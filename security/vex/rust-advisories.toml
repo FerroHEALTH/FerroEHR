@@ -156,22 +156,19 @@ carriers = [
   "reactive_graph",
   "reactive_stores",
   "tachys",
-  "utoipa-axum",
 ]
-workspace_roots = ["ferroehr-viewer", "ferroehr-rest", "ferroehr-server"]
+workspace_roots = ["ferroehr-viewer"]
 status = "not_affected"
 justification = "vulnerable_code_not_present"
 impact = """
 An UNMAINTAINED-crate advisory, not a vulnerability: the author archived the \
 repository and RustSec records no flaw and no patched version. `paste` is a \
-procedural macro that pastes tokens at compile time, reached by seven direct \
-dependents (`cargo tree -i paste@1.0.15`) falling into two groups: \
-`utoipa-axum` 0.2.0 in the server — the latest release of the official utoipa \
-axum bindings, for which no paste-free version exists — and six crates of the \
-Leptos 0.8 family in the viewer. Like every \
-proc-macro it runs inside the compiler and links into nothing that ships, so it \
-is absent from the artifacts this document describes. Re-evaluate on the next \
-`utoipa-axum` or Leptos release.\
+procedural macro that pastes tokens at compile time, reached only through six \
+crates of the Leptos 0.8 family in the viewer (`cargo tree -i paste@1.0.15`); \
+the server stopped reaching it when `utoipa-axum` 0.3 moved to `pastey`. Like \
+every proc-macro it runs inside the compiler and links into nothing that ships, \
+so it is absent from the artifacts this document describes. Re-evaluate on the \
+next Leptos release.\
 """
 
 # ── Reported by lock-file scanners only ─────────────────────────────────────
