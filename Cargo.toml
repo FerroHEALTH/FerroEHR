@@ -346,7 +346,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "registry"] }
 tracing-opentelemetry = "0.33"     # pairs with opentelemetry 0.31 line (verify matching set)
 tracing-flame = "0.2"              # span-timing flamegraph capture (folded stacks; render via inferno)
-opentelemetry = "0.32.0"
+opentelemetry = "0.33.0"
 opentelemetry_sdk = { version = "0.32.1", features = ["rt-tokio", "experimental_metrics_custom_reader"] }
 opentelemetry-otlp = { version = "0.32.0", features = ["grpc-tonic"] }
 # The PULL surface (/management/prometheus), served from the SAME MeterProvider
