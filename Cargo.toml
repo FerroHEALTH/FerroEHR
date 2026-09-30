@@ -352,7 +352,7 @@ opentelemetry-otlp = { version = "0.32.0", features = ["grpc-tonic"] }
 # The PULL surface (/management/prometheus), served from the SAME MeterProvider
 # as the OTLP push — one metrics system, so a family cannot exist on one
 # surface and not the other (#2181). Needs the SDK's custom-reader feature.
-opentelemetry-prometheus = "0.32"
+opentelemetry-prometheus = "0.33"
 prometheus = "0.14"
 # In-process sampling CPU profiler. Its own `criterion` feature is pinned to
 # criterion ^0.5 (verified on crates.io 2026-08-04) — incompatible with our
