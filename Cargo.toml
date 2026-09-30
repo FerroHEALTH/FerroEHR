@@ -344,7 +344,7 @@ thirtyfour = "0.37.2"               # E2E WebDriver client (dev-dep of the viewe
 # ── Observability (opentelemetry set is lockstep: keep versions equal) ────────
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "registry"] }
-tracing-opentelemetry = "0.33"     # pairs with opentelemetry 0.31 line (verify matching set)
+tracing-opentelemetry = "0.34"     # pairs with opentelemetry 0.31 line (verify matching set)
 tracing-flame = "0.2"              # span-timing flamegraph capture (folded stacks; render via inferno)
 opentelemetry = "0.32.0"
 opentelemetry_sdk = { version = "0.32.1", features = ["rt-tokio", "experimental_metrics_custom_reader"] }
