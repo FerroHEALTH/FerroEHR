@@ -291,7 +291,7 @@ zip = { version = "8", default-features = false, features = ["deflate-flate2"] }
 # (0.21.3, actively maintained).
 # default features off: the bzip2/aes side-codecs drag deps we neither need
 # nor allow (bzip2-1.0.6 license); 7z's native LZMA2 rides `compress` alone.
-sevenz-rust2 = { version = "0.22", default-features = false, features = ["compress"] }
+sevenz-rust2 = { version = "0.23", default-features = false, features = ["compress"] }
 rust_decimal = { version = "1", features = ["serde-with-str"] }   # BigDecimal replacement (DV_QUANTITY)
 # canonical JSON (RFC 8785 JCS) for hashing/audit — small, pick one or hand-roll:
 serde_jcs = "0.2.0"                  # verify; otherwise implement ~150 LoC
