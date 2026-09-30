@@ -67,12 +67,12 @@ ignore = [
   # too, so upstream has two reasons to move.
   # https://rustsec.org/advisories/RUSTSEC-2026-0173
   { id = "RUSTSEC-2026-0173", reason = "unmaintained advisory; compile-time proc-macro via leptos_macro (viewer), no runtime exposure" },
-  # 2026-07-15: `paste` (proc-macro) is archived/unmaintained — pulled in by
-  # utoipa-axum 0.2.0 (still the LATEST release, re-verified 2026-09-10; no
-  # paste-free release exists). Compile-time-only token pasting, no runtime
-  # code, no attack surface. DELETING EVENT: the first paste-free utoipa-axum
-  # release. https://rustsec.org/advisories/RUSTSEC-2024-0436
-  { id = "RUSTSEC-2024-0436", reason = "compile-time proc-macro via utoipa-axum 0.2.0 (latest); no runtime surface" },
+  # 2026-07-15: `paste` (proc-macro) is archived/unmaintained. utoipa-axum 0.3
+  # moved to `pastey` (2026-09-30), so the Leptos 0.8 family in the viewer is
+  # the only carrier left. Compile-time-only token pasting, no runtime code,
+  # no attack surface. DELETING EVENT: the first paste-free Leptos release.
+  # https://rustsec.org/advisories/RUSTSEC-2024-0436
+  { id = "RUSTSEC-2024-0436", reason = "compile-time proc-macro via the Leptos 0.8 family (viewer); no runtime surface" },
 ]
 
 [licenses]

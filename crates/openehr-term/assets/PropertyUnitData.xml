@@ -581,7 +581,7 @@
   <Unit property_id="75" Text="Bq" name="Becquerel" conversion="1" primary="true" UCUM="Bq"/>
   <Unit property_id="76" Text="Gy" name="Gray" conversion="1" primary="true" UCUM="Gy"/>
   <Unit property_id="76" Text="cGy" name="centigray" conversion="1" coefficient="-2" primary="false" UCUM="cGy"/>
-  <Unit property_id="76" Text="cGy" name="milligray" conversion="1" coefficient="-3" primary="false" UCUM="mGy"/>
+  <Unit property_id="76" Text="mGy" name="milligray" conversion="1" coefficient="-3" primary="false" UCUM="mGy"/>
   <Unit property_id="76" Text="J/kg" name="Joules per kilogram" conversion="1" primary="false" UCUM="J/kg"/>
   <Unit property_id="76" Text="Sv" name="Sievert" conversion="1" primary="false" UCUM="Sv"/>
   <Unit property_id="76" Text="mSv" name="millisievert" conversion="1" primary="false" UCUM="mSv"/>

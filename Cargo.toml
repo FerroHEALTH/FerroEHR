@@ -244,9 +244,9 @@ object_store = { version = "0.14.0", features = ["aws"] }   # S3-compatible blob
 pgp = { version = "0.20.0", default-features = false }   # rPGP — pure-Rust OpenPGP (RFC 4880/9580); version signing (no OpenSSL/C, fits the rustls-only stack). default-features off drops the bzip2 (libbz2-rs-sys) dep — detached signatures need no compression, and it fails the cargo-deny license gate.
 
 # ── OpenAPI / Swagger (code-first) ───────────────────────────────────────────
-utoipa = { version = "5.5.0", features = ["axum_extras", "chrono", "uuid", "decimal"] }
-utoipa-axum = "0.2.0"                  # route-matched OpenAPI
-utoipa-swagger-ui = { version = "9.0.2", features = ["axum", "vendored"] }   # 9.0.2; serves Swagger UI (vendored = offline build, no curl download)
+utoipa = { version = "6.0.0", features = ["axum_extras", "chrono", "uuid", "decimal"] }
+utoipa-axum = "0.3.0"                  # route-matched OpenAPI
+utoipa-swagger-ui = { version = "10.0.1", features = ["axum", "vendored"] }   # serves Swagger UI (vendored = offline build, no curl download)
 # Swagger UI is the ONE document viewer this server ships; the alternative
 # utoipa viewers (redoc/scalar/rapidoc) were pinned here but never consumed by
 # any member, so they are gone. Re-add one only when a crate actually serves it.
@@ -291,7 +291,7 @@ zip = { version = "8", default-features = false, features = ["deflate-flate2"] }
 # (0.21.3, actively maintained).
 # default features off: the bzip2/aes side-codecs drag deps we neither need
 # nor allow (bzip2-1.0.6 license); 7z's native LZMA2 rides `compress` alone.
-sevenz-rust2 = { version = "0.22", default-features = false, features = ["compress"] }
+sevenz-rust2 = { version = "0.23", default-features = false, features = ["compress"] }
 rust_decimal = { version = "1", features = ["serde-with-str"] }   # BigDecimal replacement (DV_QUANTITY)
 # canonical JSON (RFC 8785 JCS) for hashing/audit — small, pick one or hand-roll:
 serde_jcs = "0.2.0"                  # verify; otherwise implement ~150 LoC
@@ -344,15 +344,15 @@ thirtyfour = "0.37.2"               # E2E WebDriver client (dev-dep of the viewe
 # ── Observability (opentelemetry set is lockstep: keep versions equal) ────────
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "registry"] }
-tracing-opentelemetry = "0.33"     # pairs with opentelemetry 0.31 line (verify matching set)
+tracing-opentelemetry = "0.34"     # pairs with the opentelemetry 0.33 line
 tracing-flame = "0.2"              # span-timing flamegraph capture (folded stacks; render via inferno)
-opentelemetry = "0.32.0"
-opentelemetry_sdk = { version = "0.32.1", features = ["rt-tokio", "experimental_metrics_custom_reader"] }
-opentelemetry-otlp = { version = "0.32.0", features = ["grpc-tonic"] }
+opentelemetry = "0.33.0"
+opentelemetry_sdk = { version = "0.33.0", features = ["rt-tokio", "experimental_metrics_custom_reader"] }
+opentelemetry-otlp = { version = "0.33.0", features = ["grpc-tonic"] }
 # The PULL surface (/management/prometheus), served from the SAME MeterProvider
 # as the OTLP push — one metrics system, so a family cannot exist on one
 # surface and not the other (#2181). Needs the SDK's custom-reader feature.
-opentelemetry-prometheus = "0.32"
+opentelemetry-prometheus = "0.33"
 prometheus = "0.14"
 # In-process sampling CPU profiler. Its own `criterion` feature is pinned to
 # criterion ^0.5 (verified on crates.io 2026-08-04) — incompatible with our
@@ -389,7 +389,7 @@ indexmap = { version = "2", features = ["serde"] }
 
 # ── HTTP client & external integration ───────────────────────────────────────
 reqwest = { version = "0.13.4", default-features = false, features = ["rustls", "json", "gzip", "brotli"] }
-jsonschema = "0.56.0"               # validate against openEHR ITS-JSON schemas (verify latest)
+jsonschema = "0.58.3"               # validate against openEHR ITS-JSON schemas (verify latest)
 
 # ── Dev / test (dev-dependencies at the crate level) ─────────────────────────
 insta = { version = "1", features = ["json", "redactions", "filters"] }
@@ -455,6 +455,14 @@ debug = "line-tables-only"
 # (exit 137 while compiling ferroehr-rest), and thin LTO optimises across the
 # default units anyway.
 lto = "thin"
+
+# The binary the ui-e2e battery and chart-boot run on a pull request: the release
+# profile without LTO. Thin LTO spent about 13 of the job's 25 minutes on the
+# final link, which sccache cannot cache (#3490). The battery asserts
+# behaviour, and ui-e2e-published.yml drives the LTO-built release image.
+[profile.e2e]
+inherits = "release"
+lto = false
 
 # WASM bundle profile for the viewer (Leptos book `deployment/binary_size`):
 # size-optimized client bundle, wired via the crate's `lib-profile-release`.

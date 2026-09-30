@@ -456,7 +456,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: taiki-e/install-action@94c31af3204a9f15ab40b35ad084410b905bbc73 # v2.87.17
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
         with:
           tool: zizmor@1.29.0
       - name: Audit .github/workflows + .github/actions
@@ -551,7 +551,7 @@ jobs:
       # part of what the gate means. Fetched by the same SHA-pinned installer the
       # zizmor job uses, which resolves
       # github.com/koalaman/shellcheck/releases and verifies the checksum.
-      - uses: taiki-e/install-action@94c31af3204a9f15ab40b35ad084410b905bbc73 # v2.87.17
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
         with:
           tool: shellcheck@0.11.0
       - name: Every shell program is clean at severity=style
@@ -574,7 +574,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: taiki-e/install-action@94c31af3204a9f15ab40b35ad084410b905bbc73 # v2.87.17
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
         with:
           tool: shellcheck@0.11.0
       - name: The embedded deploy script is clean and its posture paths are baked
@@ -1076,7 +1076,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         with:
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: taiki-e/install-action@94c31af3204a9f15ab40b35ad084410b905bbc73 # v2.87.17
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
         with:
           tool: cargo-deny
       - run: cargo deny check
@@ -1365,7 +1365,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         with:
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: taiki-e/install-action@94c31af3204a9f15ab40b35ad084410b905bbc73 # v2.87.17
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
         with:
           tool: cargo-hack
       - run: cargo hack check --rust-version --workspace --locked --all-targets
@@ -1423,7 +1423,7 @@ jobs:
       contents: read
     services:
       postgres:
-        image: postgres:18.6@sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280
+        image: postgres:18.6@sha256:5a5a84b19854a9ffaa54082c166ff4ec27473a361e496e5ea167f298f2da9722
         env:
           POSTGRES_USER: openehr
           POSTGRES_PASSWORD: openehr
@@ -1458,7 +1458,7 @@ jobs:
           sudo apt-get update && sudo apt-get install -y postgresql-client libxml2-utils
           PGPASSWORD=openehr psql -h localhost -U openehr -d postgres \
             -c "ALTER SYSTEM SET fsync = off" -c "ALTER SYSTEM SET synchronous_commit = off" -c "ALTER SYSTEM SET full_page_writes = off" -c "SELECT pg_reload_conf()"
-      - uses: taiki-e/install-action@94c31af3204a9f15ab40b35ad084410b905bbc73 # v2.87.17
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
         with:
           tool: cargo-nextest
       # The viewer is excluded from --all-features lanes (mutually exclusive
@@ -1516,7 +1516,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         with:
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: taiki-e/install-action@94c31af3204a9f15ab40b35ad084410b905bbc73 # v2.87.17
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
         with:
           tool: cargo-nextest
       - run: cargo build --locked -p ferroehr-viewer --features ssr
@@ -1724,7 +1724,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: taiki-e/install-action@94c31af3204a9f15ab40b35ad084410b905bbc73 # v2.87.17
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
         with:
           tool: cargo-machete
       - run: cargo machete
@@ -1744,7 +1744,8 @@ jobs:
   #
   # So the binary is compiled here the way containers.yml compiles the
   # PUBLISHED one — natively, in the pinned rust:*-slim-trixie image, never
-  # inside a Dockerfile — and ui-e2e then PACKAGES it with `runtime-prebuilt`,
+  # inside a Dockerfile — except under the `e2e` profile, which is the release
+  # profile without LTO (#3490) — and ui-e2e then PACKAGES it with `runtime-prebuilt`,
   # the very final target containers.yml ships. Both final targets inherit ONE
   # shared runtime-base stage, so the battery drives the same distroless base,
   # the same non-root user, EXPOSE, HEALTHCHECK and ENTRYPOINT as before.
@@ -1838,7 +1839,7 @@ jobs:
           cache-targets: false
       - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
         if: steps.binary-cache.outputs.cache-hit != 'true'
-      - name: Build the server binary (release, native)
+      - name: Build the server binary (e2e profile, native)
         if: steps.binary-cache.outputs.cache-hit != 'true'
         env:
           SCCACHE_GHA_ENABLED: "true"
@@ -1849,10 +1850,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cargo build --release --locked -p ferroehr-server
-          strip target/release/ferroehr
+          cargo build --profile e2e --locked -p ferroehr-server
+          strip target/e2e/ferroehr
           mkdir -p bin/amd64
-          install -m0755 target/release/ferroehr bin/amd64/ferroehr
+          install -m0755 target/e2e/ferroehr bin/amd64/ferroehr
       # Cache-hit visibility in the job log, the same as the battery job below.
       - name: sccache statistics
         if: always() && steps.binary-cache.outputs.cache-hit != 'true'
@@ -1913,7 +1914,7 @@ jobs:
           cache-targets: false
       - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
         if: steps.viewer-cache.outputs.cache-hit != 'true'
-      - uses: taiki-e/install-action@94c31af3204a9f15ab40b35ad084410b905bbc73 # v2.87.17
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
         if: steps.viewer-cache.outputs.cache-hit != 'true'
         with:
           # wasm-bindgen pinned to the workspace's wasm-bindgen version;
@@ -2016,7 +2017,7 @@ jobs:
         # cache is not release input.
         with: # zizmor: ignore[cache-poisoning]
           cache-targets: false
-      - uses: taiki-e/install-action@94c31af3204a9f15ab40b35ad084410b905bbc73 # v2.87.17
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
         with:
           tool: cargo-nextest
       # The CDR image is PACKAGED here, never compiled here (issue #335 — the

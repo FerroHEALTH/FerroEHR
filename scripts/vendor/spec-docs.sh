@@ -47,7 +47,7 @@ COMPONENTS=(
   "BASE|specifications-BASE|master (BASE 1.3.0)|e48795762a0648cbe5701be58d42ec5df0c701a7"
   "RM|specifications-RM|master (RM 1.2.0)|66d3ac45587e4532a94d5fd27ca24bcf049f5bf3"
   "AM|specifications-AM|master (AM 2.4.0 + ADL/AOM/OPT 1.4)|da06d63297e8549a351c854d8b1c45cd9f1d577c"
-  "TERM|specifications-TERM|master (TERM 3.1.0)|007d0dddcdd77648711681878b54ace021b2fbd5"
+  "TERM|specifications-TERM|master (TERM 3.1.0)|78edd7f59600c40da00fa4e8a1282d563b8942cc"
   "LANG|specifications-LANG|master (LANG 1.1.0)|201b647034f7b1ddfe207e4c3c6f52f6878869b8"
   "QUERY|specifications-QUERY|Release-1.1.0|a87bb51fa1c515b863c9610a9444a2d5570dc05a"
   "SM|specifications-SM|master|23ffc4711c10bae2ae43724b1948fe3b24a0964e"
@@ -129,6 +129,22 @@ for entry in "${COMPONENTS[@]}"; do
   else
     echo "ERROR: $name LICENSE at $sha is neither CC-BY-SA 3.0 nor Apache-2.0 — adjudicate before vendoring" >&2
     exit 1
+  fi
+
+  # The openehr-term crate embeds the TERM computable files, and its
+  # asset_identity test byte-compares them against this vendored copy, so both
+  # move from the same checkout. The XSDs ride along here although the spec
+  # text above excludes them.
+  if [[ "$name" == "TERM" ]]; then
+    assets="$REPO_ROOT/crates/openehr-term/assets"
+    for lang in en es ja pt zh; do
+      cp "$src/computable/XML/$lang/openehr_terminology.xml" "$assets/$lang/openehr_terminology.xml"
+    done
+    cp "$src/computable/XML/openehr_external_terminologies.xml" "$assets/openehr_external_terminologies.xml"
+    cp "$src/computable/XML/PropertyUnitData.xml" "$assets/PropertyUnitData.xml"
+    cp "$src"/computable/XML/schema/*.xsd "$assets/schema/"
+    sed -i.bak -E "s/^- Commit: \`[0-9a-f]{40}\`/- Commit: \`$sha\`/" "$assets/PROVENANCE.md"
+    rm -f "$assets/PROVENANCE.md.bak"
   fi
 
   # The UML class diagrams the vendored chapters reference (see the header

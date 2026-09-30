@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: Vernum Projecten B.V.
+# SPDX-License-Identifier: BUSL-1.1
+# Per-host settings for the weekly external link check (link-check-external.yml).
+# Each entry names a host that answered a browser but not the check (#3471).
+
+# The NHS Data Dictionary answers lychee's user agent with 403 and a browser
+# with 200 (checked by hand 2026-09-30); lychee 0.24 has no per-host accept.
+exclude = ['^https://www\.datadictionary\.nhs\.uk/']
+
+# gesetze-im-internet.de timed out on 80 requests under the default ten
+# concurrent requests per host, and answers every one when they are spaced.
+[hosts."www.gesetze-im-internet.de"]
+concurrency = 2
+request_interval = "500ms"
