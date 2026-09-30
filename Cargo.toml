@@ -456,6 +456,14 @@ debug = "line-tables-only"
 # default units anyway.
 lto = "thin"
 
+# The binary the ui-e2e battery and chart-boot run on a pull request: the release
+# profile without LTO. Thin LTO spent about 13 of the job's 25 minutes on the
+# final link, which sccache cannot cache (#3490). The battery asserts
+# behaviour, and ui-e2e-published.yml drives the LTO-built release image.
+[profile.e2e]
+inherits = "release"
+lto = false
+
 # WASM bundle profile for the viewer (Leptos book `deployment/binary_size`):
 # size-optimized client bundle, wired via the crate's `lib-profile-release`.
 [profile.wasm-release]

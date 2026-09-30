@@ -1744,7 +1744,8 @@ jobs:
   #
   # So the binary is compiled here the way containers.yml compiles the
   # PUBLISHED one — natively, in the pinned rust:*-slim-trixie image, never
-  # inside a Dockerfile — and ui-e2e then PACKAGES it with `runtime-prebuilt`,
+  # inside a Dockerfile — except under the `e2e` profile, which is the release
+  # profile without LTO (#3490) — and ui-e2e then PACKAGES it with `runtime-prebuilt`,
   # the very final target containers.yml ships. Both final targets inherit ONE
   # shared runtime-base stage, so the battery drives the same distroless base,
   # the same non-root user, EXPOSE, HEALTHCHECK and ENTRYPOINT as before.
@@ -1838,7 +1839,7 @@ jobs:
           cache-targets: false
       - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
         if: steps.binary-cache.outputs.cache-hit != 'true'
-      - name: Build the server binary (release, native)
+      - name: Build the server binary (e2e profile, native)
         if: steps.binary-cache.outputs.cache-hit != 'true'
         env:
           SCCACHE_GHA_ENABLED: "true"
@@ -1849,10 +1850,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cargo build --release --locked -p ferroehr-server
-          strip target/release/ferroehr
+          cargo build --profile e2e --locked -p ferroehr-server
+          strip target/e2e/ferroehr
           mkdir -p bin/amd64
-          install -m0755 target/release/ferroehr bin/amd64/ferroehr
+          install -m0755 target/e2e/ferroehr bin/amd64/ferroehr
       # Cache-hit visibility in the job log, the same as the battery job below.
       - name: sccache statistics
         if: always() && steps.binary-cache.outputs.cache-hit != 'true'
