@@ -61,6 +61,15 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **The dependency set moves forward in one step.** OpenTelemetry goes to
+  0.33 (`opentelemetry`, `opentelemetry_sdk`, `opentelemetry-otlp`,
+  `opentelemetry-prometheus`) with `tracing-opentelemetry` 0.34; the OpenAPI
+  stack to `utoipa` 6, `utoipa-axum` 0.3 and `utoipa-swagger-ui` 10;
+  `jsonschema` to 0.58, `sevenz-rust2` to 0.23, `lapin` to 4.12 and `config`
+  to 0.15.27. The bundled PostgreSQL image is rebuilt on the current
+  `postgres:18.6` upstream digest (`sha256:5a5a84b1…`), a same-version respin
+  with rebuilt base packages. The nine `openehr-*` crates step to 0.0.73.
+
 - **FerroTERM moves to 0.1.5 everywhere the product pins it.** The quickstart
   overlay `docker-compose.terminology.yml`, the hosted sandbox compose file, the
   Helm chart (`terminology.image.digest` and the pinned version its tag default

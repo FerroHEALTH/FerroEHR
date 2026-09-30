@@ -21,4 +21,4 @@ non-commercial reference basis, with the required acknowledgement:
 > © Copyright openEHR Foundation 2001-2006. All rights reserved.
 > www.openEHR.org
 
-Do not hand-edit files under this directory; re-run scripts/vendor-spec-docs.sh.
+Do not hand-edit files under this directory; re-run scripts/vendor/spec-docs.sh.

@@ -906,6 +906,19 @@ mod tests {
         assert!(t.units_for_property("does-not-exist").is_empty());
     }
 
+    #[test]
+    fn energy_dose_units_display_their_own_symbol() {
+        // Before specifications-TERM 78edd7f59 the milligray row displayed "cGy".
+        let units = openehr().units_for_property("508");
+        let milligray = units
+            .iter()
+            .find(|u| u.name == "milligray")
+            .expect("milligray unit present");
+        assert_eq!(milligray.text, "mGy");
+        assert_eq!(milligray.ucum.as_deref(), Some("mGy"));
+        assert_eq!(units.iter().filter(|u| u.text == "cGy").count(), 1);
+    }
+
     // ── Fallible parser (corrupt-asset path) ──────────────────────────────────
 
     #[test]

@@ -374,7 +374,7 @@ jobs:
         if: matrix.platform == 'amd64'
         run: apt-get update && apt-get install -y --no-install-recommends curl ca-certificates
 
-      - uses: taiki-e/install-action@94c31af3204a9f15ab40b35ad084410b905bbc73 # v2.87.17
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
         if: matrix.platform == 'amd64'
         with:
           tool: cargo-leptos@0.3.7,wasm-bindgen@0.2.128
@@ -466,7 +466,7 @@ jobs:
         org.opencontainers.image.authors=Ruben Talstra <https://github.com/rubentalstra>
         org.opencontainers.image.licenses=BUSL-1.1 AND PostgreSQL
         org.opencontainers.image.base.name=postgres:18.6
-        org.opencontainers.image.base.digest=sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280
+        org.opencontainers.image.base.digest=sha256:5a5a84b19854a9ffaa54082c166ff4ec27473a361e496e5ea167f298f2da9722
 
   # ── Scan the pushed digests, then make them referencable ────────────────────
   # Both halves live in the reusable scan-and-tag.yml (#2776), which the release

@@ -73,7 +73,8 @@ jobs:
       # The full check, external links included. Retries and a long timeout are
       # affordable here in a way they are not on the PR path: nobody is waiting
       # on this run, so a slow host gets the benefit of the doubt rather than
-      # producing a false report. 429 is accepted outright — being rate-limited
+      # producing a false report. Hosts that need their own treatment are in
+      # .github/lychee-external.toml, each with its reason. 429 is accepted outright — being rate-limited
       # is evidence the host is UP, which is the only thing being measured.
       # A non-zero lychee exit is a FINDING when it came with a summary, and a
       # PROBE FAILURE when it did not: the summary is the answer, and without one
@@ -85,6 +86,7 @@ jobs:
           set -uo pipefail
           status=0
           lychee --no-progress --max-retries 5 --retry-wait-time 10 --timeout 45 \
+            --config .github/lychee-external.toml \
             --accept '200..=299,429' --exclude-loopback \
             --root-dir "$PWD/_site" \
             --exclude '^https://ferroehr\.eu' \

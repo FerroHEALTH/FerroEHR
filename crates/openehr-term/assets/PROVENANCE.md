@@ -2,7 +2,7 @@
 
 - Source: https://github.com/openEHR/specifications-TERM
 - Ref: master (TERM 3.1.0)
-- Commit: `007d0dddcdd77648711681878b54ace021b2fbd5`
+- Commit: `78edd7f59600c40da00fa4e8a1282d563b8942cc`
 - License: CC-BY-SA 3.0 Unported (the upstream repo's `LICENSE`; root
   reference copy `LICENSE-CC-BY-SA-3.0`) — redistributed verbatim with
   attribution.
@@ -19,10 +19,9 @@ pinned commit — never "clean up", reformat, or re-indent them; known upstream
 defects (e.g. SPECPR-51) are handled in access logic with a citation, never by
 editing the asset.
 
-The same commit is vendored as spec text + computable XML at
-`docs/specs/openehr/TERM/` (see its `PROVENANCE.md`); the `asset_identity`
-test in `tests/it/` byte-compares this directory against that copy, so a
-re-vendor of either side fails loudly until both move together. The XSDs are
-excluded from the spec-text vendoring (text-formats-only script), so their
-byte-identity to upstream was verified directly at the pinned commit
-(2026-08-01).
+Vendored by `scripts/vendor/spec-docs.sh`, from the same checkout it vendors
+the spec text + computable XML at `docs/specs/openehr/TERM/` from (see that
+`PROVENANCE.md`); the script also rewrites the commit line above. The
+`asset_identity` test in `tests/it/` byte-compares this directory against that
+copy. The XSDs are copied here although the spec-text vendoring excludes
+them.
