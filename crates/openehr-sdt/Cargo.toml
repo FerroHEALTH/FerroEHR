@@ -1,6 +1,6 @@
 [package]
 name = "openehr-sdt"
-version = "0.0.73"
+version = "0.0.74"
 description = "openEHR Simplified Data Template formats (FLAT / STRUCTURED / Web Template / TDD), template-independent RM-instance validation, and the SMART on openEHR scope grammar, hand-written over the openehr-its wire layer"
 edition.workspace = true
 rust-version.workspace = true
@@ -31,12 +31,12 @@ fancy-regex = { workspace = true, optional = true }
 moka = { workspace = true, optional = true }
 # The wire layer this crate builds on: canonical JSON, the XML runtime and the
 # OPT 1.4 reader (`opt14` pulls `xml` and `json` in).
-openehr-its = { path = "../openehr-its", version = "0.0.73", default-features = false, optional = true }
-openehr-base = { path = "../openehr-base", version = "0.0.73", optional = true }
-openehr-rm = { path = "../openehr-rm", version = "0.0.73", optional = true }
-openehr-am = { path = "../openehr-am", version = "0.0.73", optional = true }
-openehr-lang = { path = "../openehr-lang", version = "0.0.73", optional = true }
-openehr-term = { path = "../openehr-term", version = "0.0.73", optional = true }
+openehr-its = { path = "../openehr-its", version = "0.0.74", default-features = false, optional = true }
+openehr-base = { path = "../openehr-base", version = "0.0.74", optional = true }
+openehr-rm = { path = "../openehr-rm", version = "0.0.74", optional = true }
+openehr-am = { path = "../openehr-am", version = "0.0.74", optional = true }
+openehr-lang = { path = "../openehr-lang", version = "0.0.74", optional = true }
+openehr-term = { path = "../openehr-term", version = "0.0.74", optional = true }
 
 [features]
 default = ["full"]

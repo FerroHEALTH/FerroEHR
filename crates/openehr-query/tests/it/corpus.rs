@@ -3,6 +3,7 @@
 
 #![allow(
     clippy::panic,
+    clippy::expect_used,
     clippy::print_stdout,
     clippy::print_stderr,
     let_underscore_drop,
@@ -90,6 +91,33 @@ fn listing_blocks(doc: &str) -> Vec<String> {
 /// parse-tested.
 fn wrap_fragment(fragment: &str) -> String {
     format!("SELECT e/ehr_id/value FROM EHR e WHERE {}", fragment.trim())
+}
+
+/// Every standard AQL 1.1.0 query of the official corpus, a bare fragment
+/// wrapped in its query shell, for the topic modules that sweep the corpus.
+pub(crate) fn standard_queries() -> Vec<String> {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("vendor/examples");
+    let mut files: Vec<_> = fs::read_dir(&dir)
+        .expect("examples dir")
+        .filter_map(|e| e.ok().map(|e| e.path()))
+        .filter(|p| p.extension().is_some_and(|x| x == "adoc"))
+        .collect();
+    files.sort();
+    let mut queries = Vec::new();
+    for path in files {
+        let doc = fs::read_to_string(&path).expect("example file");
+        for block in listing_blocks(&doc) {
+            if out_of_grammar_reason(&block).is_some() {
+                continue;
+            }
+            queries.push(if block.to_uppercase().contains("SELECT") {
+                block
+            } else {
+                wrap_fragment(&block)
+            });
+        }
+    }
+    queries
 }
 
 /// Parses one query and round-trips it through the printer.

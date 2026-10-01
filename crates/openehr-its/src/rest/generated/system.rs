@@ -3,7 +3,8 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 //! ITS-REST contract for the `system` API group: DTOs, per-operation
-//! param structs, the `SystemApi` server trait, and the route table.
+//! param structs, per-response headers structs, the `server` and
+//! `client` halves, and the route table.
 
 #![allow(
     clippy::all,
@@ -49,19 +50,122 @@ pub struct OptionsParams {
     pub accept: Option<String>,
 }
 
-/// Server contract for the `system` API group (ITS-REST). Every method
-/// defaults to returning `ApiError::NotImplemented`, so an implementor
-/// (the application service, or a test stub) overrides only the
-/// operations it supports.
+/// The response headers the OAS declares for the `200` answer of
+/// `OPTIONS /`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct OptionsOkHeaders {
+    /// The `Allow` response header.
+    pub allow: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for OptionsOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Allow", self.allow)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The server half of the `system` API group (ITS-REST): the `SystemApi`
+/// trait an implementation provides, one success-answer enum per operation,
+/// and `router`, which binds every operation of the route table to its
+/// trait method over axum.
 #[cfg(feature = "rest-server")]
-#[async_trait::async_trait]
-pub trait SystemApi {
-    /// `OPTIONS /`
-    async fn options(
-        &self,
-        params: OptionsParams,
-    ) -> Result<Options, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+pub mod server {
+    use super::*;
+
+    /// The answers `OPTIONS /` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum OptionsResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: Options,
+            /// The response headers the OAS declares for this answer.
+            headers: OptionsOkHeaders,
+        },
+    }
+
+    /// Server contract for the `system` API group (ITS-REST).
+    ///
+    /// Every method defaults to refusing with `ApiError::NotImplemented` (`501`),
+    /// so an implementor overrides only the operations it supports; `router`
+    /// serves an implementation over axum. A method refuses with a
+    /// [`crate::rest::runtime::Refusal`]: `?` turns an `ApiError` into one,
+    /// and `Refusal::with_headers` adds the headers the OAS declares for the
+    /// answer (the `ETag` of a `412`, for one).
+    #[async_trait::async_trait]
+    pub trait SystemApi {
+        /// `OPTIONS /`
+        async fn options(
+            &self,
+            params: OptionsParams,
+        ) -> Result<OptionsResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+    }
+
+    /// The axum router serving every operation of the `system` group over `api`.
+    ///
+    /// Each route is bound at its OAS path relative to the API base (an RFC 6570
+    /// query expansion dropped, path captures named by segment position). A
+    /// handler decodes the request into the operation's params struct and body
+    /// — a missing or unparseable parameter answers `400` naming it, a
+    /// canonical-JSON body sent as another `Content-Type` answers `415` — and
+    /// encodes the trait method's answer, or its `Refusal` as the ITS-REST
+    /// `Error` body with the refusal's headers. Mount it under the base path
+    /// with `axum::Router::nest`.
+    ///
+    /// The router carries no fallback, so group routers merge freely (axum
+    /// refuses to merge two routers that both carry one); finish the merged
+    /// router with `crate::rest::server::with_fallbacks` for the `404` and `405`
+    /// answers, or take `crate::rest::server::router`, which does both.
+    ///
+    /// The typed bodies are canonical JSON only: a server that also serves
+    /// canonical XML or a Simplified Format routes those requests itself, and
+    /// the `accept` parameter reaches the trait method, which answers
+    /// `ApiError::NotAcceptable` for a representation it does not serve.
+    pub fn router<S>(api: std::sync::Arc<S>) -> axum::Router
+    where
+        S: SystemApi + Send + Sync + 'static,
+    {
+        axum::Router::new()
+            .route(
+                "/",
+                axum::routing::on(axum::routing::MethodFilter::OPTIONS, handle_options::<S>),
+            )
+            .with_state(api)
+    }
+
+    /// Serves `OPTIONS /` through [`SystemApi::options`].
+    async fn handle_options<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+    ) -> axum::response::Response
+    where
+        S: SystemApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let params = OptionsParams {
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply = match api.options(params).await? {
+                OptionsResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
     }
 }
 
@@ -71,16 +175,6 @@ pub trait SystemApi {
 #[cfg(feature = "rest-client")]
 pub mod client {
     use super::*;
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `OPTIONS /`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct OptionsOkHeaders {
-        /// The `Allow` response header.
-        pub allow: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
 
     /// The outcome of `OPTIONS /`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
@@ -96,16 +190,28 @@ pub mod client {
     }
 
     /// The `system` API group over one configured CDR.
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone)]
     pub struct SystemClient<'c, T> {
         client: &'c crate::rest::client::Client<T>,
+        options: crate::rest::client::CallOptions,
     }
 
     impl<'c, T: crate::rest::client::Transport> SystemClient<'c, T> {
         /// The `system` API group over `client`.
         #[must_use]
         pub fn new(client: &'c crate::rest::client::Client<T>) -> Self {
-            Self { client }
+            Self {
+                client,
+                options: crate::rest::client::CallOptions::default(),
+            }
+        }
+
+        /// This group client applying `options` (a deadline, extra headers) to
+        /// every call it makes.
+        #[must_use]
+        pub fn with_options(mut self, options: crate::rest::client::CallOptions) -> Self {
+            self.options = options;
+            self
         }
 
         /// `OPTIONS /`
@@ -123,6 +229,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(OptionsOutcome::Ok {
@@ -137,6 +244,7 @@ pub mod client {
         }
     }
 }
-/// The operations of this group as `(method, path, operation_id)`, for
-/// wiring an axum router in `ferroehr-rest`.
+/// The operations of this group as `(method, path, operation_id)`, in OAS
+/// document order: `server::router` binds each to its trait method, and
+/// `crate::rest::routes::lookup` matches a request path against them.
 pub const ROUTES: &[(&str, &str, &str)] = &[("OPTIONS", "/", "options")];

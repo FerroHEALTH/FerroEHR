@@ -15,8 +15,8 @@ vendored specification text.
 | [`openehr-adl`](https://crates.io/crates/openehr-adl) | ADL 2.4.0 | ADL2/cADL/ODIN parser, AOM2 validation, flattener, OPT2, ADL 1.4→2 conversion |
 | [`openehr-term`](https://crates.io/crates/openehr-term) | TERM 3.1.0 | Terminology model + the embedded official openEHR terminology (five languages: `en`, `es`, `ja`, `pt`, `zh`) |
 | [`openehr-lang`](https://crates.io/crates/openehr-lang) | LANG 1.0.0 + 1.1.0 | The BMM meta-model and its P_BMM schema form, plus hand-written ODIN, BEL and Expression-Language readers |
-| [`openehr-query`](https://crates.io/crates/openehr-query) | QUERY 1.1.0 | AQL lexer, parser, typed AST, and canonical printer |
-| [`openehr-its`](https://crates.io/crates/openehr-its) | ITS-JSON, ITS-XML, ITS-REST 1.1.0 | Canonical JSON + XML codecs, the generated ITS-REST contract, OPT 1.4 and AOM2 archetype XML |
+| [`openehr-query`](https://crates.io/crates/openehr-query) | QUERY 1.1.0 | AQL lexer, parser, typed AST with source spans, visitors, parameter binding, and canonical printer; the `federation` feature for the `FROM ENDPOINT` directive |
+| [`openehr-its`](https://crates.io/crates/openehr-its) | ITS-JSON, ITS-XML, ITS-REST 1.1.0 | Canonical JSON + XML codecs, the generated ITS-REST contract (axum server router, client, and an operation matcher for intermediaries), OPT 1.4 and AOM2 archetype XML |
 | [`openehr-sdt`](https://crates.io/crates/openehr-sdt) | ITS-REST 1.1.0 Simplified Formats + SMART App Launch | Simplified Formats (FLAT/STRUCTURED/Web Template, TDD import), template-independent RM-instance validation, the SMART on openEHR scope grammar |
 
 ```toml
@@ -103,8 +103,8 @@ have to compile an HTTP server to read a template. The parsing spine is
 sit `schema-validation` (validation against the compiled-in ITS-JSON RM
 schema, its only `jsonschema` user) and three ITS-REST features. `rest` is the
 generated contract (DTOs, parameter structs, route tables and the `ApiError`
-type) over serde and `http`, with no HTTP engine. `rest-server` adds the
-per-group server traits and the `axum` response mapping, which is what brings
+type, plus the `routes::lookup` operation matcher) over serde and `http`, with no HTTP engine. `rest-server` adds the
+per-group server traits, their success enums and a generated `router(api)` per group, which is what brings
 in `axum`. `rest-client` adds a generated client per API group over a runtime
 that sends through `reqwest`: each operation answers one outcome variant per
 status the OpenAPI documents, and an undocumented status is an error. A

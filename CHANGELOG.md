@@ -17,6 +17,45 @@ workflow refuses a tag that has no matching section here.
 
 ### Added
 
+- **`openehr-query` can rewrite, locate and bind a query** (#3505, #3506,
+  #3507, #3508). `visit::Visit` and `visit::VisitMut` walk every node of the
+  AST, so a consumer finds, replaces or removes a `WHERE` condition without
+  its own recursive walk. Every `IdentifiedPath` and every `WHERE` condition
+  carries an `ast::Span`, the byte range it was written at, so a diagnostic
+  can point at a predicate without repeating its literal; spans take no part
+  in equality. `bind::bind` substitutes ITS-REST `query_parameters` into the
+  AST as typed literals the printer escapes, at every position the grammar
+  admits a parameter, and reports an unbound, unknown, duplicate or
+  unbindable parameter by name, never by value. The opt-in `federation`
+  feature adds `federation::parse_federated`, which lifts a
+  `FROM ENDPOINT p [ … ]` or `ORGANISATION [ … ]` directive out of a query
+  and parses the rest as strict AQL. Breaking: `WhereExpr::Identified` and
+  `IdentifiedPath` gained the span (`WhereExpr::identified` and
+  `IdentifiedPath::new` build them without one).
+- **`openehr-its` publishes the server router and the intermediary seams**
+  (#3509, #3510, #3511, #3512, #3514). Under `rest-server`, each API group's
+  `server` module carries the trait, one success enum per operation (the
+  documented `2xx` answers with their `Location`, `ETag` and other headers)
+  and `router(api)`, an axum router binding every `ROUTES` entry to its trait
+  method. A method refuses with `rest::runtime::Refusal`, an `ApiError` plus
+  the headers its answer needs: the current `ETag` on a `412`, or the
+  OpenAPI-declared headers of a demographic `409`/`412` through the generated
+  headers structs (`Refusal::with_headers`). Either renders as the ITS-REST
+  `Error` JSON body. `rest::server::router(api)` mounts all six groups at
+  once, and `rest::server::with_fallbacks` makes an unknown path answer `404`
+  and an undeclared method `405` with `Allow`, both with the `Error` body.
+  `rest::routes::lookup` matches a method and path to its operation and path
+  parameters without reading the body, and `Client::forward` sends a request
+  once and returns every answer as received, so an intermediary passes bodies,
+  `Location` and `ETag` through byte for byte. `CredentialsProvider` resolves
+  the credential before every attempt and hears about a `401`, for tokens that
+  refresh. `CallOptions` gives a generated client a deadline and extra headers
+  per call (`with_options`); the remaining budget reaches the engine as
+  `RequestTimeout`, and an elapsed deadline is `ClientError::DeadlineElapsed`.
+  Breaking: the server traits moved into `<group>::server` and return
+  `Result<success enum, Refusal>`, and the response headers structs moved
+  from `client` to the group module. The nine `openehr-*` crates step to 0.0.74.
+
 - **The `openehr-its` ITS-REST client carries what a consumer meets on first
   adoption** (#3487). The commit operations (COMPOSITION, EHR_STATUS, the
   directory, EHR creation, the demographic parties and relationships) take
@@ -119,6 +158,10 @@ workflow refuses a tag that has no matching section here.
 
 ### Fixed
 
+- **An AQL path predicate whose node boolean opens with a parameter or an
+  archetype id parses** (#3513): `CLUSTER k[$node and name/value='x']` and
+  `[openEHR-EHR-CLUSTER.device.v1 or at0001]` were refused, though the
+  grammar in `QUERY/docs/AQL/master07-grammar.adoc` admits both.
 - The `no attribution in commits` CI job no longer refuses the
   `Co-authored-by: dependabot[bot]` trailer GitHub writes when it squash-merges
   a Dependabot pull request, which had failed the last three pushes to `main`.

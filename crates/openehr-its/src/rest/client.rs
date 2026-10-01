@@ -14,23 +14,40 @@
 //! operation (`401`, `403`, `5xx`) and the refusal of an undocumented status.
 //! The HTTP engine is a trait ([`Transport`]) so any `http`-speaking client
 //! serves; [`ReqwestTransport`] is the engine shipped with the crate.
+//!
+//! A call may carry a deadline ([`CallOptions`], [`Request::set_deadline`]):
+//! the client refuses an attempt once it has passed, hands the engine the
+//! remaining budget as a [`RequestTimeout`], and never waits out a retry
+//! backoff that would end after it. No openEHR spec governs client deadlines,
+//! credential refresh or request forwarding; they are our own design.
 
-use http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE, WWW_AUTHENTICATE};
+use http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE, PROXY_AUTHORIZATION, WWW_AUTHENTICATE};
 use http::{HeaderMap, HeaderName, HeaderValue, Method, StatusCode};
 use secrecy::{ExposeSecret as _, SecretString};
 use std::fmt;
-use std::time::Duration;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use super::generated::common::Error;
 
 /// The canonical JSON media type, the default `Accept` and `Content-Type`.
 const CANONICAL_JSON: &str = "application/json";
 
+/// The time a request has left before its deadline, carried in the
+/// `http::Request` extensions the client hands a [`Transport`].
+///
+/// An engine honours it as the request's timeout, the shorter of it and its
+/// own; [`ReqwestTransport`] does. A request without a deadline carries none.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RequestTimeout(pub Duration);
+
 /// An HTTP engine the client sends through.
 ///
 /// The request and response are `http` values carrying whole bodies, so an
 /// engine adapts in a few lines and the client never depends on one. The
-/// engine owns the connection pool, TLS and the per-request timeout.
+/// engine owns the connection pool, TLS and the per-request timeout; a request
+/// that carries a [`RequestTimeout`] extension must not run past it, or the
+/// caller's deadline is not kept.
 #[async_trait::async_trait]
 pub trait Transport: Send + Sync {
     /// Sends `request` and reads the whole response.
@@ -67,14 +84,34 @@ pub enum TransportError {
 #[derive(Debug, Clone)]
 pub struct ReqwestTransport {
     client: reqwest::Client,
+    // The per-request timeout this engine was built with, kept so a request
+    // deadline can shorten it and never lengthen it.
+    timeout: Option<Duration>,
 }
 
 impl ReqwestTransport {
     /// An engine over a `reqwest` client the caller configured (TLS roots,
     /// proxies, timeouts).
+    ///
+    /// A request that carries a [`RequestTimeout`] runs under that timeout,
+    /// which replaces the client's own (`reqwest::Request::timeout_mut`); use
+    /// [`ReqwestTransport::with_client_timeout`] to keep the shorter of both.
     #[must_use]
     pub fn new(client: reqwest::Client) -> Self {
-        Self { client }
+        Self {
+            client,
+            timeout: None,
+        }
+    }
+
+    /// An engine over a configured `reqwest` client that was built with
+    /// `timeout` per request; a request deadline only ever shortens it.
+    #[must_use]
+    pub fn with_client_timeout(client: reqwest::Client, timeout: Duration) -> Self {
+        Self {
+            client,
+            timeout: Some(timeout),
+        }
     }
 
     /// An engine with the default client and `timeout` per request.
@@ -83,7 +120,7 @@ impl ReqwestTransport {
     /// Returns the `reqwest` error when the TLS backend cannot be initialised.
     pub fn with_timeout(timeout: Duration) -> Result<Self, reqwest::Error> {
         let client = reqwest::Client::builder().timeout(timeout).build()?;
-        Ok(Self { client })
+        Ok(Self::with_client_timeout(client, timeout))
     }
 }
 
@@ -93,10 +130,15 @@ impl Transport for ReqwestTransport {
         &self,
         request: http::Request<Vec<u8>>,
     ) -> Result<http::Response<Vec<u8>>, TransportError> {
-        let request =
+        let budget = request.extensions().get::<RequestTimeout>().map(|t| t.0);
+        let mut request =
             reqwest::Request::try_from(request).map_err(|source| TransportError::Send {
                 source: Box::new(source),
             })?;
+        if let Some(budget) = budget {
+            let timeout = self.timeout.map_or(budget, |own| own.min(budget));
+            *request.timeout_mut() = Some(timeout);
+        }
         let response = self.client.execute(request).await.map_err(|source| {
             if source.is_timeout() {
                 TransportError::Timeout {
@@ -195,6 +237,143 @@ impl Credentials {
     }
 }
 
+/// A source of the credentials the client sends, asked once per attempt.
+///
+/// A provider that obtains a token (an OAuth 2.0 grant, an RFC 7523
+/// assertion) and refreshes it before expiry implements this trait; the
+/// static [`Credentials`] forms implement it by answering themselves. The
+/// client resolves the credential at send time, so a retry after a refresh
+/// carries the new token. "No credential" is a client without a provider.
+#[async_trait::async_trait]
+pub trait CredentialsProvider: Send + Sync + fmt::Debug {
+    /// The credentials for the next attempt.
+    ///
+    /// # Errors
+    /// Returns a [`CredentialsError`] when no credential can be obtained; the
+    /// call then fails with [`ClientError::Credentials`] before anything is
+    /// sent.
+    async fn credentials(&self) -> Result<Credentials, CredentialsError>;
+
+    /// Reports that the service answered `401` to an attempt that carried the
+    /// last credential, so a caching provider can drop it.
+    ///
+    /// Called on the answering task; it must not block. The default does
+    /// nothing.
+    fn refused(&self) {}
+}
+
+#[async_trait::async_trait]
+impl CredentialsProvider for Credentials {
+    async fn credentials(&self) -> Result<Credentials, CredentialsError> {
+        Ok(self.clone())
+    }
+}
+
+#[async_trait::async_trait]
+impl<P: CredentialsProvider + ?Sized> CredentialsProvider for Arc<P> {
+    async fn credentials(&self) -> Result<Credentials, CredentialsError> {
+        P::credentials(self).await
+    }
+
+    fn refused(&self) {
+        P::refused(self);
+    }
+}
+
+/// A credentials provider that could not produce a credential.
+#[derive(Debug, thiserror::Error)]
+#[error("the credentials provider could not produce a credential")]
+pub struct CredentialsError {
+    /// What the provider reported.
+    #[source]
+    source: Box<dyn std::error::Error + Send + Sync>,
+}
+
+impl CredentialsError {
+    /// The failure `source` reported by a provider.
+    #[must_use]
+    pub fn new(source: impl Into<Box<dyn std::error::Error + Send + Sync>>) -> Self {
+        Self {
+            source: source.into(),
+        }
+    }
+}
+
+/// Per-call options: a deadline and extra request headers.
+///
+/// A generated group client applies its options to every call
+/// (`with_options`); a raw [`Request`] takes them through
+/// [`Request::apply_options`]. An option header replaces every field line of
+/// the same name the call would otherwise send (the request id or the
+/// conveyed client identity, set per call); the client's configured
+/// credentials still set `Authorization`. `Debug` prints the header values
+/// except those marked sensitive (`Authorization`, `Proxy-Authorization`).
+#[derive(Debug, Clone, Default)]
+pub struct CallOptions {
+    deadline: Option<Instant>,
+    headers: HeaderMap,
+}
+
+impl CallOptions {
+    /// These options with `deadline` as the instant the call must finish by,
+    /// retries included.
+    #[must_use]
+    pub fn with_deadline(mut self, deadline: Instant) -> Self {
+        self.deadline = Some(deadline);
+        self
+    }
+
+    /// These options with a deadline `timeout` from now, replacing any
+    /// deadline set before; a timeout the platform clock cannot represent sets
+    /// no deadline.
+    #[must_use]
+    pub fn with_timeout(mut self, timeout: Duration) -> Self {
+        self.deadline = Instant::now().checked_add(timeout);
+        self
+    }
+
+    /// These options with one more field line of header `name`; set the same
+    /// name twice to send two field lines.
+    ///
+    /// # Errors
+    /// Returns [`ClientError::HeaderName`] or [`ClientError::HeaderValue`]
+    /// when either is not legal on the wire.
+    pub fn with_header(mut self, name: &str, value: &str) -> Result<Self, ClientError> {
+        let (name, mut value) = header_field(name, value)?;
+        if name == AUTHORIZATION || name == PROXY_AUTHORIZATION {
+            value.set_sensitive(true);
+        }
+        self.headers.append(name, value);
+        Ok(self)
+    }
+
+    /// The instant the call must finish by, when one is set.
+    #[must_use]
+    pub fn deadline(&self) -> Option<Instant> {
+        self.deadline
+    }
+
+    /// The extra request headers.
+    #[must_use]
+    pub fn headers(&self) -> &HeaderMap {
+        &self.headers
+    }
+}
+
+/// A header name and value checked for the wire.
+fn header_field(name: &str, value: &str) -> Result<(HeaderName, HeaderValue), ClientError> {
+    let header_name =
+        HeaderName::from_bytes(name.as_bytes()).map_err(|source| ClientError::HeaderName {
+            header: name.to_owned(),
+            source,
+        })?;
+    let header_value = HeaderValue::from_str(value).map_err(|source| ClientError::HeaderValue {
+        header: name.to_owned(),
+        source,
+    })?;
+    Ok((header_name, header_value))
+}
+
 /// The retry budget over idempotent requests.
 ///
 /// Only a request RFC 9110 §9.2.2 makes idempotent (`GET`, `HEAD`,
@@ -229,12 +408,13 @@ impl Default for RetryPolicy {
 /// per-group operations are the generated clients in
 /// `rest::generated::<group>::client`; [`Client::execute`] is the raw seam
 /// underneath them, for a request the typed surface does not build (a
-/// Simplified Formats body, a vendor extension).
+/// Simplified Formats body, a vendor extension), and [`Client::forward`]
+/// passes a request through unclassified, for an intermediary.
 #[derive(Debug, Clone)]
 pub struct Client<T> {
     transport: T,
     base: url::Url,
-    credentials: Option<Credentials>,
+    credentials: Option<Arc<dyn CredentialsProvider>>,
     retry: RetryPolicy,
 }
 
@@ -258,7 +438,21 @@ impl<T: Transport> Client<T> {
     /// This client sending `credentials` on every request.
     #[must_use]
     pub fn with_credentials(mut self, credentials: Credentials) -> Self {
-        self.credentials = Some(credentials);
+        self.credentials = Some(Arc::new(credentials));
+        self
+    }
+
+    /// This client asking `provider` for the credentials of every attempt
+    /// and telling it when the service refused them (`401`).
+    ///
+    /// An `Arc<P>` is a provider too, so one provider can serve several
+    /// clients.
+    #[must_use]
+    pub fn with_credentials_provider(
+        mut self,
+        provider: impl CredentialsProvider + 'static,
+    ) -> Self {
+        self.credentials = Some(Arc::new(provider));
         self
     }
 
@@ -291,14 +485,20 @@ impl<T: Transport> Client<T> {
     /// an idempotent request within the budget.
     ///
     /// The `Accept` header defaults to `application/json` when the request set
-    /// none; the credentials, when configured, go on every attempt.
+    /// none; the credentials, when configured, are resolved and sent on every
+    /// attempt. A request deadline bounds the whole call: no attempt starts
+    /// after it, each attempt's engine timeout is the time left, and a retry
+    /// whose backoff would end after it is not made — the last failure is
+    /// returned instead.
     ///
     /// # Errors
     /// Returns [`ClientError::Unauthorized`], [`ClientError::Forbidden`] and
     /// [`ClientError::ServiceFailure`] for the general statuses the ITS-REST
-    /// overview documents for every operation, and
-    /// [`ClientError::Transport`] when no attempt completed. Every other
-    /// status is the caller's to match.
+    /// overview documents for every operation, [`ClientError::Transport`] when
+    /// no attempt completed, [`ClientError::DeadlineElapsed`] when the
+    /// deadline passed before an attempt, and [`ClientError::Credentials`]
+    /// when the provider produced no credential. Every other status is the
+    /// caller's to match.
     pub async fn execute(&self, request: Request) -> Result<Answer, ClientError> {
         use backon::Retryable as _;
         if !is_idempotent(&request.method) || self.retry.max_attempts <= 1 {
@@ -309,33 +509,46 @@ impl<T: Transport> Client<T> {
             .with_min_delay(self.retry.initial_backoff)
             .with_max_delay(self.retry.max_backoff)
             .with_max_times(retries);
+        let deadline = request.deadline;
         (|| self.attempt(&request))
             .retry(backoff)
             .when(ClientError::is_retryable)
+            .adjust(move |_, delay| {
+                delay.filter(|delay| {
+                    deadline.is_none_or(|deadline| {
+                        Instant::now()
+                            .checked_add(*delay)
+                            .is_some_and(|wake| wake < deadline)
+                    })
+                })
+            })
             .await
     }
 
-    /// One attempt: build the `http` request, send it, classify the general
-    /// statuses.
+    /// Sends `request` once under the base URL and returns whatever the
+    /// service answered, for an intermediary passing a request through.
+    ///
+    /// Nothing is classified and nothing is retried: a `401`, `403` or `5xx`
+    /// is an [`Answer`] like any other, and the status, every header (`ETag`,
+    /// `Location`) and the body bytes are as received. The request goes out as
+    /// built — path, query ([`Request::raw_query`]), headers and body
+    /// ([`Request::raw_body`]) unchanged — except that the client's credentials,
+    /// when configured, set `Authorization`, and `Accept` defaults to
+    /// `application/json` when absent. Stripping hop-by-hop fields (RFC 9110
+    /// §7.6.1) is the caller's.
+    ///
+    /// # Errors
+    /// Returns [`ClientError::Transport`] when the request did not complete,
+    /// [`ClientError::DeadlineElapsed`] when its deadline has passed,
+    /// [`ClientError::Credentials`] when the provider produced no credential,
+    /// and [`ClientError::Build`] when the parts do not form a request.
+    pub async fn forward(&self, request: Request) -> Result<Answer, ClientError> {
+        self.send_once(&request).await
+    }
+
+    /// One attempt: send it, classify the general statuses.
     async fn attempt(&self, request: &Request) -> Result<Answer, ClientError> {
-        let built = self.build(request)?;
-        let response =
-            self.transport
-                .send(built)
-                .await
-                .map_err(|source| ClientError::Transport {
-                    method: request.method.clone(),
-                    path: request.path.clone(),
-                    source,
-                })?;
-        let (parts, body) = response.into_parts();
-        let answer = Answer {
-            method: request.method.clone(),
-            path: request.path.clone(),
-            status: parts.status,
-            headers: parts.headers,
-            body,
-        };
+        let answer = self.send_once(request).await?;
         if answer.status == StatusCode::UNAUTHORIZED {
             return Err(ClientError::Unauthorized {
                 method: answer.method,
@@ -362,8 +575,55 @@ impl<T: Transport> Client<T> {
         Ok(answer)
     }
 
-    /// The `http` request for one attempt.
-    fn build(&self, request: &Request) -> Result<http::Request<Vec<u8>>, ClientError> {
+    /// One send of `request`: resolve the credential, build, hand the engine
+    /// the time left, and read the answer whole, unclassified.
+    async fn send_once(&self, request: &Request) -> Result<Answer, ClientError> {
+        request.remaining()?;
+        let credentials =
+            match self.credentials.as_ref() {
+                Some(provider) => Some(provider.credentials().await.map_err(|source| {
+                    ClientError::Credentials {
+                        method: request.method.clone(),
+                        path: request.path.clone(),
+                        source,
+                    }
+                })?),
+                None => None,
+            };
+        let mut built = self.build(request, credentials.as_ref())?;
+        if let Some(left) = request.remaining()? {
+            built.extensions_mut().insert(RequestTimeout(left));
+        }
+        let response =
+            self.transport
+                .send(built)
+                .await
+                .map_err(|source| ClientError::Transport {
+                    method: request.method.clone(),
+                    path: request.path.clone(),
+                    source,
+                })?;
+        let (parts, body) = response.into_parts();
+        if parts.status == StatusCode::UNAUTHORIZED
+            && let Some(provider) = self.credentials.as_ref()
+        {
+            provider.refused();
+        }
+        Ok(Answer {
+            method: request.method.clone(),
+            path: request.path.clone(),
+            status: parts.status,
+            headers: parts.headers,
+            body,
+        })
+    }
+
+    /// The `http` request for one attempt, carrying `credentials` when set.
+    fn build(
+        &self,
+        request: &Request,
+        credentials: Option<&Credentials>,
+    ) -> Result<http::Request<Vec<u8>>, ClientError> {
         let mut url = self.base.clone();
         let root = self.base.path().trim_end_matches('/').to_owned();
         url.set_path(&format!("{root}{}", request.path));
@@ -376,7 +636,7 @@ impl<T: Transport> Client<T> {
             if !headers.contains_key(ACCEPT) {
                 headers.insert(ACCEPT, HeaderValue::from_static(CANONICAL_JSON));
             }
-            if let Some(credentials) = self.credentials.as_ref() {
+            if let Some(credentials) = credentials {
                 headers.insert(AUTHORIZATION, credentials.header_value()?);
             }
         }
@@ -500,7 +760,8 @@ pub fn path_segment(value: &impl fmt::Display) -> String {
 }
 
 /// One request under the client's base URL, as the generated methods build
-/// it: a method, an operation path, a query string, headers and a body.
+/// it: a method, an operation path, a query string, headers, a body and an
+/// optional deadline.
 #[derive(Debug, Clone)]
 pub struct Request {
     method: Method,
@@ -508,6 +769,7 @@ pub struct Request {
     query: String,
     headers: HeaderMap,
     body: Option<Vec<u8>>,
+    deadline: Option<Instant>,
 }
 
 impl Request {
@@ -521,7 +783,50 @@ impl Request {
             query: String::new(),
             headers: HeaderMap::new(),
             body: None,
+            deadline: None,
         }
+    }
+
+    /// The instant the call must finish by, when one is set.
+    #[must_use]
+    pub fn deadline(&self) -> Option<Instant> {
+        self.deadline
+    }
+
+    /// Sets `deadline`, keeping the earlier one when a deadline is already
+    /// set: a budget only ever shrinks.
+    pub fn set_deadline(&mut self, deadline: Instant) {
+        self.deadline = Some(self.deadline.map_or(deadline, |set| set.min(deadline)));
+    }
+
+    /// Applies `options`: its deadline as [`Request::set_deadline`] does, and
+    /// its headers, each replacing every field line of the same name set so
+    /// far.
+    pub fn apply_options(&mut self, options: &CallOptions) {
+        if let Some(deadline) = options.deadline {
+            self.set_deadline(deadline);
+        }
+        for name in options.headers.keys() {
+            self.headers.remove(name);
+        }
+        for (name, value) in &options.headers {
+            self.headers.append(name.clone(), value.clone());
+        }
+    }
+
+    /// The time left before the deadline, or `None` without one.
+    fn remaining(&self) -> Result<Option<Duration>, ClientError> {
+        let Some(deadline) = self.deadline else {
+            return Ok(None);
+        };
+        let left = deadline.saturating_duration_since(Instant::now());
+        if left.is_zero() {
+            return Err(ClientError::DeadlineElapsed {
+                method: self.method.clone(),
+                path: self.path.clone(),
+            });
+        }
+        Ok(Some(left))
     }
 
     /// The HTTP method.
@@ -548,6 +853,27 @@ impl Request {
         &self.headers
     }
 
+    /// The request headers, for setting field values byte for byte — a
+    /// forwarded request's headers as received, opaque octets included.
+    pub fn headers_mut(&mut self) -> &mut HeaderMap {
+        &mut self.headers
+    }
+
+    /// Sets the query string to `query` verbatim, without its leading `?`
+    /// and without encoding, replacing every pair appended so far.
+    pub fn raw_query(&mut self, query: &str) {
+        query.clone_into(&mut self.query);
+    }
+
+    /// Sets `body` as the bytes to send, unchanged, with `content_type` as
+    /// its `Content-Type` when given (otherwise the headers decide).
+    pub fn raw_body(&mut self, body: Vec<u8>, content_type: Option<HeaderValue>) {
+        if let Some(content_type) = content_type {
+            self.headers.insert(CONTENT_TYPE, content_type);
+        }
+        self.body = Some(body);
+    }
+
     /// The body, when one is set.
     #[must_use]
     pub fn body(&self) -> Option<&[u8]> {
@@ -571,16 +897,7 @@ impl Request {
     /// Returns [`ClientError::HeaderName`] or [`ClientError::HeaderValue`]
     /// when either is not legal on the wire.
     pub fn header(&mut self, name: &str, value: &str) -> Result<(), ClientError> {
-        let header_name =
-            HeaderName::from_bytes(name.as_bytes()).map_err(|source| ClientError::HeaderName {
-                header: name.to_owned(),
-                source,
-            })?;
-        let header_value =
-            HeaderValue::from_str(value).map_err(|source| ClientError::HeaderValue {
-                header: name.to_owned(),
-                source,
-            })?;
+        let (header_name, header_value) = header_field(name, value)?;
         self.headers.append(header_name, header_value);
         Ok(())
     }
@@ -634,8 +951,9 @@ impl Request {
     }
 }
 
-/// What the service answered, read whole, for a status that is neither a
-/// general refusal nor a service failure.
+/// What the service answered, read whole: from [`Client::execute`] a status
+/// that is neither a general refusal nor a service failure, from
+/// [`Client::forward`] any status.
 #[derive(Debug, Clone)]
 pub struct Answer {
     method: Method,
@@ -683,6 +1001,12 @@ impl Answer {
     #[must_use]
     pub fn body(&self) -> &[u8] {
         &self.body
+    }
+
+    /// The body as received, taken out of the answer.
+    #[must_use]
+    pub fn into_body(self) -> Vec<u8> {
+        self.body
     }
 
     /// The body decoded from canonical JSON as `D`.
@@ -745,6 +1069,25 @@ pub enum ClientError {
     BaseUrl {
         /// The rejected base URL.
         base: url::Url,
+    },
+    /// The call's deadline passed before an attempt could start.
+    #[error("the deadline of {method} {path} passed before the request was sent")]
+    DeadlineElapsed {
+        /// The HTTP method.
+        method: Method,
+        /// The operation path.
+        path: String,
+    },
+    /// The credentials provider produced no credential for the request.
+    #[error("no credential could be obtained for {method} {path}")]
+    Credentials {
+        /// The HTTP method.
+        method: Method,
+        /// The operation path.
+        path: String,
+        /// What the provider reported.
+        #[source]
+        source: CredentialsError,
     },
     /// The request never completed on any attempt.
     #[error("the {method} {path} request could not be sent")]

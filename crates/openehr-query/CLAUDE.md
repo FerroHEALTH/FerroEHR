@@ -20,3 +20,12 @@ hand-written and corpus-validated.
   crate's own SemVer line (`.claude/rules/crates-publishing.md`).
 - Gates: `cargo clippy -p openehr-query --all-targets` +
   `cargo nextest run -p openehr-query`.
+- Modules beyond the front end: `visit` (`Visit`/`VisitMut`, exhaustive
+  walk functions that destructure every node — a new AST field or variant
+  must be added there or the crate stops compiling), `bind` (ITS-REST
+  `query_parameters` → typed literals; faults carry names, never values),
+  and `federation` behind the opt-in `federation` feature (a token-level
+  split of the `FROM ENDPOINT`/`ORGANISATION` directive; the strict parser
+  keeps refusing it). `ast::Span` rides on `IdentifiedPath` and on each
+  `WhereExpr::Identified` leaf and is excluded from equality, so the
+  printer round-trip invariant stays a statement about syntax.

@@ -7,7 +7,7 @@
 use openehr_its::rest::generated::query;
 
 /// The generated server trait is a real, nameable bound.
-fn _assert_is_trait<T: query::QueryApi>() {}
+fn _assert_is_trait<T: query::server::QueryApi>() {}
 
 #[test]
 fn query_contract_is_usable() {

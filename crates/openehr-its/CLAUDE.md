@@ -20,15 +20,15 @@ surface is API nobody can use.
 |---|---|---|
 | `src/xml/generated/` (`ToXml`/`FromXml`) | **GENERATED** (`emit-xml`, from the XSDs + BMM) | edit the emitter, regenerate |
 | `src/json_codec/generated/structural.rs` (the `_type` → decode dispatch + the declared-key table) | **GENERATED** (`emit-json`, from BMM) | edit the emitter, regenerate |
-| `src/rest/generated/` (ITS-REST DTOs, server traits, clients, routes) | **GENERATED** (`emit-rest`, from the vendored OAS) | edit the emitter, regenerate |
-| `xml/runtime.rs`, `rest/runtime.rs`, `rest/client.rs` (the client runtime: `Transport`, `ReqwestTransport`, `Client`, `Credentials` over `secrecy::SecretString`, `RetryPolicy`, `ErrorBody`, `ClientError`), `json` + `wire_validate` entry points, validation, fidelity gates | hand-written | edit normally, with spec citations |
+| `src/rest/generated/` (ITS-REST DTOs, params and response headers structs, the per-group `server` module — trait, success-answer enums, axum `router` — and `client` module, route tables) | **GENERATED** (`emit-rest`, from the vendored OAS) | edit the emitter, regenerate |
+| `xml/runtime.rs`, `rest/runtime.rs` (`ApiError`; `Refusal` = an `ApiError` plus answer headers, what the server traits return; the `ResponseHeaders` seam the generated headers structs implement; the ITS-REST `Error` rendering), `rest/routes.rs` (the body-free operation matcher over every `ROUTES` table), `rest/server.rs` (public: the whole-API `router` and `with_fallbacks` — `404`/`405` with the `Error` body and `Allow`; crate-private: the runtime the generated routers share), `rest/client.rs` (the client runtime: `Transport`, `ReqwestTransport`, `Client` with `execute`/`forward`, `Credentials` over `secrecy::SecretString` and the `CredentialsProvider` trait, `CallOptions`, `RequestTimeout`, `RetryPolicy`, `ErrorBody`, `ClientError`), `json` + `wire_validate` entry points, validation, fidelity gates | hand-written | edit normally, with spec citations |
 
 **Features (`default = ["full"]` = everything, so consumers are unaffected).**
 The graph underneath is layered: `json` → `xml` → `opt14` are the openEHR
 content surfaces and are all wasm-safe; `schema-validation` (`jsonschema` + the
 embedded RM schema) and the three REST features sit outside that chain:
-`rest` (DTOs, params, routes, `ApiError` over serde + `http`), `rest-server`
-(`rest` + the server traits + `axum`) and `rest-client` (`rest` + the
+`rest` (DTOs, params, routes, the `routes` matcher, `ApiError` over serde + `http` +
+`urlencoding`), `rest-server` (`rest` + the server traits and generated routers + `axum`) and `rest-client` (`rest` + the
 generated clients + the `rest/client.rs` runtime over `reqwest`, with
 `secrecy` for the credential secret). The generated contract carries, beyond
 the OAS parameters, the request headers the ITS-REST docs text defines

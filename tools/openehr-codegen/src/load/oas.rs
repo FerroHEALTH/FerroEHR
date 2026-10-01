@@ -40,8 +40,6 @@ pub(crate) struct Operation<'a> {
     /// (`application/json` for a canonical-JSON body, `application/xml` for an
     /// OPT 1.4 upload, …); empty when the operation takes no body.
     pub request_media: Vec<String>,
-    /// The primary success (2xx) response body schema (resolved), if any.
-    pub success_body: Option<Value>,
     /// Every documented response, in ascending status order — the client
     /// half's outcome variants. The `default` response key is not a status
     /// and is left out.
@@ -215,7 +213,6 @@ impl Oas {
                 let parameters = self.parse_params(op);
                 let request_body = self.parse_request_body(op);
                 let request_media = self.parse_request_media(op);
-                let success_body = self.parse_success(op);
                 let responses = self.parse_responses(op);
                 out.push(Operation {
                     method,
@@ -224,7 +221,6 @@ impl Oas {
                     parameters,
                     request_body,
                     request_media,
-                    success_body,
                     responses,
                 });
             }
@@ -311,20 +307,6 @@ impl Oas {
             .collect();
         out.sort_by_key(|r| r.status);
         out
-    }
-
-    fn parse_success(&self, op: &Value) -> Option<Value> {
-        let responses = op.get("responses")?.as_object()?;
-        // The first 2xx response, in numeric order.
-        let mut codes: Vec<&String> = responses.keys().filter(|c| c.starts_with('2')).collect();
-        codes.sort();
-        for code in codes {
-            let resp = self.resolve(&responses[code]);
-            if let Some(schema) = Self::first_json_schema(resp) {
-                return Some(schema);
-            }
-        }
-        None
     }
 
     /// The `application/json` (or first) content schema of a requestBody/response.

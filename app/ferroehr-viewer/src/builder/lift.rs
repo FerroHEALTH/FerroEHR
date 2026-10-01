@@ -238,7 +238,7 @@ fn lift_select(select: &SelectClause) -> Result<(QueryShape, Vec<SelectedColumn>
         ) {
             return Ok((QueryShape::Count, Vec::new()));
         }
-        if matches!(&only.column, ColumnExpr::Path(IdentifiedPath { root, predicate: None, path: None })
+        if matches!(&only.column, ColumnExpr::Path(IdentifiedPath { root, predicate: None, path: None, .. })
             if root == COMP_VAR)
         {
             return Ok((QueryShape::Compositions, Vec::new()));
@@ -305,11 +305,14 @@ fn lift_where(where_: Option<&WhereExpr>) -> Result<(String, Option<CriterionNod
 
 /// `c/archetype_details/template_id/value='id'` — the template restriction.
 fn template_restriction(expr: &WhereExpr) -> Option<String> {
-    let WhereExpr::Identified(IdentifiedExpr::Compare {
-        lhs: CompareOperand::Path(path),
-        op: CompOp::Eq,
-        rhs: Terminal::Primitive(Primitive::String(id)),
-    }) = expr
+    let WhereExpr::Identified(
+        IdentifiedExpr::Compare {
+            lhs: CompareOperand::Path(path),
+            op: CompOp::Eq,
+            rhs: Terminal::Primitive(Primitive::String(id)),
+        },
+        _,
+    ) = expr
     else {
         return None;
     };
@@ -354,7 +357,7 @@ fn lift_node(expr: &WhereExpr) -> Result<CriterionNode, LiftError> {
             flatten_and(expr, &mut conjuncts);
             lift_conjunction(&conjuncts)
         }
-        WhereExpr::Identified(_) => lift_conjunction(&[expr]),
+        WhereExpr::Identified(..) => lift_conjunction(&[expr]),
     }
 }
 
@@ -369,7 +372,7 @@ fn lift_conjunction(conjuncts: &[&WhereExpr]) -> Result<CriterionNode, LiftError
         let Some(head) = rest.first().copied() else {
             break;
         };
-        if matches!(head, WhereExpr::Identified(_)) {
+        if matches!(head, WhereExpr::Identified(..)) {
             let (criterion, consumed) = lift_criterion(rest)?;
             children.push(CriterionNode::Leaf(criterion));
             index = index.saturating_add(consumed);
@@ -687,7 +690,7 @@ fn ordinal_list(items: &[ValueListItem]) -> Option<Vec<i64>> {
 
 /// Reduce one `WHERE` leaf to an [`Atom`], or refuse it.
 fn classify(expr: &WhereExpr) -> Result<Atom, LiftError> {
-    let WhereExpr::Identified(condition) = expr else {
+    let WhereExpr::Identified(condition, _) = expr else {
         return Err(LiftError::UnsupportedCondition(fragment_text(expr)));
     };
     let refuse = || LiftError::UnsupportedCondition(fragment_text(expr));
@@ -854,11 +857,7 @@ fn fragment_text(expr: &WhereExpr) -> String {
             distinct: false,
             top: None,
             columns: vec![SelectExpr {
-                column: ColumnExpr::Path(IdentifiedPath {
-                    root: COMP_VAR.to_owned(),
-                    predicate: None,
-                    path: None,
-                }),
+                column: ColumnExpr::Path(IdentifiedPath::new(COMP_VAR.to_owned(), None, None)),
                 alias: None,
             }],
         },

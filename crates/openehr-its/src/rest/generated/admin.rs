@@ -3,7 +3,8 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 //! ITS-REST contract for the `admin` API group: DTOs, per-operation
-//! param structs, the `AdminApi` server trait, and the route table.
+//! param structs, per-response headers structs, the `server` and
+//! `client` halves, and the route table.
 
 #![allow(
     clippy::all,
@@ -31,26 +32,157 @@ pub struct AdminEhrDeleteAllParams {
     pub ehr_id: Option<String>,
 }
 
-/// Server contract for the `admin` API group (ITS-REST). Every method
-/// defaults to returning `ApiError::NotImplemented`, so an implementor
-/// (the application service, or a test stub) overrides only the
-/// operations it supports.
+/// The server half of the `admin` API group (ITS-REST): the `AdminApi`
+/// trait an implementation provides, one success-answer enum per operation,
+/// and `router`, which binds every operation of the route table to its
+/// trait method over axum.
 #[cfg(feature = "rest-server")]
-#[async_trait::async_trait]
-pub trait AdminApi {
-    /// `DELETE /admin/ehr/{ehr_id}`
-    async fn admin_ehr_delete(
-        &self,
-        params: AdminEhrDeleteParams,
-    ) -> Result<(), crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+pub mod server {
+    use super::*;
+
+    /// The answers `DELETE /admin/ehr/{ehr_id}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum AdminEhrDeleteResponse {
+        /// The `202` answer.
+        Accepted,
+        /// The `204` answer.
+        NoContent,
     }
-    /// `DELETE /admin/ehr/all{?ehr_id*}`
-    async fn admin_ehr_delete_all(
-        &self,
-        params: AdminEhrDeleteAllParams,
-    ) -> Result<(), crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `DELETE /admin/ehr/all{?ehr_id*}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum AdminEhrDeleteAllResponse {
+        /// The `202` answer.
+        Accepted,
+        /// The `204` answer.
+        NoContent,
+    }
+
+    /// Server contract for the `admin` API group (ITS-REST).
+    ///
+    /// Every method defaults to refusing with `ApiError::NotImplemented` (`501`),
+    /// so an implementor overrides only the operations it supports; `router`
+    /// serves an implementation over axum. A method refuses with a
+    /// [`crate::rest::runtime::Refusal`]: `?` turns an `ApiError` into one,
+    /// and `Refusal::with_headers` adds the headers the OAS declares for the
+    /// answer (the `ETag` of a `412`, for one).
+    #[async_trait::async_trait]
+    pub trait AdminApi {
+        /// `DELETE /admin/ehr/{ehr_id}`
+        async fn admin_ehr_delete(
+            &self,
+            params: AdminEhrDeleteParams,
+        ) -> Result<AdminEhrDeleteResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `DELETE /admin/ehr/all{?ehr_id*}`
+        async fn admin_ehr_delete_all(
+            &self,
+            params: AdminEhrDeleteAllParams,
+        ) -> Result<AdminEhrDeleteAllResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+    }
+
+    /// The axum router serving every operation of the `admin` group over `api`.
+    ///
+    /// Each route is bound at its OAS path relative to the API base (an RFC 6570
+    /// query expansion dropped, path captures named by segment position). A
+    /// handler decodes the request into the operation's params struct and body
+    /// — a missing or unparseable parameter answers `400` naming it, a
+    /// canonical-JSON body sent as another `Content-Type` answers `415` — and
+    /// encodes the trait method's answer, or its `Refusal` as the ITS-REST
+    /// `Error` body with the refusal's headers. Mount it under the base path
+    /// with `axum::Router::nest`.
+    ///
+    /// The router carries no fallback, so group routers merge freely (axum
+    /// refuses to merge two routers that both carry one); finish the merged
+    /// router with `crate::rest::server::with_fallbacks` for the `404` and `405`
+    /// answers, or take `crate::rest::server::router`, which does both.
+    ///
+    /// The typed bodies are canonical JSON only: a server that also serves
+    /// canonical XML or a Simplified Format routes those requests itself, and
+    /// the `accept` parameter reaches the trait method, which answers
+    /// `ApiError::NotAcceptable` for a representation it does not serve.
+    pub fn router<S>(api: std::sync::Arc<S>) -> axum::Router
+    where
+        S: AdminApi + Send + Sync + 'static,
+    {
+        axum::Router::new()
+            .route(
+                "/admin/ehr/{p3}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::DELETE,
+                    handle_admin_ehr_delete::<S>,
+                ),
+            )
+            .route(
+                "/admin/ehr/all",
+                axum::routing::on(
+                    axum::routing::MethodFilter::DELETE,
+                    handle_admin_ehr_delete_all::<S>,
+                ),
+            )
+            .with_state(api)
+    }
+
+    /// Serves `DELETE /admin/ehr/{ehr_id}` through [`AdminApi::admin_ehr_delete`].
+    async fn handle_admin_ehr_delete<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: AdminApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = AdminEhrDeleteParams {
+                ehr_id: path.value("p3", "ehr_id")?,
+            };
+            let reply: crate::rest::server::Reply = match api.admin_ehr_delete(params).await? {
+                AdminEhrDeleteResponse::Accepted => {
+                    crate::rest::server::Reply::new(http::StatusCode::ACCEPTED)
+                }
+                AdminEhrDeleteResponse::NoContent => {
+                    crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT)
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `DELETE /admin/ehr/all{?ehr_id*}` through [`AdminApi::admin_ehr_delete_all`].
+    async fn handle_admin_ehr_delete_all<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        axum::extract::RawQuery(query): axum::extract::RawQuery,
+    ) -> axum::response::Response
+    where
+        S: AdminApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
+            let params = AdminEhrDeleteAllParams {
+                ehr_id: query.optional("ehr_id")?,
+            };
+            let reply: crate::rest::server::Reply = match api.admin_ehr_delete_all(params).await? {
+                AdminEhrDeleteAllResponse::Accepted => {
+                    crate::rest::server::Reply::new(http::StatusCode::ACCEPTED)
+                }
+                AdminEhrDeleteAllResponse::NoContent => {
+                    crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT)
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
     }
 }
 
@@ -97,16 +229,28 @@ pub mod client {
     }
 
     /// The `admin` API group over one configured CDR.
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone)]
     pub struct AdminClient<'c, T> {
         client: &'c crate::rest::client::Client<T>,
+        options: crate::rest::client::CallOptions,
     }
 
     impl<'c, T: crate::rest::client::Transport> AdminClient<'c, T> {
         /// The `admin` API group over `client`.
         #[must_use]
         pub fn new(client: &'c crate::rest::client::Client<T>) -> Self {
-            Self { client }
+            Self {
+                client,
+                options: crate::rest::client::CallOptions::default(),
+            }
+        }
+
+        /// This group client applying `options` (a deadline, extra headers) to
+        /// every call it makes.
+        #[must_use]
+        pub fn with_options(mut self, options: crate::rest::client::CallOptions) -> Self {
+            self.options = options;
+            self
         }
 
         /// `DELETE /admin/ehr/{ehr_id}`
@@ -119,13 +263,14 @@ pub mod client {
             &self,
             params: &AdminEhrDeleteParams,
         ) -> Result<AdminEhrDeleteOutcome, crate::rest::client::ClientError> {
-            let request = crate::rest::client::Request::new(
+            let mut request = crate::rest::client::Request::new(
                 http::Method::DELETE,
                 format!(
                     "/admin/ehr/{}",
                     crate::rest::client::path_segment(&params.ehr_id)
                 ),
             );
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::ACCEPTED => Ok(AdminEhrDeleteOutcome::Accepted),
@@ -154,6 +299,7 @@ pub mod client {
             if let Some(value) = params.ehr_id.as_ref() {
                 request.query("ehr_id", value);
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::ACCEPTED => Ok(AdminEhrDeleteAllOutcome::Accepted),
@@ -171,8 +317,9 @@ pub mod client {
         }
     }
 }
-/// The operations of this group as `(method, path, operation_id)`, for
-/// wiring an axum router in `ferroehr-rest`.
+/// The operations of this group as `(method, path, operation_id)`, in OAS
+/// document order: `server::router` binds each to its trait method, and
+/// `crate::rest::routes::lookup` matches a request path against them.
 pub const ROUTES: &[(&str, &str, &str)] = &[
     ("DELETE", "/admin/ehr/{ehr_id}", "admin_ehr_delete"),
     ("DELETE", "/admin/ehr/all{?ehr_id*}", "admin_ehr_delete_all"),

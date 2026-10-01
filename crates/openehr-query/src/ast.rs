@@ -7,8 +7,61 @@
 //! Each grammar rule maps to a type here; [`crate::parser`] builds these from
 //! the [`crate::lexer`] token stream. This is the SYNTACTIC tree only —
 //! resolving paths and typing quoted temporal literals are semantic concerns.
+//!
+//! Every [`IdentifiedPath`] and every WHERE condition carries a [`Span`]: where
+//! it was written in the source, so a diagnostic can name a position instead of
+//! echoing the text there. Spans never take part in equality.
+
+use std::ops::Range;
 
 use crate::lexer::CompOp;
+
+/// Where a node was written: a half-open byte range into the AQL source.
+///
+/// A span is position metadata, not syntax, so equality ignores it: two nodes
+/// are equal when their syntax is, wherever each was written. That keeps the
+/// printer's round-trip invariant (`parse(to_aql(ast)) == ast`) a statement
+/// about syntax alone. A node built in code, or parsed from a bare token slice
+/// ([`crate::parser::parse`]), has no source position and carries the
+/// [`Span::default`] unknown span.
+///
+/// Offsets are held as `u32`, which keeps a span small enough to ride on every
+/// path; a position past 4 GiB of source is not representable and reads as
+/// unknown.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Span {
+    bytes: Option<(u32, u32)>,
+}
+
+impl Span {
+    /// A span over `bytes` of the source.
+    #[must_use]
+    pub fn new(bytes: Range<usize>) -> Self {
+        let start = u32::try_from(bytes.start).ok();
+        let end = u32::try_from(bytes.end).ok();
+        Self {
+            bytes: start.zip(end),
+        }
+    }
+
+    /// The half-open byte range of the source this node was written at, or
+    /// `None` when the node has no source position.
+    #[must_use]
+    pub fn bytes(&self) -> Option<Range<usize>> {
+        let (start, end) = self.bytes?;
+        let start = usize::try_from(start).ok()?;
+        let end = usize::try_from(end).ok()?;
+        Some(start..end)
+    }
+}
+
+impl PartialEq for Span {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl Eq for Span {}
 
 /// `selectQuery : selectClause fromClause whereClause? orderByClause? limitClause?`
 #[derive(Debug, Clone, PartialEq)]
@@ -126,14 +179,22 @@ pub enum ClassExprOperand {
 /// `whereExpr` — a boolean tree of [`IdentifiedExpr`] leaves.
 #[derive(Debug, Clone, PartialEq)]
 pub enum WhereExpr {
-    /// A leaf condition.
-    Identified(IdentifiedExpr),
+    /// A leaf condition, and where it was written.
+    Identified(IdentifiedExpr, Span),
     /// `NOT whereExpr`
     Not(Box<WhereExpr>),
     /// `whereExpr AND whereExpr`
     And(Box<WhereExpr>, Box<WhereExpr>),
     /// `whereExpr OR whereExpr`
     Or(Box<WhereExpr>, Box<WhereExpr>),
+}
+
+impl WhereExpr {
+    /// A leaf condition with no source position, for a tree built in code.
+    #[must_use]
+    pub fn identified(expr: IdentifiedExpr) -> Self {
+        Self::Identified(expr, Span::default())
+    }
 }
 
 /// `identifiedExpr` — a single WHERE condition.
@@ -229,6 +290,21 @@ pub struct IdentifiedPath {
     pub predicate: Option<PathPredicate>,
     /// Optional trailing `/a/b/c` object path.
     pub path: Option<ObjectPath>,
+    /// Where the path was written, root to last part.
+    pub span: Span,
+}
+
+impl IdentifiedPath {
+    /// A path with no source position, for a tree built in code.
+    #[must_use]
+    pub fn new(root: String, predicate: Option<PathPredicate>, path: Option<ObjectPath>) -> Self {
+        Self {
+            root,
+            predicate,
+            path,
+            span: Span::default(),
+        }
+    }
 }
 
 /// `objectPath : pathPart ('/' pathPart)*`

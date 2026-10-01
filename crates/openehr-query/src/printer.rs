@@ -21,9 +21,18 @@ use crate::ast::{
 /// Render a whole query as canonical AQL text.
 #[must_use]
 pub fn to_aql(query: &SelectQuery) -> String {
+    render(query, None)
+}
+
+/// Renders `query`, with `from_prefix` written between `FROM` and the
+/// containment expression when given.
+pub(crate) fn render(query: &SelectQuery, from_prefix: Option<&str>) -> String {
     let mut out = String::new();
     select_clause(&mut out, query);
     out.push_str(" FROM ");
+    if let Some(prefix) = from_prefix {
+        out.push_str(prefix);
+    }
     contains_expr(&mut out, &query.from, ContainsCtx::Top);
     if let Some(where_) = &query.where_ {
         out.push_str(" WHERE ");
@@ -348,7 +357,7 @@ enum WhereCtx {
 
 fn where_expr(out: &mut String, expr: &WhereExpr, ctx: WhereCtx) {
     match expr {
-        WhereExpr::Identified(leaf) => identified_expr(out, leaf),
+        WhereExpr::Identified(leaf, _) => identified_expr(out, leaf),
         WhereExpr::Not(inner) => {
             out.push_str("NOT ");
             where_expr(out, inner, WhereCtx::Not);

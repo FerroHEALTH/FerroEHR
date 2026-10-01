@@ -3,7 +3,8 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 //! ITS-REST contract for the `demographic` API group: DTOs, per-operation
-//! param structs, the `DemographicApi` server trait, and the route table.
+//! param structs, per-response headers structs, the `server` and
+//! `client` halves, and the route table.
 
 #![allow(
     clippy::all,
@@ -1049,334 +1050,4233 @@ pub struct RoleTagsDeleteParams {
     pub key: String,
 }
 
-/// Server contract for the `demographic` API group (ITS-REST). Every method
-/// defaults to returning `ApiError::NotImplemented`, so an implementor
-/// (the application service, or a test stub) overrides only the
-/// operations it supports.
+/// The response headers the OAS declares for the `201` answer of
+/// `POST /demographic/agent`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct AgentCreateCreatedHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for AgentCreateCreatedHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `204` answer of
+/// `POST /demographic/agent`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct AgentCreateNoContentHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for AgentCreateNoContentHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /demographic/agent/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct AgentGetOkHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for AgentGetOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `PUT /demographic/agent/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct AgentUpdateOkHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for AgentUpdateOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `204` answer of
+/// `PUT /demographic/agent/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct AgentUpdateNoContentHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for AgentUpdateNoContentHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `412` answer of
+/// `PUT /demographic/agent/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct AgentUpdatePreconditionFailedHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for AgentUpdatePreconditionFailedHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `204` answer of
+/// `DELETE /demographic/agent/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct AgentDeleteNoContentHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for AgentDeleteNoContentHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `409` answer of
+/// `DELETE /demographic/agent/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct AgentDeleteConflictHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for AgentDeleteConflictHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `201` answer of
+/// `POST /demographic/group`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct GroupCreateCreatedHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for GroupCreateCreatedHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `204` answer of
+/// `POST /demographic/group`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct GroupCreateNoContentHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for GroupCreateNoContentHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /demographic/group/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct GroupGetOkHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for GroupGetOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `PUT /demographic/group/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct GroupUpdateOkHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for GroupUpdateOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `204` answer of
+/// `PUT /demographic/group/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct GroupUpdateNoContentHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for GroupUpdateNoContentHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `412` answer of
+/// `PUT /demographic/group/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct GroupUpdatePreconditionFailedHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for GroupUpdatePreconditionFailedHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `204` answer of
+/// `DELETE /demographic/group/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct GroupDeleteNoContentHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for GroupDeleteNoContentHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `409` answer of
+/// `DELETE /demographic/group/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct GroupDeleteConflictHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for GroupDeleteConflictHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `201` answer of
+/// `POST /demographic/organisation`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct OrganisationCreateCreatedHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for OrganisationCreateCreatedHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `204` answer of
+/// `POST /demographic/organisation`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct OrganisationCreateNoContentHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for OrganisationCreateNoContentHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /demographic/organisation/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct OrganisationGetOkHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for OrganisationGetOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `PUT /demographic/organisation/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct OrganisationUpdateOkHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for OrganisationUpdateOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `204` answer of
+/// `PUT /demographic/organisation/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct OrganisationUpdateNoContentHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for OrganisationUpdateNoContentHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `412` answer of
+/// `PUT /demographic/organisation/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct OrganisationUpdatePreconditionFailedHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for OrganisationUpdatePreconditionFailedHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `204` answer of
+/// `DELETE /demographic/organisation/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct OrganisationDeleteNoContentHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for OrganisationDeleteNoContentHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `409` answer of
+/// `DELETE /demographic/organisation/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct OrganisationDeleteConflictHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for OrganisationDeleteConflictHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `201` answer of
+/// `POST /demographic/person`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct PersonCreateCreatedHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for PersonCreateCreatedHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `204` answer of
+/// `POST /demographic/person`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct PersonCreateNoContentHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for PersonCreateNoContentHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /demographic/person/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct PersonGetOkHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for PersonGetOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `PUT /demographic/person/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct PersonUpdateOkHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for PersonUpdateOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `204` answer of
+/// `PUT /demographic/person/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct PersonUpdateNoContentHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for PersonUpdateNoContentHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `412` answer of
+/// `PUT /demographic/person/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct PersonUpdatePreconditionFailedHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for PersonUpdatePreconditionFailedHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `204` answer of
+/// `DELETE /demographic/person/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct PersonDeleteNoContentHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for PersonDeleteNoContentHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `409` answer of
+/// `DELETE /demographic/person/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct PersonDeleteConflictHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for PersonDeleteConflictHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `201` answer of
+/// `POST /demographic/role`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct RoleCreateCreatedHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for RoleCreateCreatedHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `204` answer of
+/// `POST /demographic/role`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct RoleCreateNoContentHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for RoleCreateNoContentHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /demographic/role/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct RoleGetOkHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for RoleGetOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `PUT /demographic/role/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct RoleUpdateOkHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for RoleUpdateOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `204` answer of
+/// `PUT /demographic/role/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct RoleUpdateNoContentHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for RoleUpdateNoContentHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `412` answer of
+/// `PUT /demographic/role/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct RoleUpdatePreconditionFailedHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for RoleUpdatePreconditionFailedHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `204` answer of
+/// `DELETE /demographic/role/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct RoleDeleteNoContentHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for RoleDeleteNoContentHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `409` answer of
+/// `DELETE /demographic/role/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct RoleDeleteConflictHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for RoleDeleteConflictHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /demographic/versioned_party/{versioned_object_uid}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct VersionedPartyGetOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for VersionedPartyGetOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /demographic/versioned_party/{versioned_object_uid}/revision_history`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct VersionedPartyRevisionHistoryOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for VersionedPartyRevisionHistoryOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /demographic/versioned_party/{versioned_object_uid}/version`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct VersionedPartyVersionGetAtTimeOkHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for VersionedPartyVersionGetAtTimeOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /demographic/versioned_party/{versioned_object_uid}/version/{version_uid}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct VersionedPartyVersionGetByIdOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for VersionedPartyVersionGetByIdOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `201` answer of
+/// `POST /demographic/contribution`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct ContributionCreateCreatedHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for ContributionCreateCreatedHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `204` answer of
+/// `POST /demographic/contribution`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct ContributionCreateNoContentHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for ContributionCreateNoContentHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /demographic/contribution/{contribution_uid}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct ContributionGetOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for ContributionGetOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /demographic/tags`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct DemographicTagsGetOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for DemographicTagsGetOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /demographic/agent/{uid_based_id}/tags`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct AgentTagsGetOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for AgentTagsGetOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `PUT /demographic/agent/{uid_based_id}/tags`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct AgentTagsUpdateOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for AgentTagsUpdateOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /demographic/group/{uid_based_id}/tags`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct GroupTagsGetOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for GroupTagsGetOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `PUT /demographic/group/{uid_based_id}/tags`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct GroupTagsUpdateOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for GroupTagsUpdateOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /demographic/organisation/{uid_based_id}/tags`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct OrganisationTagsGetOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for OrganisationTagsGetOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `PUT /demographic/organisation/{uid_based_id}/tags`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct OrganisationTagsUpdateOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for OrganisationTagsUpdateOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /demographic/person/{uid_based_id}/tags`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct PersonTagsGetOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for PersonTagsGetOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `PUT /demographic/person/{uid_based_id}/tags`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct PersonTagsUpdateOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for PersonTagsUpdateOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /demographic/role/{uid_based_id}/tags`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct RoleTagsGetOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for RoleTagsGetOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `PUT /demographic/role/{uid_based_id}/tags`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct RoleTagsUpdateOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for RoleTagsUpdateOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The server half of the `demographic` API group (ITS-REST): the `DemographicApi`
+/// trait an implementation provides, one success-answer enum per operation,
+/// and `router`, which binds every operation of the route table to its
+/// trait method over axum.
 #[cfg(feature = "rest-server")]
-#[async_trait::async_trait]
-pub trait DemographicApi {
-    /// `POST /demographic/agent`
-    async fn agent_create(
-        &self,
-        params: AgentCreateParams,
-        body: openehr_rm::v1_2::demographic::agent::Agent,
-    ) -> Result<serde_json::Value, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+pub mod server {
+    use super::*;
+
+    /// The answers `POST /demographic/agent` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum AgentCreateResponse {
+        /// The `201` answer.
+        Created {
+            /// The body, sent as canonical JSON; `None` sends no body.
+            body: Option<serde_json::Value>,
+            /// The response headers the OAS declares for this answer.
+            headers: AgentCreateCreatedHeaders,
+        },
+        /// The `204` answer.
+        NoContent {
+            /// The response headers the OAS declares for this answer.
+            headers: AgentCreateNoContentHeaders,
+        },
     }
-    /// `GET /demographic/agent/{uid_based_id}`
-    async fn agent_get(
-        &self,
-        params: AgentGetParams,
-    ) -> Result<openehr_rm::v1_2::demographic::agent::Agent, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /demographic/agent/{uid_based_id}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum AgentGetResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: openehr_rm::v1_2::demographic::agent::Agent,
+            /// The response headers the OAS declares for this answer.
+            headers: AgentGetOkHeaders,
+        },
+        /// The `204` answer.
+        NoContent,
     }
-    /// `PUT /demographic/agent/{uid_based_id}`
-    async fn agent_update(
-        &self,
-        params: AgentUpdateParams,
-        body: openehr_rm::v1_2::demographic::agent::Agent,
-    ) -> Result<serde_json::Value, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `PUT /demographic/agent/{uid_based_id}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum AgentUpdateResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: serde_json::Value,
+            /// The response headers the OAS declares for this answer.
+            headers: AgentUpdateOkHeaders,
+        },
+        /// The `204` answer.
+        NoContent {
+            /// The response headers the OAS declares for this answer.
+            headers: AgentUpdateNoContentHeaders,
+        },
     }
-    /// `DELETE /demographic/agent/{uid_based_id}`
-    async fn agent_delete(
-        &self,
-        params: AgentDeleteParams,
-    ) -> Result<(), crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `DELETE /demographic/agent/{uid_based_id}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum AgentDeleteResponse {
+        /// The `204` answer.
+        NoContent {
+            /// The response headers the OAS declares for this answer.
+            headers: AgentDeleteNoContentHeaders,
+        },
     }
-    /// `POST /demographic/group`
-    async fn group_create(
-        &self,
-        params: GroupCreateParams,
-        body: openehr_rm::v1_2::demographic::group::Group,
-    ) -> Result<serde_json::Value, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `POST /demographic/group` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum GroupCreateResponse {
+        /// The `201` answer.
+        Created {
+            /// The body, sent as canonical JSON; `None` sends no body.
+            body: Option<serde_json::Value>,
+            /// The response headers the OAS declares for this answer.
+            headers: GroupCreateCreatedHeaders,
+        },
+        /// The `204` answer.
+        NoContent {
+            /// The response headers the OAS declares for this answer.
+            headers: GroupCreateNoContentHeaders,
+        },
     }
-    /// `GET /demographic/group/{uid_based_id}`
-    async fn group_get(
-        &self,
-        params: GroupGetParams,
-    ) -> Result<openehr_rm::v1_2::demographic::group::Group, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /demographic/group/{uid_based_id}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum GroupGetResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: openehr_rm::v1_2::demographic::group::Group,
+            /// The response headers the OAS declares for this answer.
+            headers: GroupGetOkHeaders,
+        },
+        /// The `204` answer.
+        NoContent,
     }
-    /// `PUT /demographic/group/{uid_based_id}`
-    async fn group_update(
-        &self,
-        params: GroupUpdateParams,
-        body: openehr_rm::v1_2::demographic::group::Group,
-    ) -> Result<serde_json::Value, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `PUT /demographic/group/{uid_based_id}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum GroupUpdateResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: serde_json::Value,
+            /// The response headers the OAS declares for this answer.
+            headers: GroupUpdateOkHeaders,
+        },
+        /// The `204` answer.
+        NoContent {
+            /// The response headers the OAS declares for this answer.
+            headers: GroupUpdateNoContentHeaders,
+        },
     }
-    /// `DELETE /demographic/group/{uid_based_id}`
-    async fn group_delete(
-        &self,
-        params: GroupDeleteParams,
-    ) -> Result<(), crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `DELETE /demographic/group/{uid_based_id}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum GroupDeleteResponse {
+        /// The `204` answer.
+        NoContent {
+            /// The response headers the OAS declares for this answer.
+            headers: GroupDeleteNoContentHeaders,
+        },
     }
-    /// `POST /demographic/organisation`
-    async fn organisation_create(
-        &self,
-        params: OrganisationCreateParams,
-        body: openehr_rm::v1_2::demographic::organisation::Organisation,
-    ) -> Result<serde_json::Value, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `POST /demographic/organisation` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum OrganisationCreateResponse {
+        /// The `201` answer.
+        Created {
+            /// The body, sent as canonical JSON; `None` sends no body.
+            body: Option<serde_json::Value>,
+            /// The response headers the OAS declares for this answer.
+            headers: OrganisationCreateCreatedHeaders,
+        },
+        /// The `204` answer.
+        NoContent {
+            /// The response headers the OAS declares for this answer.
+            headers: OrganisationCreateNoContentHeaders,
+        },
     }
-    /// `GET /demographic/organisation/{uid_based_id}`
-    async fn organisation_get(
-        &self,
-        params: OrganisationGetParams,
-    ) -> Result<
-        openehr_rm::v1_2::demographic::organisation::Organisation,
-        crate::rest::runtime::ApiError,
-    > {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /demographic/organisation/{uid_based_id}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum OrganisationGetResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: openehr_rm::v1_2::demographic::organisation::Organisation,
+            /// The response headers the OAS declares for this answer.
+            headers: OrganisationGetOkHeaders,
+        },
+        /// The `204` answer.
+        NoContent,
     }
-    /// `PUT /demographic/organisation/{uid_based_id}`
-    async fn organisation_update(
-        &self,
-        params: OrganisationUpdateParams,
-        body: openehr_rm::v1_2::demographic::organisation::Organisation,
-    ) -> Result<serde_json::Value, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `PUT /demographic/organisation/{uid_based_id}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum OrganisationUpdateResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: serde_json::Value,
+            /// The response headers the OAS declares for this answer.
+            headers: OrganisationUpdateOkHeaders,
+        },
+        /// The `204` answer.
+        NoContent {
+            /// The response headers the OAS declares for this answer.
+            headers: OrganisationUpdateNoContentHeaders,
+        },
     }
-    /// `DELETE /demographic/organisation/{uid_based_id}`
-    async fn organisation_delete(
-        &self,
-        params: OrganisationDeleteParams,
-    ) -> Result<(), crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `DELETE /demographic/organisation/{uid_based_id}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum OrganisationDeleteResponse {
+        /// The `204` answer.
+        NoContent {
+            /// The response headers the OAS declares for this answer.
+            headers: OrganisationDeleteNoContentHeaders,
+        },
     }
-    /// `POST /demographic/person`
-    async fn person_create(
-        &self,
-        params: PersonCreateParams,
-        body: openehr_rm::v1_2::demographic::person::Person,
-    ) -> Result<serde_json::Value, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `POST /demographic/person` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum PersonCreateResponse {
+        /// The `201` answer.
+        Created {
+            /// The body, sent as canonical JSON; `None` sends no body.
+            body: Option<serde_json::Value>,
+            /// The response headers the OAS declares for this answer.
+            headers: PersonCreateCreatedHeaders,
+        },
+        /// The `204` answer.
+        NoContent {
+            /// The response headers the OAS declares for this answer.
+            headers: PersonCreateNoContentHeaders,
+        },
     }
-    /// `GET /demographic/person/{uid_based_id}`
-    async fn person_get(
-        &self,
-        params: PersonGetParams,
-    ) -> Result<openehr_rm::v1_2::demographic::person::Person, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /demographic/person/{uid_based_id}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum PersonGetResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: openehr_rm::v1_2::demographic::person::Person,
+            /// The response headers the OAS declares for this answer.
+            headers: PersonGetOkHeaders,
+        },
+        /// The `204` answer.
+        NoContent,
     }
-    /// `PUT /demographic/person/{uid_based_id}`
-    async fn person_update(
-        &self,
-        params: PersonUpdateParams,
-        body: openehr_rm::v1_2::demographic::person::Person,
-    ) -> Result<serde_json::Value, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `PUT /demographic/person/{uid_based_id}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum PersonUpdateResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: serde_json::Value,
+            /// The response headers the OAS declares for this answer.
+            headers: PersonUpdateOkHeaders,
+        },
+        /// The `204` answer.
+        NoContent {
+            /// The response headers the OAS declares for this answer.
+            headers: PersonUpdateNoContentHeaders,
+        },
     }
-    /// `DELETE /demographic/person/{uid_based_id}`
-    async fn person_delete(
-        &self,
-        params: PersonDeleteParams,
-    ) -> Result<(), crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `DELETE /demographic/person/{uid_based_id}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum PersonDeleteResponse {
+        /// The `204` answer.
+        NoContent {
+            /// The response headers the OAS declares for this answer.
+            headers: PersonDeleteNoContentHeaders,
+        },
     }
-    /// `POST /demographic/role`
-    async fn role_create(
-        &self,
-        params: RoleCreateParams,
-        body: openehr_rm::v1_2::demographic::role::Role,
-    ) -> Result<serde_json::Value, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `POST /demographic/role` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum RoleCreateResponse {
+        /// The `201` answer.
+        Created {
+            /// The body, sent as canonical JSON; `None` sends no body.
+            body: Option<serde_json::Value>,
+            /// The response headers the OAS declares for this answer.
+            headers: RoleCreateCreatedHeaders,
+        },
+        /// The `204` answer.
+        NoContent {
+            /// The response headers the OAS declares for this answer.
+            headers: RoleCreateNoContentHeaders,
+        },
     }
-    /// `GET /demographic/role/{uid_based_id}`
-    async fn role_get(
-        &self,
-        params: RoleGetParams,
-    ) -> Result<openehr_rm::v1_2::demographic::role::Role, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /demographic/role/{uid_based_id}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum RoleGetResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: openehr_rm::v1_2::demographic::role::Role,
+            /// The response headers the OAS declares for this answer.
+            headers: RoleGetOkHeaders,
+        },
+        /// The `204` answer.
+        NoContent,
     }
-    /// `PUT /demographic/role/{uid_based_id}`
-    async fn role_update(
-        &self,
-        params: RoleUpdateParams,
-        body: openehr_rm::v1_2::demographic::role::Role,
-    ) -> Result<serde_json::Value, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `PUT /demographic/role/{uid_based_id}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum RoleUpdateResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: serde_json::Value,
+            /// The response headers the OAS declares for this answer.
+            headers: RoleUpdateOkHeaders,
+        },
+        /// The `204` answer.
+        NoContent {
+            /// The response headers the OAS declares for this answer.
+            headers: RoleUpdateNoContentHeaders,
+        },
     }
-    /// `DELETE /demographic/role/{uid_based_id}`
-    async fn role_delete(
-        &self,
-        params: RoleDeleteParams,
-    ) -> Result<(), crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `DELETE /demographic/role/{uid_based_id}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum RoleDeleteResponse {
+        /// The `204` answer.
+        NoContent {
+            /// The response headers the OAS declares for this answer.
+            headers: RoleDeleteNoContentHeaders,
+        },
     }
-    /// `GET /demographic/versioned_party/{versioned_object_uid}`
-    async fn versioned_party_get(
-        &self,
-        params: VersionedPartyGetParams,
-    ) -> Result<
-        openehr_rm::v1_2::demographic::versioned_party::VersionedParty,
-        crate::rest::runtime::ApiError,
-    > {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /demographic/versioned_party/{versioned_object_uid}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum VersionedPartyGetResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: openehr_rm::v1_2::demographic::versioned_party::VersionedParty,
+            /// The response headers the OAS declares for this answer.
+            headers: VersionedPartyGetOkHeaders,
+        },
     }
-    /// `GET /demographic/versioned_party/{versioned_object_uid}/revision_history`
-    async fn versioned_party_revision_history(
-        &self,
-        params: VersionedPartyRevisionHistoryParams,
-    ) -> Result<
-        openehr_rm::v1_2::common::generic::revision_history::RevisionHistory,
-        crate::rest::runtime::ApiError,
-    > {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /demographic/versioned_party/{versioned_object_uid}/revision_history` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum VersionedPartyRevisionHistoryResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: openehr_rm::v1_2::common::generic::revision_history::RevisionHistory,
+            /// The response headers the OAS declares for this answer.
+            headers: VersionedPartyRevisionHistoryOkHeaders,
+        },
     }
-    /// `GET /demographic/versioned_party/{versioned_object_uid}/version`
-    async fn versioned_party_version_get_at_time(
-        &self,
-        params: VersionedPartyVersionGetAtTimeParams,
-    ) -> Result<VersionOfParty, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /demographic/versioned_party/{versioned_object_uid}/version` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum VersionedPartyVersionGetAtTimeResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: VersionOfParty,
+            /// The response headers the OAS declares for this answer.
+            headers: VersionedPartyVersionGetAtTimeOkHeaders,
+        },
     }
-    /// `GET /demographic/versioned_party/{versioned_object_uid}/version/{version_uid}`
-    async fn versioned_party_version_get_by_id(
-        &self,
-        params: VersionedPartyVersionGetByIdParams,
-    ) -> Result<VersionOfParty, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /demographic/versioned_party/{versioned_object_uid}/version/{version_uid}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum VersionedPartyVersionGetByIdResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: VersionOfParty,
+            /// The response headers the OAS declares for this answer.
+            headers: VersionedPartyVersionGetByIdOkHeaders,
+        },
     }
-    /// `POST /demographic/contribution`
-    async fn contribution_create(
-        &self,
-        params: ContributionCreateParams,
-        body: NewContribution,
-    ) -> Result<serde_json::Value, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `POST /demographic/contribution` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum ContributionCreateResponse {
+        /// The `201` answer.
+        Created {
+            /// The body, sent as canonical JSON; `None` sends no body.
+            body: Option<serde_json::Value>,
+            /// The response headers the OAS declares for this answer.
+            headers: ContributionCreateCreatedHeaders,
+        },
+        /// The `204` answer.
+        NoContent {
+            /// The response headers the OAS declares for this answer.
+            headers: ContributionCreateNoContentHeaders,
+        },
     }
-    /// `GET /demographic/contribution/{contribution_uid}`
-    async fn contribution_get(
-        &self,
-        params: ContributionGetParams,
-    ) -> Result<
-        openehr_rm::v1_2::common::change_control::contribution::Contribution,
-        crate::rest::runtime::ApiError,
-    > {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /demographic/contribution/{contribution_uid}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum ContributionGetResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: openehr_rm::v1_2::common::change_control::contribution::Contribution,
+            /// The response headers the OAS declares for this answer.
+            headers: ContributionGetOkHeaders,
+        },
     }
-    /// `GET /demographic/tags`
-    async fn demographic_tags_get(
-        &self,
-        params: DemographicTagsGetParams,
-    ) -> Result<Vec<ItemTagOfPerson>, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /demographic/tags` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum DemographicTagsGetResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: Vec<ItemTagOfPerson>,
+            /// The response headers the OAS declares for this answer.
+            headers: DemographicTagsGetOkHeaders,
+        },
     }
-    /// `GET /demographic/agent/{uid_based_id}/tags`
-    async fn agent_tags_get(
-        &self,
-        params: AgentTagsGetParams,
-    ) -> Result<Vec<ItemTagOfAgent>, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /demographic/agent/{uid_based_id}/tags` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum AgentTagsGetResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: Vec<ItemTagOfAgent>,
+            /// The response headers the OAS declares for this answer.
+            headers: AgentTagsGetOkHeaders,
+        },
     }
-    /// `PUT /demographic/agent/{uid_based_id}/tags`
-    async fn agent_tags_update(
-        &self,
-        params: AgentTagsUpdateParams,
-        body: Vec<super::common::UpdateItemTag>,
-    ) -> Result<Vec<ItemTagOfAgent>, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `PUT /demographic/agent/{uid_based_id}/tags` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum AgentTagsUpdateResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: Vec<ItemTagOfAgent>,
+            /// The response headers the OAS declares for this answer.
+            headers: AgentTagsUpdateOkHeaders,
+        },
+        /// The `204` answer.
+        NoContent,
     }
-    /// `DELETE /demographic/agent/{uid_based_id}/tags/{key}`
-    async fn agent_tags_delete(
-        &self,
-        params: AgentTagsDeleteParams,
-    ) -> Result<(), crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `DELETE /demographic/agent/{uid_based_id}/tags/{key}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum AgentTagsDeleteResponse {
+        /// The `204` answer.
+        NoContent,
     }
-    /// `GET /demographic/group/{uid_based_id}/tags`
-    async fn group_tags_get(
-        &self,
-        params: GroupTagsGetParams,
-    ) -> Result<Vec<ItemTagOfGroup>, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /demographic/group/{uid_based_id}/tags` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum GroupTagsGetResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: Vec<ItemTagOfGroup>,
+            /// The response headers the OAS declares for this answer.
+            headers: GroupTagsGetOkHeaders,
+        },
     }
-    /// `PUT /demographic/group/{uid_based_id}/tags`
-    async fn group_tags_update(
-        &self,
-        params: GroupTagsUpdateParams,
-        body: Vec<super::common::UpdateItemTag>,
-    ) -> Result<Vec<ItemTagOfGroup>, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `PUT /demographic/group/{uid_based_id}/tags` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum GroupTagsUpdateResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: Vec<ItemTagOfGroup>,
+            /// The response headers the OAS declares for this answer.
+            headers: GroupTagsUpdateOkHeaders,
+        },
+        /// The `204` answer.
+        NoContent,
     }
-    /// `DELETE /demographic/group/{uid_based_id}/tags/{key}`
-    async fn group_tags_delete(
-        &self,
-        params: GroupTagsDeleteParams,
-    ) -> Result<(), crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `DELETE /demographic/group/{uid_based_id}/tags/{key}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum GroupTagsDeleteResponse {
+        /// The `204` answer.
+        NoContent,
     }
-    /// `GET /demographic/organisation/{uid_based_id}/tags`
-    async fn organisation_tags_get(
-        &self,
-        params: OrganisationTagsGetParams,
-    ) -> Result<Vec<ItemTagOfOrganisation>, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /demographic/organisation/{uid_based_id}/tags` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum OrganisationTagsGetResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: Vec<ItemTagOfOrganisation>,
+            /// The response headers the OAS declares for this answer.
+            headers: OrganisationTagsGetOkHeaders,
+        },
     }
-    /// `PUT /demographic/organisation/{uid_based_id}/tags`
-    async fn organisation_tags_update(
-        &self,
-        params: OrganisationTagsUpdateParams,
-        body: Vec<super::common::UpdateItemTag>,
-    ) -> Result<Vec<ItemTagOfOrganisation>, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `PUT /demographic/organisation/{uid_based_id}/tags` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum OrganisationTagsUpdateResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: Vec<ItemTagOfOrganisation>,
+            /// The response headers the OAS declares for this answer.
+            headers: OrganisationTagsUpdateOkHeaders,
+        },
+        /// The `204` answer.
+        NoContent,
     }
-    /// `DELETE /demographic/organisation/{uid_based_id}/tags/{key}`
-    async fn organisation_tags_delete(
-        &self,
-        params: OrganisationTagsDeleteParams,
-    ) -> Result<(), crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `DELETE /demographic/organisation/{uid_based_id}/tags/{key}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum OrganisationTagsDeleteResponse {
+        /// The `204` answer.
+        NoContent,
     }
-    /// `GET /demographic/person/{uid_based_id}/tags`
-    async fn person_tags_get(
-        &self,
-        params: PersonTagsGetParams,
-    ) -> Result<Vec<ItemTagOfPerson>, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /demographic/person/{uid_based_id}/tags` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum PersonTagsGetResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: Vec<ItemTagOfPerson>,
+            /// The response headers the OAS declares for this answer.
+            headers: PersonTagsGetOkHeaders,
+        },
     }
-    /// `PUT /demographic/person/{uid_based_id}/tags`
-    async fn person_tags_update(
-        &self,
-        params: PersonTagsUpdateParams,
-        body: Vec<super::common::UpdateItemTag>,
-    ) -> Result<Vec<ItemTagOfPerson>, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `PUT /demographic/person/{uid_based_id}/tags` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum PersonTagsUpdateResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: Vec<ItemTagOfPerson>,
+            /// The response headers the OAS declares for this answer.
+            headers: PersonTagsUpdateOkHeaders,
+        },
+        /// The `204` answer.
+        NoContent,
     }
-    /// `DELETE /demographic/person/{uid_based_id}/tags/{key}`
-    async fn person_tags_delete(
-        &self,
-        params: PersonTagsDeleteParams,
-    ) -> Result<(), crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `DELETE /demographic/person/{uid_based_id}/tags/{key}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum PersonTagsDeleteResponse {
+        /// The `204` answer.
+        NoContent,
     }
-    /// `GET /demographic/role/{uid_based_id}/tags`
-    async fn role_tags_get(
-        &self,
-        params: RoleTagsGetParams,
-    ) -> Result<Vec<ItemTagOfRole>, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /demographic/role/{uid_based_id}/tags` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum RoleTagsGetResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: Vec<ItemTagOfRole>,
+            /// The response headers the OAS declares for this answer.
+            headers: RoleTagsGetOkHeaders,
+        },
     }
-    /// `PUT /demographic/role/{uid_based_id}/tags`
-    async fn role_tags_update(
-        &self,
-        params: RoleTagsUpdateParams,
-        body: Vec<super::common::UpdateItemTag>,
-    ) -> Result<Vec<ItemTagOfRole>, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `PUT /demographic/role/{uid_based_id}/tags` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum RoleTagsUpdateResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: Vec<ItemTagOfRole>,
+            /// The response headers the OAS declares for this answer.
+            headers: RoleTagsUpdateOkHeaders,
+        },
+        /// The `204` answer.
+        NoContent,
     }
-    /// `DELETE /demographic/role/{uid_based_id}/tags/{key}`
-    async fn role_tags_delete(
-        &self,
-        params: RoleTagsDeleteParams,
-    ) -> Result<(), crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `DELETE /demographic/role/{uid_based_id}/tags/{key}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum RoleTagsDeleteResponse {
+        /// The `204` answer.
+        NoContent,
+    }
+
+    /// Server contract for the `demographic` API group (ITS-REST).
+    ///
+    /// Every method defaults to refusing with `ApiError::NotImplemented` (`501`),
+    /// so an implementor overrides only the operations it supports; `router`
+    /// serves an implementation over axum. A method refuses with a
+    /// [`crate::rest::runtime::Refusal`]: `?` turns an `ApiError` into one,
+    /// and `Refusal::with_headers` adds the headers the OAS declares for the
+    /// answer (the `ETag` of a `412`, for one).
+    #[async_trait::async_trait]
+    pub trait DemographicApi {
+        /// `POST /demographic/agent`
+        async fn agent_create(
+            &self,
+            params: AgentCreateParams,
+            body: openehr_rm::v1_2::demographic::agent::Agent,
+        ) -> Result<AgentCreateResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /demographic/agent/{uid_based_id}`
+        async fn agent_get(
+            &self,
+            params: AgentGetParams,
+        ) -> Result<AgentGetResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `PUT /demographic/agent/{uid_based_id}`
+        async fn agent_update(
+            &self,
+            params: AgentUpdateParams,
+            body: openehr_rm::v1_2::demographic::agent::Agent,
+        ) -> Result<AgentUpdateResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `DELETE /demographic/agent/{uid_based_id}`
+        async fn agent_delete(
+            &self,
+            params: AgentDeleteParams,
+        ) -> Result<AgentDeleteResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `POST /demographic/group`
+        async fn group_create(
+            &self,
+            params: GroupCreateParams,
+            body: openehr_rm::v1_2::demographic::group::Group,
+        ) -> Result<GroupCreateResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /demographic/group/{uid_based_id}`
+        async fn group_get(
+            &self,
+            params: GroupGetParams,
+        ) -> Result<GroupGetResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `PUT /demographic/group/{uid_based_id}`
+        async fn group_update(
+            &self,
+            params: GroupUpdateParams,
+            body: openehr_rm::v1_2::demographic::group::Group,
+        ) -> Result<GroupUpdateResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `DELETE /demographic/group/{uid_based_id}`
+        async fn group_delete(
+            &self,
+            params: GroupDeleteParams,
+        ) -> Result<GroupDeleteResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `POST /demographic/organisation`
+        async fn organisation_create(
+            &self,
+            params: OrganisationCreateParams,
+            body: openehr_rm::v1_2::demographic::organisation::Organisation,
+        ) -> Result<OrganisationCreateResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /demographic/organisation/{uid_based_id}`
+        async fn organisation_get(
+            &self,
+            params: OrganisationGetParams,
+        ) -> Result<OrganisationGetResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `PUT /demographic/organisation/{uid_based_id}`
+        async fn organisation_update(
+            &self,
+            params: OrganisationUpdateParams,
+            body: openehr_rm::v1_2::demographic::organisation::Organisation,
+        ) -> Result<OrganisationUpdateResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `DELETE /demographic/organisation/{uid_based_id}`
+        async fn organisation_delete(
+            &self,
+            params: OrganisationDeleteParams,
+        ) -> Result<OrganisationDeleteResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `POST /demographic/person`
+        async fn person_create(
+            &self,
+            params: PersonCreateParams,
+            body: openehr_rm::v1_2::demographic::person::Person,
+        ) -> Result<PersonCreateResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /demographic/person/{uid_based_id}`
+        async fn person_get(
+            &self,
+            params: PersonGetParams,
+        ) -> Result<PersonGetResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `PUT /demographic/person/{uid_based_id}`
+        async fn person_update(
+            &self,
+            params: PersonUpdateParams,
+            body: openehr_rm::v1_2::demographic::person::Person,
+        ) -> Result<PersonUpdateResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `DELETE /demographic/person/{uid_based_id}`
+        async fn person_delete(
+            &self,
+            params: PersonDeleteParams,
+        ) -> Result<PersonDeleteResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `POST /demographic/role`
+        async fn role_create(
+            &self,
+            params: RoleCreateParams,
+            body: openehr_rm::v1_2::demographic::role::Role,
+        ) -> Result<RoleCreateResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /demographic/role/{uid_based_id}`
+        async fn role_get(
+            &self,
+            params: RoleGetParams,
+        ) -> Result<RoleGetResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `PUT /demographic/role/{uid_based_id}`
+        async fn role_update(
+            &self,
+            params: RoleUpdateParams,
+            body: openehr_rm::v1_2::demographic::role::Role,
+        ) -> Result<RoleUpdateResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `DELETE /demographic/role/{uid_based_id}`
+        async fn role_delete(
+            &self,
+            params: RoleDeleteParams,
+        ) -> Result<RoleDeleteResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /demographic/versioned_party/{versioned_object_uid}`
+        async fn versioned_party_get(
+            &self,
+            params: VersionedPartyGetParams,
+        ) -> Result<VersionedPartyGetResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /demographic/versioned_party/{versioned_object_uid}/revision_history`
+        async fn versioned_party_revision_history(
+            &self,
+            params: VersionedPartyRevisionHistoryParams,
+        ) -> Result<VersionedPartyRevisionHistoryResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /demographic/versioned_party/{versioned_object_uid}/version`
+        async fn versioned_party_version_get_at_time(
+            &self,
+            params: VersionedPartyVersionGetAtTimeParams,
+        ) -> Result<VersionedPartyVersionGetAtTimeResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /demographic/versioned_party/{versioned_object_uid}/version/{version_uid}`
+        async fn versioned_party_version_get_by_id(
+            &self,
+            params: VersionedPartyVersionGetByIdParams,
+        ) -> Result<VersionedPartyVersionGetByIdResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `POST /demographic/contribution`
+        async fn contribution_create(
+            &self,
+            params: ContributionCreateParams,
+            body: NewContribution,
+        ) -> Result<ContributionCreateResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /demographic/contribution/{contribution_uid}`
+        async fn contribution_get(
+            &self,
+            params: ContributionGetParams,
+        ) -> Result<ContributionGetResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /demographic/tags`
+        async fn demographic_tags_get(
+            &self,
+            params: DemographicTagsGetParams,
+        ) -> Result<DemographicTagsGetResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /demographic/agent/{uid_based_id}/tags`
+        async fn agent_tags_get(
+            &self,
+            params: AgentTagsGetParams,
+        ) -> Result<AgentTagsGetResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `PUT /demographic/agent/{uid_based_id}/tags`
+        async fn agent_tags_update(
+            &self,
+            params: AgentTagsUpdateParams,
+            body: Vec<super::super::common::UpdateItemTag>,
+        ) -> Result<AgentTagsUpdateResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `DELETE /demographic/agent/{uid_based_id}/tags/{key}`
+        async fn agent_tags_delete(
+            &self,
+            params: AgentTagsDeleteParams,
+        ) -> Result<AgentTagsDeleteResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /demographic/group/{uid_based_id}/tags`
+        async fn group_tags_get(
+            &self,
+            params: GroupTagsGetParams,
+        ) -> Result<GroupTagsGetResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `PUT /demographic/group/{uid_based_id}/tags`
+        async fn group_tags_update(
+            &self,
+            params: GroupTagsUpdateParams,
+            body: Vec<super::super::common::UpdateItemTag>,
+        ) -> Result<GroupTagsUpdateResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `DELETE /demographic/group/{uid_based_id}/tags/{key}`
+        async fn group_tags_delete(
+            &self,
+            params: GroupTagsDeleteParams,
+        ) -> Result<GroupTagsDeleteResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /demographic/organisation/{uid_based_id}/tags`
+        async fn organisation_tags_get(
+            &self,
+            params: OrganisationTagsGetParams,
+        ) -> Result<OrganisationTagsGetResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `PUT /demographic/organisation/{uid_based_id}/tags`
+        async fn organisation_tags_update(
+            &self,
+            params: OrganisationTagsUpdateParams,
+            body: Vec<super::super::common::UpdateItemTag>,
+        ) -> Result<OrganisationTagsUpdateResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `DELETE /demographic/organisation/{uid_based_id}/tags/{key}`
+        async fn organisation_tags_delete(
+            &self,
+            params: OrganisationTagsDeleteParams,
+        ) -> Result<OrganisationTagsDeleteResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /demographic/person/{uid_based_id}/tags`
+        async fn person_tags_get(
+            &self,
+            params: PersonTagsGetParams,
+        ) -> Result<PersonTagsGetResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `PUT /demographic/person/{uid_based_id}/tags`
+        async fn person_tags_update(
+            &self,
+            params: PersonTagsUpdateParams,
+            body: Vec<super::super::common::UpdateItemTag>,
+        ) -> Result<PersonTagsUpdateResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `DELETE /demographic/person/{uid_based_id}/tags/{key}`
+        async fn person_tags_delete(
+            &self,
+            params: PersonTagsDeleteParams,
+        ) -> Result<PersonTagsDeleteResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /demographic/role/{uid_based_id}/tags`
+        async fn role_tags_get(
+            &self,
+            params: RoleTagsGetParams,
+        ) -> Result<RoleTagsGetResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `PUT /demographic/role/{uid_based_id}/tags`
+        async fn role_tags_update(
+            &self,
+            params: RoleTagsUpdateParams,
+            body: Vec<super::super::common::UpdateItemTag>,
+        ) -> Result<RoleTagsUpdateResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `DELETE /demographic/role/{uid_based_id}/tags/{key}`
+        async fn role_tags_delete(
+            &self,
+            params: RoleTagsDeleteParams,
+        ) -> Result<RoleTagsDeleteResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+    }
+
+    /// The axum router serving every operation of the `demographic` group over `api`.
+    ///
+    /// Each route is bound at its OAS path relative to the API base (an RFC 6570
+    /// query expansion dropped, path captures named by segment position). A
+    /// handler decodes the request into the operation's params struct and body
+    /// — a missing or unparseable parameter answers `400` naming it, a
+    /// canonical-JSON body sent as another `Content-Type` answers `415` — and
+    /// encodes the trait method's answer, or its `Refusal` as the ITS-REST
+    /// `Error` body with the refusal's headers. Mount it under the base path
+    /// with `axum::Router::nest`.
+    ///
+    /// The router carries no fallback, so group routers merge freely (axum
+    /// refuses to merge two routers that both carry one); finish the merged
+    /// router with `crate::rest::server::with_fallbacks` for the `404` and `405`
+    /// answers, or take `crate::rest::server::router`, which does both.
+    ///
+    /// The typed bodies are canonical JSON only: a server that also serves
+    /// canonical XML or a Simplified Format routes those requests itself, and
+    /// the `accept` parameter reaches the trait method, which answers
+    /// `ApiError::NotAcceptable` for a representation it does not serve.
+    pub fn router<S>(api: std::sync::Arc<S>) -> axum::Router
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        axum::Router::new()
+            .route(
+                "/demographic/agent",
+                axum::routing::on(axum::routing::MethodFilter::POST, handle_agent_create::<S>),
+            )
+            .route(
+                "/demographic/agent/{p3}",
+                axum::routing::on(axum::routing::MethodFilter::GET, handle_agent_get::<S>),
+            )
+            .route(
+                "/demographic/agent/{p3}",
+                axum::routing::on(axum::routing::MethodFilter::PUT, handle_agent_update::<S>),
+            )
+            .route(
+                "/demographic/agent/{p3}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::DELETE,
+                    handle_agent_delete::<S>,
+                ),
+            )
+            .route(
+                "/demographic/group",
+                axum::routing::on(axum::routing::MethodFilter::POST, handle_group_create::<S>),
+            )
+            .route(
+                "/demographic/group/{p3}",
+                axum::routing::on(axum::routing::MethodFilter::GET, handle_group_get::<S>),
+            )
+            .route(
+                "/demographic/group/{p3}",
+                axum::routing::on(axum::routing::MethodFilter::PUT, handle_group_update::<S>),
+            )
+            .route(
+                "/demographic/group/{p3}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::DELETE,
+                    handle_group_delete::<S>,
+                ),
+            )
+            .route(
+                "/demographic/organisation",
+                axum::routing::on(
+                    axum::routing::MethodFilter::POST,
+                    handle_organisation_create::<S>,
+                ),
+            )
+            .route(
+                "/demographic/organisation/{p3}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_organisation_get::<S>,
+                ),
+            )
+            .route(
+                "/demographic/organisation/{p3}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::PUT,
+                    handle_organisation_update::<S>,
+                ),
+            )
+            .route(
+                "/demographic/organisation/{p3}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::DELETE,
+                    handle_organisation_delete::<S>,
+                ),
+            )
+            .route(
+                "/demographic/person",
+                axum::routing::on(axum::routing::MethodFilter::POST, handle_person_create::<S>),
+            )
+            .route(
+                "/demographic/person/{p3}",
+                axum::routing::on(axum::routing::MethodFilter::GET, handle_person_get::<S>),
+            )
+            .route(
+                "/demographic/person/{p3}",
+                axum::routing::on(axum::routing::MethodFilter::PUT, handle_person_update::<S>),
+            )
+            .route(
+                "/demographic/person/{p3}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::DELETE,
+                    handle_person_delete::<S>,
+                ),
+            )
+            .route(
+                "/demographic/role",
+                axum::routing::on(axum::routing::MethodFilter::POST, handle_role_create::<S>),
+            )
+            .route(
+                "/demographic/role/{p3}",
+                axum::routing::on(axum::routing::MethodFilter::GET, handle_role_get::<S>),
+            )
+            .route(
+                "/demographic/role/{p3}",
+                axum::routing::on(axum::routing::MethodFilter::PUT, handle_role_update::<S>),
+            )
+            .route(
+                "/demographic/role/{p3}",
+                axum::routing::on(axum::routing::MethodFilter::DELETE, handle_role_delete::<S>),
+            )
+            .route(
+                "/demographic/versioned_party/{p3}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_versioned_party_get::<S>,
+                ),
+            )
+            .route(
+                "/demographic/versioned_party/{p3}/revision_history",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_versioned_party_revision_history::<S>,
+                ),
+            )
+            .route(
+                "/demographic/versioned_party/{p3}/version",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_versioned_party_version_get_at_time::<S>,
+                ),
+            )
+            .route(
+                "/demographic/versioned_party/{p3}/version/{p5}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_versioned_party_version_get_by_id::<S>,
+                ),
+            )
+            .route(
+                "/demographic/contribution",
+                axum::routing::on(
+                    axum::routing::MethodFilter::POST,
+                    handle_contribution_create::<S>,
+                ),
+            )
+            .route(
+                "/demographic/contribution/{p3}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_contribution_get::<S>,
+                ),
+            )
+            .route(
+                "/demographic/tags",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_demographic_tags_get::<S>,
+                ),
+            )
+            .route(
+                "/demographic/agent/{p3}/tags",
+                axum::routing::on(axum::routing::MethodFilter::GET, handle_agent_tags_get::<S>),
+            )
+            .route(
+                "/demographic/agent/{p3}/tags",
+                axum::routing::on(
+                    axum::routing::MethodFilter::PUT,
+                    handle_agent_tags_update::<S>,
+                ),
+            )
+            .route(
+                "/demographic/agent/{p3}/tags/{p5}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::DELETE,
+                    handle_agent_tags_delete::<S>,
+                ),
+            )
+            .route(
+                "/demographic/group/{p3}/tags",
+                axum::routing::on(axum::routing::MethodFilter::GET, handle_group_tags_get::<S>),
+            )
+            .route(
+                "/demographic/group/{p3}/tags",
+                axum::routing::on(
+                    axum::routing::MethodFilter::PUT,
+                    handle_group_tags_update::<S>,
+                ),
+            )
+            .route(
+                "/demographic/group/{p3}/tags/{p5}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::DELETE,
+                    handle_group_tags_delete::<S>,
+                ),
+            )
+            .route(
+                "/demographic/organisation/{p3}/tags",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_organisation_tags_get::<S>,
+                ),
+            )
+            .route(
+                "/demographic/organisation/{p3}/tags",
+                axum::routing::on(
+                    axum::routing::MethodFilter::PUT,
+                    handle_organisation_tags_update::<S>,
+                ),
+            )
+            .route(
+                "/demographic/organisation/{p3}/tags/{p5}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::DELETE,
+                    handle_organisation_tags_delete::<S>,
+                ),
+            )
+            .route(
+                "/demographic/person/{p3}/tags",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_person_tags_get::<S>,
+                ),
+            )
+            .route(
+                "/demographic/person/{p3}/tags",
+                axum::routing::on(
+                    axum::routing::MethodFilter::PUT,
+                    handle_person_tags_update::<S>,
+                ),
+            )
+            .route(
+                "/demographic/person/{p3}/tags/{p5}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::DELETE,
+                    handle_person_tags_delete::<S>,
+                ),
+            )
+            .route(
+                "/demographic/role/{p3}/tags",
+                axum::routing::on(axum::routing::MethodFilter::GET, handle_role_tags_get::<S>),
+            )
+            .route(
+                "/demographic/role/{p3}/tags",
+                axum::routing::on(
+                    axum::routing::MethodFilter::PUT,
+                    handle_role_tags_update::<S>,
+                ),
+            )
+            .route(
+                "/demographic/role/{p3}/tags/{p5}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::DELETE,
+                    handle_role_tags_delete::<S>,
+                ),
+            )
+            .with_state(api)
+    }
+
+    /// Serves `POST /demographic/agent` through [`DemographicApi::agent_create`].
+    async fn handle_agent_create<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let params = AgentCreateParams {
+                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+                openehr_item_tag: crate::rest::server::header_list(&headers, "openehr-item-tag")?,
+                openehr_version_item_tag: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-version-item-tag",
+                )?,
+                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
+                openehr_audit_details: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-audit-details",
+                )?,
+            };
+            let body = crate::rest::server::json_body(&headers, &body)?;
+            let reply: crate::rest::server::Reply = match api.agent_create(params, body).await? {
+                AgentCreateResponse::Created { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::CREATED);
+                    if let Some(body) = body.as_ref() {
+                        reply.json(body)?;
+                    }
+                    reply.headers(headers)?;
+                    reply
+                }
+                AgentCreateResponse::NoContent { headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /demographic/agent/{uid_based_id}` through [`DemographicApi::agent_get`].
+    async fn handle_agent_get<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        axum::extract::RawQuery(query): axum::extract::RawQuery,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
+            let params = AgentGetParams {
+                uid_based_id: path.value("p3", "uid_based_id")?,
+                version_at_time: query.optional("version_at_time")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply = match api.agent_get(params).await? {
+                AgentGetResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+                AgentGetResponse::NoContent => {
+                    crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT)
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `PUT /demographic/agent/{uid_based_id}` through [`DemographicApi::agent_update`].
+    async fn handle_agent_update<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = AgentUpdateParams {
+                uid_based_id: path.value("p3", "uid_based_id")?,
+                if_match: crate::rest::server::header_required(&headers, "If-Match")?,
+                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+                openehr_version_item_tag: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-version-item-tag",
+                )?,
+                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
+                openehr_audit_details: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-audit-details",
+                )?,
+            };
+            let body = crate::rest::server::json_body(&headers, &body)?;
+            let reply: crate::rest::server::Reply = match api.agent_update(params, body).await? {
+                AgentUpdateResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+                AgentUpdateResponse::NoContent { headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `DELETE /demographic/agent/{uid_based_id}` through [`DemographicApi::agent_delete`].
+    async fn handle_agent_delete<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = AgentDeleteParams {
+                uid_based_id: path.value("p3", "uid_based_id")?,
+                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
+                openehr_audit_details: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-audit-details",
+                )?,
+            };
+            let reply: crate::rest::server::Reply = match api.agent_delete(params).await? {
+                AgentDeleteResponse::NoContent { headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `POST /demographic/group` through [`DemographicApi::group_create`].
+    async fn handle_group_create<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let params = GroupCreateParams {
+                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+                openehr_item_tag: crate::rest::server::header_list(&headers, "openehr-item-tag")?,
+                openehr_version_item_tag: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-version-item-tag",
+                )?,
+                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
+                openehr_audit_details: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-audit-details",
+                )?,
+            };
+            let body = crate::rest::server::json_body(&headers, &body)?;
+            let reply: crate::rest::server::Reply = match api.group_create(params, body).await? {
+                GroupCreateResponse::Created { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::CREATED);
+                    if let Some(body) = body.as_ref() {
+                        reply.json(body)?;
+                    }
+                    reply.headers(headers)?;
+                    reply
+                }
+                GroupCreateResponse::NoContent { headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /demographic/group/{uid_based_id}` through [`DemographicApi::group_get`].
+    async fn handle_group_get<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        axum::extract::RawQuery(query): axum::extract::RawQuery,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
+            let params = GroupGetParams {
+                uid_based_id: path.value("p3", "uid_based_id")?,
+                version_at_time: query.optional("version_at_time")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply = match api.group_get(params).await? {
+                GroupGetResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+                GroupGetResponse::NoContent => {
+                    crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT)
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `PUT /demographic/group/{uid_based_id}` through [`DemographicApi::group_update`].
+    async fn handle_group_update<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = GroupUpdateParams {
+                uid_based_id: path.value("p3", "uid_based_id")?,
+                if_match: crate::rest::server::header_required(&headers, "If-Match")?,
+                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+                openehr_version_item_tag: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-version-item-tag",
+                )?,
+                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
+                openehr_audit_details: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-audit-details",
+                )?,
+            };
+            let body = crate::rest::server::json_body(&headers, &body)?;
+            let reply: crate::rest::server::Reply = match api.group_update(params, body).await? {
+                GroupUpdateResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+                GroupUpdateResponse::NoContent { headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `DELETE /demographic/group/{uid_based_id}` through [`DemographicApi::group_delete`].
+    async fn handle_group_delete<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = GroupDeleteParams {
+                uid_based_id: path.value("p3", "uid_based_id")?,
+                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
+                openehr_audit_details: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-audit-details",
+                )?,
+            };
+            let reply: crate::rest::server::Reply = match api.group_delete(params).await? {
+                GroupDeleteResponse::NoContent { headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `POST /demographic/organisation` through [`DemographicApi::organisation_create`].
+    async fn handle_organisation_create<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let params = OrganisationCreateParams {
+                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+                openehr_item_tag: crate::rest::server::header_list(&headers, "openehr-item-tag")?,
+                openehr_version_item_tag: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-version-item-tag",
+                )?,
+                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
+                openehr_audit_details: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-audit-details",
+                )?,
+            };
+            let body = crate::rest::server::json_body(&headers, &body)?;
+            let reply: crate::rest::server::Reply =
+                match api.organisation_create(params, body).await? {
+                    OrganisationCreateResponse::Created { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::CREATED);
+                        if let Some(body) = body.as_ref() {
+                            reply.json(body)?;
+                        }
+                        reply.headers(headers)?;
+                        reply
+                    }
+                    OrganisationCreateResponse::NoContent { headers } => {
+                        let mut reply =
+                            crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /demographic/organisation/{uid_based_id}` through [`DemographicApi::organisation_get`].
+    async fn handle_organisation_get<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        axum::extract::RawQuery(query): axum::extract::RawQuery,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
+            let params = OrganisationGetParams {
+                uid_based_id: path.value("p3", "uid_based_id")?,
+                version_at_time: query.optional("version_at_time")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply = match api.organisation_get(params).await? {
+                OrganisationGetResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+                OrganisationGetResponse::NoContent => {
+                    crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT)
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `PUT /demographic/organisation/{uid_based_id}` through [`DemographicApi::organisation_update`].
+    async fn handle_organisation_update<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = OrganisationUpdateParams {
+                uid_based_id: path.value("p3", "uid_based_id")?,
+                if_match: crate::rest::server::header_required(&headers, "If-Match")?,
+                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+                openehr_version_item_tag: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-version-item-tag",
+                )?,
+                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
+                openehr_audit_details: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-audit-details",
+                )?,
+            };
+            let body = crate::rest::server::json_body(&headers, &body)?;
+            let reply: crate::rest::server::Reply =
+                match api.organisation_update(params, body).await? {
+                    OrganisationUpdateResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                    OrganisationUpdateResponse::NoContent { headers } => {
+                        let mut reply =
+                            crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `DELETE /demographic/organisation/{uid_based_id}` through [`DemographicApi::organisation_delete`].
+    async fn handle_organisation_delete<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = OrganisationDeleteParams {
+                uid_based_id: path.value("p3", "uid_based_id")?,
+                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
+                openehr_audit_details: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-audit-details",
+                )?,
+            };
+            let reply: crate::rest::server::Reply = match api.organisation_delete(params).await? {
+                OrganisationDeleteResponse::NoContent { headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `POST /demographic/person` through [`DemographicApi::person_create`].
+    async fn handle_person_create<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let params = PersonCreateParams {
+                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+                openehr_item_tag: crate::rest::server::header_list(&headers, "openehr-item-tag")?,
+                openehr_version_item_tag: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-version-item-tag",
+                )?,
+                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
+                openehr_audit_details: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-audit-details",
+                )?,
+            };
+            let body = crate::rest::server::json_body(&headers, &body)?;
+            let reply: crate::rest::server::Reply = match api.person_create(params, body).await? {
+                PersonCreateResponse::Created { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::CREATED);
+                    if let Some(body) = body.as_ref() {
+                        reply.json(body)?;
+                    }
+                    reply.headers(headers)?;
+                    reply
+                }
+                PersonCreateResponse::NoContent { headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /demographic/person/{uid_based_id}` through [`DemographicApi::person_get`].
+    async fn handle_person_get<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        axum::extract::RawQuery(query): axum::extract::RawQuery,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
+            let params = PersonGetParams {
+                uid_based_id: path.value("p3", "uid_based_id")?,
+                version_at_time: query.optional("version_at_time")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply = match api.person_get(params).await? {
+                PersonGetResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+                PersonGetResponse::NoContent => {
+                    crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT)
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `PUT /demographic/person/{uid_based_id}` through [`DemographicApi::person_update`].
+    async fn handle_person_update<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = PersonUpdateParams {
+                uid_based_id: path.value("p3", "uid_based_id")?,
+                if_match: crate::rest::server::header_required(&headers, "If-Match")?,
+                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+                openehr_version_item_tag: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-version-item-tag",
+                )?,
+                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
+                openehr_audit_details: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-audit-details",
+                )?,
+            };
+            let body = crate::rest::server::json_body(&headers, &body)?;
+            let reply: crate::rest::server::Reply = match api.person_update(params, body).await? {
+                PersonUpdateResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+                PersonUpdateResponse::NoContent { headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `DELETE /demographic/person/{uid_based_id}` through [`DemographicApi::person_delete`].
+    async fn handle_person_delete<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = PersonDeleteParams {
+                uid_based_id: path.value("p3", "uid_based_id")?,
+                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
+                openehr_audit_details: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-audit-details",
+                )?,
+            };
+            let reply: crate::rest::server::Reply = match api.person_delete(params).await? {
+                PersonDeleteResponse::NoContent { headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `POST /demographic/role` through [`DemographicApi::role_create`].
+    async fn handle_role_create<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let params = RoleCreateParams {
+                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+                openehr_item_tag: crate::rest::server::header_list(&headers, "openehr-item-tag")?,
+                openehr_version_item_tag: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-version-item-tag",
+                )?,
+                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
+                openehr_audit_details: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-audit-details",
+                )?,
+            };
+            let body = crate::rest::server::json_body(&headers, &body)?;
+            let reply: crate::rest::server::Reply = match api.role_create(params, body).await? {
+                RoleCreateResponse::Created { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::CREATED);
+                    if let Some(body) = body.as_ref() {
+                        reply.json(body)?;
+                    }
+                    reply.headers(headers)?;
+                    reply
+                }
+                RoleCreateResponse::NoContent { headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /demographic/role/{uid_based_id}` through [`DemographicApi::role_get`].
+    async fn handle_role_get<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        axum::extract::RawQuery(query): axum::extract::RawQuery,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
+            let params = RoleGetParams {
+                uid_based_id: path.value("p3", "uid_based_id")?,
+                version_at_time: query.optional("version_at_time")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply = match api.role_get(params).await? {
+                RoleGetResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+                RoleGetResponse::NoContent => {
+                    crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT)
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `PUT /demographic/role/{uid_based_id}` through [`DemographicApi::role_update`].
+    async fn handle_role_update<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = RoleUpdateParams {
+                uid_based_id: path.value("p3", "uid_based_id")?,
+                if_match: crate::rest::server::header_required(&headers, "If-Match")?,
+                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+                openehr_version_item_tag: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-version-item-tag",
+                )?,
+                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
+                openehr_audit_details: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-audit-details",
+                )?,
+            };
+            let body = crate::rest::server::json_body(&headers, &body)?;
+            let reply: crate::rest::server::Reply = match api.role_update(params, body).await? {
+                RoleUpdateResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+                RoleUpdateResponse::NoContent { headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `DELETE /demographic/role/{uid_based_id}` through [`DemographicApi::role_delete`].
+    async fn handle_role_delete<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = RoleDeleteParams {
+                uid_based_id: path.value("p3", "uid_based_id")?,
+                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
+                openehr_audit_details: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-audit-details",
+                )?,
+            };
+            let reply: crate::rest::server::Reply = match api.role_delete(params).await? {
+                RoleDeleteResponse::NoContent { headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /demographic/versioned_party/{versioned_object_uid}` through [`DemographicApi::versioned_party_get`].
+    async fn handle_versioned_party_get<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = VersionedPartyGetParams {
+                versioned_object_uid: path.value("p3", "versioned_object_uid")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+            };
+            let reply: crate::rest::server::Reply = match api.versioned_party_get(params).await? {
+                VersionedPartyGetResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /demographic/versioned_party/{versioned_object_uid}/revision_history` through [`DemographicApi::versioned_party_revision_history`].
+    async fn handle_versioned_party_revision_history<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = VersionedPartyRevisionHistoryParams {
+                versioned_object_uid: path.value("p3", "versioned_object_uid")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+            };
+            let reply: crate::rest::server::Reply =
+                match api.versioned_party_revision_history(params).await? {
+                    VersionedPartyRevisionHistoryResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /demographic/versioned_party/{versioned_object_uid}/version` through [`DemographicApi::versioned_party_version_get_at_time`].
+    async fn handle_versioned_party_version_get_at_time<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        axum::extract::RawQuery(query): axum::extract::RawQuery,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
+            let params = VersionedPartyVersionGetAtTimeParams {
+                versioned_object_uid: path.value("p3", "versioned_object_uid")?,
+                version_at_time: query.optional("version_at_time")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+            };
+            let reply: crate::rest::server::Reply =
+                match api.versioned_party_version_get_at_time(params).await? {
+                    VersionedPartyVersionGetAtTimeResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /demographic/versioned_party/{versioned_object_uid}/version/{version_uid}` through [`DemographicApi::versioned_party_version_get_by_id`].
+    async fn handle_versioned_party_version_get_by_id<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = VersionedPartyVersionGetByIdParams {
+                versioned_object_uid: path.value("p3", "versioned_object_uid")?,
+                version_uid: path.value("p5", "version_uid")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+            };
+            let reply: crate::rest::server::Reply =
+                match api.versioned_party_version_get_by_id(params).await? {
+                    VersionedPartyVersionGetByIdResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `POST /demographic/contribution` through [`DemographicApi::contribution_create`].
+    async fn handle_contribution_create<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let params = ContributionCreateParams {
+                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+                openehr_template_id: crate::rest::server::header_optional(
+                    &headers,
+                    "openehr-template-id",
+                )?,
+            };
+            let body = crate::rest::server::json_body(&headers, &body)?;
+            let reply: crate::rest::server::Reply =
+                match api.contribution_create(params, body).await? {
+                    ContributionCreateResponse::Created { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::CREATED);
+                        if let Some(body) = body.as_ref() {
+                            reply.json(body)?;
+                        }
+                        reply.headers(headers)?;
+                        reply
+                    }
+                    ContributionCreateResponse::NoContent { headers } => {
+                        let mut reply =
+                            crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /demographic/contribution/{contribution_uid}` through [`DemographicApi::contribution_get`].
+    async fn handle_contribution_get<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = ContributionGetParams {
+                contribution_uid: path.value("p3", "contribution_uid")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply = match api.contribution_get(params).await? {
+                ContributionGetResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /demographic/tags` through [`DemographicApi::demographic_tags_get`].
+    async fn handle_demographic_tags_get<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        axum::extract::RawQuery(query): axum::extract::RawQuery,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
+            let params = DemographicTagsGetParams {
+                tag_key: query.optional("tag_key")?,
+                tag_value: query.optional("tag_value")?,
+                tag_target_path: query.optional("tag_target_path")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply = match api.demographic_tags_get(params).await? {
+                DemographicTagsGetResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /demographic/agent/{uid_based_id}/tags` through [`DemographicApi::agent_tags_get`].
+    async fn handle_agent_tags_get<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = AgentTagsGetParams {
+                uid_based_id: path.value("p3", "uid_based_id")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply = match api.agent_tags_get(params).await? {
+                AgentTagsGetResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `PUT /demographic/agent/{uid_based_id}/tags` through [`DemographicApi::agent_tags_update`].
+    async fn handle_agent_tags_update<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = AgentTagsUpdateParams {
+                uid_based_id: path.value("p3", "uid_based_id")?,
+                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+            };
+            let body = crate::rest::server::json_body(&headers, &body)?;
+            let reply: crate::rest::server::Reply =
+                match api.agent_tags_update(params, body).await? {
+                    AgentTagsUpdateResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                    AgentTagsUpdateResponse::NoContent => {
+                        crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT)
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `DELETE /demographic/agent/{uid_based_id}/tags/{key}` through [`DemographicApi::agent_tags_delete`].
+    async fn handle_agent_tags_delete<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = AgentTagsDeleteParams {
+                uid_based_id: path.value("p3", "uid_based_id")?,
+                key: path.value("p5", "key")?,
+            };
+            let reply: crate::rest::server::Reply = match api.agent_tags_delete(params).await? {
+                AgentTagsDeleteResponse::NoContent => {
+                    crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT)
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /demographic/group/{uid_based_id}/tags` through [`DemographicApi::group_tags_get`].
+    async fn handle_group_tags_get<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = GroupTagsGetParams {
+                uid_based_id: path.value("p3", "uid_based_id")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply = match api.group_tags_get(params).await? {
+                GroupTagsGetResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `PUT /demographic/group/{uid_based_id}/tags` through [`DemographicApi::group_tags_update`].
+    async fn handle_group_tags_update<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = GroupTagsUpdateParams {
+                uid_based_id: path.value("p3", "uid_based_id")?,
+                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+            };
+            let body = crate::rest::server::json_body(&headers, &body)?;
+            let reply: crate::rest::server::Reply =
+                match api.group_tags_update(params, body).await? {
+                    GroupTagsUpdateResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                    GroupTagsUpdateResponse::NoContent => {
+                        crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT)
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `DELETE /demographic/group/{uid_based_id}/tags/{key}` through [`DemographicApi::group_tags_delete`].
+    async fn handle_group_tags_delete<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = GroupTagsDeleteParams {
+                uid_based_id: path.value("p3", "uid_based_id")?,
+                key: path.value("p5", "key")?,
+            };
+            let reply: crate::rest::server::Reply = match api.group_tags_delete(params).await? {
+                GroupTagsDeleteResponse::NoContent => {
+                    crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT)
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /demographic/organisation/{uid_based_id}/tags` through [`DemographicApi::organisation_tags_get`].
+    async fn handle_organisation_tags_get<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = OrganisationTagsGetParams {
+                uid_based_id: path.value("p3", "uid_based_id")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply = match api.organisation_tags_get(params).await? {
+                OrganisationTagsGetResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `PUT /demographic/organisation/{uid_based_id}/tags` through [`DemographicApi::organisation_tags_update`].
+    async fn handle_organisation_tags_update<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = OrganisationTagsUpdateParams {
+                uid_based_id: path.value("p3", "uid_based_id")?,
+                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+            };
+            let body = crate::rest::server::json_body(&headers, &body)?;
+            let reply: crate::rest::server::Reply =
+                match api.organisation_tags_update(params, body).await? {
+                    OrganisationTagsUpdateResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                    OrganisationTagsUpdateResponse::NoContent => {
+                        crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT)
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `DELETE /demographic/organisation/{uid_based_id}/tags/{key}` through [`DemographicApi::organisation_tags_delete`].
+    async fn handle_organisation_tags_delete<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = OrganisationTagsDeleteParams {
+                uid_based_id: path.value("p3", "uid_based_id")?,
+                key: path.value("p5", "key")?,
+            };
+            let reply: crate::rest::server::Reply =
+                match api.organisation_tags_delete(params).await? {
+                    OrganisationTagsDeleteResponse::NoContent => {
+                        crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT)
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /demographic/person/{uid_based_id}/tags` through [`DemographicApi::person_tags_get`].
+    async fn handle_person_tags_get<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = PersonTagsGetParams {
+                uid_based_id: path.value("p3", "uid_based_id")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply = match api.person_tags_get(params).await? {
+                PersonTagsGetResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `PUT /demographic/person/{uid_based_id}/tags` through [`DemographicApi::person_tags_update`].
+    async fn handle_person_tags_update<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = PersonTagsUpdateParams {
+                uid_based_id: path.value("p3", "uid_based_id")?,
+                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+            };
+            let body = crate::rest::server::json_body(&headers, &body)?;
+            let reply: crate::rest::server::Reply =
+                match api.person_tags_update(params, body).await? {
+                    PersonTagsUpdateResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                    PersonTagsUpdateResponse::NoContent => {
+                        crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT)
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `DELETE /demographic/person/{uid_based_id}/tags/{key}` through [`DemographicApi::person_tags_delete`].
+    async fn handle_person_tags_delete<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = PersonTagsDeleteParams {
+                uid_based_id: path.value("p3", "uid_based_id")?,
+                key: path.value("p5", "key")?,
+            };
+            let reply: crate::rest::server::Reply = match api.person_tags_delete(params).await? {
+                PersonTagsDeleteResponse::NoContent => {
+                    crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT)
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /demographic/role/{uid_based_id}/tags` through [`DemographicApi::role_tags_get`].
+    async fn handle_role_tags_get<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = RoleTagsGetParams {
+                uid_based_id: path.value("p3", "uid_based_id")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply = match api.role_tags_get(params).await? {
+                RoleTagsGetResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `PUT /demographic/role/{uid_based_id}/tags` through [`DemographicApi::role_tags_update`].
+    async fn handle_role_tags_update<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = RoleTagsUpdateParams {
+                uid_based_id: path.value("p3", "uid_based_id")?,
+                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+            };
+            let body = crate::rest::server::json_body(&headers, &body)?;
+            let reply: crate::rest::server::Reply = match api.role_tags_update(params, body).await?
+            {
+                RoleTagsUpdateResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+                RoleTagsUpdateResponse::NoContent => {
+                    crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT)
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `DELETE /demographic/role/{uid_based_id}/tags/{key}` through [`DemographicApi::role_tags_delete`].
+    async fn handle_role_tags_delete<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DemographicApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = RoleTagsDeleteParams {
+                uid_based_id: path.value("p3", "uid_based_id")?,
+                key: path.value("p5", "key")?,
+            };
+            let reply: crate::rest::server::Reply = match api.role_tags_delete(params).await? {
+                RoleTagsDeleteResponse::NoContent => {
+                    crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT)
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
     }
 }
 
@@ -1386,38 +5286,6 @@ pub trait DemographicApi {
 #[cfg(feature = "rest-client")]
 pub mod client {
     use super::*;
-
-    /// The response headers the OAS declares for the `201` answer of
-    /// `POST /demographic/agent`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct AgentCreateCreatedHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
-    }
-
-    /// The response headers the OAS declares for the `204` answer of
-    /// `POST /demographic/agent`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct AgentCreateNoContentHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
-    }
 
     /// The outcome of `POST /demographic/agent`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
@@ -1452,22 +5320,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /demographic/agent/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct AgentGetOkHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
-    }
-
     /// The outcome of `GET /demographic/agent/{uid_based_id}`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -1486,46 +5338,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `PUT /demographic/agent/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct AgentUpdateOkHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
-    }
-
-    /// The response headers the OAS declares for the `204` answer of
-    /// `PUT /demographic/agent/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct AgentUpdateNoContentHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
-    }
-
-    /// The response headers the OAS declares for the `412` answer of
-    /// `PUT /demographic/agent/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct AgentUpdatePreconditionFailedHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
     }
 
     /// The outcome of `PUT /demographic/agent/{uid_based_id}`: one variant per status the OAS documents.
@@ -1568,26 +5380,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `204` answer of
-    /// `DELETE /demographic/agent/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct AgentDeleteNoContentHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-    }
-
-    /// The response headers the OAS declares for the `409` answer of
-    /// `DELETE /demographic/agent/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct AgentDeleteConflictHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-    }
-
     /// The outcome of `DELETE /demographic/agent/{uid_based_id}`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -1614,38 +5406,6 @@ pub mod client {
             /// The response headers the OAS declares for this answer.
             headers: AgentDeleteConflictHeaders,
         },
-    }
-
-    /// The response headers the OAS declares for the `201` answer of
-    /// `POST /demographic/group`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct GroupCreateCreatedHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
-    }
-
-    /// The response headers the OAS declares for the `204` answer of
-    /// `POST /demographic/group`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct GroupCreateNoContentHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
     }
 
     /// The outcome of `POST /demographic/group`: one variant per status the OAS documents.
@@ -1681,22 +5441,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /demographic/group/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct GroupGetOkHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
-    }
-
     /// The outcome of `GET /demographic/group/{uid_based_id}`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -1715,46 +5459,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `PUT /demographic/group/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct GroupUpdateOkHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
-    }
-
-    /// The response headers the OAS declares for the `204` answer of
-    /// `PUT /demographic/group/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct GroupUpdateNoContentHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
-    }
-
-    /// The response headers the OAS declares for the `412` answer of
-    /// `PUT /demographic/group/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct GroupUpdatePreconditionFailedHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
     }
 
     /// The outcome of `PUT /demographic/group/{uid_based_id}`: one variant per status the OAS documents.
@@ -1797,26 +5501,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `204` answer of
-    /// `DELETE /demographic/group/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct GroupDeleteNoContentHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-    }
-
-    /// The response headers the OAS declares for the `409` answer of
-    /// `DELETE /demographic/group/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct GroupDeleteConflictHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-    }
-
     /// The outcome of `DELETE /demographic/group/{uid_based_id}`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -1843,38 +5527,6 @@ pub mod client {
             /// The response headers the OAS declares for this answer.
             headers: GroupDeleteConflictHeaders,
         },
-    }
-
-    /// The response headers the OAS declares for the `201` answer of
-    /// `POST /demographic/organisation`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct OrganisationCreateCreatedHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
-    }
-
-    /// The response headers the OAS declares for the `204` answer of
-    /// `POST /demographic/organisation`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct OrganisationCreateNoContentHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
     }
 
     /// The outcome of `POST /demographic/organisation`: one variant per status the OAS documents.
@@ -1910,22 +5562,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /demographic/organisation/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct OrganisationGetOkHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
-    }
-
     /// The outcome of `GET /demographic/organisation/{uid_based_id}`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -1944,46 +5580,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `PUT /demographic/organisation/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct OrganisationUpdateOkHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
-    }
-
-    /// The response headers the OAS declares for the `204` answer of
-    /// `PUT /demographic/organisation/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct OrganisationUpdateNoContentHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
-    }
-
-    /// The response headers the OAS declares for the `412` answer of
-    /// `PUT /demographic/organisation/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct OrganisationUpdatePreconditionFailedHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
     }
 
     /// The outcome of `PUT /demographic/organisation/{uid_based_id}`: one variant per status the OAS documents.
@@ -2026,26 +5622,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `204` answer of
-    /// `DELETE /demographic/organisation/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct OrganisationDeleteNoContentHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-    }
-
-    /// The response headers the OAS declares for the `409` answer of
-    /// `DELETE /demographic/organisation/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct OrganisationDeleteConflictHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-    }
-
     /// The outcome of `DELETE /demographic/organisation/{uid_based_id}`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -2072,38 +5648,6 @@ pub mod client {
             /// The response headers the OAS declares for this answer.
             headers: OrganisationDeleteConflictHeaders,
         },
-    }
-
-    /// The response headers the OAS declares for the `201` answer of
-    /// `POST /demographic/person`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct PersonCreateCreatedHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
-    }
-
-    /// The response headers the OAS declares for the `204` answer of
-    /// `POST /demographic/person`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct PersonCreateNoContentHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
     }
 
     /// The outcome of `POST /demographic/person`: one variant per status the OAS documents.
@@ -2139,22 +5683,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /demographic/person/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct PersonGetOkHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
-    }
-
     /// The outcome of `GET /demographic/person/{uid_based_id}`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -2173,46 +5701,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `PUT /demographic/person/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct PersonUpdateOkHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
-    }
-
-    /// The response headers the OAS declares for the `204` answer of
-    /// `PUT /demographic/person/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct PersonUpdateNoContentHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
-    }
-
-    /// The response headers the OAS declares for the `412` answer of
-    /// `PUT /demographic/person/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct PersonUpdatePreconditionFailedHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
     }
 
     /// The outcome of `PUT /demographic/person/{uid_based_id}`: one variant per status the OAS documents.
@@ -2255,26 +5743,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `204` answer of
-    /// `DELETE /demographic/person/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct PersonDeleteNoContentHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-    }
-
-    /// The response headers the OAS declares for the `409` answer of
-    /// `DELETE /demographic/person/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct PersonDeleteConflictHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-    }
-
     /// The outcome of `DELETE /demographic/person/{uid_based_id}`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -2301,38 +5769,6 @@ pub mod client {
             /// The response headers the OAS declares for this answer.
             headers: PersonDeleteConflictHeaders,
         },
-    }
-
-    /// The response headers the OAS declares for the `201` answer of
-    /// `POST /demographic/role`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct RoleCreateCreatedHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
-    }
-
-    /// The response headers the OAS declares for the `204` answer of
-    /// `POST /demographic/role`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct RoleCreateNoContentHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
     }
 
     /// The outcome of `POST /demographic/role`: one variant per status the OAS documents.
@@ -2368,22 +5804,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /demographic/role/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct RoleGetOkHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
-    }
-
     /// The outcome of `GET /demographic/role/{uid_based_id}`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -2402,46 +5822,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `PUT /demographic/role/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct RoleUpdateOkHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
-    }
-
-    /// The response headers the OAS declares for the `204` answer of
-    /// `PUT /demographic/role/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct RoleUpdateNoContentHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
-    }
-
-    /// The response headers the OAS declares for the `412` answer of
-    /// `PUT /demographic/role/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct RoleUpdatePreconditionFailedHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
     }
 
     /// The outcome of `PUT /demographic/role/{uid_based_id}`: one variant per status the OAS documents.
@@ -2484,26 +5864,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `204` answer of
-    /// `DELETE /demographic/role/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct RoleDeleteNoContentHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-    }
-
-    /// The response headers the OAS declares for the `409` answer of
-    /// `DELETE /demographic/role/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct RoleDeleteConflictHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-    }
-
     /// The outcome of `DELETE /demographic/role/{uid_based_id}`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -2532,14 +5892,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /demographic/versioned_party/{versioned_object_uid}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct VersionedPartyGetOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
     /// The outcome of `GET /demographic/versioned_party/{versioned_object_uid}`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -2556,14 +5908,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /demographic/versioned_party/{versioned_object_uid}/revision_history`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct VersionedPartyRevisionHistoryOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
     }
 
     /// The outcome of `GET /demographic/versioned_party/{versioned_object_uid}/revision_history`: one variant per status the OAS documents.
@@ -2584,18 +5928,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /demographic/versioned_party/{versioned_object_uid}/version`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct VersionedPartyVersionGetAtTimeOkHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
     /// The outcome of `GET /demographic/versioned_party/{versioned_object_uid}/version`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -2614,14 +5946,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /demographic/versioned_party/{versioned_object_uid}/version/{version_uid}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct VersionedPartyVersionGetByIdOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
     /// The outcome of `GET /demographic/versioned_party/{versioned_object_uid}/version/{version_uid}`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -2638,30 +5962,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `201` answer of
-    /// `POST /demographic/contribution`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct ContributionCreateCreatedHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
-    /// The response headers the OAS declares for the `204` answer of
-    /// `POST /demographic/contribution`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct ContributionCreateNoContentHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
     }
 
     /// The outcome of `POST /demographic/contribution`: one variant per status the OAS documents.
@@ -2692,14 +5992,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /demographic/contribution/{contribution_uid}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct ContributionGetOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
     /// The outcome of `GET /demographic/contribution/{contribution_uid}`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -2716,14 +6008,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /demographic/tags`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct DemographicTagsGetOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
     }
 
     /// The outcome of `GET /demographic/tags`: one variant per status the OAS documents.
@@ -2744,14 +6028,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /demographic/agent/{uid_based_id}/tags`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct AgentTagsGetOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
     /// The outcome of `GET /demographic/agent/{uid_based_id}/tags`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -2768,14 +6044,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `PUT /demographic/agent/{uid_based_id}/tags`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct AgentTagsUpdateOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
     }
 
     /// The outcome of `PUT /demographic/agent/{uid_based_id}/tags`: one variant per status the OAS documents.
@@ -2816,14 +6084,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /demographic/group/{uid_based_id}/tags`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct GroupTagsGetOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
     /// The outcome of `GET /demographic/group/{uid_based_id}/tags`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -2840,14 +6100,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `PUT /demographic/group/{uid_based_id}/tags`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct GroupTagsUpdateOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
     }
 
     /// The outcome of `PUT /demographic/group/{uid_based_id}/tags`: one variant per status the OAS documents.
@@ -2888,14 +6140,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /demographic/organisation/{uid_based_id}/tags`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct OrganisationTagsGetOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
     /// The outcome of `GET /demographic/organisation/{uid_based_id}/tags`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -2912,14 +6156,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `PUT /demographic/organisation/{uid_based_id}/tags`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct OrganisationTagsUpdateOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
     }
 
     /// The outcome of `PUT /demographic/organisation/{uid_based_id}/tags`: one variant per status the OAS documents.
@@ -2960,14 +6196,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /demographic/person/{uid_based_id}/tags`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct PersonTagsGetOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
     /// The outcome of `GET /demographic/person/{uid_based_id}/tags`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -2984,14 +6212,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `PUT /demographic/person/{uid_based_id}/tags`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct PersonTagsUpdateOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
     }
 
     /// The outcome of `PUT /demographic/person/{uid_based_id}/tags`: one variant per status the OAS documents.
@@ -3032,14 +6252,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /demographic/role/{uid_based_id}/tags`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct RoleTagsGetOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
     /// The outcome of `GET /demographic/role/{uid_based_id}/tags`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -3056,14 +6268,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `PUT /demographic/role/{uid_based_id}/tags`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct RoleTagsUpdateOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
     }
 
     /// The outcome of `PUT /demographic/role/{uid_based_id}/tags`: one variant per status the OAS documents.
@@ -3105,16 +6309,28 @@ pub mod client {
     }
 
     /// The `demographic` API group over one configured CDR.
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone)]
     pub struct DemographicClient<'c, T> {
         client: &'c crate::rest::client::Client<T>,
+        options: crate::rest::client::CallOptions,
     }
 
     impl<'c, T: crate::rest::client::Transport> DemographicClient<'c, T> {
         /// The `demographic` API group over `client`.
         #[must_use]
         pub fn new(client: &'c crate::rest::client::Client<T>) -> Self {
-            Self { client }
+            Self {
+                client,
+                options: crate::rest::client::CallOptions::default(),
+            }
+        }
+
+        /// This group client applying `options` (a deadline, extra headers) to
+        /// every call it makes.
+        #[must_use]
+        pub fn with_options(mut self, options: crate::rest::client::CallOptions) -> Self {
+            self.options = options;
+            self
         }
 
         /// `POST /demographic/agent`
@@ -3160,6 +6376,7 @@ pub mod client {
                 }
             }
             request.json_body(body, params.content_type.as_deref())?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::CREATED => Ok(AgentCreateOutcome::Created {
@@ -3219,6 +6436,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(AgentGetOutcome::Ok {
@@ -3284,6 +6502,7 @@ pub mod client {
                 }
             }
             request.json_body(body, params.content_type.as_deref())?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(AgentUpdateOutcome::Ok {
@@ -3353,6 +6572,7 @@ pub mod client {
                     request.header("openehr-audit-details", &item.to_string())?;
                 }
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::NO_CONTENT => Ok(AgentDeleteOutcome::NoContent {
@@ -3421,6 +6641,7 @@ pub mod client {
                 }
             }
             request.json_body(body, params.content_type.as_deref())?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::CREATED => Ok(GroupCreateOutcome::Created {
@@ -3480,6 +6701,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(GroupGetOutcome::Ok {
@@ -3545,6 +6767,7 @@ pub mod client {
                 }
             }
             request.json_body(body, params.content_type.as_deref())?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(GroupUpdateOutcome::Ok {
@@ -3614,6 +6837,7 @@ pub mod client {
                     request.header("openehr-audit-details", &item.to_string())?;
                 }
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::NO_CONTENT => Ok(GroupDeleteOutcome::NoContent {
@@ -3682,6 +6906,7 @@ pub mod client {
                 }
             }
             request.json_body(body, params.content_type.as_deref())?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::CREATED => Ok(OrganisationCreateOutcome::Created {
@@ -3741,6 +6966,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(OrganisationGetOutcome::Ok {
@@ -3806,6 +7032,7 @@ pub mod client {
                 }
             }
             request.json_body(body, params.content_type.as_deref())?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(OrganisationUpdateOutcome::Ok {
@@ -3875,6 +7102,7 @@ pub mod client {
                     request.header("openehr-audit-details", &item.to_string())?;
                 }
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::NO_CONTENT => Ok(OrganisationDeleteOutcome::NoContent {
@@ -3943,6 +7171,7 @@ pub mod client {
                 }
             }
             request.json_body(body, params.content_type.as_deref())?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::CREATED => Ok(PersonCreateOutcome::Created {
@@ -4002,6 +7231,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(PersonGetOutcome::Ok {
@@ -4067,6 +7297,7 @@ pub mod client {
                 }
             }
             request.json_body(body, params.content_type.as_deref())?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(PersonUpdateOutcome::Ok {
@@ -4136,6 +7367,7 @@ pub mod client {
                     request.header("openehr-audit-details", &item.to_string())?;
                 }
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::NO_CONTENT => Ok(PersonDeleteOutcome::NoContent {
@@ -4204,6 +7436,7 @@ pub mod client {
                 }
             }
             request.json_body(body, params.content_type.as_deref())?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::CREATED => Ok(RoleCreateOutcome::Created {
@@ -4263,6 +7496,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(RoleGetOutcome::Ok {
@@ -4328,6 +7562,7 @@ pub mod client {
                 }
             }
             request.json_body(body, params.content_type.as_deref())?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(RoleUpdateOutcome::Ok {
@@ -4397,6 +7632,7 @@ pub mod client {
                     request.header("openehr-audit-details", &item.to_string())?;
                 }
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::NO_CONTENT => Ok(RoleDeleteOutcome::NoContent {
@@ -4445,6 +7681,7 @@ pub mod client {
             if let Some(value) = params.content_type.as_ref() {
                 request.header("Content-Type", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(VersionedPartyGetOutcome::Ok {
@@ -4484,6 +7721,7 @@ pub mod client {
             if let Some(value) = params.content_type.as_ref() {
                 request.header("Content-Type", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(VersionedPartyRevisionHistoryOutcome::Ok {
@@ -4526,6 +7764,7 @@ pub mod client {
             if let Some(value) = params.content_type.as_ref() {
                 request.header("Content-Type", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(VersionedPartyVersionGetAtTimeOutcome::Ok {
@@ -4569,6 +7808,7 @@ pub mod client {
             if let Some(value) = params.content_type.as_ref() {
                 request.header("Content-Type", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(VersionedPartyVersionGetByIdOutcome::Ok {
@@ -4612,6 +7852,7 @@ pub mod client {
                 request.header("openehr-template-id", &value.to_string())?;
             }
             request.json_body(body, params.content_type.as_deref())?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::CREATED => Ok(ContributionCreateOutcome::Created {
@@ -4659,6 +7900,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(ContributionGetOutcome::Ok {
@@ -4700,6 +7942,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(DemographicTagsGetOutcome::Ok {
@@ -4735,6 +7978,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(AgentTagsGetOutcome::Ok {
@@ -4778,6 +8022,7 @@ pub mod client {
                 request.header("Content-Type", &value.to_string())?;
             }
             request.json_body(body, params.content_type.as_deref())?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(AgentTagsUpdateOutcome::Ok {
@@ -4807,7 +8052,7 @@ pub mod client {
             &self,
             params: &AgentTagsDeleteParams,
         ) -> Result<AgentTagsDeleteOutcome, crate::rest::client::ClientError> {
-            let request = crate::rest::client::Request::new(
+            let mut request = crate::rest::client::Request::new(
                 http::Method::DELETE,
                 format!(
                     "/demographic/agent/{}/tags/{}",
@@ -4815,6 +8060,7 @@ pub mod client {
                     crate::rest::client::path_segment(&params.key)
                 ),
             );
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::NO_CONTENT => Ok(AgentTagsDeleteOutcome::NoContent),
@@ -4845,6 +8091,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(GroupTagsGetOutcome::Ok {
@@ -4888,6 +8135,7 @@ pub mod client {
                 request.header("Content-Type", &value.to_string())?;
             }
             request.json_body(body, params.content_type.as_deref())?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(GroupTagsUpdateOutcome::Ok {
@@ -4917,7 +8165,7 @@ pub mod client {
             &self,
             params: &GroupTagsDeleteParams,
         ) -> Result<GroupTagsDeleteOutcome, crate::rest::client::ClientError> {
-            let request = crate::rest::client::Request::new(
+            let mut request = crate::rest::client::Request::new(
                 http::Method::DELETE,
                 format!(
                     "/demographic/group/{}/tags/{}",
@@ -4925,6 +8173,7 @@ pub mod client {
                     crate::rest::client::path_segment(&params.key)
                 ),
             );
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::NO_CONTENT => Ok(GroupTagsDeleteOutcome::NoContent),
@@ -4955,6 +8204,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(OrganisationTagsGetOutcome::Ok {
@@ -4998,6 +8248,7 @@ pub mod client {
                 request.header("Content-Type", &value.to_string())?;
             }
             request.json_body(body, params.content_type.as_deref())?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(OrganisationTagsUpdateOutcome::Ok {
@@ -5027,7 +8278,7 @@ pub mod client {
             &self,
             params: &OrganisationTagsDeleteParams,
         ) -> Result<OrganisationTagsDeleteOutcome, crate::rest::client::ClientError> {
-            let request = crate::rest::client::Request::new(
+            let mut request = crate::rest::client::Request::new(
                 http::Method::DELETE,
                 format!(
                     "/demographic/organisation/{}/tags/{}",
@@ -5035,6 +8286,7 @@ pub mod client {
                     crate::rest::client::path_segment(&params.key)
                 ),
             );
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::NO_CONTENT => Ok(OrganisationTagsDeleteOutcome::NoContent),
@@ -5065,6 +8317,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(PersonTagsGetOutcome::Ok {
@@ -5108,6 +8361,7 @@ pub mod client {
                 request.header("Content-Type", &value.to_string())?;
             }
             request.json_body(body, params.content_type.as_deref())?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(PersonTagsUpdateOutcome::Ok {
@@ -5137,7 +8391,7 @@ pub mod client {
             &self,
             params: &PersonTagsDeleteParams,
         ) -> Result<PersonTagsDeleteOutcome, crate::rest::client::ClientError> {
-            let request = crate::rest::client::Request::new(
+            let mut request = crate::rest::client::Request::new(
                 http::Method::DELETE,
                 format!(
                     "/demographic/person/{}/tags/{}",
@@ -5145,6 +8399,7 @@ pub mod client {
                     crate::rest::client::path_segment(&params.key)
                 ),
             );
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::NO_CONTENT => Ok(PersonTagsDeleteOutcome::NoContent),
@@ -5175,6 +8430,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(RoleTagsGetOutcome::Ok {
@@ -5218,6 +8474,7 @@ pub mod client {
                 request.header("Content-Type", &value.to_string())?;
             }
             request.json_body(body, params.content_type.as_deref())?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(RoleTagsUpdateOutcome::Ok {
@@ -5247,7 +8504,7 @@ pub mod client {
             &self,
             params: &RoleTagsDeleteParams,
         ) -> Result<RoleTagsDeleteOutcome, crate::rest::client::ClientError> {
-            let request = crate::rest::client::Request::new(
+            let mut request = crate::rest::client::Request::new(
                 http::Method::DELETE,
                 format!(
                     "/demographic/role/{}/tags/{}",
@@ -5255,6 +8512,7 @@ pub mod client {
                     crate::rest::client::path_segment(&params.key)
                 ),
             );
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::NO_CONTENT => Ok(RoleTagsDeleteOutcome::NoContent),
@@ -5266,8 +8524,9 @@ pub mod client {
         }
     }
 }
-/// The operations of this group as `(method, path, operation_id)`, for
-/// wiring an axum router in `ferroehr-rest`.
+/// The operations of this group as `(method, path, operation_id)`, in OAS
+/// document order: `server::router` binds each to its trait method, and
+/// `crate::rest::routes::lookup` matches a request path against them.
 pub const ROUTES: &[(&str, &str, &str)] = &[
     ("POST", "/demographic/agent", "agent_create"),
     ("GET", "/demographic/agent/{uid_based_id}", "agent_get"),

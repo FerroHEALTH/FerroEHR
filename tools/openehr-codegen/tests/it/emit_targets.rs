@@ -232,13 +232,13 @@ fn emit_rest_matches_the_committed_tree() {
     assert_matches_committed_tree("emit-rest", &files);
 }
 
-/// Every API group gates exactly one server trait and exactly one client module.
+/// Every API group gates exactly one server module and exactly one client module.
 ///
 /// The two halves ride separate features (`rest-server`, `rest-client`), so a
 /// second gate, or a half emitted outside its gate, would compile a half into a
 /// consumer that did not ask for it.
 #[test]
-fn every_rest_group_gates_one_server_trait_and_one_client_module() {
+fn every_rest_group_gates_one_server_module_and_one_client_module() {
     let files = testsupport::emit_rest_to_memory().unwrap();
     for group in REST_GROUPS {
         let Some(text) = rest_group(&files, group) else {
@@ -250,12 +250,9 @@ fn every_rest_group_gates_one_server_trait_and_one_client_module() {
             "emit-rest: {group} must gate exactly one item on rest-server",
         );
         assert_eq!(
-            text.matches(
-                "#[cfg(feature = \"rest-server\")]\n#[async_trait::async_trait]\npub trait "
-            )
-            .count(),
+            text.matches(SERVER_GATE).count(),
             1,
-            "emit-rest: {group}'s rest-server gate must sit on its server trait",
+            "emit-rest: {group}'s rest-server gate must sit on its `pub mod server`",
         );
         assert_eq!(
             text.matches("#[cfg(feature = \"rest-client\")]").count(),
@@ -303,6 +300,51 @@ fn every_rest_operation_has_one_outcome_and_one_client_method() {
             methods, routes,
             "emit-rest: {group} has {methods} client methods for {routes} operations",
         );
+    }
+}
+
+/// Every operation of a group has one success-answer enum, one trait method,
+/// one router binding and one handler in the server module.
+///
+/// Counted against the route table, like the client half: an operation the
+/// router skipped would be unreachable over HTTP while its trait method still
+/// compiles.
+#[test]
+fn every_rest_operation_has_one_server_response_route_and_handler() {
+    let files = testsupport::emit_rest_to_memory().unwrap();
+    for group in REST_GROUPS {
+        let Some(text) = rest_group(&files, group) else {
+            panic!("emit-rest: the {group} group was not rendered");
+        };
+        let Some(server) = server_module(text) else {
+            panic!("emit-rest: {group} renders no server module ahead of its client module");
+        };
+        let Some(routes) = route_count(text) else {
+            panic!("emit-rest: {group} renders no route table");
+        };
+        let responses = server
+            .lines()
+            .map(str::trim_start)
+            .filter(|line| line.starts_with("pub enum ") && line.ends_with("Response {"))
+            .count();
+        let methods = server
+            .lines()
+            .map(str::trim_start)
+            .filter(|line| line.starts_with("async fn ") && !line.starts_with("async fn handle_"))
+            .count();
+        let bindings = server.matches("axum::routing::on(").count();
+        let handlers = server.matches("async fn handle_").count();
+        for (what, count) in [
+            ("success-answer enums", responses),
+            ("trait methods", methods),
+            ("router bindings", bindings),
+            ("handlers", handlers),
+        ] {
+            assert_eq!(
+                count, routes,
+                "emit-rest: {group} has {count} {what} for {routes} operations",
+            );
+        }
     }
 }
 
@@ -385,6 +427,18 @@ const REST_GROUPS: &[&str] = &[
 /// The feature gate and header of a group's client module, as the emitter
 /// writes them.
 const CLIENT_GATE: &str = "#[cfg(feature = \"rest-client\")]\npub mod client {";
+
+/// The feature gate and header of a group's server module, as the emitter
+/// writes them.
+const SERVER_GATE: &str = "#[cfg(feature = \"rest-server\")]\npub mod server {";
+
+/// The server module of a rendered group: from its feature gate up to the
+/// client module the emitter writes after it.
+fn server_module(text: &str) -> Option<&str> {
+    let start = text.find(SERVER_GATE)?;
+    let end = text.find(CLIENT_GATE)?;
+    text.get(start..end)
+}
 
 /// The rendered module of API group `group`.
 fn rest_group<'a>(files: &'a BTreeMap<String, String>, group: &str) -> Option<&'a str> {
