@@ -24,7 +24,7 @@ ITS-REST 1.1.0 &nbsp;·&nbsp; AQL 1.1 &nbsp;·&nbsp; RM 1.2.0 **+ 1.1.0** &nbsp;
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/FerroHEALTH/FerroEHR/badge)](https://scorecard.dev/viewer/?uri=github.com/FerroHEALTH/FerroEHR)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/13982/badge)](https://www.bestpractices.dev/projects/13982)
 [![GHCR](https://img.shields.io/badge/ghcr.io-ferroehr-2496ED.svg?logo=docker&logoColor=white)](https://github.com/FerroHEALTH/FerroEHR/pkgs/container/ferroehr)
-[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/ferroehr)](https://artifacthub.io/packages/search?repo=ferroehr)
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/ferrohealth)](https://artifacthub.io/packages/search?repo=ferrohealth)
 [![DOI](https://zenodo.org/badge/1286429270.svg)](https://doi.org/10.5281/zenodo.21940279)
 [![License: BUSL-1.1](https://img.shields.io/badge/License-BUSL--1.1-blue.svg)](LICENSE)
 
@@ -550,7 +550,7 @@ for EHRbase) and `veredictum stress` / `veredictum aql-probe`
 
 The Helm chart is published to GHCR as an OCI artifact, beside the images it
 deploys, and listed on
-[Artifact Hub](https://artifacthub.io/packages/helm/ferroehr/ferroehr):
+[Artifact Hub](https://artifacthub.io/packages/helm/ferrohealth/ferroehr):
 
 ```shell
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
