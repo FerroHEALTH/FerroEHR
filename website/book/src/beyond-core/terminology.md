@@ -221,7 +221,7 @@ that gives you both.
 
 ## FerroTERM beside the CDR
 
-[FerroTERM](https://github.com/rubentalstra/FerroTERM) is the terminology server
+[FerroTERM](https://github.com/FerroHEALTH/FerroTERM) is the terminology server
 FerroEHR ships with: the `docker-compose.terminology.yml` overlay of the
 quickstart starts it beside the CDR and points `[terminology.external]` at
 `http://ferroterm:8080/r4b`, the [compose page](../installation/compose.md#the-terminology-overlay-ferroterm)

@@ -79,10 +79,10 @@ services:
   # 702 MB resident); the 1536m cap also fits the Netherlands edition (889 MB).
   # The CDR's cap moved from 4096m to 3072m to make room on the 8 GB box.
   ferroterm:
-    image: ${FERROTERM_IMAGE:-ghcr.io/rubentalstra/ferroterm:0.1.5@sha256:61a2d4aefc4a48e9e90b9a698a64bdfeb7ef6443744a1fe50972099456891fe9}
+    image: ${FERROTERM_IMAGE:-ghcr.io/ferrohealth/ferroterm:0.1.6@sha256:7ec4c9622e88e3028faf7c74a2384fb02e57dc3163c282b21274121a26aa3d5b}
     container_name: ferroehr-sandbox-ferroterm
     restart: unless-stopped
-    # The image is its own health probe (`ferroterm healthcheck`, 0.1.5): no
+    # The image is its own health probe (`ferroterm healthcheck`, 0.1.6): no
     # shell, no curl in the distroless base. Same cadence as the CDR's above;
     # the start period covers loading a SNOMED CT edition.
     healthcheck:

@@ -7,7 +7,7 @@
 #   docker compose -f docker-compose.yml -f docker-compose.terminology.yml up
 #   curl 'http://localhost:8090/r4b/metadata?mode=terminology'
 #
-# It starts FerroTERM (https://github.com/rubentalstra/FerroTERM, the Ferro
+# It starts FerroTERM (https://github.com/FerroHEALTH/FerroTERM, the Ferro
 # family's FHIR terminology server: R4 /r4, R4B /r4b, R5 /r5, no JVM, no
 # database) beside the CDR and switches the CDR's external terminology on, so
 # archetype value-set bindings resolve against it at commit, AQL TERMINOLOGY()
@@ -53,8 +53,8 @@
 
 services:
   ferroterm:
-    # Digest-pinned FerroTERM 0.1.5 (resolved 2026-09-24); no `:latest`.
-    image: ghcr.io/rubentalstra/ferroterm:0.1.5@sha256:61a2d4aefc4a48e9e90b9a698a64bdfeb7ef6443744a1fe50972099456891fe9
+    # Digest-pinned FerroTERM 0.1.6 (resolved 2026-10-01); no `:latest`.
+    image: ghcr.io/ferrohealth/ferroterm:0.1.6@sha256:7ec4c9622e88e3028faf7c74a2384fb02e57dc3163c282b21274121a26aa3d5b
     environment:
       # The shaped seed, read straight out of the ferroehr image: the whole
       # image is mounted read-only at /image (a Compose `type: image` volume,
@@ -83,7 +83,7 @@ services:
     ports:
       - "${FERROEHR_BIND_HOST:-127.0.0.1}:${FERROEHR_TERMINOLOGY_PORT:-8090}:8080"
     # The image is its own health probe (`ferroterm healthcheck`, FerroTERM
-    # 0.1.5): the distroless base carries no shell and no HTTP client, so the
+    # 0.1.6): the distroless base carries no shell and no HTTP client, so the
     # binary sends the one GET /health itself and exits 0 on 200. The values
     # restate the image's HEALTHCHECK, and the 60 s start period is for a large
     # edition's load; `healthy` means the code systems are served.
@@ -112,7 +112,7 @@ services:
   # never starts it. Same image; the release archive you hold a licence for is
   # mounted read-only and the index lands in the volume the server reads.
   ferroterm-build:
-    image: ghcr.io/rubentalstra/ferroterm:0.1.5@sha256:61a2d4aefc4a48e9e90b9a698a64bdfeb7ef6443744a1fe50972099456891fe9
+    image: ghcr.io/ferrohealth/ferroterm:0.1.6@sha256:7ec4c9622e88e3028faf7c74a2384fb02e57dc3163c282b21274121a26aa3d5b
     profiles: [terminology-build]
     entrypoint: ["/usr/local/bin/ferroterm-build"]
     command: ["--rf2", "/rf2/release.zip", "--out", "/data/index"]

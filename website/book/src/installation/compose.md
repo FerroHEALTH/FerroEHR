@@ -272,7 +272,7 @@ curl -H "Authorization: Bearer $TOKEN" -X POST -i \
 
 ## The terminology overlay (FerroTERM)
 
-[FerroTERM](https://github.com/rubentalstra/FerroTERM) is the Ferro family's
+[FerroTERM](https://github.com/FerroHEALTH/FerroTERM) is the Ferro family's
 FHIR terminology server: R4, R4B and R5 endpoints over a precomputed index, no
 JVM, no database, one distroless image. The overlay
 `docker-compose.terminology.yml` starts it beside the CDR and switches the CDR's

@@ -1267,20 +1267,20 @@ terminology:
   strategy: {}
   image:
     # -- FerroTERM image repository. A separate product on its own release line
-    # (https://github.com/rubentalstra/FerroTERM), BUSL-1.1 from the same
+    # (https://github.com/FerroHEALTH/FerroTERM), BUSL-1.1 from the same
     # Licensor as FerroEHR.
-    repository: ghcr.io/rubentalstra/ferroterm
+    repository: ghcr.io/ferrohealth/ferroterm
     # -- Pull policy.
     pullPolicy: IfNotPresent
     # -- Image tag. Empty falls back to the FerroTERM release this chart is
-    # pinned to (0.1.5) — never `.Chart.appVersion`, which is FerroEHR's line.
+    # pinned to (0.1.6) — never `.Chart.appVersion`, which is FerroEHR's line.
     # A tag other than that pin is REFUSED while `digest` below is non-empty:
     # the digest wins, so the tag would be inert while the values file claimed
     # otherwise. Clear `digest` to deploy a tag.
     tag: ""
     # -- Image digest (`sha256:…`); wins over `tag`. Pinned by default, so an
     # install runs the exact image this chart was validated against.
-    digest: sha256:61a2d4aefc4a48e9e90b9a698a64bdfeb7ef6443744a1fe50972099456891fe9
+    digest: sha256:7ec4c9622e88e3028faf7c74a2384fb02e57dc3163c282b21274121a26aa3d5b
   service:
     # -- Service type. ClusterIP deliberately: the CDR is the only caller.
     type: ClusterIP
