@@ -157,7 +157,7 @@ pod starts, not when the chart renders; `--skip-schema-validation` disables the
 check entirely if you ever need to bypass it.
 
 The chart is also listed on **[Artifact
-Hub](https://artifacthub.io/packages/helm/ferrohealth/ferroehr)**, which renders the
+Hub](https://artifacthub.io/packages/helm/ferroehr/ferroehr)**, which renders the
 chart's metadata plus a security report over the four images the chart's own
 metadata lists: the server, the optional viewer, the backup jobs' `pg_dump`
 image, and FerroTERM.
