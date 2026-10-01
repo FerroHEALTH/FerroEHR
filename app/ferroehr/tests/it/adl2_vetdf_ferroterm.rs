@@ -15,7 +15,7 @@
 //! - a code of the served shaped system that exists: accepted;
 //! - a code of the served shaped system that does not exist: VETDF, `422`.
 //!
-//! The container is `ghcr.io/rubentalstra/ferroterm` at the release the compose
+//! The container is `ghcr.io/ferrohealth/ferroterm` at the release the compose
 //! overlay pins, started through `testcontainers` with `docker/terminology/seed`
 //! mounted as its `FERROTERM_CODESYSTEMS`; the harness's `PostgreSQL` 18 backs
 //! the service. Serialized with the other container suites by the nextest
@@ -42,11 +42,11 @@ use testcontainers::runners::AsyncRunner;
 use testcontainers::{ContainerAsync, GenericImage, ImageExt};
 
 /// The `FerroTERM` release the compose overlay pins (`docker-compose.terminology.yml`).
-const FERROTERM_IMAGE: &str = "ghcr.io/rubentalstra/ferroterm";
+const FERROTERM_IMAGE: &str = "ghcr.io/ferrohealth/ferroterm";
 /// Tag AND index digest, the reference the overlay carries: the digest is what
 /// is pulled, so this suite measures the exact bytes a deployment runs.
 const FERROTERM_TAG: &str =
-    "0.1.5@sha256:61a2d4aefc4a48e9e90b9a698a64bdfeb7ef6443744a1fe50972099456891fe9";
+    "0.1.6@sha256:7ec4c9622e88e3028faf7c74a2384fb02e57dc3163c282b21274121a26aa3d5b";
 const FERROTERM_PORT: ContainerPort = ContainerPort::Tcp(8080);
 /// The shaped code system the seed serves (`docker/terminology/seed/`).
 const SHAPED_SYSTEM: &str = "http://cnf.example.test/fhir/CodeSystem/sct-shaped";

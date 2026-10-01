@@ -15,6 +15,15 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+### Changed
+
+- **FerroTERM moves to 0.1.6 at `ghcr.io/ferrohealth/ferroterm`** (#3521).
+  FerroTERM moved to the FerroHEALTH organization, and its releases from 0.1.6
+  on publish there. The terminology compose overlay, the hosted sandbox, the
+  Helm chart (`terminology.image`, chart 10.1.6) and the FerroTERM integration
+  test pin `0.1.6@sha256:7ec4c962…`, and the book links
+  <https://github.com/FerroHEALTH/FerroTERM>.
+
 ## [4.3.2] - 2026-10-01
 
 ### Added

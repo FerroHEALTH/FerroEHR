@@ -32,7 +32,7 @@
 #      appVersion contradicts. First-party means the images built from THIS
 #      repository at this version: `ferroehr`, `ferroehr-viewer` and
 #      `ferroehr-postgres` today. A third-party image the chart deploys —
-#      `ghcr.io/rubentalstra/ferroterm` since #3305 — moves on its own release
+#      `ghcr.io/ferrohealth/ferroterm` since #3305 — moves on its own release
 #      line, is pinned in the chart's own values and helpers, and is neither
 #      equal to appVersion nor rewritten at package time; holding it to this
 #      rule would make every FerroEHR release claim a FerroTERM version that
@@ -200,8 +200,8 @@ if [[ -z "$terminology_pin" ]]; then
 elif [[ -z "$terminology_digest" ]]; then
   report "could not read terminology.image.digest from $VALUES — the chart pins FerroTERM by digest, and this guard holds the published annotation to that pin."
 else
-  want="ghcr.io/rubentalstra/ferroterm:${terminology_pin}@${terminology_digest}"
-  have=$(grep -oE 'image: ghcr\.io/rubentalstra/ferroterm[^[:space:]]*' "$CHART" | head -1)
+  want="ghcr.io/ferrohealth/ferroterm:${terminology_pin}@${terminology_digest}"
+  have=$(grep -oE 'image: ghcr\.io/ferrohealth/ferroterm[^[:space:]]*' "$CHART" | head -1)
   have="${have#image: }"
   if [[ "$have" != "$want" ]]; then
     report "$CHART lists FerroTERM as '${have:-<absent>}' but the chart deploys '${want}' (tag from ferroehr.terminologyPinnedVersion in $HELPERS, digest from terminology.image.digest in $VALUES). Artifact Hub scans the reference in the annotation, so a stale one reports vulnerabilities for an image nobody runs."
