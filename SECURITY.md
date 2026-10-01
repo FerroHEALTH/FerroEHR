@@ -13,7 +13,7 @@ running a clinical deployment under change control has to plan around it.
 | Artifact | Version line | What is supported |
 |---|---|---|
 | The server (GitHub releases, container images) | product SemVer, currently `4.x` | the newest `vX.Y.Z` tag, and nothing older |
-| The Helm chart (`oci://ghcr.io/rubentalstra/charts`) | its own SemVer, independent of the server | the newest published chart version |
+| The Helm chart (`oci://ghcr.io/ferrohealth/charts`) | its own SemVer, independent of the server | the newest published chart version |
 | The `openehr-*` crates (crates.io) | their own lockstep `0.0.x` line | the newest published version of all nine |
 
 **How a security fix reaches you.** The fix lands on `main` and ships in the
@@ -42,7 +42,7 @@ there currently are.
 **Please do not open a public issue for suspected vulnerabilities.**
 
 Report privately via
-[GitHub private vulnerability reporting](https://github.com/rubentalstra/FerroEHR/security/advisories/new)
+[GitHub private vulnerability reporting](https://github.com/FerroHEALTH/FerroEHR/security/advisories/new)
 ("Report a vulnerability" on the repository's Security tab).
 
 Include what you can: affected component/endpoint, reproduction steps or a proof
@@ -106,8 +106,8 @@ credit costs you nothing and changes nothing about how the report is handled.
 Settings live in GitHub, not in the tree, so they can be changed without a
 commit and reset without anyone noticing. This table is the record of what the
 posture is **supposed** to be; read it back with
-`gh api repos/rubentalstra/FerroEHR --jq '.security_and_analysis'` and
-`gh api repos/rubentalstra/FerroEHR/rulesets`, and treat a divergence as a
+`gh api repos/FerroHEALTH/FerroEHR --jq '.security_and_analysis'` and
+`gh api repos/FerroHEALTH/FerroEHR/rulesets`, and treat a divergence as a
 finding.
 
 | Setting | Expected | Why |

@@ -20,7 +20,7 @@
 # first-hand on this repository's own first GitHub-archived deposit
 # (10.5281/zenodo.21940280, v3.17.6, read 2026-08-15): the record-shape file
 # was IGNORED entirely and the deposit fell back to GitHub's raw repo
-# metadata (title "rubentalstra/FerroEHR: v3.17.6", the full 29-name
+# metadata (title "FerroHEALTH/FerroEHR: v3.17.6", the full 29-name
 # contributor list as creators), refuting the earlier claim that the
 # integration accepts the record shape. The help page's complete example
 # (read 2026-08-15) is the authority for the field spellings used below:

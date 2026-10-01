@@ -37,8 +37,8 @@ kubectl create namespace ferroehr
 kubectl -n ferroehr create secret generic ferroehr-db \
   --from-literal=FERROEHR__DB__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
-helm install ferroehr oci://ghcr.io/rubentalstra/charts/ferroehr \
-  --version 10.1.3 -n ferroehr \
+helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
+  --version 10.1.4 -n ferroehr \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=4.3.1
 ```
@@ -55,7 +55,7 @@ helm install ferroehr oci://ghcr.io/rubentalstra/charts/ferroehr \
 reference. To read the chart's metadata without installing it:
 
 ```shell
-helm show chart oci://ghcr.io/rubentalstra/charts/ferroehr --version 10.1.3
+helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 10.1.4
 ```
 
 ### Pin two versions, not one
@@ -68,7 +68,7 @@ against.
 
 | | Selects | Pin with | Line |
 |---|---|---|---|
-| Chart version | templates, values schema, defaults | `--version 10.1.3` | SemVer over the chart's own contract |
+| Chart version | templates, values schema, defaults | `--version 10.1.4` | SemVer over the chart's own contract |
 | Image tag | the server binary | `--set image.tag=4.3.1` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
@@ -97,8 +97,8 @@ artifacts answer two different questions, and you can ask both.
 signature over the chart's digest:
 
 ```shell
-cosign verify ghcr.io/rubentalstra/charts/ferroehr:<chart-version> \
-  --certificate-identity-regexp '^https://github\.com/rubentalstra/FerroEHR/\.github/workflows/build-chart\.yml@' \
+cosign verify ghcr.io/ferrohealth/charts/ferroehr:<chart-version> \
+  --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/build-chart\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
 
@@ -111,9 +111,9 @@ is what signed the bytes you pulled.
 
 ```shell
 # the chart
-gh attestation verify oci://ghcr.io/rubentalstra/charts/ferroehr:<chart-version> -R rubentalstra/FerroEHR
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:<chart-version> -R FerroHEALTH/FerroEHR
 # the image it deploys
-gh attestation verify oci://ghcr.io/rubentalstra/ferroehr:<tag> -R rubentalstra/FerroEHR
+gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:<tag> -R FerroHEALTH/FerroEHR
 ```
 
 The publish lane reads both back from the registry before it reports success, so
@@ -157,7 +157,7 @@ pod starts, not when the chart renders; `--skip-schema-validation` disables the
 check entirely if you ever need to bypass it.
 
 The chart is also listed on **[Artifact
-Hub](https://artifacthub.io/packages/helm/ferroehr/ferroehr)**, which renders the
+Hub](https://artifacthub.io/packages/helm/ferrohealth/ferroehr)**, which renders the
 chart's metadata plus a security report over the four images the chart's own
 metadata lists: the server, the optional viewer, the backup jobs' `pg_dump`
 image, and FerroTERM.
@@ -168,12 +168,12 @@ image, and FerroTERM.
 > the image itself as the authority:
 >
 > ```shell
-> helm template ferroehr oci://ghcr.io/rubentalstra/charts/ferroehr --version 10.1.3 \
+> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 10.1.4 \
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
 >   -e FERROEHR__DB__URL=postgres://u:p@db:5432/ferroehr \
->   --entrypoint /usr/local/bin/ferroehr ghcr.io/rubentalstra/ferroehr:<tag> config check
+>   --entrypoint /usr/local/bin/ferroehr ghcr.io/ferrohealth/ferroehr:<tag> config check
 > ```
 >
 > Exit 0 means the image accepts the rendered configuration. A reported unknown
@@ -601,8 +601,8 @@ config:
 ```
 
 ```shell
-helm upgrade ferroehr oci://ghcr.io/rubentalstra/charts/ferroehr \
-  --version 10.1.3 -n ferroehr --reuse-values \
+helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
+  --version 10.1.4 -n ferroehr --reuse-values \
   --set config.query.plan_cache_capacity=512
 ```
 
@@ -702,8 +702,8 @@ running. It is the Helm equivalent of the
 [compose terminology overlay](compose.md#the-terminology-overlay-ferroterm).
 
 ```shell
-helm upgrade --install ferroehr oci://ghcr.io/rubentalstra/charts/ferroehr \
-  --version 10.1.3 -n ferroehr --reuse-values \
+helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
+  --version 10.1.4 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
@@ -944,7 +944,7 @@ Preview an upgrade against what you have installed with
 `helm diff`, or render the new chart version and read it:
 
 ```shell
-helm template ferroehr oci://ghcr.io/rubentalstra/charts/ferroehr --version 10.1.3 \
+helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 10.1.4 \
   -n ferroehr -f my-values.yaml | less
 ```
 
@@ -969,7 +969,7 @@ The check that closes that gap runs the image against your rendered
 configuration:
 
 ```shell
-FERROEHR_IMAGE=ghcr.io/rubentalstra/ferroehr:4.3.1 \
+FERROEHR_IMAGE=ghcr.io/ferrohealth/ferroehr:4.3.1 \
   deploy/helm/ci/boot-check.sh my-values.yaml
 ```
 

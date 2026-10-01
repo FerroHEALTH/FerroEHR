@@ -141,7 +141,7 @@ does not build.
 
 Most of this crate is generated, and every generated file carries a
 `// @generated` header. The generated halves are emitted
-deterministically by [`openehr-codegen`](https://github.com/rubentalstra/FerroEHR/tree/main/tools/openehr-codegen)
+deterministically by [`openehr-codegen`](https://github.com/FerroHEALTH/FerroEHR/tree/main/tools/openehr-codegen)
 from the vendored openEHR artifacts: the XML codec from the ITS-XML XSDs plus
 the BMM field model, the REST contract from the ITS-REST OpenAPI documents,
 the `_type` dispatch table from the BMM, and the three archetype XML codecs
@@ -205,7 +205,7 @@ position moved to [`openehr-sdt`](https://docs.rs/openehr-sdt).
 
 ## Part of FerroEHR
 
-This crate is the serialization and REST-contract layer of [FerroEHR](https://github.com/rubentalstra/FerroEHR), a pure-Rust,
+This crate is the serialization and REST-contract layer of [FerroEHR](https://github.com/FerroHEALTH/FerroEHR), a pure-Rust,
 openEHR-spec-conformant Clinical Data Repository (ITS-REST 1.1.0 + AQL 1.1 on
 PostgreSQL 18). The crates are usable standalone; FerroEHR is the reference
 consumer.

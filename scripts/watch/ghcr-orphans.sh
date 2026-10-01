@@ -46,7 +46,7 @@
 # shellcheck disable=SC2016
 set -euo pipefail
 
-OWNER="rubentalstra"
+OWNER="FerroHEALTH"
 PACKAGES=(ferroehr ferroehr-viewer ferroehr-postgres)
 OUT=""
 
@@ -114,7 +114,7 @@ for pkg in "${PACKAGES[@]}"; do
   echo "== ${repo}" >&2
 
   # `name` is the manifest digest, `id` is what the delete endpoint takes.
-  if ! gh api "/users/${OWNER}/packages/container/${pkg}/versions?per_page=100" --paginate \
+  if ! gh api "/orgs/${OWNER}/packages/container/${pkg}/versions?per_page=100" --paginate \
       --jq '.[] | [.name, (.id|tostring), ((.metadata.container.tags // []) | join(","))] | @tsv' \
       > "$WORK/${pkg}.versions"; then
     echo "::error::could not list versions of ${repo} — the probe could not answer" >&2

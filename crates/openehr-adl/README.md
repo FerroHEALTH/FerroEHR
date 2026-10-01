@@ -47,7 +47,7 @@ package. Versions up to 0.0.59 were published under Apache-2.0 and keep it.
 
 ## Part of FerroEHR
 
-This crate is the archetype-tooling layer of [FerroEHR](https://github.com/rubentalstra/FerroEHR), a pure-Rust,
+This crate is the archetype-tooling layer of [FerroEHR](https://github.com/FerroHEALTH/FerroEHR), a pure-Rust,
 openEHR-spec-conformant Clinical Data Repository (ITS-REST 1.1.0 + AQL 1.1 on
 PostgreSQL 18). The crates are usable standalone; FerroEHR is the reference
 consumer.

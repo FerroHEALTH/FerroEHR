@@ -8,9 +8,9 @@
 # Expires MUST be refreshed before the date below (RFC 9116 §2.5.5: a stale file
 # is to be treated as invalid). The release procedure is where to do it.
 
-Contact: https://github.com/rubentalstra/FerroEHR/security/advisories/new
+Contact: https://github.com/FerroHEALTH/FerroEHR/security/advisories/new
 Expires: 2027-08-06T00:00:00.000Z
 Preferred-Languages: en, nl
 Canonical: https://ferroehr.eu/.well-known/security.txt
-Policy: https://github.com/rubentalstra/FerroEHR/blob/main/SECURITY.md
-Acknowledgments: https://github.com/rubentalstra/FerroEHR/security/advisories
+Policy: https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md
+Acknowledgments: https://github.com/FerroHEALTH/FerroEHR/security/advisories

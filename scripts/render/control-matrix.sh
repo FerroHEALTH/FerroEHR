@@ -292,7 +292,7 @@ keeps a shipped control from sitting here as "planned".
   control regenerates this page as it will read after the merge, so the page
   never lags a shipped control.
 - **Planned:** the issue is open. Whether work has started is the issue's
-  column on the [public roadmap board](https://github.com/users/rubentalstra/projects/4),
+  column on the [public roadmap board](https://github.com/orgs/FerroHEALTH/projects/2),
   which this page does not copy: a status that lives in two places disagrees
   the day one of them moves.
 - **Not planned:** the issue was closed without the control being built. The

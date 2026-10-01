@@ -45,7 +45,7 @@ spec:
     spec:
       containers:
         - name: postgres
-          image: ghcr.io/rubentalstra/ferroehr-postgres:3.17.3
+          image: ghcr.io/ferrohealth/ferroehr-postgres:3.17.3
           env:
             - name: POSTGRES_PASSWORD
               valueFrom:

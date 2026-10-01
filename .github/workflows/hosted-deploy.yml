@@ -42,7 +42,7 @@ jobs:
   deploy:
     name: deploy the hosted sandbox and verify
     # Upstream only: a fork has no key and no box.
-    if: github.repository == 'rubentalstra/FerroEHR'
+    if: github.repository == 'FerroHEALTH/FerroEHR'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # The deploy key and the host key are ENVIRONMENT secrets, reachable only

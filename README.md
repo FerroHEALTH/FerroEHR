@@ -11,28 +11,28 @@ ITS-REST 1.1.0 &nbsp;·&nbsp; AQL 1.1 &nbsp;·&nbsp; RM 1.2.0 **+ 1.1.0** &nbsp;
 
 **Try it live: [sandbox.ferroehr.eu](https://sandbox.ferroehr.eu)** (`ferroehr` / `ferroehr`, demo data, reset nightly)
 
-[![CI](https://github.com/rubentalstra/FerroEHR/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/rubentalstra/FerroEHR/actions/workflows/ci.yml)
-[![Containers](https://github.com/rubentalstra/FerroEHR/actions/workflows/containers.yml/badge.svg?branch=main)](https://github.com/rubentalstra/FerroEHR/actions/workflows/containers.yml)
-[![CodeQL](https://github.com/rubentalstra/FerroEHR/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/rubentalstra/FerroEHR/actions/workflows/codeql.yml)
-[![GitHub Release](https://img.shields.io/github/release/rubentalstra/FerroEHR.svg?logo=github)](https://github.com/rubentalstra/FerroEHR/releases/latest)
-[![Image pulls](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fghcr-badge.elias.eu.org%2Fapi%2Frubentalstra%2FFerroEHR%2Fferroehr&query=downloadCount&label=image%20pulls&logo=github)](https://github.com/rubentalstra/FerroEHR/pkgs/container/ferroehr)
+[![CI](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/ci.yml)
+[![Containers](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml/badge.svg?branch=main)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml)
+[![CodeQL](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/codeql.yml)
+[![GitHub Release](https://img.shields.io/github/release/FerroHEALTH/FerroEHR.svg?logo=github)](https://github.com/FerroHEALTH/FerroEHR/releases/latest)
+[![Image pulls](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fghcr-badge.elias.eu.org%2Fapi%2FFerroHEALTH%2FFerroEHR%2Fferroehr&query=downloadCount&label=image%20pulls&logo=github)](https://github.com/FerroHEALTH/FerroEHR/pkgs/container/ferroehr)
 [![FOSSA Status](https://app.fossa.com/api/projects/custom%2B63718%2FFerroEHR.svg?type=shield&issueType=license)](https://app.fossa.com/projects/custom%2B63718%2FFerroEHR?ref=badge_shield&issueType=license)
 [![FOSSA Status](https://app.fossa.com/api/projects/custom%2B63718%2FFerroEHR.svg?type=shield&issueType=security)](https://app.fossa.com/projects/custom%2B63718%2FFerroEHR?ref=badge_shield&issueType=security)
 
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=rubentalstra_FerroEHR&metric=coverage)](https://sonarcloud.io/component_measures?id=rubentalstra_FerroEHR&metric=coverage)
 [![Quality gate status](https://sonarcloud.io/api/project_badges/measure?project=rubentalstra_FerroEHR&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=rubentalstra_FerroEHR)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/rubentalstra/FerroEHR/badge)](https://scorecard.dev/viewer/?uri=github.com/rubentalstra/FerroEHR)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/FerroHEALTH/FerroEHR/badge)](https://scorecard.dev/viewer/?uri=github.com/FerroHEALTH/FerroEHR)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/13982/badge)](https://www.bestpractices.dev/projects/13982)
-[![GHCR](https://img.shields.io/badge/ghcr.io-ferroehr-2496ED.svg?logo=docker&logoColor=white)](https://github.com/rubentalstra/FerroEHR/pkgs/container/ferroehr)
-[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/ferroehr)](https://artifacthub.io/packages/search?repo=ferroehr)
+[![GHCR](https://img.shields.io/badge/ghcr.io-ferroehr-2496ED.svg?logo=docker&logoColor=white)](https://github.com/FerroHEALTH/FerroEHR/pkgs/container/ferroehr)
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/ferrohealth)](https://artifacthub.io/packages/search?repo=ferrohealth)
 [![DOI](https://zenodo.org/badge/1286429270.svg)](https://doi.org/10.5281/zenodo.21940279)
 [![License: BUSL-1.1](https://img.shields.io/badge/License-BUSL--1.1-blue.svg)](LICENSE)
 
-[![openEHR CNF conformance](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Frubentalstra%2Fferroehr%2Fmain%2Fdocs%2Fconformance%2Fferroehr%2Fbadge.json)](docs/conformance/ferroehr/CONFORMANCE_REPORT.md)
-[![CNF performance](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Frubentalstra%2Fferroehr%2Fmain%2Fdocs%2Fconformance%2Fferroehr%2Fbadge-performance.json)](docs/conformance/ferroehr/CONFORMANCE_CERTIFICATE.md)
+[![openEHR CNF conformance](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fferroehr%2Fbadge.json)](docs/conformance/ferroehr/CONFORMANCE_REPORT.md)
+[![CNF performance](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fferroehr%2Fbadge-performance.json)](docs/conformance/ferroehr/CONFORMANCE_CERTIFICATE.md)
 [![SLSA Build L3](https://slsa.dev/images/gh-badge-level3.svg)](https://ferroehr.eu/docs/latest/verifying-releases.html#what-slsa-level-each-artifact-reaches)
 
-[**Live sandbox**](https://sandbox.ferroehr.eu) · [**Documentation**](https://ferroehr.eu/) · [Why this exists](#why-this-project-exists) · [**Do you need a commercial licence?**](#do-you-need-a-commercial-licence) · [Quick start](#quick-start) · [Features](#features) · [Spec versions](#choose-your-openehr-specification-generation) · [Rust crates](#the-openehr-specification-layer-as-rust-crates) · [Architecture](#architecture) · [Conformance](#conformance-measured) · [Deployment](#deployment) · [Roadmap](https://github.com/users/rubentalstra/projects/4) · [Contributing](#contributing-and-security)
+[**Live sandbox**](https://sandbox.ferroehr.eu) · [**Documentation**](https://ferroehr.eu/) · [Why this exists](#why-this-project-exists) · [**Do you need a commercial licence?**](#do-you-need-a-commercial-licence) · [Quick start](#quick-start) · [Features](#features) · [Spec versions](#choose-your-openehr-specification-generation) · [Rust crates](#the-openehr-specification-layer-as-rust-crates) · [Architecture](#architecture) · [Conformance](#conformance-measured) · [Deployment](#deployment) · [Roadmap](https://github.com/orgs/FerroHEALTH/projects/2) · [Contributing](#contributing-and-security)
 
 </div>
 
@@ -236,13 +236,13 @@ knows what it runs on and what it costs:
 | Database | a second CX33 running the project's own `ferroehr-postgres` image (PostgreSQL 18), reachable only over a Hetzner private network |
 
 The whole posture is committed at [`deploy/hosted/`](deploy/hosted/). One step up,
-[open a GitHub Codespace](https://codespaces.new/rubentalstra/FerroEHR)
+[open a GitHub Codespace](https://codespaces.new/FerroHEALTH/FerroEHR)
 and the published stack (server, PostgreSQL 18, viewer) boots in your
 browser. Details in [Try it in Codespaces](https://ferroehr.eu/docs/latest/installation/codespaces.html).
 
 Or run it locally with Docker Compose: one downloaded file, no checkout
 (needs Compose 2.23.1+). Grab `docker-compose.yml` from the
-[latest release](https://github.com/rubentalstra/FerroEHR/releases/latest)
+[latest release](https://github.com/FerroHEALTH/FerroEHR/releases/latest)
 and start it:
 
 ```shell
@@ -281,11 +281,11 @@ docker compose -f docker-compose.yml -f docker-compose.keycloak.yml up
 # user ferroehr / ferroehr (password grant enabled for curl)
 ```
 
-Published images: [`ghcr.io/rubentalstra/ferroehr`](https://github.com/rubentalstra/FerroEHR/pkgs/container/ferroehr),
-[`ghcr.io/rubentalstra/ferroehr-postgres`](https://github.com/rubentalstra/FerroEHR/pkgs/container/ferroehr-postgres)
+Published images: [`ghcr.io/ferrohealth/ferroehr`](https://github.com/FerroHEALTH/FerroEHR/pkgs/container/ferroehr),
+[`ghcr.io/ferrohealth/ferroehr-postgres`](https://github.com/FerroHEALTH/FerroEHR/pkgs/container/ferroehr-postgres)
 (PostgreSQL 18 with roles, schemas, and extensions pre-created; the server
 runs its own migrations at boot), and
-[`ghcr.io/rubentalstra/ferroehr-viewer`](https://github.com/rubentalstra/FerroEHR/pkgs/container/ferroehr-viewer)
+[`ghcr.io/ferrohealth/ferroehr-viewer`](https://github.com/FerroHEALTH/FerroEHR/pkgs/container/ferroehr-viewer)
 (the viewer). The Compose file pins the release's exact image versions.
 Configuration is environment-driven (`FERROEHR_*`) on top of the config the
 Compose file carries inline; that config ships **one** development user with
@@ -439,10 +439,10 @@ full design is documented in
 <!-- CNF 2.0 profile badges: shields.io endpoint scheme over the
      runner-generated badge JSONs on main — auto-updating on every merged
      conformance ratchet, zero manual edits. -->
-[![CNF CORE](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Frubentalstra%2Fferroehr%2Fmain%2Fdocs%2Fconformance%2Fferroehr%2Fbadge-core.json)](docs/conformance/ferroehr/CONFORMANCE_CERTIFICATE.md)
-[![CNF STANDARD](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Frubentalstra%2Fferroehr%2Fmain%2Fdocs%2Fconformance%2Fferroehr%2Fbadge-standard.json)](docs/conformance/ferroehr/CONFORMANCE_CERTIFICATE.md)
-[![CNF OPTIONS](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Frubentalstra%2Fferroehr%2Fmain%2Fdocs%2Fconformance%2Fferroehr%2Fbadge-options.json)](docs/conformance/ferroehr/CONFORMANCE_CERTIFICATE.md)
-[![CNF SEC-BASIC](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Frubentalstra%2Fferroehr%2Fmain%2Fdocs%2Fconformance%2Fferroehr%2Fbadge-sec-basic.json)](docs/conformance/ferroehr/CONFORMANCE_CERTIFICATE.md)
+[![CNF CORE](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fferroehr%2Fbadge-core.json)](docs/conformance/ferroehr/CONFORMANCE_CERTIFICATE.md)
+[![CNF STANDARD](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fferroehr%2Fbadge-standard.json)](docs/conformance/ferroehr/CONFORMANCE_CERTIFICATE.md)
+[![CNF OPTIONS](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fferroehr%2Fbadge-options.json)](docs/conformance/ferroehr/CONFORMANCE_CERTIFICATE.md)
+[![CNF SEC-BASIC](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fferroehr%2Fbadge-sec-basic.json)](docs/conformance/ferroehr/CONFORMANCE_CERTIFICATE.md)
 
 ```shell
 bash scripts/conformance.sh
@@ -550,11 +550,11 @@ for EHRbase) and `veredictum stress` / `veredictum aql-probe`
 
 The Helm chart is published to GHCR as an OCI artifact, beside the images it
 deploys, and listed on
-[Artifact Hub](https://artifacthub.io/packages/helm/ferroehr/ferroehr):
+[Artifact Hub](https://artifacthub.io/packages/helm/ferrohealth/ferroehr):
 
 ```shell
-helm install ferroehr oci://ghcr.io/rubentalstra/charts/ferroehr \
-  --version 10.1.3 --set database.existingSecret=my-db-secret
+helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
+  --version 10.1.4 --set database.existingSecret=my-db-secret
 ```
 
 There is no HTTP chart repository, so `helm repo add` does not apply — OCI is the
@@ -562,7 +562,7 @@ only publication path. The chart version and the image tag are separate SemVer
 lines: `--version` pins the chart, `--set image.tag=` pins the server. Your values
 file is checked against the chart's `values.schema.json` before anything is
 applied. The chart and the images are published with signed keyless provenance
-(`gh attestation verify oci://ghcr.io/rubentalstra/charts/ferroehr:<chart-version> -R rubentalstra/FerroEHR`),
+(`gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:<chart-version> -R FerroHEALTH/FerroEHR`),
 and the chart additionally carries a keyless `cosign` signature.
 
 See the [Kubernetes chapter](https://ferroehr.eu/docs/latest/installation/kubernetes.html)
@@ -597,7 +597,7 @@ spec-codegen drift, comment style, and a container smoke test. See [CONTRIBUTING
 | [Conformance report](docs/conformance/ferroehr/CONFORMANCE_REPORT.md) | The latest measured results, per test case                          |
 | [Version matrix](docs/VERSIONS.md)                                    | Every pin: openEHR spec generations, Rust toolchain, PostgreSQL     |
 | [`openehr-*` crates](https://crates.io/search?q=openehr)              | The specification layer as standalone Rust libraries                |
-| [Roadmap board](https://github.com/users/rubentalstra/projects/4)     | The plan and its live status                                        |
+| [Roadmap board](https://github.com/orgs/FerroHEALTH/projects/2)     | The plan and its live status                                        |
 | [Developer documentation](docs/README.md)                             | Contributing, design decisions, specifications                      |
 | [Vendored openEHR specifications](docs/specs/openehr/)                | The oracle every spec-facing decision cites                         |
 

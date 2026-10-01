@@ -10,7 +10,7 @@ is documented in the code + the user website.
 
 | Path | What it is | Authoritative for |
 |---|---|---|
-| The [FerroEHR Roadmap board](https://github.com/rubentalstra/FerroEHR/projects) | The public direction + live-status view over the tracker (`.claude/rules/project-board.md`) | where the product goes next |
+| The [FerroEHR Roadmap board](https://github.com/FerroHEALTH/FerroEHR/projects) | The public direction + live-status view over the tracker (`.claude/rules/project-board.md`) | where the product goes next |
 | GitHub Issues (`gh issue list --state open`) | The open-items tracker (root `CLAUDE.md` §Issue workflow) | what's open + what's active (pinned = current focus) |
 | Closed issues + PR descriptions + `CHANGELOG.md` | The build record | the historical record of what shipped |
 | The code itself (router → handler → service → SQL) | Per-endpoint call chains — there is no standing endpoint map (a standing map goes stale) | navigation + optimization |

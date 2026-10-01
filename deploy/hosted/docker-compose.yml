@@ -21,7 +21,7 @@ services:
   ferroehr:
     # The release pointer the image lane moves on real release tags. `.env`
     # names the exact reference so a rollback can pin an older one.
-    image: ${FERROEHR_IMAGE:-ghcr.io/rubentalstra/ferroehr:latest}
+    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:latest}
     container_name: ferroehr-sandbox
     restart: unless-stopped
     # The image is its own health probe (`ferroehr healthcheck`): the
@@ -105,7 +105,7 @@ services:
       # The whole ferroehr image, read-only, for the seed directory it carries
       # (a subpath mount needs a newer engine than a box may run).
       - type: image
-        source: ${FERROEHR_IMAGE:-ghcr.io/rubentalstra/ferroehr:latest}
+        source: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:latest}
         target: /image
         read_only: true
       - type: bind
@@ -120,7 +120,7 @@ services:
       - "8080"
 
   viewer:
-    image: ${FERROEHR_VIEWER_IMAGE:-ghcr.io/rubentalstra/ferroehr-viewer:latest}
+    image: ${FERROEHR_VIEWER_IMAGE:-ghcr.io/ferrohealth/ferroehr-viewer:latest}
     container_name: ferroehr-sandbox-viewer
     restart: unless-stopped
     healthcheck:

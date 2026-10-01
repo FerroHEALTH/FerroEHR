@@ -39,7 +39,7 @@
       "resource_type": "publication-softwaredocumentation"
     },
     {
-      "identifier": "https://github.com/rubentalstra/FerroEHR/tree/v4.3.1",
+      "identifier": "https://github.com/FerroHEALTH/FerroEHR/tree/v4.3.1",
       "relation": "isSupplementTo",
       "resource_type": "software"
     },

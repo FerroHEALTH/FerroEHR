@@ -61,7 +61,7 @@ concurrency:
 jobs:
   wipe:
     name: wipe the sandbox schemas (on the box)
-    if: github.repository == 'rubentalstra/FerroEHR' && !inputs.seed-only
+    if: github.repository == 'FerroHEALTH/FerroEHR' && !inputs.seed-only
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: hosted

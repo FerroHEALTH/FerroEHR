@@ -34,7 +34,7 @@ Every other `openehr-*` crate builds on this one.
 ## Generated code — do not edit
 
 Every type file carries a `// @generated` header. The crate is emitted
-deterministically by [`openehr-codegen`](https://github.com/rubentalstra/FerroEHR/tree/main/tools/openehr-codegen)
+deterministically by [`openehr-codegen`](https://github.com/FerroHEALTH/FerroEHR/tree/main/tools/openehr-codegen)
 from the vendored openEHR BMM meta-model; hand-written spec behaviour
 (invariants, spec functions) lives in sibling `*_impl.rs` files the generator
 never rewrites. Changes belong in the emitter, never in the generated output.
@@ -70,7 +70,7 @@ them.
 
 ## Part of FerroEHR
 
-This crate is the specification foundation layer of [FerroEHR](https://github.com/rubentalstra/FerroEHR), a pure-Rust,
+This crate is the specification foundation layer of [FerroEHR](https://github.com/FerroHEALTH/FerroEHR), a pure-Rust,
 openEHR-spec-conformant Clinical Data Repository (ITS-REST 1.1.0 + AQL 1.1 on
 PostgreSQL 18). The crates are usable standalone; FerroEHR is the reference
 consumer.

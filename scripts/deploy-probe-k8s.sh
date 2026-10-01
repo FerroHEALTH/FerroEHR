@@ -84,13 +84,13 @@ if [[ -n "${PROBE_K8S_IMAGE:-}" ]]; then
   PROBE_K8S_IMAGE_REPO="${PROBE_K8S_IMAGE%:*}"
   PROBE_K8S_IMAGE_TAG="${PROBE_K8S_IMAGE##*:}"
 else
-  PROBE_K8S_IMAGE_REPO="ghcr.io/rubentalstra/ferroehr"
+  PROBE_K8S_IMAGE_REPO="ghcr.io/ferrohealth/ferroehr"
   # Detection goes through the cluster's node name, not `docker ps` — Docker
   # Desktop hides its node from the container list while `docker exec` into it
   # works, so a ps-based check reports "no node" on the commonest dev cluster.
   node="$(k8s_node_container || true)"
   if [[ -n "$node" ]] && [[ "$(docker exec "$node" crictl images 2>/dev/null \
-       | grep -cE 'rubentalstra/ferroehr +dev-local')" != "0" ]]; then
+       | grep -cE 'ferrohealth/ferroehr +dev-local')" != "0" ]]; then
     PROBE_K8S_IMAGE_TAG="dev-local"
   else
     PROBE_K8S_IMAGE_TAG="$(grep '^appVersion:' deploy/helm/ferroehr/Chart.yaml | awk '{print $2}' | tr -d '"')"

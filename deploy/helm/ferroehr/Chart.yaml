@@ -19,7 +19,7 @@ type: application
 # A published OCI version is immutable by refusal rather than by the registry —
 # `helm push` over an existing tag replaces it silently — so a correction always
 # ships as a NEW version and the published one stands as it was.
-version: 10.1.3
+version: 10.1.4
 # The DEFAULT container image tag (overridable via image.tag). Equals the
 # workspace version in Cargo.toml, bumped in the release PR beside the
 # docker-compose.yml image tags — one version sweep, the compose treatment
@@ -73,12 +73,12 @@ keywords:
   - fhir
   - healthcare
   - rust
-home: https://github.com/rubentalstra/FerroEHR
+home: https://github.com/FerroHEALTH/FerroEHR
 sources:
-  - https://github.com/rubentalstra/FerroEHR
+  - https://github.com/FerroHEALTH/FerroEHR
 maintainers:
   - name: FerroEHR maintainers
-    url: https://github.com/rubentalstra/FerroEHR
+    url: https://github.com/FerroHEALTH/FerroEHR
 
 # The listing logo. Artifact Hub reads `icon` from Chart.yaml, not from an
 # annotation, and a chart without one is rendered with a generic placeholder
@@ -128,11 +128,11 @@ annotations:
   artifacthub.io/license: BUSL-1.1
   artifacthub.io/links: |
     - name: source
-      url: https://github.com/rubentalstra/FerroEHR
+      url: https://github.com/FerroHEALTH/FerroEHR
     - name: documentation
       url: https://ferroehr.eu/docs/latest/installation/kubernetes.html
     - name: support
-      url: https://github.com/rubentalstra/FerroEHR/issues
+      url: https://github.com/FerroHEALTH/FerroEHR/issues
   artifacthub.io/maintainers: |
     - name: Ruben Talstra
       email: me@rubentalstra.nl
@@ -147,7 +147,7 @@ annotations:
   # WHICH images are first party is DECLARED, not spelled: every entry carries a
   # trailing `# party: first` or `# party: third` marker, and both scripts read
   # that marker rather than matching a repository name. An unmarked entry fails
-  # the guard. A name pattern would have classified `ghcr.io/rubentalstra/
+  # the guard. A name pattern would have classified `ghcr.io/ferrohealth/
   # ferroehr-anything` as ours by accident and a first-party image published
   # under another name as somebody else's, and neither mistake is visible in a
   # render — the tag is simply rewritten, or silently left behind, at the cut.
@@ -162,7 +162,7 @@ annotations:
   # leaving a false claim in place, so it is deliberately not used.
   artifacthub.io/images: |
     - name: ferroehr
-      image: ghcr.io/rubentalstra/ferroehr:4.3.1  # party: first
+      image: ghcr.io/ferrohealth/ferroehr:4.3.1  # party: first
       platforms:
         - linux/amd64
         - linux/arm64
@@ -172,7 +172,7 @@ annotations:
     # the entry describes a surface an operator opts into rather than one every
     # install carries, and it is listed so that surface is scanned.
     - name: ferroehr-viewer
-      image: ghcr.io/rubentalstra/ferroehr-viewer:4.3.1  # party: first
+      image: ghcr.io/ferrohealth/ferroehr-viewer:4.3.1  # party: first
       platforms:
         - linux/amd64
         - linux/arm64
@@ -180,7 +180,7 @@ annotations:
     # `backup.enabled` is set: it carries pg_dump. The chart still provisions no
     # database — this image runs as a client, on a schedule, and exits.
     - name: ferroehr-postgres
-      image: ghcr.io/rubentalstra/ferroehr-postgres:4.3.1  # party: first
+      image: ghcr.io/ferrohealth/ferroehr-postgres:4.3.1  # party: first
       platforms:
         - linux/amd64
         - linux/arm64

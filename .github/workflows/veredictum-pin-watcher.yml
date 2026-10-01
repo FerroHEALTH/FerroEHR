@@ -50,7 +50,7 @@ jobs:
           set -euo pipefail
           pin=$(sed -nE 's/^VEREDICTUM_VERSION="([^"]+)"$/\1/p' scripts/lib/veredictum.sh)
           [ -n "$pin" ] || { echo "::error::VEREDICTUM_VERSION not found in scripts/lib/veredictum.sh"; exit 1; }
-          latest=$(curl -fsS --retry 3 -H "User-Agent: ferroehr-pin-watcher (github.com/rubentalstra/FerroEHR)" \
+          latest=$(curl -fsS --retry 3 -H "User-Agent: ferroehr-pin-watcher (github.com/FerroHEALTH/FerroEHR)" \
               https://crates.io/api/v1/crates/veredictum \
             | jq -r '[.versions[] | select(.yanked | not)][0].num')
           [ -n "$latest" ] && [ "$latest" != "null" ] || { echo "::error::crates.io returned no version list"; exit 1; }

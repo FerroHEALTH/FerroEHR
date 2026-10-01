@@ -77,7 +77,7 @@ output.
      | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/rendered.toml
    docker run --rm -v /tmp/rendered.toml:/etc/ferroehr/ferroehr.toml:ro \
      -e FERROEHR__DB__URL=postgres://u:p@db:5432/ferroehr \
-     --entrypoint /usr/local/bin/ferroehr ghcr.io/rubentalstra/ferroehr:3.17.3 config check
+     --entrypoint /usr/local/bin/ferroehr ghcr.io/ferrohealth/ferroehr:3.17.3 config check
    # 3.17.3, 2026-08-06: `unknown configuration key statement_timeout_ms` (default
    # overlay) and `limits` (all-features) — i.e. the chart on main currently
    # cannot deploy its own appVersion without the version-skew nulls below.
@@ -128,9 +128,9 @@ green, and about the wrong thing.
 Build the image from the branch and load it:
 
 ```bash
-docker build -t ghcr.io/rubentalstra/ferroehr:dev-local \
+docker build -t ghcr.io/ferrohealth/ferroehr:dev-local \
   --target runtime-from-source -f docker/Dockerfile .        # ~10-15 min cold
-docker save ghcr.io/rubentalstra/ferroehr:dev-local \
+docker save ghcr.io/ferrohealth/ferroehr:dev-local \
   | docker exec -i desktop-control-plane ctr -n k8s.io images import -
 helm upgrade ... --set image.tag=dev-local --set image.pullPolicy=IfNotPresent
 ```
@@ -199,7 +199,7 @@ To test a locally built image instead, import it into the node's containerd
 first — `docker load` on the host is not enough:
 
 ```bash
-docker save ghcr.io/rubentalstra/ferroehr:local \
+docker save ghcr.io/ferrohealth/ferroehr:local \
   | docker exec -i desktop-control-plane ctr -n k8s.io images import -
 docker exec desktop-control-plane crictl images | grep ferroehr
 helm install … --set image.tag=local --set image.pullPolicy=Never
@@ -558,7 +558,7 @@ objects — the observability fixture and metrics-server both leave some behind.
 | Symptom | Cause | Fix |
 |---|---|---|
 | `Error: 16 configuration error(s): unknown configuration environment variable FERROEHR_SERVICE_HOST` (+ `FERROEHR_PORT_8080_TCP…`, `FERROEHR_POSTGRES_…`) then `CrashLoopBackOff` | The kubelet's Service link variables collide with the reserved `FERROEHR_` prefix for any Service named `ferroehr*` | `enableServiceLinks: false` on the pod spec. The chart pins it and `validate.sh` asserts it — if you see this, someone removed it |
-| `unknown configuration key spec_profile (line 1)` / `statement_timeout_ms` / `limits` / `connection` | The chart's `config:` defaults are newer than the image `appVersion` names | Diff the key sets against the image itself: `kubectl -n default run cfg --image=ghcr.io/rubentalstra/ferroehr:<tag> --restart=Never --attach --rm --quiet --command -- /usr/local/bin/ferroehr config default`. Then either use an image that has the keys, or null them for the test (`--set config.spec_profile=null`, `--set config.db.statement_timeout_ms=null`, `--set config.server.limits=null`, …). Do NOT delete the keys from `values.yaml` — they are correct for the next release |
+| `unknown configuration key spec_profile (line 1)` / `statement_timeout_ms` / `limits` / `connection` | The chart's `config:` defaults are newer than the image `appVersion` names | Diff the key sets against the image itself: `kubectl -n default run cfg --image=ghcr.io/ferrohealth/ferroehr:<tag> --restart=Never --attach --rm --quiet --command -- /usr/local/bin/ferroehr config default`. Then either use an image that has the keys, or null them for the test (`--set config.spec_profile=null`, `--set config.db.statement_timeout_ms=null`, `--set config.server.limits=null`, …). Do NOT delete the keys from `values.yaml` — they are correct for the next release |
 | Every request `401` with `WWW-Authenticate: Basic realm="ferroehr"` | Chart default is `auth.enabled: true` with NO mechanism configured — it boots and refuses everything | Supply `config.auth.basic.users` (as `test-values.yaml` does) or `config.auth.oidc` |
 | `Upgrade failed: … .env: duplicate entries for key [name="FERROEHR__…"]` | `extraEnv` repeated a name the chart already emits | Set the value through its own key, not `extraEnv` |
 | Pods stay NotReady with `migrations` DOWN / `core schema tables missing (migrations not applied)` while `db: UP` | The database was replaced/wiped under a running pod; migrations run only at boot | `kubectl rollout restart deploy/ferroehr` (a running pod also recovers by itself once anything else migrates — step 6) |

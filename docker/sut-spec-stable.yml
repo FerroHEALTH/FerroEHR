@@ -38,7 +38,7 @@ services:
     cap_drop: [ALL]
     security_opt:
       - no-new-privileges:true
-    image: ${FERROEHR_IMAGE:-ghcr.io/rubentalstra/ferroehr:local}
+    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:local}
     depends_on:
       ferroehr-postgres:
         condition: service_healthy

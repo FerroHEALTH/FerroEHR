@@ -234,7 +234,7 @@ to operator-configured endpoints.
   share; both are now on the patched version, and the only pre-fix copy left in
   the build reaches it through the flamegraph renderer, which writes SVG and
   parses nothing. That argument is published as a machine-readable
-  [VEX document](https://github.com/rubentalstra/FerroEHR/tree/main/security/vex)
+  [VEX document](https://github.com/FerroHEALTH/FerroEHR/tree/main/security/vex)
   rather than left in a comment. Read the current documents for the current
   position: they name the versions, and they are regenerated from the gate.
 - **Multimedia blobs are stored, not inspected.** FerroEHR is not an antivirus
@@ -353,9 +353,9 @@ tags are signed and the tags are protected by a ruleset.
 - **Review capacity is one person.** No second human is structurally required
   between an idea and a released binary; the mitigation is machine enforcement
   and it is honestly recorded in
-  [GOVERNANCE.md](https://github.com/rubentalstra/FerroEHR/blob/main/GOVERNANCE.md).
+  [GOVERNANCE.md](https://github.com/FerroHEALTH/FerroEHR/blob/main/GOVERNANCE.md).
 - **Only the newest release receives fixes.** There is no maintenance branch to
-  backport to; see [SECURITY.md](https://github.com/rubentalstra/FerroEHR/blob/main/SECURITY.md).
+  backport to; see [SECURITY.md](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md).
 
 ## What each database credential can reach
 
@@ -582,7 +582,7 @@ Silence is never coverage, so these are stated rather than left to inference.
 - **Anyone with direct database credentials.**
 - **A malicious maintainer, or a compromise of the maintainer's account or
   signing key.** The bus factor is one; see
-  [MAINTAINERS.md](https://github.com/rubentalstra/FerroEHR/blob/main/MAINTAINERS.md).
+  [MAINTAINERS.md](https://github.com/FerroHEALTH/FerroEHR/blob/main/MAINTAINERS.md).
 - **Physical access, side channels, and speculative-execution attacks.**
 - **Traffic analysis.** Request sizes, timings and error-code patterns can leak
   the existence of records; nothing pads or delays.
@@ -602,5 +602,5 @@ Silence is never coverage, so these are stated rather than left to inference.
 If you believe a control is weaker than stated here, or a residual risk is
 missing, that is a valid security report, including when the defect is in this
 document rather than in the code. Follow
-[SECURITY.md](https://github.com/rubentalstra/FerroEHR/blob/main/SECURITY.md):
+[SECURITY.md](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md):
 report privately, never as a public issue.

@@ -289,11 +289,13 @@ impl From<ApiError> for Refusal {
     }
 }
 
-/// A header value an implementation answers with that is not legal on the
-/// wire is a server fault: `500 Internal Server Error`.
+/// A header an implementation answers with that is not legal on the wire is a
+/// server fault: `500 Internal Server Error`, with a fixed message.
 impl From<HeaderError> for Refusal {
-    fn from(error: HeaderError) -> Self {
-        Self::new(ApiError::Internal(error.to_string()))
+    fn from(_error: HeaderError) -> Self {
+        Self::new(ApiError::Internal(
+            "the answer carries a header that is not legal on the wire".to_owned(),
+        ))
     }
 }
 

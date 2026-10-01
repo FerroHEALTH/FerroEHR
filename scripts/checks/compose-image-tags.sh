@@ -53,7 +53,7 @@ done
 # tracks the `:latest` release pointer the image lane moves (#2974), so this
 # guard only pins them to that pointer — a versioned default reappearing would
 # resurrect the release-cut bump this guard used to police.
-for pair in "FERROEHR_IMAGE ghcr.io/rubentalstra/ferroehr:latest"   "FERROEHR_VIEWER_IMAGE ghcr.io/rubentalstra/ferroehr-viewer:latest"; do
+for pair in "FERROEHR_IMAGE ghcr.io/ferrohealth/ferroehr:latest"   "FERROEHR_VIEWER_IMAGE ghcr.io/ferrohealth/ferroehr-viewer:latest"; do
   var="${pair%% *}"
   want="${pair#* }"
   ref="$(grep -oE "\\$\{$var:-[^}]+\}" "$HOSTED_COMPOSE" | head -1     | sed -E "s/^\\$\{$var:-//; s/\}$//")"

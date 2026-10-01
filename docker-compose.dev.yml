@@ -36,13 +36,13 @@
 
 services:
   ferroehr-postgres:
-    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/rubentalstra/ferroehr-postgres:local}
+    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:local}
     build:
       context: ./docker/postgres
       dockerfile: Dockerfile
 
   ferroehr:
-    image: ${FERROEHR_IMAGE:-ghcr.io/rubentalstra/ferroehr:local}
+    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:local}
     build:
       context: .
       dockerfile: docker/Dockerfile
@@ -65,7 +65,7 @@ services:
       FERROEHR__SPEC_PROFILE: ${FERROEHR__SPEC_PROFILE:-development}
 
   ferroehr-viewer:
-    image: ${FERROEHR_VIEWER_IMAGE:-ghcr.io/rubentalstra/ferroehr-viewer:local}
+    image: ${FERROEHR_VIEWER_IMAGE:-ghcr.io/ferrohealth/ferroehr-viewer:local}
     build:
       context: .
       dockerfile: docker/viewer/Dockerfile

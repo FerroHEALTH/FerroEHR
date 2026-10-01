@@ -71,7 +71,7 @@ write_files:
     content: |
       services:
         postgres:
-          image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/rubentalstra/ferroehr-postgres:latest}
+          image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:latest}
           container_name: ferroehr-sandbox-postgres
           restart: unless-stopped
           # Docker's default 64MB /dev/shm starves PostgreSQL's dynamic

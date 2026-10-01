@@ -25,7 +25,7 @@ Standalone, point it at any CDR:
 ```bash
 docker run -p 3000:3000 \
   -e FERROEHR_VIEWER__CDR__BASE_URL=https://cdr.example.org \
-  ghcr.io/rubentalstra/ferroehr-viewer
+  ghcr.io/ferrohealth/ferroehr-viewer
 ```
 
 ### On Kubernetes

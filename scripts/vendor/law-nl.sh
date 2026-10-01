@@ -45,7 +45,7 @@ DEST="$REPO_ROOT/docs/law/nl"
 
 # The publisher sees a named client rather than a default curl string, so a
 # fetch from this repository is attributable at the far end.
-UA='ferroehr-vendor/1.0 (+https://github.com/rubentalstra/FerroEHR)'
+UA='ferroehr-vendor/1.0 (+https://github.com/FerroHEALTH/FerroEHR)'
 FETCHED="$(date -u +%Y-%m-%d)"
 
 # directory | BWB id | consolidation date | byte floor | title

@@ -59,7 +59,7 @@ DEST="$REPO_ROOT/docs/law/de"
 
 # The publisher sees a named client rather than a default curl string, so a
 # fetch from this repository is attributable at the far end.
-UA='ferroehr-vendor/1.0 (+https://github.com/rubentalstra/FerroEHR)'
+UA='ferroehr-vendor/1.0 (+https://github.com/FerroHEALTH/FerroEHR)'
 FETCHED="$(date -u +%Y-%m-%d)"
 
 # directory | gesetze-im-internet slug | pinned builddate | byte floor of the XML | title

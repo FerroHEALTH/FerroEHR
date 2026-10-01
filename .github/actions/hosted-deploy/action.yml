@@ -62,7 +62,7 @@ inputs:
   image:
     description: The published image the box pulls (and the posture source).
     required: false
-    default: ghcr.io/rubentalstra/ferroehr
+    default: ghcr.io/ferrohealth/ferroehr
   host:
     description: >-
       The box the deploy key opens — the IPv4 address, not the DNS name:

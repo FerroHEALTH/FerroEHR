@@ -424,9 +424,14 @@ impl Reply {
     /// # Errors
     /// Returns [`ApiError::Internal`] when `body` does not serialize.
     pub(crate) fn json<B: serde::Serialize + ?Sized>(&mut self, body: &B) -> Result<(), ApiError> {
-        self.body = serde_json::to_vec(body).map_err(|error| {
-            ApiError::Internal(format!("the answer body does not serialize: {error}"))
-        })?;
+        self.body = match serde_json::to_vec(body) {
+            Ok(bytes) => bytes,
+            Err(_) => {
+                return Err(ApiError::Internal(
+                    "the answer body does not serialize".to_owned(),
+                ));
+            }
+        };
         self.headers
             .insert(CONTENT_TYPE, HeaderValue::from_static(CANONICAL_JSON));
         Ok(())

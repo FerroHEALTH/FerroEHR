@@ -164,17 +164,17 @@ control is irrelevant to that source.
 
 | Control | Issue | GDPR | EDPB 01/2025 | EHDS | NEN |
 |---|---|---|---|---|---|
-| Demographic parties in their own schema under a non-overlapping runtime role | [#3153](https://github.com/rubentalstra/FerroEHR/issues/3153) | Art. 4(5), Art. 32(1)(a) | pseudonymisation domain | — | — |
-| The clinical side refuses identifying data; the subject reference is constrained to a pseudonym namespace | [#3154](https://github.com/rubentalstra/FerroEHR/issues/3154) | Art. 4(5), Art. 25(2) | — | — | — |
-| National identifiers sealed, looked up by keyed digest, resolved under audit | [#3155](https://github.com/rubentalstra/FerroEHR/issues/3155) | Art. 32(1)(a) | — | — | NEN 7510-2 cryptographic controls |
-| Per-domain access logging for reads and queries | [#3156](https://github.com/rubentalstra/FerroEHR/issues/3156) | — | — | Art. 9 | NEN 7513 event content |
-| Separate encryption keys and per-schema backup handling | [#3157](https://github.com/rubentalstra/FerroEHR/issues/3157) | Art. 4(5), Art. 32(1)(c) | — | — | — |
-| The linkage map as its own schema and role | [#3158](https://github.com/rubentalstra/FerroEHR/issues/3158) | Art. 4(5) | pseudonymisation domain | — | — |
-| The declared deployment profile: `production` refuses what it cannot prove | [#3226](https://github.com/rubentalstra/FerroEHR/issues/3226) | Art. 32(1) | — | — | — |
-| The server mints the subject pseudonym; no caller value becomes one | [#3232](https://github.com/rubentalstra/FerroEHR/issues/3232) | Art. 4(5) | — | — | — |
-| A jurisdictional floor under access-log retention | [#3242](https://github.com/rubentalstra/FerroEHR/issues/3242) | Art. 5(1)(e) | — | — | NEN 7513 retention |
-| The accessing organisation on every access record | [#3204](https://github.com/rubentalstra/FerroEHR/issues/3204) | — | — | Annex II 3.2(a) | — |
-| The actor's roles on every access record | [#3239](https://github.com/rubentalstra/FerroEHR/issues/3239) | — | — | — | NEN 7513 actor role |
+| Demographic parties in their own schema under a non-overlapping runtime role | [#3153](https://github.com/FerroHEALTH/FerroEHR/issues/3153) | Art. 4(5), Art. 32(1)(a) | pseudonymisation domain | — | — |
+| The clinical side refuses identifying data; the subject reference is constrained to a pseudonym namespace | [#3154](https://github.com/FerroHEALTH/FerroEHR/issues/3154) | Art. 4(5), Art. 25(2) | — | — | — |
+| National identifiers sealed, looked up by keyed digest, resolved under audit | [#3155](https://github.com/FerroHEALTH/FerroEHR/issues/3155) | Art. 32(1)(a) | — | — | NEN 7510-2 cryptographic controls |
+| Per-domain access logging for reads and queries | [#3156](https://github.com/FerroHEALTH/FerroEHR/issues/3156) | — | — | Art. 9 | NEN 7513 event content |
+| Separate encryption keys and per-schema backup handling | [#3157](https://github.com/FerroHEALTH/FerroEHR/issues/3157) | Art. 4(5), Art. 32(1)(c) | — | — | — |
+| The linkage map as its own schema and role | [#3158](https://github.com/FerroHEALTH/FerroEHR/issues/3158) | Art. 4(5) | pseudonymisation domain | — | — |
+| The declared deployment profile: `production` refuses what it cannot prove | [#3226](https://github.com/FerroHEALTH/FerroEHR/issues/3226) | Art. 32(1) | — | — | — |
+| The server mints the subject pseudonym; no caller value becomes one | [#3232](https://github.com/FerroHEALTH/FerroEHR/issues/3232) | Art. 4(5) | — | — | — |
+| A jurisdictional floor under access-log retention | [#3242](https://github.com/FerroHEALTH/FerroEHR/issues/3242) | Art. 5(1)(e) | — | — | NEN 7513 retention |
+| The accessing organisation on every access record | [#3204](https://github.com/FerroHEALTH/FerroEHR/issues/3204) | — | — | Annex II 3.2(a) | — |
+| The actor's roles on every access record | [#3239](https://github.com/FerroHEALTH/FerroEHR/issues/3239) | — | — | — | NEN 7513 actor role |
 
 The legal sources, each cited to its publisher:
 [GDPR](https://eur-lex.europa.eu/eli/reg/2016/679/oj),

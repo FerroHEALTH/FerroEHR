@@ -30,9 +30,9 @@ FerroEHR publishes three container images to GHCR:
 
 | Image | Contents |
 |---|---|
-| `ghcr.io/rubentalstra/ferroehr` | The `ferroehr` server binary on a distroless, non-root, shell-less multi-arch base (amd64 + arm64). Configured by a mounted TOML file and/or `FERROEHR__*` environment variables. |
-| `ghcr.io/rubentalstra/ferroehr-postgres` | `postgres:18.6` (with Debian security updates applied at image build) plus init scripts that pre-create the application login role, the eight `NOLOGIN` group roles (`ferroehr_migrator`, `ferroehr_clinical`, `ferroehr_clinical_reader`, and the five domain roles `ferroehr_clinical`, `ferroehr_party`, `ferroehr_clinical_reader`, `ferroehr_party_reader`, `ferroehr_linkage`), the database, the schemas (`clinical`, `ext`, `audit`) and the one extension the schema needs, `btree_gist`, so the app role never needs superuser. |
-| `ghcr.io/rubentalstra/ferroehr-viewer` | The [viewer](../viewer/index.md), a standalone web application that talks to the CDR strictly over ITS-REST. Optional; see the `viewer` profile below. |
+| `ghcr.io/ferrohealth/ferroehr` | The `ferroehr` server binary on a distroless, non-root, shell-less multi-arch base (amd64 + arm64). Configured by a mounted TOML file and/or `FERROEHR__*` environment variables. |
+| `ghcr.io/ferrohealth/ferroehr-postgres` | `postgres:18.6` (with Debian security updates applied at image build) plus init scripts that pre-create the application login role, the eight `NOLOGIN` group roles (`ferroehr_migrator`, `ferroehr_clinical`, `ferroehr_clinical_reader`, and the five domain roles `ferroehr_clinical`, `ferroehr_party`, `ferroehr_clinical_reader`, `ferroehr_party_reader`, `ferroehr_linkage`), the database, the schemas (`clinical`, `ext`, `audit`) and the one extension the schema needs, `btree_gist`, so the app role never needs superuser. |
+| `ghcr.io/ferrohealth/ferroehr-viewer` | The [viewer](../viewer/index.md), a standalone web application that talks to the CDR strictly over ITS-REST. Optional; see the `viewer` profile below. |
 
 Each image is published under several tags:
 
@@ -90,7 +90,7 @@ self-provisions and a restart is a no-op.
 ## Bringing up the stack
 
 Download `docker-compose.yml` (attached to every
-[release](https://github.com/rubentalstra/FerroEHR/releases/latest)) into an
+[release](https://github.com/FerroHEALTH/FerroEHR/releases/latest)) into an
 empty directory and start it:
 
 ```shell
@@ -481,9 +481,9 @@ Set these in your shell (or an `.env` file) to retune without editing anything:
 
 | Variable | Default | Effect |
 |---|---|---|
-| `FERROEHR_IMAGE` | `ghcr.io/rubentalstra/ferroehr:<release>` | Server image to run. |
-| `FERROEHR_POSTGRES_IMAGE` | `ghcr.io/rubentalstra/ferroehr-postgres:<release>` | Database image to run. |
-| `FERROEHR_VIEWER_IMAGE` | `ghcr.io/rubentalstra/ferroehr-viewer:<release>` | Viewer image (the `viewer` profile). |
+| `FERROEHR_IMAGE` | `ghcr.io/ferrohealth/ferroehr:<release>` | Server image to run. |
+| `FERROEHR_POSTGRES_IMAGE` | `ghcr.io/ferrohealth/ferroehr-postgres:<release>` | Database image to run. |
+| `FERROEHR_VIEWER_IMAGE` | `ghcr.io/ferrohealth/ferroehr-viewer:<release>` | Viewer image (the `viewer` profile). |
 | `FERROEHR_BIND_HOST` | `127.0.0.1` | Host interface every published port binds. |
 | `FERROEHR_PORT` | `8080` | Host port mapped to the server. |
 | `FERROEHR_VIEWER_PORT` | `3000` | Host port mapped to the viewer. |

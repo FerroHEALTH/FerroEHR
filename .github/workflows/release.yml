@@ -205,7 +205,7 @@ jobs:
       - uses: ./.github/actions/helm-pinned
       - name: The chart version is not already published
         env:
-          CHART_REF: ghcr.io/${{ github.repository_owner }}/charts/ferroehr
+          CHART_REF: ghcr.io/ferrohealth/charts/ferroehr
         run: |
           ver=$(awk '$1 == "version:" {print $2; exit}' deploy/helm/ferroehr/Chart.yaml)
           if helm show chart "oci://${CHART_REF}" --version "$ver" >/dev/null 2>&1; then
@@ -590,7 +590,7 @@ jobs:
     # `latest` by the time the lane turns red (#2747).
     uses: ./.github/workflows/build-image.yml
     with:
-      image: ghcr.io/${{ github.repository_owner }}/ferroehr
+      image: ghcr.io/ferrohealth/ferroehr
       defer-tags: true
       dockerfile: docker/Dockerfile
       target: runtime-prebuilt
@@ -598,14 +598,14 @@ jobs:
       labels: |
         org.opencontainers.image.title=FerroEHR
         org.opencontainers.image.description=Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1)
-        org.opencontainers.image.source=https://github.com/rubentalstra/FerroEHR
+        org.opencontainers.image.source=https://github.com/FerroHEALTH/FerroEHR
         org.opencontainers.image.url=https://ferroehr.eu/
         org.opencontainers.image.documentation=https://ferroehr.eu/docs/latest/
         org.opencontainers.image.vendor=FerroEHR
         org.opencontainers.image.authors=Ruben Talstra <https://github.com/rubentalstra>
         org.opencontainers.image.licenses=BUSL-1.1
         org.opencontainers.image.base.name=gcr.io/distroless/cc-debian13:nonroot
-        org.opencontainers.image.base.digest=sha256:54df941ed0d06a1bd95ef5e0ce391fd8d9f94b64782dc9a60062727849ee3f97
+        org.opencontainers.image.base.digest=sha256:e792ab3d241a468a4fd7519ddbbebe66b49b5f365771716ea688ad40b6c6f1c2
 
   # ── Viewer: server binary per arch + the arch-independent site ──────────────
   # The WASM/JS/CSS site bundle is architecture-independent, so cargo-leptos
@@ -728,7 +728,7 @@ jobs:
     # The reusable SLSA Build L3 lane; see the app image above.
     uses: ./.github/workflows/build-image.yml
     with:
-      image: ghcr.io/${{ github.repository_owner }}/ferroehr-viewer
+      image: ghcr.io/ferrohealth/ferroehr-viewer
       defer-tags: true
       dockerfile: docker/viewer/Dockerfile
       target: runtime-prebuilt
@@ -737,14 +737,14 @@ jobs:
       labels: |
         org.opencontainers.image.title=FerroEHR Viewer
         org.opencontainers.image.description=Viewer for openEHR ITS-REST CDRs — pure-Rust Leptos web app (template manager, visual AQL query builder, EHR browser)
-        org.opencontainers.image.source=https://github.com/rubentalstra/FerroEHR
+        org.opencontainers.image.source=https://github.com/FerroHEALTH/FerroEHR
         org.opencontainers.image.url=https://ferroehr.eu/
         org.opencontainers.image.documentation=https://ferroehr.eu/docs/latest/
         org.opencontainers.image.vendor=FerroEHR
         org.opencontainers.image.authors=Ruben Talstra <https://github.com/rubentalstra>
         org.opencontainers.image.licenses=BUSL-1.1
         org.opencontainers.image.base.name=gcr.io/distroless/cc-debian13:nonroot
-        org.opencontainers.image.base.digest=sha256:54df941ed0d06a1bd95ef5e0ce391fd8d9f94b64782dc9a60062727849ee3f97
+        org.opencontainers.image.base.digest=sha256:e792ab3d241a468a4fd7519ddbbebe66b49b5f365771716ea688ad40b6c6f1c2
 
   # ── PostgreSQL image (multi-arch) ───────────────────────────────────────────
   # One RUN layer (the Debian security upgrade, #2408) on top of postgres:18.6,
@@ -761,7 +761,7 @@ jobs:
     # security upgrade, #2408) executes on the non-native platform.
     uses: ./.github/workflows/build-image.yml
     with:
-      image: ghcr.io/${{ github.repository_owner }}/ferroehr-postgres
+      image: ghcr.io/ferrohealth/ferroehr-postgres
       defer-tags: true
       dockerfile: docker/postgres/Dockerfile
       context: docker/postgres
@@ -770,7 +770,7 @@ jobs:
       labels: |
         org.opencontainers.image.title=FerroEHR PostgreSQL
         org.opencontainers.image.description=PostgreSQL 18 preconfigured (role/db/schemas/extensions) for ferroehr
-        org.opencontainers.image.source=https://github.com/rubentalstra/FerroEHR
+        org.opencontainers.image.source=https://github.com/FerroHEALTH/FerroEHR
         org.opencontainers.image.url=https://ferroehr.eu/
         org.opencontainers.image.documentation=https://ferroehr.eu/docs/latest/
         org.opencontainers.image.vendor=FerroEHR
@@ -792,13 +792,13 @@ jobs:
       packages: write # pull the pushed digests, then tag them
     uses: ./.github/workflows/scan-and-tag.yml
     with:
-      app-image: ghcr.io/${{ github.repository_owner }}/ferroehr
+      app-image: ghcr.io/ferrohealth/ferroehr
       app-digest: ${{ needs.app-image.outputs.digest }}
       app-tags: ${{ needs.app-image.outputs.tags }}
-      viewer-image: ghcr.io/${{ github.repository_owner }}/ferroehr-viewer
+      viewer-image: ghcr.io/ferrohealth/ferroehr-viewer
       viewer-digest: ${{ needs.viewer-image.outputs.digest }}
       viewer-tags: ${{ needs.viewer-image.outputs.tags }}
-      postgres-image: ghcr.io/${{ github.repository_owner }}/ferroehr-postgres
+      postgres-image: ghcr.io/ferrohealth/ferroehr-postgres
       postgres-digest: ${{ needs.postgres-image.outputs.digest }}
       postgres-tags: ${{ needs.postgres-image.outputs.tags }}
 
@@ -821,8 +821,8 @@ jobs:
       packages: read # pull the image this run just pushed
     needs: [viewer-image, app-image]
     env:
-      VIEWER_IMAGE: ghcr.io/${{ github.repository_owner }}/ferroehr-viewer
-      APP_IMAGE: ghcr.io/${{ github.repository_owner }}/ferroehr
+      VIEWER_IMAGE: ghcr.io/ferrohealth/ferroehr-viewer
+      APP_IMAGE: ghcr.io/ferrohealth/ferroehr
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -903,7 +903,7 @@ jobs:
       packages: read # pull the image this run just pushed
     needs: [plan, app-image]
     env:
-      APP_IMAGE: ghcr.io/${{ github.repository_owner }}/ferroehr
+      APP_IMAGE: ghcr.io/ferrohealth/ferroehr
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -960,7 +960,7 @@ jobs:
 
   # ── The hosted sandbox (#2974: the Hetzner box) ─────────────────────────────
   # Keyed on apply-tags, never on a run conclusion: the box pulls
-  # `ghcr.io/rubentalstra/ferroehr:latest`, which scan-and-tag has just moved,
+  # `ghcr.io/ferrohealth/ferroehr:latest`, which scan-and-tag has just moved,
   # and an advisory scanner elsewhere in this run can no longer suppress the
   # deploy (v4.0.3). A prerelease moves no `:latest`, so there is nothing to
   # deploy — hence the release-only condition.
@@ -1119,7 +1119,7 @@ jobs:
   # both lanes call.
   #
   # Consequence, stated where it bites: each of the nine crates needs a Trusted
-  # Publisher entry for THIS workflow file (repository `rubentalstra/FerroEHR`,
+  # Publisher entry for THIS workflow file (repository `FerroHEALTH/FerroEHR`,
   # workflow `release.yml`, environment `crates-io`) beside the one naming
   # `publish-crates.yml`. Without it the token exchange below is refused, and
   # `announce` names that as the cause.

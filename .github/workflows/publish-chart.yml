@@ -37,11 +37,11 @@
 #   * a cosign SIGNATURE — "this artifact was signed by this workflow". The
 #     signer is the REUSABLE workflow, which is what a Fulcio certificate names
 #     and what this lane's own read-back asserts — never this caller.
-#       cosign verify ghcr.io/rubentalstra/charts/ferroehr@sha256:… \
-#         --certificate-identity-regexp '^https://github\.com/rubentalstra/FerroEHR/\.github/workflows/build-chart\.yml@' \
+#       cosign verify ghcr.io/ferrohealth/charts/ferroehr@sha256:… \
+#         --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/build-chart\.yml@' \
 #         --certificate-oidc-issuer https://token.actions.githubusercontent.com
 #   * a SLSA build PROVENANCE attestation — "it was built from this source, this way"
-#       gh attestation verify oci://ghcr.io/rubentalstra/charts/ferroehr:X.Y.Z -R rubentalstra/FerroEHR
+#       gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:X.Y.Z -R FerroHEALTH/FerroEHR
 # The consequence for consumers is honest: `helm install --verify` (which only
 # understands a `.prov`) does not apply; the two commands above do.
 name: Publish chart
@@ -72,9 +72,9 @@ env:
   CHART_DIR: deploy/helm/ferroehr
   # `helm push` appends the chart name, so the chart lands at
   # ghcr.io/<owner>/charts/ferroehr.
-  OCI_NAMESPACE: oci://ghcr.io/${{ github.repository_owner }}/charts
-  CHART_REF: ghcr.io/${{ github.repository_owner }}/charts/ferroehr
-  APP_IMAGE: ghcr.io/${{ github.repository_owner }}/ferroehr
+  OCI_NAMESPACE: oci://ghcr.io/ferrohealth/charts
+  CHART_REF: ghcr.io/ferrohealth/charts/ferroehr
+  APP_IMAGE: ghcr.io/ferrohealth/ferroehr
 
 jobs:
   publish:

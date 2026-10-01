@@ -85,7 +85,7 @@ optional:
   overwrite a published chart version, checks that the `appVersion` image
   accepts the chart's rendered defaults, injects that release's
   `artifacthub.io/changes` from this changelog, pushes to
-  `oci://ghcr.io/rubentalstra/charts`, attests it through Sigstore, and
+  `oci://ghcr.io/ferrohealth/charts`, attests it through Sigstore, and
   re-pushes the Artifact Hub ownership tag. A chart-only fix between releases
   uses the same lane by `workflow_dispatch` with `publish: true`. **Never
   re-publish a chart version — bump it:** an OCI tag is MUTABLE, so `helm push`
@@ -157,7 +157,7 @@ optional:
   **Trusted Publishing matches the top-level workflow FILENAME**, so each of
   the nine crates carries TWO publisher entries — one naming `release.yml`,
   one naming `publish-crates.yml` — both under repository
-  `rubentalstra/FerroEHR` and environment `crates-io`; a missing entry is
+  `FerroHEALTH/FerroEHR` and environment `crates-io`; a missing entry is
   refused at the token exchange, and the release run's summary names that as
   the cause. Configuring the reviewer and the second entry set are owner
   clicks (crates.io, and Settings → Environments); until the reviewer exists

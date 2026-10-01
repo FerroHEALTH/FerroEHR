@@ -348,7 +348,7 @@ fi
 # `{{version}}` without one, so `ghcr.io/…:v3.17.5` does not resolve at all.
 for f in $files website/landing/index.html; do
   [[ -f "$f" ]] || continue
-  if grep -qE 'ghcr\.io/rubentalstra/[A-Za-z0-9._-]+:v[0-9]' "$f"; then
+  if grep -qE 'ghcr\.io/(rubentalstra|ferrohealth)/[A-Za-z0-9._-]+:v[0-9]' "$f"; then
     report "$f" "references a v-prefixed ghcr image tag; published tags carry no v prefix"
   fi
   case " $CHART_PAGES " in *" $f "*) continue ;; *) ;; esac
@@ -356,7 +356,7 @@ for f in $files website/landing/index.html; do
     [[ -n "$v" ]] || continue
     [[ "$v" = "$app_version" ]] \
       || report "$f" "pins ghcr image tag \`$v\`; the workspace version is $app_version"
-  done < <(grep -ohE 'ghcr\.io/rubentalstra/(ferroehr|ferroehr-viewer|ferroehr-postgres):[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?' "$f" | sed 's/.*://' | sort -u)
+  done < <(grep -ohE 'ghcr\.io/(rubentalstra|ferrohealth)/(ferroehr|ferroehr-viewer|ferroehr-postgres):[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?' "$f" | sed 's/.*://' | sort -u)
 done
 # The from-source page: a Rust version literal must be the toolchain channel
 # (with or without its patch) or the EXACT declared MSRV ("Rust 1.96.1"

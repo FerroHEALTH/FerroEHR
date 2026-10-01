@@ -18,7 +18,7 @@ authors:
   - family-names: Talstra
     given-names: Ruben
     orcid: "https://orcid.org/0009-0009-2758-0141"
-repository-code: "https://github.com/rubentalstra/FerroEHR"
+repository-code: "https://github.com/FerroHEALTH/FerroEHR"
 url: "https://ferroehr.eu/"
 identifiers:
   - type: doi
