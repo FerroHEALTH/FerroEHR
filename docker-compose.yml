@@ -95,7 +95,7 @@
 
 services:
   ferroehr-postgres:
-    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:4.3.1}
+    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:4.3.2}
     # Docker's default 64MB /dev/shm starves PostgreSQL's dynamic shared
     # memory under load (parallel workers error `could not resize shared
     # memory segment … No space left on device`); measured runs share this
@@ -218,7 +218,7 @@ services:
   # single credential.
   ferroehr-backup-clinical:
     profiles: [backup]
-    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:4.3.1}
+    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:4.3.2}
     depends_on:
       ferroehr-postgres:
         condition: service_healthy
@@ -256,7 +256,7 @@ services:
 
   ferroehr-backup-party:
     profiles: [backup]
-    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:4.3.1}
+    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:4.3.2}
     depends_on:
       ferroehr-postgres:
         condition: service_healthy
@@ -288,7 +288,7 @@ services:
 
   ferroehr-backup-linkage:
     profiles: [backup]
-    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:4.3.1}
+    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:4.3.2}
     depends_on:
       ferroehr-postgres:
         condition: service_healthy
@@ -331,7 +331,7 @@ services:
       - /tmp
 
   ferroehr:
-    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:4.3.1}
+    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:4.3.2}
     depends_on:
       ferroehr-postgres:
         condition: service_healthy
@@ -447,7 +447,7 @@ services:
   # FERROEHR_VIEWER__AUTH__OIDC__* variables at your identity provider.
   ferroehr-viewer:
     profiles: [viewer]
-    image: ${FERROEHR_VIEWER_IMAGE:-ghcr.io/ferrohealth/ferroehr-viewer:4.3.1}
+    image: ${FERROEHR_VIEWER_IMAGE:-ghcr.io/ferrohealth/ferroehr-viewer:4.3.2}
     depends_on:
       ferroehr:
         condition: service_healthy
