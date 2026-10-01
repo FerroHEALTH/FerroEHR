@@ -8,6 +8,7 @@ metadata:
 The repository was transferred from `rubentalstra/FerroEHR` to the `FerroHEALTH` organization on 2026-10-01 (#3516). The roadmap board was copied to <https://github.com/orgs/FerroHEALTH/projects/2> (Projects cannot change owner); the old user board #4 is retired.
 
 - Image and chart refs are `ghcr.io/ferrohealth/...`, spelled as a literal: `github.repository_owner` is `FerroHEALTH`, and OCI refs must be lowercase.
+- Artifact Hub kept the repository NAME `ferroehr` (id `f5b3afc5-…`), only its URL moved: the package page stays `artifacthub.io/packages/helm/ferroehr/ferroehr`.
 - Org packages are listed under `/orgs/FerroHEALTH/packages`, not `/users/`.
 - Still under the user account (do not rewrite): FerroTERM + `ghcr.io/rubentalstra/ferroterm`, Veredictum, FerroBRIDGE, `hetzner-deploy-action`, the Sonar org/key `rubentalstra_FerroEHR`, `urn:rubentalstra:ferroehr`.
 - Releases up to v4.3.1 were signed as `rubentalstra/FerroEHR`; v4.3.2 (2026-10-01) is the first built under FerroHEALTH, and `website/book/src/verifying-releases.md` carries a note on verifying the older ones.
