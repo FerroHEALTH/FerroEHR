@@ -2,7 +2,7 @@
 
 Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1). A single static binary deployed with a hardened-by-default security posture: runs as a non-root, read-only-rootfs workload whose NetworkPolicy admits its serving port only, and that connects to an EXTERNAL PostgreSQL 18 as an unprivileged app role, with schema preparation on its own credential.
 
-![Version: 10.1.4](https://img.shields.io/badge/Version-10.1.4-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 4.3.1](https://img.shields.io/badge/AppVersion-4.3.1-informational?style=flat-square)
+![Version: 10.1.5](https://img.shields.io/badge/Version-10.1.5-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 4.3.2](https://img.shields.io/badge/AppVersion-4.3.2-informational?style=flat-square)
 
 FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0 at the
 API, AQL 1.1 as the query language, PostgreSQL 18-native storage, shipped as a
@@ -33,10 +33,10 @@ to add; `helm repo add` does not apply to this chart:
 
 ```console
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 10.1.4 \
+  --version 10.1.5 \
   --namespace ferroehr --create-namespace \
   --set database.existingSecret=ferroehr-db \
-  --set image.tag=4.3.1
+  --set image.tag=4.3.2
 ```
 
 OCI registries require Helm 3.8 or newer.
@@ -47,8 +47,8 @@ They are independent SemVer lines and they move independently:
 
 | What | Set with | This release |
 |---|---|---|
-| the **chart** (templates, defaults, this document) | `--version` | `10.1.4` |
-| the **server image** | `image.tag` | `4.3.1` |
+| the **chart** (templates, defaults, this document) | `--version` | `10.1.5` |
+| the **server image** | `image.tag` | `4.3.2` |
 
 `appVersion` is the image the chart defaults to; pinning `image.tag` explicitly
 is what keeps an upgrade of one from silently moving the other.
@@ -59,7 +59,7 @@ The chart carries two keyless Sigstore artifacts, and they answer different
 questions. A **cosign signature:** who signed this:
 
 ```console
-cosign verify ghcr.io/ferrohealth/charts/ferroehr:10.1.4 \
+cosign verify ghcr.io/ferrohealth/charts/ferroehr:10.1.5 \
   --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/publish-chart\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -67,9 +67,9 @@ cosign verify ghcr.io/ferrohealth/charts/ferroehr:10.1.4 \
 A **SLSA build provenance attestation:** what source it was built from, and how:
 
 ```console
-gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:10.1.4 \
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:10.1.5 \
   -R FerroHEALTH/FerroEHR
-gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:4.3.1 \
+gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:4.3.2 \
   -R FerroHEALTH/FerroEHR
 ```
 

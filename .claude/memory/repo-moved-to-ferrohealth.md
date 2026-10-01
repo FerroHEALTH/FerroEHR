@@ -10,7 +10,7 @@ The repository was transferred from `rubentalstra/FerroEHR` to the `FerroHEALTH`
 - Image and chart refs are `ghcr.io/ferrohealth/...`, spelled as a literal: `github.repository_owner` is `FerroHEALTH`, and OCI refs must be lowercase.
 - Org packages are listed under `/orgs/FerroHEALTH/packages`, not `/users/`.
 - Still under the user account (do not rewrite): FerroTERM + `ghcr.io/rubentalstra/ferroterm`, Veredictum, FerroBRIDGE, `hetzner-deploy-action`, the Sonar org/key `rubentalstra_FerroEHR`, `urn:rubentalstra:ferroehr`.
-- Releases up to v4.3.1 were signed as `rubentalstra/FerroEHR`; `website/book/src/verifying-releases.md` keeps those names until the next cut's sweep moves it to the new release.
+- Releases up to v4.3.1 were signed as `rubentalstra/FerroEHR`; v4.3.2 (2026-10-01) is the first built under FerroHEALTH, and `website/book/src/verifying-releases.md` carries a note on verifying the older ones.
 
 **Why:** owner moved the product line under one organization ([[sibling-products]]).
-**How to apply:** at the next release cut, flip verifying-releases.md to `FerroHEALTH/FerroEHR` + `ghcr.io/ferrohealth` and drop its move note.
+**How to apply:** verify a pre-move release with `-R rubentalstra/FerroEHR`; cosign signatures of v4.3.1 exist only at the `ghcr.io/rubentalstra` path.

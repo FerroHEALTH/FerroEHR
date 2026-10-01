@@ -12,21 +12,22 @@ checksum alongside each artifact. Provenance is signed through
 [Sigstore](https://www.sigstore.dev/), so you can verify it yourself, and the
 signer identity is one you can pin to a single hardened workflow.
 
-The repository moved to the `FerroHEALTH` organization on 2026-10-01.
-Releases up to and including v4.3.1 were built and signed while it was
-`rubentalstra/FerroEHR`: their attestations name that repository and their
-signer workflows sit under it, so the examples on this page, which verify
-v4.3.1, use that name. The v4.3.1 images and chart are also available under
-`ghcr.io/ferrohealth` with the same digests; verify them with
-`-R rubentalstra/FerroEHR` too, because the signature records where they were
-built.
+The repository moved to the `FerroHEALTH` organization on 2026-10-01, and
+v4.3.2 is the first release built there. Releases up to and including v4.3.1
+were built and signed while it was `rubentalstra/FerroEHR`, so their
+attestations name that repository: verify them with `-R rubentalstra/FerroEHR`
+and `--signer-workflow rubentalstra/FerroEHR/…`. Their images and charts were
+published under `ghcr.io/rubentalstra`. The copies of v4.3.1 under
+`ghcr.io/ferrohealth` carry the same digests, so `gh attestation verify` accepts
+them with the old repository name. Their cosign signatures exist only beside
+the originals, so run `cosign verify` against the `ghcr.io/rubentalstra` path.
 
 <!-- toc -->
 
 ## What a release publishes
 
 Substitute the release tag you downloaded for `<tag>` (for example
-`v4.3.1`) and the architecture for `<arch>` (`x86_64` or `aarch64`) throughout
+`v4.3.2`) and the architecture for `<arch>` (`x86_64` or `aarch64`) throughout
 this page. Linux is the only published target.
 
 | Asset | What it is |
@@ -74,7 +75,7 @@ the two files in. On macOS, `shasum -a 256 -c` is the same check.
 
 ```bash
 gh attestation verify ferroehr-<tag>-<arch>-unknown-linux-gnu.tar.gz \
-  -R rubentalstra/FerroEHR
+  -R FerroHEALTH/FerroEHR
 ```
 
 **Without reaching GitHub.** Each release also carries its Sigstore bundles as
@@ -85,7 +86,7 @@ download:
 ```bash
 gh attestation verify ferroehr-<tag>-<arch>-unknown-linux-gnu.tar.gz \
   --bundle ferroehr-<tag>-<arch>-unknown-linux-gnu.tar.gz.sigstore.json \
-  --repo rubentalstra/FerroEHR
+  --repo FerroHEALTH/FerroEHR
 ```
 
 The `*.sbom.sigstore.json` asset beside it is the same thing for the SBOM
@@ -96,7 +97,7 @@ a non-provenance attestation must name its predicate type explicitly:
 
 ```bash
 gh attestation verify ferroehr-<tag>-<arch>-unknown-linux-gnu.tar.gz \
-  -R rubentalstra/FerroEHR \
+  -R FerroHEALTH/FerroEHR \
   --predicate-type https://cyclonedx.org/bom
 ```
 
@@ -108,7 +109,7 @@ gh attestation trusted-root > trusted_root.jsonl        # on a connected host
 gh attestation verify ferroehr-<tag>-<arch>-unknown-linux-gnu.tar.gz \
   --bundle ferroehr-<tag>-<arch>-unknown-linux-gnu.tar.gz.sigstore.json \
   --custom-trusted-root trusted_root.jsonl \
-  --repo rubentalstra/FerroEHR
+  --repo FerroHEALTH/FerroEHR
 ```
 
 **Require the hardened signer.** Without a signer constraint you are trusting
@@ -117,8 +118,8 @@ actually did:
 
 ```bash
 gh attestation verify ferroehr-<tag>-<arch>-unknown-linux-gnu.tar.gz \
-  -R rubentalstra/FerroEHR \
-  --signer-workflow rubentalstra/FerroEHR/.github/workflows/release-build.yml
+  -R FerroHEALTH/FerroEHR \
+  --signer-workflow FerroHEALTH/FerroEHR/.github/workflows/release-build.yml
 ```
 
 That workflow is the reusable release-build lane described under
@@ -151,7 +152,7 @@ before you trust a passing run:
 printf 'x' >> ferroehr-<tag>-<arch>-unknown-linux-gnu.tar.gz
 gh attestation verify ferroehr-<tag>-<arch>-unknown-linux-gnu.tar.gz \
   --bundle ferroehr-<tag>-<arch>-unknown-linux-gnu.tar.gz.sigstore.json \
-  --repo rubentalstra/FerroEHR
+  --repo FerroHEALTH/FerroEHR
 # → Error: verifying with issuer "sigstore.dev"; exit status 1
 
 # 2. Name a repository that did not build it — also non-zero.
@@ -184,8 +185,8 @@ carry a Sigstore-signed SLSA provenance attestation, plus the SPDX SBOM and
 provenance the builder writes onto the image index itself.
 
 ```bash
-gh attestation verify oci://ghcr.io/rubentalstra/ferroehr:4.3.1 \
-  -R rubentalstra/FerroEHR
+gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:4.3.2 \
+  -R FerroHEALTH/FerroEHR
 ```
 
 > [!IMPORTANT]
@@ -194,11 +195,11 @@ gh attestation verify oci://ghcr.io/rubentalstra/ferroehr:4.3.1 \
 > after the `v4.0.1` git tag. Using `v4.0.1` as an image reference will simply
 > not resolve.
 
-The development tags (`ghcr.io/rubentalstra/ferroehr:main` and its two
+The development tags (`ghcr.io/ferrohealth/ferroehr:main` and its two
 siblings) are signed the same way, so you can rehearse the command against them
 before a release.
 
-Add `--signer-workflow rubentalstra/FerroEHR/.github/workflows/build-image.yml`
+Add `--signer-workflow FerroHEALTH/FerroEHR/.github/workflows/build-image.yml`
 to require the hardened image-build lane specifically rather than any
 workflow in this repository.
 
@@ -208,10 +209,10 @@ tag once and verify the digest it resolved — otherwise the bytes verified and
 the bytes pulled can differ:
 
 ```bash
-digest=$(docker buildx imagetools inspect ghcr.io/rubentalstra/ferroehr:4.3.1 \
+digest=$(docker buildx imagetools inspect ghcr.io/ferrohealth/ferroehr:4.3.2 \
   | awk '/^Digest:/{print $2}')
-gh attestation verify "oci://ghcr.io/rubentalstra/ferroehr@${digest}" \
-  -R rubentalstra/FerroEHR
+gh attestation verify "oci://ghcr.io/ferrohealth/ferroehr@${digest}" \
+  -R FerroHEALTH/FerroEHR
 ```
 
 The attestation is also pushed to the registry itself, so a host with
@@ -220,7 +221,7 @@ with `--bundle-from-oci`. And the SBOM the builder wrote onto the image index
 is readable without any verifier at all:
 
 ```bash
-docker buildx imagetools inspect "ghcr.io/rubentalstra/ferroehr@${digest}" \
+docker buildx imagetools inspect "ghcr.io/ferrohealth/ferroehr@${digest}" \
   --format '{{ json .SBOM }}'
 ```
 
@@ -236,8 +237,8 @@ built from, the signature says who signed the artifact you pulled, and the
 signature is what Helm-ecosystem tooling looks for.
 
 ```bash
-cosign verify ghcr.io/rubentalstra/charts/ferroehr:<chart-version> \
-  --certificate-identity-regexp '^https://github\.com/rubentalstra/FerroEHR/\.github/workflows/build-chart\.yml@' \
+cosign verify ghcr.io/ferrohealth/charts/ferroehr:<chart-version> \
+  --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/build-chart\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
 
@@ -245,9 +246,9 @@ Both flags are the point: without an identity and an issuer, `cosign verify`
 accepts a signature from anyone in the transparency log.
 
 ```bash
-gh attestation verify oci://ghcr.io/rubentalstra/charts/ferroehr:<chart-version> \
-  -R rubentalstra/FerroEHR \
-  --signer-workflow rubentalstra/FerroEHR/.github/workflows/build-chart.yml
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:<chart-version> \
+  -R FerroHEALTH/FerroEHR \
+  --signer-workflow FerroHEALTH/FerroEHR/.github/workflows/build-chart.yml
 ```
 
 > [!NOTE]
@@ -338,7 +339,7 @@ public history.
 Run a scanner over a FerroEHR artifact and it will report findings. Every one
 this project has assessed and accepted is published as an
 [OpenVEX](https://openvex.dev) document under
-[`security/vex/`](https://github.com/rubentalstra/FerroEHR/tree/main/security/vex),
+[`security/vex/`](https://github.com/FerroHEALTH/FerroEHR/tree/main/security/vex),
 carrying a controlled-vocabulary justification and an impact statement you can
 check, rather than an ignore entry that records only the verdict. Point your
 tooling at them (`trivy --vex`, and most SCA platforms take an OpenVEX feed).
@@ -372,6 +373,6 @@ looks at is not a control.
 
 A failing verification is a security report, not a support question. Do not run
 the artifact, and follow
-[SECURITY.md](https://github.com/rubentalstra/FerroEHR/blob/main/SECURITY.md):
+[SECURITY.md](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md):
 report privately, never as a public issue. Note that only the newest release
 receives fixes; there is no maintenance branch to backport to.
