@@ -6,8 +6,9 @@
 //! Technology Specification surfaces — canonical JSON (fidelity, contract,
 //! codec parity, ITS-JSON schema validation), canonical XML (round-trip,
 //! namespaces, C14N/hash, locatable attributes), the generated ITS-REST
-//! contract with its client half (wiremock contract tests), and the
-//! wire-boundary RM validation dispatch.
+//! contract with its client half (wiremock contract tests), its server half
+//! (the generated routers, driven without a socket) and the operation matcher,
+//! and the wire-boundary RM validation dispatch.
 //!
 //! One binary per crate, split into topic modules
 //! (`.claude/rules/testing.md` §One integration-test binary per crate);
@@ -39,7 +40,10 @@ mod opt14_corpus;
 mod opt14_ordinal_symbol;
 mod opt14_v1_4_divergence;
 mod rest_client;
+mod rest_client_runtime;
 mod rest_contract;
+mod rest_routes;
+mod rest_server;
 mod rm_validation;
 mod xml_abstract_root;
 mod xml_c14n;

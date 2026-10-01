@@ -24,6 +24,20 @@ ANTLR runtime.
 - `printer::to_aql` — canonical AQL rendering of the AST, the parser's
   inverse, for programmatic query construction (corpus-verified fixed point:
   `parse(to_aql(ast)) == ast`).
+- `visit::Visit` and `visit::VisitMut` — a read-only and a mutating
+  traversal, exhaustive over every AST node, for finding, replacing or
+  removing conditions without writing a recursive walk.
+- Source spans: every `IdentifiedPath` and every `WHERE` condition carries an
+  `ast::Span` (a byte range of the source), so a diagnostic can name a
+  position without echoing the text there. Spans take no part in equality.
+- `bind::bind` — binds ITS-REST `query_parameters` into the AST as typed
+  literals the printer escapes, at every position the grammar admits a
+  parameter; an unbound, unknown, duplicate or unbindable parameter is
+  reported by name, never by value.
+- The `federation` feature: `federation::parse_federated` lifts the
+  federation-only `FROM ENDPOINT p [ … ]` / `ORGANISATION [ … ]` directive
+  out of a query and parses the rest as strict AQL, which `to_aql` renders
+  without it; `federation::to_federated_aql` renders it back.
 - The AST is engine-agnostic: this crate deliberately stops at the syntax
   layer, so any execution engine (SQL generation, in-memory evaluation) can
   build on it.

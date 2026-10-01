@@ -49,7 +49,7 @@ disallowed-methods = [
   { path = "std::time::SystemTime::now", reason = "wall-clock time comes from jiff (Zoned/Timestamp); std::time::Instant stays fine for latency measurement" },
   { path = "std::env::var", reason = "configuration flows through the config tree (ferroehr::config), never ad-hoc env reads" },
   { path = "std::env::var_os", reason = "configuration flows through the config tree (ferroehr::config), never ad-hoc env reads" },
-  { path = "uuid::Uuid::new_v4", reason = "DB keys are uuidv7 (Uuid::now_v7) for index locality; v4 only for non-key randomness with a scoped expect" },
+  { path = "uuid::Uuid::new_v4", allow-invalid = true, reason = "DB keys are uuidv7 (Uuid::now_v7) for index locality; v4 only for non-key randomness with a scoped expect" },
   { path = "core::option::Option::as_slice", reason = "on Option<Vec<T>> this yields &[Vec<T>] (0-or-1 vectors), not &[T] — it compiles silently after a container-shape flip; spell it .as_deref().unwrap_or_default() (Vec::as_slice stays fine)" },
   { path = "core::option::Option::as_mut_slice", reason = "on Option<Vec<T>> this yields &mut [Vec<T>] (0-or-1 vectors), not &mut [T] — same shape-flip trap as Option::as_slice; match on the Option instead" },
 ]

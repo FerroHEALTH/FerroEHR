@@ -8,6 +8,11 @@
 //! (`.claude/rules/testing.md` §One integration-test binary per crate).
 
 mod backtracking;
+mod bind;
 mod corpus;
+#[cfg(feature = "federation")]
+mod federation;
 mod parse_errors;
 mod printer_round_trip;
+mod spans;
+mod visit;

@@ -125,11 +125,7 @@ pub fn to_aql(query: &BuilderQuery) -> Result<String, BuilderError> {
 fn select_columns(query: &BuilderQuery) -> Result<Vec<SelectExpr>, BuilderError> {
     match query.shape {
         QueryShape::Compositions => Ok(vec![SelectExpr {
-            column: ColumnExpr::Path(IdentifiedPath {
-                root: COMP_VAR.to_owned(),
-                predicate: None,
-                path: None,
-            }),
+            column: ColumnExpr::Path(IdentifiedPath::new(COMP_VAR.to_owned(), None, None)),
             alias: None,
         }]),
         QueryShape::Count => Ok(vec![SelectExpr {
@@ -248,14 +244,14 @@ fn leaf(criterion: &Criterion) -> Result<WhereExpr, BuilderError> {
             coded_in(&at("defining_code"), codes, terminology)
         }
         CriterionKind::TextEquals { text } => compare_str(&at("value"), CompOp::Eq, text),
-        CriterionKind::TextLike { pattern } => Ok(WhereExpr::Identified(IdentifiedExpr::Like {
+        CriterionKind::TextLike { pattern } => Ok(WhereExpr::identified(IdentifiedExpr::Like {
             path: parse_path(COMP_VAR, &at("value"))?,
             operand: openehr_query::ast::LikeOperand::String(pattern.clone()),
         })),
         CriterionKind::DateTimeRange { from, to } => all_of(text_bounds(&at("value"), from, to)?),
         CriterionKind::CountRange { min, max } => all_of(int_bounds(&at("magnitude"), *min, *max)?),
         CriterionKind::OrdinalIn { values } => ordinal_in(&at("value"), values),
-        CriterionKind::BooleanIs { value } => Ok(WhereExpr::Identified(IdentifiedExpr::Compare {
+        CriterionKind::BooleanIs { value } => Ok(WhereExpr::identified(IdentifiedExpr::Compare {
             lhs: CompareOperand::Path(parse_path(COMP_VAR, &at("value"))?),
             op: CompOp::Eq,
             rhs: Terminal::Primitive(Primitive::Boolean(*value)),
@@ -263,7 +259,7 @@ fn leaf(criterion: &Criterion) -> Result<WhereExpr, BuilderError> {
         CriterionKind::ProportionNumeratorRange { min, max } => {
             all_of(real_bounds(&at("numerator"), *min, *max)?)
         }
-        CriterionKind::Exists => Ok(WhereExpr::Identified(IdentifiedExpr::Exists(parse_path(
+        CriterionKind::Exists => Ok(WhereExpr::identified(IdentifiedExpr::Exists(parse_path(
             COMP_VAR,
             &criterion.aql_path,
         )?))),
@@ -323,7 +319,7 @@ fn ordinal_in(path: &str, values: &[i64]) -> Result<WhereExpr, BuilderError> {
     if values.is_empty() {
         return Err(BuilderError::EmptyOrdinalList);
     }
-    Ok(WhereExpr::Identified(IdentifiedExpr::Matches {
+    Ok(WhereExpr::identified(IdentifiedExpr::Matches {
         path: parse_path(COMP_VAR, path)?,
         operand: MatchesOperand::ValueList(
             values
@@ -344,7 +340,7 @@ fn coded_in(
     if codes.is_empty() {
         return Err(BuilderError::EmptyCodeList);
     }
-    let matches = WhereExpr::Identified(IdentifiedExpr::Matches {
+    let matches = WhereExpr::identified(IdentifiedExpr::Matches {
         path: parse_path(COMP_VAR, &format!("{defining_code}/code_string"))?,
         operand: MatchesOperand::ValueList(
             codes
@@ -368,7 +364,7 @@ fn coded_in(
 }
 
 fn compare_str(relative: &str, op: CompOp, value: &str) -> Result<WhereExpr, BuilderError> {
-    Ok(WhereExpr::Identified(IdentifiedExpr::Compare {
+    Ok(WhereExpr::identified(IdentifiedExpr::Compare {
         lhs: CompareOperand::Path(parse_path(COMP_VAR, relative)?),
         op,
         rhs: Terminal::Primitive(Primitive::String(value.to_owned())),
@@ -376,7 +372,7 @@ fn compare_str(relative: &str, op: CompOp, value: &str) -> Result<WhereExpr, Bui
 }
 
 fn compare_real(path: &str, op: CompOp, value: f64) -> Result<WhereExpr, BuilderError> {
-    Ok(WhereExpr::Identified(IdentifiedExpr::Compare {
+    Ok(WhereExpr::identified(IdentifiedExpr::Compare {
         lhs: CompareOperand::Path(parse_path(COMP_VAR, path)?),
         op,
         rhs: Terminal::Primitive(Primitive::Real(value)),
@@ -384,7 +380,7 @@ fn compare_real(path: &str, op: CompOp, value: f64) -> Result<WhereExpr, Builder
 }
 
 fn compare_int(path: &str, op: CompOp, value: i64) -> Result<WhereExpr, BuilderError> {
-    Ok(WhereExpr::Identified(IdentifiedExpr::Compare {
+    Ok(WhereExpr::identified(IdentifiedExpr::Compare {
         lhs: CompareOperand::Path(parse_path(COMP_VAR, path)?),
         op,
         rhs: Terminal::Primitive(Primitive::Integer(value)),

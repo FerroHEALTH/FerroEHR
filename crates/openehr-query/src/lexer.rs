@@ -329,6 +329,21 @@ impl SpannedTokens {
         &self.spans
     }
 
+    /// The stream with the tokens at indices `removed` taken out; every kept
+    /// token keeps its byte span in the original source.
+    #[cfg(feature = "federation")]
+    pub(crate) fn without(&self, removed: std::ops::Range<usize>) -> Self {
+        let (tokens, spans) = self
+            .tokens
+            .iter()
+            .zip(&self.spans)
+            .enumerate()
+            .filter(|(i, _)| !removed.contains(i))
+            .map(|(_, (token, span))| (token.clone(), span.clone()))
+            .unzip();
+        Self { tokens, spans }
+    }
+
     /// Consumes the stream and returns its tokens, discarding the spans.
     #[must_use]
     pub fn into_tokens(self) -> Vec<Token> {

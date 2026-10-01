@@ -179,7 +179,7 @@ fn key(tf: &TerminologyFunction) -> (String, String) {
 /// Collect the distinct terminology requests reachable from a `WHERE` sub-tree.
 fn collect(expr: &WhereExpr, out: &mut BTreeSet<Request>) {
     match expr {
-        WhereExpr::Identified(IdentifiedExpr::Matches { operand, .. }) => match operand {
+        WhereExpr::Identified(IdentifiedExpr::Matches { operand, .. }, _) => match operand {
             MatchesOperand::Terminology(tf) if is_expand(tf) => {
                 let (api, uri) = key(tf);
                 out.insert(Request::Expand(api, uri));
@@ -195,7 +195,7 @@ fn collect(expr: &WhereExpr, out: &mut BTreeSet<Request>) {
             }
             MatchesOperand::Terminology(_) => {}
         },
-        WhereExpr::Identified(ie) => {
+        WhereExpr::Identified(ie, _) => {
             if let Some((tf, _, _)) = boolean_form(ie) {
                 let (api, uri) = key(tf);
                 out.insert(Request::Boolean(tf.operation.clone(), api, uri));
@@ -237,10 +237,10 @@ fn expand_item(item: &ValueListItem) -> Option<&TerminologyFunction> {
 /// constant truth value.
 fn rewrite(expr: &mut WhereExpr, resolved: &BTreeMap<Request, Resolution>) {
     match expr {
-        WhereExpr::Identified(IdentifiedExpr::Matches { operand, .. }) => {
+        WhereExpr::Identified(IdentifiedExpr::Matches { operand, .. }, _) => {
             rewrite_operand(operand, resolved);
         }
-        WhereExpr::Identified(ie) => {
+        WhereExpr::Identified(ie, _) => {
             if let Some((tf, op, rhs)) = boolean_form(ie) {
                 let (api, uri) = key(tf);
                 let request = Request::Boolean(tf.operation.clone(), api, uri);
@@ -337,7 +337,7 @@ mod tests {
 
     fn matches_values(q: &SelectQuery) -> Vec<String> {
         // Descend to the single WHERE matches operand and read its value list.
-        let Some(WhereExpr::Identified(IdentifiedExpr::Matches { operand, .. })) =
+        let Some(WhereExpr::Identified(IdentifiedExpr::Matches { operand, .. }, _)) =
             q.where_.as_ref()
         else {
             panic!("expected a WHERE matches");
@@ -443,7 +443,7 @@ mod tests {
             .expect("resolves");
         assert_eq!(
             q.where_,
-            Some(WhereExpr::Identified(IdentifiedExpr::Resolved(true))),
+            Some(WhereExpr::identified(IdentifiedExpr::Resolved(true))),
             "validate=true with a true evaluation is the constant TRUE"
         );
     }
@@ -461,7 +461,7 @@ mod tests {
         // subsumes evaluates false; `false != false` is false.
         assert_eq!(
             q.where_,
-            Some(WhereExpr::Identified(IdentifiedExpr::Resolved(false)))
+            Some(WhereExpr::identified(IdentifiedExpr::Resolved(false)))
         );
     }
 

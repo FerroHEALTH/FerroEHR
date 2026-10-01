@@ -3,7 +3,8 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 //! ITS-REST contract for the `definition` API group: DTOs, per-operation
-//! param structs, the `DefinitionApi` server trait, and the route table.
+//! param structs, per-response headers structs, the `server` and
+//! `client` halves, and the route table.
 
 #![allow(
     clippy::all,
@@ -948,107 +949,1162 @@ pub struct DefinitionQueryVersionStoreYamlParams {
     pub accept: Option<String>,
 }
 
-/// Server contract for the `definition` API group (ITS-REST). Every method
-/// defaults to returning `ApiError::NotImplemented`, so an implementor
-/// (the application service, or a test stub) overrides only the
-/// operations it supports.
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /definition/template/adl1.4`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct DefinitionTemplateAdl14ListOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for DefinitionTemplateAdl14ListOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `201` answer of
+/// `POST /definition/template/adl1.4`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct DefinitionTemplateAdl14UploadCreatedHeaders {
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for DefinitionTemplateAdl14UploadCreatedHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `204` answer of
+/// `POST /definition/template/adl1.4`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct DefinitionTemplateAdl14UploadNoContentHeaders {
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for DefinitionTemplateAdl14UploadNoContentHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /definition/template/adl1.4/{template_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct DefinitionTemplateAdl14GetOkHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for DefinitionTemplateAdl14GetOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /definition/template/adl1.4/{template_id}/example`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct DefinitionTemplateAdl14ExampleGetOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for DefinitionTemplateAdl14ExampleGetOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /definition/template/adl2`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct DefinitionTemplateAdl2ListOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for DefinitionTemplateAdl2ListOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `201` answer of
+/// `POST /definition/template/adl2`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct DefinitionTemplateAdl2UploadCreatedHeaders {
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for DefinitionTemplateAdl2UploadCreatedHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `204` answer of
+/// `POST /definition/template/adl2`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct DefinitionTemplateAdl2UploadNoContentHeaders {
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for DefinitionTemplateAdl2UploadNoContentHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /definition/template/adl2/{template_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct DefinitionTemplateAdl2GetOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for DefinitionTemplateAdl2GetOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /definition/template/adl2/{template_id}/example`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct DefinitionTemplateAdl2ExampleGetOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for DefinitionTemplateAdl2ExampleGetOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /definition/template/adl2/{template_id}/{version}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct DefinitionTemplateAdl2VersionGetOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for DefinitionTemplateAdl2VersionGetOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /definition/query/{qualified_query_name}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct DefinitionQueryListOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for DefinitionQueryListOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `PUT /definition/query/{qualified_query_name}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct DefinitionQueryStoreYamlOkHeaders {
+    /// The `Location` response header.
+    pub location: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for DefinitionQueryStoreYamlOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /definition/query/{qualified_query_name}/{version}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct DefinitionQueryVersionGetOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for DefinitionQueryVersionGetOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `PUT /definition/query/{qualified_query_name}/{version}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct DefinitionQueryVersionStoreYamlOkHeaders {
+    /// The `Location` response header.
+    pub location: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for DefinitionQueryVersionStoreYamlOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        Ok(map)
+    }
+}
+
+/// The server half of the `definition` API group (ITS-REST): the `DefinitionApi`
+/// trait an implementation provides, one success-answer enum per operation,
+/// and `router`, which binds every operation of the route table to its
+/// trait method over axum.
 #[cfg(feature = "rest-server")]
-#[async_trait::async_trait]
-pub trait DefinitionApi {
-    /// `GET /definition/template/adl1.4`
-    async fn definition_template_adl1_4_list(
-        &self,
-        params: DefinitionTemplateAdl14ListParams,
-    ) -> Result<TemplateList, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+pub mod server {
+    use super::*;
+
+    /// The answers `GET /definition/template/adl1.4` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum DefinitionTemplateAdl14ListResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: TemplateList,
+            /// The response headers the OAS declares for this answer.
+            headers: DefinitionTemplateAdl14ListOkHeaders,
+        },
     }
-    /// `POST /definition/template/adl1.4`
-    async fn definition_template_adl1_4_upload(
-        &self,
-        params: DefinitionTemplateAdl14UploadParams,
-        body: serde_json::Value,
-    ) -> Result<TemplateIdentifier, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `POST /definition/template/adl1.4` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum DefinitionTemplateAdl14UploadResponse {
+        /// The `201` answer.
+        Created {
+            /// The body, sent as given, in the representation the request `Accept` selected (the `Content-Type` response header names it).
+            body: Vec<u8>,
+            /// The response headers the OAS declares for this answer.
+            headers: DefinitionTemplateAdl14UploadCreatedHeaders,
+        },
+        /// The `204` answer.
+        NoContent {
+            /// The response headers the OAS declares for this answer.
+            headers: DefinitionTemplateAdl14UploadNoContentHeaders,
+        },
     }
-    /// `GET /definition/template/adl1.4/{template_id}`
-    async fn definition_template_adl1_4_get(
-        &self,
-        params: DefinitionTemplateAdl14GetParams,
-    ) -> Result<serde_json::Value, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /definition/template/adl1.4/{template_id}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum DefinitionTemplateAdl14GetResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as given, in the representation the request `Accept` selected (the `Content-Type` response header names it).
+            body: Vec<u8>,
+            /// The response headers the OAS declares for this answer.
+            headers: DefinitionTemplateAdl14GetOkHeaders,
+        },
     }
-    /// `GET /definition/template/adl1.4/{template_id}/example`
-    async fn definition_template_adl1_4_example_get(
-        &self,
-        params: DefinitionTemplateAdl14ExampleGetParams,
-    ) -> Result<serde_json::Value, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /definition/template/adl1.4/{template_id}/example` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum DefinitionTemplateAdl14ExampleGetResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: serde_json::Value,
+            /// The response headers the OAS declares for this answer.
+            headers: DefinitionTemplateAdl14ExampleGetOkHeaders,
+        },
     }
-    /// `GET /definition/template/adl2`
-    async fn definition_template_adl2_list(
-        &self,
-        params: DefinitionTemplateAdl2ListParams,
-    ) -> Result<TemplateList, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /definition/template/adl2` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum DefinitionTemplateAdl2ListResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: TemplateList,
+            /// The response headers the OAS declares for this answer.
+            headers: DefinitionTemplateAdl2ListOkHeaders,
+        },
     }
-    /// `POST /definition/template/adl2`
-    async fn definition_template_adl2_upload(
-        &self,
-        params: DefinitionTemplateAdl2UploadParams,
-        body: serde_json::Value,
-    ) -> Result<TemplateIdentifier, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `POST /definition/template/adl2` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum DefinitionTemplateAdl2UploadResponse {
+        /// The `201` answer.
+        Created {
+            /// The body, sent as given, in the representation the request `Accept` selected (the `Content-Type` response header names it).
+            body: Vec<u8>,
+            /// The response headers the OAS declares for this answer.
+            headers: DefinitionTemplateAdl2UploadCreatedHeaders,
+        },
+        /// The `204` answer.
+        NoContent {
+            /// The response headers the OAS declares for this answer.
+            headers: DefinitionTemplateAdl2UploadNoContentHeaders,
+        },
     }
-    /// `GET /definition/template/adl2/{template_id}`
-    async fn definition_template_adl2_get(
-        &self,
-        params: DefinitionTemplateAdl2GetParams,
-    ) -> Result<OperationalTemplateV2, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /definition/template/adl2/{template_id}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum DefinitionTemplateAdl2GetResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as given, in the representation the request `Accept` selected (the `Content-Type` response header names it).
+            body: Vec<u8>,
+            /// The response headers the OAS declares for this answer.
+            headers: DefinitionTemplateAdl2GetOkHeaders,
+        },
     }
-    /// `GET /definition/template/adl2/{template_id}/example`
-    async fn definition_template_adl2_example_get(
-        &self,
-        params: DefinitionTemplateAdl2ExampleGetParams,
-    ) -> Result<serde_json::Value, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /definition/template/adl2/{template_id}/example` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum DefinitionTemplateAdl2ExampleGetResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: serde_json::Value,
+            /// The response headers the OAS declares for this answer.
+            headers: DefinitionTemplateAdl2ExampleGetOkHeaders,
+        },
     }
-    /// `GET /definition/template/adl2/{template_id}/{version}`
-    async fn definition_template_adl2_version_get(
-        &self,
-        params: DefinitionTemplateAdl2VersionGetParams,
-    ) -> Result<OperationalTemplateV2, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /definition/template/adl2/{template_id}/{version}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum DefinitionTemplateAdl2VersionGetResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as given, in the representation the request `Accept` selected (the `Content-Type` response header names it).
+            body: Vec<u8>,
+            /// The response headers the OAS declares for this answer.
+            headers: DefinitionTemplateAdl2VersionGetOkHeaders,
+        },
     }
-    /// `GET /definition/query/{qualified_query_name}`
-    async fn definition_query_list(
-        &self,
-        params: DefinitionQueryListParams,
-    ) -> Result<QueryList, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /definition/query/{qualified_query_name}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum DefinitionQueryListResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: QueryList,
+            /// The response headers the OAS declares for this answer.
+            headers: DefinitionQueryListOkHeaders,
+        },
     }
-    /// `PUT /definition/query/{qualified_query_name}`
-    async fn definition_query_store_yaml(
-        &self,
-        params: DefinitionQueryStoreYamlParams,
-        body: super::common::Aql,
-    ) -> Result<(), crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `PUT /definition/query/{qualified_query_name}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum DefinitionQueryStoreYamlResponse {
+        /// The `200` answer.
+        Ok {
+            /// The response headers the OAS declares for this answer.
+            headers: DefinitionQueryStoreYamlOkHeaders,
+        },
     }
-    /// `GET /definition/query/{qualified_query_name}/{version}`
-    async fn definition_query_version_get(
-        &self,
-        params: DefinitionQueryVersionGetParams,
-    ) -> Result<StoredQuery, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /definition/query/{qualified_query_name}/{version}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum DefinitionQueryVersionGetResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: StoredQuery,
+            /// The response headers the OAS declares for this answer.
+            headers: DefinitionQueryVersionGetOkHeaders,
+        },
     }
-    /// `PUT /definition/query/{qualified_query_name}/{version}`
-    async fn definition_query_version_store_yaml(
-        &self,
-        params: DefinitionQueryVersionStoreYamlParams,
-        body: super::common::Aql,
-    ) -> Result<(), crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `PUT /definition/query/{qualified_query_name}/{version}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum DefinitionQueryVersionStoreYamlResponse {
+        /// The `200` answer.
+        Ok {
+            /// The response headers the OAS declares for this answer.
+            headers: DefinitionQueryVersionStoreYamlOkHeaders,
+        },
+    }
+
+    /// Server contract for the `definition` API group (ITS-REST).
+    ///
+    /// Every method defaults to refusing with `ApiError::NotImplemented` (`501`),
+    /// so an implementor overrides only the operations it supports; `router`
+    /// serves an implementation over axum. A method refuses with a
+    /// [`crate::rest::runtime::Refusal`]: `?` turns an `ApiError` into one,
+    /// and `Refusal::with_headers` adds the headers the OAS declares for the
+    /// answer (the `ETag` of a `412`, for one).
+    #[async_trait::async_trait]
+    pub trait DefinitionApi {
+        /// `GET /definition/template/adl1.4`
+        async fn definition_template_adl1_4_list(
+            &self,
+            params: DefinitionTemplateAdl14ListParams,
+        ) -> Result<DefinitionTemplateAdl14ListResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `POST /definition/template/adl1.4`
+        async fn definition_template_adl1_4_upload(
+            &self,
+            params: DefinitionTemplateAdl14UploadParams,
+            body: String,
+        ) -> Result<DefinitionTemplateAdl14UploadResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /definition/template/adl1.4/{template_id}`
+        async fn definition_template_adl1_4_get(
+            &self,
+            params: DefinitionTemplateAdl14GetParams,
+        ) -> Result<DefinitionTemplateAdl14GetResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /definition/template/adl1.4/{template_id}/example`
+        async fn definition_template_adl1_4_example_get(
+            &self,
+            params: DefinitionTemplateAdl14ExampleGetParams,
+        ) -> Result<DefinitionTemplateAdl14ExampleGetResponse, crate::rest::runtime::Refusal>
+        {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /definition/template/adl2`
+        async fn definition_template_adl2_list(
+            &self,
+            params: DefinitionTemplateAdl2ListParams,
+        ) -> Result<DefinitionTemplateAdl2ListResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `POST /definition/template/adl2`
+        async fn definition_template_adl2_upload(
+            &self,
+            params: DefinitionTemplateAdl2UploadParams,
+            body: String,
+        ) -> Result<DefinitionTemplateAdl2UploadResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /definition/template/adl2/{template_id}`
+        async fn definition_template_adl2_get(
+            &self,
+            params: DefinitionTemplateAdl2GetParams,
+        ) -> Result<DefinitionTemplateAdl2GetResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /definition/template/adl2/{template_id}/example`
+        async fn definition_template_adl2_example_get(
+            &self,
+            params: DefinitionTemplateAdl2ExampleGetParams,
+        ) -> Result<DefinitionTemplateAdl2ExampleGetResponse, crate::rest::runtime::Refusal>
+        {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /definition/template/adl2/{template_id}/{version}`
+        async fn definition_template_adl2_version_get(
+            &self,
+            params: DefinitionTemplateAdl2VersionGetParams,
+        ) -> Result<DefinitionTemplateAdl2VersionGetResponse, crate::rest::runtime::Refusal>
+        {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /definition/query/{qualified_query_name}`
+        async fn definition_query_list(
+            &self,
+            params: DefinitionQueryListParams,
+        ) -> Result<DefinitionQueryListResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `PUT /definition/query/{qualified_query_name}`
+        async fn definition_query_store_yaml(
+            &self,
+            params: DefinitionQueryStoreYamlParams,
+            body: String,
+        ) -> Result<DefinitionQueryStoreYamlResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /definition/query/{qualified_query_name}/{version}`
+        async fn definition_query_version_get(
+            &self,
+            params: DefinitionQueryVersionGetParams,
+        ) -> Result<DefinitionQueryVersionGetResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `PUT /definition/query/{qualified_query_name}/{version}`
+        async fn definition_query_version_store_yaml(
+            &self,
+            params: DefinitionQueryVersionStoreYamlParams,
+            body: String,
+        ) -> Result<DefinitionQueryVersionStoreYamlResponse, crate::rest::runtime::Refusal>
+        {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+    }
+
+    /// The axum router serving every operation of the `definition` group over `api`.
+    ///
+    /// Each route is bound at its OAS path relative to the API base (an RFC 6570
+    /// query expansion dropped, path captures named by segment position). A
+    /// handler decodes the request into the operation's params struct and body
+    /// — a missing or unparseable parameter answers `400` naming it, a
+    /// canonical-JSON body sent as another `Content-Type` answers `415` — and
+    /// encodes the trait method's answer, or its `Refusal` as the ITS-REST
+    /// `Error` body with the refusal's headers. Mount it under the base path
+    /// with `axum::Router::nest`.
+    ///
+    /// The router carries no fallback, so group routers merge freely (axum
+    /// refuses to merge two routers that both carry one); finish the merged
+    /// router with `crate::rest::server::with_fallbacks` for the `404` and `405`
+    /// answers, or take `crate::rest::server::router`, which does both.
+    ///
+    /// The typed bodies are canonical JSON only: a server that also serves
+    /// canonical XML or a Simplified Format routes those requests itself, and
+    /// the `accept` parameter reaches the trait method, which answers
+    /// `ApiError::NotAcceptable` for a representation it does not serve.
+    pub fn router<S>(api: std::sync::Arc<S>) -> axum::Router
+    where
+        S: DefinitionApi + Send + Sync + 'static,
+    {
+        axum::Router::new()
+            .route(
+                "/definition/template/adl1.4",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_definition_template_adl1_4_list::<S>,
+                ),
+            )
+            .route(
+                "/definition/template/adl1.4",
+                axum::routing::on(
+                    axum::routing::MethodFilter::POST,
+                    handle_definition_template_adl1_4_upload::<S>,
+                ),
+            )
+            .route(
+                "/definition/template/adl1.4/{p4}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_definition_template_adl1_4_get::<S>,
+                ),
+            )
+            .route(
+                "/definition/template/adl1.4/{p4}/example",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_definition_template_adl1_4_example_get::<S>,
+                ),
+            )
+            .route(
+                "/definition/template/adl2",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_definition_template_adl2_list::<S>,
+                ),
+            )
+            .route(
+                "/definition/template/adl2",
+                axum::routing::on(
+                    axum::routing::MethodFilter::POST,
+                    handle_definition_template_adl2_upload::<S>,
+                ),
+            )
+            .route(
+                "/definition/template/adl2/{p4}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_definition_template_adl2_get::<S>,
+                ),
+            )
+            .route(
+                "/definition/template/adl2/{p4}/example",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_definition_template_adl2_example_get::<S>,
+                ),
+            )
+            .route(
+                "/definition/template/adl2/{p4}/{p5}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_definition_template_adl2_version_get::<S>,
+                ),
+            )
+            .route(
+                "/definition/query/{p3}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_definition_query_list::<S>,
+                ),
+            )
+            .route(
+                "/definition/query/{p3}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::PUT,
+                    handle_definition_query_store_yaml::<S>,
+                ),
+            )
+            .route(
+                "/definition/query/{p3}/{p4}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_definition_query_version_get::<S>,
+                ),
+            )
+            .route(
+                "/definition/query/{p3}/{p4}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::PUT,
+                    handle_definition_query_version_store_yaml::<S>,
+                ),
+            )
+            .with_state(api)
+    }
+
+    /// Serves `GET /definition/template/adl1.4` through [`DefinitionApi::definition_template_adl1_4_list`].
+    async fn handle_definition_template_adl1_4_list<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        axum::extract::RawQuery(query): axum::extract::RawQuery,
+    ) -> axum::response::Response
+    where
+        S: DefinitionApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
+            let params = DefinitionTemplateAdl14ListParams {
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                template_id: query.optional("template_id")?,
+                concept: query.optional("concept")?,
+                version: query.optional("version")?,
+                offset: query.optional("offset")?,
+                fetch: query.optional("fetch")?,
+            };
+            let reply: crate::rest::server::Reply =
+                match api.definition_template_adl1_4_list(params).await? {
+                    DefinitionTemplateAdl14ListResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `POST /definition/template/adl1.4` through [`DefinitionApi::definition_template_adl1_4_upload`].
+    async fn handle_definition_template_adl1_4_upload<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: DefinitionApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let params = DefinitionTemplateAdl14UploadParams {
+                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+            };
+            let body = crate::rest::server::text_body(&body)?;
+            let reply: crate::rest::server::Reply =
+                match api.definition_template_adl1_4_upload(params, body).await? {
+                    DefinitionTemplateAdl14UploadResponse::Created { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::CREATED);
+                        reply.raw(body);
+                        reply.headers(headers)?;
+                        reply
+                    }
+                    DefinitionTemplateAdl14UploadResponse::NoContent { headers } => {
+                        let mut reply =
+                            crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /definition/template/adl1.4/{template_id}` through [`DefinitionApi::definition_template_adl1_4_get`].
+    async fn handle_definition_template_adl1_4_get<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DefinitionApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = DefinitionTemplateAdl14GetParams {
+                template_id: path.value("p4", "template_id")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply =
+                match api.definition_template_adl1_4_get(params).await? {
+                    DefinitionTemplateAdl14GetResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.raw(body);
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /definition/template/adl1.4/{template_id}/example` through [`DefinitionApi::definition_template_adl1_4_example_get`].
+    async fn handle_definition_template_adl1_4_example_get<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        axum::extract::RawQuery(query): axum::extract::RawQuery,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DefinitionApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
+            let params = DefinitionTemplateAdl14ExampleGetParams {
+                template_id: path.value("p4", "template_id")?,
+                r#type: query.optional("type")?,
+                detail_level: query.optional("detail_level")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply =
+                match api.definition_template_adl1_4_example_get(params).await? {
+                    DefinitionTemplateAdl14ExampleGetResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /definition/template/adl2` through [`DefinitionApi::definition_template_adl2_list`].
+    async fn handle_definition_template_adl2_list<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        axum::extract::RawQuery(query): axum::extract::RawQuery,
+    ) -> axum::response::Response
+    where
+        S: DefinitionApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
+            let params = DefinitionTemplateAdl2ListParams {
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                template_id: query.optional("template_id")?,
+                concept: query.optional("concept")?,
+                version: query.optional("version")?,
+                offset: query.optional("offset")?,
+                fetch: query.optional("fetch")?,
+            };
+            let reply: crate::rest::server::Reply =
+                match api.definition_template_adl2_list(params).await? {
+                    DefinitionTemplateAdl2ListResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `POST /definition/template/adl2` through [`DefinitionApi::definition_template_adl2_upload`].
+    async fn handle_definition_template_adl2_upload<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        axum::extract::RawQuery(query): axum::extract::RawQuery,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: DefinitionApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
+            let params = DefinitionTemplateAdl2UploadParams {
+                version: query.optional("version")?,
+                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+            };
+            let body = crate::rest::server::text_body(&body)?;
+            let reply: crate::rest::server::Reply =
+                match api.definition_template_adl2_upload(params, body).await? {
+                    DefinitionTemplateAdl2UploadResponse::Created { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::CREATED);
+                        reply.raw(body);
+                        reply.headers(headers)?;
+                        reply
+                    }
+                    DefinitionTemplateAdl2UploadResponse::NoContent { headers } => {
+                        let mut reply =
+                            crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /definition/template/adl2/{template_id}` through [`DefinitionApi::definition_template_adl2_get`].
+    async fn handle_definition_template_adl2_get<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DefinitionApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = DefinitionTemplateAdl2GetParams {
+                template_id: path.value("p4", "template_id")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply =
+                match api.definition_template_adl2_get(params).await? {
+                    DefinitionTemplateAdl2GetResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.raw(body);
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /definition/template/adl2/{template_id}/example` through [`DefinitionApi::definition_template_adl2_example_get`].
+    async fn handle_definition_template_adl2_example_get<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        axum::extract::RawQuery(query): axum::extract::RawQuery,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DefinitionApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
+            let params = DefinitionTemplateAdl2ExampleGetParams {
+                template_id: path.value("p4", "template_id")?,
+                r#type: query.optional("type")?,
+                detail_level: query.optional("detail_level")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply =
+                match api.definition_template_adl2_example_get(params).await? {
+                    DefinitionTemplateAdl2ExampleGetResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /definition/template/adl2/{template_id}/{version}` through [`DefinitionApi::definition_template_adl2_version_get`].
+    async fn handle_definition_template_adl2_version_get<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DefinitionApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = DefinitionTemplateAdl2VersionGetParams {
+                template_id: path.value("p4", "template_id")?,
+                version: path.value("p5", "version")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply =
+                match api.definition_template_adl2_version_get(params).await? {
+                    DefinitionTemplateAdl2VersionGetResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.raw(body);
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /definition/query/{qualified_query_name}` through [`DefinitionApi::definition_query_list`].
+    async fn handle_definition_query_list<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DefinitionApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = DefinitionQueryListParams {
+                qualified_query_name: path.value("p3", "qualified_query_name")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply = match api.definition_query_list(params).await? {
+                DefinitionQueryListResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `PUT /definition/query/{qualified_query_name}` through [`DefinitionApi::definition_query_store_yaml`].
+    async fn handle_definition_query_store_yaml<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        axum::extract::RawQuery(query): axum::extract::RawQuery,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: DefinitionApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
+            let params = DefinitionQueryStoreYamlParams {
+                qualified_query_name: path.value("p3", "qualified_query_name")?,
+                query_type: query.optional("query_type")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+            };
+            let body = crate::rest::server::text_body(&body)?;
+            let reply: crate::rest::server::Reply =
+                match api.definition_query_store_yaml(params, body).await? {
+                    DefinitionQueryStoreYamlResponse::Ok { headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /definition/query/{qualified_query_name}/{version}` through [`DefinitionApi::definition_query_version_get`].
+    async fn handle_definition_query_version_get<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: DefinitionApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = DefinitionQueryVersionGetParams {
+                qualified_query_name: path.value("p3", "qualified_query_name")?,
+                version: path.value("p4", "version")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply =
+                match api.definition_query_version_get(params).await? {
+                    DefinitionQueryVersionGetResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `PUT /definition/query/{qualified_query_name}/{version}` through [`DefinitionApi::definition_query_version_store_yaml`].
+    async fn handle_definition_query_version_store_yaml<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        axum::extract::RawQuery(query): axum::extract::RawQuery,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: DefinitionApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
+            let params = DefinitionQueryVersionStoreYamlParams {
+                qualified_query_name: path.value("p3", "qualified_query_name")?,
+                version: path.value("p4", "version")?,
+                query_type: query.optional("query_type")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let body = crate::rest::server::text_body(&body)?;
+            let reply: crate::rest::server::Reply = match api
+                .definition_query_version_store_yaml(params, body)
+                .await?
+            {
+                DefinitionQueryVersionStoreYamlResponse::Ok { headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
     }
 }
 
@@ -1058,14 +2114,6 @@ pub trait DefinitionApi {
 #[cfg(feature = "rest-client")]
 pub mod client {
     use super::*;
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /definition/template/adl1.4`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct DefinitionTemplateAdl14ListOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
 
     /// The outcome of `GET /definition/template/adl1.4`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
@@ -1078,30 +2126,6 @@ pub mod client {
             /// The response headers the OAS declares for this answer.
             headers: DefinitionTemplateAdl14ListOkHeaders,
         },
-    }
-
-    /// The response headers the OAS declares for the `201` answer of
-    /// `POST /definition/template/adl1.4`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct DefinitionTemplateAdl14UploadCreatedHeaders {
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
-    /// The response headers the OAS declares for the `204` answer of
-    /// `POST /definition/template/adl1.4`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct DefinitionTemplateAdl14UploadNoContentHeaders {
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
     }
 
     /// The outcome of `POST /definition/template/adl1.4`: one variant per status the OAS documents.
@@ -1132,16 +2156,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /definition/template/adl1.4/{template_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct DefinitionTemplateAdl14GetOkHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
     /// The outcome of `GET /definition/template/adl1.4/{template_id}`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -1168,14 +2182,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /definition/template/adl1.4/{template_id}/example`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct DefinitionTemplateAdl14ExampleGetOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
     }
 
     /// The outcome of `GET /definition/template/adl1.4/{template_id}/example`: one variant per status the OAS documents.
@@ -1206,14 +2212,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /definition/template/adl2`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct DefinitionTemplateAdl2ListOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
     /// The outcome of `GET /definition/template/adl2`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -1225,30 +2223,6 @@ pub mod client {
             /// The response headers the OAS declares for this answer.
             headers: DefinitionTemplateAdl2ListOkHeaders,
         },
-    }
-
-    /// The response headers the OAS declares for the `201` answer of
-    /// `POST /definition/template/adl2`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct DefinitionTemplateAdl2UploadCreatedHeaders {
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
-    /// The response headers the OAS declares for the `204` answer of
-    /// `POST /definition/template/adl2`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct DefinitionTemplateAdl2UploadNoContentHeaders {
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
     }
 
     /// The outcome of `POST /definition/template/adl2`: one variant per status the OAS documents.
@@ -1279,14 +2253,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /definition/template/adl2/{template_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct DefinitionTemplateAdl2GetOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
     /// The outcome of `GET /definition/template/adl2/{template_id}`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -1308,14 +2274,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /definition/template/adl2/{template_id}/example`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct DefinitionTemplateAdl2ExampleGetOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
     }
 
     /// The outcome of `GET /definition/template/adl2/{template_id}/example`: one variant per status the OAS documents.
@@ -1346,14 +2304,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /definition/template/adl2/{template_id}/{version}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct DefinitionTemplateAdl2VersionGetOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
     /// The outcome of `GET /definition/template/adl2/{template_id}/{version}`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -1377,14 +2327,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /definition/query/{qualified_query_name}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct DefinitionQueryListOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
     /// The outcome of `GET /definition/query/{qualified_query_name}`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -1396,14 +2338,6 @@ pub mod client {
             /// The response headers the OAS declares for this answer.
             headers: DefinitionQueryListOkHeaders,
         },
-    }
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `PUT /definition/query/{qualified_query_name}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct DefinitionQueryStoreYamlOkHeaders {
-        /// The `Location` response header.
-        pub location: Option<String>,
     }
 
     /// The outcome of `PUT /definition/query/{qualified_query_name}`: one variant per status the OAS documents.
@@ -1422,14 +2356,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /definition/query/{qualified_query_name}/{version}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct DefinitionQueryVersionGetOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
     /// The outcome of `GET /definition/query/{qualified_query_name}/{version}`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -1446,14 +2372,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `PUT /definition/query/{qualified_query_name}/{version}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct DefinitionQueryVersionStoreYamlOkHeaders {
-        /// The `Location` response header.
-        pub location: Option<String>,
     }
 
     /// The outcome of `PUT /definition/query/{qualified_query_name}/{version}`: one variant per status the OAS documents.
@@ -1478,16 +2396,28 @@ pub mod client {
     }
 
     /// The `definition` API group over one configured CDR.
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone)]
     pub struct DefinitionClient<'c, T> {
         client: &'c crate::rest::client::Client<T>,
+        options: crate::rest::client::CallOptions,
     }
 
     impl<'c, T: crate::rest::client::Transport> DefinitionClient<'c, T> {
         /// The `definition` API group over `client`.
         #[must_use]
         pub fn new(client: &'c crate::rest::client::Client<T>) -> Self {
-            Self { client }
+            Self {
+                client,
+                options: crate::rest::client::CallOptions::default(),
+            }
+        }
+
+        /// This group client applying `options` (a deadline, extra headers) to
+        /// every call it makes.
+        #[must_use]
+        pub fn with_options(mut self, options: crate::rest::client::CallOptions) -> Self {
+            self.options = options;
+            self
         }
 
         /// `GET /definition/template/adl1.4`
@@ -1522,6 +2452,7 @@ pub mod client {
             if let Some(value) = params.fetch.as_ref() {
                 request.query("fetch", value);
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(DefinitionTemplateAdl14ListOutcome::Ok {
@@ -1563,6 +2494,7 @@ pub mod client {
                 body,
                 params.content_type.as_deref().unwrap_or("application/xml"),
             )?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::CREATED => Ok(DefinitionTemplateAdl14UploadOutcome::Created {
@@ -1614,6 +2546,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(DefinitionTemplateAdl14GetOutcome::Ok {
@@ -1667,6 +2600,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(DefinitionTemplateAdl14ExampleGetOutcome::Ok {
@@ -1726,6 +2660,7 @@ pub mod client {
             if let Some(value) = params.fetch.as_ref() {
                 request.query("fetch", value);
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(DefinitionTemplateAdl2ListOutcome::Ok {
@@ -1766,6 +2701,7 @@ pub mod client {
                 request.header("Content-Type", &value.to_string())?;
             }
             request.text_body(body, params.content_type.as_deref().unwrap_or("text/plain"))?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::CREATED => Ok(DefinitionTemplateAdl2UploadOutcome::Created {
@@ -1817,6 +2753,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(DefinitionTemplateAdl2GetOutcome::Ok {
@@ -1862,6 +2799,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(DefinitionTemplateAdl2ExampleGetOutcome::Ok {
@@ -1911,6 +2849,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(DefinitionTemplateAdl2VersionGetOutcome::Ok {
@@ -1953,6 +2892,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(DefinitionQueryListOutcome::Ok {
@@ -1993,6 +2933,7 @@ pub mod client {
                 request.header("Content-Type", &value.to_string())?;
             }
             request.text_body(body, params.content_type.as_deref().unwrap_or("text/plain"))?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(DefinitionQueryStoreYamlOutcome::Ok {
@@ -2028,6 +2969,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(DefinitionQueryVersionGetOutcome::Ok {
@@ -2070,6 +3012,7 @@ pub mod client {
                 request.header("Accept", &value.to_string())?;
             }
             request.text_body(body, None.unwrap_or("text/plain"))?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(DefinitionQueryVersionStoreYamlOutcome::Ok {
@@ -2092,8 +3035,9 @@ pub mod client {
         }
     }
 }
-/// The operations of this group as `(method, path, operation_id)`, for
-/// wiring an axum router in `ferroehr-rest`.
+/// The operations of this group as `(method, path, operation_id)`, in OAS
+/// document order: `server::router` binds each to its trait method, and
+/// `crate::rest::routes::lookup` matches a request path against them.
 pub const ROUTES: &[(&str, &str, &str)] = &[
     (
         "GET",

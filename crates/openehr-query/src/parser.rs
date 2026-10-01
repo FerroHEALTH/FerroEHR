@@ -16,10 +16,11 @@ use crate::ast::{
     ContainsConstraint, ContainsExpr, FunctionCall, IdentifiedExpr, IdentifiedPath, LikeOperand,
     Limit, MatchesOperand, NodeNameConstraint, NodePredicate, ObjectPath, OrderByExpr, PathPart,
     PathPredicate, PathPredicateOperand, Primitive, SelectClause, SelectExpr, SelectQuery,
-    SortOrder, StandardPredicate, StatFunc, Terminal, TerminologyFunction, Top, TopDirection,
+    SortOrder, Span, StandardPredicate, StatFunc, Terminal, TerminologyFunction, Top, TopDirection,
     ValueListItem, VersionPredicate, WhereExpr,
 };
 use crate::lexer::{CompOp, SpannedTokens, Token};
+use crate::visit::VisitMut;
 use chumsky::prelude::*;
 
 // The chumsky extra-parameter alias. `chumsky::extra::Err` stays fully
@@ -82,7 +83,8 @@ pub enum ParseError {
 /// Parses a token slice into a [`SelectQuery`].
 ///
 /// A bare token slice carries no source positions, so every reported
-/// [`SyntaxFault`] has `bytes: None`; use [`parse_spanned`] to keep them.
+/// [`SyntaxFault`] has `bytes: None` and every [`Span`] in the tree is
+/// unknown; use [`parse_spanned`] to keep them.
 ///
 /// # Errors
 /// [`ParseError::Syntax`], carrying every token position the parser reported.
@@ -91,7 +93,7 @@ pub fn parse(tokens: &[Token]) -> Result<SelectQuery, ParseError> {
 }
 
 /// Parses a spanned token stream into a [`SelectQuery`], keeping source
-/// positions on any failure.
+/// positions: on every [`Span`] in the tree, and on any failure.
 ///
 /// # Errors
 /// [`ParseError::Syntax`], each fault carrying both the token indices and the
@@ -101,7 +103,7 @@ pub fn parse_spanned(tokens: &SpannedTokens) -> Result<SelectQuery, ParseError> 
 }
 
 fn run(tokens: &[Token], spanned: Option<&SpannedTokens>) -> Result<SelectQuery, ParseError> {
-    query().parse(tokens).into_result().map_err(|errs| {
+    let mut parsed = query().parse(tokens).into_result().map_err(|errs| {
         let faults = errs
             .iter()
             .map(|e: &Simple<'_, Token>| {
@@ -114,7 +116,28 @@ fn run(tokens: &[Token], spanned: Option<&SpannedTokens>) -> Result<SelectQuery,
             })
             .collect();
         ParseError::Syntax { faults }
-    })
+    })?;
+    ResolveSpans(spanned).visit_select_query_mut(&mut parsed);
+    Ok(parsed)
+}
+
+/// Turns the token-index spans the grammar records into byte spans of the
+/// source, or into unknown spans when the parse ran over a bare token slice.
+struct ResolveSpans<'s>(Option<&'s SpannedTokens>);
+
+impl VisitMut for ResolveSpans<'_> {
+    fn visit_span_mut(&mut self, node: &mut Span) {
+        *node = match (self.0, node.bytes()) {
+            (Some(stream), Some(tokens)) => Span::new(stream.byte_span(&tokens)),
+            _ => Span::default(),
+        };
+    }
+}
+
+/// The span of a parsed node while it is still a token-index range;
+/// [`ResolveSpans`] maps it to bytes once the whole query has parsed.
+fn token_span(range: core::ops::Range<usize>) -> Span {
+    Span::new(range)
 }
 
 /// Lexes then parses `src` in one step.
@@ -135,7 +158,7 @@ fn ident<'a>() -> impl Parser<'a, &'a [Token], String, Err<'a>> + Clone {
 /// Strips the quotes from a lexed string literal and unescapes it per
 /// `AqlLexer.g4` `ESCAPE_SEQ` / `OCTAL_ESC` / `UTF8CHAR`, so the AST carries
 /// the decoded value rather than the raw source text.
-fn unquote(s: &str) -> String {
+pub(crate) fn unquote(s: &str) -> String {
     // A value too short to be quoted, or a range that is not a UTF-8 boundary,
     // passes through unchanged rather than panicking.
     let inner = s
@@ -363,10 +386,11 @@ fn path_parsers<'a>() -> (
     let identified = ident()
         .then(predicate.clone().or_not())
         .then(just(Token::Slash).ignore_then(object).or_not())
-        .map(|((root, predicate), path)| IdentifiedPath {
+        .map_with(|((root, predicate), path), e| IdentifiedPath {
             root,
             predicate,
             path,
+            span: token_span(e.span().into_range()),
         });
 
     (identified, predicate, standard)
@@ -467,17 +491,24 @@ fn predicate_parsers<'a>(
     // pathPredicate : '[' (standardPredicate | archetypePredicate |
     // nodePredicate) ']'
     //
-    // A bare comparison (`[ehr_id/value='123']`) is both a standardPredicate
-    // and a nodePredicate; the grammar lists `standardPredicate` first, so a
-    // lone comparison is lifted back out of the parsed node boolean tree.
-    let predicate = archetype
-        .clone()
-        .map(PathPredicate::Archetype)
-        .or(node.map(|n| match n {
-            NodePredicate::Standard(s) => PathPredicate::Standard(s),
-            other => PathPredicate::Node(Box::new(other)),
-        }))
-        .delimited_by(just(Token::LeftBracket), just(Token::RightBracket));
+    // A lone comparison is both a standardPredicate and a nodePredicate, and
+    // the grammar lists `standardPredicate` first, so it is lifted back out of
+    // the node tree. A lone `ARCHETYPE_HRID`/`PARAMETER` is an
+    // archetypePredicate, yet can open a node boolean (`[$p and at0001]`), so
+    // `]` belongs to each alternative and a failed one backtracks.
+    let close = just(Token::RightBracket);
+    let predicate = just(Token::LeftBracket).ignore_then(
+        archetype
+            .clone()
+            .then_ignore(close.clone())
+            .map(PathPredicate::Archetype)
+            .or(node
+                .map(|n| match n {
+                    NodePredicate::Standard(s) => PathPredicate::Standard(s),
+                    other => PathPredicate::Node(Box::new(other)),
+                })
+                .then_ignore(close)),
+    );
 
     (predicate, standard)
 }
@@ -739,9 +770,11 @@ fn query<'a>() -> impl Parser<'a, &'a [Token], SelectQuery, Err<'a>> {
             }));
 
     let where_expr = recursive(|where_expr| {
-        let atom = identified_expr.map(WhereExpr::Identified).or(where_expr
-            .clone()
-            .delimited_by(just(Token::LeftParen), just(Token::RightParen)));
+        let atom = identified_expr
+            .map_with(|expr, e| WhereExpr::Identified(expr, token_span(e.span().into_range())))
+            .or(where_expr
+                .clone()
+                .delimited_by(just(Token::LeftParen), just(Token::RightParen)));
         // Precedence: NOT (unary, tightest) > AND > OR. `NOT a AND b` parses as
         // `(NOT a) AND b`; group with parens for `NOT (a AND b)`.
         let unary = just(Token::Not)
@@ -843,10 +876,13 @@ mod tests {
                 "SELECT c FROM COMPOSITION c WHERE c/name/value LIKE {src}"
             ))
             .expect("parse");
-            let Some(WhereExpr::Identified(IdentifiedExpr::Like {
-                operand: LikeOperand::String(pattern),
-                ..
-            })) = q.where_
+            let Some(WhereExpr::Identified(
+                IdentifiedExpr::Like {
+                    operand: LikeOperand::String(pattern),
+                    ..
+                },
+                _,
+            )) = q.where_
             else {
                 panic!("not a LIKE: {:?}", q.where_);
             };
@@ -861,7 +897,7 @@ mod tests {
         assert!(matches!(q.select.columns[0].column, ColumnExpr::Path(_)));
         assert!(matches!(
             q.where_,
-            Some(WhereExpr::Identified(IdentifiedExpr::Compare { .. }))
+            Some(WhereExpr::Identified(IdentifiedExpr::Compare { .. }, _))
         ));
     }
 
@@ -1062,10 +1098,13 @@ mod tests {
             .expect("parse i64::MAX");
         assert!(matches!(
             q.where_,
-            Some(WhereExpr::Identified(IdentifiedExpr::Compare {
-                rhs: Terminal::Primitive(Primitive::Integer(9_223_372_036_854_775_807)),
-                ..
-            }))
+            Some(WhereExpr::Identified(
+                IdentifiedExpr::Compare {
+                    rhs: Terminal::Primitive(Primitive::Integer(9_223_372_036_854_775_807)),
+                    ..
+                },
+                _
+            ))
         ));
     }
 
@@ -1087,10 +1126,13 @@ mod tests {
         let q = parse_str("SELECT c FROM COMPOSITION c WHERE c/x = - - 5").expect("parse");
         assert!(matches!(
             q.where_,
-            Some(WhereExpr::Identified(IdentifiedExpr::Compare {
-                rhs: Terminal::Primitive(Primitive::Integer(5)),
-                ..
-            }))
+            Some(WhereExpr::Identified(
+                IdentifiedExpr::Compare {
+                    rhs: Terminal::Primitive(Primitive::Integer(5)),
+                    ..
+                },
+                _
+            ))
         ));
     }
 
@@ -1099,10 +1141,13 @@ mod tests {
         let q = parse_str("SELECT c FROM COMPOSITION c WHERE c/x = -5").expect("parse");
         assert!(matches!(
             q.where_,
-            Some(WhereExpr::Identified(IdentifiedExpr::Compare {
-                rhs: Terminal::Primitive(Primitive::Integer(-5)),
-                ..
-            }))
+            Some(WhereExpr::Identified(
+                IdentifiedExpr::Compare {
+                    rhs: Terminal::Primitive(Primitive::Integer(-5)),
+                    ..
+                },
+                _
+            ))
         ));
     }
 
@@ -1111,10 +1156,13 @@ mod tests {
     fn string_escapes_are_decoded() {
         let q = parse_str(r"SELECT c FROM COMPOSITION c WHERE c/x = 'a\nb\t\\c'").expect("parse");
         match q.where_ {
-            Some(WhereExpr::Identified(IdentifiedExpr::Compare {
-                rhs: Terminal::Primitive(Primitive::String(s)),
-                ..
-            })) => assert_eq!(s, "a\nb\t\\c"),
+            Some(WhereExpr::Identified(
+                IdentifiedExpr::Compare {
+                    rhs: Terminal::Primitive(Primitive::String(s)),
+                    ..
+                },
+                _,
+            )) => assert_eq!(s, "a\nb\t\\c"),
             other => panic!("expected decoded string, got {other:?}"),
         }
     }
@@ -1175,10 +1223,13 @@ mod tests {
         let q = parse_str("SELECT c FROM COMPOSITION c WHERE c/x = 1e3").expect("parse");
         assert!(matches!(
             q.where_,
-            Some(WhereExpr::Identified(IdentifiedExpr::Compare {
-                rhs: Terminal::Primitive(Primitive::Integer(1000)),
-                ..
-            }))
+            Some(WhereExpr::Identified(
+                IdentifiedExpr::Compare {
+                    rhs: Terminal::Primitive(Primitive::Integer(1000)),
+                    ..
+                },
+                _
+            ))
         ));
     }
 
@@ -1187,10 +1238,13 @@ mod tests {
         let q = parse_str("SELECT c FROM COMPOSITION c WHERE c/x = 1.5e2").expect("parse");
         assert!(matches!(
             q.where_,
-            Some(WhereExpr::Identified(IdentifiedExpr::Compare {
-                rhs: Terminal::Primitive(Primitive::Real(_)),
-                ..
-            }))
+            Some(WhereExpr::Identified(
+                IdentifiedExpr::Compare {
+                    rhs: Terminal::Primitive(Primitive::Real(_)),
+                    ..
+                },
+                _
+            ))
         ));
     }
 
@@ -1200,16 +1254,19 @@ mod tests {
             .expect("parse");
         assert!(matches!(
             q.where_,
-            Some(WhereExpr::Identified(IdentifiedExpr::Like { .. }))
+            Some(WhereExpr::Identified(IdentifiedExpr::Like { .. }, _))
         ));
         let q =
             parse_str("SELECT c FROM COMPOSITION c WHERE c/name/value LIKE $pat").expect("parse");
         assert!(matches!(
             q.where_,
-            Some(WhereExpr::Identified(IdentifiedExpr::Like {
-                operand: LikeOperand::Parameter(_),
-                ..
-            }))
+            Some(WhereExpr::Identified(
+                IdentifiedExpr::Like {
+                    operand: LikeOperand::Parameter(_),
+                    ..
+                },
+                _
+            ))
         ));
     }
 
@@ -1221,10 +1278,13 @@ mod tests {
         .expect("parse");
         assert!(matches!(
             q.where_,
-            Some(WhereExpr::Identified(IdentifiedExpr::Matches {
-                operand: MatchesOperand::Uri(_),
-                ..
-            }))
+            Some(WhereExpr::Identified(
+                IdentifiedExpr::Matches {
+                    operand: MatchesOperand::Uri(_),
+                    ..
+                },
+                _
+            ))
         ));
         let q = parse_str(
             "SELECT o FROM OBSERVATION o WHERE o/value/defining_code \
@@ -1233,10 +1293,13 @@ mod tests {
         .expect("parse");
         assert!(matches!(
             q.where_,
-            Some(WhereExpr::Identified(IdentifiedExpr::Matches {
-                operand: MatchesOperand::Terminology(_),
-                ..
-            }))
+            Some(WhereExpr::Identified(
+                IdentifiedExpr::Matches {
+                    operand: MatchesOperand::Terminology(_),
+                    ..
+                },
+                _
+            ))
         ));
     }
 
@@ -1293,6 +1356,41 @@ mod tests {
         ));
     }
 
+    /// The class predicate of a single-operand `FROM`.
+    fn class_predicate(src: &str) -> Option<PathPredicate> {
+        match parse_str(src).expect("parse").from {
+            ContainsExpr::Contained {
+                operand: ClassExprOperand::Class { predicate, .. },
+                ..
+            } => predicate,
+            _ => None,
+        }
+    }
+
+    #[test]
+    fn a_node_boolean_may_open_with_a_parameter_or_an_archetype_id() {
+        // AqlParser.g4 nodePredicate: PARAMETER | ARCHETYPE_HRID … | nodePredicate (AND|OR) nodePredicate.
+        for src in [
+            "SELECT k FROM CLUSTER k[$node and name/value='x']",
+            "SELECT k FROM CLUSTER k[openEHR-EHR-CLUSTER.device.v1 or at0001]",
+        ] {
+            assert!(
+                matches!(class_predicate(src), Some(PathPredicate::Node(_))),
+                "a node boolean: {src}"
+            );
+        }
+        // A lone parameter or HRID stays the archetypePredicate the grammar lists first.
+        for src in [
+            "SELECT k FROM CLUSTER k[$node]",
+            "SELECT k FROM CLUSTER k[openEHR-EHR-CLUSTER.device.v1]",
+        ] {
+            assert!(
+                matches!(class_predicate(src), Some(PathPredicate::Archetype(_))),
+                "an archetype predicate: {src}"
+            );
+        }
+    }
+
     #[test]
     fn hyphenated_term_code_in_predicate_parses() {
         // end-to-end: the node-name term-code slot accepts a hyphenated id.
@@ -1334,7 +1432,7 @@ mod tests {
         ));
         assert!(matches!(
             q.where_,
-            Some(WhereExpr::Identified(IdentifiedExpr::Matches { .. }))
+            Some(WhereExpr::Identified(IdentifiedExpr::Matches { .. }, _))
         ));
     }
 }

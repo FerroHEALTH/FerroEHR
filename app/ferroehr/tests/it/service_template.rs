@@ -4,7 +4,7 @@
 //! End-to-end service tests for OPT 1.4 operational-template ingestion against a
 //! real `PostgreSQL` 18 (shared testkit harness): upload a corpus `.opt` template, list it,
 //! retrieve its XML, and re-upload (idempotent replace) — driven through the
-//! generated `DefinitionApi` trait exactly as the REST layer calls it.
+//! `FerroEhrService` definition methods the REST layer calls.
 
 #![expect(
     clippy::expect_used,
@@ -186,7 +186,7 @@ fn web_template_of(rel: &str) -> openehr_sdt::flat::webtemplate::model::WebTempl
 
 /// The generated `required` example is committable (passes the validator)
 /// and survives FLAT round-trip + canonical-XML serialization for real
-/// templates. The example is fetched through the generated `DefinitionApi`
+/// templates. The example is fetched through the service definition methods
 /// exactly as the REST layer calls it; validation/conversion use the same
 /// `WebTemplate` the service caches.
 #[tokio::test]

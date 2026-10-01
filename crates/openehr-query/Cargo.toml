@@ -1,6 +1,6 @@
 [package]
 name = "openehr-query"
-version = "0.0.73"
+version = "0.0.74"
 description = "openEHR QUERY (AQL 1.1.0): hand-written lexer, parser, typed AST and canonical printer from the official grammar (no ANTLR runtime)"
 edition.workspace = true
 rust-version.workspace = true
@@ -17,5 +17,14 @@ logos.workspace = true
 chumsky.workspace = true
 thiserror.workspace = true
 
+# Additive: the feature adds a module and changes no type the default build exposes.
+[features]
+default = []
+# The `federation` module: the `FROM ENDPOINT` / `ORGANISATION` directive.
+federation = []
+
 [lints]
 workspace = true
+
+[package.metadata.docs.rs]
+all-features = true

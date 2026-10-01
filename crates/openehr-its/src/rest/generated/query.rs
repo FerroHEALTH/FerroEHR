@@ -3,7 +3,8 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 //! ITS-REST contract for the `query` API group: DTOs, per-operation
-//! param structs, the `QueryApi` server trait, and the route table.
+//! param structs, per-response headers structs, the `server` and
+//! `client` halves, and the route table.
 
 #![allow(
     clippy::all,
@@ -249,57 +250,559 @@ pub struct QueryExecuteStoredQueryVersionBodyParams {
     pub content_type: Option<String>,
 }
 
-/// Server contract for the `query` API group (ITS-REST). Every method
-/// defaults to returning `ApiError::NotImplemented`, so an implementor
-/// (the application service, or a test stub) overrides only the
-/// operations it supports.
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /query/aql`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct QueryExecuteAdhocQueryOkHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for QueryExecuteAdhocQueryOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `POST /query/aql`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct QueryExecuteAdhocQueryBodyOkHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for QueryExecuteAdhocQueryBodyOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /query/{qualified_query_name}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct QueryExecuteStoredQueryOkHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for QueryExecuteStoredQueryOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `POST /query/{qualified_query_name}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct QueryExecuteStoredQueryBodyOkHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for QueryExecuteStoredQueryBodyOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /query/{qualified_query_name}/{version}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct QueryExecuteStoredQueryVersionOkHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for QueryExecuteStoredQueryVersionOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `POST /query/{qualified_query_name}/{version}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct QueryExecuteStoredQueryVersionBodyOkHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for QueryExecuteStoredQueryVersionBodyOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The server half of the `query` API group (ITS-REST): the `QueryApi`
+/// trait an implementation provides, one success-answer enum per operation,
+/// and `router`, which binds every operation of the route table to its
+/// trait method over axum.
 #[cfg(feature = "rest-server")]
-#[async_trait::async_trait]
-pub trait QueryApi {
-    /// `GET /query/aql`
-    async fn query_execute_adhoc_query(
-        &self,
-        params: QueryExecuteAdhocQueryParams,
-    ) -> Result<ResultSet, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+pub mod server {
+    use super::*;
+
+    /// The answers `GET /query/aql` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum QueryExecuteAdhocQueryResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: ResultSet,
+            /// The response headers the OAS declares for this answer.
+            headers: QueryExecuteAdhocQueryOkHeaders,
+        },
     }
-    /// `POST /query/aql`
-    async fn query_execute_adhoc_query_body(
-        &self,
-        params: QueryExecuteAdhocQueryBodyParams,
-        body: AdhocQueryExecute,
-    ) -> Result<ResultSet, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `POST /query/aql` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum QueryExecuteAdhocQueryBodyResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: ResultSet,
+            /// The response headers the OAS declares for this answer.
+            headers: QueryExecuteAdhocQueryBodyOkHeaders,
+        },
     }
-    /// `GET /query/{qualified_query_name}`
-    async fn query_execute_stored_query(
-        &self,
-        params: QueryExecuteStoredQueryParams,
-    ) -> Result<ResultSet, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /query/{qualified_query_name}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum QueryExecuteStoredQueryResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: ResultSet,
+            /// The response headers the OAS declares for this answer.
+            headers: QueryExecuteStoredQueryOkHeaders,
+        },
     }
-    /// `POST /query/{qualified_query_name}`
-    async fn query_execute_stored_query_body(
-        &self,
-        params: QueryExecuteStoredQueryBodyParams,
-        body: Query,
-    ) -> Result<ResultSet, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `POST /query/{qualified_query_name}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum QueryExecuteStoredQueryBodyResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: ResultSet,
+            /// The response headers the OAS declares for this answer.
+            headers: QueryExecuteStoredQueryBodyOkHeaders,
+        },
     }
-    /// `GET /query/{qualified_query_name}/{version}`
-    async fn query_execute_stored_query_version(
-        &self,
-        params: QueryExecuteStoredQueryVersionParams,
-    ) -> Result<ResultSet, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /query/{qualified_query_name}/{version}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum QueryExecuteStoredQueryVersionResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: ResultSet,
+            /// The response headers the OAS declares for this answer.
+            headers: QueryExecuteStoredQueryVersionOkHeaders,
+        },
     }
-    /// `POST /query/{qualified_query_name}/{version}`
-    async fn query_execute_stored_query_version_body(
-        &self,
-        params: QueryExecuteStoredQueryVersionBodyParams,
-        body: Query,
-    ) -> Result<ResultSet, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `POST /query/{qualified_query_name}/{version}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum QueryExecuteStoredQueryVersionBodyResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: ResultSet,
+            /// The response headers the OAS declares for this answer.
+            headers: QueryExecuteStoredQueryVersionBodyOkHeaders,
+        },
+    }
+
+    /// Server contract for the `query` API group (ITS-REST).
+    ///
+    /// Every method defaults to refusing with `ApiError::NotImplemented` (`501`),
+    /// so an implementor overrides only the operations it supports; `router`
+    /// serves an implementation over axum. A method refuses with a
+    /// [`crate::rest::runtime::Refusal`]: `?` turns an `ApiError` into one,
+    /// and `Refusal::with_headers` adds the headers the OAS declares for the
+    /// answer (the `ETag` of a `412`, for one).
+    #[async_trait::async_trait]
+    pub trait QueryApi {
+        /// `GET /query/aql`
+        async fn query_execute_adhoc_query(
+            &self,
+            params: QueryExecuteAdhocQueryParams,
+        ) -> Result<QueryExecuteAdhocQueryResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `POST /query/aql`
+        async fn query_execute_adhoc_query_body(
+            &self,
+            params: QueryExecuteAdhocQueryBodyParams,
+            body: AdhocQueryExecute,
+        ) -> Result<QueryExecuteAdhocQueryBodyResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /query/{qualified_query_name}`
+        async fn query_execute_stored_query(
+            &self,
+            params: QueryExecuteStoredQueryParams,
+        ) -> Result<QueryExecuteStoredQueryResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `POST /query/{qualified_query_name}`
+        async fn query_execute_stored_query_body(
+            &self,
+            params: QueryExecuteStoredQueryBodyParams,
+            body: Query,
+        ) -> Result<QueryExecuteStoredQueryBodyResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /query/{qualified_query_name}/{version}`
+        async fn query_execute_stored_query_version(
+            &self,
+            params: QueryExecuteStoredQueryVersionParams,
+        ) -> Result<QueryExecuteStoredQueryVersionResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `POST /query/{qualified_query_name}/{version}`
+        async fn query_execute_stored_query_version_body(
+            &self,
+            params: QueryExecuteStoredQueryVersionBodyParams,
+            body: Query,
+        ) -> Result<QueryExecuteStoredQueryVersionBodyResponse, crate::rest::runtime::Refusal>
+        {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+    }
+
+    /// The axum router serving every operation of the `query` group over `api`.
+    ///
+    /// Each route is bound at its OAS path relative to the API base (an RFC 6570
+    /// query expansion dropped, path captures named by segment position). A
+    /// handler decodes the request into the operation's params struct and body
+    /// — a missing or unparseable parameter answers `400` naming it, a
+    /// canonical-JSON body sent as another `Content-Type` answers `415` — and
+    /// encodes the trait method's answer, or its `Refusal` as the ITS-REST
+    /// `Error` body with the refusal's headers. Mount it under the base path
+    /// with `axum::Router::nest`.
+    ///
+    /// The router carries no fallback, so group routers merge freely (axum
+    /// refuses to merge two routers that both carry one); finish the merged
+    /// router with `crate::rest::server::with_fallbacks` for the `404` and `405`
+    /// answers, or take `crate::rest::server::router`, which does both.
+    ///
+    /// The typed bodies are canonical JSON only: a server that also serves
+    /// canonical XML or a Simplified Format routes those requests itself, and
+    /// the `accept` parameter reaches the trait method, which answers
+    /// `ApiError::NotAcceptable` for a representation it does not serve.
+    pub fn router<S>(api: std::sync::Arc<S>) -> axum::Router
+    where
+        S: QueryApi + Send + Sync + 'static,
+    {
+        axum::Router::new()
+            .route(
+                "/query/aql",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_query_execute_adhoc_query::<S>,
+                ),
+            )
+            .route(
+                "/query/aql",
+                axum::routing::on(
+                    axum::routing::MethodFilter::POST,
+                    handle_query_execute_adhoc_query_body::<S>,
+                ),
+            )
+            .route(
+                "/query/{p2}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_query_execute_stored_query::<S>,
+                ),
+            )
+            .route(
+                "/query/{p2}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::POST,
+                    handle_query_execute_stored_query_body::<S>,
+                ),
+            )
+            .route(
+                "/query/{p2}/{p3}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_query_execute_stored_query_version::<S>,
+                ),
+            )
+            .route(
+                "/query/{p2}/{p3}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::POST,
+                    handle_query_execute_stored_query_version_body::<S>,
+                ),
+            )
+            .with_state(api)
+    }
+
+    /// Serves `GET /query/aql` through [`QueryApi::query_execute_adhoc_query`].
+    async fn handle_query_execute_adhoc_query<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        axum::extract::RawQuery(query): axum::extract::RawQuery,
+    ) -> axum::response::Response
+    where
+        S: QueryApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
+            let params = QueryExecuteAdhocQueryParams {
+                q: query.required("q")?,
+                ehr_id: query.optional("ehr_id")?,
+                offset: query.optional("offset")?,
+                fetch: query.optional("fetch")?,
+                query_parameters: query
+                    .members("query_parameters", &["q", "ehr_id", "offset", "fetch"])?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply =
+                match api.query_execute_adhoc_query(params).await? {
+                    QueryExecuteAdhocQueryResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `POST /query/aql` through [`QueryApi::query_execute_adhoc_query_body`].
+    async fn handle_query_execute_adhoc_query_body<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: QueryApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let params = QueryExecuteAdhocQueryBodyParams {
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+            };
+            let body = crate::rest::server::json_body(&headers, &body)?;
+            let reply: crate::rest::server::Reply =
+                match api.query_execute_adhoc_query_body(params, body).await? {
+                    QueryExecuteAdhocQueryBodyResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /query/{qualified_query_name}` through [`QueryApi::query_execute_stored_query`].
+    async fn handle_query_execute_stored_query<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        axum::extract::RawQuery(query): axum::extract::RawQuery,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: QueryApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
+            let params = QueryExecuteStoredQueryParams {
+                qualified_query_name: path.value("p2", "qualified_query_name")?,
+                ehr_id: query.optional("ehr_id")?,
+                offset: query.optional("offset")?,
+                fetch: query.optional("fetch")?,
+                query_parameters: query
+                    .members("query_parameters", &["ehr_id", "offset", "fetch"])?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply =
+                match api.query_execute_stored_query(params).await? {
+                    QueryExecuteStoredQueryResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `POST /query/{qualified_query_name}` through [`QueryApi::query_execute_stored_query_body`].
+    async fn handle_query_execute_stored_query_body<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: QueryApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = QueryExecuteStoredQueryBodyParams {
+                qualified_query_name: path.value("p2", "qualified_query_name")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+            };
+            let body = crate::rest::server::json_body(&headers, &body)?;
+            let reply: crate::rest::server::Reply =
+                match api.query_execute_stored_query_body(params, body).await? {
+                    QueryExecuteStoredQueryBodyResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /query/{qualified_query_name}/{version}` through [`QueryApi::query_execute_stored_query_version`].
+    async fn handle_query_execute_stored_query_version<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        axum::extract::RawQuery(query): axum::extract::RawQuery,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: QueryApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
+            let params = QueryExecuteStoredQueryVersionParams {
+                qualified_query_name: path.value("p2", "qualified_query_name")?,
+                version: path.value("p3", "version")?,
+                ehr_id: query.optional("ehr_id")?,
+                offset: query.optional("offset")?,
+                fetch: query.optional("fetch")?,
+                query_parameters: query
+                    .members("query_parameters", &["ehr_id", "offset", "fetch"])?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply =
+                match api.query_execute_stored_query_version(params).await? {
+                    QueryExecuteStoredQueryVersionResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `POST /query/{qualified_query_name}/{version}` through [`QueryApi::query_execute_stored_query_version_body`].
+    async fn handle_query_execute_stored_query_version_body<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: QueryApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = QueryExecuteStoredQueryVersionBodyParams {
+                qualified_query_name: path.value("p2", "qualified_query_name")?,
+                version: path.value("p3", "version")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+            };
+            let body = crate::rest::server::json_body(&headers, &body)?;
+            let reply: crate::rest::server::Reply = match api
+                .query_execute_stored_query_version_body(params, body)
+                .await?
+            {
+                QueryExecuteStoredQueryVersionBodyResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
     }
 }
 
@@ -309,16 +812,6 @@ pub trait QueryApi {
 #[cfg(feature = "rest-client")]
 pub mod client {
     use super::*;
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /query/aql`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct QueryExecuteAdhocQueryOkHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
 
     /// The outcome of `GET /query/aql`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
@@ -343,16 +836,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `POST /query/aql`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct QueryExecuteAdhocQueryBodyOkHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
     /// The outcome of `POST /query/aql`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -374,16 +857,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /query/{qualified_query_name}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct QueryExecuteStoredQueryOkHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
     }
 
     /// The outcome of `GET /query/{qualified_query_name}`: one variant per status the OAS documents.
@@ -414,16 +887,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `POST /query/{qualified_query_name}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct QueryExecuteStoredQueryBodyOkHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
     /// The outcome of `POST /query/{qualified_query_name}`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -452,16 +915,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /query/{qualified_query_name}/{version}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct QueryExecuteStoredQueryVersionOkHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
     /// The outcome of `GET /query/{qualified_query_name}/{version}`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -488,16 +941,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `POST /query/{qualified_query_name}/{version}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct QueryExecuteStoredQueryVersionBodyOkHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
     }
 
     /// The outcome of `POST /query/{qualified_query_name}/{version}`: one variant per status the OAS documents.
@@ -529,16 +972,28 @@ pub mod client {
     }
 
     /// The `query` API group over one configured CDR.
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone)]
     pub struct QueryClient<'c, T> {
         client: &'c crate::rest::client::Client<T>,
+        options: crate::rest::client::CallOptions,
     }
 
     impl<'c, T: crate::rest::client::Transport> QueryClient<'c, T> {
         /// The `query` API group over `client`.
         #[must_use]
         pub fn new(client: &'c crate::rest::client::Client<T>) -> Self {
-            Self { client }
+            Self {
+                client,
+                options: crate::rest::client::CallOptions::default(),
+            }
+        }
+
+        /// This group client applying `options` (a deadline, extra headers) to
+        /// every call it makes.
+        #[must_use]
+        pub fn with_options(mut self, options: crate::rest::client::CallOptions) -> Self {
+            self.options = options;
+            self
         }
 
         /// `GET /query/aql`
@@ -577,6 +1032,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(QueryExecuteAdhocQueryOutcome::Ok {
@@ -618,6 +1074,7 @@ pub mod client {
                 request.header("Content-Type", &value.to_string())?;
             }
             request.json_body(body, params.content_type.as_deref())?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(QueryExecuteAdhocQueryBodyOutcome::Ok {
@@ -678,6 +1135,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(QueryExecuteStoredQueryOutcome::Ok {
@@ -727,6 +1185,7 @@ pub mod client {
                 request.header("Content-Type", &value.to_string())?;
             }
             request.json_body(body, params.content_type.as_deref())?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(QueryExecuteStoredQueryBodyOutcome::Ok {
@@ -792,6 +1251,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(QueryExecuteStoredQueryVersionOutcome::Ok {
@@ -847,6 +1307,7 @@ pub mod client {
                 request.header("Content-Type", &value.to_string())?;
             }
             request.json_body(body, params.content_type.as_deref())?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(QueryExecuteStoredQueryVersionBodyOutcome::Ok {
@@ -876,8 +1337,9 @@ pub mod client {
         }
     }
 }
-/// The operations of this group as `(method, path, operation_id)`, for
-/// wiring an axum router in `ferroehr-rest`.
+/// The operations of this group as `(method, path, operation_id)`, in OAS
+/// document order: `server::router` binds each to its trait method, and
+/// `crate::rest::routes::lookup` matches a request path against them.
 pub const ROUTES: &[(&str, &str, &str)] = &[
     ("GET", "/query/aql", "query_execute_adhoc_query"),
     ("POST", "/query/aql", "query_execute_adhoc_query_body"),

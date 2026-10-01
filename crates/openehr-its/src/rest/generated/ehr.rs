@@ -3,7 +3,8 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 //! ITS-REST contract for the `ehr` API group: DTOs, per-operation
-//! param structs, the `EhrApi` server trait, and the route table.
+//! param structs, per-response headers structs, the `server` and
+//! `client` halves, and the route table.
 
 #![allow(
     clippy::all,
@@ -860,273 +861,3226 @@ pub struct EhrStatusTagsDeleteParams {
     pub key: String,
 }
 
-/// Server contract for the `ehr` API group (ITS-REST). Every method
-/// defaults to returning `ApiError::NotImplemented`, so an implementor
-/// (the application service, or a test stub) overrides only the
-/// operations it supports.
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /ehr`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct EhrGetBySubjectOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for EhrGetBySubjectOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `201` answer of
+/// `POST /ehr`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct EhrCreateCreatedHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for EhrCreateCreatedHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `204` answer of
+/// `POST /ehr`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct EhrCreateNoContentHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for EhrCreateNoContentHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /ehr/{ehr_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct EhrGetByIdOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for EhrGetByIdOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `201` answer of
+/// `PUT /ehr/{ehr_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct EhrCreateWithIdCreatedHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for EhrCreateWithIdCreatedHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `204` answer of
+/// `PUT /ehr/{ehr_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct EhrCreateWithIdNoContentHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for EhrCreateWithIdNoContentHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /ehr/{ehr_id}/ehr_status/{version_uid}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct EhrStatusGetByVersionIdOkHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for EhrStatusGetByVersionIdOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /ehr/{ehr_id}/ehr_status`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct EhrStatusGetAtTimeOkHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for EhrStatusGetAtTimeOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `PUT /ehr/{ehr_id}/ehr_status`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct EhrStatusUpdateOkHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for EhrStatusUpdateOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `204` answer of
+/// `PUT /ehr/{ehr_id}/ehr_status`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct EhrStatusUpdateNoContentHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for EhrStatusUpdateNoContentHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `412` answer of
+/// `PUT /ehr/{ehr_id}/ehr_status`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct EhrStatusUpdatePreconditionFailedHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for EhrStatusUpdatePreconditionFailedHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /ehr/{ehr_id}/versioned_ehr_status`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct VersionedEhrStatusGetOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for VersionedEhrStatusGetOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /ehr/{ehr_id}/versioned_ehr_status/revision_history`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct VersionedEhrStatusRevisionHistoryOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for VersionedEhrStatusRevisionHistoryOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /ehr/{ehr_id}/versioned_ehr_status/version`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct VersionedEhrStatusVersionGetAtTimeOkHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for VersionedEhrStatusVersionGetAtTimeOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /ehr/{ehr_id}/versioned_ehr_status/version/{version_uid}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct VersionedEhrStatusVersionGetByIdOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for VersionedEhrStatusVersionGetByIdOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `201` answer of
+/// `POST /ehr/{ehr_id}/composition`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct CompositionCreateCreatedHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for CompositionCreateCreatedHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `204` answer of
+/// `POST /ehr/{ehr_id}/composition`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct CompositionCreateNoContentHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for CompositionCreateNoContentHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /ehr/{ehr_id}/composition/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct CompositionGetOkHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for CompositionGetOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `PUT /ehr/{ehr_id}/composition/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct CompositionUpdateOkHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for CompositionUpdateOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `204` answer of
+/// `PUT /ehr/{ehr_id}/composition/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct CompositionUpdateNoContentHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for CompositionUpdateNoContentHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `412` answer of
+/// `PUT /ehr/{ehr_id}/composition/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct CompositionUpdatePreconditionFailedHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for CompositionUpdatePreconditionFailedHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `204` answer of
+/// `DELETE /ehr/{ehr_id}/composition/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct CompositionDeleteNoContentHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for CompositionDeleteNoContentHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `409` answer of
+/// `DELETE /ehr/{ehr_id}/composition/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct CompositionDeleteConflictHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for CompositionDeleteConflictHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct VersionedCompositionGetOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for VersionedCompositionGetOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/revision_history`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct VersionedCompositionRevisionHistoryOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for VersionedCompositionRevisionHistoryOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/version`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct VersionedCompositionVersionGetAtTimeOkHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for VersionedCompositionVersionGetAtTimeOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/version/{version_uid}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct VersionedCompositionVersionGetByIdOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for VersionedCompositionVersionGetByIdOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /ehr/{ehr_id}/directory`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct DirectoryGetAtTimeOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for DirectoryGetAtTimeOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `PUT /ehr/{ehr_id}/directory`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct DirectoryUpdateOkHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for DirectoryUpdateOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `204` answer of
+/// `PUT /ehr/{ehr_id}/directory`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct DirectoryUpdateNoContentHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// Every value of the `openehr-item-tag` response header, one per field line.
+    pub openehr_item_tag: Vec<String>,
+    /// Every value of the `openehr-version-item-tag` response header, one per field line.
+    pub openehr_version_item_tag: Vec<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for DirectoryUpdateNoContentHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::append_headers(&mut map, "openehr-item-tag", self.openehr_item_tag)?;
+        crate::rest::runtime::append_headers(
+            &mut map,
+            "openehr-version-item-tag",
+            self.openehr_version_item_tag,
+        )?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `412` answer of
+/// `PUT /ehr/{ehr_id}/directory`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct DirectoryUpdatePreconditionFailedHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for DirectoryUpdatePreconditionFailedHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `201` answer of
+/// `POST /ehr/{ehr_id}/directory`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct DirectoryCreateCreatedHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for DirectoryCreateCreatedHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `204` answer of
+/// `POST /ehr/{ehr_id}/directory`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct DirectoryCreateNoContentHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for DirectoryCreateNoContentHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `412` answer of
+/// `DELETE /ehr/{ehr_id}/directory`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct DirectoryDeletePreconditionFailedHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for DirectoryDeletePreconditionFailedHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /ehr/{ehr_id}/directory/{version_uid}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct DirectoryGetByVersionIdOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for DirectoryGetByVersionIdOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `201` answer of
+/// `POST /ehr/{ehr_id}/contribution`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct ContributionCreateCreatedHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for ContributionCreateCreatedHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `204` answer of
+/// `POST /ehr/{ehr_id}/contribution`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct ContributionCreateNoContentHeaders {
+    /// The `ETag` response header.
+    pub etag: Option<String>,
+    /// The `Location` response header.
+    pub location: Option<String>,
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for ContributionCreateNoContentHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
+        crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /ehr/{ehr_id}/contribution/{contribution_uid}`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct ContributionGetOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for ContributionGetOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /ehr/{ehr_id}/tags`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct EhrTagsGetOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for EhrTagsGetOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /ehr/{ehr_id}/composition/{uid_based_id}/tags`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct CompositionTagsGetOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for CompositionTagsGetOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `PUT /ehr/{ehr_id}/composition/{uid_based_id}/tags`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct CompositionTagsUpdateOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for CompositionTagsUpdateOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `GET /ehr/{ehr_id}/ehr_status/{uid_based_id}/tags`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct EhrStatusTagsGetOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for EhrStatusTagsGetOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The response headers the OAS declares for the `200` answer of
+/// `PUT /ehr/{ehr_id}/ehr_status/{uid_based_id}/tags`: each value the answer carries, `None` (or an empty list)
+/// when it carries none.
+#[derive(Debug, Clone, Default)]
+pub struct EhrStatusTagsUpdateOkHeaders {
+    /// The `Content-Type` response header.
+    pub content_type: Option<String>,
+}
+
+impl crate::rest::runtime::ResponseHeaders for EhrStatusTagsUpdateOkHeaders {
+    fn into_header_map(self) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {
+        let mut map = http::HeaderMap::new();
+        crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
+        Ok(map)
+    }
+}
+
+/// The server half of the `ehr` API group (ITS-REST): the `EhrApi`
+/// trait an implementation provides, one success-answer enum per operation,
+/// and `router`, which binds every operation of the route table to its
+/// trait method over axum.
 #[cfg(feature = "rest-server")]
-#[async_trait::async_trait]
-pub trait EhrApi {
-    /// `GET /ehr`
-    async fn ehr_get_by_subject(
-        &self,
-        params: EhrGetBySubjectParams,
-    ) -> Result<openehr_rm::v1_2::ehr::ehr::Ehr, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+pub mod server {
+    use super::*;
+
+    /// The answers `GET /ehr` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum EhrGetBySubjectResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: openehr_rm::v1_2::ehr::ehr::Ehr,
+            /// The response headers the OAS declares for this answer.
+            headers: EhrGetBySubjectOkHeaders,
+        },
     }
-    /// `POST /ehr`
-    async fn ehr_create(
-        &self,
-        params: EhrCreateParams,
-        body: Option<openehr_rm::v1_2::ehr::ehr_status::EhrStatus>,
-    ) -> Result<serde_json::Value, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `POST /ehr` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum EhrCreateResponse {
+        /// The `201` answer.
+        Created {
+            /// The body, sent as canonical JSON; `None` sends no body.
+            body: Option<serde_json::Value>,
+            /// The response headers the OAS declares for this answer.
+            headers: EhrCreateCreatedHeaders,
+        },
+        /// The `204` answer.
+        NoContent {
+            /// The response headers the OAS declares for this answer.
+            headers: EhrCreateNoContentHeaders,
+        },
     }
-    /// `GET /ehr/{ehr_id}`
-    async fn ehr_get_by_id(
-        &self,
-        params: EhrGetByIdParams,
-    ) -> Result<openehr_rm::v1_2::ehr::ehr::Ehr, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /ehr/{ehr_id}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum EhrGetByIdResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: openehr_rm::v1_2::ehr::ehr::Ehr,
+            /// The response headers the OAS declares for this answer.
+            headers: EhrGetByIdOkHeaders,
+        },
     }
-    /// `PUT /ehr/{ehr_id}`
-    async fn ehr_create_with_id(
-        &self,
-        params: EhrCreateWithIdParams,
-        body: Option<openehr_rm::v1_2::ehr::ehr_status::EhrStatus>,
-    ) -> Result<serde_json::Value, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `PUT /ehr/{ehr_id}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum EhrCreateWithIdResponse {
+        /// The `201` answer.
+        Created {
+            /// The body, sent as canonical JSON; `None` sends no body.
+            body: Option<serde_json::Value>,
+            /// The response headers the OAS declares for this answer.
+            headers: EhrCreateWithIdCreatedHeaders,
+        },
+        /// The `204` answer.
+        NoContent {
+            /// The response headers the OAS declares for this answer.
+            headers: EhrCreateWithIdNoContentHeaders,
+        },
     }
-    /// `GET /ehr/{ehr_id}/ehr_status/{version_uid}`
-    async fn ehr_status_get_by_version_id(
-        &self,
-        params: EhrStatusGetByVersionIdParams,
-    ) -> Result<openehr_rm::v1_2::ehr::ehr_status::EhrStatus, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /ehr/{ehr_id}/ehr_status/{version_uid}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum EhrStatusGetByVersionIdResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: openehr_rm::v1_2::ehr::ehr_status::EhrStatus,
+            /// The response headers the OAS declares for this answer.
+            headers: EhrStatusGetByVersionIdOkHeaders,
+        },
     }
-    /// `GET /ehr/{ehr_id}/ehr_status`
-    async fn ehr_status_get_at_time(
-        &self,
-        params: EhrStatusGetAtTimeParams,
-    ) -> Result<openehr_rm::v1_2::ehr::ehr_status::EhrStatus, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /ehr/{ehr_id}/ehr_status` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum EhrStatusGetAtTimeResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: openehr_rm::v1_2::ehr::ehr_status::EhrStatus,
+            /// The response headers the OAS declares for this answer.
+            headers: EhrStatusGetAtTimeOkHeaders,
+        },
     }
-    /// `PUT /ehr/{ehr_id}/ehr_status`
-    async fn ehr_status_update(
-        &self,
-        params: EhrStatusUpdateParams,
-        body: openehr_rm::v1_2::ehr::ehr_status::EhrStatus,
-    ) -> Result<serde_json::Value, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `PUT /ehr/{ehr_id}/ehr_status` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum EhrStatusUpdateResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: serde_json::Value,
+            /// The response headers the OAS declares for this answer.
+            headers: EhrStatusUpdateOkHeaders,
+        },
+        /// The `204` answer.
+        NoContent {
+            /// The response headers the OAS declares for this answer.
+            headers: EhrStatusUpdateNoContentHeaders,
+        },
     }
-    /// `GET /ehr/{ehr_id}/versioned_ehr_status`
-    async fn versioned_ehr_status_get(
-        &self,
-        params: VersionedEhrStatusGetParams,
-    ) -> Result<
-        openehr_rm::v1_2::ehr::versioned_ehr_status::VersionedEhrStatus,
-        crate::rest::runtime::ApiError,
-    > {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /ehr/{ehr_id}/versioned_ehr_status` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum VersionedEhrStatusGetResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: openehr_rm::v1_2::ehr::versioned_ehr_status::VersionedEhrStatus,
+            /// The response headers the OAS declares for this answer.
+            headers: VersionedEhrStatusGetOkHeaders,
+        },
     }
-    /// `GET /ehr/{ehr_id}/versioned_ehr_status/revision_history`
-    async fn versioned_ehr_status_revision_history(
-        &self,
-        params: VersionedEhrStatusRevisionHistoryParams,
-    ) -> Result<
-        openehr_rm::v1_2::common::generic::revision_history::RevisionHistory,
-        crate::rest::runtime::ApiError,
-    > {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /ehr/{ehr_id}/versioned_ehr_status/revision_history` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum VersionedEhrStatusRevisionHistoryResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: openehr_rm::v1_2::common::generic::revision_history::RevisionHistory,
+            /// The response headers the OAS declares for this answer.
+            headers: VersionedEhrStatusRevisionHistoryOkHeaders,
+        },
     }
-    /// `GET /ehr/{ehr_id}/versioned_ehr_status/version`
-    async fn versioned_ehr_status_version_get_at_time(
-        &self,
-        params: VersionedEhrStatusVersionGetAtTimeParams,
-    ) -> Result<VersionOfEhrStatus, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /ehr/{ehr_id}/versioned_ehr_status/version` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum VersionedEhrStatusVersionGetAtTimeResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: VersionOfEhrStatus,
+            /// The response headers the OAS declares for this answer.
+            headers: VersionedEhrStatusVersionGetAtTimeOkHeaders,
+        },
     }
-    /// `GET /ehr/{ehr_id}/versioned_ehr_status/version/{version_uid}`
-    async fn versioned_ehr_status_version_get_by_id(
-        &self,
-        params: VersionedEhrStatusVersionGetByIdParams,
-    ) -> Result<VersionOfEhrStatus, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /ehr/{ehr_id}/versioned_ehr_status/version/{version_uid}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum VersionedEhrStatusVersionGetByIdResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: VersionOfEhrStatus,
+            /// The response headers the OAS declares for this answer.
+            headers: VersionedEhrStatusVersionGetByIdOkHeaders,
+        },
     }
-    /// `POST /ehr/{ehr_id}/composition`
-    async fn composition_create(
-        &self,
-        params: CompositionCreateParams,
-        body: openehr_rm::v1_2::composition::composition::Composition,
-    ) -> Result<serde_json::Value, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `POST /ehr/{ehr_id}/composition` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum CompositionCreateResponse {
+        /// The `201` answer.
+        Created {
+            /// The body, sent as canonical JSON; `None` sends no body.
+            body: Option<serde_json::Value>,
+            /// The response headers the OAS declares for this answer.
+            headers: CompositionCreateCreatedHeaders,
+        },
+        /// The `204` answer.
+        NoContent {
+            /// The response headers the OAS declares for this answer.
+            headers: CompositionCreateNoContentHeaders,
+        },
     }
-    /// `GET /ehr/{ehr_id}/composition/{uid_based_id}`
-    async fn composition_get(
-        &self,
-        params: CompositionGetParams,
-    ) -> Result<
-        openehr_rm::v1_2::composition::composition::Composition,
-        crate::rest::runtime::ApiError,
-    > {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /ehr/{ehr_id}/composition/{uid_based_id}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum CompositionGetResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: openehr_rm::v1_2::composition::composition::Composition,
+            /// The response headers the OAS declares for this answer.
+            headers: CompositionGetOkHeaders,
+        },
+        /// The `204` answer.
+        NoContent,
     }
-    /// `PUT /ehr/{ehr_id}/composition/{uid_based_id}`
-    async fn composition_update(
-        &self,
-        params: CompositionUpdateParams,
-        body: openehr_rm::v1_2::composition::composition::Composition,
-    ) -> Result<serde_json::Value, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `PUT /ehr/{ehr_id}/composition/{uid_based_id}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum CompositionUpdateResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: serde_json::Value,
+            /// The response headers the OAS declares for this answer.
+            headers: CompositionUpdateOkHeaders,
+        },
+        /// The `204` answer.
+        NoContent {
+            /// The response headers the OAS declares for this answer.
+            headers: CompositionUpdateNoContentHeaders,
+        },
     }
-    /// `DELETE /ehr/{ehr_id}/composition/{uid_based_id}`
-    async fn composition_delete(
-        &self,
-        params: CompositionDeleteParams,
-    ) -> Result<(), crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `DELETE /ehr/{ehr_id}/composition/{uid_based_id}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum CompositionDeleteResponse {
+        /// The `204` answer.
+        NoContent {
+            /// The response headers the OAS declares for this answer.
+            headers: CompositionDeleteNoContentHeaders,
+        },
     }
-    /// `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}`
-    async fn versioned_composition_get(
-        &self,
-        params: VersionedCompositionGetParams,
-    ) -> Result<
-        openehr_rm::v1_2::ehr::versioned_composition::VersionedComposition,
-        crate::rest::runtime::ApiError,
-    > {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum VersionedCompositionGetResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: openehr_rm::v1_2::ehr::versioned_composition::VersionedComposition,
+            /// The response headers the OAS declares for this answer.
+            headers: VersionedCompositionGetOkHeaders,
+        },
     }
-    /// `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/revision_history`
-    async fn versioned_composition_revision_history(
-        &self,
-        params: VersionedCompositionRevisionHistoryParams,
-    ) -> Result<
-        openehr_rm::v1_2::common::generic::revision_history::RevisionHistory,
-        crate::rest::runtime::ApiError,
-    > {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/revision_history` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum VersionedCompositionRevisionHistoryResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: openehr_rm::v1_2::common::generic::revision_history::RevisionHistory,
+            /// The response headers the OAS declares for this answer.
+            headers: VersionedCompositionRevisionHistoryOkHeaders,
+        },
     }
-    /// `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/version`
-    async fn versioned_composition_version_get_at_time(
-        &self,
-        params: VersionedCompositionVersionGetAtTimeParams,
-    ) -> Result<VersionOfComposition, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/version` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum VersionedCompositionVersionGetAtTimeResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: VersionOfComposition,
+            /// The response headers the OAS declares for this answer.
+            headers: VersionedCompositionVersionGetAtTimeOkHeaders,
+        },
     }
-    /// `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/version/{version_uid}`
-    async fn versioned_composition_version_get_by_id(
-        &self,
-        params: VersionedCompositionVersionGetByIdParams,
-    ) -> Result<VersionOfComposition, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// The answers `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/version/{version_uid}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum VersionedCompositionVersionGetByIdResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: VersionOfComposition,
+            /// The response headers the OAS declares for this answer.
+            headers: VersionedCompositionVersionGetByIdOkHeaders,
+        },
     }
-    /// `GET /ehr/{ehr_id}/directory`
-    async fn directory_get_at_time(
-        &self,
-        params: DirectoryGetAtTimeParams,
-    ) -> Result<openehr_rm::v1_2::common::directory::folder::Folder, crate::rest::runtime::ApiError>
+
+    /// The answers `GET /ehr/{ehr_id}/directory` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum DirectoryGetAtTimeResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: openehr_rm::v1_2::common::directory::folder::Folder,
+            /// The response headers the OAS declares for this answer.
+            headers: DirectoryGetAtTimeOkHeaders,
+        },
+        /// The `204` answer.
+        NoContent,
+    }
+
+    /// The answers `PUT /ehr/{ehr_id}/directory` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum DirectoryUpdateResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: serde_json::Value,
+            /// The response headers the OAS declares for this answer.
+            headers: DirectoryUpdateOkHeaders,
+        },
+        /// The `204` answer.
+        NoContent {
+            /// The response headers the OAS declares for this answer.
+            headers: DirectoryUpdateNoContentHeaders,
+        },
+    }
+
+    /// The answers `POST /ehr/{ehr_id}/directory` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum DirectoryCreateResponse {
+        /// The `201` answer.
+        Created {
+            /// The body, sent as canonical JSON; `None` sends no body.
+            body: Option<serde_json::Value>,
+            /// The response headers the OAS declares for this answer.
+            headers: DirectoryCreateCreatedHeaders,
+        },
+        /// The `204` answer.
+        NoContent {
+            /// The response headers the OAS declares for this answer.
+            headers: DirectoryCreateNoContentHeaders,
+        },
+    }
+
+    /// The answers `DELETE /ehr/{ehr_id}/directory` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum DirectoryDeleteResponse {
+        /// The `204` answer.
+        NoContent,
+    }
+
+    /// The answers `GET /ehr/{ehr_id}/directory/{version_uid}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum DirectoryGetByVersionIdResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: openehr_rm::v1_2::common::directory::folder::Folder,
+            /// The response headers the OAS declares for this answer.
+            headers: DirectoryGetByVersionIdOkHeaders,
+        },
+    }
+
+    /// The answers `POST /ehr/{ehr_id}/contribution` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum ContributionCreateResponse {
+        /// The `201` answer.
+        Created {
+            /// The body, sent as canonical JSON; `None` sends no body.
+            body: Option<serde_json::Value>,
+            /// The response headers the OAS declares for this answer.
+            headers: ContributionCreateCreatedHeaders,
+        },
+        /// The `204` answer.
+        NoContent {
+            /// The response headers the OAS declares for this answer.
+            headers: ContributionCreateNoContentHeaders,
+        },
+    }
+
+    /// The answers `GET /ehr/{ehr_id}/contribution/{contribution_uid}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum ContributionGetResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: openehr_rm::v1_2::common::change_control::contribution::Contribution,
+            /// The response headers the OAS declares for this answer.
+            headers: ContributionGetOkHeaders,
+        },
+    }
+
+    /// The answers `GET /ehr/{ehr_id}/tags` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum EhrTagsGetResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: Vec<ItemTagOfComposition>,
+            /// The response headers the OAS declares for this answer.
+            headers: EhrTagsGetOkHeaders,
+        },
+    }
+
+    /// The answers `GET /ehr/{ehr_id}/composition/{uid_based_id}/tags` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum CompositionTagsGetResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: Vec<ItemTagOfComposition>,
+            /// The response headers the OAS declares for this answer.
+            headers: CompositionTagsGetOkHeaders,
+        },
+    }
+
+    /// The answers `PUT /ehr/{ehr_id}/composition/{uid_based_id}/tags` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum CompositionTagsUpdateResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: Vec<ItemTagOfComposition>,
+            /// The response headers the OAS declares for this answer.
+            headers: CompositionTagsUpdateOkHeaders,
+        },
+        /// The `204` answer.
+        NoContent,
+    }
+
+    /// The answers `DELETE /ehr/{ehr_id}/composition/{uid_based_id}/tags/{key}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum CompositionTagsDeleteResponse {
+        /// The `204` answer.
+        NoContent,
+    }
+
+    /// The answers `GET /ehr/{ehr_id}/ehr_status/{uid_based_id}/tags` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum EhrStatusTagsGetResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: Vec<ItemTagOfEhrStatus>,
+            /// The response headers the OAS declares for this answer.
+            headers: EhrStatusTagsGetOkHeaders,
+        },
+    }
+
+    /// The answers `PUT /ehr/{ehr_id}/ehr_status/{uid_based_id}/tags` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum EhrStatusTagsUpdateResponse {
+        /// The `200` answer.
+        Ok {
+            /// The body, sent as canonical JSON.
+            body: Vec<ItemTagOfEhrStatus>,
+            /// The response headers the OAS declares for this answer.
+            headers: EhrStatusTagsUpdateOkHeaders,
+        },
+        /// The `204` answer.
+        NoContent,
+    }
+
+    /// The answers `DELETE /ehr/{ehr_id}/ehr_status/{uid_based_id}/tags/{key}` succeeds with: one variant per `2xx`/`3xx` status
+    /// the OAS documents (an error is a [`crate::rest::runtime::Refusal`]).
+    #[derive(Debug, Clone)]
+    pub enum EhrStatusTagsDeleteResponse {
+        /// The `204` answer.
+        NoContent,
+    }
+
+    /// Server contract for the `ehr` API group (ITS-REST).
+    ///
+    /// Every method defaults to refusing with `ApiError::NotImplemented` (`501`),
+    /// so an implementor overrides only the operations it supports; `router`
+    /// serves an implementation over axum. A method refuses with a
+    /// [`crate::rest::runtime::Refusal`]: `?` turns an `ApiError` into one,
+    /// and `Refusal::with_headers` adds the headers the OAS declares for the
+    /// answer (the `ETag` of a `412`, for one).
+    #[async_trait::async_trait]
+    pub trait EhrApi {
+        /// `GET /ehr`
+        async fn ehr_get_by_subject(
+            &self,
+            params: EhrGetBySubjectParams,
+        ) -> Result<EhrGetBySubjectResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `POST /ehr`
+        async fn ehr_create(
+            &self,
+            params: EhrCreateParams,
+            body: Option<openehr_rm::v1_2::ehr::ehr_status::EhrStatus>,
+        ) -> Result<EhrCreateResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /ehr/{ehr_id}`
+        async fn ehr_get_by_id(
+            &self,
+            params: EhrGetByIdParams,
+        ) -> Result<EhrGetByIdResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `PUT /ehr/{ehr_id}`
+        async fn ehr_create_with_id(
+            &self,
+            params: EhrCreateWithIdParams,
+            body: Option<openehr_rm::v1_2::ehr::ehr_status::EhrStatus>,
+        ) -> Result<EhrCreateWithIdResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /ehr/{ehr_id}/ehr_status/{version_uid}`
+        async fn ehr_status_get_by_version_id(
+            &self,
+            params: EhrStatusGetByVersionIdParams,
+        ) -> Result<EhrStatusGetByVersionIdResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /ehr/{ehr_id}/ehr_status`
+        async fn ehr_status_get_at_time(
+            &self,
+            params: EhrStatusGetAtTimeParams,
+        ) -> Result<EhrStatusGetAtTimeResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `PUT /ehr/{ehr_id}/ehr_status`
+        async fn ehr_status_update(
+            &self,
+            params: EhrStatusUpdateParams,
+            body: openehr_rm::v1_2::ehr::ehr_status::EhrStatus,
+        ) -> Result<EhrStatusUpdateResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /ehr/{ehr_id}/versioned_ehr_status`
+        async fn versioned_ehr_status_get(
+            &self,
+            params: VersionedEhrStatusGetParams,
+        ) -> Result<VersionedEhrStatusGetResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /ehr/{ehr_id}/versioned_ehr_status/revision_history`
+        async fn versioned_ehr_status_revision_history(
+            &self,
+            params: VersionedEhrStatusRevisionHistoryParams,
+        ) -> Result<VersionedEhrStatusRevisionHistoryResponse, crate::rest::runtime::Refusal>
+        {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /ehr/{ehr_id}/versioned_ehr_status/version`
+        async fn versioned_ehr_status_version_get_at_time(
+            &self,
+            params: VersionedEhrStatusVersionGetAtTimeParams,
+        ) -> Result<VersionedEhrStatusVersionGetAtTimeResponse, crate::rest::runtime::Refusal>
+        {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /ehr/{ehr_id}/versioned_ehr_status/version/{version_uid}`
+        async fn versioned_ehr_status_version_get_by_id(
+            &self,
+            params: VersionedEhrStatusVersionGetByIdParams,
+        ) -> Result<VersionedEhrStatusVersionGetByIdResponse, crate::rest::runtime::Refusal>
+        {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `POST /ehr/{ehr_id}/composition`
+        async fn composition_create(
+            &self,
+            params: CompositionCreateParams,
+            body: openehr_rm::v1_2::composition::composition::Composition,
+        ) -> Result<CompositionCreateResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /ehr/{ehr_id}/composition/{uid_based_id}`
+        async fn composition_get(
+            &self,
+            params: CompositionGetParams,
+        ) -> Result<CompositionGetResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `PUT /ehr/{ehr_id}/composition/{uid_based_id}`
+        async fn composition_update(
+            &self,
+            params: CompositionUpdateParams,
+            body: openehr_rm::v1_2::composition::composition::Composition,
+        ) -> Result<CompositionUpdateResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `DELETE /ehr/{ehr_id}/composition/{uid_based_id}`
+        async fn composition_delete(
+            &self,
+            params: CompositionDeleteParams,
+        ) -> Result<CompositionDeleteResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}`
+        async fn versioned_composition_get(
+            &self,
+            params: VersionedCompositionGetParams,
+        ) -> Result<VersionedCompositionGetResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/revision_history`
+        async fn versioned_composition_revision_history(
+            &self,
+            params: VersionedCompositionRevisionHistoryParams,
+        ) -> Result<VersionedCompositionRevisionHistoryResponse, crate::rest::runtime::Refusal>
+        {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/version`
+        async fn versioned_composition_version_get_at_time(
+            &self,
+            params: VersionedCompositionVersionGetAtTimeParams,
+        ) -> Result<VersionedCompositionVersionGetAtTimeResponse, crate::rest::runtime::Refusal>
+        {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/version/{version_uid}`
+        async fn versioned_composition_version_get_by_id(
+            &self,
+            params: VersionedCompositionVersionGetByIdParams,
+        ) -> Result<VersionedCompositionVersionGetByIdResponse, crate::rest::runtime::Refusal>
+        {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /ehr/{ehr_id}/directory`
+        async fn directory_get_at_time(
+            &self,
+            params: DirectoryGetAtTimeParams,
+        ) -> Result<DirectoryGetAtTimeResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `PUT /ehr/{ehr_id}/directory`
+        async fn directory_update(
+            &self,
+            params: DirectoryUpdateParams,
+            body: openehr_rm::v1_2::common::directory::folder::Folder,
+        ) -> Result<DirectoryUpdateResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `POST /ehr/{ehr_id}/directory`
+        async fn directory_create(
+            &self,
+            params: DirectoryCreateParams,
+            body: openehr_rm::v1_2::common::directory::folder::Folder,
+        ) -> Result<DirectoryCreateResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `DELETE /ehr/{ehr_id}/directory`
+        async fn directory_delete(
+            &self,
+            params: DirectoryDeleteParams,
+        ) -> Result<DirectoryDeleteResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /ehr/{ehr_id}/directory/{version_uid}`
+        async fn directory_get_by_version_id(
+            &self,
+            params: DirectoryGetByVersionIdParams,
+        ) -> Result<DirectoryGetByVersionIdResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `POST /ehr/{ehr_id}/contribution`
+        async fn contribution_create(
+            &self,
+            params: ContributionCreateParams,
+            body: NewContribution,
+        ) -> Result<ContributionCreateResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /ehr/{ehr_id}/contribution/{contribution_uid}`
+        async fn contribution_get(
+            &self,
+            params: ContributionGetParams,
+        ) -> Result<ContributionGetResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /ehr/{ehr_id}/tags`
+        async fn ehr_tags_get(
+            &self,
+            params: EhrTagsGetParams,
+        ) -> Result<EhrTagsGetResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /ehr/{ehr_id}/composition/{uid_based_id}/tags`
+        async fn composition_tags_get(
+            &self,
+            params: CompositionTagsGetParams,
+        ) -> Result<CompositionTagsGetResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `PUT /ehr/{ehr_id}/composition/{uid_based_id}/tags`
+        async fn composition_tags_update(
+            &self,
+            params: CompositionTagsUpdateParams,
+            body: Vec<super::super::common::UpdateItemTag>,
+        ) -> Result<CompositionTagsUpdateResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `DELETE /ehr/{ehr_id}/composition/{uid_based_id}/tags/{key}`
+        async fn composition_tags_delete(
+            &self,
+            params: CompositionTagsDeleteParams,
+        ) -> Result<CompositionTagsDeleteResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `GET /ehr/{ehr_id}/ehr_status/{uid_based_id}/tags`
+        async fn ehr_status_tags_get(
+            &self,
+            params: EhrStatusTagsGetParams,
+        ) -> Result<EhrStatusTagsGetResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `PUT /ehr/{ehr_id}/ehr_status/{uid_based_id}/tags`
+        async fn ehr_status_tags_update(
+            &self,
+            params: EhrStatusTagsUpdateParams,
+            body: Vec<super::super::common::UpdateItemTag>,
+        ) -> Result<EhrStatusTagsUpdateResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+        /// `DELETE /ehr/{ehr_id}/ehr_status/{uid_based_id}/tags/{key}`
+        async fn ehr_status_tags_delete(
+            &self,
+            params: EhrStatusTagsDeleteParams,
+        ) -> Result<EhrStatusTagsDeleteResponse, crate::rest::runtime::Refusal> {
+            Err(crate::rest::runtime::ApiError::NotImplemented.into())
+        }
+    }
+
+    /// The axum router serving every operation of the `ehr` group over `api`.
+    ///
+    /// Each route is bound at its OAS path relative to the API base (an RFC 6570
+    /// query expansion dropped, path captures named by segment position). A
+    /// handler decodes the request into the operation's params struct and body
+    /// — a missing or unparseable parameter answers `400` naming it, a
+    /// canonical-JSON body sent as another `Content-Type` answers `415` — and
+    /// encodes the trait method's answer, or its `Refusal` as the ITS-REST
+    /// `Error` body with the refusal's headers. Mount it under the base path
+    /// with `axum::Router::nest`.
+    ///
+    /// The router carries no fallback, so group routers merge freely (axum
+    /// refuses to merge two routers that both carry one); finish the merged
+    /// router with `crate::rest::server::with_fallbacks` for the `404` and `405`
+    /// answers, or take `crate::rest::server::router`, which does both.
+    ///
+    /// The typed bodies are canonical JSON only: a server that also serves
+    /// canonical XML or a Simplified Format routes those requests itself, and
+    /// the `accept` parameter reaches the trait method, which answers
+    /// `ApiError::NotAcceptable` for a representation it does not serve.
+    pub fn router<S>(api: std::sync::Arc<S>) -> axum::Router
+    where
+        S: EhrApi + Send + Sync + 'static,
     {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+        axum::Router::new()
+            .route(
+                "/ehr",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_ehr_get_by_subject::<S>,
+                ),
+            )
+            .route(
+                "/ehr",
+                axum::routing::on(axum::routing::MethodFilter::POST, handle_ehr_create::<S>),
+            )
+            .route(
+                "/ehr/{p2}",
+                axum::routing::on(axum::routing::MethodFilter::GET, handle_ehr_get_by_id::<S>),
+            )
+            .route(
+                "/ehr/{p2}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::PUT,
+                    handle_ehr_create_with_id::<S>,
+                ),
+            )
+            .route(
+                "/ehr/{p2}/ehr_status/{p4}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_ehr_status_get_by_version_id::<S>,
+                ),
+            )
+            .route(
+                "/ehr/{p2}/ehr_status",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_ehr_status_get_at_time::<S>,
+                ),
+            )
+            .route(
+                "/ehr/{p2}/ehr_status",
+                axum::routing::on(
+                    axum::routing::MethodFilter::PUT,
+                    handle_ehr_status_update::<S>,
+                ),
+            )
+            .route(
+                "/ehr/{p2}/versioned_ehr_status",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_versioned_ehr_status_get::<S>,
+                ),
+            )
+            .route(
+                "/ehr/{p2}/versioned_ehr_status/revision_history",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_versioned_ehr_status_revision_history::<S>,
+                ),
+            )
+            .route(
+                "/ehr/{p2}/versioned_ehr_status/version",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_versioned_ehr_status_version_get_at_time::<S>,
+                ),
+            )
+            .route(
+                "/ehr/{p2}/versioned_ehr_status/version/{p5}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_versioned_ehr_status_version_get_by_id::<S>,
+                ),
+            )
+            .route(
+                "/ehr/{p2}/composition",
+                axum::routing::on(
+                    axum::routing::MethodFilter::POST,
+                    handle_composition_create::<S>,
+                ),
+            )
+            .route(
+                "/ehr/{p2}/composition/{p4}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_composition_get::<S>,
+                ),
+            )
+            .route(
+                "/ehr/{p2}/composition/{p4}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::PUT,
+                    handle_composition_update::<S>,
+                ),
+            )
+            .route(
+                "/ehr/{p2}/composition/{p4}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::DELETE,
+                    handle_composition_delete::<S>,
+                ),
+            )
+            .route(
+                "/ehr/{p2}/versioned_composition/{p4}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_versioned_composition_get::<S>,
+                ),
+            )
+            .route(
+                "/ehr/{p2}/versioned_composition/{p4}/revision_history",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_versioned_composition_revision_history::<S>,
+                ),
+            )
+            .route(
+                "/ehr/{p2}/versioned_composition/{p4}/version",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_versioned_composition_version_get_at_time::<S>,
+                ),
+            )
+            .route(
+                "/ehr/{p2}/versioned_composition/{p4}/version/{p6}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_versioned_composition_version_get_by_id::<S>,
+                ),
+            )
+            .route(
+                "/ehr/{p2}/directory",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_directory_get_at_time::<S>,
+                ),
+            )
+            .route(
+                "/ehr/{p2}/directory",
+                axum::routing::on(
+                    axum::routing::MethodFilter::PUT,
+                    handle_directory_update::<S>,
+                ),
+            )
+            .route(
+                "/ehr/{p2}/directory",
+                axum::routing::on(
+                    axum::routing::MethodFilter::POST,
+                    handle_directory_create::<S>,
+                ),
+            )
+            .route(
+                "/ehr/{p2}/directory",
+                axum::routing::on(
+                    axum::routing::MethodFilter::DELETE,
+                    handle_directory_delete::<S>,
+                ),
+            )
+            .route(
+                "/ehr/{p2}/directory/{p4}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_directory_get_by_version_id::<S>,
+                ),
+            )
+            .route(
+                "/ehr/{p2}/contribution",
+                axum::routing::on(
+                    axum::routing::MethodFilter::POST,
+                    handle_contribution_create::<S>,
+                ),
+            )
+            .route(
+                "/ehr/{p2}/contribution/{p4}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_contribution_get::<S>,
+                ),
+            )
+            .route(
+                "/ehr/{p2}/tags",
+                axum::routing::on(axum::routing::MethodFilter::GET, handle_ehr_tags_get::<S>),
+            )
+            .route(
+                "/ehr/{p2}/composition/{p4}/tags",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_composition_tags_get::<S>,
+                ),
+            )
+            .route(
+                "/ehr/{p2}/composition/{p4}/tags",
+                axum::routing::on(
+                    axum::routing::MethodFilter::PUT,
+                    handle_composition_tags_update::<S>,
+                ),
+            )
+            .route(
+                "/ehr/{p2}/composition/{p4}/tags/{p6}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::DELETE,
+                    handle_composition_tags_delete::<S>,
+                ),
+            )
+            .route(
+                "/ehr/{p2}/ehr_status/{p4}/tags",
+                axum::routing::on(
+                    axum::routing::MethodFilter::GET,
+                    handle_ehr_status_tags_get::<S>,
+                ),
+            )
+            .route(
+                "/ehr/{p2}/ehr_status/{p4}/tags",
+                axum::routing::on(
+                    axum::routing::MethodFilter::PUT,
+                    handle_ehr_status_tags_update::<S>,
+                ),
+            )
+            .route(
+                "/ehr/{p2}/ehr_status/{p4}/tags/{p6}",
+                axum::routing::on(
+                    axum::routing::MethodFilter::DELETE,
+                    handle_ehr_status_tags_delete::<S>,
+                ),
+            )
+            .with_state(api)
     }
-    /// `PUT /ehr/{ehr_id}/directory`
-    async fn directory_update(
-        &self,
-        params: DirectoryUpdateParams,
-        body: openehr_rm::v1_2::common::directory::folder::Folder,
-    ) -> Result<serde_json::Value, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
-    }
-    /// `POST /ehr/{ehr_id}/directory`
-    async fn directory_create(
-        &self,
-        params: DirectoryCreateParams,
-        body: openehr_rm::v1_2::common::directory::folder::Folder,
-    ) -> Result<serde_json::Value, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
-    }
-    /// `DELETE /ehr/{ehr_id}/directory`
-    async fn directory_delete(
-        &self,
-        params: DirectoryDeleteParams,
-    ) -> Result<(), crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
-    }
-    /// `GET /ehr/{ehr_id}/directory/{version_uid}`
-    async fn directory_get_by_version_id(
-        &self,
-        params: DirectoryGetByVersionIdParams,
-    ) -> Result<openehr_rm::v1_2::common::directory::folder::Folder, crate::rest::runtime::ApiError>
+
+    /// Serves `GET /ehr` through [`EhrApi::ehr_get_by_subject`].
+    async fn handle_ehr_get_by_subject<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        axum::extract::RawQuery(query): axum::extract::RawQuery,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
     {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
+            let params = EhrGetBySubjectParams {
+                subject_id: query.required("subject_id")?,
+                subject_namespace: query.required("subject_namespace")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply = match api.ehr_get_by_subject(params).await? {
+                EhrGetBySubjectResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
     }
-    /// `POST /ehr/{ehr_id}/contribution`
-    async fn contribution_create(
-        &self,
-        params: ContributionCreateParams,
-        body: NewContribution,
-    ) -> Result<serde_json::Value, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// Serves `POST /ehr` through [`EhrApi::ehr_create`].
+    async fn handle_ehr_create<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let params = EhrCreateParams {
+                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
+                openehr_audit_details: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-audit-details",
+                )?,
+            };
+            let body = crate::rest::server::json_body_optional(&headers, &body)?;
+            let reply: crate::rest::server::Reply = match api.ehr_create(params, body).await? {
+                EhrCreateResponse::Created { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::CREATED);
+                    if let Some(body) = body.as_ref() {
+                        reply.json(body)?;
+                    }
+                    reply.headers(headers)?;
+                    reply
+                }
+                EhrCreateResponse::NoContent { headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
     }
-    /// `GET /ehr/{ehr_id}/contribution/{contribution_uid}`
-    async fn contribution_get(
-        &self,
-        params: ContributionGetParams,
-    ) -> Result<
-        openehr_rm::v1_2::common::change_control::contribution::Contribution,
-        crate::rest::runtime::ApiError,
-    > {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// Serves `GET /ehr/{ehr_id}` through [`EhrApi::ehr_get_by_id`].
+    async fn handle_ehr_get_by_id<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = EhrGetByIdParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply = match api.ehr_get_by_id(params).await? {
+                EhrGetByIdResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
     }
-    /// `GET /ehr/{ehr_id}/tags`
-    async fn ehr_tags_get(
-        &self,
-        params: EhrTagsGetParams,
-    ) -> Result<Vec<ItemTagOfComposition>, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// Serves `PUT /ehr/{ehr_id}` through [`EhrApi::ehr_create_with_id`].
+    async fn handle_ehr_create_with_id<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = EhrCreateWithIdParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
+                openehr_audit_details: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-audit-details",
+                )?,
+            };
+            let body = crate::rest::server::json_body_optional(&headers, &body)?;
+            let reply: crate::rest::server::Reply =
+                match api.ehr_create_with_id(params, body).await? {
+                    EhrCreateWithIdResponse::Created { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::CREATED);
+                        if let Some(body) = body.as_ref() {
+                            reply.json(body)?;
+                        }
+                        reply.headers(headers)?;
+                        reply
+                    }
+                    EhrCreateWithIdResponse::NoContent { headers } => {
+                        let mut reply =
+                            crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
     }
-    /// `GET /ehr/{ehr_id}/composition/{uid_based_id}/tags`
-    async fn composition_tags_get(
-        &self,
-        params: CompositionTagsGetParams,
-    ) -> Result<Vec<ItemTagOfComposition>, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// Serves `GET /ehr/{ehr_id}/ehr_status/{version_uid}` through [`EhrApi::ehr_status_get_by_version_id`].
+    async fn handle_ehr_status_get_by_version_id<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = EhrStatusGetByVersionIdParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                version_uid: path.value("p4", "version_uid")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply =
+                match api.ehr_status_get_by_version_id(params).await? {
+                    EhrStatusGetByVersionIdResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
     }
-    /// `PUT /ehr/{ehr_id}/composition/{uid_based_id}/tags`
-    async fn composition_tags_update(
-        &self,
-        params: CompositionTagsUpdateParams,
-        body: Vec<super::common::UpdateItemTag>,
-    ) -> Result<Vec<ItemTagOfComposition>, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// Serves `GET /ehr/{ehr_id}/ehr_status` through [`EhrApi::ehr_status_get_at_time`].
+    async fn handle_ehr_status_get_at_time<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        axum::extract::RawQuery(query): axum::extract::RawQuery,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
+            let params = EhrStatusGetAtTimeParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                version_at_time: query.optional("version_at_time")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply = match api.ehr_status_get_at_time(params).await?
+            {
+                EhrStatusGetAtTimeResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
     }
-    /// `DELETE /ehr/{ehr_id}/composition/{uid_based_id}/tags/{key}`
-    async fn composition_tags_delete(
-        &self,
-        params: CompositionTagsDeleteParams,
-    ) -> Result<(), crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// Serves `PUT /ehr/{ehr_id}/ehr_status` through [`EhrApi::ehr_status_update`].
+    async fn handle_ehr_status_update<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = EhrStatusUpdateParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                if_match: crate::rest::server::header_required(&headers, "If-Match")?,
+                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+                openehr_item_tag: crate::rest::server::header_list(&headers, "openehr-item-tag")?,
+                openehr_version_item_tag: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-version-item-tag",
+                )?,
+                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
+                openehr_audit_details: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-audit-details",
+                )?,
+            };
+            let body = crate::rest::server::json_body(&headers, &body)?;
+            let reply: crate::rest::server::Reply =
+                match api.ehr_status_update(params, body).await? {
+                    EhrStatusUpdateResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                    EhrStatusUpdateResponse::NoContent { headers } => {
+                        let mut reply =
+                            crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
     }
-    /// `GET /ehr/{ehr_id}/ehr_status/{uid_based_id}/tags`
-    async fn ehr_status_tags_get(
-        &self,
-        params: EhrStatusTagsGetParams,
-    ) -> Result<Vec<ItemTagOfEhrStatus>, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// Serves `GET /ehr/{ehr_id}/versioned_ehr_status` through [`EhrApi::versioned_ehr_status_get`].
+    async fn handle_versioned_ehr_status_get<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = VersionedEhrStatusGetParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+            };
+            let reply: crate::rest::server::Reply =
+                match api.versioned_ehr_status_get(params).await? {
+                    VersionedEhrStatusGetResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
     }
-    /// `PUT /ehr/{ehr_id}/ehr_status/{uid_based_id}/tags`
-    async fn ehr_status_tags_update(
-        &self,
-        params: EhrStatusTagsUpdateParams,
-        body: Vec<super::common::UpdateItemTag>,
-    ) -> Result<Vec<ItemTagOfEhrStatus>, crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// Serves `GET /ehr/{ehr_id}/versioned_ehr_status/revision_history` through [`EhrApi::versioned_ehr_status_revision_history`].
+    async fn handle_versioned_ehr_status_revision_history<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = VersionedEhrStatusRevisionHistoryParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+            };
+            let reply: crate::rest::server::Reply =
+                match api.versioned_ehr_status_revision_history(params).await? {
+                    VersionedEhrStatusRevisionHistoryResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
     }
-    /// `DELETE /ehr/{ehr_id}/ehr_status/{uid_based_id}/tags/{key}`
-    async fn ehr_status_tags_delete(
-        &self,
-        params: EhrStatusTagsDeleteParams,
-    ) -> Result<(), crate::rest::runtime::ApiError> {
-        Err(crate::rest::runtime::ApiError::NotImplemented)
+
+    /// Serves `GET /ehr/{ehr_id}/versioned_ehr_status/version` through [`EhrApi::versioned_ehr_status_version_get_at_time`].
+    async fn handle_versioned_ehr_status_version_get_at_time<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        axum::extract::RawQuery(query): axum::extract::RawQuery,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
+            let params = VersionedEhrStatusVersionGetAtTimeParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                version_at_time: query.optional("version_at_time")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+            };
+            let reply: crate::rest::server::Reply =
+                match api.versioned_ehr_status_version_get_at_time(params).await? {
+                    VersionedEhrStatusVersionGetAtTimeResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /ehr/{ehr_id}/versioned_ehr_status/version/{version_uid}` through [`EhrApi::versioned_ehr_status_version_get_by_id`].
+    async fn handle_versioned_ehr_status_version_get_by_id<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = VersionedEhrStatusVersionGetByIdParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                version_uid: path.value("p5", "version_uid")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+            };
+            let reply: crate::rest::server::Reply =
+                match api.versioned_ehr_status_version_get_by_id(params).await? {
+                    VersionedEhrStatusVersionGetByIdResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `POST /ehr/{ehr_id}/composition` through [`EhrApi::composition_create`].
+    async fn handle_composition_create<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = CompositionCreateParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+                openehr_item_tag: crate::rest::server::header_list(&headers, "openehr-item-tag")?,
+                openehr_version_item_tag: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-version-item-tag",
+                )?,
+                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
+                openehr_audit_details: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-audit-details",
+                )?,
+                openehr_template_id: crate::rest::server::header_optional(
+                    &headers,
+                    "openehr-template-id",
+                )?,
+            };
+            let body = crate::rest::server::json_body(&headers, &body)?;
+            let reply: crate::rest::server::Reply =
+                match api.composition_create(params, body).await? {
+                    CompositionCreateResponse::Created { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::CREATED);
+                        if let Some(body) = body.as_ref() {
+                            reply.json(body)?;
+                        }
+                        reply.headers(headers)?;
+                        reply
+                    }
+                    CompositionCreateResponse::NoContent { headers } => {
+                        let mut reply =
+                            crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /ehr/{ehr_id}/composition/{uid_based_id}` through [`EhrApi::composition_get`].
+    async fn handle_composition_get<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        axum::extract::RawQuery(query): axum::extract::RawQuery,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
+            let params = CompositionGetParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                uid_based_id: path.value("p4", "uid_based_id")?,
+                version_at_time: query.optional("version_at_time")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply = match api.composition_get(params).await? {
+                CompositionGetResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+                CompositionGetResponse::NoContent => {
+                    crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT)
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `PUT /ehr/{ehr_id}/composition/{uid_based_id}` through [`EhrApi::composition_update`].
+    async fn handle_composition_update<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = CompositionUpdateParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                uid_based_id: path.value("p4", "uid_based_id")?,
+                if_match: crate::rest::server::header_required(&headers, "If-Match")?,
+                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+                openehr_item_tag: crate::rest::server::header_list(&headers, "openehr-item-tag")?,
+                openehr_version_item_tag: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-version-item-tag",
+                )?,
+                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
+                openehr_audit_details: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-audit-details",
+                )?,
+                openehr_template_id: crate::rest::server::header_optional(
+                    &headers,
+                    "openehr-template-id",
+                )?,
+            };
+            let body = crate::rest::server::json_body(&headers, &body)?;
+            let reply: crate::rest::server::Reply =
+                match api.composition_update(params, body).await? {
+                    CompositionUpdateResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                    CompositionUpdateResponse::NoContent { headers } => {
+                        let mut reply =
+                            crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `DELETE /ehr/{ehr_id}/composition/{uid_based_id}` through [`EhrApi::composition_delete`].
+    async fn handle_composition_delete<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = CompositionDeleteParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                uid_based_id: path.value("p4", "uid_based_id")?,
+                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
+                openehr_audit_details: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-audit-details",
+                )?,
+            };
+            let reply: crate::rest::server::Reply = match api.composition_delete(params).await? {
+                CompositionDeleteResponse::NoContent { headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}` through [`EhrApi::versioned_composition_get`].
+    async fn handle_versioned_composition_get<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = VersionedCompositionGetParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                versioned_object_uid: path.value("p4", "versioned_object_uid")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+            };
+            let reply: crate::rest::server::Reply =
+                match api.versioned_composition_get(params).await? {
+                    VersionedCompositionGetResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/revision_history` through [`EhrApi::versioned_composition_revision_history`].
+    async fn handle_versioned_composition_revision_history<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = VersionedCompositionRevisionHistoryParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                versioned_object_uid: path.value("p4", "versioned_object_uid")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+            };
+            let reply: crate::rest::server::Reply =
+                match api.versioned_composition_revision_history(params).await? {
+                    VersionedCompositionRevisionHistoryResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/version` through [`EhrApi::versioned_composition_version_get_at_time`].
+    async fn handle_versioned_composition_version_get_at_time<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        axum::extract::RawQuery(query): axum::extract::RawQuery,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
+            let params = VersionedCompositionVersionGetAtTimeParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                versioned_object_uid: path.value("p4", "versioned_object_uid")?,
+                version_at_time: query.optional("version_at_time")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+            };
+            let reply: crate::rest::server::Reply = match api
+                .versioned_composition_version_get_at_time(params)
+                .await?
+            {
+                VersionedCompositionVersionGetAtTimeResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/version/{version_uid}` through [`EhrApi::versioned_composition_version_get_by_id`].
+    async fn handle_versioned_composition_version_get_by_id<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = VersionedCompositionVersionGetByIdParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                versioned_object_uid: path.value("p4", "versioned_object_uid")?,
+                version_uid: path.value("p6", "version_uid")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+            };
+            let reply: crate::rest::server::Reply =
+                match api.versioned_composition_version_get_by_id(params).await? {
+                    VersionedCompositionVersionGetByIdResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /ehr/{ehr_id}/directory` through [`EhrApi::directory_get_at_time`].
+    async fn handle_directory_get_at_time<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        axum::extract::RawQuery(query): axum::extract::RawQuery,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
+            let params = DirectoryGetAtTimeParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                version_at_time: query.optional("version_at_time")?,
+                path: query.optional("path")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply = match api.directory_get_at_time(params).await? {
+                DirectoryGetAtTimeResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+                DirectoryGetAtTimeResponse::NoContent => {
+                    crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT)
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `PUT /ehr/{ehr_id}/directory` through [`EhrApi::directory_update`].
+    async fn handle_directory_update<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = DirectoryUpdateParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                if_match: crate::rest::server::header_required(&headers, "If-Match")?,
+                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
+                openehr_audit_details: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-audit-details",
+                )?,
+            };
+            let body = crate::rest::server::json_body(&headers, &body)?;
+            let reply: crate::rest::server::Reply = match api.directory_update(params, body).await?
+            {
+                DirectoryUpdateResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+                DirectoryUpdateResponse::NoContent { headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `POST /ehr/{ehr_id}/directory` through [`EhrApi::directory_create`].
+    async fn handle_directory_create<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = DirectoryCreateParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
+                openehr_audit_details: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-audit-details",
+                )?,
+            };
+            let body = crate::rest::server::json_body(&headers, &body)?;
+            let reply: crate::rest::server::Reply = match api.directory_create(params, body).await?
+            {
+                DirectoryCreateResponse::Created { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::CREATED);
+                    if let Some(body) = body.as_ref() {
+                        reply.json(body)?;
+                    }
+                    reply.headers(headers)?;
+                    reply
+                }
+                DirectoryCreateResponse::NoContent { headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `DELETE /ehr/{ehr_id}/directory` through [`EhrApi::directory_delete`].
+    async fn handle_directory_delete<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = DirectoryDeleteParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                if_match: crate::rest::server::header_required(&headers, "If-Match")?,
+                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
+                openehr_audit_details: crate::rest::server::header_list(
+                    &headers,
+                    "openehr-audit-details",
+                )?,
+            };
+            let reply: crate::rest::server::Reply = match api.directory_delete(params).await? {
+                DirectoryDeleteResponse::NoContent => {
+                    crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT)
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /ehr/{ehr_id}/directory/{version_uid}` through [`EhrApi::directory_get_by_version_id`].
+    async fn handle_directory_get_by_version_id<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        axum::extract::RawQuery(query): axum::extract::RawQuery,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
+            let params = DirectoryGetByVersionIdParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                version_uid: path.value("p4", "version_uid")?,
+                path: query.optional("path")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply =
+                match api.directory_get_by_version_id(params).await? {
+                    DirectoryGetByVersionIdResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `POST /ehr/{ehr_id}/contribution` through [`EhrApi::contribution_create`].
+    async fn handle_contribution_create<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = ContributionCreateParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+                openehr_template_id: crate::rest::server::header_optional(
+                    &headers,
+                    "openehr-template-id",
+                )?,
+            };
+            let body = crate::rest::server::json_body(&headers, &body)?;
+            let reply: crate::rest::server::Reply =
+                match api.contribution_create(params, body).await? {
+                    ContributionCreateResponse::Created { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::CREATED);
+                        if let Some(body) = body.as_ref() {
+                            reply.json(body)?;
+                        }
+                        reply.headers(headers)?;
+                        reply
+                    }
+                    ContributionCreateResponse::NoContent { headers } => {
+                        let mut reply =
+                            crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
+                        reply.headers(headers)?;
+                        reply
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /ehr/{ehr_id}/contribution/{contribution_uid}` through [`EhrApi::contribution_get`].
+    async fn handle_contribution_get<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = ContributionGetParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                contribution_uid: path.value("p4", "contribution_uid")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply = match api.contribution_get(params).await? {
+                ContributionGetResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /ehr/{ehr_id}/tags` through [`EhrApi::ehr_tags_get`].
+    async fn handle_ehr_tags_get<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        axum::extract::RawQuery(query): axum::extract::RawQuery,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
+            let params = EhrTagsGetParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                tag_key: query.optional("tag_key")?,
+                tag_value: query.optional("tag_value")?,
+                tag_target_path: query.optional("tag_target_path")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply = match api.ehr_tags_get(params).await? {
+                EhrTagsGetResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /ehr/{ehr_id}/composition/{uid_based_id}/tags` through [`EhrApi::composition_tags_get`].
+    async fn handle_composition_tags_get<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = CompositionTagsGetParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                uid_based_id: path.value("p4", "uid_based_id")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply = match api.composition_tags_get(params).await? {
+                CompositionTagsGetResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `PUT /ehr/{ehr_id}/composition/{uid_based_id}/tags` through [`EhrApi::composition_tags_update`].
+    async fn handle_composition_tags_update<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = CompositionTagsUpdateParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                uid_based_id: path.value("p4", "uid_based_id")?,
+                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+            };
+            let body = crate::rest::server::json_body(&headers, &body)?;
+            let reply: crate::rest::server::Reply =
+                match api.composition_tags_update(params, body).await? {
+                    CompositionTagsUpdateResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                    CompositionTagsUpdateResponse::NoContent => {
+                        crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT)
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `DELETE /ehr/{ehr_id}/composition/{uid_based_id}/tags/{key}` through [`EhrApi::composition_tags_delete`].
+    async fn handle_composition_tags_delete<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = CompositionTagsDeleteParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                uid_based_id: path.value("p4", "uid_based_id")?,
+                key: path.value("p6", "key")?,
+            };
+            let reply: crate::rest::server::Reply =
+                match api.composition_tags_delete(params).await? {
+                    CompositionTagsDeleteResponse::NoContent => {
+                        crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT)
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `GET /ehr/{ehr_id}/ehr_status/{uid_based_id}/tags` through [`EhrApi::ehr_status_tags_get`].
+    async fn handle_ehr_status_tags_get<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = EhrStatusTagsGetParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                uid_based_id: path.value("p4", "uid_based_id")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+            };
+            let reply: crate::rest::server::Reply = match api.ehr_status_tags_get(params).await? {
+                EhrStatusTagsGetResponse::Ok { body, headers } => {
+                    let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                    reply.json(&body)?;
+                    reply.headers(headers)?;
+                    reply
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `PUT /ehr/{ehr_id}/ehr_status/{uid_based_id}/tags` through [`EhrApi::ehr_status_tags_update`].
+    async fn handle_ehr_status_tags_update<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        headers: http::HeaderMap,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+        body: axum::body::Bytes,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = EhrStatusTagsUpdateParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                uid_based_id: path.value("p4", "uid_based_id")?,
+                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
+                accept: crate::rest::server::header_optional(&headers, "Accept")?,
+                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
+            };
+            let body = crate::rest::server::json_body(&headers, &body)?;
+            let reply: crate::rest::server::Reply =
+                match api.ehr_status_tags_update(params, body).await? {
+                    EhrStatusTagsUpdateResponse::Ok { body, headers } => {
+                        let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
+                        reply.json(&body)?;
+                        reply.headers(headers)?;
+                        reply
+                    }
+                    EhrStatusTagsUpdateResponse::NoContent => {
+                        crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT)
+                    }
+                };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
+    }
+
+    /// Serves `DELETE /ehr/{ehr_id}/ehr_status/{uid_based_id}/tags/{key}` through [`EhrApi::ehr_status_tags_delete`].
+    async fn handle_ehr_status_tags_delete<S>(
+        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,
+        path: Result<
+            axum::extract::RawPathParams,
+            axum::extract::rejection::RawPathParamsRejection,
+        >,
+    ) -> axum::response::Response
+    where
+        S: EhrApi + Send + Sync + 'static,
+    {
+        let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
+            let path = crate::rest::server::PathCaptures::new(path)?;
+            let params = EhrStatusTagsDeleteParams {
+                ehr_id: path.value("p2", "ehr_id")?,
+                uid_based_id: path.value("p4", "uid_based_id")?,
+                key: path.value("p6", "key")?,
+            };
+            let reply: crate::rest::server::Reply = match api.ehr_status_tags_delete(params).await?
+            {
+                EhrStatusTagsDeleteResponse::NoContent => {
+                    crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT)
+                }
+            };
+            Ok(reply.finish())
+        }
+        .await;
+        crate::rest::server::respond(served)
     }
 }
 
@@ -1136,14 +4090,6 @@ pub trait EhrApi {
 #[cfg(feature = "rest-client")]
 pub mod client {
     use super::*;
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /ehr`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct EhrGetBySubjectOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
 
     /// The outcome of `GET /ehr`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
@@ -1161,26 +4107,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `201` answer of
-    /// `POST /ehr`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct EhrCreateCreatedHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-    }
-
-    /// The response headers the OAS declares for the `204` answer of
-    /// `POST /ehr`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct EhrCreateNoContentHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
     }
 
     /// The outcome of `POST /ehr`: one variant per status the OAS documents.
@@ -1211,14 +4137,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /ehr/{ehr_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct EhrGetByIdOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
     /// The outcome of `GET /ehr/{ehr_id}`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -1235,26 +4153,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `201` answer of
-    /// `PUT /ehr/{ehr_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct EhrCreateWithIdCreatedHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-    }
-
-    /// The response headers the OAS declares for the `204` answer of
-    /// `PUT /ehr/{ehr_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct EhrCreateWithIdNoContentHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
     }
 
     /// The outcome of `PUT /ehr/{ehr_id}`: one variant per status the OAS documents.
@@ -1285,22 +4183,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /ehr/{ehr_id}/ehr_status/{version_uid}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct EhrStatusGetByVersionIdOkHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
-    }
-
     /// The outcome of `GET /ehr/{ehr_id}/ehr_status/{version_uid}`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -1317,22 +4199,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /ehr/{ehr_id}/ehr_status`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct EhrStatusGetAtTimeOkHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
     }
 
     /// The outcome of `GET /ehr/{ehr_id}/ehr_status`: one variant per status the OAS documents.
@@ -1356,46 +4222,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `PUT /ehr/{ehr_id}/ehr_status`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct EhrStatusUpdateOkHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
-    }
-
-    /// The response headers the OAS declares for the `204` answer of
-    /// `PUT /ehr/{ehr_id}/ehr_status`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct EhrStatusUpdateNoContentHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
-    }
-
-    /// The response headers the OAS declares for the `412` answer of
-    /// `PUT /ehr/{ehr_id}/ehr_status`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct EhrStatusUpdatePreconditionFailedHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
     }
 
     /// The outcome of `PUT /ehr/{ehr_id}/ehr_status`: one variant per status the OAS documents.
@@ -1433,14 +4259,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /ehr/{ehr_id}/versioned_ehr_status`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct VersionedEhrStatusGetOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
     /// The outcome of `GET /ehr/{ehr_id}/versioned_ehr_status`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -1459,14 +4277,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /ehr/{ehr_id}/versioned_ehr_status/revision_history`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct VersionedEhrStatusRevisionHistoryOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
     /// The outcome of `GET /ehr/{ehr_id}/versioned_ehr_status/revision_history`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -1483,18 +4293,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /ehr/{ehr_id}/versioned_ehr_status/version`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct VersionedEhrStatusVersionGetAtTimeOkHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
     }
 
     /// The outcome of `GET /ehr/{ehr_id}/versioned_ehr_status/version`: one variant per status the OAS documents.
@@ -1520,14 +4318,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /ehr/{ehr_id}/versioned_ehr_status/version/{version_uid}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct VersionedEhrStatusVersionGetByIdOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
     /// The outcome of `GET /ehr/{ehr_id}/versioned_ehr_status/version/{version_uid}`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -1544,38 +4334,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `201` answer of
-    /// `POST /ehr/{ehr_id}/composition`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct CompositionCreateCreatedHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
-    }
-
-    /// The response headers the OAS declares for the `204` answer of
-    /// `POST /ehr/{ehr_id}/composition`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct CompositionCreateNoContentHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
     }
 
     /// The outcome of `POST /ehr/{ehr_id}/composition`: one variant per status the OAS documents.
@@ -1611,22 +4369,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /ehr/{ehr_id}/composition/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct CompositionGetOkHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
-    }
-
     /// The outcome of `GET /ehr/{ehr_id}/composition/{uid_based_id}`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -1645,46 +4387,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `PUT /ehr/{ehr_id}/composition/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct CompositionUpdateOkHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
-    }
-
-    /// The response headers the OAS declares for the `204` answer of
-    /// `PUT /ehr/{ehr_id}/composition/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct CompositionUpdateNoContentHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
-    }
-
-    /// The response headers the OAS declares for the `412` answer of
-    /// `PUT /ehr/{ehr_id}/composition/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct CompositionUpdatePreconditionFailedHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
     }
 
     /// The outcome of `PUT /ehr/{ehr_id}/composition/{uid_based_id}`: one variant per status the OAS documents.
@@ -1727,26 +4429,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `204` answer of
-    /// `DELETE /ehr/{ehr_id}/composition/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct CompositionDeleteNoContentHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-    }
-
-    /// The response headers the OAS declares for the `409` answer of
-    /// `DELETE /ehr/{ehr_id}/composition/{uid_based_id}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct CompositionDeleteConflictHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-    }
-
     /// The outcome of `DELETE /ehr/{ehr_id}/composition/{uid_based_id}`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -1775,14 +4457,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct VersionedCompositionGetOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
     /// The outcome of `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -1799,14 +4473,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/revision_history`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct VersionedCompositionRevisionHistoryOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
     }
 
     /// The outcome of `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/revision_history`: one variant per status the OAS documents.
@@ -1827,18 +4493,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/version`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct VersionedCompositionVersionGetAtTimeOkHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
     /// The outcome of `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/version`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -1855,14 +4509,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/version/{version_uid}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct VersionedCompositionVersionGetByIdOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
     }
 
     /// The outcome of `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/version/{version_uid}`: one variant per status the OAS documents.
@@ -1883,14 +4529,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /ehr/{ehr_id}/directory`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct DirectoryGetAtTimeOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
     /// The outcome of `GET /ehr/{ehr_id}/directory`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -1909,42 +4547,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `PUT /ehr/{ehr_id}/directory`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct DirectoryUpdateOkHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
-    /// The response headers the OAS declares for the `204` answer of
-    /// `PUT /ehr/{ehr_id}/directory`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct DirectoryUpdateNoContentHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// Every value of the `openehr-item-tag` response header, one per field line.
-        pub openehr_item_tag: Vec<String>,
-        /// Every value of the `openehr-version-item-tag` response header, one per field line.
-        pub openehr_version_item_tag: Vec<String>,
-    }
-
-    /// The response headers the OAS declares for the `412` answer of
-    /// `PUT /ehr/{ehr_id}/directory`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct DirectoryUpdatePreconditionFailedHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
     }
 
     /// The outcome of `PUT /ehr/{ehr_id}/directory`: one variant per status the OAS documents.
@@ -1982,30 +4584,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `201` answer of
-    /// `POST /ehr/{ehr_id}/directory`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct DirectoryCreateCreatedHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
-    /// The response headers the OAS declares for the `204` answer of
-    /// `POST /ehr/{ehr_id}/directory`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct DirectoryCreateNoContentHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
     /// The outcome of `POST /ehr/{ehr_id}/directory`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -2034,16 +4612,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `412` answer of
-    /// `DELETE /ehr/{ehr_id}/directory`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct DirectoryDeletePreconditionFailedHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-    }
-
     /// The outcome of `DELETE /ehr/{ehr_id}/directory`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -2069,14 +4637,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /ehr/{ehr_id}/directory/{version_uid}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct DirectoryGetByVersionIdOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
     /// The outcome of `GET /ehr/{ehr_id}/directory/{version_uid}`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -2093,30 +4653,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `201` answer of
-    /// `POST /ehr/{ehr_id}/contribution`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct ContributionCreateCreatedHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
-    /// The response headers the OAS declares for the `204` answer of
-    /// `POST /ehr/{ehr_id}/contribution`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct ContributionCreateNoContentHeaders {
-        /// The `ETag` response header.
-        pub etag: Option<String>,
-        /// The `Location` response header.
-        pub location: Option<String>,
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
     }
 
     /// The outcome of `POST /ehr/{ehr_id}/contribution`: one variant per status the OAS documents.
@@ -2152,14 +4688,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /ehr/{ehr_id}/contribution/{contribution_uid}`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct ContributionGetOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
     /// The outcome of `GET /ehr/{ehr_id}/contribution/{contribution_uid}`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -2176,14 +4704,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /ehr/{ehr_id}/tags`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct EhrTagsGetOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
     }
 
     /// The outcome of `GET /ehr/{ehr_id}/tags`: one variant per status the OAS documents.
@@ -2209,14 +4729,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /ehr/{ehr_id}/composition/{uid_based_id}/tags`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct CompositionTagsGetOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
     /// The outcome of `GET /ehr/{ehr_id}/composition/{uid_based_id}/tags`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -2233,14 +4745,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `PUT /ehr/{ehr_id}/composition/{uid_based_id}/tags`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct CompositionTagsUpdateOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
     }
 
     /// The outcome of `PUT /ehr/{ehr_id}/composition/{uid_based_id}/tags`: one variant per status the OAS documents.
@@ -2281,14 +4785,6 @@ pub mod client {
         },
     }
 
-    /// The response headers the OAS declares for the `200` answer of
-    /// `GET /ehr/{ehr_id}/ehr_status/{uid_based_id}/tags`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct EhrStatusTagsGetOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
-    }
-
     /// The outcome of `GET /ehr/{ehr_id}/ehr_status/{uid_based_id}/tags`: one variant per status the OAS documents.
     /// A status outside this set is a [`crate::rest::client::ClientError`].
     #[derive(Debug, Clone)]
@@ -2305,14 +4801,6 @@ pub mod client {
             /// The error body as received, decoded as the ITS-REST `Error` when it is one.
             body: crate::rest::client::ErrorBody,
         },
-    }
-
-    /// The response headers the OAS declares for the `200` answer of
-    /// `PUT /ehr/{ehr_id}/ehr_status/{uid_based_id}/tags`, each as received (absent when the service did not send it).
-    #[derive(Debug, Clone)]
-    pub struct EhrStatusTagsUpdateOkHeaders {
-        /// The `Content-Type` response header.
-        pub content_type: Option<String>,
     }
 
     /// The outcome of `PUT /ehr/{ehr_id}/ehr_status/{uid_based_id}/tags`: one variant per status the OAS documents.
@@ -2354,16 +4842,28 @@ pub mod client {
     }
 
     /// The `ehr` API group over one configured CDR.
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone)]
     pub struct EhrClient<'c, T> {
         client: &'c crate::rest::client::Client<T>,
+        options: crate::rest::client::CallOptions,
     }
 
     impl<'c, T: crate::rest::client::Transport> EhrClient<'c, T> {
         /// The `ehr` API group over `client`.
         #[must_use]
         pub fn new(client: &'c crate::rest::client::Client<T>) -> Self {
-            Self { client }
+            Self {
+                client,
+                options: crate::rest::client::CallOptions::default(),
+            }
+        }
+
+        /// This group client applying `options` (a deadline, extra headers) to
+        /// every call it makes.
+        #[must_use]
+        pub fn with_options(mut self, options: crate::rest::client::CallOptions) -> Self {
+            self.options = options;
+            self
         }
 
         /// `GET /ehr`
@@ -2389,6 +4889,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(EhrGetBySubjectOutcome::Ok {
@@ -2437,6 +4938,7 @@ pub mod client {
             if let Some(body) = body {
                 request.json_body(body, params.content_type.as_deref())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::CREATED => Ok(EhrCreateOutcome::Created {
@@ -2479,6 +4981,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(EhrGetByIdOutcome::Ok {
@@ -2529,6 +5032,7 @@ pub mod client {
             if let Some(body) = body {
                 request.json_body(body, params.content_type.as_deref())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::CREATED => Ok(EhrCreateWithIdOutcome::Created {
@@ -2575,6 +5079,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(EhrStatusGetByVersionIdOutcome::Ok {
@@ -2617,6 +5122,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(EhrStatusGetAtTimeOutcome::Ok {
@@ -2689,6 +5195,7 @@ pub mod client {
                 }
             }
             request.json_body(body, params.content_type.as_deref())?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(EhrStatusUpdateOutcome::Ok {
@@ -2751,6 +5258,7 @@ pub mod client {
             if let Some(value) = params.content_type.as_ref() {
                 request.header("Content-Type", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(VersionedEhrStatusGetOutcome::Ok {
@@ -2790,6 +5298,7 @@ pub mod client {
             if let Some(value) = params.content_type.as_ref() {
                 request.header("Content-Type", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(VersionedEhrStatusRevisionHistoryOutcome::Ok {
@@ -2834,6 +5343,7 @@ pub mod client {
             if let Some(value) = params.content_type.as_ref() {
                 request.header("Content-Type", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(VersionedEhrStatusVersionGetAtTimeOutcome::Ok {
@@ -2883,6 +5393,7 @@ pub mod client {
             if let Some(value) = params.content_type.as_ref() {
                 request.header("Content-Type", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(VersionedEhrStatusVersionGetByIdOutcome::Ok {
@@ -2949,6 +5460,7 @@ pub mod client {
                 request.header("openehr-template-id", &value.to_string())?;
             }
             request.json_body(body, params.content_type.as_deref())?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::CREATED => Ok(CompositionCreateOutcome::Created {
@@ -3009,6 +5521,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(CompositionGetOutcome::Ok {
@@ -3083,6 +5596,7 @@ pub mod client {
                 request.header("openehr-template-id", &value.to_string())?;
             }
             request.json_body(body, params.content_type.as_deref())?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(CompositionUpdateOutcome::Ok {
@@ -3153,6 +5667,7 @@ pub mod client {
                     request.header("openehr-audit-details", &item.to_string())?;
                 }
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::NO_CONTENT => Ok(CompositionDeleteOutcome::NoContent {
@@ -3202,6 +5717,7 @@ pub mod client {
             if let Some(value) = params.content_type.as_ref() {
                 request.header("Content-Type", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(VersionedCompositionGetOutcome::Ok {
@@ -3242,6 +5758,7 @@ pub mod client {
             if let Some(value) = params.content_type.as_ref() {
                 request.header("Content-Type", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(VersionedCompositionRevisionHistoryOutcome::Ok {
@@ -3287,6 +5804,7 @@ pub mod client {
             if let Some(value) = params.content_type.as_ref() {
                 request.header("Content-Type", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(VersionedCompositionVersionGetAtTimeOutcome::Ok {
@@ -3332,6 +5850,7 @@ pub mod client {
             if let Some(value) = params.content_type.as_ref() {
                 request.header("Content-Type", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(VersionedCompositionVersionGetByIdOutcome::Ok {
@@ -3375,6 +5894,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(DirectoryGetAtTimeOutcome::Ok {
@@ -3431,6 +5951,7 @@ pub mod client {
                 }
             }
             request.json_body(body, params.content_type.as_deref())?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(DirectoryUpdateOutcome::Ok {
@@ -3504,6 +6025,7 @@ pub mod client {
                 }
             }
             request.json_body(body, params.content_type.as_deref())?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::CREATED => Ok(DirectoryCreateOutcome::Created {
@@ -3560,6 +6082,7 @@ pub mod client {
                     request.header("openehr-audit-details", &item.to_string())?;
                 }
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::NO_CONTENT => Ok(DirectoryDeleteOutcome::NoContent),
@@ -3606,6 +6129,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(DirectoryGetByVersionIdOutcome::Ok {
@@ -3652,6 +6176,7 @@ pub mod client {
                 request.header("openehr-template-id", &value.to_string())?;
             }
             request.json_body(body, params.content_type.as_deref())?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::CREATED => Ok(ContributionCreateOutcome::Created {
@@ -3703,6 +6228,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(ContributionGetOutcome::Ok {
@@ -3747,6 +6273,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(EhrTagsGetOutcome::Ok {
@@ -3786,6 +6313,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(CompositionTagsGetOutcome::Ok {
@@ -3830,6 +6358,7 @@ pub mod client {
                 request.header("Content-Type", &value.to_string())?;
             }
             request.json_body(body, params.content_type.as_deref())?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(CompositionTagsUpdateOutcome::Ok {
@@ -3859,7 +6388,7 @@ pub mod client {
             &self,
             params: &CompositionTagsDeleteParams,
         ) -> Result<CompositionTagsDeleteOutcome, crate::rest::client::ClientError> {
-            let request = crate::rest::client::Request::new(
+            let mut request = crate::rest::client::Request::new(
                 http::Method::DELETE,
                 format!(
                     "/ehr/{}/composition/{}/tags/{}",
@@ -3868,6 +6397,7 @@ pub mod client {
                     crate::rest::client::path_segment(&params.key)
                 ),
             );
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::NO_CONTENT => Ok(CompositionTagsDeleteOutcome::NoContent),
@@ -3899,6 +6429,7 @@ pub mod client {
             if let Some(value) = params.accept.as_ref() {
                 request.header("Accept", &value.to_string())?;
             }
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(EhrStatusTagsGetOutcome::Ok {
@@ -3943,6 +6474,7 @@ pub mod client {
                 request.header("Content-Type", &value.to_string())?;
             }
             request.json_body(body, params.content_type.as_deref())?;
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::OK => Ok(EhrStatusTagsUpdateOutcome::Ok {
@@ -3972,7 +6504,7 @@ pub mod client {
             &self,
             params: &EhrStatusTagsDeleteParams,
         ) -> Result<EhrStatusTagsDeleteOutcome, crate::rest::client::ClientError> {
-            let request = crate::rest::client::Request::new(
+            let mut request = crate::rest::client::Request::new(
                 http::Method::DELETE,
                 format!(
                     "/ehr/{}/ehr_status/{}/tags/{}",
@@ -3981,6 +6513,7 @@ pub mod client {
                     crate::rest::client::path_segment(&params.key)
                 ),
             );
+            request.apply_options(&self.options);
             let answer = self.client.execute(request).await?;
             match answer.status() {
                 http::StatusCode::NO_CONTENT => Ok(EhrStatusTagsDeleteOutcome::NoContent),
@@ -3992,8 +6525,9 @@ pub mod client {
         }
     }
 }
-/// The operations of this group as `(method, path, operation_id)`, for
-/// wiring an axum router in `ferroehr-rest`.
+/// The operations of this group as `(method, path, operation_id)`, in OAS
+/// document order: `server::router` binds each to its trait method, and
+/// `crate::rest::routes::lookup` matches a request path against them.
 pub const ROUTES: &[(&str, &str, &str)] = &[
     ("GET", "/ehr", "ehr_get_by_subject"),
     ("POST", "/ehr", "ehr_create"),

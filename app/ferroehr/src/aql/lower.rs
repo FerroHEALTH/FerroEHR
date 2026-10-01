@@ -401,7 +401,7 @@ impl Planner {
 
     fn lower_where(&self, expr: &WhereExpr) -> Result<Expr, AqlError> {
         match expr {
-            WhereExpr::Identified(ie) => self.lower_identified(ie),
+            WhereExpr::Identified(ie, _) => self.lower_identified(ie),
             WhereExpr::Not(w) => Ok(Expr::Not(Box::new(self.lower_where(w)?))),
             WhereExpr::And(a, b) => Ok(Expr::And(
                 Box::new(self.lower_where(a)?),
