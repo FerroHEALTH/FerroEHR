@@ -22,7 +22,7 @@
 
 # The id Artifact Hub issues when the repository is registered at
 # https://artifacthub.io/control-panel/repositories (kind: Helm charts, URL:
-# oci://ghcr.io/rubentalstra/charts/ferroehr). Without it the chart can still be
+# oci://ghcr.io/ferrohealth/charts/ferroehr). Without it the chart can still be
 # listed, but the listing is unowned — anyone could claim it — and the Verified
 # Publisher badge is unavailable.
 repositoryID: f5b3afc5-75b1-42db-9861-d5c75a34223b

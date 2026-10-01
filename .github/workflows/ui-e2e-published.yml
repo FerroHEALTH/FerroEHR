@@ -110,10 +110,10 @@ jobs:
       - name: Run the battery against the published images
         env:
           UI_E2E_IMAGE: "1"
-          UI_E2E_IMAGE_REF: ghcr.io/${{ github.repository_owner }}/ferroehr-viewer:${{ steps.release.outputs.version }}
+          UI_E2E_IMAGE_REF: ghcr.io/ferrohealth/ferroehr-viewer:${{ steps.release.outputs.version }}
           UI_E2E_NO_BUILD: "1"
-          FERROEHR_IMAGE: ghcr.io/${{ github.repository_owner }}/ferroehr:${{ steps.release.outputs.version }}
-          FERROEHR_POSTGRES_IMAGE: ghcr.io/${{ github.repository_owner }}/ferroehr-postgres:${{ steps.release.outputs.version }}
+          FERROEHR_IMAGE: ghcr.io/ferrohealth/ferroehr:${{ steps.release.outputs.version }}
+          FERROEHR_POSTGRES_IMAGE: ghcr.io/ferrohealth/ferroehr-postgres:${{ steps.release.outputs.version }}
         run: bash scripts/ui-e2e.sh
 
       - name: Upload journey screenshots

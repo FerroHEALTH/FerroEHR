@@ -345,7 +345,7 @@ A policy sees the **caller**, not just the request: the authenticated subject,
 its roles (as the role layer above resolved them), its scopes, the resolved
 organization and patient, the resource's patient and template, and the operation
 id. So a rule can be written about one caller, a role, a scope, or a single
-operation; the [shipped example policy](https://github.com/rubentalstra/FerroEHR/tree/main/app/ferroehr-rest/examples/policies)
+operation; the [shipped example policy](https://github.com/FerroHEALTH/FerroEHR/tree/main/app/ferroehr-rest/examples/policies)
 shows a role-keyed break-glass permit and a scope-keyed write restriction.
 
 A request whose `patient` or `template` resolves to several values is evaluated

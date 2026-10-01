@@ -29,7 +29,7 @@ come back **400**.
   parse") + **AMB-194** ("400 is reserved on this route for the SHAPE class …
   and a complete-but-incomplete body parses"). Parses ⇒ 422; does not parse ⇒ 400.
 
-**Reproduced 2026-08-05** (image `ghcr.io/rubentalstra/ferroehr:local`, plain
+**Reproduced 2026-08-05** (image `ghcr.io/ferrohealth/ferroehr:local`, plain
 `docker-compose.yml`, no SMART overlay — the SMART overlay 403s the admin
 template upload under Basic auth):
 `minimal_event.cluster_no_items` → direct composition **400**

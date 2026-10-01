@@ -23,8 +23,8 @@
 # certificate names THIS workflow as the signer, which a consumer can require:
 #
 #   gh attestation verify ferroehr-<tag>-<target>.tar.gz \
-#     -R rubentalstra/FerroEHR \
-#     --signer-workflow rubentalstra/FerroEHR/.github/workflows/release-build.yml
+#     -R FerroHEALTH/FerroEHR \
+#     --signer-workflow FerroHEALTH/FerroEHR/.github/workflows/release-build.yml
 #
 # That flag is the consumer-visible prize, not the badge: it lets a downstream
 # verifier insist an artifact came from this hardened lane rather than from any

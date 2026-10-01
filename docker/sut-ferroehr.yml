@@ -50,7 +50,7 @@ services:
     cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
     security_opt:
       - no-new-privileges:true
-    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/rubentalstra/ferroehr-postgres:local}
+    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:local}
     build:
       context: ./docker/postgres
       dockerfile: Dockerfile
@@ -100,7 +100,7 @@ services:
     cap_drop: [ALL]
     security_opt:
       - no-new-privileges:true
-    image: ${FERROEHR_IMAGE:-ghcr.io/rubentalstra/ferroehr:local}
+    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:local}
     build:
       context: .
       dockerfile: docker/Dockerfile

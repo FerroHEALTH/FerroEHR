@@ -143,7 +143,7 @@ could otherwise assume:
 
 The connector this table measures is planned to leave: FerroBRIDGE
 (<https://github.com/rubentalstra/FerroBRIDGE>) is the FHIRconnect and OMOP
-bridge, and [#3080](https://github.com/rubentalstra/FerroEHR/issues/3080)
+bridge, and [#3080](https://github.com/FerroHEALTH/FerroEHR/issues/3080)
 retires the in-tree connector once it ships. The EHDS readiness question does
 NOT leave with it — it is asked of the EHR system — so this table moves to the
 compliance chapter at that point rather than being deleted with the page it
@@ -152,7 +152,7 @@ currently sits on.
 Two of the example compositions this rests on — the patient summary and the
 imaging report — were patched by hand rather than regenerated against a
 running server, which their pack's provenance records and
-[#1724](https://github.com/rubentalstra/FerroEHR/issues/1724) tracks. They are
+[#1724](https://github.com/FerroHEALTH/FerroEHR/issues/1724) tracks. They are
 real CKM templates either way; the caveat belongs beside a claim that leans on
 them.
 
@@ -162,7 +162,7 @@ them.
 
 No profile mapping ships for any priority category, and none will be authored
 here. That is a recorded decision
-([#3206](https://github.com/rubentalstra/FerroEHR/issues/3206)), not an
+([#3206](https://github.com/FerroHEALTH/FerroEHR/issues/3206)), not an
 omission, and it rests on two things being unfixed at once.
 
 The target format is unfixed. Annex II 2.1 to 2.3 require the categories in
@@ -176,7 +176,7 @@ those acts require.
 The place is unfixed too, and settled the other way. Mappings belong to
 [FerroBRIDGE](https://github.com/rubentalstra/FerroBRIDGE), which is the
 FHIRconnect and OMOP bridge, and
-[#3080](https://github.com/rubentalstra/FerroEHR/issues/3080) retires the
+[#3080](https://github.com/FerroHEALTH/FerroEHR/issues/3080) retires the
 in-tree connector once it ships its first round trip. A mapping written here
 would be written against `ehr.fhir_mapping` rows and the FHIRPath-lite dialect
 this façade reads, both of which leave with the connector.

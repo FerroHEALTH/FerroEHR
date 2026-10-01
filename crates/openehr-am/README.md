@@ -24,7 +24,7 @@ For an ADL 2 *engine* (parser, validation, flattener, OPT2 generation, ADL
 
 This crate is **entirely generated** — every file carries a `// @generated`
 header — emitted deterministically by
-[`openehr-codegen`](https://github.com/rubentalstra/FerroEHR/tree/main/tools/openehr-codegen)
+[`openehr-codegen`](https://github.com/FerroHEALTH/FerroEHR/tree/main/tools/openehr-codegen)
 from the vendored openEHR BMM meta-model. Changes belong in the emitter, never
 in the generated output; hand-written spec behaviour, when a class needs it,
 goes in a sibling `*_impl.rs` file the generator never rewrites. The AOM 2
@@ -61,7 +61,7 @@ them.
 
 ## Part of FerroEHR
 
-This crate is the specification layer of [FerroEHR](https://github.com/rubentalstra/FerroEHR), a pure-Rust,
+This crate is the specification layer of [FerroEHR](https://github.com/FerroHEALTH/FerroEHR), a pure-Rust,
 openEHR-spec-conformant Clinical Data Repository (ITS-REST 1.1.0 + AQL 1.1 on
 PostgreSQL 18). The crates are usable standalone; FerroEHR is the reference
 consumer.

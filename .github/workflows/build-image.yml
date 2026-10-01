@@ -16,9 +16,9 @@
 # else — no caller-defined step runs beside the attestation. The Fulcio
 # certificate then names THIS workflow as the signer, which a consumer pins:
 #
-#   gh attestation verify oci://ghcr.io/rubentalstra/<image>@<digest> \
-#     -R rubentalstra/FerroEHR \
-#     --signer-workflow rubentalstra/FerroEHR/.github/workflows/build-image.yml
+#   gh attestation verify oci://ghcr.io/ferrohealth/<image>@<digest> \
+#     -R FerroHEALTH/FerroEHR \
+#     --signer-workflow FerroHEALTH/FerroEHR/.github/workflows/build-image.yml
 #
 # Every input is DATA (names, paths, label text), never executable content:
 # an input that carried commands would hand the build definition back to the

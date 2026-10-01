@@ -16,7 +16,7 @@ the others renders and lints clean:
    own hand-written `pg_dump --schema=` command. **Not** generated from the
    chart.
 3. `docker/postgres/initdb/10-ferroehr-init.sh` — baked into the
-   `ghcr.io/rubentalstra/ferroehr-postgres` image (`docker/postgres/Dockerfile`
+   `ghcr.io/ferrohealth/ferroehr-postgres` image (`docker/postgres/Dockerfile`
    `COPY initdb/ /docker-entrypoint-initdb.d/`), so it serves BOTH the compose
    stack and the hosted sandbox's database box
    (`deploy/hosted/cloud-init-postgres.yaml`). It `CREATE SCHEMA ... AUTHORIZATION`s

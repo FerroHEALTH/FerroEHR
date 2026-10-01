@@ -20,9 +20,9 @@
 #
 # A consumer pins:
 #
-#   gh attestation verify oci://ghcr.io/rubentalstra/charts/ferroehr@<digest> \
-#     -R rubentalstra/FerroEHR \
-#     --signer-workflow rubentalstra/FerroEHR/.github/workflows/build-chart.yml
+#   gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr@<digest> \
+#     -R FerroHEALTH/FerroEHR \
+#     --signer-workflow FerroHEALTH/FerroEHR/.github/workflows/build-chart.yml
 name: Build chart (reusable)
 
 on:
@@ -58,9 +58,9 @@ env:
   CHART_DIR: deploy/helm/ferroehr
   # `helm push` appends the chart name, so the chart lands at
   # ghcr.io/<owner>/charts/ferroehr.
-  OCI_NAMESPACE: oci://ghcr.io/${{ github.repository_owner }}/charts
-  CHART_REF: ghcr.io/${{ github.repository_owner }}/charts/ferroehr
-  APP_IMAGE: ghcr.io/${{ github.repository_owner }}/ferroehr
+  OCI_NAMESPACE: oci://ghcr.io/ferrohealth/charts
+  CHART_REF: ghcr.io/ferrohealth/charts/ferroehr
+  APP_IMAGE: ghcr.io/ferrohealth/ferroehr
 
 jobs:
   build:

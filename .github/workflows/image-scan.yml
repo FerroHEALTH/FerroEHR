@@ -97,7 +97,7 @@ jobs:
       - name: Scan every published image
         id: scan
         env:
-          OWNER: ${{ github.repository_owner }}
+          OWNER: ferrohealth
         run: |
           set -euo pipefail
           # Every VEX document under security/vex/, passed as repeated --vex flags.

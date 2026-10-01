@@ -771,7 +771,7 @@ probes_backup_restore() {
   for i in "${!PROBE_DOMAINS[@]}"; do
     name="$(domain_field "${PROBE_DOMAINS[$i]}" 1)"
     tocs+=("$(docker run --rm -v "$dumps/$name:/backup:ro" \
-      "${FERROEHR_POSTGRES_IMAGE:-ghcr.io/rubentalstra/ferroehr-postgres:4.1.1}" \
+      "${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:4.1.1}" \
       pg_restore --list "/backup/$(basename "${dump_files[$i]}")" 2>/dev/null)")
   done
   for i in "${!PROBE_DOMAINS[@]}"; do
@@ -841,7 +841,7 @@ probes_backup_restore() {
     --format '{{range $net, $_ := .NetworkSettings.Networks}}{{$net}}{{end}}' \
     "$(dc ps -q ferroehr-postgres)" 2>/dev/null)"
   restore_log="$(docker run --rm --network "$network" -v "$dumps:/dumps:ro" \
-    "${FERROEHR_POSTGRES_IMAGE:-ghcr.io/rubentalstra/ferroehr-postgres:4.1.1}" \
+    "${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:4.1.1}" \
     sh -c "$restore_script" 2>&1)"
   if verify_out="$(dc exec -T -e FERROEHR__DB__URL="$restored_dsn" -e FERROEHR__DB__MIGRATE=verify \
       ferroehr /usr/local/bin/ferroehr db verify 2>&1)"; then

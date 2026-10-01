@@ -122,7 +122,7 @@ write_files:
         # a box seeded before the storage rewrite still carries them, and the
         # server refuses such a database at boot.
         docker run --rm --entrypoint psql \
-          ghcr.io/rubentalstra/ferroehr-postgres:latest "$dsn" \
+          ghcr.io/ferrohealth/ferroehr-postgres:latest "$dsn" \
           -v ON_ERROR_STOP=1 \
           -c 'DROP SCHEMA IF EXISTS clinical CASCADE' \
           -c 'DROP SCHEMA IF EXISTS party CASCADE' \

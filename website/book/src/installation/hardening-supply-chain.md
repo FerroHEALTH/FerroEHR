@@ -68,15 +68,15 @@ provider. Read it off a published artifact rather than deriving it from a workfl
 file:
 
 ```shell
-gh attestation verify oci://ghcr.io/rubentalstra/ferroehr:main \
-  -R rubentalstra/FerroEHR --format json \
+gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:main \
+  -R FerroHEALTH/FerroEHR --format json \
   | jq '.[0].verificationResult.signature.certificate
         | {subjectAlternativeName, issuer, sourceRepositoryRef, runnerEnvironment}'
 ```
 
 ```json
 {
-  "subjectAlternativeName": "https://github.com/rubentalstra/FerroEHR/.github/workflows/build-image.yml@refs/heads/main",
+  "subjectAlternativeName": "https://github.com/FerroHEALTH/FerroEHR/.github/workflows/build-image.yml@refs/heads/main",
   "issuer": "https://token.actions.githubusercontent.com",
   "sourceRepositoryRef": "refs/heads/main",
   "runnerEnvironment": "github-hosted"
@@ -93,7 +93,7 @@ identity:
 | the chart | `build-chart.yml` — the reusable chart lane | `…/build-chart.yml@refs/tags/vX.Y.Z` (the release pipeline's chart leg) | `…/build-chart.yml@refs/heads/main` (a `workflow_dispatch` chart-only publish) |
 | the release binaries | `release-build.yml` | `…/release-build.yml@refs/tags/vX.Y.Z` | *(none; the lane only runs on a tag)* |
 
-All three prefixed with `https://github.com/rubentalstra/FerroEHR/.github/workflows/`,
+All three prefixed with `https://github.com/FerroHEALTH/FerroEHR/.github/workflows/`,
 and all with issuer `https://token.actions.githubusercontent.com`.
 
 The release binaries are signed by `release-build.yml` rather than by the release
@@ -103,7 +103,7 @@ names the workflow that owns the build definition, which is what makes the
 
 **Pick the ref set deliberately, because the choice is a refusal.** A policy
 matching `refs/tags/v…` only admits released images and **refuses
-`ghcr.io/rubentalstra/ferroehr:main`**, correct for production, and the
+`ghcr.io/ferrohealth/ferroehr:main`**, correct for production, and the
 reason a policy tested against `:main` appears broken when it is working. A
 staging cluster that runs `:main` needs both refs. Nothing accepts an
 arbitrary branch: `refs/heads/main` is exact, not a prefix match.
@@ -147,9 +147,9 @@ spec:
               namespaces: [ferroehr]
       verifyImages:
         - imageReferences:
-            - "ghcr.io/rubentalstra/ferroehr"
-            - "ghcr.io/rubentalstra/ferroehr:*"
-            - "ghcr.io/rubentalstra/ferroehr-viewer*"
+            - "ghcr.io/ferrohealth/ferroehr"
+            - "ghcr.io/ferrohealth/ferroehr:*"
+            - "ghcr.io/ferrohealth/ferroehr-viewer*"
           # Sigstore bundle format, GitHub Artifact Attestations. Omitting
           # this defaults to Cosign, which looks for a signature that does not
           # exist and refuses every image.
@@ -165,7 +165,7 @@ spec:
                         # Released images only. For a staging cluster that runs
                         # the development tag, make the group
                         # `(heads/main|tags/v.+)`.
-                        subjectRegExp: '^https://github\.com/rubentalstra/FerroEHR/\.github/workflows/containers\.yml@refs/(tags/v.+)$'
+                        subjectRegExp: '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/containers\.yml@refs/(tags/v.+)$'
                         rekor:
                           url: https://rekor.sigstore.dev
               conditions:
@@ -175,7 +175,7 @@ spec:
                       value: https://actions.github.io/buildtypes/workflow/v1
 ```
 
-Add `ghcr.io/rubentalstra/ferroehr-postgres*` to `imageReferences` only if you run
+Add `ghcr.io/ferrohealth/ferroehr-postgres*` to `imageReferences` only if you run
 that image in the namespace; the chart never installs it.
 
 `failureAction` sits on the `verifyImages` entry: the spec-level
@@ -202,7 +202,7 @@ metadata:
   name: ferroehr-image-provenance
 spec:
   images:
-    - glob: "ghcr.io/rubentalstra/ferroehr**"
+    - glob: "ghcr.io/ferrohealth/ferroehr**"
   authorities:
     - keyless:
         url: https://fulcio.sigstore.dev
@@ -210,7 +210,7 @@ spec:
           - issuer: https://token.actions.githubusercontent.com
             # Same group as the Kyverno policy: `(heads/main|tags/v.+)` for a
             # staging cluster that runs the development tag.
-            subjectRegExp: '^https://github\.com/rubentalstra/FerroEHR/\.github/workflows/containers\.yml@refs/(tags/v.+)$'
+            subjectRegExp: '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/containers\.yml@refs/(tags/v.+)$'
       signatureFormat: bundle
       attestations:
         - name: require-slsa-provenance
@@ -250,9 +250,9 @@ Add `--signer-workflow` to insist on the lane as well as the repository; without
 it you are trusting that *some* workflow here signed the image:
 
 ```shell
-gh attestation verify oci://ghcr.io/rubentalstra/ferroehr:main \
-  -R rubentalstra/FerroEHR \
-  --signer-workflow rubentalstra/FerroEHR/.github/workflows/build-image.yml
+gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:main \
+  -R FerroHEALTH/FerroEHR \
+  --signer-workflow FerroHEALTH/FerroEHR/.github/workflows/build-image.yml
 ```
 
 Substitute a `vX.Y.Z` tag for `main` on a release; the signer workflow is the
@@ -310,8 +310,8 @@ reader can check rather than trust:
 | Dockerfile linting | hadolint, with adjudicated exceptions in `.hadolint.yaml` | the `Dockerfile lint` job |
 | Secret + misconfiguration scanning | Trivy's `secret` and `misconfig` scanners over the tree | the `tree-scan` job |
 | Dependency advisories | `cargo deny` on every change, plus a scheduled latest-dependencies lane | `cargo deny check` |
-| Signed images | a Sigstore keyless SLSA v1 provenance attestation per image | `gh attestation verify oci://ghcr.io/rubentalstra/ferroehr:<tag> -R rubentalstra/FerroEHR` |
-| Signed chart | an attestation plus a cosign signature over the chart digest, both read back from the registry before the lane reports success | `gh attestation verify oci://ghcr.io/rubentalstra/charts/ferroehr:<version> -R rubentalstra/FerroEHR` |
+| Signed images | a Sigstore keyless SLSA v1 provenance attestation per image | `gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:<tag> -R FerroHEALTH/FerroEHR` |
+| Signed chart | an attestation plus a cosign signature over the chart digest, both read back from the registry before the lane reports success | `gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:<version> -R FerroHEALTH/FerroEHR` |
 | SBOM | an SPDX SBOM written onto the image index by the builder; a CycloneDX dependency-graph SBOM attached **and Sigstore-attested** per released binary | `docker buildx imagetools inspect <image> --format '{{json .SBOM}}'` |
 | Adjudicated findings carry their argument | OpenVEX documents under `security/vex/`, applied by the scheduled scan | read the `impact_statement` in the document |
 | Secured CI/CD | every `uses:` digest-pinned, `permissions: {}` by default, no context interpolated into a shell, zizmor and CodeQL over the workflows themselves | the `zizmor` job |

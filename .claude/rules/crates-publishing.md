@@ -134,7 +134,7 @@ every member is verified together.
 - **Trusted Publishing matches the top-level workflow FILENAME**, so each of
   the nine crates carries two publisher entries on crates.io, one naming
   `release.yml` and one naming `publish-crates.yml`, both under repository
-  `rubentalstra/FerroEHR` and environment `crates-io`. A missing entry is
+  `FerroHEALTH/FerroEHR` and environment `crates-io`. A missing entry is
   refused at the token exchange. Adding the entries and the environment
   reviewer are owner clicks.
 - The full procedure, including the manual first-release exception, lives in

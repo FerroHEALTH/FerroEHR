@@ -1,6 +1,6 @@
 [package]
 name = "openehr-term"
-version = "0.0.74"
+version = "0.0.75"
 description = "openEHR TERM terminology data model, generated from BMM (generation v3_1 = TERM 3.1.0), plus the embedded official terminology XML bundle"
 edition.workspace = true
 rust-version.workspace = true
@@ -33,7 +33,7 @@ include = [
 ]
 
 [dependencies]
-openehr-base = { path = "../openehr-base", version = "0.0.74" }
+openehr-base = { path = "../openehr-base", version = "0.0.75" }
 # Canonical-JSON (de)serialization is EMITTED manual `serde` impls on the spec
 # types (`openehr-codegen -- emit-json`, into `src/json_serde.rs`) — never a
 # derive.

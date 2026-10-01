@@ -58,7 +58,7 @@ strategy:
 
 image:
   # -- Image repository. Multi-arch distroless (gcr.io/distroless/cc-debian13:nonroot base).
-  repository: ghcr.io/rubentalstra/ferroehr
+  repository: ghcr.io/ferrohealth/ferroehr
   # -- Pull policy. IfNotPresent + an immutable pinned tag/digest in production.
   pullPolicy: IfNotPresent
   # -- Image tag. Empty string falls back to .Chart.appVersion. Pin a version in
@@ -338,7 +338,7 @@ backup:
   image:
     # -- Image carrying `pg_dump`. The project's own PostgreSQL 18 image, so the
     # dump is taken by the same major version the server runs against.
-    repository: ghcr.io/rubentalstra/ferroehr-postgres
+    repository: ghcr.io/ferrohealth/ferroehr-postgres
     # -- Pull policy.
     pullPolicy: IfNotPresent
     # -- Image tag. Empty falls back to .Chart.appVersion, as the server's does.
@@ -1095,7 +1095,7 @@ viewer:
   replicaCount: 1
   image:
     # -- Viewer image repository.
-    repository: ghcr.io/rubentalstra/ferroehr-viewer
+    repository: ghcr.io/ferrohealth/ferroehr-viewer
     # -- Pull policy.
     pullPolicy: IfNotPresent
     # -- Image tag. Empty falls back to .Chart.appVersion, so the viewer and

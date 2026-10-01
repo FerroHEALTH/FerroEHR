@@ -86,7 +86,7 @@ jobs:
           pinned-cli-version: v3.17.16
           # Pinned, or the CLI derives the project name from the git remote and
           # files results under a project literally named
-          # "https://github.com/rubentalstra/FerroEHR". A stable name keeps the
+          # "https://github.com/FerroHEALTH/FerroEHR". A stable name keeps the
           # dashboard, the badge and this lane pointing at one place.
           project: FerroEHR
           # The SOURCE branch, never the merge ref. `github.ref_name` is the

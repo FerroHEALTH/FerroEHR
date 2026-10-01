@@ -385,7 +385,7 @@ The service layer realizes the openEHR **SM Platform Service Model**
 | EHR Index | `I_EHR_INDEX` | `service::ehr_index` over `linkage.subject_ehr` | implemented |
 | Terminology | `I_TERMINOLOGY_SERVICE` | `service::terminology` (in-process `openehr-term` bundle + N simultaneously-materialised FHIR R4B servers, selected per call by an explicit terminology→provider route map with a `default` fallback; optional OAuth2 client-credentials per server; commit-time ac-code constraint-binding resolution) | implemented |
 | Message | `I_MESSAGE_SERVICE`, `I_EHR_EXTRACT_SERVICE`, `I_TDD_SERVICE` | `service::message` | implemented |
-| Subject Proxy | `I_SUBJECT_PROXY_SERVICE`, `I_DATA_BINDING` | not realised ([#3431](https://github.com/rubentalstra/FerroEHR/issues/3431)) | not realised |
+| Subject Proxy | `I_SUBJECT_PROXY_SERVICE`, `I_DATA_BINDING` | not realised ([#3431](https://github.com/FerroHEALTH/FerroEHR/issues/3431)) | not realised |
 
 | Crate | Role | Kind |
 |---|---|---|

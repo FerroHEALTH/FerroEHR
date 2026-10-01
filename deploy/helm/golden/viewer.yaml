@@ -429,7 +429,7 @@ spec:
         supplementalGroupsPolicy: Strict
       containers:
         - name: ferroehr
-          image: "ghcr.io/rubentalstra/ferroehr:4.3.1"
+          image: "ghcr.io/ferrohealth/ferroehr:4.3.1"
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -613,7 +613,7 @@ spec:
         supplementalGroupsPolicy: Strict
       containers:
         - name: viewer
-          image: "ghcr.io/rubentalstra/ferroehr-viewer:4.3.1"
+          image: "ghcr.io/ferrohealth/ferroehr-viewer:4.3.1"
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false

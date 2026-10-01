@@ -43,8 +43,8 @@ concurrency:
 # reusable lane (#2776) — a constant nothing reads is drift waiting to happen.
 env:
   REGISTRY: ghcr.io
-  APP_IMAGE: ghcr.io/${{ github.repository_owner }}/ferroehr
-  VIEWER_IMAGE: ghcr.io/${{ github.repository_owner }}/ferroehr-viewer
+  APP_IMAGE: ghcr.io/ferrohealth/ferroehr
+  VIEWER_IMAGE: ghcr.io/ferrohealth/ferroehr-viewer
 
 permissions: {}
 
@@ -276,7 +276,7 @@ jobs:
     # scripts/checks/image-labels.sh fails if the two ever disagree.
     uses: ./.github/workflows/build-image.yml
     with:
-      image: ghcr.io/${{ github.repository_owner }}/ferroehr
+      image: ghcr.io/ferrohealth/ferroehr
       defer-tags: true
       dockerfile: docker/Dockerfile
       target: runtime-prebuilt
@@ -284,7 +284,7 @@ jobs:
       labels: |
         org.opencontainers.image.title=FerroEHR
         org.opencontainers.image.description=Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1)
-        org.opencontainers.image.source=https://github.com/rubentalstra/FerroEHR
+        org.opencontainers.image.source=https://github.com/FerroHEALTH/FerroEHR
         org.opencontainers.image.url=https://ferroehr.eu/
         org.opencontainers.image.documentation=https://ferroehr.eu/docs/latest/
         org.opencontainers.image.vendor=FerroEHR
@@ -414,7 +414,7 @@ jobs:
     # The reusable SLSA Build L3 lane; see the app image above.
     uses: ./.github/workflows/build-image.yml
     with:
-      image: ghcr.io/${{ github.repository_owner }}/ferroehr-viewer
+      image: ghcr.io/ferrohealth/ferroehr-viewer
       defer-tags: true
       dockerfile: docker/viewer/Dockerfile
       target: runtime-prebuilt
@@ -423,7 +423,7 @@ jobs:
       labels: |
         org.opencontainers.image.title=FerroEHR Viewer
         org.opencontainers.image.description=Viewer for openEHR ITS-REST CDRs — pure-Rust Leptos web app (template manager, visual AQL query builder, EHR browser)
-        org.opencontainers.image.source=https://github.com/rubentalstra/FerroEHR
+        org.opencontainers.image.source=https://github.com/FerroHEALTH/FerroEHR
         org.opencontainers.image.url=https://ferroehr.eu/
         org.opencontainers.image.documentation=https://ferroehr.eu/docs/latest/
         org.opencontainers.image.vendor=FerroEHR
@@ -450,7 +450,7 @@ jobs:
     # security upgrade, #2408) executes on the non-native platform.
     uses: ./.github/workflows/build-image.yml
     with:
-      image: ghcr.io/${{ github.repository_owner }}/ferroehr-postgres
+      image: ghcr.io/ferrohealth/ferroehr-postgres
       defer-tags: true
       dockerfile: docker/postgres/Dockerfile
       context: docker/postgres
@@ -459,7 +459,7 @@ jobs:
       labels: |
         org.opencontainers.image.title=FerroEHR PostgreSQL
         org.opencontainers.image.description=PostgreSQL 18 preconfigured (role/db/schemas/extensions) for ferroehr
-        org.opencontainers.image.source=https://github.com/rubentalstra/FerroEHR
+        org.opencontainers.image.source=https://github.com/FerroHEALTH/FerroEHR
         org.opencontainers.image.url=https://ferroehr.eu/
         org.opencontainers.image.documentation=https://ferroehr.eu/docs/latest/
         org.opencontainers.image.vendor=FerroEHR
@@ -487,13 +487,13 @@ jobs:
       packages: write # pull the pushed digests, then tag them
     uses: ./.github/workflows/scan-and-tag.yml
     with:
-      app-image: ghcr.io/${{ github.repository_owner }}/ferroehr
+      app-image: ghcr.io/ferrohealth/ferroehr
       app-digest: ${{ needs.app-image.outputs.digest }}
       app-tags: ${{ needs.app-image.outputs.tags }}
-      viewer-image: ghcr.io/${{ github.repository_owner }}/ferroehr-viewer
+      viewer-image: ghcr.io/ferrohealth/ferroehr-viewer
       viewer-digest: ${{ needs.viewer-image.outputs.digest }}
       viewer-tags: ${{ needs.viewer-image.outputs.tags }}
-      postgres-image: ghcr.io/${{ github.repository_owner }}/ferroehr-postgres
+      postgres-image: ghcr.io/ferrohealth/ferroehr-postgres
       postgres-digest: ${{ needs.postgres-image.outputs.digest }}
       postgres-tags: ${{ needs.postgres-image.outputs.tags }}
 

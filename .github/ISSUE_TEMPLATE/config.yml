@@ -10,7 +10,7 @@
 blank_issues_enabled: false
 contact_links:
   - name: Question or usage help
-    url: https://github.com/rubentalstra/FerroEHR/discussions
+    url: https://github.com/FerroHEALTH/FerroEHR/discussions
     about: How do I …, is this expected, which configuration key … . Discussions, so the answer stays findable.
   - name: Documentation site
     url: https://ferroehr.eu/docs/latest/

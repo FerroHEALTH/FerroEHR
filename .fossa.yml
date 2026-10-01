@@ -46,7 +46,7 @@ version: 3
 #     project is selected by the workflow's `project:` input, which is one
 #     place rather than half here and half there; unpinned, the CLI names it
 #     after the git remote and files results under a project literally called
-#     "https://github.com/rubentalstra/FerroEHR", which is how a duplicate
+#     "https://github.com/FerroHEALTH/FerroEHR", which is how a duplicate
 #     appeared beside the hosted integration's.
 #   revision.branch/.commit  — passed by the workflow, which is the only place
 #     that knows the event. `github.head_ref || github.ref_name` there keeps a

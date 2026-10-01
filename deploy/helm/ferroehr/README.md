@@ -32,7 +32,7 @@ The chart is published as an **OCI artifact**. There is no chart repository
 to add; `helm repo add` does not apply to this chart:
 
 ```console
-helm install ferroehr oci://ghcr.io/rubentalstra/charts/ferroehr \
+helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
   --version 10.1.3 \
   --namespace ferroehr --create-namespace \
   --set database.existingSecret=ferroehr-db \
@@ -59,18 +59,18 @@ The chart carries two keyless Sigstore artifacts, and they answer different
 questions. A **cosign signature:** who signed this:
 
 ```console
-cosign verify ghcr.io/rubentalstra/charts/ferroehr:10.1.3 \
-  --certificate-identity-regexp '^https://github\.com/rubentalstra/FerroEHR/\.github/workflows/publish-chart\.yml@' \
+cosign verify ghcr.io/ferrohealth/charts/ferroehr:10.1.3 \
+  --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/publish-chart\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
 
 A **SLSA build provenance attestation:** what source it was built from, and how:
 
 ```console
-gh attestation verify oci://ghcr.io/rubentalstra/charts/ferroehr:10.1.3 \
-  -R rubentalstra/FerroEHR
-gh attestation verify oci://ghcr.io/rubentalstra/ferroehr:4.3.1 \
-  -R rubentalstra/FerroEHR
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:10.1.3 \
+  -R FerroHEALTH/FerroEHR
+gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:4.3.1 \
+  -R FerroHEALTH/FerroEHR
 ```
 
 `helm install --verify` does **not** apply: it reads a PGP `.prov` provenance
@@ -176,7 +176,7 @@ Kubernetes: `>=1.36.0-0`
 | backup.enabled | bool | `false` | Render the per-domain backup CronJobs: clinical, party, linkage, and audit when `database.audit.existingSecret` gives it a database of its own. Each rendered domain then needs its own `persistentVolumeClaim` below, or the render is refused. |
 | backup.image.digest | string | `""` | Image digest (`sha256:…`); wins over `tag` entirely when set. |
 | backup.image.pullPolicy | string | `"IfNotPresent"` | Pull policy. |
-| backup.image.repository | string | `"ghcr.io/rubentalstra/ferroehr-postgres"` | Image carrying `pg_dump`. The project's own PostgreSQL 18 image, so the dump is taken by the same major version the server runs against. |
+| backup.image.repository | string | `"ghcr.io/ferrohealth/ferroehr-postgres"` | Image carrying `pg_dump`. The project's own PostgreSQL 18 image, so the dump is taken by the same major version the server runs against. |
 | backup.image.tag | string | `""` | Image tag. Empty falls back to .Chart.appVersion, as the server's does. |
 | backup.linkage.existingSecret | string | `""` | REQUIRED when enabled: Secret holding the linkage BACKUP DSN — a role read-only on the linkage schema, and a DIFFERENT role from the other two. This credential reads the map from a party to its EHR, the additional information that re-identifies a pseudonymised record, so it is the narrowest of the three. |
 | backup.linkage.existingSecretKey | string | `"FERROEHR__STORAGE__LINKAGE__URL"` | Key within `existingSecret` carrying that DSN. The name follows its two siblings and matches the server's own `database.linkage.existingSecretKey` for the linkage POOL, but this must be a different Secret holding the backup role's DSN: the pool's credential cannot dump the table. The probe restores this dump and checks the map's temporal key and forced row policy. |
@@ -274,7 +274,7 @@ Kubernetes: `>=1.36.0-0`
 | hostUsers | bool | `false` | Run the pods in their own USER NAMESPACE, so container UIDs map to unprivileged host UIDs and a container escape lands as nobody rather than as the UID it ran under (KEP-127, stable v1.36 — the reason this chart's kubeVersion floor is 1.36). `false` here is the Kubernetes field spelling and means user namespaces are ON; set it to `true` to share the host's user namespace, which is the API default.  Set it to `true` if your nodes cannot support it. The requirement is a node-level one the chart cannot check: a Linux node whose container runtime implements it (containerd >= 2.0 or CRI-O >= 1.25) with idmap-mount support in the kernel. On a node without it the pod does not start — a loud failure, not a silent downgrade (https://kubernetes.io/docs/tasks/configure-pod-container/user-namespaces/). |
 | image.digest | string | `""` | Image digest (`sha256:…`). Set it and the pod runs `repository@digest`, ignoring `tag` entirely: a digest is what the provenance attestation is made over, so deploying by digest is what makes verification bind to the running image. A tag can be moved afterwards; a digest cannot. |
 | image.pullPolicy | string | `"IfNotPresent"` | Pull policy. IfNotPresent + an immutable pinned tag/digest in production. |
-| image.repository | string | `"ghcr.io/rubentalstra/ferroehr"` | Image repository. Multi-arch distroless (gcr.io/distroless/cc-debian13:nonroot base). |
+| image.repository | string | `"ghcr.io/ferrohealth/ferroehr"` | Image repository. Multi-arch distroless (gcr.io/distroless/cc-debian13:nonroot base). |
 | image.tag | string | `""` | Image tag. Empty string falls back to .Chart.appVersion. Pin a version in production, never `latest` — and prefer `digest` below, which a tag cannot be substituted for once it is set. |
 | imagePullSecrets | list | `[]` | imagePullSecrets for private registries. |
 | ingress.annotations | object | `{}` | Ingress annotations (TLS issuer, body size, timeouts — controller-specific). |
@@ -412,7 +412,7 @@ Kubernetes: `>=1.36.0-0`
 | viewer.extraEnv | list | `[]` | Extra environment for the viewer (escape hatch). |
 | viewer.image.digest | string | `""` | Image digest (`sha256:…`); wins over `tag` when set, exactly as the server's `image.digest` does. |
 | viewer.image.pullPolicy | string | `"IfNotPresent"` | Pull policy. |
-| viewer.image.repository | string | `"ghcr.io/rubentalstra/ferroehr-viewer"` | Viewer image repository. |
+| viewer.image.repository | string | `"ghcr.io/ferrohealth/ferroehr-viewer"` | Viewer image repository. |
 | viewer.image.tag | string | `""` | Image tag. Empty falls back to .Chart.appVersion, so the viewer and the server move together by default. |
 | viewer.ingress.annotations | object | `{}` | Extra annotations for the viewer Ingress. |
 | viewer.ingress.className | string | `""` | IngressClass name. |

@@ -23,7 +23,7 @@ package (English, Spanish, Japanese, Portuguese, Chinese).
 
 The types under the `v3_1` generation module each carry a `// @generated`
 header and are emitted deterministically by
-[`openehr-codegen`](https://github.com/rubentalstra/FerroEHR/tree/main/tools/openehr-codegen)
+[`openehr-codegen`](https://github.com/FerroHEALTH/FerroEHR/tree/main/tools/openehr-codegen)
 from the vendored openEHR BMM meta-model; changes to them belong in the
 emitter, never in the generated output. The terminology content is a different
 matter: the BMM declares only the data classes, so the embedded XML assets and
@@ -68,7 +68,7 @@ FerroEHR application does not apply to them.
 
 ## Part of FerroEHR
 
-This crate is the terminology layer of [FerroEHR](https://github.com/rubentalstra/FerroEHR), a pure-Rust,
+This crate is the terminology layer of [FerroEHR](https://github.com/FerroHEALTH/FerroEHR), a pure-Rust,
 openEHR-spec-conformant Clinical Data Repository (ITS-REST 1.1.0 + AQL 1.1 on
 PostgreSQL 18). The crates are usable standalone; FerroEHR is the reference
 consumer.

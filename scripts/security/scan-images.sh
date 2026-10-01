@@ -32,7 +32,7 @@ command -v trivy >/dev/null || { echo "trivy is required (brew install trivy)" >
 command -v jq >/dev/null || { echo "jq is required" >&2; exit 2; }
 
 SCAN_TAG=${SCAN_TAG:-latest}
-OWNER=${OWNER:-rubentalstra}
+OWNER=${OWNER:-ferrohealth}
 
 # Each entry is "ref|platform"; an empty platform scans the ref as built.
 targets=()

@@ -9,7 +9,7 @@ vulnerability, or open a pull request; the authoritative documents live in the
 repository and are linked below. You keep your copyright, and there is no
 separate agreement to sign; the terms a contribution lands under are set out
 in
-[CONTRIBUTING.md](https://github.com/rubentalstra/FerroEHR/blob/main/CONTRIBUTING.md)
+[CONTRIBUTING.md](https://github.com/FerroHEALTH/FerroEHR/blob/main/CONTRIBUTING.md)
 § Licensing of contributions.
 [Why FerroEHR exists](why-ferroehr.md) explains what the project offers
 the organisations that run it and build on it, and what it asks in return.
@@ -25,11 +25,11 @@ measurement from your own hardware all count.
 
 The three governing documents are kept in the repository root:
 
-- [CONTRIBUTING](https://github.com/rubentalstra/FerroEHR/blob/main/CONTRIBUTING.md)
+- [CONTRIBUTING](https://github.com/FerroHEALTH/FerroEHR/blob/main/CONTRIBUTING.md)
   — the practical rules for setup, the required checks, and pull requests.
-- [Code of conduct](https://github.com/rubentalstra/FerroEHR/blob/main/CODE_OF_CONDUCT.md)
+- [Code of conduct](https://github.com/FerroHEALTH/FerroEHR/blob/main/CODE_OF_CONDUCT.md)
   — the Contributor Covenant (v2.1) the community follows.
-- [Security policy](https://github.com/rubentalstra/FerroEHR/blob/main/SECURITY.md)
+- [Security policy](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md)
   — how to report a vulnerability privately.
 
 ## Setting up
@@ -211,7 +211,7 @@ Use the GitHub issue tracker for bugs and feature requests.
 > [!WARNING]
 > Do **not** open a public issue for a suspected security vulnerability. Report
 > it privately through
-> [GitHub's private vulnerability reporting](https://github.com/rubentalstra/FerroEHR/security/advisories/new)
+> [GitHub's private vulnerability reporting](https://github.com/FerroHEALTH/FerroEHR/security/advisories/new)
 > ("Report a vulnerability" on the repository's Security tab). Because the server
 > handles PHI-class data by design, reports about data exposure through the API,
 > AQL, telemetry, or the audit trail are in scope even when they look like "just

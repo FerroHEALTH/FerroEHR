@@ -12,6 +12,15 @@ checksum alongside each artifact. Provenance is signed through
 [Sigstore](https://www.sigstore.dev/), so you can verify it yourself, and the
 signer identity is one you can pin to a single hardened workflow.
 
+The repository moved to the `FerroHEALTH` organization on 2026-10-01.
+Releases up to and including v4.3.1 were built and signed while it was
+`rubentalstra/FerroEHR`: their attestations name that repository and their
+signer workflows sit under it, so the examples on this page, which verify
+v4.3.1, use that name. The v4.3.1 images and chart are also available under
+`ghcr.io/ferrohealth` with the same digests; verify them with
+`-R rubentalstra/FerroEHR` too, because the signature records where they were
+built.
+
 <!-- toc -->
 
 ## What a release publishes

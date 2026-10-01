@@ -29,8 +29,8 @@ places that cannot drift out of sync with the tree.
 
 | Kind of decision                   | Where it lives                                                                                                   |
 |------------------------------------|------------------------------------------------------------------------------------------------------------------|
-| What to work on next               | a [GitHub issue](https://github.com/rubentalstra/FerroEHR/issues); the open list is the worklist                 |
-| Direction and status, publicly     | the [FerroEHR Roadmap project board](https://github.com/rubentalstra/FerroEHR/projects), a view over the tracker |
+| What to work on next               | a [GitHub issue](https://github.com/FerroHEALTH/FerroEHR/issues); the open list is the worklist                 |
+| Direction and status, publicly     | the [FerroEHR Roadmap project board](https://github.com/FerroHEALTH/FerroEHR/projects), a view over the tracker |
 | Why a change looks the way it does | the pull request description that landed it, and the issue's closing comment                                     |
 | What a release contains            | [`CHANGELOG.md`](CHANGELOG.md) and the `vX.Y.Z` milestone                                                        |
 | Standing architectural rules       | [`docs/architecture.md`](docs/architecture.md) and the `CLAUDE.md` files                                         |

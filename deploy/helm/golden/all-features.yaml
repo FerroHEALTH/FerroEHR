@@ -1034,7 +1034,7 @@ spec:
         supplementalGroupsPolicy: Strict
       containers:
         - name: ferroehr
-          image: "ghcr.io/rubentalstra/ferroehr:4.3.1"
+          image: "ghcr.io/ferrohealth/ferroehr:4.3.1"
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -1476,7 +1476,7 @@ spec:
             supplementalGroupsPolicy: Strict
           containers:
             - name: pg-dump
-              image: "ghcr.io/rubentalstra/ferroehr-postgres:4.3.1"
+              image: "ghcr.io/ferrohealth/ferroehr-postgres:4.3.1"
               imagePullPolicy: IfNotPresent
               securityContext:
                 allowPrivilegeEscalation: false
@@ -1579,7 +1579,7 @@ spec:
             supplementalGroupsPolicy: Strict
           containers:
             - name: pg-dump
-              image: "ghcr.io/rubentalstra/ferroehr-postgres:4.3.1"
+              image: "ghcr.io/ferrohealth/ferroehr-postgres:4.3.1"
               imagePullPolicy: IfNotPresent
               securityContext:
                 allowPrivilegeEscalation: false
@@ -1682,7 +1682,7 @@ spec:
             supplementalGroupsPolicy: Strict
           containers:
             - name: pg-dump
-              image: "ghcr.io/rubentalstra/ferroehr-postgres:4.3.1"
+              image: "ghcr.io/ferrohealth/ferroehr-postgres:4.3.1"
               imagePullPolicy: IfNotPresent
               securityContext:
                 allowPrivilegeEscalation: false
@@ -1785,7 +1785,7 @@ spec:
             supplementalGroupsPolicy: Strict
           containers:
             - name: pg-dump
-              image: "ghcr.io/rubentalstra/ferroehr-postgres:4.3.1"
+              image: "ghcr.io/ferrohealth/ferroehr-postgres:4.3.1"
               imagePullPolicy: IfNotPresent
               securityContext:
                 allowPrivilegeEscalation: false
@@ -1970,7 +1970,7 @@ spec:
         supplementalGroupsPolicy: Strict
       containers:
         - name: migrate
-          image: "ghcr.io/rubentalstra/ferroehr:4.3.1"
+          image: "ghcr.io/ferrohealth/ferroehr:4.3.1"
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false

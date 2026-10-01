@@ -30,13 +30,13 @@ concurrency:
 
 env:
   HOSTED_BASE: https://sandbox.ferroehr.eu
-  IMAGE: ghcr.io/rubentalstra/ferroehr
+  IMAGE: ghcr.io/ferrohealth/ferroehr
   ISSUE_TITLE: "The hosted sandbox is not serving what it should"
 
 jobs:
   watch:
     name: is it up, and is it the right version
-    if: github.repository == 'rubentalstra/FerroEHR'
+    if: github.repository == 'FerroHEALTH/FerroEHR'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

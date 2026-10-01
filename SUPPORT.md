@@ -5,7 +5,7 @@ the difference between an answer and a thread nobody is paged for.
 
 ## I have a question
 
-**[GitHub Discussions](https://github.com/rubentalstra/FerroEHR/discussions)** —
+**[GitHub Discussions](https://github.com/FerroHEALTH/FerroEHR/discussions)** —
 how to configure something, whether an approach fits, what an openEHR concept
 means in this implementation, why a design is the way it is.
 
@@ -29,7 +29,7 @@ keyboard
 
 ## I found a defect
 
-**[Open an issue](https://github.com/rubentalstra/FerroEHR/issues/new/choose)**
+**[Open an issue](https://github.com/FerroHEALTH/FerroEHR/issues/new/choose)**
 — something is wrong, missing, or contradicts the openEHR specifications.
 
 The reports that get fixed fastest carry:
@@ -49,7 +49,7 @@ the implementation is the usual culprit.
 
 **Do not open a public issue.** Follow [SECURITY.md](SECURITY.md): report
 privately through
-[GitHub private vulnerability reporting](https://github.com/rubentalstra/FerroEHR/security/advisories/new).
+[GitHub private vulnerability reporting](https://github.com/FerroHEALTH/FerroEHR/security/advisories/new).
 
 That document also carries what you can expect in return (an acknowledgement
 window, an assessment window, coordinated disclosure, safe harbour for

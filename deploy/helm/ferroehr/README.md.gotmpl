@@ -32,7 +32,7 @@ The chart is published as an **OCI artifact**. There is no chart repository
 to add; `helm repo add` does not apply to this chart:
 
 ```console
-helm install ferroehr oci://ghcr.io/rubentalstra/charts/ferroehr \
+helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
   --version {{ template "chart.version" . }} \
   --namespace ferroehr --create-namespace \
   --set database.existingSecret=ferroehr-db \
@@ -59,18 +59,18 @@ The chart carries two keyless Sigstore artifacts, and they answer different
 questions. A **cosign signature:** who signed this:
 
 ```console
-cosign verify ghcr.io/rubentalstra/charts/ferroehr:{{ template "chart.version" . }} \
-  --certificate-identity-regexp '^https://github\.com/rubentalstra/FerroEHR/\.github/workflows/publish-chart\.yml@' \
+cosign verify ghcr.io/ferrohealth/charts/ferroehr:{{ template "chart.version" . }} \
+  --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/publish-chart\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
 
 A **SLSA build provenance attestation:** what source it was built from, and how:
 
 ```console
-gh attestation verify oci://ghcr.io/rubentalstra/charts/ferroehr:{{ template "chart.version" . }} \
-  -R rubentalstra/FerroEHR
-gh attestation verify oci://ghcr.io/rubentalstra/ferroehr:{{ template "chart.appVersion" . }} \
-  -R rubentalstra/FerroEHR
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:{{ template "chart.version" . }} \
+  -R FerroHEALTH/FerroEHR
+gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:{{ template "chart.appVersion" . }} \
+  -R FerroHEALTH/FerroEHR
 ```
 
 `helm install --verify` does **not** apply: it reads a PGP `.prov` provenance

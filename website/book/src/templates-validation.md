@@ -102,7 +102,7 @@ again.
 
 Whether the schema should require the element on an ordinal symbol is a question
 for openEHR, tracked at
-<https://github.com/rubentalstra/FerroEHR/issues/3401>.
+<https://github.com/FerroHEALTH/FerroEHR/issues/3401>.
 
 ## Uploading ADL 2 artefacts
 

@@ -20,7 +20,7 @@ outside local evaluation.
 
 You need Docker with the Compose plugin (2.23.1 or newer). Download
 `docker-compose.yml` (attached to every
-[release](https://github.com/rubentalstra/FerroEHR/releases/latest)) into an
+[release](https://github.com/FerroHEALTH/FerroEHR/releases/latest)) into an
 empty directory and start it:
 
 ```shell

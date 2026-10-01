@@ -127,7 +127,7 @@ COMPONENTS
   jq -r '
     def badge: {shipped:"Shipped", partial:"Partial", planned:"Planned", open:"Open question"}[.];
     def issue_links: if (.issues // []) | length == 0 then "" else
-      (" (" + ([.issues[] | "[#\(.)](https://github.com/rubentalstra/FerroEHR/issues/\(.))"] | join(", ")) + ")") end;
+      (" (" + ([.issues[] | "[#\(.)](https://github.com/FerroHEALTH/FerroEHR/issues/\(.))"] | join(", ")) + ")") end;
     .components[]
     | "| \(.name) | \(.status | badge)\(. | issue_links) | \(.note | gsub("\n"; " ")) |"
   ' "$WORK/ehds.json"
@@ -144,7 +144,7 @@ ANNEX2
   jq -r '
     def badge: {shipped:"Shipped", partial:"Partial", planned:"Planned", open:"Open question"}[.];
     def issue_links: if (.issues // []) | length == 0 then "" else
-      ([.issues[] | "[#\(.)](https://github.com/rubentalstra/FerroEHR/issues/\(.))"] | join(", ")) end;
+      ([.issues[] | "[#\(.)](https://github.com/FerroHEALTH/FerroEHR/issues/\(.))"] | join(", ")) end;
     def evidence: if (.evidence // []) | length == 0 then "—" else
       ([.evidence[] | "[\(.text)](\(.href))"] | join("; ")) end;
     def detail:
@@ -170,7 +170,7 @@ QUESTIONS
 
   jq -r '
     def issue_links: if (.issues // []) | length == 0 then "" else
-      (" Tracked in " + ([.issues[] | "[#\(.)](https://github.com/rubentalstra/FerroEHR/issues/\(.))"] | join(", ")) + ".") end;
+      (" Tracked in " + ([.issues[] | "[#\(.)](https://github.com/FerroHEALTH/FerroEHR/issues/\(.))"] | join(", ")) + ".") end;
     .open_questions[] | "- \(.question | gsub("\n"; " "))\(. | issue_links)"
   ' "$WORK/ehds.json"
 
@@ -320,7 +320,7 @@ could otherwise assume:
 
 The connector this table measures is planned to leave: FerroBRIDGE
 (<https://github.com/rubentalstra/FerroBRIDGE>) is the FHIRconnect and OMOP
-bridge, and [#3080](https://github.com/rubentalstra/FerroEHR/issues/3080)
+bridge, and [#3080](https://github.com/FerroHEALTH/FerroEHR/issues/3080)
 retires the in-tree connector once it ships. The EHDS readiness question does
 NOT leave with it — it is asked of the EHR system — so this table moves to the
 compliance chapter at that point rather than being deleted with the page it
@@ -329,7 +329,7 @@ currently sits on.
 Two of the example compositions this rests on — the patient summary and the
 imaging report — were patched by hand rather than regenerated against a
 running server, which their pack's provenance records and
-[#1724](https://github.com/rubentalstra/FerroEHR/issues/1724) tracks. They are
+[#1724](https://github.com/FerroHEALTH/FerroEHR/issues/1724) tracks. They are
 real CKM templates either way; the caveat belongs beside a claim that leans on
 them.
 OUTRO

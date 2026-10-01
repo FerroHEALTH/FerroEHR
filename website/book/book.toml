@@ -10,8 +10,8 @@ default-theme = "rust"
 preferred-dark-theme = "coal"
 additional-css = ["theme/custom.css"]
 additional-js = ["theme/mermaid.min.js", "theme/mermaid-init.js", "theme/version-picker.js"]
-git-repository-url = "https://github.com/rubentalstra/FerroEHR"
-edit-url-template = "https://github.com/rubentalstra/FerroEHR/edit/main/website/book/{path}"
+git-repository-url = "https://github.com/FerroHEALTH/FerroEHR"
+edit-url-template = "https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/{path}"
 smart-punctuation = true
 
 [output.html.search]

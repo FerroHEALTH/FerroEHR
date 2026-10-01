@@ -720,7 +720,7 @@ Plan the upgrade cadence around this, because it is short and it is deliberate:
 The consequence for change control: budget for taking every release, or budget
 for maintaining a fork. There is no third option, and the full policy (with
 the reasoning and what to do if you need something stronger) is
-[SECURITY.md](https://github.com/rubentalstra/FerroEHR/blob/main/SECURITY.md#supported-versions).
+[SECURITY.md](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions).
 
 ## Observability
 

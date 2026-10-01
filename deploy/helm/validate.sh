@@ -949,7 +949,7 @@ cat <<'BOUNDARY'
     * that the image the chart selects UNDERSTANDS those keys. `appVersion` and
       the chart's config defaults move on different clocks, so a key added
       in-tree can be rejected by the released image.
-      Run: FERROEHR_IMAGE=ghcr.io/rubentalstra/ferroehr:<tag> \
+      Run: FERROEHR_IMAGE=ghcr.io/ferrohealth/ferroehr:<tag> \
              deploy/helm/ci/boot-check.sh   [CI: the release pipeline's chart leg, on a tag]
     * that a pod STARTS, migrates the database, passes its probes and serves a
       request — config validation opens no socket. Run: the k8s-test skill

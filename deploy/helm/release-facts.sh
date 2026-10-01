@@ -25,7 +25,7 @@
 #     scripts/checks/chart-appversion.sh reads the same marker and refuses an
 #     unmarked line, so the set checked and the set rewritten are one set by
 #     construction. Matching the repository NAME instead would silently
-#     rewrite a future `ghcr.io/rubentalstra/ferroehr-<something>` built by
+#     rewrite a future `ghcr.io/ferrohealth/ferroehr-<something>` built by
 #     somebody else, and silently leave a first-party image published under
 #     another name a release behind;
 #   * README.md — a GENERATED file (helm-docs, from Chart.yaml + the `# --`

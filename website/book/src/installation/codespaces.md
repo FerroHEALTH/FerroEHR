@@ -3,7 +3,7 @@
 The fastest way to try FerroEHR is a GitHub Codespace: one click boots the
 published images in your browser, with nothing installed on your machine.
 
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/rubentalstra/FerroEHR)
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/FerroHEALTH/FerroEHR)
 
 <!-- toc -->
 

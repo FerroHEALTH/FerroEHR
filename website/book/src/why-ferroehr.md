@@ -105,7 +105,7 @@ those deployments and products possible on a sustainable footing. It is also
 how the shared, conformant foundation gets maintained by the people who build
 on it instead of every vendor rebuilding one in private. It starts with a
 conversation with the maintainer named in
-[`MAINTAINERS.md`](https://github.com/rubentalstra/FerroEHR/blob/main/MAINTAINERS.md),
+[`MAINTAINERS.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/MAINTAINERS.md),
 and that conversation is usually short. Talk to us early.
 
 ## What we ask in return
@@ -183,7 +183,7 @@ FerroEHR are built with AI coding tools, directed and reviewed by the
 maintainer, with every change held to the machine-enforced gates described
 above. The full statement — what that means, what bounds it, and what you
 can verify instead of trusting it — is the repository's
-[AI statement](https://github.com/rubentalstra/FerroEHR/blob/main/AI_STATEMENT.md).
+[AI statement](https://github.com/FerroHEALTH/FerroEHR/blob/main/AI_STATEMENT.md).
 
 ---
 

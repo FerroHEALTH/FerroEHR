@@ -100,6 +100,19 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **The repository moved to the FerroHEALTH organization**
+  (<https://github.com/FerroHEALTH/FerroEHR>, #3516); the old
+  `rubentalstra/FerroEHR` URLs redirect. Images and the Helm chart now publish
+  to `ghcr.io/ferrohealth/ferroehr`, `ghcr.io/ferrohealth/ferroehr-viewer`,
+  `ghcr.io/ferrohealth/ferroehr-postgres` and
+  `oci://ghcr.io/ferrohealth/charts/ferroehr`, and the compose files, the chart
+  and the book name those references. The v4.3.1 images and chart are copied
+  there by digest. Everything published up to v4.3.1 stays available under
+  `ghcr.io/rubentalstra`, and its signatures name `rubentalstra/FerroEHR` as the
+  repository that built it. The roadmap board is now
+  <https://github.com/orgs/FerroHEALTH/projects/2>. The nine `openehr-*` crates
+  step to 0.0.75 for their new `repository` field.
+
 - **The dependency set moves forward in one step.** OpenTelemetry goes to
   0.33 (`opentelemetry`, `opentelemetry_sdk`, `opentelemetry-otlp`,
   `opentelemetry-prometheus`) with `tracing-opentelemetry` 0.34; the OpenAPI
@@ -9914,52 +9927,52 @@ but has not yet run in production.
   seccomp, default-deny NetworkPolicy) and golden-render validation.
 
 
-[unreleased]: https://github.com/rubentalstra/FerroEHR/compare/v4.3.1...HEAD
-[4.3.1]: https://github.com/rubentalstra/FerroEHR/compare/v4.3.0...v4.3.1
-[4.3.0]: https://github.com/rubentalstra/FerroEHR/compare/v4.2.5...v4.3.0
-[4.2.5]: https://github.com/rubentalstra/FerroEHR/compare/v4.2.4...v4.2.5
-[4.2.4]: https://github.com/rubentalstra/FerroEHR/compare/v4.2.3...v4.2.4
-[4.2.3]: https://github.com/rubentalstra/FerroEHR/compare/v4.2.2...v4.2.3
-[4.2.2]: https://github.com/rubentalstra/FerroEHR/compare/v4.2.1...v4.2.2
-[4.2.1]: https://github.com/rubentalstra/FerroEHR/compare/v4.2.0...v4.2.1
-[4.2.0]: https://github.com/rubentalstra/FerroEHR/compare/v4.1.1...v4.2.0
-[4.1.1]: https://github.com/rubentalstra/FerroEHR/compare/v4.1.0...v4.1.1
-[4.1.0]: https://github.com/rubentalstra/FerroEHR/compare/v4.0.18...v4.1.0
-[4.0.18]: https://github.com/rubentalstra/FerroEHR/compare/v4.0.17...v4.0.18
-[4.0.17]: https://github.com/rubentalstra/FerroEHR/compare/v4.0.16...v4.0.17
-[4.0.16]: https://github.com/rubentalstra/FerroEHR/compare/v4.0.15...v4.0.16
-[4.0.15]: https://github.com/rubentalstra/FerroEHR/compare/v4.0.13...v4.0.15
-[4.0.13]: https://github.com/rubentalstra/FerroEHR/compare/v4.0.12...v4.0.13
-[4.0.12]: https://github.com/rubentalstra/FerroEHR/compare/v4.0.11...v4.0.12
-[4.0.11]: https://github.com/rubentalstra/FerroEHR/compare/v4.0.10...v4.0.11
-[4.0.10]: https://github.com/rubentalstra/FerroEHR/compare/v4.0.9...v4.0.10
-[4.0.9]: https://github.com/rubentalstra/FerroEHR/compare/v4.0.8...v4.0.9
-[4.0.8]: https://github.com/rubentalstra/FerroEHR/compare/v4.0.7...v4.0.8
-[4.0.7]: https://github.com/rubentalstra/FerroEHR/compare/v4.0.6...v4.0.7
-[4.0.6]: https://github.com/rubentalstra/FerroEHR/compare/v4.0.6-rc3...v4.0.6
-[4.0.6-rc3]: https://github.com/rubentalstra/FerroEHR/compare/v4.0.6-rc2...v4.0.6-rc3
-[4.0.6-rc2]: https://github.com/rubentalstra/FerroEHR/compare/v4.0.5...v4.0.6-rc2
-[4.0.5]: https://github.com/rubentalstra/FerroEHR/compare/v4.0.4...v4.0.5
-[4.0.4]: https://github.com/rubentalstra/FerroEHR/compare/v4.0.3...v4.0.4
-[4.0.3]: https://github.com/rubentalstra/FerroEHR/compare/v4.0.2...v4.0.3
-[4.0.2]: https://github.com/rubentalstra/FerroEHR/compare/v4.0.1...v4.0.2
-[4.0.1]: https://github.com/rubentalstra/FerroEHR/compare/v4.0.0...v4.0.1
-[4.0.0]: https://github.com/rubentalstra/FerroEHR/compare/v3.20.0...v4.0.0
-[3.20.0]: https://github.com/rubentalstra/FerroEHR/compare/v3.19.0...v3.20.0
-[3.19.0]: https://github.com/rubentalstra/FerroEHR/compare/v3.18.0...v3.19.0
-[3.18.0]: https://github.com/rubentalstra/FerroEHR/compare/v3.17.8...v3.18.0
-[3.17.8]: https://github.com/rubentalstra/FerroEHR/compare/v3.17.7...v3.17.8
-[3.17.7]: https://github.com/rubentalstra/FerroEHR/compare/v3.17.6...v3.17.7
-[3.17.6]: https://github.com/rubentalstra/FerroEHR/compare/v3.17.5...v3.17.6
-[3.17.5]: https://github.com/rubentalstra/FerroEHR/compare/v3.17.4...v3.17.5
-[3.17.4]: https://github.com/rubentalstra/FerroEHR/compare/v3.17.3...v3.17.4
-[3.17.3]: https://github.com/rubentalstra/FerroEHR/compare/v3.17.2...v3.17.3
-[3.17.2]: https://github.com/rubentalstra/FerroEHR/compare/v3.17.1...v3.17.2
-[3.17.1]: https://github.com/rubentalstra/FerroEHR/compare/v3.17.0...v3.17.1
-[3.17.0]: https://github.com/rubentalstra/FerroEHR/compare/v3.16.0...v3.17.0
-[3.16.0]: https://github.com/rubentalstra/FerroEHR/compare/v3.15.3...v3.16.0
-[3.15.3]: https://github.com/rubentalstra/FerroEHR/compare/v3.15.2...v3.15.3
-[3.15.2]: https://github.com/rubentalstra/FerroEHR/compare/v3.15.1...v3.15.2
+[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.1...HEAD
+[4.3.1]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.0...v4.3.1
+[4.3.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.2.5...v4.3.0
+[4.2.5]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.2.4...v4.2.5
+[4.2.4]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.2.3...v4.2.4
+[4.2.3]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.2.2...v4.2.3
+[4.2.2]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.2.1...v4.2.2
+[4.2.1]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.2.0...v4.2.1
+[4.2.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.1.1...v4.2.0
+[4.1.1]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.1.0...v4.1.1
+[4.1.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.0.18...v4.1.0
+[4.0.18]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.0.17...v4.0.18
+[4.0.17]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.0.16...v4.0.17
+[4.0.16]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.0.15...v4.0.16
+[4.0.15]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.0.13...v4.0.15
+[4.0.13]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.0.12...v4.0.13
+[4.0.12]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.0.11...v4.0.12
+[4.0.11]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.0.10...v4.0.11
+[4.0.10]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.0.9...v4.0.10
+[4.0.9]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.0.8...v4.0.9
+[4.0.8]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.0.7...v4.0.8
+[4.0.7]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.0.6...v4.0.7
+[4.0.6]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.0.6-rc3...v4.0.6
+[4.0.6-rc3]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.0.6-rc2...v4.0.6-rc3
+[4.0.6-rc2]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.0.5...v4.0.6-rc2
+[4.0.5]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.0.4...v4.0.5
+[4.0.4]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.0.3...v4.0.4
+[4.0.3]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.0.2...v4.0.3
+[4.0.2]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.0.1...v4.0.2
+[4.0.1]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.0.0...v4.0.1
+[4.0.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v3.20.0...v4.0.0
+[3.20.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v3.19.0...v3.20.0
+[3.19.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v3.18.0...v3.19.0
+[3.18.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v3.17.8...v3.18.0
+[3.17.8]: https://github.com/FerroHEALTH/FerroEHR/compare/v3.17.7...v3.17.8
+[3.17.7]: https://github.com/FerroHEALTH/FerroEHR/compare/v3.17.6...v3.17.7
+[3.17.6]: https://github.com/FerroHEALTH/FerroEHR/compare/v3.17.5...v3.17.6
+[3.17.5]: https://github.com/FerroHEALTH/FerroEHR/compare/v3.17.4...v3.17.5
+[3.17.4]: https://github.com/FerroHEALTH/FerroEHR/compare/v3.17.3...v3.17.4
+[3.17.3]: https://github.com/FerroHEALTH/FerroEHR/compare/v3.17.2...v3.17.3
+[3.17.2]: https://github.com/FerroHEALTH/FerroEHR/compare/v3.17.1...v3.17.2
+[3.17.1]: https://github.com/FerroHEALTH/FerroEHR/compare/v3.17.0...v3.17.1
+[3.17.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v3.16.0...v3.17.0
+[3.16.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v3.15.3...v3.16.0
+[3.15.3]: https://github.com/FerroHEALTH/FerroEHR/compare/v3.15.2...v3.15.3
+[3.15.2]: https://github.com/FerroHEALTH/FerroEHR/compare/v3.15.1...v3.15.2
 [3.15.1]: https://github.com/rubentalstra/ehrbase-rs/compare/v3.15.0...v3.15.1
 [3.15.0]: https://github.com/rubentalstra/ehrbase-rs/compare/v3.14.0...v3.15.0
 [3.14.0]: https://github.com/rubentalstra/ehrbase-rs/compare/v3.13.0...v3.14.0

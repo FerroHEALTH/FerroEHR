@@ -25,7 +25,7 @@ const WORDMARK: &str = r"
 |_|  \___|_|  |_|  \___/|_____|_| |_|_| \_\";
 
 /// The project's public repository.
-const PROJECT_URL: &str = "https://github.com/rubentalstra/FerroEHR";
+const PROJECT_URL: &str = "https://github.com/FerroHEALTH/FerroEHR";
 
 /// Render the full banner for the given product `version` and ACTIVE
 /// generation set.
@@ -185,7 +185,7 @@ mod tests {
         assert!(b.contains("v9.9.9"), "version must be substituted");
         assert!(b.contains("Ruben Talstra"), "maintainer credit must appear");
         assert!(
-            b.contains("https://github.com/rubentalstra/FerroEHR"),
+            b.contains("https://github.com/FerroHEALTH/FerroEHR"),
             "project URL must appear"
         );
         assert!(b.contains("Profile"));
