@@ -291,7 +291,7 @@ jobs:
         org.opencontainers.image.authors=Ruben Talstra <https://github.com/rubentalstra>
         org.opencontainers.image.licenses=BUSL-1.1
         org.opencontainers.image.base.name=gcr.io/distroless/cc-debian13:nonroot
-        org.opencontainers.image.base.digest=sha256:54df941ed0d06a1bd95ef5e0ce391fd8d9f94b64782dc9a60062727849ee3f97
+        org.opencontainers.image.base.digest=sha256:e792ab3d241a468a4fd7519ddbbebe66b49b5f365771716ea688ad40b6c6f1c2
 
   # ── Viewer: server binary per arch + the arch-independent site ──────────────
   # The WASM/JS/CSS site bundle is architecture-independent, so cargo-leptos
@@ -430,7 +430,7 @@ jobs:
         org.opencontainers.image.authors=Ruben Talstra <https://github.com/rubentalstra>
         org.opencontainers.image.licenses=BUSL-1.1
         org.opencontainers.image.base.name=gcr.io/distroless/cc-debian13:nonroot
-        org.opencontainers.image.base.digest=sha256:54df941ed0d06a1bd95ef5e0ce391fd8d9f94b64782dc9a60062727849ee3f97
+        org.opencontainers.image.base.digest=sha256:e792ab3d241a468a4fd7519ddbbebe66b49b5f365771716ea688ad40b6c6f1c2
 
   # ── PostgreSQL image (only on docker/postgres changes or tags; multi-arch) ──
   # One RUN layer (the Debian security upgrade, #2408) on top of postgres:18.6,

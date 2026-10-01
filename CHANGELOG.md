@@ -171,6 +171,13 @@ workflow refuses a tag that has no matching section here.
 
 ### Fixed
 
+- **The app and viewer images rebase onto a distroless base with the fixed
+  OpenSSL** (#3504). `gcr.io/distroless/cc-debian13:nonroot` moves to
+  `sha256:e792ab3d…`, which carries the `libssl3t64` update from DSA-6531-1
+  (CVE-2026-75804, CVE-2026-84782). The image scan refused the previous base
+  with both findings at HIGH, so the `main` images went untagged until this
+  change.
+
 - **An AQL path predicate whose node boolean opens with a parameter or an
   archetype id parses** (#3513): `CLUSTER k[$node and name/value='x']` and
   `[openEHR-EHR-CLUSTER.device.v1 or at0001]` were refused, though the
