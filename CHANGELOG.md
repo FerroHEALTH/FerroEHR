@@ -171,6 +171,11 @@ workflow refuses a tag that has no matching section here.
 
 ### Fixed
 
+- **Two `500` answers from the `openehr-its` REST server runtime carry a fixed
+  message** (#3518). An illegal response header and an answer body that does
+  not serialize put the header name or the serde error into the body the client
+  received; both now answer with a fixed text.
+
 - **The app and viewer images rebase onto a distroless base with the fixed
   OpenSSL** (#3504). `gcr.io/distroless/cc-debian13:nonroot` moves to
   `sha256:e792ab3d…`, which carries the `libssl3t64` update from DSA-6531-1
