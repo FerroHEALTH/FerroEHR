@@ -1,0 +1,601 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Verifying releases - FerroEHR Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        <!-- Content-Security-Policy as a <meta> element, because GitHub Pages serves
+             static files and cannot set response headers. A meta CSP is genuinely
+             weaker than the header: `frame-ancestors`, `report-uri` and `sandbox` are
+             IGNORED in meta form (w3c CSP3 §3.3), and it applies only after the parser
+             reaches it. It still stops an injected external script or an exfiltrating
+             `connect-src`, which is the realistic risk for a docs site, so it is worth
+             having while being honest that the site cannot carry the full header set —
+             documented on the security page. `unsafe-inline` is required: mdBook emits
+             inline theme/sidebar scripts and inline styles of its own. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <!-- Self-hosted KaTeX stylesheet (fonts under katex/fonts/) — the site
+             serves no external requests, so mdbook-katex runs with no-css = true
+             and the vendored sheet is linked here. Version 0.16.4, matching the
+             KaTeX the katex-rs renderer inside mdbook-katex bundles (its
+             KATEX-VERSION file); provenance in website/book/KATEX-PROVENANCE.md. -->
+        <link rel="stylesheet" href="katex/katex.min.css">
+
+        <meta name="description" content="User documentation for FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-e96d0476.css">
+        <link rel="stylesheet" href="css/chrome-d279d366.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom-79743c4e.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "rust";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "searchindex-9cdd67d6.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-96c4774d.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">FerroEHR Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/src/verifying-releases.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="verifying-releases"><a class="header" href="#verifying-releases">Verifying releases</a></h1>
+<p>Before you run a FerroEHR binary, image, or chart in a clinical environment,
+you should be able to answer two questions about the bytes you downloaded:
+<strong>did they arrive intact</strong>, and <strong>were they built by this project’s own release
+pipeline</strong>. This page is the operator’s procedure for both: one command per
+artifact kind, plus the deliberately-failing runs that prove your verification
+is actually checking something.</p>
+<p>Every release publishes signed build provenance, a dependency SBOM, and a plain
+checksum alongside each artifact. Provenance is signed through
+<a href="https://www.sigstore.dev/">Sigstore</a>, so you can verify it yourself, and the
+signer identity is one you can pin to a single hardened workflow.</p>
+<p>The repository moved to the <code>FerroHEALTH</code> organization on 2026-10-01, and
+v4.3.2 is the first release built there. Releases up to and including v4.3.1
+were built and signed while it was <code>rubentalstra/FerroEHR</code>, so their
+attestations name that repository: verify them with <code>-R rubentalstra/FerroEHR</code>
+and <code>--signer-workflow rubentalstra/FerroEHR/…</code>. Their images and charts were
+published under <code>ghcr.io/rubentalstra</code>. The copies of v4.3.1 under
+<code>ghcr.io/ferrohealth</code> carry the same digests, so <code>gh attestation verify</code> accepts
+them with the old repository name. Their cosign signatures exist only beside
+the originals, so run <code>cosign verify</code> against the <code>ghcr.io/rubentalstra</code> path.</p>
+<ul>
+<li><a href="#what-a-release-publishes">What a release publishes</a></li>
+<li><a href="#a-release-binary">A release binary</a></li>
+<li><a href="#prove-your-verification-can-fail">Prove your verification can fail</a></li>
+<li><a href="#a-container-image">A container image</a></li>
+<li><a href="#the-helm-chart">The Helm chart</a></li>
+<li><a href="#three-sboms-three-questions">Three SBOMs, three questions</a></li>
+<li><a href="#what-slsa-level-each-artifact-reaches">What SLSA level each artifact reaches</a></li>
+<li><a href="#the-openehr--crates">The <code>openehr-*</code> crates</a></li>
+<li><a href="#findings-a-scanner-will-report">Findings a scanner will report</a></li>
+<li><a href="#if-verification-fails">If verification fails</a></li>
+</ul>
+<h2 id="what-a-release-publishes"><a class="header" href="#what-a-release-publishes">What a release publishes</a></h2>
+<p>Substitute the release tag you downloaded for <code>&lt;tag&gt;</code> (for example
+<code>v4.3.2</code>) and the architecture for <code>&lt;arch&gt;</code> (<code>x86_64</code> or <code>aarch64</code>) throughout
+this page. Linux is the only published target.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Asset</th><th>What it is</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ferroehr-&lt;tag&gt;-&lt;arch&gt;-unknown-linux-gnu.tar.gz</code></td><td>the stripped server binary</td></tr>
+<tr><td><code>…tar.gz.sha256sum</code></td><td>a plain checksum of that tarball</td></tr>
+<tr><td><code>…tar.gz.sigstore.json</code></td><td>the Sigstore bundle for its build-provenance attestation</td></tr>
+<tr><td><code>…tar.gz.sbom.sigstore.json</code></td><td>the Sigstore bundle for its SBOM attestation</td></tr>
+<tr><td><code>…tar.gz.intoto.jsonl</code></td><td>the same provenance as one DSSE-wrapped in-toto statement per line</td></tr>
+<tr><td><code>ferroehr-&lt;tag&gt;-&lt;arch&gt;-unknown-linux-gnu.cdx.json</code></td><td>the CycloneDX dependency SBOM for that binary</td></tr>
+<tr><td><code>ferroehr-&lt;tag&gt;.spdx.json</code></td><td>the SPDX SBOM of the source tree at the release commit</td></tr>
+<tr><td><code>docker-compose.yml</code> + the Keycloak and observability overlays</td><td>the quickstart stack, so a downloader never has to clone the repository</td></tr>
+</tbody>
+</table>
+</div>
+<p>Container images and the Helm chart are published to GHCR by their own lanes and
+carry their own attestations; see <a href="#a-container-image">images</a> and
+<a href="#the-helm-chart">the chart</a> below.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>The release lane refuses to publish a release whose asset set is incomplete.
+It creates the release as a draft, attaches every asset, checks the full
+expected set is present, and only then publishes, because a published release
+is immutable on this repository, so a missing asset could never be added
+afterwards. The remedy for a bad cut is a new patch version, never a retag.</p>
+</blockquote>
+<h2 id="a-release-binary"><a class="header" href="#a-release-binary">A release binary</a></h2>
+<p><strong>The floor: the checksum.</strong> Every tarball ships a <code>.sha256sum</code> beside it, and
+this is the only verification available with neither <code>gh</code> nor <code>cosign</code> installed
+, which is a realistic constraint in a locked-down clinical environment:</p>
+<pre><code class="language-bash">sha256sum -c ferroehr-&lt;tag&gt;-&lt;arch&gt;-unknown-linux-gnu.tar.gz.sha256sum
+</code></pre>
+<p>The file records the bare filename, so this works in whatever directory you put
+the two files in. On macOS, <code>shasum -a 256 -c</code> is the same check.</p>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p>Be clear about what a checksum buys: it detects a <strong>corrupt or truncated
+download</strong>, not a substituted release, because anyone who could replace the
+tarball could replace the checksum beside it. Only the Sigstore bundle answers
+“who built this”. The checksum is a floor, not a substitute.</p>
+</blockquote>
+<p><strong>The real check: the provenance attestation.</strong></p>
+<pre><code class="language-bash">gh attestation verify ferroehr-&lt;tag&gt;-&lt;arch&gt;-unknown-linux-gnu.tar.gz \
+  -R FerroHEALTH/FerroEHR
+</code></pre>
+<p><strong>Without reaching GitHub.</strong> Each release also carries its Sigstore bundles as
+assets, so verification needs nothing but the artifact and the bundle, useful
+on an air-gapped host, and the only form in which the signature travels with the
+download:</p>
+<pre><code class="language-bash">gh attestation verify ferroehr-&lt;tag&gt;-&lt;arch&gt;-unknown-linux-gnu.tar.gz \
+  --bundle ferroehr-&lt;tag&gt;-&lt;arch&gt;-unknown-linux-gnu.tar.gz.sigstore.json \
+  --repo FerroHEALTH/FerroEHR
+</code></pre>
+<p>The <code>*.sbom.sigstore.json</code> asset beside it is the same thing for the SBOM
+attestation, so “which dependency graph was this binary built from” is
+verifiable offline too. Verifying an SBOM attestation needs one extra flag:
+<code>gh attestation verify</code> enforces the SLSA provenance predicate by default, so
+a non-provenance attestation must name its predicate type explicitly:</p>
+<pre><code class="language-bash">gh attestation verify ferroehr-&lt;tag&gt;-&lt;arch&gt;-unknown-linux-gnu.tar.gz \
+  -R FerroHEALTH/FerroEHR \
+  --predicate-type https://cyclonedx.org/bom
+</code></pre>
+<p><strong>Fully offline</strong>, with no call to GitHub at all: fetch the trusted key
+material once on a connected machine and carry it across with the bundle:</p>
+<pre><code class="language-bash">gh attestation trusted-root &gt; trusted_root.jsonl        # on a connected host
+gh attestation verify ferroehr-&lt;tag&gt;-&lt;arch&gt;-unknown-linux-gnu.tar.gz \
+  --bundle ferroehr-&lt;tag&gt;-&lt;arch&gt;-unknown-linux-gnu.tar.gz.sigstore.json \
+  --custom-trusted-root trusted_root.jsonl \
+  --repo FerroHEALTH/FerroEHR
+</code></pre>
+<p><strong>Require the hardened signer.</strong> Without a signer constraint you are trusting
+that <em>some</em> workflow in this repository signed the artifact. Pin the one that
+actually did:</p>
+<pre><code class="language-bash">gh attestation verify ferroehr-&lt;tag&gt;-&lt;arch&gt;-unknown-linux-gnu.tar.gz \
+  -R FerroHEALTH/FerroEHR \
+  --signer-workflow FerroHEALTH/FerroEHR/.github/workflows/release-build.yml
+</code></pre>
+<p>That workflow is the reusable release-build lane described under
+<a href="#what-slsa-level-each-artifact-reaches">SLSA levels</a> below.</p>
+<p><strong>The binary also describes itself.</strong> From v4.0.1 on, the shipped binary
+embeds its own compressed dependency list in a <code>.dep-v0</code> linker section
+(built with <a href="https://github.com/rust-secure-code/cargo-auditable"><code>cargo auditable</code></a>;
+the section is allocated, so it survives the release lane’s <code>strip</code>). A
+scanner that reads binaries — syft, trivy, grype, osv-scanner — recovers the
+crate graph from the artifact itself, even when the release page’s SBOM never
+travelled with it:</p>
+<pre><code class="language-bash">syft ferroehr -o cyclonedx-json   # the extracted binary, not the tarball
+</code></pre>
+<blockquote class="blockquote-tag blockquote-tag-tip">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M8 1.5c-2.363 0-4 1.69-4 3.75 0 .984.424 1.625.984 2.304l.214.253c.223.264.47.556.673.848.284.411.537.896.621 1.49a.75.75 0 0 1-1.484.211c-.04-.282-.163-.547-.37-.847a8.456 8.456 0 0 0-.542-.68c-.084-.1-.173-.205-.268-.32C3.201 7.75 2.5 6.766 2.5 5.25 2.5 2.31 4.863 0 8 0s5.5 2.31 5.5 5.25c0 1.516-.701 2.5-1.328 3.259-.095.115-.184.22-.268.319-.207.245-.383.453-.541.681-.208.3-.33.565-.37.847a.751.751 0 0 1-1.485-.212c.084-.593.337-1.078.621-1.489.203-.292.45-.584.673-.848.075-.088.147-.173.213-.253.561-.679.985-1.32.985-2.304 0-2.06-1.637-3.75-4-3.75ZM5.75 12h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1 0-1.5ZM6 15.25a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Z"></path></svg>Tip</p>
+<p><code>gh attestation verify</code> reports success by <strong>exiting zero and printing
+nothing</strong> in current <code>gh</code> versions. Check the exit status in scripts rather
+than grepping for a success message.</p>
+</blockquote>
+<h2 id="prove-your-verification-can-fail"><a class="header" href="#prove-your-verification-can-fail">Prove your verification can fail</a></h2>
+<p>A check that cannot fail proves nothing, so do both of these once, by hand,
+before you trust a passing run:</p>
+<pre><code class="language-bash"># 1. Tamper with the artifact — verification must refuse it.
+printf 'x' &gt;&gt; ferroehr-&lt;tag&gt;-&lt;arch&gt;-unknown-linux-gnu.tar.gz
+gh attestation verify ferroehr-&lt;tag&gt;-&lt;arch&gt;-unknown-linux-gnu.tar.gz \
+  --bundle ferroehr-&lt;tag&gt;-&lt;arch&gt;-unknown-linux-gnu.tar.gz.sigstore.json \
+  --repo FerroHEALTH/FerroEHR
+# → Error: verifying with issuer "sigstore.dev"; exit status 1
+
+# 2. Name a repository that did not build it — also non-zero.
+gh attestation verify … --repo someone-else/something
+</code></pre>
+<p>Re-download the tarball afterwards. Only once you have seen both refusals does a
+passing run mean something.</p>
+<p><strong>Cross-check the digest.</strong> The same digest is produced independently in three
+places, so they are worth comparing against each other rather than trusting any
+one of them:</p>
+<pre><code class="language-bash"># the published checksum file
+cat ferroehr-&lt;tag&gt;-&lt;arch&gt;-unknown-linux-gnu.tar.gz.sha256sum
+
+# the digest the provenance statement was signed over
+jq -r '.payload' ferroehr-&lt;tag&gt;-&lt;arch&gt;-unknown-linux-gnu.tar.gz.intoto.jsonl \
+  | base64 -d | jq -r '.subject[].digest.sha256'
+
+# the bytes on your disk
+sha256sum ferroehr-&lt;tag&gt;-&lt;arch&gt;-unknown-linux-gnu.tar.gz
+</code></pre>
+<h2 id="a-container-image"><a class="header" href="#a-container-image">A container image</a></h2>
+<p>The three images (<code>ferroehr</code>, <code>ferroehr-viewer</code>, <code>ferroehr-postgres</code>) each
+carry a Sigstore-signed SLSA provenance attestation, plus the SPDX SBOM and
+provenance the builder writes onto the image index itself.</p>
+<pre><code class="language-bash">gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:4.3.2 \
+  -R FerroHEALTH/FerroEHR
+</code></pre>
+<blockquote class="blockquote-tag blockquote-tag-important">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v9.5A1.75 1.75 0 0 1 14.25 13H8.06l-2.573 2.573A1.458 1.458 0 0 1 3 14.543V13H1.75A1.75 1.75 0 0 1 0 11.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h6.5a.25.25 0 0 0 .25-.25v-9.5a.25.25 0 0 0-.25-.25Zm7 2.25v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 9a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Important</p>
+<p><strong>Image tags carry no <code>v</code> prefix.</strong> A release publishes <code>4.0.0</code>, <code>3.20</code> and
+<code>latest</code> (plus a <code>sha-…</code> tag per commit), while the release <em>assets</em> are named
+after the <code>v4.0.1</code> git tag. Using <code>v4.0.1</code> as an image reference will simply
+not resolve.</p>
+</blockquote>
+<p>The development tags (<code>ghcr.io/ferrohealth/ferroehr:main</code> and its two
+siblings) are signed the same way, so you can rehearse the command against them
+before a release.</p>
+<p>Add <code>--signer-workflow FerroHEALTH/FerroEHR/.github/workflows/build-image.yml</code>
+to require the hardened image-build lane specifically rather than any
+workflow in this repository.</p>
+<p><strong>Verify by digest where it matters.</strong> A tag is mutable, so anything that
+GATES on verification (admission control, a deploy script) should resolve the
+tag once and verify the digest it resolved — otherwise the bytes verified and
+the bytes pulled can differ:</p>
+<pre><code class="language-bash">digest=$(docker buildx imagetools inspect ghcr.io/ferrohealth/ferroehr:4.3.2 \
+  | awk '/^Digest:/{print $2}')
+gh attestation verify "oci://ghcr.io/ferrohealth/ferroehr@${digest}" \
+  -R FerroHEALTH/FerroEHR
+</code></pre>
+<p>The attestation is also pushed to the registry itself, so a host with
+registry access but no GitHub API path can verify from the registry alone
+with <code>--bundle-from-oci</code>. And the SBOM the builder wrote onto the image index
+is readable without any verifier at all:</p>
+<pre><code class="language-bash">docker buildx imagetools inspect "ghcr.io/ferrohealth/ferroehr@${digest}" \
+  --format '{{ json .SBOM }}'
+</code></pre>
+<p>Enforcing this at admission time in a Kubernetes cluster is a separate job with
+its own machinery; see
+<a href="installation/hardening-supply-chain.html">Images: build, provenance, scanning</a>.</p>
+<h2 id="the-helm-chart"><a class="header" href="#the-helm-chart">The Helm chart</a></h2>
+<p>The chart carries a keyless <strong>cosign signature</strong> in addition to its provenance
+attestation. The two are not redundant: the attestation says what the chart was
+built from, the signature says who signed the artifact you pulled, and the
+signature is what Helm-ecosystem tooling looks for.</p>
+<pre><code class="language-bash">cosign verify ghcr.io/ferrohealth/charts/ferroehr:&lt;chart-version&gt; \
+  --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/build-chart\.yml@' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+</code></pre>
+<p>Both flags are the point: without an identity and an issuer, <code>cosign verify</code>
+accepts a signature from anyone in the transparency log.</p>
+<pre><code class="language-bash">gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:&lt;chart-version&gt; \
+  -R FerroHEALTH/FerroEHR \
+  --signer-workflow FerroHEALTH/FerroEHR/.github/workflows/build-chart.yml
+</code></pre>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p><strong>The chart version is not the product version.</strong> The chart runs its own
+SemVer line, so a chart version and the <code>appVersion</code> it deploys move
+independently. Read the chart’s <code>appVersion</code> to learn which server release it
+defaults to.</p>
+</blockquote>
+<p>The chart ships <strong>no</strong> PGP <code>.prov</code> file, so <code>helm install --verify</code> does not
+apply. That is deliberate: a <code>.prov</code> needs a long-lived private key in CI, and
+keyless Sigstore signing gives a consumer a stronger identity to pin without
+one.</p>
+<p>The publishing lane refuses to overwrite a chart version that already exists,
+reads both the signature and the attestation back from the registry before
+reporting success, and checks that the <code>appVersion</code> image accepts the chart’s
+rendered defaults.</p>
+<h2 id="three-sboms-three-questions"><a class="header" href="#three-sboms-three-questions">Three SBOMs, three questions</a></h2>
+<p>A release involves three SBOM documents. They are not redundant: they describe
+different things for different readers, and both kinds of review genuinely
+happen for a clinical deployment:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Document</th><th>Where</th><th>Format</th><th>Answers</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ferroehr-&lt;tag&gt;-&lt;arch&gt;-unknown-linux-gnu.cdx.json</code></td><td>a release asset, one per architecture</td><td>CycloneDX 1.5</td><td><em>what is inside the binary I am about to run?</em> Every cargo component with a <code>pkg:cargo/…</code> purl and licence, most with checksums, and the <strong>dependency edges</strong>, so “is this crate direct or four levels down” is answerable rather than guessed. This is what a vulnerability scanner consumes.</td></tr>
+<tr><td><code>ferroehr-&lt;tag&gt;.spdx.json</code></td><td>a release asset, one per release</td><td>SPDX 2.3</td><td><em>what am I redistributing, and under what terms?</em> The attribution and licence-obligation view of the source tree at the release commit, the document a legal or procurement reviewer of a multi-licence redistribution asks for.</td></tr>
+<tr><td>the image SBOM</td><td>written onto each container image index by the builder</td><td>SPDX</td><td><em>what is in the image’s OS layer?</em> Which is what matters for <code>ferroehr-postgres</code>, built on the upstream <code>postgres</code> image.</td></tr>
+</tbody>
+</table>
+</div>
+<p>CycloneDX 1.5 is the highest version the generator emits (<code>cargo-cyclonedx</code>
+accepts 1.3, 1.4 or 1.5 and defaults to 1.3, so the release lane sets it
+explicitly); it carries everything 1.6 consumers read. The repository SPDX
+document is checked at publish time for being real SPDX, naming itself
+<code>ferroehr</code>, and listing at least one package: an SBOM that answers no question
+is worse than none.</p>
+<h2 id="what-slsa-level-each-artifact-reaches"><a class="header" href="#what-slsa-level-each-artifact-reaches">What SLSA level each artifact reaches</a></h2>
+<p>The levels are the <a href="https://slsa.dev/spec/v1.2/build-requirements">SLSA v1.2 Build track</a>
+(the current spec; v1.0 is marked Retired, and the Build-track requirements
+are unchanged across those versions — GitHub’s own documentation still
+phrases the same construction against “SLSA v1.0”). They differ per artifact,
+so a table is the honest form:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Artifact</th><th>Level</th><th>Why</th></tr>
+</thead>
+<tbody>
+<tr><td>release binaries + their SBOM</td><td><strong>Build L3</strong></td><td>built and attested inside a <em>reusable</em> workflow (<code>release-build.yml</code>), so the signing material is out of reach of any caller-defined step</td></tr>
+<tr><td>container images</td><td><strong>Build L3</strong></td><td>built, pushed and attested inside a reusable workflow (<code>build-image.yml</code>); the calling jobs pass names and label text, never steps</td></tr>
+<tr><td>the Helm chart</td><td><strong>Build L3</strong></td><td>packaged, pushed, signed and attested inside a reusable workflow (<code>build-chart.yml</code>); the caller carries only triggers</td></tr>
+</tbody>
+</table>
+</div>
+<p>Images and the chart reach L3 from the first publish after v4.0.1; earlier
+artifacts were attested at Build L2 (in the job that built them), and their
+attestations verify with the repository-scoped command, not the pinned
+signer.</p>
+<p>Build L3’s distinguishing requirement is that secret material used for
+authenticating the provenance “MUST NOT be accessible to the environment
+running the user-defined build steps”. Every step of a GitHub Actions job shares one runner VM, so
+attesting inside the building job cannot satisfy it. The release lane therefore
+builds and signs inside a reusable workflow: it runs on its own VM, and a caller
+passes declared inputs; it cannot add steps. The calling job has no steps at
+all, which is what makes the property hard to lose by accident, and it is why
+<code>--signer-workflow</code> is worth passing.</p>
+<p><strong>What is still not claimed</strong>, in either lane: the isolation is GitHub’s rather
+than this project’s, and nothing here asserts a reproducible or hermetic build;
+those are separate SLSA tracks this project does not address. Provenance proves
+<em>where</em> an artifact was built, not that the source was good. Naming the boundary
+is worth more than rounding a level up.</p>
+<h2 id="the-openehr--crates"><a class="header" href="#the-openehr--crates">The <code>openehr-*</code> crates</a></h2>
+<p>The eight specification crates publish to crates.io through Trusted
+Publishing: the workflow authenticates with a short-lived OIDC token, and no
+long-lived crates.io token exists anywhere. Be precise about what that does
+and does not give you: it is <strong>authentication, not provenance</strong>. crates.io
+records and displays nothing about how a crate was built, and the Rust RFC
+that introduced Trusted Publishing lists provenance verification as
+explicitly out of scope — there is no registry-side attestation to verify,
+from this project or any other. <code>cargo</code> checks the crate’s checksum against
+the registry index, and that is the whole registry-side story. The crates’
+source of truth is this repository: the publishing lane, the tags, and the
+public history.</p>
+<h2 id="findings-a-scanner-will-report"><a class="header" href="#findings-a-scanner-will-report">Findings a scanner will report</a></h2>
+<p>Run a scanner over a FerroEHR artifact and it will report findings. Every one
+this project has assessed and accepted is published as an
+<a href="https://openvex.dev">OpenVEX</a> document under
+<a href="https://github.com/FerroHEALTH/FerroEHR/tree/main/security/vex"><code>security/vex/</code></a>,
+carrying a controlled-vocabulary justification and an impact statement you can
+check, rather than an ignore entry that records only the verdict. Point your
+tooling at them (<code>trivy --vex</code>, and most SCA platforms take an OpenVEX feed).</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Document</th><th>Covers</th></tr>
+</thead>
+<tbody>
+<tr><td><code>rust-advisories.openvex.json</code></td><td>the Rust dependency advisories: the ones the advisory gate accepts, plus one that only a <code>Cargo.lock</code>-reading scanner reports</td></tr>
+<tr><td><code>postgres-gosu.openvex.json</code></td><td>Go standard-library findings in the <code>gosu</code> helper the upstream <code>postgres</code> image ships</td></tr>
+</tbody>
+</table>
+</div>
+<p>The Rust document is <strong>generated</strong> from <code>deny.toml</code> (the gate that actually
+decides whether a build passes) joined with the published reasoning, and a CI
+job fails if the two disagree in either direction. So an advisory cannot be
+accepted without a justification reaching you, and a justification cannot claim
+something the gate does not do.</p>
+<p>One asymmetry worth knowing, because it produces findings that are real reports
+of nothing. <code>Cargo.lock</code> records the union of every dependency any feature
+combination <em>could</em> pull, so a scanner reading the lock file alone reports
+crates this project’s feature set never compiles. <code>cargo deny</code> resolves features
+and does not. Where the two disagree in that direction the feature-resolving
+tool is the more precise instrument, and the VEX document carries that argument
+for the specific crate it applies to, so you do not have to take our word for it
+in prose.</p>
+<p>The published images are additionally re-scanned on a weekly schedule at the
+tag an operator actually pulls, and a fixable high-or-critical finding both
+fails that run and files a tracker issue, because a red scheduled run nobody
+looks at is not a control.</p>
+<h2 id="if-verification-fails"><a class="header" href="#if-verification-fails">If verification fails</a></h2>
+<p>A failing verification is a security report, not a support question. Do not run
+the artifact, and follow
+<a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md">SECURITY.md</a>:
+report privately, never as a public issue. Note that only the newest release
+receives fixes; there is no maintenance branch to backport to.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="security.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="threat-model.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="security.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="threat-model.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-09f2665d.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="theme/mermaid-eefea253.min.js"></script>
+        <script src="theme/mermaid-init-ccf746f1.js"></script>
+        <script src="theme/version-picker-dddf05c1.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

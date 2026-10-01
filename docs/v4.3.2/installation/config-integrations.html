@@ -1,0 +1,593 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Integrations - FerroEHR Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        <!-- Content-Security-Policy as a <meta> element, because GitHub Pages serves
+             static files and cannot set response headers. A meta CSP is genuinely
+             weaker than the header: `frame-ancestors`, `report-uri` and `sandbox` are
+             IGNORED in meta form (w3c CSP3 §3.3), and it applies only after the parser
+             reaches it. It still stops an injected external script or an exfiltrating
+             `connect-src`, which is the realistic risk for a docs site, so it is worth
+             having while being honest that the site cannot carry the full header set —
+             documented on the security page. `unsafe-inline` is required: mdBook emits
+             inline theme/sidebar scripts and inline styles of its own. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <!-- Self-hosted KaTeX stylesheet (fonts under katex/fonts/) — the site
+             serves no external requests, so mdbook-katex runs with no-css = true
+             and the vendored sheet is linked here. Version 0.16.4, matching the
+             KaTeX the katex-rs renderer inside mdbook-katex bundles (its
+             KATEX-VERSION file); provenance in website/book/KATEX-PROVENANCE.md. -->
+        <link rel="stylesheet" href="../katex/katex.min.css">
+
+        <meta name="description" content="User documentation for FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../css/chrome-d279d366.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/custom-79743c4e.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "rust";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "../searchindex-9cdd67d6.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-96c4774d.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">FerroEHR Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/src/installation/config-integrations.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="integrations"><a class="header" href="#integrations">Integrations</a></h1>
+<p>Query execution and the four optional integrations: <code>[query]</code>, <code>[events]</code>,
+<code>[fhir]</code>, <code>[terminology]</code>, <code>[multimedia]</code>. Everything except the query knobs is
+off by default, and a disabled integration contacts nothing and mounts no
+routes. Precedence, the environment-name grammar, and file discovery are on the
+<a href="configuration.html">Configuration reference</a> index.</p>
+<ul>
+<li><a href="#query"><code>[query]</code></a></li>
+<li><a href="#events"><code>[events]</code></a></li>
+<li><a href="#fhir"><code>[fhir]</code></a></li>
+<li><a href="#terminology"><code>[terminology]</code></a>
+<ul>
+<li><a href="#several-terminology-servers-at-once">Several terminology servers at once</a></li>
+<li><a href="#authenticating-to-a-terminology-server">Authenticating to a terminology server</a></li>
+<li><a href="#mutual-tls-to-a-terminology-server">Mutual TLS to a terminology server</a></li>
+<li><a href="#archetype-value-set-bindings-at-commit">Archetype value-set bindings at commit</a></li>
+</ul>
+</li>
+<li><a href="#multimedia"><code>[multimedia]</code></a></li>
+</ul>
+<h2 id="query"><a class="header" href="#query"><code>[query]</code></a></h2>
+<p>AQL execution bounds.</p>
+<pre><code class="language-toml">[query]
+plan_cache_capacity = 256
+timeout_ms = 30000
+max_result_rows = 10000
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>plan_cache_capacity</code></td><td>int</td><td><code>256</code></td><td>Maximum distinct cached query plans; <code>0</code> disables the cache and every lookup runs the full parse-and-lower path. Cache activity is reported by the <code>aql_plan_cache_events</code> counter.</td></tr>
+<tr><td><code>timeout_ms</code></td><td>int</td><td><code>30000</code></td><td>Per-query database execution budget; <code>0</code> disables it. Overrun is refused <code>408</code>.</td></tr>
+<tr><td><code>max_result_rows</code></td><td>int</td><td><code>10000</code></td><td>The largest page one query execution serves: the page of a query nothing else bounds, and the maximum an explicit <code>LIMIT</code> or <code>fetch</code> may ask for (a larger page is refused <code>400</code>); <code>0</code> means unbounded.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong><code>timeout_ms</code> is on by default, and deliberately tighter than
+<a href="config-server.html#db"><code>db.statement_timeout_ms</code></a>.</strong> The HTTP request timeout
+cannot stand in for it: answering the client by dropping the handler does not
+cancel the statement PostgreSQL is running, so overrunning queries would keep
+holding pooled connections after their callers had been given up on. Keeping
+this budget the tighter of the two means an overrun surfaces as the engine’s own
+typed <code>408</code> rather than a driver error.</p>
+<p><strong><code>max_result_rows</code> is the largest page one execution serves.</strong> Without it,
+<code>SELECT c FROM COMPOSITION c</code> with no <code>fetch</code> generates SQL with no <code>LIMIT</code> and
+materialises every matching row: one request, unbounded allocation. A query that
+nothing else bounds takes the ceiling as its page. An explicit AQL <code>LIMIT</code> or a
+<code>fetch</code> parameter is honoured as written up to the ceiling; a page larger than the
+ceiling is refused with <code>400</code> naming the ceiling. The refusal is deliberate: a
+silently shortened page would let a client that pages with its own <code>fetch</code> as the
+stride skip the rows between the shortened page and its next <code>offset</code>, and the
+<code>RESULT_SET</code> has nothing to say so. ITS-REST leaves both the <code>fetch</code> default and
+its maximum to the implementation. A bulk consumer pages with <code>offset</code> and a
+<code>fetch</code> at or below the ceiling, or the operator raises the ceiling deliberately.</p>
+<h2 id="events"><a class="header" href="#events"><code>[events]</code></a></h2>
+<p>Contribution-outbox eventing to an AMQP broker, plus its admin API. Off by
+default; the envelopes are PHI-free by design.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>enabled</code></td><td>bool</td><td><code>false</code></td><td>Spawn the outbox publisher. Together with <code>fhir.outbound.enabled</code> it also gates the per-commit outbox INSERT, so with both off the commit path writes no outbox rows at all.</td></tr>
+<tr><td><code>url</code></td><td>secret URL</td><td><code>amqp://guest:guest@localhost:5672/%2f</code></td><td>AMQP broker URL; credentials are redacted from every rendering.</td></tr>
+<tr><td><code>url_file</code></td><td>path</td><td>unset</td><td>Read the broker URL from a file instead, for a mounted secret. At most one of the pair, where the built-in development default does not count as “set”.</td></tr>
+<tr><td><code>exchange</code></td><td>string</td><td><code>ferroehr.events</code></td><td>Topic exchange for the PHI-free envelope stream.</td></tr>
+<tr><td><code>tls</code></td><td>bool</td><td><code>false</code></td><td>Upgrade an <code>amqp://</code> URL to <code>amqps://</code> (an already-<code>amqps://</code> URL is TLS regardless).</td></tr>
+<tr><td><code>batch_size</code></td><td>int</td><td><code>128</code></td><td>Rows drained per poll.</td></tr>
+<tr><td><code>poll_interval_ms</code></td><td>int</td><td><code>1000</code></td><td>Idle poll interval.</td></tr>
+<tr><td><code>retention_days</code></td><td>int</td><td><code>7</code></td><td>Published-row retention window.</td></tr>
+<tr><td><code>prune_interval_secs</code></td><td>int</td><td><code>3600</code></td><td>Retention-prune cadence.</td></tr>
+<tr><td><code>publish_max_retries</code></td><td>int</td><td><code>3</code></td><td>Per-row publish retries before backing off.</td></tr>
+<tr><td><code>admin_api</code></td><td>bool</td><td><code>false</code></td><td>Mount the <code>/admin/event_subscription</code> CRUD routes.</td></tr>
+</tbody>
+</table>
+</div>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>Eventing needs the <code>events</code> build feature, which is on in the published binary
+and container images. A binary built with <code>--no-default-features</code> refuses at
+startup if <code>events.enabled</code> is set, rather than running with the publisher
+silently absent.</p>
+</blockquote>
+<h2 id="fhir"><a class="header" href="#fhir"><code>[fhir]</code></a></h2>
+<p>The FHIR connector: an inbound façade and an independent outbound emitter.</p>
+<p><code>[fhir]</code>: <code>api_enabled</code> (bool, <code>false</code>) mounts <code>/fhir/r4/*</code> plus the
+<code>/admin/fhir_mapping</code> CRUD; the routes answer <code>404</code> while it is off.</p>
+<p><code>[fhir.outbound]</code>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>enabled</code></td><td>bool</td><td><code>false</code></td><td>Emit mapped FHIR resources to the broker.</td></tr>
+<tr><td><code>url</code></td><td>secret URL</td><td><code>amqp://guest:guest@localhost:5672/%2f</code></td><td>AMQP broker URL; credentials redacted.</td></tr>
+<tr><td><code>url_file</code></td><td>path</td><td>unset</td><td>Read the broker URL from a mounted file instead. At most one of the pair.</td></tr>
+<tr><td><code>exchange</code></td><td>string</td><td><code>ferroehr.fhir</code></td><td>Topic exchange, deliberately distinct from the events exchange, for PHI isolation.</td></tr>
+<tr><td><code>tls</code></td><td>bool</td><td><code>false</code></td><td>Upgrade <code>amqp://</code> to <code>amqps://</code>.</td></tr>
+<tr><td><code>batch_size</code></td><td>int</td><td><code>128</code></td><td>Outbox rows scanned per poll.</td></tr>
+<tr><td><code>poll_interval_ms</code></td><td>int</td><td><code>1000</code></td><td>Idle poll interval.</td></tr>
+<tr><td><code>publish_max_retries</code></td><td>int</td><td><code>3</code></td><td>Per-message publish retries before backing off.</td></tr>
+</tbody>
+</table>
+</div>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p>The outbound stream carries <strong>PHI</strong>: its payload <em>is</em> the mapped FHIR
+resource. That is why it is a separate switch and a separate exchange from the
+PHI-free change-event stream: broker-level access control can then restrict
+the PHI-bearing stream on its own. Enable it only against a TLS,
+access-controlled broker.</p>
+</blockquote>
+<h2 id="terminology"><a class="header" href="#terminology"><code>[terminology]</code></a></h2>
+<p>The terminology extension API and external FHIR terminology servers.</p>
+<p><code>[terminology]</code>: <code>api_enabled</code> (bool, <code>false</code>) mounts the terminology extension
+API.</p>
+<p><code>[terminology.external]</code>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>enabled</code></td><td>bool</td><td><code>false</code></td><td>Materialise the configured providers. With it off, no remote provider is built and validation stays on the in-process openEHR terminology bundle.</td></tr>
+<tr><td><code>fail_on_error</code></td><td>bool</td><td><code>false</code></td><td>What an unresolvable terminology lookup does to a commit: <code>false</code> accepts it (fail-open), <code>true</code> rejects it.</td></tr>
+</tbody>
+</table>
+</div>
+<p>Enabling <code>[terminology.external]</code> with no provider configured is a boot error.</p>
+<p><code>[terminology.external.providers.&lt;name&gt;]</code>, conventionally at least <code>default</code>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>type</code></td><td>enum{fhir}</td><td><code>fhir</code></td><td>Server kind. Only FHIR R4B is supported.</td></tr>
+<tr><td><code>url</code></td><td>string</td><td>required</td><td>The server’s FHIR base URL. Empty is a boot error.</td></tr>
+<tr><td><code>operation</code></td><td>enum{validate_code,expand}</td><td><code>validate_code</code></td><td>The membership operation. <code>validate_code</code> is a direct yes/no with the least payload; <code>expand</code> plus a membership test is the fallback for servers without <code>$validate-code</code>.</td></tr>
+<tr><td><code>connect_timeout_ms</code></td><td>int</td><td><code>2000</code></td><td>TCP connect timeout.</td></tr>
+<tr><td><code>request_timeout_ms</code></td><td>int</td><td><code>10000</code></td><td>Overall request timeout.</td></tr>
+<tr><td><code>oauth2_client</code></td><td>string</td><td>unset ⇒ unauthenticated</td><td>Names an entry under <code>[terminology.external.oauth2_clients]</code>. A name with no such entry is a boot error.</td></tr>
+<tr><td><code>client_cert_path</code> / <code>client_key_path</code></td><td>path</td><td>unset</td><td>The mutual-TLS client identity; see <a href="#mutual-tls-to-a-terminology-server">below</a>.</td></tr>
+<tr><td><code>ca_bundle_path</code></td><td>path</td><td>unset</td><td>The trust anchors this server’s certificate is verified against; see <a href="#mutual-tls-to-a-terminology-server">below</a>.</td></tr>
+<tr><td><code>cache_ttl_secs</code></td><td>int</td><td><code>300</code></td><td>TTL of the per-provider response cache; a repeated validate/expand/subsumes/lookup within the window is served locally instead of one HTTPS round trip per validated code. <code>0</code> disables it.</td></tr>
+<tr><td><code>cache_capacity</code></td><td>int</td><td><code>10000</code></td><td>Maximum cached responses per provider.</td></tr>
+</tbody>
+</table>
+</div>
+<p>Cached entries are the <em>decoded</em> responses, not raw JSON: a server answer that
+is not a valid FHIR R4B <code>Parameters</code>/<code>ValueSet</code> resource (for example an
+<code>$expand</code> result missing the required <code>ValueSet.status</code> or
+<code>expansion.timestamp</code>) is treated as an upstream fault rather than partially
+read, so it takes the same path as an unreachable server and <code>fail_on_error</code>
+decides what the commit does.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>External terminology servers need the <code>fhir</code> build feature, which is on in the
+published binary and container images. A binary built with
+<code>--no-default-features</code> refuses at startup if <code>terminology.external</code> is
+enabled with any provider configured; the in-process openEHR terminology
+bundle remains available.</p>
+</blockquote>
+<h3 id="several-terminology-servers-at-once"><a class="header" href="#several-terminology-servers-at-once">Several terminology servers at once</a></h3>
+<p><strong>Every</strong> entry under <code>[terminology.external.providers]</code> is materialised at
+startup, so one instance can serve SNOMED CT from one server and LOINC or ICD
+from others. <code>[terminology.external.routes]</code> maps a terminology to the provider
+that answers for it: the key is a terminology id (<code>SNOMED-CT</code>) or a system URI
+(<code>http://snomed.info/sct</code>), matched case-insensitively as a whole string, and
+the value names a provider. A terminology with no route goes to the provider
+named <code>default</code>, or to the sole configured provider when there is exactly one. A
+route naming a provider that does not exist is a startup error, because a
+dangling route would otherwise degrade silently into “ask the default server”.</p>
+<pre><code class="language-toml">[terminology.external]
+enabled = true
+fail_on_error = false
+
+[terminology.external.providers.default]
+type = "fhir"
+url = "https://r4.ontoserver.csiro.au/fhir"
+
+[terminology.external.providers.snomed]
+type = "fhir"
+url = "https://snowstorm.example.org/fhir"
+oauth2_client = "ts-client"
+
+[terminology.external.routes]
+"SNOMED-CT" = "snomed"
+"http://snomed.info/sct" = "snomed"
+"http://loinc.org" = "default"
+</code></pre>
+<p>Routing applies everywhere terminology is consulted: the <code>/terminology/*</code>
+extension API, AQL <code>TERMINOLOGY(…)</code> resolution, and the composition-commit
+binding checks below.</p>
+<h3 id="authenticating-to-a-terminology-server"><a class="header" href="#authenticating-to-a-terminology-server">Authenticating to a terminology server</a></h3>
+<p><code>[terminology.external.oauth2_clients.&lt;name&gt;]</code> configures an OAuth2
+client-credentials client; a provider references it by name with
+<code>oauth2_client</code>. The access token is cached and re-requested shortly before it
+expires, so a validation burst costs one token request per token lifetime.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>token_url</code></td><td>string</td><td>required</td><td>The OAuth2 token endpoint. Empty is a boot error.</td></tr>
+<tr><td><code>client_id</code></td><td>string</td><td>required</td><td>The registered client identifier. Empty is a boot error.</td></tr>
+<tr><td><code>client_secret</code> / <code>client_secret_file</code></td><td>secret / path</td><td>one is required</td><td>The client secret, inline or read from a mounted file.</td></tr>
+<tr><td><code>scopes</code></td><td>list of string</td><td><code>[]</code></td><td>Scopes requested with the client-credentials grant.</td></tr>
+<tr><td><code>refresh_leeway_secs</code></td><td>int</td><td><code>30</code></td><td>How long before stated expiry the token is renewed.</td></tr>
+<tr><td><code>auth_method</code></td><td>enum{client_secret_basic,client_secret_post}</td><td><code>client_secret_basic</code></td><td>How the client authenticates at the token endpoint.</td></tr>
+</tbody>
+</table>
+</div>
+<pre><code class="language-toml">[terminology.external.oauth2_clients.ts-client]
+token_url = "https://idp.example.org/realms/ts/protocol/openid-connect/token"
+client_id = "ferroehr-cdr"
+client_secret_file = "/run/secrets/ts-client"
+scopes = ["system/*.read"]
+</code></pre>
+<h3 id="mutual-tls-to-a-terminology-server"><a class="header" href="#mutual-tls-to-a-terminology-server">Mutual TLS to a terminology server</a></h3>
+<p>A terminology server that authenticates its clients with certificates instead of
+(or in addition to) a bearer token is configured <strong>per provider</strong>, because a
+client certificate is issued by that server’s PKI: a deployment enrolled with a
+national SNOMED CT service, a commercial value-set server and an in-house FHIR
+server holds three different certificates. Repeat the same paths in each
+provider table if one identity really does serve them all.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>client_cert_path</code></td><td>PEM file with the client certificate (optionally a chain) presented to this server.</td></tr>
+<tr><td><code>client_key_path</code></td><td>PEM file with that certificate’s private key.</td></tr>
+<tr><td><code>ca_bundle_path</code></td><td>PEM bundle of the trust anchors this server’s certificate is verified against.</td></tr>
+</tbody>
+</table>
+</div>
+<pre><code class="language-toml">[terminology.external.providers.snomed]
+type = "fhir"
+url = "https://snowstorm.example.org/fhir"
+client_cert_path = "/run/secrets/ts-snomed-client.crt.pem"
+client_key_path = "/run/secrets/ts-snomed-client.key.pem"
+ca_bundle_path = "/run/secrets/ts-snomed-ca.pem"
+</code></pre>
+<p><code>client_cert_path</code> and <code>client_key_path</code> are set together; one without the
+other is a startup error, never a connection that silently presents no
+certificate. Unreadable files, a certificate file with no certificate in it and
+a key file with no key in it are startup errors too, so a broken identity never
+waits until the first validated code to surface.</p>
+<p><code>ca_bundle_path</code> <strong>replaces</strong> the default trust anchors for that provider, so a
+terminology server issued by a private PKI is pinned to that PKI instead of also
+accepting the whole public web PKI. Leave it unset to use the platform’s default
+trust store.</p>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p>There is no option to disable certificate verification. Server-certificate and
+hostname verification are always on for every provider; <code>ca_bundle_path</code>
+changes <em>which</em> anchors are trusted, never <em>whether</em> the server is verified.</p>
+</blockquote>
+<p>The client identity applies to the connection to the terminology server itself.
+An OAuth2 token endpoint (<code>oauth2_client</code>) is a different host in a different
+trust domain and keeps the default TLS stack.</p>
+<p>Kubernetes deployments mount the PEM files with the chart’s <code>config.files</code> map,
+which materialises them under <code>/etc/ferroehr/</code>.</p>
+<h3 id="archetype-value-set-bindings-at-commit"><a class="header" href="#archetype-value-set-bindings-at-commit">Archetype value-set bindings at commit</a></h3>
+<p>With <code>[terminology.external]</code> enabled, committing a COMPOSITION also resolves
+the archetype <strong>constraint bindings</strong> its template declares: where a template
+binds an <code>ac</code> code to an external terminology query, the coded value in the
+composition must be a member of the value set that query returns. The query goes
+to the server the binding’s terminology routes to.</p>
+<ul>
+<li>The code is in the value set → the commit proceeds.</li>
+<li>The code is <strong>not</strong> in the value set → <code>422</code> naming the path, the code, and
+the bound query. That is a real constraint violation, not a service failure,
+so <code>fail_on_error</code> does not change it.</li>
+<li>The value set could <strong>not be resolved</strong> (server down, error response, unknown
+value set, no provider routes to that terminology) → <code>fail_on_error</code> decides:
+<code>false</code> (the default) accepts the commit and logs a warning; <code>true</code> rejects it
+with <code>422</code>.</li>
+</ul>
+<p>With <code>[terminology.external]</code> disabled (the default) no binding is resolved
+and no request is made, so commit behaviour is exactly as if this section did
+not exist.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>The composition’s <code>terminology_id</code> is sent verbatim as the FHIR <code>system</code>
+parameter, and no openEHR specification defines a mapping between
+<code>terminology_id</code> values (<code>SNOMED-CT</code>) and FHIR system URIs
+(<code>http://snomed.info/sct</code>). If your archetypes and your terminology server
+disagree, align them in the terminology-server configuration; the CDR does
+not rewrite the value.</p>
+</blockquote>
+<h2 id="multimedia"><a class="header" href="#multimedia"><code>[multimedia]</code></a></h2>
+<p><code>DV_MULTIMEDIA</code> externalization to an S3-compatible object store. Off by
+default: blobs stay inline, byte-identical, and no object store is built or
+contacted.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>enabled</code></td><td>bool</td><td><code>false</code></td><td>Externalize large multimedia data.</td></tr>
+<tr><td><code>threshold_bytes</code></td><td>int</td><td><code>262144</code> (256 KiB)</td><td>Decoded size strictly above which data is offloaded; at or below it stays inline.</td></tr>
+<tr><td><code>endpoint</code></td><td>string</td><td>unset ⇒ default AWS endpoint resolution</td><td>S3-compatible endpoint. Must be an absolute <code>http</code>/<code>https</code> URL when set.</td></tr>
+<tr><td><code>bucket</code></td><td>string</td><td><code>openehr-multimedia</code></td><td>Target bucket for content-addressed blobs.</td></tr>
+<tr><td><code>region</code></td><td>string</td><td><code>us-east-1</code></td><td>AWS region; S3 requires one even for non-AWS endpoints.</td></tr>
+<tr><td><code>access_key_id</code></td><td>string</td><td>unset</td><td>S3 access key id. Unset, with no secret key either, runs the client anonymously.</td></tr>
+<tr><td><code>secret_access_key</code> / <code>secret_access_key_file</code></td><td>secret / path</td><td>unset</td><td>S3 secret access key. At most one of the pair.</td></tr>
+<tr><td><code>allow_http</code></td><td>bool</td><td><code>false</code></td><td>Allow plain-HTTP endpoints, development only; production S3 is HTTPS.</td></tr>
+</tbody>
+</table>
+</div>
+<p>An enabled integration whose <code>endpoint</code> is set but blank, not an absolute URL,
+or carries a scheme other than <code>http</code>/<code>https</code> is a <strong>boot error</strong>. That case is
+easy to reach by accident (an unset Compose variable expanding to nothing, or
+an empty Helm value) and used to boot cleanly and then fail on the first
+multimedia commit, so it is refused where an operator can still act on it.</p>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p>Offloaded blobs are PHI. The bucket must be private and encrypted, and reached
+over HTTPS. Multimedia externalization also needs the <code>multimedia</code> build
+feature (on in the published binary and container images); a slim build
+refuses at startup rather than silently keeping blobs inline.</p>
+</blockquote>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../installation/config-auth.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../installation/config-audit.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../installation/config-auth.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../installation/config-audit.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../theme/mermaid-eefea253.min.js"></script>
+        <script src="../theme/mermaid-init-ccf746f1.js"></script>
+        <script src="../theme/version-picker-dddf05c1.js"></script>
+
+
+
+    </div>
+    </body>
+</html>
