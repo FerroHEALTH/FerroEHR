@@ -15,6 +15,10 @@
     unused_variables,
     reason = "mechanically generated contract text: the OAS is emitted in full (every DTO, param struct and route, whether or not this workspace consumes it yet), so style and dead-code lints do not apply — the hand-written runtime and the implementing adapter carry the lint bar"
 )]
+#![allow(
+    clippy::disallowed_types,
+    reason = "adjudicated free-form JSON slots: serde_json::Value is workspace-banned (#1694); a generated carrier exists only where the spec leaves the slot open — `allow`, not `expect`, because a carrier may sit inside a feature-gated region and fire only under that feature"
+)]
 use serde::{Deserialize, Serialize};
 
 /// The `Options` transport DTO of this API group (an ITS-REST OAS
@@ -39,6 +43,10 @@ pub struct Options {
     /// The `endpoints` property of `Options`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub endpoints: Option<Vec<String>>,
+    /// The undeclared (`additionalProperties`) members of `Options`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// Parameters for `options` (path/query/header).

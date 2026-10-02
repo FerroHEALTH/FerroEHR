@@ -119,11 +119,13 @@ const SKIP_NONE_ATTR: &str = "    #[serde(skip_serializing_if = \"Option::is_non
 /// The generated field name for an OAS `additionalProperties` extension map.
 const ADDITIONAL_PROPERTIES_FIELD: &str = "additional_properties";
 
-/// Emit the flattened extension map for a DTO whose OAS schema declares
-/// `additionalProperties` (the designated extension point), or nothing when it
-/// declares `additionalProperties: false`/omits the keyword.
+/// Emit the flattened extension map for a DTO whose OAS schema leaves the
+/// object open, or nothing when it declares `additionalProperties: false`.
 ///
-/// `additionalProperties: true` carries arbitrary JSON values; an
+/// An absent keyword is an open object: OpenAPI 3.0.3 §Schema Object says
+/// "Consistent with JSON Schema, `additionalProperties` defaults to `true`",
+/// and every vendored bundle is `openapi: 3.0.3`. So an absent keyword and
+/// `additionalProperties: true` both carry arbitrary JSON values, and an
 /// `additionalProperties: <schema>` form carries that schema's Rust type. A
 /// `BTreeMap` keeps the emitted order deterministic, and `#[serde(flatten)]`
 /// puts the entries at the object's own level — which is what "additional
@@ -132,16 +134,20 @@ const ADDITIONAL_PROPERTIES_FIELD: &str = "additional_properties";
 /// is byte-identical to one emitted before this field existed.
 fn emit_additional_properties(b: &mut String, name: &str, schema: &Value, ctx: &Ctx) {
     let value_ty = match schema.get("additionalProperties") {
-        Some(Value::Bool(true)) => "serde_json::Value".to_string(),
+        None | Some(Value::Bool(true)) => "serde_json::Value".to_string(),
         Some(v @ Value::Object(_)) => ctx.rust_type(v),
-        // `false`, a non-schema value, or the keyword's absence: the object is
-        // closed and gets no extension slot.
-        _ => return,
+        // `false` closes the object, which gets `deny_unknown_fields` instead.
+        Some(_) => return,
+    };
+    let declared = if schema.get("additionalProperties").is_some() {
+        "declares as an extension point"
+    } else {
+        "leaves open (no `additionalProperties`, which defaults to `true`)"
     };
     let _ = write!(
         b,
         "    /// The undeclared (`additionalProperties`) members of `{name}`, which\n\
-         \x20   /// its ITS-REST OAS component schema declares as an extension point.\n\
+         \x20   /// its ITS-REST OAS component schema {declared}.\n\
          \x20   #[serde(flatten)]\n\
          \x20   pub {ADDITIONAL_PROPERTIES_FIELD}: std::collections::BTreeMap<String, {value_ty}>,\n"
     );

@@ -174,6 +174,7 @@ fn result_set(q: &str) -> query::ResultSet {
         q: Some(q.to_owned()),
         columns: None,
         rows: vec![vec![json!(1)]],
+        additional_properties: std::collections::BTreeMap::new(),
     }
 }
 

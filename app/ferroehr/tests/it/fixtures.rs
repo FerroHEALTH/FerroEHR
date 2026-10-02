@@ -129,8 +129,10 @@ pub(crate) fn uv<T: serde::de::DeserializeOwned>(
             change_type: change_type_coded(change_code),
             description: None,
             committer: committer_proxy(TESTER),
+            additional_properties: std::collections::BTreeMap::new(),
         }),
         signature: None,
+        additional_properties: std::collections::BTreeMap::new(),
     }
 }
 

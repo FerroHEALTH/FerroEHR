@@ -69,8 +69,10 @@ fn uv<T: serde::de::DeserializeOwned>(data: &Value, change_code: &str) -> Update
                 &json!({ "_type": "PARTY_IDENTIFIED", "name": "event tester" }),
             )
             .expect("committer"),
+            additional_properties: std::collections::BTreeMap::new(),
         }),
         signature: None,
+        additional_properties: std::collections::BTreeMap::new(),
     }
 }
 

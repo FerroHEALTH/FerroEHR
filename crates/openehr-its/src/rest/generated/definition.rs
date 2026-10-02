@@ -36,6 +36,10 @@ pub struct TemplateMetadata {
     pub archetype_id: String,
     /// The `created_timestamp` property of `TemplateMetadata`.
     pub created_timestamp: String,
+    /// The undeclared (`additionalProperties`) members of `TemplateMetadata`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `TemplateList` ITS-REST OAS component schema (a non-object shape, so
@@ -52,6 +56,10 @@ pub type OperationalTemplate = std::collections::BTreeMap<String, serde_json::Va
 pub struct LocalizedNames {
     /// The `en` property of `LocalizedNames`.
     pub en: String,
+    /// The undeclared (`additionalProperties`) members of `LocalizedNames`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `LocalizedDescriptions` transport DTO of this API group (an ITS-REST OAS
@@ -60,6 +68,10 @@ pub struct LocalizedNames {
 pub struct LocalizedDescriptions {
     /// The `sl` property of `LocalizedDescriptions`.
     pub sl: String,
+    /// The undeclared (`additionalProperties`) members of `LocalizedDescriptions`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `LocalizedNames1` transport DTO of this API group (an ITS-REST OAS
@@ -68,6 +80,10 @@ pub struct LocalizedDescriptions {
 pub struct LocalizedNames1 {
     /// The `sl` property of `LocalizedNames1`.
     pub sl: String,
+    /// The undeclared (`additionalProperties`) members of `LocalizedNames1`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `LocalizedNames2` transport DTO of this API group (an ITS-REST OAS
@@ -79,6 +95,10 @@ pub struct LocalizedNames2 {
     /// The `en` property of `LocalizedNames2`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub en: Option<String>,
+    /// The undeclared (`additionalProperties`) members of `LocalizedNames2`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `Annotations` transport DTO of this API group (an ITS-REST OAS
@@ -91,6 +111,10 @@ pub struct Annotations {
     /// The `default` property of `Annotations`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub default: Option<String>,
+    /// The undeclared (`additionalProperties`) members of `Annotations`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `Precision` transport DTO of this API group (an ITS-REST OAS
@@ -107,6 +131,10 @@ pub struct Precision {
     pub max_op: String,
     /// The `max` property of `Precision`.
     pub max: i64,
+    /// The undeclared (`additionalProperties`) members of `Precision`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `Range` transport DTO of this API group (an ITS-REST OAS
@@ -125,6 +153,10 @@ pub struct Range {
     /// The `max` property of `Range`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max: Option<i64>,
+    /// The undeclared (`additionalProperties`) members of `Range`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `Validation` transport DTO of this API group (an ITS-REST OAS
@@ -137,6 +169,10 @@ pub struct Validation {
     /// The `range` property of `Validation`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub range: Option<Range>,
+    /// The undeclared (`additionalProperties`) members of `Validation`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `LocalizedLabels` transport DTO of this API group (an ITS-REST OAS
@@ -145,6 +181,10 @@ pub struct Validation {
 pub struct LocalizedLabels {
     /// The `sl` property of `LocalizedLabels`.
     pub sl: String,
+    /// The undeclared (`additionalProperties`) members of `LocalizedLabels`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `List` transport DTO of this API group (an ITS-REST OAS
@@ -166,6 +206,10 @@ pub struct List {
     #[serde(rename = "localizedDescriptions")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub localized_descriptions: Option<LocalizedDescriptions>,
+    /// The undeclared (`additionalProperties`) members of `List`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `Validation1` transport DTO of this API group (an ITS-REST OAS
@@ -177,6 +221,10 @@ pub struct Validation1 {
     /// The `precision` property of `Validation1`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub precision: Option<Precision>,
+    /// The undeclared (`additionalProperties`) members of `Validation1`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `Input` transport DTO of this API group (an ITS-REST OAS
@@ -198,6 +246,10 @@ pub struct Input {
     /// The `validation` property of `Input`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub validation: Option<Validation1>,
+    /// The undeclared (`additionalProperties`) members of `Input`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `SNOMEDCT` transport DTO of this API group (an ITS-REST OAS
@@ -209,6 +261,10 @@ pub struct Snomedct {
     /// The `terminologyId` property of `SNOMEDCT`.
     #[serde(rename = "terminologyId")]
     pub terminology_id: String,
+    /// The undeclared (`additionalProperties`) members of `SNOMEDCT`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `TermBindings` transport DTO of this API group (an ITS-REST OAS
@@ -218,6 +274,10 @@ pub struct TermBindings {
     /// The `SNOMED-CT` property of `TermBindings`.
     #[serde(rename = "SNOMED-CT")]
     pub snomed_ct: Snomedct,
+    /// The undeclared (`additionalProperties`) members of `TermBindings`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `Input1` transport DTO of this API group (an ITS-REST OAS
@@ -229,6 +289,10 @@ pub struct Input1 {
     /// The `suffix` property of `Input1`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub suffix: Option<String>,
+    /// The undeclared (`additionalProperties`) members of `Input1`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `Child3` transport DTO of this API group (an ITS-REST OAS
@@ -264,6 +328,10 @@ pub struct Child3 {
     /// The `name` property of `Child3`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
+    /// The undeclared (`additionalProperties`) members of `Child3`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `Child2` transport DTO of this API group (an ITS-REST OAS
@@ -316,6 +384,10 @@ pub struct Child2 {
     /// The `children` property of `Child2`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub children: Option<Vec<Child3>>,
+    /// The undeclared (`additionalProperties`) members of `Child2`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `List1` transport DTO of this API group (an ITS-REST OAS
@@ -332,6 +404,10 @@ pub struct List1 {
     /// The `localizedDescriptions` property of `List1`.
     #[serde(rename = "localizedDescriptions")]
     pub localized_descriptions: LocalizedDescriptions,
+    /// The undeclared (`additionalProperties`) members of `List1`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `Input2` transport DTO of this API group (an ITS-REST OAS
@@ -346,6 +422,10 @@ pub struct Input2 {
     /// The `list` property of `Input2`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub list: Option<Vec<List1>>,
+    /// The undeclared (`additionalProperties`) members of `Input2`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `Annotations1` transport DTO of this API group (an ITS-REST OAS
@@ -359,6 +439,10 @@ pub struct Annotations1 {
     #[serde(rename = "view:pass_through")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub view_pass_through: Option<String>,
+    /// The undeclared (`additionalProperties`) members of `Annotations1`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `Child1` transport DTO of this API group (an ITS-REST OAS
@@ -420,6 +504,10 @@ pub struct Child1 {
     #[serde(rename = "proportionTypes")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub proportion_types: Option<Vec<String>>,
+    /// The undeclared (`additionalProperties`) members of `Child1`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `List2` transport DTO of this API group (an ITS-REST OAS
@@ -433,6 +521,10 @@ pub struct List2 {
     /// The `localizedLabels` property of `List2`.
     #[serde(rename = "localizedLabels")]
     pub localized_labels: LocalizedLabels,
+    /// The undeclared (`additionalProperties`) members of `List2`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `Input3` transport DTO of this API group (an ITS-REST OAS
@@ -449,6 +541,10 @@ pub struct Input3 {
     /// The `terminology` property of `Input3`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub terminology: Option<String>,
+    /// The undeclared (`additionalProperties`) members of `Input3`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `Child` transport DTO of this API group (an ITS-REST OAS
@@ -500,6 +596,10 @@ pub struct Child {
     #[serde(rename = "inContext")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub in_context: Option<bool>,
+    /// The undeclared (`additionalProperties`) members of `Child`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `Tree` transport DTO of this API group (an ITS-REST OAS
@@ -534,6 +634,10 @@ pub struct Tree {
     pub aql_path: String,
     /// The `children` property of `Tree`.
     pub children: Vec<Child>,
+    /// The undeclared (`additionalProperties`) members of `Tree`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `WebTemplate` transport DTO of this API group (an ITS-REST OAS
@@ -552,6 +656,10 @@ pub struct WebTemplate {
     pub languages: Vec<String>,
     /// The `tree` property of `WebTemplate`.
     pub tree: Tree,
+    /// The undeclared (`additionalProperties`) members of `WebTemplate`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `TemplateIdentifier` transport DTO of this API group (an ITS-REST OAS
@@ -560,6 +668,10 @@ pub struct WebTemplate {
 pub struct TemplateIdentifier {
     /// The `template_id` property of `TemplateIdentifier`.
     pub template_id: String,
+    /// The undeclared (`additionalProperties`) members of `TemplateIdentifier`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `Versionable` ITS-REST OAS component schema: `_type`-discriminated
@@ -731,6 +843,10 @@ pub struct StoredQuery {
     pub saved: String,
     /// The `q` property of `StoredQuery`.
     pub q: super::common::Aql,
+    /// The undeclared (`additionalProperties`) members of `StoredQuery`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `QueryList` ITS-REST OAS component schema (a non-object shape, so
