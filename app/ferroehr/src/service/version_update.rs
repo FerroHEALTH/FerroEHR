@@ -253,7 +253,9 @@ pub fn direct_envelope<T>(data: T) -> UpdateVersion<T> {
             change_type: change_type_coded(change_type::CREATION),
             description: None,
             committer: system_committer(),
+            additional_properties: std::collections::BTreeMap::new(),
         }),
+        additional_properties: std::collections::BTreeMap::new(),
     }
 }
 

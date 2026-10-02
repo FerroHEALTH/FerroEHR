@@ -211,7 +211,9 @@ pub(super) fn mk_update_version<T>(
             change_type: change_type_coded(change_code),
             description: Some(plain_text(description)),
             committer: committer_proxy(),
+            additional_properties: std::collections::BTreeMap::new(),
         }),
+        additional_properties: std::collections::BTreeMap::new(),
     };
     crate::overview::committal::merge_committal_headers(&mut uv, headers)?;
     Ok(uv)

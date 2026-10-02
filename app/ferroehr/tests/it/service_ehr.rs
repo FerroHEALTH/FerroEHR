@@ -565,6 +565,7 @@ async fn ehr_creation_merges_the_committal_metadata() {
             )
             .expect("committer"),
             system_id: Some("example.openehr.systemid".to_owned()),
+            additional_properties: std::collections::BTreeMap::new(),
         }),
         // `553|incomplete|` — a legal first-version lifecycle state (master06
         // §Incomplete Content), so the merge is visible against the
@@ -635,6 +636,7 @@ async fn ehr_creation_rejects_a_change_type_that_is_not_a_creation() {
                 &json!({ "_type": "PARTY_IDENTIFIED", "name": "Dr Chart" }),
             )
             .expect("committer"),
+            additional_properties: std::collections::BTreeMap::new(),
         }),
         lifecycle_state: None,
     };

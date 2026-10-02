@@ -4,7 +4,7 @@
 
 //! Smoke test for the generated ITS-REST contract: the DTOs serde
 //! round-trip, the route table is populated, and the server trait is nameable.
-use openehr_its::rest::generated::query;
+use openehr_its::rest::generated::{common, query};
 
 /// The generated server trait is a real, nameable bound.
 fn _assert_is_trait<T: query::server::QueryApi>() {}
@@ -31,6 +31,7 @@ fn query_contract_is_usable() {
         q: None,
         columns: None,
         rows: vec![],
+        additional_properties: std::collections::BTreeMap::new(),
     };
     let s = serde_json::to_string(&rs).expect("serialize ResultSet");
     assert!(s.contains("\"rows\""));
@@ -53,6 +54,7 @@ fn absent_optional_properties_are_omitted() {
         q: None,
         columns: None,
         rows: vec![],
+        additional_properties: std::collections::BTreeMap::new(),
     };
     let value = serde_json::to_value(&rs).expect("serialize ResultSet");
     let object = value
@@ -131,6 +133,7 @@ fn array_items_keep_their_referenced_type() {
     let columns: Vec<query::ResultSetColumn> = vec![query::ResultSetColumn {
         name: "#0".to_owned(),
         path: Some("/ehr_id/value".to_owned()),
+        additional_properties: std::collections::BTreeMap::new(),
     }];
     let rs = query::ResultSet {
         meta: None,
@@ -138,6 +141,7 @@ fn array_items_keep_their_referenced_type() {
         q: None,
         columns: Some(columns),
         rows: vec![vec![serde_json::Value::Null]],
+        additional_properties: std::collections::BTreeMap::new(),
     };
     let value = serde_json::to_value(&rs).expect("serialize ResultSet");
     assert_eq!(
@@ -153,4 +157,44 @@ fn array_items_keep_their_referenced_type() {
     let columns = back.columns.expect("columns round-trip");
     assert_eq!(columns.len(), 1);
     assert_eq!(columns[0].name, "#0");
+}
+
+/// `Error` sets no `additionalProperties`, which OpenAPI 3.0.3 §Schema Object
+/// defaults to `true`: a body carrying members beyond `message` and
+/// `validationErrors` decodes with them kept and encodes them back at the
+/// object's own level.
+#[test]
+fn error_round_trips_members_beyond_its_declared_two() {
+    let wire = serde_json::json!({
+        "message": "the request body is not a COMPOSITION",
+        "validationErrors": ["/content[0]: required"],
+        "error": "Bad Request",
+        "code": "INVALID_BODY",
+        "request_id": "01JABCDEF",
+    });
+    let error: common::Error = serde_json::from_value(wire.clone()).expect("deserialize Error");
+    assert_eq!(error.message, "the request body is not a COMPOSITION");
+    assert_eq!(error.validation_errors, vec!["/content[0]: required"]);
+    assert_eq!(
+        error.additional_properties.keys().collect::<Vec<_>>(),
+        vec!["code", "error", "request_id"],
+        "every undeclared member is kept"
+    );
+    assert_eq!(
+        serde_json::to_value(&error).expect("serialize Error"),
+        wire,
+        "the members round-trip unchanged"
+    );
+}
+
+/// A schema that declares `additionalProperties: false` stays closed: the DTO
+/// refuses an undeclared member rather than collecting it.
+#[test]
+fn a_closed_schema_refuses_an_undeclared_member() {
+    let wire = serde_json::json!({"key": "k", "colour": "red"});
+    let refused = serde_json::from_value::<common::UpdateItemTag>(wire);
+    assert!(
+        refused.is_err(),
+        "UpdateItemTag is additionalProperties: false"
+    );
 }

@@ -159,6 +159,7 @@ impl SystemManifest {
             restapi_specs_version: Some(self.config.restapi_specs_version.clone()),
             conformance_profile: Some(self.config.conformance_profile.clone()),
             endpoints: Some(self.endpoints.clone()),
+            additional_properties: std::collections::BTreeMap::new(),
         }
     }
 
@@ -317,6 +318,7 @@ mod tests {
             restapi_specs_version: Some("r".to_owned()),
             conformance_profile: Some("p".to_owned()),
             endpoints: Some(endpoints.clone()),
+            additional_properties: std::collections::BTreeMap::new(),
         })
         .expect("wire carrier serializes");
         assert_eq!(

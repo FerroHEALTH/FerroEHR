@@ -188,6 +188,7 @@ pub(in crate::service) fn canonicalize<T: serde::Serialize>(
         attestations: version.attestations,
         data: openehr_its::json::to_canonical_value(&version.data),
         commit_audit: version.commit_audit,
+        additional_properties: version.additional_properties,
     }
 }
 
@@ -215,6 +216,7 @@ fn resolve_envelope(
         commit_audit,
         signature,
         preceding_version_uid: _,
+        additional_properties: _,
     } = version;
     let audit = crate::versioning::audit::AuditInput::from_update(
         &commit_audit,

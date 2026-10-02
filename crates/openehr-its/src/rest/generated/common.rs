@@ -15,6 +15,10 @@
     unused_variables,
     reason = "mechanically generated contract text: the OAS is emitted in full (every DTO, param struct and route, whether or not this workspace consumes it yet), so style and dead-code lints do not apply — the hand-written runtime and the implementing adapter carry the lint bar"
 )]
+#![expect(
+    clippy::disallowed_types,
+    reason = "adjudicated free-form JSON slots: serde_json::Value is workspace-banned (#1694); a generated carrier exists only where the spec leaves the slot open, and each adjudicated field's NOTE names its citation"
+)]
 use serde::{Deserialize, Serialize};
 
 /// The `Error` transport DTO of this API group (an ITS-REST OAS
@@ -29,6 +33,10 @@ pub struct Error {
     #[serde(rename = "validationErrors")]
     #[serde(default)]
     pub validation_errors: Vec<String>,
+    /// The undeclared (`additionalProperties`) members of `Error`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `AbstractEntry` ITS-REST OAS component schema: `_type`-discriminated
@@ -197,6 +205,10 @@ pub struct UpdateItemTag {
 pub struct Identifier {
     /// The `uid` property of `Identifier`.
     pub uid: String,
+    /// The undeclared (`additionalProperties`) members of `Identifier`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `UpdateAudit` transport DTO of this API group (an ITS-REST OAS
@@ -216,6 +228,10 @@ pub struct UpdateAuditData {
     pub description: Option<openehr_rm::v1_2::data_types::text::dv_text::DvText>,
     /// The `committer` property of `UpdateAudit`.
     pub committer: openehr_rm::v1_2::common::generic::party_proxy::PartyProxy,
+    /// The undeclared (`additionalProperties`) members of `UpdateAudit`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `UpdateAudit` ITS-REST OAS component schema: `_type`-discriminated
@@ -334,6 +350,10 @@ pub struct UpdateAttestation {
     pub reason: openehr_rm::v1_2::data_types::text::dv_text::DvText,
     /// The `is_pending` property of `UpdateAttestation`.
     pub is_pending: bool,
+    /// The undeclared (`additionalProperties`) members of `UpdateAttestation`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `UpdateVersion` transport DTO of this API group (an ITS-REST OAS
@@ -356,4 +376,8 @@ pub struct UpdateVersion<T> {
     pub data: T,
     /// The `commit_audit` property of `UpdateVersion`.
     pub commit_audit: UpdateAudit,
+    /// The undeclared (`additionalProperties`) members of `UpdateVersion`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }

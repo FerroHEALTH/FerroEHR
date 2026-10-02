@@ -218,6 +218,7 @@ fn merged_committal(
         change_type: unstated_code(),
         description: None,
         committer: committer.unwrap_or_else(system_committer),
+        additional_properties: std::collections::BTreeMap::new(),
     });
     apply_attrs(&mut lifecycle_state, &mut commit_audit, &attrs)?;
     Ok(Some(Committal {
@@ -386,7 +387,9 @@ mod tests {
                 change_type: change_type_coded("249"),
                 description: Some(plain_text("default")),
                 committer: party("default"),
+                additional_properties: std::collections::BTreeMap::new(),
             }),
+            additional_properties: std::collections::BTreeMap::new(),
         }
     }
 

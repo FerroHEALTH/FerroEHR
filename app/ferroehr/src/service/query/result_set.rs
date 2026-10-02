@@ -143,6 +143,7 @@ pub(super) fn result_set_json(
             ResultSetColumn {
                 name: c.name.clone(),
                 path: c.path.clone(),
+                additional_properties: std::collections::BTreeMap::new(),
             }
         })
         .collect();
@@ -172,6 +173,7 @@ pub(super) fn result_set_json(
         // into the serialized map below, so a page of documents is never
         // deep-copied by `to_value`.
         rows: Vec::new(),
+        additional_properties: std::collections::BTreeMap::new(),
     };
 
     // Every optional property the DTOs leave `None` is OMITTED, not rendered as

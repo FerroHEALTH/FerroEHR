@@ -9,11 +9,9 @@
 //! REST layer wraps it in [`RestError`] so handlers can use `?` and every error
 //! leaves the server as a structured JSON body.
 //!
-//! One body shape, uniform across every non-2xx:
-//! `{ "error", "message", "validationErrors" }` — the openEHR `Error` object's
-//! members (`schemas/others/Error.yaml`: `required: [message,
-//! validationErrors]`, additional members tolerated) plus our `error`
-//! reason-phrase extra. A semantic-validation failure populates the list with
+//! One body shape, uniform across every non-2xx: the generated openEHR `Error`
+//! (`schemas/others/Error.yaml`: `required: [message, validationErrors]`, an
+//! open object) with our `error` reason-phrase member in its extension map. A semantic-validation failure populates the list with
 //! its `"<path>: <message>"` violations; every other error carries it empty.
 //!
 //! NOTE: only the OAS `400.yaml` / `400_CONTRIBUTION.yaml` attach `Error.yaml`
@@ -27,13 +25,15 @@
               cfg(test)-only, so #[expect] would be unfulfilled in the non-test build"
 )]
 
+use std::collections::BTreeMap;
+
 use axum::response::{IntoResponse, Response};
 use http::{HeaderValue, StatusCode, header};
-use serde::Serialize;
 
 use ferroehr::service::error::{ErrorChain, ServiceError};
 use ferroehr::service::status::{CallStatusType, QUERY_TIMEOUT_TAG, SmError};
 use ferroehr::versioning::object_version_id::VersionIdError;
+use openehr_its::rest::generated::common::Error;
 use openehr_its::rest::runtime::ApiError;
 
 /// A response-rendering wrapper over the contract's [`ApiError`].
@@ -165,23 +165,25 @@ impl From<ServiceError> for RestError {
     }
 }
 
-/// The one JSON error body this server emits, uniform across every non-2xx.
+/// Serializes the one JSON error body this server emits, uniform across every
+/// non-2xx.
 ///
-/// The released assignment is narrow: only the OAS `responses/400.yaml` and
-/// `400_CONTRIBUTION.yaml` attach `schemas/others/Error.yaml` to a 400 body, and
-/// `Requests_and_responses.md` §HTTP status codes makes the body itself a MAY
-/// with no shape. Every other status's body is our own design, kept uniform so a
-/// client parses one shape everywhere, with `error` as our extra member.
-#[derive(Debug, Serialize)]
-struct ErrorBody {
-    /// Machine-readable status label (the reason phrase, e.g. `Not Found`).
-    error: String,
-    /// Human-readable detail.
-    message: String,
-    /// Per-path violations (`"<path>: <message>"`), always emitted so the 400
-    /// surface satisfies `Error.yaml`'s required member list.
-    #[serde(rename = "validationErrors")]
-    validation_errors: Vec<String>,
+/// The body is the generated ITS-REST [`Error`]: `message`, `validationErrors`
+/// (always emitted, so the 400 surface satisfies `Error.yaml`'s required member
+/// list) and, in the open schema's extension map, `error`, the status's reason
+/// phrase. The released assignment is narrow: only the OAS `responses/400.yaml`
+/// and `400_CONTRIBUTION.yaml` attach `schemas/others/Error.yaml` to a 400 body,
+/// and `Requests_and_responses.md` §HTTP status codes makes the body itself a
+/// MAY with no shape. Every other status's body is our own design, kept uniform
+/// so a client parses one shape everywhere.
+fn error_body(status: StatusCode, message: String, validation_errors: Vec<String>) -> Vec<u8> {
+    let reason = status.canonical_reason().unwrap_or("Error").to_owned();
+    let body = Error {
+        message,
+        validation_errors,
+        additional_properties: BTreeMap::from([("error".to_owned(), reason.into())]),
+    };
+    serde_json::to_vec(&body).unwrap_or_else(|_| b"{}".to_vec())
 }
 
 /// Renders an arbitrary status as the `{ error, message }` openEHR error body.
@@ -190,12 +192,7 @@ struct ErrorBody {
 /// and for the transport-layer statuses whose middleware default body is aligned
 /// onto this shape ([`crate::router()`]).
 pub(crate) fn status_error_response(status: StatusCode, message: &str) -> Response {
-    let body = ErrorBody {
-        error: status.canonical_reason().unwrap_or("Error").to_owned(),
-        message: message.to_owned(),
-        validation_errors: Vec::new(),
-    };
-    let json = serde_json::to_vec(&body).unwrap_or_else(|_| b"{}".to_vec());
+    let json = error_body(status, message.to_owned(), Vec::new());
     let mut resp = (status, json).into_response();
     resp.headers_mut().insert(
         header::CONTENT_TYPE,
@@ -267,12 +264,7 @@ impl IntoResponse for RestError {
         } else {
             Vec::new()
         };
-        let body = ErrorBody {
-            error: status.canonical_reason().unwrap_or("Error").to_owned(),
-            message,
-            validation_errors,
-        };
-        let json = serde_json::to_vec(&body).unwrap_or_else(|_| b"{}".to_vec());
+        let json = error_body(status, message, validation_errors);
         let mut resp = (status, json).into_response();
         resp.headers_mut().insert(
             header::CONTENT_TYPE,

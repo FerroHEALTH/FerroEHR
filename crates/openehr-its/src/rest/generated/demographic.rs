@@ -37,6 +37,10 @@ pub struct VersionOfParty {
     pub commit_audit: openehr_rm::v1_2::common::generic::audit_details::AuditDetails,
     /// The `data` property of `VersionOfParty`.
     pub data: openehr_rm::v1_2::demographic::party::Party,
+    /// The undeclared (`additionalProperties`) members of `VersionOfParty`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `Versionable` ITS-REST OAS component schema: `_type`-discriminated
@@ -176,6 +180,10 @@ pub struct NewContribution {
     pub versions: Vec<UpdateVersion>,
     /// The `audit` property of `NewContribution`.
     pub audit: super::common::UpdateAudit,
+    /// The undeclared (`additionalProperties`) members of `NewContribution`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `ItemTagOfPerson` ITS-REST OAS component schema (a non-object shape, so

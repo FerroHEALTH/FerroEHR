@@ -143,8 +143,10 @@ fn uv<T: serde::de::DeserializeOwned>(
                 &json!({ "_type": "PARTY_IDENTIFIED", "name": "cohort tester" }),
             )
             .expect("committer"),
+            additional_properties: BTreeMap::new(),
         }),
         signature: None,
+        additional_properties: BTreeMap::new(),
     }
 }
 

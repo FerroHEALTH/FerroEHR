@@ -130,6 +130,7 @@ fn error_body(message: &str) -> common::Error {
     common::Error {
         message: message.to_owned(),
         validation_errors: vec!["error1".to_owned()],
+        additional_properties: BTreeMap::new(),
     }
 }
 
@@ -161,8 +162,10 @@ fn result_set(q: &str) -> query::ResultSet {
         columns: Some(vec![query::ResultSetColumn {
             name: "#0".to_owned(),
             path: Some("/uid/value".to_owned()),
+            additional_properties: BTreeMap::new(),
         }]),
         rows: vec![vec![json!(VERSION_UID)]],
+        additional_properties: BTreeMap::new(),
     }
 }
 
@@ -724,6 +727,7 @@ async fn adhoc_query_post_sends_the_json_body() -> TestResult {
         offset: None,
         fetch: Some(5),
         query_parameters: None,
+        additional_properties: BTreeMap::new(),
     };
     Mock::given(method("POST"))
         .and(path("/query/aql"))
@@ -810,6 +814,7 @@ async fn template_list_decodes_the_typed_list() -> TestResult {
         concept: "minimal persistent".to_owned(),
         archetype_id: "openEHR-EHR-COMPOSITION.minimal.v1".to_owned(),
         created_timestamp: "2026-09-25T10:00:00Z".to_owned(),
+        additional_properties: BTreeMap::new(),
     }];
     Mock::given(method("GET"))
         .and(path("/definition/template/adl1.4"))
@@ -948,6 +953,7 @@ async fn options_captures_the_allow_header() -> TestResult {
         restapi_specs_version: Some("1.1.0".to_owned()),
         conformance_profile: None,
         endpoints: Some(vec!["/ehr".to_owned()]),
+        additional_properties: BTreeMap::new(),
     };
     Mock::given(method("OPTIONS"))
         .and(path("/"))

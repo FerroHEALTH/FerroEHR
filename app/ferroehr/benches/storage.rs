@@ -211,8 +211,10 @@ fn update_version(
             change_type: change_type_coded(change_code),
             description: None,
             committer: committer(),
+            additional_properties: BTreeMap::new(),
         }),
         signature: None,
+        additional_properties: BTreeMap::new(),
     }
 }
 
