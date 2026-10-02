@@ -12,15 +12,21 @@
 //!
 //! The route tables are the vendored OAS `paths`
 //! (`crates/openehr-its/vendor/rest-oas/<group>-codegen.openapi.yaml`); the
-//! matcher's precedence (a literal segment over a parameter) and its path
-//! parameter decoding (RFC 3986 §2.1) are pinned here.
+//! matcher's precedence (a literal segment over a parameter), its path
+//! parameter decoding (RFC 3986 §2.1) and the declared-parameter table each
+//! match carries — held to the generated param structs — are pinned here.
 
+use std::collections::BTreeMap;
 use std::error::Error;
+use std::fmt;
 use std::path::Path;
 
 use http::Method;
 use openehr_its::rest::generated::{admin, definition, demographic, ehr, query, system};
-use openehr_its::rest::routes::{Lookup, PathParam, RouteMatch, lookup};
+use openehr_its::rest::routes::{
+    Lookup, Param, ParamKind, ParamLocation, PathParam, RouteMatch, lookup,
+};
+use serde::de::{DeserializeOwned, Visitor};
 
 /// A test's plumbing error: every fallible step propagates with `?`.
 type TestResult = Result<(), Box<dyn Error>>;
@@ -28,14 +34,21 @@ type TestResult = Result<(), Box<dyn Error>>;
 /// One generated route table.
 type RouteTable = &'static [(&'static str, &'static str, &'static str)];
 
-/// Every generated API group with its route table.
-const GROUPS: &[(&str, RouteTable)] = &[
-    ("admin", admin::ROUTES),
-    ("definition", definition::ROUTES),
-    ("demographic", demographic::ROUTES),
-    ("ehr", ehr::ROUTES),
-    ("query", query::ROUTES),
-    ("system", system::ROUTES),
+/// One generated parameter table, index-aligned with its route table.
+type ParamTable = &'static [&'static [Param]];
+
+/// Every generated API group with its route table and parameter table.
+const GROUPS: &[(&str, RouteTable, ParamTable)] = &[
+    ("admin", admin::ROUTES, admin::ROUTE_PARAMS),
+    ("definition", definition::ROUTES, definition::ROUTE_PARAMS),
+    (
+        "demographic",
+        demographic::ROUTES,
+        demographic::ROUTE_PARAMS,
+    ),
+    ("ehr", ehr::ROUTES, ehr::ROUTE_PARAMS),
+    ("query", query::ROUTES, query::ROUTE_PARAMS),
+    ("system", system::ROUTES, system::ROUTE_PARAMS),
 ];
 
 /// A concrete path for `template`: every `{name}` segment filled with a sample
@@ -81,7 +94,10 @@ fn the_group_list_is_every_generated_group() -> TestResult {
         .filter(|name| *name != "common")
         .map(str::to_owned)
         .collect();
-    let listed: Vec<String> = GROUPS.iter().map(|(name, _)| (*name).to_owned()).collect();
+    let listed: Vec<String> = GROUPS
+        .iter()
+        .map(|(name, _, _)| (*name).to_owned())
+        .collect();
     assert_eq!(listed, generated);
     Ok(())
 }
@@ -91,8 +107,9 @@ fn the_group_list_is_every_generated_group() -> TestResult {
 #[test]
 fn every_route_matches_back_to_its_operation() -> TestResult {
     let mut checked = 0_usize;
-    for (group, routes) in GROUPS {
-        for (method, template, operation_id) in *routes {
+    for (group, routes, params) in GROUPS {
+        assert_eq!(routes.len(), params.len(), "{group}");
+        for ((method, template, operation_id), declared) in routes.iter().zip(*params) {
             let method = Method::from_bytes(method.as_bytes())?;
             let path = concrete(template);
             let found = matched(&method, &path)?;
@@ -108,13 +125,23 @@ fn every_route_matches_back_to_its_operation() -> TestResult {
                 .map(|param| param.name.to_owned())
                 .collect();
             assert_eq!(names, declared_params(template), "{method} {template}");
+            assert_eq!(found.params, *declared, "{method} {template}");
+            let mut path_declared: Vec<String> = declared
+                .iter()
+                .filter(|param| param.location == ParamLocation::Path)
+                .map(|param| param.name.to_owned())
+                .collect();
+            path_declared.sort();
+            let mut in_template = declared_params(template);
+            in_template.sort();
+            assert_eq!(path_declared, in_template, "{method} {template}");
             for param in &found.path_params {
                 assert_eq!(param.raw, format!("sample-{}", param.name));
             }
             checked += 1;
         }
     }
-    let total: usize = GROUPS.iter().map(|(_, routes)| routes.len()).sum();
+    let total: usize = GROUPS.iter().map(|(_, routes, _)| routes.len()).sum();
     assert_eq!(checked, total);
     Ok(())
 }
@@ -197,5 +224,309 @@ fn path_parameters_keep_their_raw_form_and_decode() -> TestResult {
         raw: "%FF%FE".to_owned(),
     };
     assert!(not_utf8.decoded().is_err());
+    Ok(())
+}
+
+/// One field of a generated param struct, as the generated source declares it.
+#[derive(Debug, PartialEq, Eq)]
+struct Field {
+    /// The wire name: the `#[serde(rename)]` value, else the field identifier.
+    wire: String,
+    /// The location the field's doc line names (`path`, `query`, `header`).
+    location: String,
+    /// Whether the field is not an `Option`.
+    required: bool,
+    /// Whether the field (inside any `Option`) is a `Vec`.
+    list: bool,
+}
+
+/// The field a `pub ident: Ty,` declaration closes, with its pending rename and
+/// doc-line location.
+fn field(
+    decl: &str,
+    rename: Option<String>,
+    location: Option<String>,
+) -> Result<Field, Box<dyn Error>> {
+    let (ident, ty) = decl
+        .strip_suffix(',')
+        .and_then(|decl| decl.split_once(": "))
+        .ok_or_else(|| format!("not a field declaration: {decl:?}"))?;
+    let inner = ty
+        .strip_prefix("Option<")
+        .and_then(|ty| ty.strip_suffix('>'));
+    Ok(Field {
+        wire: rename.unwrap_or_else(|| ident.trim_start_matches("r#").to_owned()),
+        location: location.ok_or_else(|| format!("no location doc line on {ident}"))?,
+        required: inner.is_none(),
+        list: inner.unwrap_or(ty).starts_with("Vec<"),
+    })
+}
+
+/// Every param struct of a generated group source, keyed by the operation id
+/// its doc summary names, with its fields in declaration order.
+fn param_structs(source: &str) -> Result<BTreeMap<String, Vec<Field>>, Box<dyn Error>> {
+    let mut out = BTreeMap::new();
+    let mut lines = source.lines();
+    while let Some(line) = lines.next() {
+        let Some(operation_id) = line
+            .strip_prefix("/// Parameters for `")
+            .and_then(|rest| rest.strip_suffix("` (path/query/header)."))
+        else {
+            continue;
+        };
+        let mut fields = Vec::new();
+        let mut rename = None;
+        let mut location = None;
+        for line in lines.by_ref() {
+            let line = line.trim();
+            if line == "}" {
+                break;
+            }
+            if let Some(value) = line
+                .strip_prefix("#[serde(rename = \"")
+                .and_then(|rest| rest.strip_suffix("\")]"))
+            {
+                rename = Some(value.to_owned());
+            } else if let Some(doc) = line.strip_prefix("/// `")
+                && location.is_none()
+            {
+                location = doc
+                    .rsplit_once("` (")
+                    .and_then(|(_, rest)| rest.strip_suffix(')'))
+                    .map(str::to_owned);
+            } else if let Some(decl) = line.strip_prefix("pub ")
+                && !decl.starts_with("struct ")
+            {
+                fields.push(field(decl, rename.take(), location.take())?);
+            }
+        }
+        if out.insert(operation_id.to_owned(), fields).is_some() {
+            return Err(format!("two param structs for {operation_id}").into());
+        }
+    }
+    Ok(out)
+}
+
+/// The table row of every operation equals the param struct the same emitter
+/// pass wrote for it: the same wire names, locations, requiredness and list
+/// shape, in field order — and an operation without a struct has an empty row.
+#[test]
+fn every_route_params_row_equals_its_param_struct() -> TestResult {
+    let generated = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/rest/generated");
+    let mut compared = 0_usize;
+    for (group, routes, params) in GROUPS {
+        let source = std::fs::read_to_string(generated.join(format!("{group}.rs")))?;
+        let mut structs = param_structs(&source)?;
+        for ((_, _, operation_id), declared) in routes.iter().zip(*params) {
+            let fields = structs.remove(*operation_id).unwrap_or_default();
+            let row: Vec<Field> = declared
+                .iter()
+                .map(|param| Field {
+                    wire: param.name.to_owned(),
+                    location: match param.location {
+                        ParamLocation::Path => "path",
+                        ParamLocation::Query => "query",
+                        ParamLocation::Header => "header",
+                        ParamLocation::Cookie => "cookie",
+                    }
+                    .to_owned(),
+                    required: param.required,
+                    list: matches!(param.kind, ParamKind::Array(_)),
+                })
+                .collect();
+            assert_eq!(row, fields, "{group} {operation_id}");
+            compared += row.len();
+        }
+        assert!(
+            structs.is_empty(),
+            "{group}: param structs with no route: {:?}",
+            structs.keys().collect::<Vec<_>>()
+        );
+    }
+    assert!(compared > 0, "the reader found no param struct fields");
+    Ok(())
+}
+
+/// What the field-name probe deserializer reports.
+#[derive(Debug)]
+enum Probe {
+    /// The field names a derived `Deserialize` asked `deserialize_struct` for.
+    Fields(&'static [&'static str]),
+    /// Anything else the type asked for.
+    Other(String),
+}
+
+impl fmt::Display for Probe {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Fields(fields) => write!(f, "struct fields {fields:?}"),
+            Self::Other(message) => f.write_str(message),
+        }
+    }
+}
+
+impl Error for Probe {}
+
+impl serde::de::Error for Probe {
+    fn custom<T: fmt::Display>(msg: T) -> Self {
+        Self::Other(msg.to_string())
+    }
+}
+
+/// A deserializer that answers only by reporting the field names a derived
+/// struct `Deserialize` passes to `deserialize_struct` — its wire names.
+struct FieldProbe;
+
+impl<'de> serde::Deserializer<'de> for FieldProbe {
+    type Error = Probe;
+
+    fn deserialize_any<V: Visitor<'de>>(self, _visitor: V) -> Result<V::Value, Probe> {
+        Err(Probe::Other("not a struct".to_owned()))
+    }
+
+    fn deserialize_struct<V: Visitor<'de>>(
+        self,
+        _name: &'static str,
+        fields: &'static [&'static str],
+        _visitor: V,
+    ) -> Result<V::Value, Probe> {
+        Err(Probe::Fields(fields))
+    }
+
+    serde::forward_to_deserialize_any! {
+        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
+        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        tuple_struct map enum identifier ignored_any
+    }
+}
+
+/// The wire field names serde's derive gives `T`.
+fn serde_fields<T: DeserializeOwned>() -> Result<Vec<&'static str>, Box<dyn Error>> {
+    match T::deserialize(FieldProbe) {
+        Err(Probe::Fields(fields)) => Ok(fields.to_vec()),
+        Err(other) => Err(other.into()),
+        Ok(_) => Err("the probe never yields a value".into()),
+    }
+}
+
+/// The source reader above agrees with serde's own derive on the wire names of
+/// param structs that rename, use a raw identifier and carry docs-text headers,
+/// and each struct's `PARAMS` names those same fields.
+#[test]
+fn the_source_reader_agrees_with_serde_and_params() -> TestResult {
+    let cases: [(&str, &str, Vec<&'static str>, &[Param]); 4] = [
+        (
+            "ehr",
+            "ehr_create",
+            serde_fields::<ehr::EhrCreateParams>()?,
+            ehr::EhrCreateParams::PARAMS,
+        ),
+        (
+            "ehr",
+            "ehr_status_update",
+            serde_fields::<ehr::EhrStatusUpdateParams>()?,
+            ehr::EhrStatusUpdateParams::PARAMS,
+        ),
+        (
+            "query",
+            "query_execute_adhoc_query",
+            serde_fields::<query::QueryExecuteAdhocQueryParams>()?,
+            query::QueryExecuteAdhocQueryParams::PARAMS,
+        ),
+        (
+            "definition",
+            "definition_template_adl1.4_example_get",
+            serde_fields::<definition::DefinitionTemplateAdl14ExampleGetParams>()?,
+            definition::DefinitionTemplateAdl14ExampleGetParams::PARAMS,
+        ),
+    ];
+    let generated = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/rest/generated");
+    for (group, operation_id, serde_names, params) in cases {
+        let source = std::fs::read_to_string(generated.join(format!("{group}.rs")))?;
+        let structs = param_structs(&source)?;
+        let fields = structs
+            .get(operation_id)
+            .ok_or_else(|| format!("no param struct for {operation_id}"))?;
+        let read: Vec<&str> = fields.iter().map(|field| field.wire.as_str()).collect();
+        assert_eq!(read, serde_names, "{operation_id}");
+        let table: Vec<&str> = params.iter().map(|param| param.name).collect();
+        assert_eq!(table, serde_names, "{operation_id}");
+    }
+    Ok(())
+}
+
+/// A match names the declared query parameters and headers, with the kinds
+/// their schemas state: headers case-insensitively, and an undeclared query
+/// key belonging to the exploded `query_parameters` object.
+#[test]
+fn a_match_names_its_declared_query_parameters_and_headers() -> TestResult {
+    let adhoc = matched(&Method::GET, "/query/aql")?;
+    let q = adhoc.query_param("q").ok_or("q is declared")?;
+    assert_eq!(
+        (q.location, q.required, q.kind),
+        (ParamLocation::Query, true, ParamKind::Text)
+    );
+    assert_eq!(
+        adhoc.query_param("ehr_id").map(|param| param.kind),
+        Some(ParamKind::Uuid)
+    );
+    assert_eq!(
+        adhoc.query_param("offset").map(|param| param.kind),
+        Some(ParamKind::Integer)
+    );
+    assert!(adhoc.query_param("Q").is_none(), "query names are exact");
+    assert_eq!(
+        adhoc.query_key("ehr_id").map(|param| param.name),
+        Some("ehr_id")
+    );
+    let members = adhoc
+        .query_key("systolic_bp")
+        .ok_or("an undeclared key is a query_parameters member")?;
+    assert_eq!(
+        (members.name, members.explode, members.kind),
+        ("query_parameters", true, ParamKind::Object)
+    );
+    let accept = adhoc.header_param("accept").ok_or("Accept is declared")?;
+    assert_eq!(accept.name, "Accept");
+    assert_eq!(accept.kind, ParamKind::Enum(&["application/json"]));
+    assert!(adhoc.header_param("X-Forwarded-For").is_none());
+
+    let get = matched(&Method::GET, "/ehr/7d44b88c/composition/8849182c::sys::1")?;
+    assert_eq!(get.operation_id, "composition_get");
+    assert_eq!(
+        get.query_param("version_at_time").map(|param| param.kind),
+        Some(ParamKind::DateTime)
+    );
+    assert!(
+        get.query_key("anything").is_none(),
+        "no object to collect it"
+    );
+
+    let update = matched(&Method::PUT, "/ehr/7d44b88c/ehr_status")?;
+    assert_eq!(update.operation_id, "ehr_status_update");
+    let if_match = update
+        .header_param("if-match")
+        .ok_or("If-Match is declared")?;
+    assert!(if_match.required);
+    let prefer = update.header_param("PREFER").ok_or("Prefer is declared")?;
+    assert_eq!(
+        prefer.kind,
+        ParamKind::Enum(&[
+            "return=representation",
+            "return=minimal",
+            "return=identifier"
+        ])
+    );
+    let tags = update
+        .header_param("openehr-item-tag")
+        .ok_or("openehr-item-tag is declared")?;
+    assert_eq!(
+        (tags.explode, tags.kind),
+        (true, ParamKind::Array(&ParamKind::Object))
+    );
+    let audit = update
+        .header_param("openEHR-AUDIT-DETAILS")
+        .ok_or("the docs text defines openehr-audit-details")?;
+    assert_eq!(audit.kind, ParamKind::Array(&ParamKind::Text));
     Ok(())
 }

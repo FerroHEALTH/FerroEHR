@@ -14,9 +14,10 @@ use sea_query::{Expr, ExprTrait as _};
 use crate::aql::error::{AqlError, SqlError};
 use crate::aql::ir::{
     ArchetypeConstraint, Bind, Coercion, EhrField, Expr as IrExpr, LeafPath, LikePattern,
-    NameConstraint, NodeConstraint, Operand, PathTarget, ScalarFn, StdPredicate, TypedLit,
+    NameConstraint, NodeConstraint, Operand, PathTarget, StdPredicate, TypedLit,
 };
 use crate::db::iden::{Ehr, Node};
+use openehr_query::ast::{BuiltinFunction, DateTimeFunction, NumericFunction, StringFunction};
 use openehr_query::lexer::CompOp;
 
 use super::expr::{aql_like_to_sql, archetype_predicate, as_text, binoper, cast, col, jsonb_path};
@@ -281,7 +282,7 @@ impl Builder<'_> {
     /// through the magnitude coercion).
     pub(super) fn scalar_fn_expr(
         &mut self,
-        func: ScalarFn,
+        func: BuiltinFunction,
         args: &[Operand],
     ) -> Result<Expr, AqlError> {
         // Arity was validated at lowering, but the argument is still fetched
@@ -290,7 +291,8 @@ impl Builder<'_> {
         let arg = |i: usize| -> Result<&Operand, AqlError> {
             args.get(i).ok_or_else(|| {
                 AqlError::from(SqlError::Unsupported(format!(
-                    "{func:?} called with {} argument(s); argument {i} is missing",
+                    "{} called with {} argument(s); argument {i} is missing",
+                    func.as_str(),
                     args.len()
                 )))
             })
@@ -298,10 +300,12 @@ impl Builder<'_> {
         let text = |this: &mut Self, i: usize| this.operand_value(arg(i)?, Coercion::Text);
         let num = |this: &mut Self, i: usize| this.operand_value(arg(i)?, Coercion::Magnitude);
         Ok(match func {
-            ScalarFn::Length => Expr::cust_with_exprs("length($1)", [text(self, 0)?]),
+            BuiltinFunction::String(StringFunction::Length) => {
+                Expr::cust_with_exprs("length($1)", [text(self, 0)?])
+            }
             // SUBSTRING(expression, position[, length]) — 1-based positions,
             // omitted length extracts to end-of-string (PG substr matches).
-            ScalarFn::Substring => match args.len() {
+            BuiltinFunction::String(StringFunction::Substring) => match args.len() {
                 2 => {
                     Expr::cust_with_exprs("substr($1, ($2)::int4)", [text(self, 0)?, num(self, 1)?])
                 }
@@ -312,15 +316,17 @@ impl Builder<'_> {
             },
             // POSITION(substring, expression): 1-based index of the first
             // occurrence, 0 when absent — exactly PG strpos(expression, sub).
-            ScalarFn::Position => {
+            BuiltinFunction::String(StringFunction::Position) => {
                 Expr::cust_with_exprs("strpos($2, $1)", [text(self, 0)?, text(self, 1)?])
             }
             // The string function CONTAINS(expression, substring) → Boolean.
-            ScalarFn::StrContains => {
+            BuiltinFunction::String(StringFunction::Contains) => {
                 Expr::cust_with_exprs("(strpos($1, $2) > 0)", [text(self, 0)?, text(self, 1)?])
             }
-            ScalarFn::Concat | ScalarFn::ConcatWs => {
-                let name = if func == ScalarFn::Concat {
+            BuiltinFunction::String(
+                string @ (StringFunction::Concat | StringFunction::ConcatWs),
+            ) => {
+                let name = if string == StringFunction::Concat {
                     "concat"
                 } else {
                     "concat_ws"
@@ -334,19 +340,25 @@ impl Builder<'_> {
                     .join(", ");
                 Expr::cust_with_exprs(format!("{name}({placeholders})"), rendered)
             }
-            ScalarFn::Abs => Expr::cust_with_exprs("abs($1)", [num(self, 0)?]),
-            ScalarFn::Mod => Expr::cust_with_exprs(
+            BuiltinFunction::Numeric(NumericFunction::Abs) => {
+                Expr::cust_with_exprs("abs($1)", [num(self, 0)?])
+            }
+            BuiltinFunction::Numeric(NumericFunction::Mod) => Expr::cust_with_exprs(
                 "mod(($1)::numeric, ($2)::numeric)",
                 [num(self, 0)?, num(self, 1)?],
             ),
             // CEIL/FLOOR return Integer (QUERY master03 §Numeric functions).
-            ScalarFn::Ceil => Expr::cust_with_exprs("(ceil($1))::int8", [num(self, 0)?]),
-            ScalarFn::Floor => Expr::cust_with_exprs("(floor($1))::int8", [num(self, 0)?]),
+            BuiltinFunction::Numeric(NumericFunction::Ceil) => {
+                Expr::cust_with_exprs("(ceil($1))::int8", [num(self, 0)?])
+            }
+            BuiltinFunction::Numeric(NumericFunction::Floor) => {
+                Expr::cust_with_exprs("(floor($1))::int8", [num(self, 0)?])
+            }
             // ROUND(expression[, decimal]) — decimal defaults to 0.
             // NOTE: QUERY master03 §ROUND fixes no mode; the `::numeric` cast
             // pins half-away-from-zero (PostgreSQL docs §Mathematical
             // Functions — numeric ties round away from zero), test-pinned.
-            ScalarFn::Round => match args.len() {
+            BuiltinFunction::Numeric(NumericFunction::Round) => match args.len() {
                 1 => Expr::cust_with_exprs("round(($1)::numeric, 0)", [num(self, 0)?]),
                 _ => Expr::cust_with_exprs(
                     "round(($1)::numeric, ($2)::int4)",
@@ -355,12 +367,18 @@ impl Builder<'_> {
             },
             // Date/time functions: the exact string formats of QUERY master03
             // §Date and time functions.
-            ScalarFn::CurrentDate => Expr::cust("to_char(now(), 'YYYY-MM-DD')"),
-            ScalarFn::CurrentTime => Expr::cust("to_char(now(), 'HH24:MI:SS')"),
-            ScalarFn::CurrentDateTime | ScalarFn::Now => {
-                Expr::cust("to_char(now(), 'YYYY-MM-DD\"T\"HH24:MI:SS.MSTZH:TZM')")
+            BuiltinFunction::DateTime(DateTimeFunction::CurrentDate) => {
+                Expr::cust("to_char(now(), 'YYYY-MM-DD')")
             }
-            ScalarFn::CurrentTimezone => Expr::cust("to_char(now(), 'TZH:TZM')"),
+            BuiltinFunction::DateTime(DateTimeFunction::CurrentTime) => {
+                Expr::cust("to_char(now(), 'HH24:MI:SS')")
+            }
+            BuiltinFunction::DateTime(
+                DateTimeFunction::CurrentDateTime | DateTimeFunction::Now,
+            ) => Expr::cust("to_char(now(), 'YYYY-MM-DD\"T\"HH24:MI:SS.MSTZH:TZM')"),
+            BuiltinFunction::DateTime(DateTimeFunction::CurrentTimezone) => {
+                Expr::cust("to_char(now(), 'TZH:TZM')")
+            }
         })
     }
 

@@ -143,6 +143,88 @@ async fn forward_returns_every_status_as_an_answer() -> TestResult {
     Ok(())
 }
 
+/// Every public `ReqwestTransport` constructor, built with defaults.
+fn every_transport() -> Result<Vec<(&'static str, ReqwestTransport)>, Box<dyn Error>> {
+    Ok(vec![
+        ("new", ReqwestTransport::new(reqwest::Client::builder())?),
+        (
+            "with_builder_timeout",
+            ReqwestTransport::with_builder_timeout(
+                reqwest::Client::builder(),
+                Duration::from_secs(10),
+            )?,
+        ),
+        (
+            "with_timeout",
+            ReqwestTransport::with_timeout(Duration::from_secs(10))?,
+        ),
+    ])
+}
+
+/// A `303` and a `307` come back from `forward` as received, over every
+/// transport constructor, and the `Location` they name is never requested:
+/// a followed redirect would re-send the request, credentials and all, to a
+/// host the caller did not name.
+#[tokio::test]
+async fn forward_returns_a_redirect_as_received_over_every_constructor() -> TestResult {
+    let elsewhere = MockServer::start().await;
+    Mock::given(method("GET"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(0)
+        .mount(&elsewhere)
+        .await;
+    Mock::given(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(0)
+        .mount(&elsewhere)
+        .await;
+    let target = format!("{}/ehr/{EHR_ID}", elsewhere.uri());
+    for (name, transport) in every_transport()? {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path(format!("/ehr/{EHR_ID}")))
+            .respond_with(ResponseTemplate::new(303).insert_header("Location", target.as_str()))
+            .expect(1)
+            .mount(&server)
+            .await;
+        Mock::given(method("POST"))
+            .and(path("/ehr"))
+            .respond_with(ResponseTemplate::new(307).insert_header("Location", target.as_str()))
+            .expect(1)
+            .mount(&server)
+            .await;
+        let client = Client::new(transport, server.uri().parse()?)?
+            .with_credentials(Credentials::bearer("onward-token".to_owned()));
+        let seen = client
+            .forward(Request::new(Method::GET, format!("/ehr/{EHR_ID}")))
+            .await?;
+        assert_eq!(seen.status(), StatusCode::SEE_OTHER, "{name}");
+        assert_eq!(
+            seen.header("Location").as_deref(),
+            Some(target.as_str()),
+            "{name}"
+        );
+        let mut post = Request::new(Method::POST, "/ehr".to_owned());
+        post.raw_body(
+            b"{}".to_vec(),
+            Some(HeaderValue::from_static("application/json")),
+        );
+        let seen = client.forward(post).await?;
+        assert_eq!(seen.status(), StatusCode::TEMPORARY_REDIRECT, "{name}");
+        assert_eq!(
+            seen.header("Location").as_deref(),
+            Some(target.as_str()),
+            "{name}"
+        );
+    }
+    let followed = elsewhere
+        .received_requests()
+        .await
+        .ok_or("request recording is off")?;
+    assert!(followed.is_empty(), "a redirect was followed: {followed:?}");
+    Ok(())
+}
+
 // ── credentials provider ────────────────────────────────────────────────────
 
 /// A provider that hands out `t1`, `t2`, … and counts what it was told.

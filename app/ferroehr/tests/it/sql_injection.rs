@@ -453,8 +453,8 @@ fn hostile_text_in_an_identifier_position_is_refused_by_the_parser() {
 /// The one identifier position that survives lexing is a function name: the AQL
 /// grammar's `functionCall` admits a bare `IDENTIFIER`
 /// (`openehr_query::lexer` module docs), so `zqinjection(x)` PARSES. It is
-/// refused at lowering instead, against the closed `ScalarFn` set — the name
-/// never reaches `Func::cust`.
+/// classified as `FunctionCall::Other` and refused at lowering — the name never
+/// reaches `Func::cust`.
 #[test]
 fn an_unknown_function_name_is_refused_at_lowering() {
     let error = plan_err("SELECT zqinjection(c/name/value) FROM COMPOSITION c");

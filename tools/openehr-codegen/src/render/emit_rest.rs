@@ -7,8 +7,10 @@
 //! Spec-first: the vendored `-codegen` OAS is the source of truth. For each API
 //! group this emits the transport DTOs (the non-RM component schemas), a param
 //! struct per operation, a headers struct per documented response that
-//! declares headers, a route table `(method, path, operationId)`, and the two
-//! halves of the same contract. The SERVER half (`mod server`) carries an
+//! declares headers, a route table `(method, path, operationId)` with the
+//! index-aligned table of each operation's declared parameters (every param
+//! struct's own `PARAMS`, emitted from the same parameter list as its fields),
+//! and the two halves of the same contract. The SERVER half (`mod server`) carries an
 //! `#[async_trait]` trait (one typed method per operation, answering a
 //! success-answer enum), and an axum `router` that binds every route to its
 //! trait method. The CLIENT half (`mod client`) carries one method per
@@ -456,7 +458,27 @@ pub(crate) fn emit_group(
             op.operation_id
         );
     }
-    b.push_str("];\n");
+    b.push_str("];\n\n");
+    let _ = write!(
+        b,
+        "/// The declared parameters of each operation, index-aligned with [`ROUTES`]:\n\
+         /// the operation's `*Params::PARAMS`, empty when it declares none.\n\
+         pub const ROUTE_PARAMS: &[&[crate::rest::routes::Param]] = &[\n"
+    );
+    for op in &ops {
+        if has_params_struct(op) {
+            let _ = writeln!(b, "    {}::PARAMS,", param_struct_name(op));
+        } else {
+            b.push_str("    &[],\n");
+        }
+    }
+    b.push_str(
+        "];\n\n\
+         const _: () = assert!(\n    \
+         ROUTE_PARAMS.len() == ROUTES.len(),\n    \
+         \"ROUTE_PARAMS carries one row per ROUTES entry\"\n\
+         );\n",
+    );
     b
 }
 
@@ -1015,10 +1037,18 @@ fn param_struct_name(op: &Operation) -> String {
     format!("{}Params", type_id(&op.operation_id))
 }
 
+/// Whether `op` gets a param struct: it declares at least one parameter.
+fn has_params_struct(op: &Operation) -> bool {
+    !op.parameters.is_empty()
+}
+
+/// Emits the param struct of `op` and, from the same parameter list, its
+/// `PARAMS` table — one `crate::rest::routes::Param` per field, in field order.
 fn emit_params_struct(b: &mut String, op: &Operation, ctx: &Ctx) {
-    if op.parameters.is_empty() {
+    if !has_params_struct(op) {
         return;
     }
+    let mut table = String::new();
     let sname = param_struct_name(op);
     let _ = write!(
         b,
@@ -1046,8 +1076,104 @@ fn emit_params_struct(b: &mut String, op: &Operation, ctx: &Ctx) {
             let _ = writeln!(b, "    /// ({})", h.reason);
         }
         let _ = writeln!(b, "    pub {ident}: {ty},");
+        let _ = writeln!(table, "        {},", param_entry(ctx.oas, p));
     }
     b.push_str("}\n\n");
+    let _ = write!(
+        b,
+        "impl {sname} {{\n    \
+         /// The parameters of `{}`, one per field, in field order.\n    \
+         pub const PARAMS: &'static [crate::rest::routes::Param] = &[\n{table}    ];\n}}\n\n",
+        op.operation_id
+    );
+}
+
+/// The path of the hand-written parameter model the route tables carry.
+const ROUTES_MODULE: &str = "crate::rest::routes";
+
+/// The `crate::rest::routes::Param` literal of `p`.
+fn param_entry(oas: &Oas, p: &Param) -> String {
+    let location = match p.location.as_str() {
+        "path" => format!("{ROUTES_MODULE}::ParamLocation::Path"),
+        "query" => format!("{ROUTES_MODULE}::ParamLocation::Query"),
+        "header" => format!("{ROUTES_MODULE}::ParamLocation::Header"),
+        "cookie" => format!("{ROUTES_MODULE}::ParamLocation::Cookie"),
+        other => {
+            format!("compile_error!(\"parameter location `{other}` is not an OAS 3.0 location\")")
+        }
+    };
+    format!(
+        "{ROUTES_MODULE}::Param {{ name: {:?}, location: {location}, required: {}, explode: {}, kind: {} }}",
+        p.name,
+        p.required,
+        param_explode(p),
+        param_kind(oas, &p.schema)
+    )
+}
+
+/// Whether `p` explodes: its declared `explode`, else the OAS 3.0.3 default
+/// (§Parameter Object, `explode`) — `true` under the `form` style, which is the
+/// default style of a query or cookie parameter.
+fn param_explode(p: &Param) -> bool {
+    let default_style = match p.location.as_str() {
+        "query" | "cookie" => "form",
+        _ => "simple",
+    };
+    let style = p.style.as_deref().unwrap_or(default_style);
+    p.explode.unwrap_or(style == "form")
+}
+
+/// The `crate::rest::routes::ParamKind` expression of a parameter `schema`,
+/// derived only from the `enum`, `type`, `format` and `items` it states.
+fn param_kind(oas: &Oas, schema: &Value) -> String {
+    let schema = oas.resolve(schema);
+    if let Some(values) = schema.get("enum").and_then(Value::as_array) {
+        let values: Vec<String> = values
+            .iter()
+            .map(|v| {
+                format!(
+                    "{:?}",
+                    v.as_str().map_or_else(|| v.to_string(), str::to_string)
+                )
+            })
+            .collect();
+        return format!("{ROUTES_MODULE}::ParamKind::Enum(&[{}])", values.join(", "));
+    }
+    if schema.get("type").is_none()
+        && let Some([only]) = schema
+            .get("allOf")
+            .and_then(Value::as_array)
+            .map(Vec::as_slice)
+    {
+        return param_kind(oas, only);
+    }
+    let kind = match schema.get("type").and_then(Value::as_str) {
+        None => "Unspecified".to_string(),
+        Some("string") => match schema.get("format").and_then(Value::as_str) {
+            None => "Text".to_string(),
+            Some("uuid") => "Uuid".to_string(),
+            Some("date") => "Date".to_string(),
+            // NOTE: the bundles spell `version_at_time` as `format: datetime`; OAS
+            // 3.0.3 §Data Types registers `date-time`, and both name one instant.
+            Some("date-time" | "datetime") => "DateTime".to_string(),
+            Some(other) => format!("Formatted({other:?})"),
+        },
+        Some("integer") => "Integer".to_string(),
+        Some("number") => "Number".to_string(),
+        Some("boolean") => "Boolean".to_string(),
+        Some("object") => "Object".to_string(),
+        Some("array") => {
+            let item = schema.get("items").map_or_else(
+                || format!("{ROUTES_MODULE}::ParamKind::Unspecified"),
+                |items| param_kind(oas, items),
+            );
+            format!("Array(&{item})")
+        }
+        Some(other) => {
+            return format!("compile_error!(\"schema type `{other}` is not an OAS 3.0 type\")");
+        }
+    };
+    format!("{ROUTES_MODULE}::ParamKind::{kind}")
 }
 
 /// Appends to `op` the request headers the ITS-REST docs text defines for it
@@ -1067,6 +1193,8 @@ fn append_docs_text_headers(op: &mut Operation<'_>) {
             name: h.name.to_string(),
             location: "header".to_string(),
             required: false,
+            style: None,
+            explode: None,
             schema,
         });
     }

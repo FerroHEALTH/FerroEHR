@@ -170,7 +170,7 @@ fn aggregate(out: &mut String, agg: &AggregateCall) {
 
 fn function_call(out: &mut String, call: &FunctionCall) {
     match call {
-        FunctionCall::Named { name, args } => {
+        FunctionCall::Builtin { name, args, .. } | FunctionCall::Other { name, args } => {
             let _ = write!(out, "{name}(");
             for (i, arg) in args.iter().enumerate() {
                 if i > 0 {

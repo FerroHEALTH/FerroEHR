@@ -21,13 +21,14 @@
 
 use std::sync::Arc;
 
+use openehr_query::ast::{BuiltinFunction, StringFunction};
 use openehr_query::lexer::CompOp;
 use openehr_query::parser::parse_str;
 
 use ferroehr::aql::error::{AnalysisError, AqlError, AqlFeatureError};
 use ferroehr::aql::ir::{
     AggFunc, ArchetypeConstraint, Coercion, ContainsTree, EhrField, Expr, LeafPath, Link, Operand,
-    PathTarget, QueryIr, ScalarFn, SelectValue, Source, TypedLit, VersionField, VersionScope,
+    PathTarget, QueryIr, SelectValue, Source, TypedLit, VersionField, VersionScope,
 };
 use ferroehr::aql::ir::{ParamValue, Params};
 use ferroehr::aql::lineage::ArchetypeLineage;
@@ -684,7 +685,7 @@ fn whitelisted_function_accepted() {
     assert!(matches!(
         &ir.select[0].value,
         SelectValue::Function {
-            func: ScalarFn::Length,
+            func: BuiltinFunction::String(StringFunction::Length),
             ..
         }
     ));

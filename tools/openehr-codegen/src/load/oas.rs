@@ -61,6 +61,10 @@ pub(crate) struct Param {
     /// `path` | `query` | `header`.
     pub location: String,
     pub required: bool,
+    /// The declared `style`, when the parameter states one.
+    pub style: Option<String>,
+    /// The declared `explode`, when the parameter states one.
+    pub explode: Option<bool>,
     /// The parameter's schema (resolved `Value`).
     pub schema: Value,
 }
@@ -245,6 +249,8 @@ impl Oas {
                 name: name.to_string(),
                 location: location.to_string(),
                 required: p.get("required").and_then(Value::as_bool).unwrap_or(false),
+                style: p.get("style").and_then(Value::as_str).map(str::to_string),
+                explode: p.get("explode").and_then(Value::as_bool),
                 // Kept VERBATIM (a `$ref` keeps its name); the
                 // emitter's parameter mapper resolves structurally only where
                 // the name binds to nothing.

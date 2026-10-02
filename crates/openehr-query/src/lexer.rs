@@ -9,8 +9,8 @@
 //! - The grammar's function-id groups (`STRING_FUNCTION_ID`,
 //!   `NUMERIC_FUNCTION_ID`, `DATE_TIME_FUNCTION_ID` — `length`, `abs`, `now`,
 //!   …) are not reserved: they lex as [`Token::Identifier`] and the parser
-//!   classifies a `name(args)` call, which `AqlParser.g4 functionCall` also
-//!   admits for a bare `IDENTIFIER`. The accepted set is a superset of the
+//!   classifies a `name(args)` call (`ast::BuiltinFunction`), which
+//!   `AqlParser.g4 functionCall` also admits for a bare `IDENTIFIER`. The accepted set is a superset of the
 //!   grammar, never a subset. Aggregates and `terminology(...)` keep dedicated
 //!   tokens because their argument grammar differs.
 //! - Quoted temporal literals (`DATE`/`TIME`/`DATETIME`) lex as
@@ -105,9 +105,11 @@ pub enum Token {
     // NOTE: `TIMEWINDOW` is deliberately NOT a token — AQL 1.1 removed the clause
     // from the grammar (QUERY `master00-amendment_record.adoc`, SPECQUERY-20), so a
     // query using it is invalid AQL 1.1 and must fail to parse.
-    /// The `contains` keyword token, joining a containment chain.
-    #[token("contains", ignore(case))]
-    Contains,
+    /// The `contains` keyword token, joining a containment chain, as spelled:
+    /// in function position it names the string function `CONTAINS`, whose
+    /// spelling the AST keeps.
+    #[token("contains", |lex| lex.slice().to_owned(), ignore(case))]
+    Contains(String),
     /// The `and` keyword token — boolean conjunction.
     #[token("and", ignore(case))]
     And,
@@ -434,7 +436,7 @@ mod tests {
     fn keywords_are_case_insensitive() {
         assert_eq!(toks("SELECT"), vec![Token::Select]);
         assert_eq!(toks("select"), vec![Token::Select]);
-        assert_eq!(toks("Contains"), vec![Token::Contains]);
+        assert_eq!(toks("Contains"), vec![Token::Contains("Contains".into())]);
     }
 
     #[test]
@@ -518,7 +520,7 @@ mod tests {
                 Token::From,
                 Token::Identifier("EHR".into()),
                 Token::Identifier("e".into()),
-                Token::Contains,
+                Token::Contains("CONTAINS".into()),
                 Token::Identifier("COMPOSITION".into()),
                 Token::Identifier("c".into()),
             ]

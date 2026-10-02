@@ -24,12 +24,34 @@ pub struct AdminEhrDeleteParams {
     pub ehr_id: String,
 }
 
+impl AdminEhrDeleteParams {
+    /// The parameters of `admin_ehr_delete`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[crate::rest::routes::Param {
+        name: "ehr_id",
+        location: crate::rest::routes::ParamLocation::Path,
+        required: true,
+        explode: false,
+        kind: crate::rest::routes::ParamKind::Uuid,
+    }];
+}
+
 /// Parameters for `admin_ehr_delete_all` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdminEhrDeleteAllParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// `ehr_id` (query)
     pub ehr_id: Option<String>,
+}
+
+impl AdminEhrDeleteAllParams {
+    /// The parameters of `admin_ehr_delete_all`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[crate::rest::routes::Param {
+        name: "ehr_id",
+        location: crate::rest::routes::ParamLocation::Query,
+        required: false,
+        explode: true,
+        kind: crate::rest::routes::ParamKind::Uuid,
+    }];
 }
 
 /// The server half of the `admin` API group (ITS-REST): the `AdminApi`
@@ -324,3 +346,15 @@ pub const ROUTES: &[(&str, &str, &str)] = &[
     ("DELETE", "/admin/ehr/{ehr_id}", "admin_ehr_delete"),
     ("DELETE", "/admin/ehr/all{?ehr_id*}", "admin_ehr_delete_all"),
 ];
+
+/// The declared parameters of each operation, index-aligned with [`ROUTES`]:
+/// the operation's `*Params::PARAMS`, empty when it declares none.
+pub const ROUTE_PARAMS: &[&[crate::rest::routes::Param]] = &[
+    AdminEhrDeleteParams::PARAMS,
+    AdminEhrDeleteAllParams::PARAMS,
+];
+
+const _: () = assert!(
+    ROUTE_PARAMS.len() == ROUTES.len(),
+    "ROUTE_PARAMS carries one row per ROUTES entry"
+);

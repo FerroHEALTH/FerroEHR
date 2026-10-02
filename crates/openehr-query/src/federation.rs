@@ -160,7 +160,9 @@ fn directive(
     }
     let close = at;
     let contains = close.saturating_add(1);
-    expect(stream, contains, &Token::Contains)?;
+    if !matches!(stream.tokens().get(contains), Some(Token::Contains(_))) {
+        return Err(fault(stream, contains));
+    }
     let directive = Directive {
         kind,
         variable,

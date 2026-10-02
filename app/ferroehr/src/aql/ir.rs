@@ -21,6 +21,7 @@
 
 use std::collections::HashMap;
 
+use openehr_query::ast::BuiltinFunction;
 use openehr_query::lexer::CompOp;
 
 /// A dense index identifying a [`Source`] within a [`QueryIr`]'s `sources` vec.
@@ -501,8 +502,8 @@ pub enum Operand {
     Param(String),
     /// A scalar function applied to operands.
     Function {
-        /// The whitelisted function.
-        func: ScalarFn,
+        /// The AQL built-in function.
+        func: BuiltinFunction,
         /// The argument operands.
         args: Vec<Operand>,
     },
@@ -611,8 +612,8 @@ pub enum SelectValue {
     },
     /// A scalar function.
     Function {
-        /// The whitelisted function.
-        func: ScalarFn,
+        /// The AQL built-in function.
+        func: BuiltinFunction,
         /// The argument operands.
         args: Vec<Operand>,
     },
@@ -640,48 +641,6 @@ pub struct OrderKey {
     pub path: PathTarget,
     /// Ascending (`true`) or descending; defaults to ascending.
     pub ascending: bool,
-}
-
-/// A whitelisted scalar function (QUERY §Functions). Represented, not yet
-/// evaluated — the SQL package renders these.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ScalarFn {
-    // String functions.
-    /// `length`.
-    Length,
-    /// `substring`.
-    Substring,
-    /// `position`.
-    Position,
-    /// `concat`.
-    Concat,
-    /// `concat_ws`.
-    ConcatWs,
-    /// The string function `contains` (distinct from the containment
-    /// operator; QUERY master03 §Functions/String functions/CONTAINS).
-    StrContains,
-    // Numeric functions.
-    /// `abs`.
-    Abs,
-    /// `ceil`.
-    Ceil,
-    /// `floor`.
-    Floor,
-    /// `round`.
-    Round,
-    /// `mod`.
-    Mod,
-    // Date/time functions.
-    /// `current_date`.
-    CurrentDate,
-    /// `current_time`.
-    CurrentTime,
-    /// `current_date_time`.
-    CurrentDateTime,
-    /// `now`.
-    Now,
-    /// `current_timezone`.
-    CurrentTimezone,
 }
 
 // ── The query IR ─────────────────────────────────────────────────────────────

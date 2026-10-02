@@ -173,6 +173,54 @@ pub struct QueryExecuteAdhocQueryParams {
     pub accept: Option<String>,
 }
 
+impl QueryExecuteAdhocQueryParams {
+    /// The parameters of `query_execute_adhoc_query`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "q",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: true,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "ehr_id",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Uuid,
+        },
+        crate::rest::routes::Param {
+            name: "offset",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Integer,
+        },
+        crate::rest::routes::Param {
+            name: "fetch",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Integer,
+        },
+        crate::rest::routes::Param {
+            name: "query_parameters",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Object,
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+        },
+    ];
+}
+
 /// Parameters for `query_execute_adhoc_query_body` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QueryExecuteAdhocQueryBodyParams {
@@ -184,6 +232,26 @@ pub struct QueryExecuteAdhocQueryBodyParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// `Content-Type` (header)
     pub content_type: Option<String>,
+}
+
+impl QueryExecuteAdhocQueryBodyParams {
+    /// The parameters of `query_execute_adhoc_query_body`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+        },
+        crate::rest::routes::Param {
+            name: "Content-Type",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+        },
+    ];
 }
 
 /// Parameters for `query_execute_stored_query` (path/query/header).
@@ -209,6 +277,54 @@ pub struct QueryExecuteStoredQueryParams {
     pub accept: Option<String>,
 }
 
+impl QueryExecuteStoredQueryParams {
+    /// The parameters of `query_execute_stored_query`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "qualified_query_name",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "ehr_id",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Uuid,
+        },
+        crate::rest::routes::Param {
+            name: "offset",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Integer,
+        },
+        crate::rest::routes::Param {
+            name: "fetch",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Integer,
+        },
+        crate::rest::routes::Param {
+            name: "query_parameters",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Object,
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+        },
+    ];
+}
+
 /// Parameters for `query_execute_stored_query_body` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QueryExecuteStoredQueryBodyParams {
@@ -222,6 +338,33 @@ pub struct QueryExecuteStoredQueryBodyParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// `Content-Type` (header)
     pub content_type: Option<String>,
+}
+
+impl QueryExecuteStoredQueryBodyParams {
+    /// The parameters of `query_execute_stored_query_body`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "qualified_query_name",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+        },
+        crate::rest::routes::Param {
+            name: "Content-Type",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+        },
+    ];
 }
 
 /// Parameters for `query_execute_stored_query_version` (path/query/header).
@@ -249,6 +392,61 @@ pub struct QueryExecuteStoredQueryVersionParams {
     pub accept: Option<String>,
 }
 
+impl QueryExecuteStoredQueryVersionParams {
+    /// The parameters of `query_execute_stored_query_version`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "qualified_query_name",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "version",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "ehr_id",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Uuid,
+        },
+        crate::rest::routes::Param {
+            name: "offset",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Integer,
+        },
+        crate::rest::routes::Param {
+            name: "fetch",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Integer,
+        },
+        crate::rest::routes::Param {
+            name: "query_parameters",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Object,
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+        },
+    ];
+}
+
 /// Parameters for `query_execute_stored_query_version_body` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QueryExecuteStoredQueryVersionBodyParams {
@@ -264,6 +462,40 @@ pub struct QueryExecuteStoredQueryVersionBodyParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// `Content-Type` (header)
     pub content_type: Option<String>,
+}
+
+impl QueryExecuteStoredQueryVersionBodyParams {
+    /// The parameters of `query_execute_stored_query_version_body`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "qualified_query_name",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "version",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+        },
+        crate::rest::routes::Param {
+            name: "Content-Type",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+        },
+    ];
 }
 
 /// The response headers the OAS declares for the `200` answer of
@@ -1380,3 +1612,19 @@ pub const ROUTES: &[(&str, &str, &str)] = &[
         "query_execute_stored_query_version_body",
     ),
 ];
+
+/// The declared parameters of each operation, index-aligned with [`ROUTES`]:
+/// the operation's `*Params::PARAMS`, empty when it declares none.
+pub const ROUTE_PARAMS: &[&[crate::rest::routes::Param]] = &[
+    QueryExecuteAdhocQueryParams::PARAMS,
+    QueryExecuteAdhocQueryBodyParams::PARAMS,
+    QueryExecuteStoredQueryParams::PARAMS,
+    QueryExecuteStoredQueryBodyParams::PARAMS,
+    QueryExecuteStoredQueryVersionParams::PARAMS,
+    QueryExecuteStoredQueryVersionBodyParams::PARAMS,
+];
+
+const _: () = assert!(
+    ROUTE_PARAMS.len() == ROUTES.len(),
+    "ROUTE_PARAMS carries one row per ROUTES entry"
+);

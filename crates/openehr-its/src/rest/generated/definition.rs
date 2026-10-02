@@ -877,6 +877,54 @@ pub struct DefinitionTemplateAdl14ListParams {
     pub fetch: Option<i64>,
 }
 
+impl DefinitionTemplateAdl14ListParams {
+    /// The parameters of `definition_template_adl1.4_list`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+        },
+        crate::rest::routes::Param {
+            name: "template_id",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "concept",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "version",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "offset",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Integer,
+        },
+        crate::rest::routes::Param {
+            name: "fetch",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Integer,
+        },
+    ];
+}
+
 /// Parameters for `definition_template_adl1.4_upload` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DefinitionTemplateAdl14UploadParams {
@@ -894,6 +942,41 @@ pub struct DefinitionTemplateAdl14UploadParams {
     pub content_type: Option<String>,
 }
 
+impl DefinitionTemplateAdl14UploadParams {
+    /// The parameters of `definition_template_adl1.4_upload`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "Prefer",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "return=representation",
+                "return=minimal",
+                "return=identifier",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "application/openehr.wt+json",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "Content-Type",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/xml"]),
+        },
+    ];
+}
+
 /// Parameters for `definition_template_adl1.4_get` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DefinitionTemplateAdl14GetParams {
@@ -903,6 +986,30 @@ pub struct DefinitionTemplateAdl14GetParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// `Accept` (header)
     pub accept: Option<String>,
+}
+
+impl DefinitionTemplateAdl14GetParams {
+    /// The parameters of `definition_template_adl1.4_get`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "template_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "application/openehr.wt+json",
+            ]),
+        },
+    ];
 }
 
 /// Parameters for `definition_template_adl1.4_example_get` (path/query/header).
@@ -920,6 +1027,45 @@ pub struct DefinitionTemplateAdl14ExampleGetParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// `Accept` (header)
     pub accept: Option<String>,
+}
+
+impl DefinitionTemplateAdl14ExampleGetParams {
+    /// The parameters of `definition_template_adl1.4_example_get`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "template_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "type",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Enum(&["input", "output"]),
+        },
+        crate::rest::routes::Param {
+            name: "detail_level",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Enum(&["required", "medium", "complete"]),
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "application/openehr.wt.flat+json",
+                "application/openehr.wt.structured+json",
+            ]),
+        },
+    ];
 }
 
 /// Parameters for `definition_template_adl2_list` (path/query/header).
@@ -946,6 +1092,54 @@ pub struct DefinitionTemplateAdl2ListParams {
     pub fetch: Option<i64>,
 }
 
+impl DefinitionTemplateAdl2ListParams {
+    /// The parameters of `definition_template_adl2_list`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+        },
+        crate::rest::routes::Param {
+            name: "template_id",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "concept",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "version",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "offset",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Integer,
+        },
+        crate::rest::routes::Param {
+            name: "fetch",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Integer,
+        },
+    ];
+}
+
 /// Parameters for `definition_template_adl2_upload` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DefinitionTemplateAdl2UploadParams {
@@ -966,6 +1160,48 @@ pub struct DefinitionTemplateAdl2UploadParams {
     pub content_type: Option<String>,
 }
 
+impl DefinitionTemplateAdl2UploadParams {
+    /// The parameters of `definition_template_adl2_upload`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "version",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "Prefer",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "return=representation",
+                "return=minimal",
+                "return=identifier",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "text/plain",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "Content-Type",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["text/plain"]),
+        },
+    ];
+}
+
 /// Parameters for `definition_template_adl2_get` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DefinitionTemplateAdl2GetParams {
@@ -975,6 +1211,30 @@ pub struct DefinitionTemplateAdl2GetParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// `Accept` (header)
     pub accept: Option<String>,
+}
+
+impl DefinitionTemplateAdl2GetParams {
+    /// The parameters of `definition_template_adl2_get`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "template_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "text/plain",
+            ]),
+        },
+    ];
 }
 
 /// Parameters for `definition_template_adl2_example_get` (path/query/header).
@@ -994,6 +1254,45 @@ pub struct DefinitionTemplateAdl2ExampleGetParams {
     pub accept: Option<String>,
 }
 
+impl DefinitionTemplateAdl2ExampleGetParams {
+    /// The parameters of `definition_template_adl2_example_get`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "template_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "type",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Enum(&["input", "output"]),
+        },
+        crate::rest::routes::Param {
+            name: "detail_level",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Enum(&["required", "medium", "complete"]),
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "application/openehr.wt.flat+json",
+                "application/openehr.wt.structured+json",
+            ]),
+        },
+    ];
+}
+
 /// Parameters for `definition_template_adl2_version_get` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DefinitionTemplateAdl2VersionGetParams {
@@ -1007,6 +1306,37 @@ pub struct DefinitionTemplateAdl2VersionGetParams {
     pub accept: Option<String>,
 }
 
+impl DefinitionTemplateAdl2VersionGetParams {
+    /// The parameters of `definition_template_adl2_version_get`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "template_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "version",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "text/plain",
+            ]),
+        },
+    ];
+}
+
 /// Parameters for `definition_query_list` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DefinitionQueryListParams {
@@ -1016,6 +1346,26 @@ pub struct DefinitionQueryListParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// `Accept` (header)
     pub accept: Option<String>,
+}
+
+impl DefinitionQueryListParams {
+    /// The parameters of `definition_query_list`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "qualified_query_name",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+        },
+    ];
 }
 
 /// Parameters for `definition_query_store.yaml` (path/query/header).
@@ -1036,6 +1386,40 @@ pub struct DefinitionQueryStoreYamlParams {
     pub content_type: Option<String>,
 }
 
+impl DefinitionQueryStoreYamlParams {
+    /// The parameters of `definition_query_store.yaml`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "qualified_query_name",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "query_type",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+        },
+        crate::rest::routes::Param {
+            name: "Content-Type",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["text/plain"]),
+        },
+    ];
+}
+
 /// Parameters for `definition_query_version_get` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DefinitionQueryVersionGetParams {
@@ -1047,6 +1431,33 @@ pub struct DefinitionQueryVersionGetParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// `Accept` (header)
     pub accept: Option<String>,
+}
+
+impl DefinitionQueryVersionGetParams {
+    /// The parameters of `definition_query_version_get`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "qualified_query_name",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "version",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+        },
+    ];
 }
 
 /// Parameters for `definition_query_version_store.yaml` (path/query/header).
@@ -1063,6 +1474,40 @@ pub struct DefinitionQueryVersionStoreYamlParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// `Accept` (header)
     pub accept: Option<String>,
+}
+
+impl DefinitionQueryVersionStoreYamlParams {
+    /// The parameters of `definition_query_version_store.yaml`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "qualified_query_name",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "version",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "query_type",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+        },
+    ];
 }
 
 /// The response headers the OAS declares for the `200` answer of
@@ -3221,3 +3666,26 @@ pub const ROUTES: &[(&str, &str, &str)] = &[
         "definition_query_version_store.yaml",
     ),
 ];
+
+/// The declared parameters of each operation, index-aligned with [`ROUTES`]:
+/// the operation's `*Params::PARAMS`, empty when it declares none.
+pub const ROUTE_PARAMS: &[&[crate::rest::routes::Param]] = &[
+    DefinitionTemplateAdl14ListParams::PARAMS,
+    DefinitionTemplateAdl14UploadParams::PARAMS,
+    DefinitionTemplateAdl14GetParams::PARAMS,
+    DefinitionTemplateAdl14ExampleGetParams::PARAMS,
+    DefinitionTemplateAdl2ListParams::PARAMS,
+    DefinitionTemplateAdl2UploadParams::PARAMS,
+    DefinitionTemplateAdl2GetParams::PARAMS,
+    DefinitionTemplateAdl2ExampleGetParams::PARAMS,
+    DefinitionTemplateAdl2VersionGetParams::PARAMS,
+    DefinitionQueryListParams::PARAMS,
+    DefinitionQueryStoreYamlParams::PARAMS,
+    DefinitionQueryVersionGetParams::PARAMS,
+    DefinitionQueryVersionStoreYamlParams::PARAMS,
+];
+
+const _: () = assert!(
+    ROUTE_PARAMS.len() == ROUTES.len(),
+    "ROUTE_PARAMS carries one row per ROUTES entry"
+);

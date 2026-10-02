@@ -541,16 +541,16 @@ fn function_parser<'a>(
     // The STRING function `CONTAINS(expr, substring)` shares its name with the
     // containment keyword (QUERY master03 §Functions/String functions) — in
     // function position (followed by `(`) the keyword token is the function
-    // name.
+    // name, kept as spelled.
     let named = ident()
-        .or(just(Token::Contains).to("contains".to_owned()))
+        .or(select! { Token::Contains(spelled) => spelled })
         .then(
             terminal
                 .separated_by(just(Token::Comma))
                 .collect::<Vec<_>>()
                 .delimited_by(just(Token::LeftParen), just(Token::RightParen)),
         )
-        .map(|(name, args)| FunctionCall::Named { name, args });
+        .map(|(name, args)| FunctionCall::named(name, args));
     terminology_fn().map(FunctionCall::Terminology).or(named)
 }
 
@@ -696,7 +696,7 @@ fn query<'a>() -> impl Parser<'a, &'a [Token], SelectQuery, Err<'a>> {
             .then(
                 just(Token::Not)
                     .or_not()
-                    .then_ignore(just(Token::Contains))
+                    .then_ignore(select! { Token::Contains(_) => () })
                     .then(contains.clone())
                     .map(|(neg, expr)| {
                         Box::new(ContainsConstraint {

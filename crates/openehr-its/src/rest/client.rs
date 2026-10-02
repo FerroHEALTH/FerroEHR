@@ -47,7 +47,9 @@ pub struct RequestTimeout(pub Duration);
 /// engine adapts in a few lines and the client never depends on one. The
 /// engine owns the connection pool, TLS and the per-request timeout; a request
 /// that carries a [`RequestTimeout`] extension must not run past it, or the
-/// caller's deadline is not kept.
+/// caller's deadline is not kept. An engine sends each request once and
+/// returns the answer it read, a `3xx` included: following a redirect would
+/// re-send the request, credentials and all, to a host the caller never named.
 #[async_trait::async_trait]
 pub trait Transport: Send + Sync {
     /// Sends `request` and reads the whole response.
@@ -81,6 +83,12 @@ pub enum TransportError {
 }
 
 /// The `reqwest` engine: a shared connection pool with rustls TLS.
+///
+/// The engine never follows a redirect: every constructor builds its client
+/// with `reqwest::redirect::Policy::none()`, so a `3xx` reaches the caller as
+/// received and nothing is re-sent to the host its `Location` names. That is
+/// why the constructors take a `reqwest::ClientBuilder` rather than a built
+/// client, whose redirect policy can be neither read nor changed.
 #[derive(Debug, Clone)]
 pub struct ReqwestTransport {
     client: reqwest::Client,
@@ -90,37 +98,52 @@ pub struct ReqwestTransport {
 }
 
 impl ReqwestTransport {
-    /// An engine over a `reqwest` client the caller configured (TLS roots,
-    /// proxies, timeouts).
+    /// An engine over a `reqwest` client the caller configures (TLS roots,
+    /// proxies), built here with redirects off.
     ///
-    /// A request that carries a [`RequestTimeout`] runs under that timeout,
-    /// which replaces the client's own (`reqwest::Request::timeout_mut`); use
-    /// [`ReqwestTransport::with_client_timeout`] to keep the shorter of both.
-    #[must_use]
-    pub fn new(client: reqwest::Client) -> Self {
-        Self {
-            client,
+    /// A request that carries a [`RequestTimeout`] runs under that timeout;
+    /// use [`ReqwestTransport::with_builder_timeout`] for a per-request
+    /// timeout of the engine's own, which a deadline only ever shortens.
+    ///
+    /// # Errors
+    /// Returns the `reqwest` error when the client cannot be built (the TLS
+    /// backend cannot be initialised, or the builder's configuration is
+    /// refused).
+    pub fn new(builder: reqwest::ClientBuilder) -> Result<Self, reqwest::Error> {
+        Ok(Self {
+            client: builder
+                .redirect(reqwest::redirect::Policy::none())
+                .build()?,
             timeout: None,
-        }
+        })
     }
 
-    /// An engine over a configured `reqwest` client that was built with
-    /// `timeout` per request; a request deadline only ever shortens it.
-    #[must_use]
-    pub fn with_client_timeout(client: reqwest::Client, timeout: Duration) -> Self {
-        Self {
-            client,
+    /// An engine over a `reqwest` client the caller configures, built here
+    /// with redirects off and `timeout` per request; a request deadline only
+    /// ever shortens it.
+    ///
+    /// # Errors
+    /// Returns the `reqwest` error when the client cannot be built.
+    pub fn with_builder_timeout(
+        builder: reqwest::ClientBuilder,
+        timeout: Duration,
+    ) -> Result<Self, reqwest::Error> {
+        Ok(Self {
+            client: builder
+                .timeout(timeout)
+                .redirect(reqwest::redirect::Policy::none())
+                .build()?,
             timeout: Some(timeout),
-        }
+        })
     }
 
-    /// An engine with the default client and `timeout` per request.
+    /// An engine with the default client, redirects off and `timeout` per
+    /// request.
     ///
     /// # Errors
     /// Returns the `reqwest` error when the TLS backend cannot be initialised.
     pub fn with_timeout(timeout: Duration) -> Result<Self, reqwest::Error> {
-        let client = reqwest::Client::builder().timeout(timeout).build()?;
-        Ok(Self::with_client_timeout(client, timeout))
+        Self::with_builder_timeout(reqwest::Client::builder(), timeout)
     }
 }
 
@@ -530,7 +553,9 @@ impl<T: Transport> Client<T> {
     ///
     /// Nothing is classified and nothing is retried: a `401`, `403` or `5xx`
     /// is an [`Answer`] like any other, and the status, every header (`ETag`,
-    /// `Location`) and the body bytes are as received. The request goes out as
+    /// `Location`) and the body bytes are as received. A `3xx` is returned,
+    /// never followed: [`ReqwestTransport`] is always built with redirects off,
+    /// and a caller's own [`Transport`] must not follow them either. The request goes out as
     /// built — path, query ([`Request::raw_query`]), headers and body
     /// ([`Request::raw_body`]) unchanged — except that the client's credentials,
     /// when configured, set `Authorization`, and `Accept` defaults to
