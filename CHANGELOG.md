@@ -17,6 +17,16 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **`openehr-its` exposes the `Authorization` value it sends** (#3535).
+  `Credentials::header_value` is public, so a consumer can validate a
+  credential at configuration load with exactly the value the client sends.
+  Basic credentials are checked against RFC 7617 §2 (no colon in the user-id,
+  no control character in either part) and bearer tokens against the
+  `b64token` syntax of RFC 6750 §2.1. A refusal is a typed
+  `InvalidCredentials`, which never carries the secret; a request whose
+  credentials break these rules fails with `ClientError::InvalidCredentials`
+  before anything is sent.
+- **The `openehr-*` crates step to 0.0.78.**
 - **`openehr-query` classifies AQL function calls** (#3529). A call naming
   one of the built-in functions in QUERY master03 §Functions parses to
   `FunctionCall::Builtin` with a typed `BuiltinFunction` (`StringFunction`,

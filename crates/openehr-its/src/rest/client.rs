@@ -239,24 +239,102 @@ impl Credentials {
         Self::Bearer(token.into())
     }
 
-    /// The `Authorization` field value.
-    fn header_value(&self) -> Result<HeaderValue, ClientError> {
+    /// The `Authorization` field value the client sends for these
+    /// credentials, marked sensitive.
+    ///
+    /// A consumer that validates a credential before the first request (at
+    /// configuration load) calls this, so it checks exactly what is sent.
+    /// The basic form follows RFC 7617 §2: the user-id carries no colon, and
+    /// neither the user-id nor the password carries a control character (the
+    /// `CTL` of RFC 5234 Appendix B.1). The bearer form follows the `b64token`
+    /// syntax of RFC 6750 §2.1.
+    ///
+    /// # Errors
+    /// Returns [`InvalidCredentials`] naming the rule the credentials break;
+    /// it never carries the secret.
+    pub fn header_value(&self) -> Result<HeaderValue, InvalidCredentials> {
         use base64::Engine as _;
         let text = match self {
-            Self::Basic { user, password } => format!(
-                "Basic {}",
-                base64::engine::general_purpose::STANDARD
-                    .encode(format!("{user}:{}", password.expose_secret()))
-            ),
-            Self::Bearer(token) => format!("Bearer {}", token.expose_secret()),
+            Self::Basic { user, password } => {
+                if user.contains(':') {
+                    return Err(InvalidCredentials::ColonInUserId);
+                }
+                if user.chars().any(|c| c.is_ascii_control()) {
+                    return Err(InvalidCredentials::ControlCharacter(BasicPart::UserId));
+                }
+                if password
+                    .expose_secret()
+                    .chars()
+                    .any(|c| c.is_ascii_control())
+                {
+                    return Err(InvalidCredentials::ControlCharacter(BasicPart::Password));
+                }
+                format!(
+                    "Basic {}",
+                    base64::engine::general_purpose::STANDARD
+                        .encode(format!("{user}:{}", password.expose_secret()))
+                )
+            }
+            Self::Bearer(token) => {
+                if !is_b64token(token.expose_secret()) {
+                    return Err(InvalidCredentials::NotB64Token);
+                }
+                format!("Bearer {}", token.expose_secret())
+            }
         };
         let mut value =
-            HeaderValue::from_str(&text).map_err(|source| ClientError::HeaderValue {
-                header: AUTHORIZATION.to_string(),
-                source,
-            })?;
+            HeaderValue::from_str(&text).map_err(InvalidCredentials::NotAHeaderValue)?;
         value.set_sensitive(true);
         Ok(value)
+    }
+}
+
+/// Whether `token` matches RFC 6750 §2.1 `b64token`:
+/// `1*( ALPHA / DIGIT / "-" / "." / "_" / "~" / "+" / "/" ) *"="`.
+fn is_b64token(token: &str) -> bool {
+    let body = token.trim_end_matches('=');
+    !body.is_empty()
+        && body.bytes().all(|b| {
+            b.is_ascii_alphanumeric() || matches!(b, b'-' | b'.' | b'_' | b'~' | b'+' | b'/')
+        })
+}
+
+/// Why [`Credentials`] cannot form an `Authorization` value.
+///
+/// No variant carries the secret, so the error is safe to log.
+#[derive(Debug, thiserror::Error)]
+pub enum InvalidCredentials {
+    /// A basic user-id contains a colon, which RFC 7617 §2 makes invalid: the
+    /// first colon of a user-pass separates the user-id from the password.
+    #[error("the basic user-id contains a colon (RFC 7617 §2)")]
+    ColonInUserId,
+    /// A basic user-id or password contains a control character, which
+    /// RFC 7617 §2 forbids.
+    #[error("the basic {0} contains a control character (RFC 7617 §2)")]
+    ControlCharacter(BasicPart),
+    /// A bearer token is not a `b64token` (RFC 6750 §2.1).
+    #[error("the bearer token is not a b64token (RFC 6750 §2.1)")]
+    NotB64Token,
+    /// The composed value is not a legal header value.
+    #[error("the credentials do not form a legal Authorization header value")]
+    NotAHeaderValue(#[source] http::header::InvalidHeaderValue),
+}
+
+/// The part of a basic credential a refusal names.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BasicPart {
+    /// The user-id.
+    UserId,
+    /// The password.
+    Password,
+}
+
+impl fmt::Display for BasicPart {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::UserId => "user-id",
+            Self::Password => "password",
+        })
     }
 }
 
@@ -662,7 +740,14 @@ impl<T: Transport> Client<T> {
                 headers.insert(ACCEPT, HeaderValue::from_static(CANONICAL_JSON));
             }
             if let Some(credentials) = credentials {
-                headers.insert(AUTHORIZATION, credentials.header_value()?);
+                let value = credentials.header_value().map_err(|source| {
+                    ClientError::InvalidCredentials {
+                        method: request.method.clone(),
+                        path: request.path.clone(),
+                        source,
+                    }
+                })?;
+                headers.insert(AUTHORIZATION, value);
             }
         }
         builder
@@ -1145,6 +1230,17 @@ pub enum ClientError {
         #[source]
         source: http::header::InvalidHeaderName,
     },
+    /// The credentials cannot form an `Authorization` value; nothing was sent.
+    #[error("the credentials for {method} {path} cannot be sent")]
+    InvalidCredentials {
+        /// The HTTP method.
+        method: Method,
+        /// The operation path.
+        path: String,
+        /// The rule the credentials break.
+        #[source]
+        source: InvalidCredentials,
+    },
     /// A header value is not legal on the wire.
     #[error("the value for the {header} header is not a legal header value")]
     HeaderValue {
@@ -1319,6 +1415,47 @@ mod tests {
         assert!(basic.is_sensitive());
         let bearer = Credentials::bearer("tok").header_value()?;
         assert_eq!(bearer.to_str()?, "Bearer tok");
+        let padded = Credentials::bearer("mF_9.B5f-4.1JqM+/~==").header_value()?;
+        assert_eq!(padded.to_str()?, "Bearer mF_9.B5f-4.1JqM+/~==");
+        // A colon in the password is legal: only the first colon separates.
+        let colon = Credentials::basic("alice", "a:b").header_value()?;
+        assert_eq!(colon.to_str()?, "Basic YWxpY2U6YTpi");
         Ok(())
+    }
+
+    #[test]
+    fn credentials_breaking_rfc_7617_or_6750_are_refused() {
+        use super::{BasicPart, InvalidCredentials};
+        let refused = |c: Credentials| c.header_value().err();
+        assert!(matches!(
+            refused(Credentials::basic("al:ice", "pw")),
+            Some(InvalidCredentials::ColonInUserId)
+        ));
+        assert!(matches!(
+            refused(Credentials::basic("al\tice", "pw")),
+            Some(InvalidCredentials::ControlCharacter(BasicPart::UserId))
+        ));
+        for password in ["p\u{7f}w", "p\nw", "\0"] {
+            assert!(
+                matches!(
+                    refused(Credentials::basic("alice", password)),
+                    Some(InvalidCredentials::ControlCharacter(BasicPart::Password))
+                ),
+                "{password:?}"
+            );
+        }
+        for token in ["", "=", "a b", "tok\n", "a=b", "t\u{e9}k", "a,b"] {
+            assert!(
+                matches!(
+                    refused(Credentials::bearer(token.to_owned())),
+                    Some(InvalidCredentials::NotB64Token)
+                ),
+                "{token:?}"
+            );
+        }
+        // A non-ASCII basic part is not a CTL: base64 makes it header-legal.
+        assert!(refused(Credentials::basic("j\u{f6}rg", "p\u{e9}")).is_none());
+        let shown = InvalidCredentials::ControlCharacter(BasicPart::Password).to_string();
+        assert!(!shown.contains("p\nw"), "{shown}");
     }
 }

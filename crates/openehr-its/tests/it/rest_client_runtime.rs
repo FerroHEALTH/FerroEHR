@@ -26,8 +26,8 @@ use std::time::{Duration, Instant};
 
 use http::{HeaderValue, Method, StatusCode};
 use openehr_its::rest::client::{
-    CallOptions, Client, ClientError, Credentials, CredentialsError, CredentialsProvider, Request,
-    ReqwestTransport, RetryPolicy, TransportError,
+    CallOptions, Client, ClientError, Credentials, CredentialsError, CredentialsProvider,
+    InvalidCredentials, Request, ReqwestTransport, RetryPolicy, TransportError,
 };
 use openehr_its::rest::generated::ehr;
 use wiremock::matchers::{body_bytes, header, method, path};
@@ -222,6 +222,35 @@ async fn forward_returns_a_redirect_as_received_over_every_constructor() -> Test
         .await
         .ok_or("request recording is off")?;
     assert!(followed.is_empty(), "a redirect was followed: {followed:?}");
+    Ok(())
+}
+
+/// A credential that breaks RFC 7617 §2 fails the call before anything is
+/// sent, and the cause downcasts to the crate's own `InvalidCredentials`.
+#[tokio::test]
+async fn invalid_credentials_fail_before_sending() -> TestResult {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(0)
+        .mount(&server)
+        .await;
+    let client = client_for(&server)?.with_credentials(Credentials::basic("al:ice", "pw"));
+    let failed = client
+        .forward(Request::new(Method::GET, format!("/ehr/{EHR_ID}")))
+        .await;
+    match failed {
+        Err(error @ ClientError::InvalidCredentials { .. }) => {
+            let cause = error
+                .source()
+                .and_then(|source| source.downcast_ref::<InvalidCredentials>());
+            assert!(
+                matches!(cause, Some(InvalidCredentials::ColonInUserId)),
+                "{cause:?}"
+            );
+        }
+        other => panic!("expected InvalidCredentials, got {other:?}"),
+    }
     Ok(())
 }
 
