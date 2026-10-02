@@ -700,7 +700,7 @@ fn is_multiple(attr: &str) -> bool {
 /// hard-coded list.
 ///
 /// "Structural" means the attribute's container is a `List`/`Set`/`Hash` **and**
-/// its declared element type resolves to a model class — so leaf/primitive byte
+/// its declared element type is not a primitive — so leaf byte
 /// arrays such as `DV_MULTIMEDIA.data : Array<Octet>` are excluded (they are
 /// values, not wrapper nodes the FLAT/TDD builders re-materialise), which keeps
 /// single-valued structural attributes such as `OBSERVATION.data : HISTORY`
@@ -719,9 +719,9 @@ static MULTIVALUED_ATTRS: LazyLock<HashSet<&str>> = LazyLock::new(|| {
         }
         for attr in openehr_rm::v1_2::model::attributes(cls) {
             // Only follow (and count) attributes whose value is itself an RM
-            // class; a primitive/foundation element type (e.g. `Octet`) is not a
+            // object; a primitive (e.g. `Octet`) is a JSON scalar, never a
             // structural wrapper.
-            if openehr_rm::v1_2::model::class(attr.declared_type).is_none() {
+            if openehr_rm::v1_2::model::is_primitive(attr.declared_type) {
                 continue;
             }
             if attr.container != openehr_rm::v1_2::model::Container::None {

@@ -11,7 +11,20 @@ use super::{
 
 pub(super) static CLASSES: &[RmClass] = &[
     RmClass {
+        name: "ACCESS_CONTROL_SETTINGS",
+        package: "org.openehr.rm.ehr",
+        generated_type: false,
+        is_abstract: true,
+        ancestors: &[],
+        descendants: &[],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[],
+    },
+    RmClass {
         name: "ACCESS_GROUP_REF",
+        package: "org.openehr.base.base_types.identification",
+        generated_type: true,
         is_abstract: false,
         ancestors: &["OBJECT_REF"],
         descendants: &["ACCESS_GROUP_REF"],
@@ -24,6 +37,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "type",
@@ -33,6 +47,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "id",
@@ -42,6 +57,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -49,8 +65,11 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "ACTION",
+        package: "org.openehr.rm.composition.content.entry",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[
+            "Any",
             "CARE_ENTRY",
             "CONTENT_ITEM",
             "ENTRY",
@@ -67,6 +86,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -76,6 +96,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -85,6 +106,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -97,6 +119,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -106,6 +129,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -115,6 +139,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "language",
@@ -124,6 +149,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "encoding",
@@ -133,6 +159,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_participations",
@@ -145,6 +172,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "workflow_id",
@@ -154,6 +182,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "subject",
@@ -163,6 +192,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "provider",
@@ -172,6 +202,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "protocol",
@@ -181,6 +212,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "guideline_id",
@@ -190,6 +222,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "time",
@@ -199,6 +232,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "ism_transition",
@@ -208,6 +242,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "instruction_details",
@@ -217,6 +252,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "description",
@@ -226,6 +262,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: true,
@@ -233,8 +270,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "ACTIVITY",
+        package: "org.openehr.rm.composition.content.entry",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "LOCATABLE", "PATHABLE"],
         descendants: &["ACTIVITY"],
         attributes: &[
             RmAttribute {
@@ -245,6 +284,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -254,6 +294,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -263,6 +304,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -275,6 +317,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -284,6 +327,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -293,6 +337,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "timing",
@@ -302,6 +347,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "action_archetype_id",
@@ -311,6 +357,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "description",
@@ -320,6 +367,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: true,
@@ -327,8 +375,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "ACTOR",
+        package: "org.openehr.rm.demographic",
+        generated_type: true,
         is_abstract: true,
-        ancestors: &["LOCATABLE", "PARTY", "PATHABLE"],
+        ancestors: &["Any", "LOCATABLE", "PARTY", "PATHABLE"],
         descendants: &["AGENT", "GROUP", "ORGANISATION", "PERSON"],
         attributes: &[
             RmAttribute {
@@ -339,6 +389,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -348,6 +399,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -357,6 +409,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -369,6 +422,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -378,6 +432,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -387,6 +442,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "identities",
@@ -399,6 +455,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "contacts",
@@ -411,6 +468,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "details",
@@ -420,6 +478,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "relationships",
@@ -432,6 +491,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "languages",
@@ -444,6 +504,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "roles",
@@ -456,6 +517,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: Some("VERSIONED_PARTY"),
             },
         ],
         is_structure_root: false,
@@ -463,8 +525,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "ADDRESS",
+        package: "org.openehr.rm.demographic",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "LOCATABLE", "PATHABLE"],
         descendants: &["ADDRESS"],
         attributes: &[
             RmAttribute {
@@ -475,6 +539,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -484,6 +549,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -493,6 +559,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -505,6 +572,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -514,6 +582,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -523,6 +592,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "details",
@@ -532,6 +602,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -539,6 +610,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "ADDRESSED_MESSAGE",
+        package: "org.openehr.rm.ehr_extract.message",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["ADDRESSED_MESSAGE"],
@@ -551,6 +624,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "sender_reference",
@@ -560,6 +634,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "addressees",
@@ -572,6 +647,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "urgency",
@@ -581,6 +657,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "message",
@@ -590,6 +667,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -597,8 +675,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "ADMIN_ENTRY",
+        package: "org.openehr.rm.composition.content.entry",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["CONTENT_ITEM", "ENTRY", "LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "CONTENT_ITEM", "ENTRY", "LOCATABLE", "PATHABLE"],
         descendants: &["ADMIN_ENTRY"],
         attributes: &[
             RmAttribute {
@@ -609,6 +689,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -618,6 +699,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -627,6 +709,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -639,6 +722,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -648,6 +732,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -657,6 +742,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "language",
@@ -666,6 +752,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "encoding",
@@ -675,6 +762,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_participations",
@@ -687,6 +775,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "workflow_id",
@@ -696,6 +785,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "subject",
@@ -705,6 +795,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "provider",
@@ -714,6 +805,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "data",
@@ -723,6 +815,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: true,
@@ -730,8 +823,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "AGENT",
+        package: "org.openehr.rm.demographic",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["ACTOR", "LOCATABLE", "PARTY", "PATHABLE"],
+        ancestors: &["ACTOR", "Any", "LOCATABLE", "PARTY", "PATHABLE"],
         descendants: &["AGENT"],
         attributes: &[
             RmAttribute {
@@ -742,6 +837,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -751,6 +847,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -760,6 +857,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -772,6 +870,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -781,6 +880,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -790,6 +890,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "identities",
@@ -802,6 +903,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "contacts",
@@ -814,6 +916,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "details",
@@ -823,6 +926,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "relationships",
@@ -835,6 +939,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "languages",
@@ -847,6 +952,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "roles",
@@ -859,6 +965,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: Some("VERSIONED_PARTY"),
             },
         ],
         is_structure_root: false,
@@ -866,6 +973,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "ARCHETYPED",
+        package: "org.openehr.rm.common.archetyped",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["ARCHETYPED"],
@@ -878,6 +987,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "template_id",
@@ -887,6 +997,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "rm_version",
@@ -896,6 +1007,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -903,6 +1015,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "ARCHETYPE_ID",
+        package: "org.openehr.base.base_types.identification",
+        generated_type: true,
         is_abstract: false,
         ancestors: &["OBJECT_ID"],
         descendants: &["ARCHETYPE_ID"],
@@ -914,12 +1028,15 @@ pub(super) static CLASSES: &[RmClass] = &[
             type_params: &[],
             cardinality: None,
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
         name: "ATTESTATION",
+        package: "org.openehr.rm.common.generic",
+        generated_type: true,
         is_abstract: false,
         ancestors: &["AUDIT_DETAILS"],
         descendants: &["ATTESTATION"],
@@ -932,6 +1049,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "time_committed",
@@ -941,6 +1059,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "change_type",
@@ -950,6 +1069,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "description",
@@ -959,6 +1079,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "committer",
@@ -968,6 +1089,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "attested_view",
@@ -977,6 +1099,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "proof",
@@ -986,6 +1109,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "items",
@@ -998,6 +1122,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "reason",
@@ -1007,6 +1132,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "is_pending",
@@ -1016,6 +1142,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -1023,6 +1150,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "AUDIT_DETAILS",
+        package: "org.openehr.rm.common.generic",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["ATTESTATION", "AUDIT_DETAILS"],
@@ -1035,6 +1164,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "time_committed",
@@ -1044,6 +1174,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "change_type",
@@ -1053,6 +1184,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "description",
@@ -1062,6 +1194,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "committer",
@@ -1071,6 +1204,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -1078,6 +1212,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "AUTHORED_RESOURCE",
+        package: "org.openehr.rm.common.resource",
+        generated_type: true,
         is_abstract: true,
         ancestors: &[],
         descendants: &[],
@@ -1090,6 +1226,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "is_controlled",
@@ -1099,6 +1236,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "translations",
@@ -1117,6 +1255,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 ],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "description",
@@ -1126,6 +1265,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "revision_history",
@@ -1135,15 +1275,169 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
-        name: "CAPABILITY",
+        name: "Any",
+        package: "org.openehr.base.foundation_types",
+        generated_type: false,
+        is_abstract: true,
+        ancestors: &[],
+        descendants: &[
+            "ACTION",
+            "ACTIVITY",
+            "ADDRESS",
+            "ADMIN_ENTRY",
+            "AGENT",
+            "Array",
+            "Boolean",
+            "CAPABILITY",
+            "CLUSTER",
+            "COMPOSITION",
+            "CONTACT",
+            "Character",
+            "DV_COUNT",
+            "DV_DATE",
+            "DV_DATE_TIME",
+            "DV_DURATION",
+            "DV_INTERVAL",
+            "DV_ORDINAL",
+            "DV_PROPORTION",
+            "DV_QUANTITY",
+            "DV_SCALE",
+            "DV_TIME",
+            "Double",
+            "EHR_ACCESS",
+            "EHR_STATUS",
+            "ELEMENT",
+            "EVALUATION",
+            "EVENT_CONTEXT",
+            "EXTRACT",
+            "EXTRACT_ACTION_REQUEST",
+            "EXTRACT_CHAPTER",
+            "EXTRACT_ENTITY_CHAPTER",
+            "EXTRACT_FOLDER",
+            "EXTRACT_REQUEST",
+            "FOLDER",
+            "GENERIC_CONTENT_ITEM",
+            "GENERIC_ENTRY",
+            "GROUP",
+            "HISTORY",
+            "Hash",
+            "INSTRUCTION",
+            "INSTRUCTION_DETAILS",
+            "INTERVAL_EVENT",
+            "ISM_TRANSITION",
+            "ITEM_LIST",
+            "ITEM_SINGLE",
+            "ITEM_TABLE",
+            "ITEM_TREE",
+            "Integer",
+            "Integer64",
+            "Iso8601_date",
+            "Iso8601_date_time",
+            "Iso8601_duration",
+            "Iso8601_time",
+            "Iso8601_timezone",
+            "List",
+            "Multiplicity_interval",
+            "OBSERVATION",
+            "OPENEHR_CONTENT_ITEM",
+            "ORGANISATION",
+            "Octet",
+            "PARTY_IDENTITY",
+            "PARTY_RELATIONSHIP",
+            "PERSON",
+            "POINT_EVENT",
+            "PROPORTION_KIND",
+            "Point_interval",
+            "Proper_interval",
+            "ROLE",
+            "Real",
+            "SECTION",
+            "Set",
+            "String",
+            "Terminology_code",
+            "Terminology_term",
+            "Uri",
+            "VALIDITY_KIND",
+            "VERSION_STATUS",
+        ],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[],
+    },
+    RmClass {
+        name: "Array",
+        package: "org.openehr.base.foundation_types.structure",
+        generated_type: false,
         is_abstract: false,
-        ancestors: &["LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "Container"],
+        descendants: &["Array"],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[RmGenericParam {
+            name: "T",
+            conforms_to: Some("Any"),
+        }],
+    },
+    RmClass {
+        name: "BASIC_DEFINITIONS",
+        package: "org.openehr.base.base_types.definitions",
+        generated_type: false,
+        is_abstract: false,
+        ancestors: &[],
+        descendants: &[
+            "BASIC_DEFINITIONS",
+            "DV_BOOLEAN",
+            "DV_CODED_TEXT",
+            "DV_COUNT",
+            "DV_DATE",
+            "DV_DATE_TIME",
+            "DV_DURATION",
+            "DV_EHR_URI",
+            "DV_GENERAL_TIME_SPECIFICATION",
+            "DV_IDENTIFIER",
+            "DV_INTERVAL",
+            "DV_MULTIMEDIA",
+            "DV_ORDINAL",
+            "DV_PARAGRAPH",
+            "DV_PARSABLE",
+            "DV_PERIODIC_TIME_SPECIFICATION",
+            "DV_PROPORTION",
+            "DV_QUANTITY",
+            "DV_SCALE",
+            "DV_STATE",
+            "DV_TEXT",
+            "DV_TIME",
+            "DV_URI",
+            "OPENEHR_DEFINITIONS",
+        ],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[],
+    },
+    RmClass {
+        name: "Boolean",
+        package: "org.openehr.base.foundation_types.primitive_types",
+        generated_type: false,
+        is_abstract: false,
+        ancestors: &["Any"],
+        descendants: &["Boolean"],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[],
+    },
+    RmClass {
+        name: "CAPABILITY",
+        package: "org.openehr.rm.demographic",
+        generated_type: true,
+        is_abstract: false,
+        ancestors: &["Any", "LOCATABLE", "PATHABLE"],
         descendants: &["CAPABILITY"],
         attributes: &[
             RmAttribute {
@@ -1154,6 +1448,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -1163,6 +1458,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -1172,6 +1468,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -1184,6 +1481,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -1193,6 +1491,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -1202,6 +1501,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "credentials",
@@ -1211,6 +1511,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "time_validity",
@@ -1223,6 +1524,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 }],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -1230,8 +1532,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "CARE_ENTRY",
+        package: "org.openehr.rm.composition.content.entry",
+        generated_type: true,
         is_abstract: true,
-        ancestors: &["CONTENT_ITEM", "ENTRY", "LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "CONTENT_ITEM", "ENTRY", "LOCATABLE", "PATHABLE"],
         descendants: &["ACTION", "EVALUATION", "INSTRUCTION", "OBSERVATION"],
         attributes: &[
             RmAttribute {
@@ -1242,6 +1546,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -1251,6 +1556,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -1260,6 +1566,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -1272,6 +1579,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -1281,6 +1589,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -1290,6 +1599,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "language",
@@ -1299,6 +1609,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "encoding",
@@ -1308,6 +1619,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_participations",
@@ -1320,6 +1632,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "workflow_id",
@@ -1329,6 +1642,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "subject",
@@ -1338,6 +1652,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "provider",
@@ -1347,6 +1662,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "protocol",
@@ -1356,6 +1672,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "guideline_id",
@@ -1365,6 +1682,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -1372,8 +1690,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "CLUSTER",
+        package: "org.openehr.rm.data_structures.representation",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["ITEM", "LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "ITEM", "LOCATABLE", "PATHABLE"],
         descendants: &["CLUSTER"],
         attributes: &[
             RmAttribute {
@@ -1384,6 +1704,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -1393,6 +1714,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -1402,6 +1724,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -1414,6 +1737,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -1423,6 +1747,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -1432,6 +1757,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "items",
@@ -1444,6 +1770,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: true,
@@ -1451,6 +1778,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "CODE_PHRASE",
+        package: "org.openehr.rm.data_types.text",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["CODE_PHRASE"],
@@ -1463,6 +1792,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "code_string",
@@ -1472,6 +1802,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "preferred_term",
@@ -1481,6 +1812,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -1488,6 +1820,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "CODE_SET_ACCESS",
+        package: "org.openehr.rm.support.terminology",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["CODE_SET_ACCESS"],
@@ -1497,8 +1831,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "COMPOSITION",
+        package: "org.openehr.rm.composition",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "LOCATABLE", "PATHABLE"],
         descendants: &["COMPOSITION"],
         attributes: &[
             RmAttribute {
@@ -1509,6 +1845,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -1518,6 +1855,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -1527,6 +1865,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -1539,6 +1878,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -1548,6 +1888,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -1557,6 +1898,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "language",
@@ -1566,6 +1908,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "territory",
@@ -1575,6 +1918,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "category",
@@ -1584,6 +1928,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "context",
@@ -1593,6 +1938,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "composer",
@@ -1602,6 +1948,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "content",
@@ -1614,6 +1961,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
         ],
         is_structure_root: true,
@@ -1621,8 +1969,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "CONTACT",
+        package: "org.openehr.rm.demographic",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "LOCATABLE", "PATHABLE"],
         descendants: &["CONTACT"],
         attributes: &[
             RmAttribute {
@@ -1633,6 +1983,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -1642,6 +1993,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -1651,6 +2003,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -1663,6 +2016,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -1672,6 +2026,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -1681,6 +2036,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "addresses",
@@ -1693,6 +2049,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "time_validity",
@@ -1705,6 +2062,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 }],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -1712,8 +2070,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "CONTENT_ITEM",
+        package: "org.openehr.rm.composition.content",
+        generated_type: true,
         is_abstract: true,
-        ancestors: &["LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "LOCATABLE", "PATHABLE"],
         descendants: &[
             "ACTION",
             "ADMIN_ENTRY",
@@ -1732,6 +2092,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -1741,6 +2102,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -1750,6 +2112,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -1762,6 +2125,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -1771,6 +2135,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -1780,6 +2145,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -1787,6 +2153,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "CONTRIBUTION",
+        package: "org.openehr.rm.common.change_control",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["CONTRIBUTION"],
@@ -1799,6 +2167,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "versions",
@@ -1811,6 +2180,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: Some("VERSION"),
             },
             RmAttribute {
                 name: "audit",
@@ -1820,6 +2190,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -1827,6 +2198,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "Cardinality",
+        package: "org.openehr.base.foundation_types.interval",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["Cardinality"],
@@ -1839,6 +2212,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "is_ordered",
@@ -1848,6 +2222,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "is_unique",
@@ -1857,15 +2232,54 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
-        name: "DATA_STRUCTURE",
+        name: "Character",
+        package: "org.openehr.base.foundation_types.primitive_types",
+        generated_type: false,
+        is_abstract: false,
+        ancestors: &["Any", "Ordered"],
+        descendants: &["Character"],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[],
+    },
+    RmClass {
+        name: "Comparable",
+        package: "org.openehr.base.foundation_types.primitive_types",
+        generated_type: false,
         is_abstract: true,
-        ancestors: &["LOCATABLE", "PATHABLE"],
+        ancestors: &[],
+        descendants: &[],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[],
+    },
+    RmClass {
+        name: "Container",
+        package: "org.openehr.base.foundation_types.structure",
+        generated_type: false,
+        is_abstract: true,
+        ancestors: &["Any"],
+        descendants: &["Array", "Hash", "List", "Set"],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[RmGenericParam {
+            name: "T",
+            conforms_to: Some("Any"),
+        }],
+    },
+    RmClass {
+        name: "DATA_STRUCTURE",
+        package: "org.openehr.rm.data_structures",
+        generated_type: true,
+        is_abstract: true,
+        ancestors: &["Any", "LOCATABLE", "PATHABLE"],
         descendants: &[
             "HISTORY",
             "ITEM_LIST",
@@ -1882,6 +2296,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -1891,6 +2306,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -1900,6 +2316,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -1912,6 +2329,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -1921,6 +2339,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -1930,6 +2349,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -1937,8 +2357,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "DATA_VALUE",
+        package: "org.openehr.rm.data_types.basic",
+        generated_type: true,
         is_abstract: true,
-        ancestors: &[],
+        ancestors: &["BASIC_DEFINITIONS", "OPENEHR_DEFINITIONS"],
         descendants: &[
             "DV_BOOLEAN",
             "DV_CODED_TEXT",
@@ -1969,8 +2391,18 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "DV_ABSOLUTE_QUANTITY",
+        package: "org.openehr.rm.data_types.quantity",
+        generated_type: true,
         is_abstract: true,
-        ancestors: &["DATA_VALUE", "DV_ORDERED", "DV_QUANTIFIED"],
+        ancestors: &[
+            "Any",
+            "BASIC_DEFINITIONS",
+            "DATA_VALUE",
+            "DV_ORDERED",
+            "DV_QUANTIFIED",
+            "OPENEHR_DEFINITIONS",
+            "Ordered",
+        ],
         descendants: &["DV_DATE", "DV_DATE_TIME", "DV_TIME"],
         attributes: &[
             RmAttribute {
@@ -1981,6 +2413,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "normal_range",
@@ -1990,6 +2423,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_reference_ranges",
@@ -2005,6 +2439,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "magnitude_status",
@@ -2014,6 +2449,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "accuracy",
@@ -2023,6 +2459,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -2030,8 +2467,18 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "DV_AMOUNT",
+        package: "org.openehr.rm.data_types.quantity",
+        generated_type: true,
         is_abstract: true,
-        ancestors: &["DATA_VALUE", "DV_ORDERED", "DV_QUANTIFIED"],
+        ancestors: &[
+            "Any",
+            "BASIC_DEFINITIONS",
+            "DATA_VALUE",
+            "DV_ORDERED",
+            "DV_QUANTIFIED",
+            "OPENEHR_DEFINITIONS",
+            "Ordered",
+        ],
         descendants: &["DV_COUNT", "DV_DURATION", "DV_PROPORTION", "DV_QUANTITY"],
         attributes: &[
             RmAttribute {
@@ -2042,6 +2489,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "normal_range",
@@ -2051,6 +2499,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_reference_ranges",
@@ -2066,6 +2515,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "magnitude_status",
@@ -2075,6 +2525,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "accuracy",
@@ -2084,6 +2535,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "accuracy_is_percent",
@@ -2093,6 +2545,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -2100,8 +2553,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "DV_BOOLEAN",
+        package: "org.openehr.rm.data_types.basic",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["DATA_VALUE"],
+        ancestors: &["BASIC_DEFINITIONS", "DATA_VALUE", "OPENEHR_DEFINITIONS"],
         descendants: &["DV_BOOLEAN"],
         attributes: &[RmAttribute {
             name: "value",
@@ -2111,14 +2566,22 @@ pub(super) static CLASSES: &[RmClass] = &[
             type_params: &[],
             cardinality: None,
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
         name: "DV_CODED_TEXT",
+        package: "org.openehr.rm.data_types.text",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["DATA_VALUE", "DV_TEXT"],
+        ancestors: &[
+            "BASIC_DEFINITIONS",
+            "DATA_VALUE",
+            "DV_TEXT",
+            "OPENEHR_DEFINITIONS",
+        ],
         descendants: &["DV_CODED_TEXT"],
         attributes: &[
             RmAttribute {
@@ -2129,6 +2592,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "hyperlink",
@@ -2138,6 +2602,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "formatting",
@@ -2147,6 +2612,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "mappings",
@@ -2159,6 +2625,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "language",
@@ -2168,6 +2635,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "encoding",
@@ -2177,6 +2645,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "defining_code",
@@ -2186,6 +2655,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -2193,8 +2663,19 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "DV_COUNT",
+        package: "org.openehr.rm.data_types.quantity",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["DATA_VALUE", "DV_AMOUNT", "DV_ORDERED", "DV_QUANTIFIED"],
+        ancestors: &[
+            "Any",
+            "BASIC_DEFINITIONS",
+            "DATA_VALUE",
+            "DV_AMOUNT",
+            "DV_ORDERED",
+            "DV_QUANTIFIED",
+            "OPENEHR_DEFINITIONS",
+            "Ordered",
+        ],
         descendants: &["DV_COUNT"],
         attributes: &[
             RmAttribute {
@@ -2205,6 +2686,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "normal_range",
@@ -2217,6 +2699,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 }],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_reference_ranges",
@@ -2232,6 +2715,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "magnitude_status",
@@ -2241,6 +2725,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "accuracy",
@@ -2250,6 +2735,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "accuracy_is_percent",
@@ -2259,6 +2745,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "magnitude",
@@ -2268,6 +2755,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -2275,8 +2763,12 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "DV_DATE",
+        package: "org.openehr.rm.data_types.quantity.date_time",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[
+            "Any",
+            "BASIC_DEFINITIONS",
             "DATA_VALUE",
             "DV_ABSOLUTE_QUANTITY",
             "DV_ORDERED",
@@ -2284,6 +2776,10 @@ pub(super) static CLASSES: &[RmClass] = &[
             "DV_TEMPORAL",
             "Iso8601_date",
             "Iso8601_type",
+            "OPENEHR_DEFINITIONS",
+            "Ordered",
+            "Temporal",
+            "Time_Definitions",
         ],
         descendants: &["DV_DATE"],
         attributes: &[
@@ -2295,6 +2791,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "normal_range",
@@ -2304,6 +2801,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_reference_ranges",
@@ -2319,6 +2817,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "magnitude_status",
@@ -2328,6 +2827,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "accuracy",
@@ -2337,6 +2837,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "value",
@@ -2346,6 +2847,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -2353,8 +2855,12 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "DV_DATE_TIME",
+        package: "org.openehr.rm.data_types.quantity.date_time",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[
+            "Any",
+            "BASIC_DEFINITIONS",
             "DATA_VALUE",
             "DV_ABSOLUTE_QUANTITY",
             "DV_ORDERED",
@@ -2362,6 +2868,10 @@ pub(super) static CLASSES: &[RmClass] = &[
             "DV_TEMPORAL",
             "Iso8601_date_time",
             "Iso8601_type",
+            "OPENEHR_DEFINITIONS",
+            "Ordered",
+            "Temporal",
+            "Time_Definitions",
         ],
         descendants: &["DV_DATE_TIME"],
         attributes: &[
@@ -2373,6 +2883,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "normal_range",
@@ -2382,6 +2893,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_reference_ranges",
@@ -2397,6 +2909,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "magnitude_status",
@@ -2406,6 +2919,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "accuracy",
@@ -2415,6 +2929,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "value",
@@ -2424,6 +2939,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -2431,14 +2947,22 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "DV_DURATION",
+        package: "org.openehr.rm.data_types.quantity.date_time",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[
+            "Any",
+            "BASIC_DEFINITIONS",
             "DATA_VALUE",
             "DV_AMOUNT",
             "DV_ORDERED",
             "DV_QUANTIFIED",
             "Iso8601_duration",
             "Iso8601_type",
+            "OPENEHR_DEFINITIONS",
+            "Ordered",
+            "Temporal",
+            "Time_Definitions",
         ],
         descendants: &["DV_DURATION"],
         attributes: &[
@@ -2450,6 +2974,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "normal_range",
@@ -2459,6 +2984,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_reference_ranges",
@@ -2474,6 +3000,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "magnitude_status",
@@ -2483,6 +3010,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "accuracy",
@@ -2492,6 +3020,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "accuracy_is_percent",
@@ -2501,6 +3030,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "value",
@@ -2510,6 +3040,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -2517,8 +3048,15 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "DV_EHR_URI",
+        package: "org.openehr.rm.data_types.uri",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["DATA_VALUE", "DV_URI"],
+        ancestors: &[
+            "BASIC_DEFINITIONS",
+            "DATA_VALUE",
+            "DV_URI",
+            "OPENEHR_DEFINITIONS",
+        ],
         descendants: &["DV_EHR_URI"],
         attributes: &[RmAttribute {
             name: "value",
@@ -2528,14 +3066,17 @@ pub(super) static CLASSES: &[RmClass] = &[
             type_params: &[],
             cardinality: None,
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
         name: "DV_ENCAPSULATED",
+        package: "org.openehr.rm.data_types.encapsulated",
+        generated_type: true,
         is_abstract: true,
-        ancestors: &["DATA_VALUE"],
+        ancestors: &["BASIC_DEFINITIONS", "DATA_VALUE", "OPENEHR_DEFINITIONS"],
         descendants: &["DV_MULTIMEDIA", "DV_PARSABLE"],
         attributes: &[
             RmAttribute {
@@ -2546,6 +3087,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "language",
@@ -2555,6 +3097,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -2562,8 +3105,15 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "DV_GENERAL_TIME_SPECIFICATION",
+        package: "org.openehr.rm.data_types.time_specification",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["DATA_VALUE", "DV_TIME_SPECIFICATION"],
+        ancestors: &[
+            "BASIC_DEFINITIONS",
+            "DATA_VALUE",
+            "DV_TIME_SPECIFICATION",
+            "OPENEHR_DEFINITIONS",
+        ],
         descendants: &["DV_GENERAL_TIME_SPECIFICATION"],
         attributes: &[RmAttribute {
             name: "value",
@@ -2573,14 +3123,17 @@ pub(super) static CLASSES: &[RmClass] = &[
             type_params: &[],
             cardinality: None,
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
         name: "DV_IDENTIFIER",
+        package: "org.openehr.rm.data_types.basic",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["DATA_VALUE"],
+        ancestors: &["BASIC_DEFINITIONS", "DATA_VALUE", "OPENEHR_DEFINITIONS"],
         descendants: &["DV_IDENTIFIER"],
         attributes: &[
             RmAttribute {
@@ -2591,6 +3144,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "assigner",
@@ -2600,6 +3154,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "id",
@@ -2609,6 +3164,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "type",
@@ -2618,6 +3174,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -2625,8 +3182,16 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "DV_INTERVAL",
+        package: "org.openehr.rm.data_types.quantity",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["DATA_VALUE", "Interval"],
+        ancestors: &[
+            "Any",
+            "BASIC_DEFINITIONS",
+            "DATA_VALUE",
+            "Interval",
+            "OPENEHR_DEFINITIONS",
+        ],
         descendants: &["DV_INTERVAL"],
         attributes: &[
             RmAttribute {
@@ -2637,6 +3202,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "upper",
@@ -2646,6 +3212,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "lower_unbounded",
@@ -2655,6 +3222,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "upper_unbounded",
@@ -2664,6 +3232,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "lower_included",
@@ -2673,6 +3242,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "upper_included",
@@ -2682,6 +3252,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -2692,8 +3263,15 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "DV_MULTIMEDIA",
+        package: "org.openehr.rm.data_types.encapsulated",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["DATA_VALUE", "DV_ENCAPSULATED"],
+        ancestors: &[
+            "BASIC_DEFINITIONS",
+            "DATA_VALUE",
+            "DV_ENCAPSULATED",
+            "OPENEHR_DEFINITIONS",
+        ],
         descendants: &["DV_MULTIMEDIA"],
         attributes: &[
             RmAttribute {
@@ -2704,6 +3282,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "language",
@@ -2713,6 +3292,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "alternate_text",
@@ -2722,6 +3302,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uri",
@@ -2731,6 +3312,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "data",
@@ -2743,6 +3325,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "media_type",
@@ -2752,6 +3335,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "compression_algorithm",
@@ -2761,6 +3345,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "integrity_check",
@@ -2773,6 +3358,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "integrity_check_algorithm",
@@ -2782,6 +3368,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "thumbnail",
@@ -2791,6 +3378,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "size",
@@ -2800,6 +3388,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -2807,8 +3396,16 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "DV_ORDERED",
+        package: "org.openehr.rm.data_types.quantity",
+        generated_type: true,
         is_abstract: true,
-        ancestors: &["DATA_VALUE"],
+        ancestors: &[
+            "Any",
+            "BASIC_DEFINITIONS",
+            "DATA_VALUE",
+            "OPENEHR_DEFINITIONS",
+            "Ordered",
+        ],
         descendants: &[
             "DV_COUNT",
             "DV_DATE",
@@ -2829,6 +3426,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "normal_range",
@@ -2838,6 +3436,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_reference_ranges",
@@ -2853,6 +3452,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -2860,8 +3460,17 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "DV_ORDINAL",
+        package: "org.openehr.rm.data_types.quantity",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["DATA_VALUE", "DV_ORDERED"],
+        ancestors: &[
+            "Any",
+            "BASIC_DEFINITIONS",
+            "DATA_VALUE",
+            "DV_ORDERED",
+            "OPENEHR_DEFINITIONS",
+            "Ordered",
+        ],
         descendants: &["DV_ORDINAL"],
         attributes: &[
             RmAttribute {
@@ -2872,6 +3481,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "normal_range",
@@ -2881,6 +3491,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_reference_ranges",
@@ -2896,6 +3507,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "symbol",
@@ -2905,6 +3517,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "value",
@@ -2914,6 +3527,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -2921,8 +3535,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "DV_PARAGRAPH",
+        package: "org.openehr.rm.data_types.text",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["DATA_VALUE"],
+        ancestors: &["BASIC_DEFINITIONS", "DATA_VALUE", "OPENEHR_DEFINITIONS"],
         descendants: &["DV_PARAGRAPH"],
         attributes: &[RmAttribute {
             name: "items",
@@ -2935,14 +3551,22 @@ pub(super) static CLASSES: &[RmClass] = &[
                 upper: None,
             }),
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
         name: "DV_PARSABLE",
+        package: "org.openehr.rm.data_types.encapsulated",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["DATA_VALUE", "DV_ENCAPSULATED"],
+        ancestors: &[
+            "BASIC_DEFINITIONS",
+            "DATA_VALUE",
+            "DV_ENCAPSULATED",
+            "OPENEHR_DEFINITIONS",
+        ],
         descendants: &["DV_PARSABLE"],
         attributes: &[
             RmAttribute {
@@ -2953,6 +3577,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "language",
@@ -2962,6 +3587,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "value",
@@ -2971,6 +3597,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "formalism",
@@ -2980,6 +3607,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -2987,8 +3615,15 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "DV_PERIODIC_TIME_SPECIFICATION",
+        package: "org.openehr.rm.data_types.time_specification",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["DATA_VALUE", "DV_TIME_SPECIFICATION"],
+        ancestors: &[
+            "BASIC_DEFINITIONS",
+            "DATA_VALUE",
+            "DV_TIME_SPECIFICATION",
+            "OPENEHR_DEFINITIONS",
+        ],
         descendants: &["DV_PERIODIC_TIME_SPECIFICATION"],
         attributes: &[RmAttribute {
             name: "value",
@@ -2998,18 +3633,28 @@ pub(super) static CLASSES: &[RmClass] = &[
             type_params: &[],
             cardinality: None,
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
         name: "DV_PROPORTION",
+        package: "org.openehr.rm.data_types.quantity",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[
+            "Any",
+            "BASIC_DEFINITIONS",
             "DATA_VALUE",
             "DV_AMOUNT",
             "DV_ORDERED",
             "DV_QUANTIFIED",
+            "Integer",
+            "Numeric",
+            "OPENEHR_DEFINITIONS",
+            "Ordered",
+            "Ordered_Numeric",
             "PROPORTION_KIND",
         ],
         descendants: &["DV_PROPORTION"],
@@ -3022,6 +3667,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "normal_range",
@@ -3034,6 +3680,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 }],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_reference_ranges",
@@ -3049,6 +3696,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "magnitude_status",
@@ -3058,6 +3706,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "accuracy",
@@ -3067,6 +3716,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "accuracy_is_percent",
@@ -3076,6 +3726,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "numerator",
@@ -3085,6 +3736,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "denominator",
@@ -3094,6 +3746,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "type",
@@ -3103,6 +3756,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "precision",
@@ -3112,6 +3766,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -3119,8 +3774,17 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "DV_QUANTIFIED",
+        package: "org.openehr.rm.data_types.quantity",
+        generated_type: true,
         is_abstract: true,
-        ancestors: &["DATA_VALUE", "DV_ORDERED"],
+        ancestors: &[
+            "Any",
+            "BASIC_DEFINITIONS",
+            "DATA_VALUE",
+            "DV_ORDERED",
+            "OPENEHR_DEFINITIONS",
+            "Ordered",
+        ],
         descendants: &[
             "DV_COUNT",
             "DV_DATE",
@@ -3139,6 +3803,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "normal_range",
@@ -3148,6 +3813,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_reference_ranges",
@@ -3163,6 +3829,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "magnitude_status",
@@ -3172,6 +3839,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "accuracy",
@@ -3181,6 +3849,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -3188,8 +3857,19 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "DV_QUANTITY",
+        package: "org.openehr.rm.data_types.quantity",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["DATA_VALUE", "DV_AMOUNT", "DV_ORDERED", "DV_QUANTIFIED"],
+        ancestors: &[
+            "Any",
+            "BASIC_DEFINITIONS",
+            "DATA_VALUE",
+            "DV_AMOUNT",
+            "DV_ORDERED",
+            "DV_QUANTIFIED",
+            "OPENEHR_DEFINITIONS",
+            "Ordered",
+        ],
         descendants: &["DV_QUANTITY"],
         attributes: &[
             RmAttribute {
@@ -3200,6 +3880,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "normal_range",
@@ -3212,6 +3893,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 }],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_reference_ranges",
@@ -3227,6 +3909,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "magnitude_status",
@@ -3236,6 +3919,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "accuracy",
@@ -3245,6 +3929,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "accuracy_is_percent",
@@ -3254,6 +3939,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "magnitude",
@@ -3263,6 +3949,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "precision",
@@ -3272,6 +3959,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "units",
@@ -3281,6 +3969,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "units_system",
@@ -3290,6 +3979,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "units_display_name",
@@ -3299,6 +3989,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -3306,8 +3997,17 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "DV_SCALE",
+        package: "org.openehr.rm.data_types.quantity",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["DATA_VALUE", "DV_ORDERED"],
+        ancestors: &[
+            "Any",
+            "BASIC_DEFINITIONS",
+            "DATA_VALUE",
+            "DV_ORDERED",
+            "OPENEHR_DEFINITIONS",
+            "Ordered",
+        ],
         descendants: &["DV_SCALE"],
         attributes: &[
             RmAttribute {
@@ -3318,6 +4018,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "normal_range",
@@ -3327,6 +4028,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_reference_ranges",
@@ -3342,6 +4044,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "symbol",
@@ -3351,6 +4054,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "value",
@@ -3360,6 +4064,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -3367,8 +4072,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "DV_STATE",
+        package: "org.openehr.rm.data_types.basic",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["DATA_VALUE"],
+        ancestors: &["BASIC_DEFINITIONS", "DATA_VALUE", "OPENEHR_DEFINITIONS"],
         descendants: &["DV_STATE"],
         attributes: &[
             RmAttribute {
@@ -3379,6 +4086,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "is_terminal",
@@ -3388,6 +4096,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -3395,12 +4104,18 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "DV_TEMPORAL",
+        package: "org.openehr.rm.data_types.quantity.date_time",
+        generated_type: true,
         is_abstract: true,
         ancestors: &[
+            "Any",
+            "BASIC_DEFINITIONS",
             "DATA_VALUE",
             "DV_ABSOLUTE_QUANTITY",
             "DV_ORDERED",
             "DV_QUANTIFIED",
+            "OPENEHR_DEFINITIONS",
+            "Ordered",
         ],
         descendants: &["DV_DATE", "DV_DATE_TIME", "DV_TIME"],
         attributes: &[
@@ -3412,6 +4127,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "normal_range",
@@ -3421,6 +4137,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_reference_ranges",
@@ -3436,6 +4153,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "magnitude_status",
@@ -3445,6 +4163,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "accuracy",
@@ -3454,6 +4173,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -3461,8 +4181,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "DV_TEXT",
+        package: "org.openehr.rm.data_types.text",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["DATA_VALUE"],
+        ancestors: &["BASIC_DEFINITIONS", "DATA_VALUE", "OPENEHR_DEFINITIONS"],
         descendants: &["DV_CODED_TEXT", "DV_TEXT"],
         attributes: &[
             RmAttribute {
@@ -3473,6 +4195,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "hyperlink",
@@ -3482,6 +4205,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "formatting",
@@ -3491,6 +4215,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "mappings",
@@ -3503,6 +4228,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "language",
@@ -3512,6 +4238,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "encoding",
@@ -3521,6 +4248,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -3528,8 +4256,12 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "DV_TIME",
+        package: "org.openehr.rm.data_types.quantity.date_time",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[
+            "Any",
+            "BASIC_DEFINITIONS",
             "DATA_VALUE",
             "DV_ABSOLUTE_QUANTITY",
             "DV_ORDERED",
@@ -3537,6 +4269,10 @@ pub(super) static CLASSES: &[RmClass] = &[
             "DV_TEMPORAL",
             "Iso8601_time",
             "Iso8601_type",
+            "OPENEHR_DEFINITIONS",
+            "Ordered",
+            "Temporal",
+            "Time_Definitions",
         ],
         descendants: &["DV_TIME"],
         attributes: &[
@@ -3548,6 +4284,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "normal_range",
@@ -3557,6 +4294,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_reference_ranges",
@@ -3572,6 +4310,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "magnitude_status",
@@ -3581,6 +4320,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "accuracy",
@@ -3590,6 +4330,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "value",
@@ -3599,6 +4340,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -3606,8 +4348,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "DV_TIME_SPECIFICATION",
+        package: "org.openehr.rm.data_types.time_specification",
+        generated_type: true,
         is_abstract: true,
-        ancestors: &["DATA_VALUE"],
+        ancestors: &["BASIC_DEFINITIONS", "DATA_VALUE", "OPENEHR_DEFINITIONS"],
         descendants: &[
             "DV_GENERAL_TIME_SPECIFICATION",
             "DV_PERIODIC_TIME_SPECIFICATION",
@@ -3620,14 +4364,17 @@ pub(super) static CLASSES: &[RmClass] = &[
             type_params: &[],
             cardinality: None,
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
         name: "DV_URI",
+        package: "org.openehr.rm.data_types.uri",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["DATA_VALUE"],
+        ancestors: &["BASIC_DEFINITIONS", "DATA_VALUE", "OPENEHR_DEFINITIONS"],
         descendants: &["DV_EHR_URI", "DV_URI"],
         attributes: &[RmAttribute {
             name: "value",
@@ -3637,12 +4384,26 @@ pub(super) static CLASSES: &[RmClass] = &[
             type_params: &[],
             cardinality: None,
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
+        name: "Double",
+        package: "org.openehr.base.foundation_types.primitive_types",
+        generated_type: false,
+        is_abstract: false,
+        ancestors: &["Any", "Numeric", "Ordered", "Ordered_Numeric"],
+        descendants: &["Double"],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[],
+    },
+    RmClass {
         name: "EHR",
+        package: "org.openehr.rm.ehr",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["EHR"],
@@ -3655,6 +4416,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "ehr_id",
@@ -3664,6 +4426,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "contributions",
@@ -3676,6 +4439,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: Some("CONTRIBUTION"),
             },
             RmAttribute {
                 name: "ehr_status",
@@ -3685,6 +4449,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: Some("EHR_STATUS"),
             },
             RmAttribute {
                 name: "ehr_access",
@@ -3694,6 +4459,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: Some("EHR_ACCESS"),
             },
             RmAttribute {
                 name: "compositions",
@@ -3706,6 +4472,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: Some("VERSIONED_COMPOSITION"),
             },
             RmAttribute {
                 name: "directory",
@@ -3715,6 +4482,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: Some("FOLDER"),
             },
             RmAttribute {
                 name: "time_created",
@@ -3724,6 +4492,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "folders",
@@ -3736,6 +4505,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: Some("FOLDER"),
             },
             RmAttribute {
                 name: "tags",
@@ -3748,6 +4518,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: Some("ITEM_TAG"),
             },
         ],
         is_structure_root: false,
@@ -3755,8 +4526,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "EHR_ACCESS",
+        package: "org.openehr.rm.ehr",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "LOCATABLE", "PATHABLE"],
         descendants: &["EHR_ACCESS"],
         attributes: &[
             RmAttribute {
@@ -3767,6 +4540,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -3776,6 +4550,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -3785,6 +4560,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -3797,6 +4573,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -3806,6 +4583,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -3815,6 +4593,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "settings",
@@ -3824,6 +4603,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: true,
@@ -3831,8 +4611,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "EHR_STATUS",
+        package: "org.openehr.rm.ehr",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "LOCATABLE", "PATHABLE"],
         descendants: &["EHR_STATUS"],
         attributes: &[
             RmAttribute {
@@ -3843,6 +4625,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -3852,6 +4635,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -3861,6 +4645,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -3873,6 +4658,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -3882,6 +4668,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -3891,6 +4678,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "subject",
@@ -3900,6 +4688,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "is_queryable",
@@ -3909,6 +4698,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "is_modifiable",
@@ -3918,6 +4708,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_details",
@@ -3927,6 +4718,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: true,
@@ -3934,8 +4726,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "ELEMENT",
+        package: "org.openehr.rm.data_structures.representation",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["ITEM", "LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "ITEM", "LOCATABLE", "PATHABLE"],
         descendants: &["ELEMENT"],
         attributes: &[
             RmAttribute {
@@ -3946,6 +4740,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -3955,6 +4750,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -3964,6 +4760,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -3976,6 +4773,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -3985,6 +4783,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -3994,6 +4793,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "null_flavour",
@@ -4003,6 +4803,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "value",
@@ -4012,6 +4813,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "null_reason",
@@ -4021,6 +4823,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: true,
@@ -4028,8 +4831,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "ENTRY",
+        package: "org.openehr.rm.composition.content.entry",
+        generated_type: true,
         is_abstract: true,
-        ancestors: &["CONTENT_ITEM", "LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "CONTENT_ITEM", "LOCATABLE", "PATHABLE"],
         descendants: &[
             "ACTION",
             "ADMIN_ENTRY",
@@ -4046,6 +4851,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -4055,6 +4861,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -4064,6 +4871,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -4076,6 +4884,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -4085,6 +4894,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -4094,6 +4904,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "language",
@@ -4103,6 +4914,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "encoding",
@@ -4112,6 +4924,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_participations",
@@ -4124,6 +4937,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "workflow_id",
@@ -4133,6 +4947,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "subject",
@@ -4142,6 +4957,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "provider",
@@ -4151,6 +4967,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -4158,8 +4975,11 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "EVALUATION",
+        package: "org.openehr.rm.composition.content.entry",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[
+            "Any",
             "CARE_ENTRY",
             "CONTENT_ITEM",
             "ENTRY",
@@ -4176,6 +4996,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -4185,6 +5006,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -4194,6 +5016,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -4206,6 +5029,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -4215,6 +5039,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -4224,6 +5049,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "language",
@@ -4233,6 +5059,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "encoding",
@@ -4242,6 +5069,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_participations",
@@ -4254,6 +5082,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "workflow_id",
@@ -4263,6 +5092,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "subject",
@@ -4272,6 +5102,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "provider",
@@ -4281,6 +5112,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "protocol",
@@ -4290,6 +5122,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "guideline_id",
@@ -4299,6 +5132,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "data",
@@ -4308,6 +5142,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: true,
@@ -4315,8 +5150,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "EVENT",
+        package: "org.openehr.rm.data_structures.history",
+        generated_type: true,
         is_abstract: true,
-        ancestors: &["LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "LOCATABLE", "PATHABLE"],
         descendants: &["INTERVAL_EVENT", "POINT_EVENT"],
         attributes: &[
             RmAttribute {
@@ -4327,6 +5164,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -4336,6 +5174,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -4345,6 +5184,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -4357,6 +5197,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -4366,6 +5207,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -4375,6 +5217,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "time",
@@ -4384,6 +5227,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "state",
@@ -4393,6 +5237,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "data",
@@ -4402,6 +5247,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -4412,8 +5258,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "EVENT_CONTEXT",
+        package: "org.openehr.rm.composition",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["PATHABLE"],
+        ancestors: &["Any", "PATHABLE"],
         descendants: &["EVENT_CONTEXT"],
         attributes: &[
             RmAttribute {
@@ -4424,6 +5272,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "end_time",
@@ -4433,6 +5282,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "location",
@@ -4442,6 +5292,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "setting",
@@ -4451,6 +5302,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_context",
@@ -4460,6 +5312,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "health_care_facility",
@@ -4469,6 +5322,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "participations",
@@ -4481,6 +5335,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
         ],
         is_structure_root: true,
@@ -4488,6 +5343,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "EXTERNAL_ENVIRONMENT_ACCESS",
+        package: "org.openehr.rm.support",
+        generated_type: true,
         is_abstract: true,
         ancestors: &[
             "MEASUREMENT_SERVICE",
@@ -4502,8 +5359,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "EXTRACT",
+        package: "org.openehr.rm.ehr_extract.common",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "LOCATABLE", "PATHABLE"],
         descendants: &["EXTRACT"],
         attributes: &[
             RmAttribute {
@@ -4514,6 +5373,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -4523,6 +5383,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -4532,6 +5393,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -4544,6 +5406,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -4553,6 +5416,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -4562,6 +5426,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "chapters",
@@ -4574,6 +5439,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "specification",
@@ -4583,6 +5449,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "request_id",
@@ -4592,6 +5459,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "time_created",
@@ -4601,6 +5469,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "system_id",
@@ -4610,6 +5479,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "sequence_nr",
@@ -4619,6 +5489,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "participations",
@@ -4631,6 +5502,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -4638,8 +5510,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "EXTRACT_ACTION_REQUEST",
+        package: "org.openehr.rm.ehr_extract.common",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "LOCATABLE", "PATHABLE"],
         descendants: &["EXTRACT_ACTION_REQUEST"],
         attributes: &[
             RmAttribute {
@@ -4650,6 +5524,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -4659,6 +5534,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -4668,6 +5544,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -4680,6 +5557,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -4689,6 +5567,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -4698,6 +5577,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "request_id",
@@ -4707,6 +5587,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: Some("EXTRACT_REQUEST"),
             },
             RmAttribute {
                 name: "action",
@@ -4716,6 +5597,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -4723,8 +5605,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "EXTRACT_CHAPTER",
+        package: "org.openehr.rm.ehr_extract.common",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "LOCATABLE", "PATHABLE"],
         descendants: &["EXTRACT_CHAPTER", "EXTRACT_ENTITY_CHAPTER"],
         attributes: &[
             RmAttribute {
@@ -4735,6 +5619,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -4744,6 +5629,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -4753,6 +5639,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -4765,6 +5652,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -4774,6 +5662,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -4783,6 +5672,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "items",
@@ -4795,6 +5685,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -4802,8 +5693,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "EXTRACT_CONTENT_ITEM",
+        package: "org.openehr.rm.ehr_extract.common",
+        generated_type: true,
         is_abstract: true,
-        ancestors: &["EXTRACT_ITEM", "LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "EXTRACT_ITEM", "LOCATABLE", "PATHABLE"],
         descendants: &["GENERIC_CONTENT_ITEM", "OPENEHR_CONTENT_ITEM"],
         attributes: &[
             RmAttribute {
@@ -4814,6 +5707,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -4823,6 +5717,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -4832,6 +5727,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -4844,6 +5740,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -4853,6 +5750,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -4862,6 +5760,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "is_primary",
@@ -4871,6 +5770,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "is_changed",
@@ -4880,6 +5780,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "is_masked",
@@ -4889,6 +5790,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "item",
@@ -4898,6 +5800,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -4905,8 +5808,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "EXTRACT_ENTITY_CHAPTER",
+        package: "org.openehr.rm.ehr_extract.common",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["EXTRACT_CHAPTER", "LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "EXTRACT_CHAPTER", "LOCATABLE", "PATHABLE"],
         descendants: &["EXTRACT_ENTITY_CHAPTER"],
         attributes: &[
             RmAttribute {
@@ -4917,6 +5822,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -4926,6 +5832,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -4935,6 +5842,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -4947,6 +5855,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -4956,6 +5865,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -4965,6 +5875,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "items",
@@ -4977,6 +5888,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "extract_id_key",
@@ -4986,6 +5898,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -4993,6 +5906,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "EXTRACT_ENTITY_MANIFEST",
+        package: "org.openehr.rm.ehr_extract.common",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["EXTRACT_ENTITY_MANIFEST"],
@@ -5005,6 +5920,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "ehr_id",
@@ -5014,6 +5930,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "subject_id",
@@ -5023,6 +5940,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_ids",
@@ -5035,6 +5953,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "item_list",
@@ -5047,6 +5966,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -5054,6 +5974,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "EXTRACT_ERROR",
+        package: "org.openehr.rm.ehr_extract.common",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["EXTRACT_ERROR"],
@@ -5066,6 +5988,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "reason",
@@ -5075,6 +5998,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -5082,8 +6006,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "EXTRACT_FOLDER",
+        package: "org.openehr.rm.ehr_extract.common",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["EXTRACT_ITEM", "LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "EXTRACT_ITEM", "LOCATABLE", "PATHABLE"],
         descendants: &["EXTRACT_FOLDER"],
         attributes: &[
             RmAttribute {
@@ -5094,6 +6020,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -5103,6 +6030,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -5112,6 +6040,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -5124,6 +6053,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -5133,6 +6063,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -5142,6 +6073,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "items",
@@ -5154,6 +6086,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -5161,8 +6094,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "EXTRACT_ITEM",
+        package: "org.openehr.rm.ehr_extract.common",
+        generated_type: true,
         is_abstract: true,
-        ancestors: &["LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "LOCATABLE", "PATHABLE"],
         descendants: &[
             "EXTRACT_FOLDER",
             "GENERIC_CONTENT_ITEM",
@@ -5177,6 +6112,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -5186,6 +6122,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -5195,6 +6132,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -5207,6 +6145,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -5216,6 +6155,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -5225,6 +6165,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -5232,6 +6173,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "EXTRACT_MANIFEST",
+        package: "org.openehr.rm.ehr_extract.common",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["EXTRACT_MANIFEST"],
@@ -5246,12 +6189,15 @@ pub(super) static CLASSES: &[RmClass] = &[
                 upper: None,
             }),
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
         name: "EXTRACT_PARTICIPATION",
+        package: "org.openehr.rm.ehr_extract.common",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["EXTRACT_PARTICIPATION"],
@@ -5267,6 +6213,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 }],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "function",
@@ -5276,6 +6223,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "mode",
@@ -5285,6 +6233,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "performer",
@@ -5294,6 +6243,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -5301,8 +6251,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "EXTRACT_REQUEST",
+        package: "org.openehr.rm.ehr_extract.common",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "LOCATABLE", "PATHABLE"],
         descendants: &["EXTRACT_REQUEST"],
         attributes: &[
             RmAttribute {
@@ -5313,6 +6265,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -5322,6 +6275,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -5331,6 +6285,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -5343,6 +6298,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -5352,6 +6308,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -5361,6 +6318,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "extract_spec",
@@ -5370,6 +6328,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "update_spec",
@@ -5379,6 +6338,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -5386,6 +6346,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "EXTRACT_SPEC",
+        package: "org.openehr.rm.ehr_extract.common",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["EXTRACT_SPEC"],
@@ -5398,6 +6360,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "manifest",
@@ -5407,6 +6370,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "extract_type",
@@ -5416,6 +6380,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "include_multimedia",
@@ -5425,6 +6390,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "priority",
@@ -5434,6 +6400,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "link_depth",
@@ -5443,6 +6410,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "criteria",
@@ -5455,6 +6423,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_details",
@@ -5464,6 +6433,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -5471,6 +6441,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "EXTRACT_UPDATE_SPEC",
+        package: "org.openehr.rm.ehr_extract.common",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["EXTRACT_UPDATE_SPEC"],
@@ -5483,6 +6455,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "repeat_period",
@@ -5492,6 +6465,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "trigger_events",
@@ -5504,6 +6478,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "update_method",
@@ -5513,6 +6488,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -5520,6 +6496,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "EXTRACT_VERSION_SPEC",
+        package: "org.openehr.rm.ehr_extract.common",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["EXTRACT_VERSION_SPEC"],
@@ -5532,6 +6510,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "commit_time_interval",
@@ -5544,6 +6523,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 }],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "include_revision_history",
@@ -5553,6 +6533,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "include_data",
@@ -5562,13 +6543,27 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
+        name: "Env",
+        package: "org.openehr.base.base_types.builtins",
+        generated_type: false,
+        is_abstract: false,
+        ancestors: &[],
+        descendants: &["Env"],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[],
+    },
+    RmClass {
         name: "FEEDER_AUDIT",
+        package: "org.openehr.rm.common.archetyped",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["FEEDER_AUDIT"],
@@ -5584,6 +6579,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_system_item_ids",
@@ -5596,6 +6592,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "original_content",
@@ -5605,6 +6602,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "originating_system_audit",
@@ -5614,6 +6612,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_system_audit",
@@ -5623,6 +6622,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: true,
@@ -5630,6 +6630,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "FEEDER_AUDIT_DETAILS",
+        package: "org.openehr.rm.common.archetyped",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["FEEDER_AUDIT_DETAILS"],
@@ -5642,6 +6644,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "location",
@@ -5651,6 +6654,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "subject",
@@ -5660,6 +6664,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "provider",
@@ -5669,6 +6674,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "time",
@@ -5678,6 +6684,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "version_id",
@@ -5687,6 +6694,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_details",
@@ -5696,6 +6704,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -5703,8 +6712,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "FOLDER",
+        package: "org.openehr.rm.common.directory",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "LOCATABLE", "PATHABLE"],
         descendants: &["FOLDER"],
         attributes: &[
             RmAttribute {
@@ -5715,6 +6726,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -5724,6 +6736,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -5733,6 +6746,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -5745,6 +6759,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -5754,6 +6769,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -5763,6 +6779,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "items",
@@ -5775,6 +6792,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "folders",
@@ -5787,6 +6805,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "details",
@@ -5796,15 +6815,39 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: true,
         generic_params: &[],
     },
     RmClass {
+        name: "FUNCTION",
+        package: "org.openehr.base.foundation_types.functional",
+        generated_type: false,
+        is_abstract: false,
+        ancestors: &["ROUTINE"],
+        descendants: &["FUNCTION"],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[
+            RmGenericParam {
+                name: "ARGS",
+                conforms_to: Some("TUPLE"),
+            },
+            RmGenericParam {
+                name: "RESULT",
+                conforms_to: Some("Any"),
+            },
+        ],
+    },
+    RmClass {
         name: "GENERIC_CONTENT_ITEM",
+        package: "org.openehr.rm.ehr_extract.generic_extract",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[
+            "Any",
             "EXTRACT_CONTENT_ITEM",
             "EXTRACT_ITEM",
             "LOCATABLE",
@@ -5820,6 +6863,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -5829,6 +6873,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -5838,6 +6883,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -5850,6 +6896,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -5859,6 +6906,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -5868,6 +6916,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "is_primary",
@@ -5877,6 +6926,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "is_changed",
@@ -5886,6 +6936,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "is_masked",
@@ -5895,6 +6946,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "item",
@@ -5904,6 +6956,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "item_type",
@@ -5913,6 +6966,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "item_type_version",
@@ -5922,6 +6976,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "author",
@@ -5931,6 +6986,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "creation_time",
@@ -5940,6 +6996,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "authoriser",
@@ -5949,6 +7006,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "authorisation_time",
@@ -5958,6 +7016,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "item_status",
@@ -5967,6 +7026,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "version_id",
@@ -5976,6 +7036,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "version_set_id",
@@ -5985,6 +7046,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "system_id",
@@ -5994,6 +7056,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_details",
@@ -6012,6 +7075,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 ],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -6019,8 +7083,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "GENERIC_ENTRY",
+        package: "org.openehr.rm.integration",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["CONTENT_ITEM", "LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "CONTENT_ITEM", "LOCATABLE", "PATHABLE"],
         descendants: &["GENERIC_ENTRY"],
         attributes: &[
             RmAttribute {
@@ -6031,6 +7097,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -6040,6 +7107,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -6049,6 +7117,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -6061,6 +7130,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -6070,6 +7140,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -6079,6 +7150,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "data",
@@ -6088,6 +7160,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: true,
@@ -6095,6 +7168,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "GENERIC_ID",
+        package: "org.openehr.base.base_types.identification",
+        generated_type: true,
         is_abstract: false,
         ancestors: &["OBJECT_ID"],
         descendants: &["GENERIC_ID"],
@@ -6107,6 +7182,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "scheme",
@@ -6116,6 +7192,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -6123,8 +7200,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "GROUP",
+        package: "org.openehr.rm.demographic",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["ACTOR", "LOCATABLE", "PARTY", "PATHABLE"],
+        ancestors: &["ACTOR", "Any", "LOCATABLE", "PARTY", "PATHABLE"],
         descendants: &["GROUP"],
         attributes: &[
             RmAttribute {
@@ -6135,6 +7214,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -6144,6 +7224,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -6153,6 +7234,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -6165,6 +7247,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -6174,6 +7257,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -6183,6 +7267,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "identities",
@@ -6195,6 +7280,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "contacts",
@@ -6207,6 +7293,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "details",
@@ -6216,6 +7303,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "relationships",
@@ -6228,6 +7316,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "languages",
@@ -6240,6 +7329,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "roles",
@@ -6252,6 +7342,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: Some("VERSIONED_PARTY"),
             },
         ],
         is_structure_root: false,
@@ -6259,6 +7350,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "HIER_OBJECT_ID",
+        package: "org.openehr.base.base_types.identification",
+        generated_type: true,
         is_abstract: false,
         ancestors: &["OBJECT_ID", "UID_BASED_ID"],
         descendants: &["HIER_OBJECT_ID"],
@@ -6270,14 +7363,17 @@ pub(super) static CLASSES: &[RmClass] = &[
             type_params: &[],
             cardinality: None,
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
         name: "HISTORY",
+        package: "org.openehr.rm.data_structures.history",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["DATA_STRUCTURE", "LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "DATA_STRUCTURE", "LOCATABLE", "PATHABLE"],
         descendants: &["HISTORY"],
         attributes: &[
             RmAttribute {
@@ -6288,6 +7384,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -6297,6 +7394,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -6306,6 +7404,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -6318,6 +7417,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -6327,6 +7427,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -6336,6 +7437,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "origin",
@@ -6345,6 +7447,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "period",
@@ -6354,6 +7457,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "duration",
@@ -6363,6 +7467,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "summary",
@@ -6372,6 +7477,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "events",
@@ -6387,6 +7493,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: true,
@@ -6396,7 +7503,29 @@ pub(super) static CLASSES: &[RmClass] = &[
         }],
     },
     RmClass {
+        name: "Hash",
+        package: "org.openehr.base.foundation_types.structure",
+        generated_type: false,
+        is_abstract: false,
+        ancestors: &["Any", "Container"],
+        descendants: &["Hash"],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[
+            RmGenericParam {
+                name: "K",
+                conforms_to: Some("Ordered"),
+            },
+            RmGenericParam {
+                name: "V",
+                conforms_to: None,
+            },
+        ],
+    },
+    RmClass {
         name: "IMPORTED_VERSION",
+        package: "org.openehr.rm.common.change_control",
+        generated_type: true,
         is_abstract: false,
         ancestors: &["VERSION"],
         descendants: &["IMPORTED_VERSION"],
@@ -6409,6 +7538,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: Some("CONTRIBUTION"),
             },
             RmAttribute {
                 name: "signature",
@@ -6418,6 +7548,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "commit_audit",
@@ -6427,6 +7558,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "item",
@@ -6436,6 +7568,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -6446,8 +7579,11 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "INSTRUCTION",
+        package: "org.openehr.rm.composition.content.entry",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[
+            "Any",
             "CARE_ENTRY",
             "CONTENT_ITEM",
             "ENTRY",
@@ -6464,6 +7600,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -6473,6 +7610,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -6482,6 +7620,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -6494,6 +7633,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -6503,6 +7643,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -6512,6 +7653,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "language",
@@ -6521,6 +7663,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "encoding",
@@ -6530,6 +7673,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_participations",
@@ -6542,6 +7686,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "workflow_id",
@@ -6551,6 +7696,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "subject",
@@ -6560,6 +7706,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "provider",
@@ -6569,6 +7716,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "protocol",
@@ -6578,6 +7726,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "guideline_id",
@@ -6587,6 +7736,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "narrative",
@@ -6596,6 +7746,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "expiry_time",
@@ -6605,6 +7756,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "wf_definition",
@@ -6614,6 +7766,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "activities",
@@ -6626,6 +7779,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
         ],
         is_structure_root: true,
@@ -6633,8 +7787,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "INSTRUCTION_DETAILS",
+        package: "org.openehr.rm.composition.content.entry",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["PATHABLE"],
+        ancestors: &["Any", "PATHABLE"],
         descendants: &["INSTRUCTION_DETAILS"],
         attributes: &[
             RmAttribute {
@@ -6645,6 +7801,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: Some("INSTRUCTION"),
             },
             RmAttribute {
                 name: "activity_id",
@@ -6654,6 +7811,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "wf_details",
@@ -6663,6 +7821,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -6670,6 +7829,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "INTERNET_ID",
+        package: "org.openehr.base.base_types.identification",
+        generated_type: true,
         is_abstract: false,
         ancestors: &["UID"],
         descendants: &["INTERNET_ID"],
@@ -6681,14 +7842,17 @@ pub(super) static CLASSES: &[RmClass] = &[
             type_params: &[],
             cardinality: None,
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
         name: "INTERVAL_EVENT",
+        package: "org.openehr.rm.data_structures.history",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["EVENT", "LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "EVENT", "LOCATABLE", "PATHABLE"],
         descendants: &["INTERVAL_EVENT"],
         attributes: &[
             RmAttribute {
@@ -6699,6 +7863,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -6708,6 +7873,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -6717,6 +7883,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -6729,6 +7896,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -6738,6 +7906,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -6747,6 +7916,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "time",
@@ -6756,6 +7926,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "state",
@@ -6765,6 +7936,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "data",
@@ -6774,6 +7946,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "width",
@@ -6783,6 +7956,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "sample_count",
@@ -6792,6 +7966,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "math_function",
@@ -6801,6 +7976,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: true,
@@ -6811,8 +7987,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "ISM_TRANSITION",
+        package: "org.openehr.rm.composition.content.entry",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["PATHABLE"],
+        ancestors: &["Any", "PATHABLE"],
         descendants: &["ISM_TRANSITION"],
         attributes: &[
             RmAttribute {
@@ -6823,6 +8001,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "transition",
@@ -6832,6 +8011,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "careflow_step",
@@ -6841,6 +8021,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "reason",
@@ -6853,6 +8034,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -6860,6 +8042,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "ISO_OID",
+        package: "org.openehr.base.base_types.identification",
+        generated_type: true,
         is_abstract: false,
         ancestors: &["UID"],
         descendants: &["ISO_OID"],
@@ -6871,14 +8055,17 @@ pub(super) static CLASSES: &[RmClass] = &[
             type_params: &[],
             cardinality: None,
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
         name: "ITEM",
+        package: "org.openehr.rm.data_structures.representation",
+        generated_type: true,
         is_abstract: true,
-        ancestors: &["LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "LOCATABLE", "PATHABLE"],
         descendants: &["CLUSTER", "ELEMENT"],
         attributes: &[
             RmAttribute {
@@ -6889,6 +8076,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -6898,6 +8086,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -6907,6 +8096,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -6919,6 +8109,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -6928,6 +8119,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -6937,6 +8129,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -6944,8 +8137,16 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "ITEM_LIST",
+        package: "org.openehr.rm.data_structures.item_structure",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["DATA_STRUCTURE", "ITEM_STRUCTURE", "LOCATABLE", "PATHABLE"],
+        ancestors: &[
+            "Any",
+            "DATA_STRUCTURE",
+            "ITEM_STRUCTURE",
+            "LOCATABLE",
+            "PATHABLE",
+        ],
         descendants: &["ITEM_LIST"],
         attributes: &[
             RmAttribute {
@@ -6956,6 +8157,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -6965,6 +8167,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -6974,6 +8177,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -6986,6 +8190,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -6995,6 +8200,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -7004,6 +8210,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "items",
@@ -7016,6 +8223,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: true,
@@ -7023,8 +8231,16 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "ITEM_SINGLE",
+        package: "org.openehr.rm.data_structures.item_structure",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["DATA_STRUCTURE", "ITEM_STRUCTURE", "LOCATABLE", "PATHABLE"],
+        ancestors: &[
+            "Any",
+            "DATA_STRUCTURE",
+            "ITEM_STRUCTURE",
+            "LOCATABLE",
+            "PATHABLE",
+        ],
         descendants: &["ITEM_SINGLE"],
         attributes: &[
             RmAttribute {
@@ -7035,6 +8251,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -7044,6 +8261,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -7053,6 +8271,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -7065,6 +8284,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -7074,6 +8294,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -7083,6 +8304,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "item",
@@ -7092,6 +8314,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: true,
@@ -7099,8 +8322,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "ITEM_STRUCTURE",
+        package: "org.openehr.rm.data_structures.item_structure",
+        generated_type: true,
         is_abstract: true,
-        ancestors: &["DATA_STRUCTURE", "LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "DATA_STRUCTURE", "LOCATABLE", "PATHABLE"],
         descendants: &["ITEM_LIST", "ITEM_SINGLE", "ITEM_TABLE", "ITEM_TREE"],
         attributes: &[
             RmAttribute {
@@ -7111,6 +8336,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -7120,6 +8346,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -7129,6 +8356,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -7141,6 +8369,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -7150,6 +8379,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -7159,6 +8389,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -7166,8 +8397,16 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "ITEM_TABLE",
+        package: "org.openehr.rm.data_structures.item_structure",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["DATA_STRUCTURE", "ITEM_STRUCTURE", "LOCATABLE", "PATHABLE"],
+        ancestors: &[
+            "Any",
+            "DATA_STRUCTURE",
+            "ITEM_STRUCTURE",
+            "LOCATABLE",
+            "PATHABLE",
+        ],
         descendants: &["ITEM_TABLE"],
         attributes: &[
             RmAttribute {
@@ -7178,6 +8417,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -7187,6 +8427,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -7196,6 +8437,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -7208,6 +8450,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -7217,6 +8460,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -7226,6 +8470,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "rows",
@@ -7238,6 +8483,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: true,
@@ -7245,6 +8491,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "ITEM_TAG",
+        package: "org.openehr.rm.common.tags",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["ITEM_TAG"],
@@ -7257,6 +8505,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "value",
@@ -7266,6 +8515,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "target",
@@ -7275,6 +8525,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "target_path",
@@ -7284,6 +8535,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "owner_id",
@@ -7293,6 +8545,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -7300,8 +8553,16 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "ITEM_TREE",
+        package: "org.openehr.rm.data_structures.item_structure",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["DATA_STRUCTURE", "ITEM_STRUCTURE", "LOCATABLE", "PATHABLE"],
+        ancestors: &[
+            "Any",
+            "DATA_STRUCTURE",
+            "ITEM_STRUCTURE",
+            "LOCATABLE",
+            "PATHABLE",
+        ],
         descendants: &["ITEM_TREE"],
         attributes: &[
             RmAttribute {
@@ -7312,6 +8573,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -7321,6 +8583,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -7330,6 +8593,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -7342,6 +8606,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -7351,6 +8616,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -7360,6 +8626,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "items",
@@ -7372,15 +8639,40 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: true,
         generic_params: &[],
     },
     RmClass {
+        name: "Integer",
+        package: "org.openehr.base.foundation_types.primitive_types",
+        generated_type: false,
+        is_abstract: false,
+        ancestors: &["Any", "Numeric", "Ordered", "Ordered_Numeric"],
+        descendants: &["DV_PROPORTION", "Integer", "PROPORTION_KIND"],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[],
+    },
+    RmClass {
+        name: "Integer64",
+        package: "org.openehr.base.foundation_types.primitive_types",
+        generated_type: false,
+        is_abstract: false,
+        ancestors: &["Any", "Numeric", "Ordered", "Ordered_Numeric"],
+        descendants: &["Integer64"],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[],
+    },
+    RmClass {
         name: "Interval",
+        package: "org.openehr.base.foundation_types.interval",
+        generated_type: true,
         is_abstract: true,
-        ancestors: &[],
+        ancestors: &["Any"],
         descendants: &[
             "DV_INTERVAL",
             "Multiplicity_interval",
@@ -7396,6 +8688,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "upper",
@@ -7405,6 +8698,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "lower_unbounded",
@@ -7414,6 +8708,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "upper_unbounded",
@@ -7423,6 +8718,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "lower_included",
@@ -7432,6 +8728,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "upper_included",
@@ -7441,6 +8738,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -7451,8 +8749,16 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "Iso8601_date",
+        package: "org.openehr.base.foundation_types.time",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["Iso8601_type"],
+        ancestors: &[
+            "Any",
+            "Iso8601_type",
+            "Ordered",
+            "Temporal",
+            "Time_Definitions",
+        ],
         descendants: &["DV_DATE", "Iso8601_date"],
         attributes: &[RmAttribute {
             name: "value",
@@ -7462,14 +8768,23 @@ pub(super) static CLASSES: &[RmClass] = &[
             type_params: &[],
             cardinality: None,
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
         name: "Iso8601_date_time",
+        package: "org.openehr.base.foundation_types.time",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["Iso8601_type"],
+        ancestors: &[
+            "Any",
+            "Iso8601_type",
+            "Ordered",
+            "Temporal",
+            "Time_Definitions",
+        ],
         descendants: &["DV_DATE_TIME", "Iso8601_date_time"],
         attributes: &[RmAttribute {
             name: "value",
@@ -7479,14 +8794,23 @@ pub(super) static CLASSES: &[RmClass] = &[
             type_params: &[],
             cardinality: None,
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
         name: "Iso8601_duration",
+        package: "org.openehr.base.foundation_types.time",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["Iso8601_type"],
+        ancestors: &[
+            "Any",
+            "Iso8601_type",
+            "Ordered",
+            "Temporal",
+            "Time_Definitions",
+        ],
         descendants: &["DV_DURATION", "Iso8601_duration"],
         attributes: &[RmAttribute {
             name: "value",
@@ -7496,14 +8820,23 @@ pub(super) static CLASSES: &[RmClass] = &[
             type_params: &[],
             cardinality: None,
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
         name: "Iso8601_time",
+        package: "org.openehr.base.foundation_types.time",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["Iso8601_type"],
+        ancestors: &[
+            "Any",
+            "Iso8601_type",
+            "Ordered",
+            "Temporal",
+            "Time_Definitions",
+        ],
         descendants: &["DV_TIME", "Iso8601_time"],
         attributes: &[RmAttribute {
             name: "value",
@@ -7513,14 +8846,23 @@ pub(super) static CLASSES: &[RmClass] = &[
             type_params: &[],
             cardinality: None,
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
         name: "Iso8601_timezone",
+        package: "org.openehr.base.foundation_types.time",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["Iso8601_type"],
+        ancestors: &[
+            "Any",
+            "Iso8601_type",
+            "Ordered",
+            "Temporal",
+            "Time_Definitions",
+        ],
         descendants: &["Iso8601_timezone"],
         attributes: &[RmAttribute {
             name: "value",
@@ -7530,14 +8872,17 @@ pub(super) static CLASSES: &[RmClass] = &[
             type_params: &[],
             cardinality: None,
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
         name: "Iso8601_type",
+        package: "org.openehr.base.foundation_types.time",
+        generated_type: true,
         is_abstract: true,
-        ancestors: &[],
+        ancestors: &["Any", "Ordered", "Temporal", "Time_Definitions"],
         descendants: &[
             "DV_DATE",
             "DV_DATE_TIME",
@@ -7557,12 +8902,15 @@ pub(super) static CLASSES: &[RmClass] = &[
             type_params: &[],
             cardinality: None,
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
         name: "LINK",
+        package: "org.openehr.rm.common.archetyped",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["LINK"],
@@ -7575,6 +8923,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "type",
@@ -7584,6 +8933,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "target",
@@ -7593,6 +8943,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -7600,8 +8951,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "LOCATABLE",
+        package: "org.openehr.rm.common.archetyped",
+        generated_type: true,
         is_abstract: true,
-        ancestors: &["PATHABLE"],
+        ancestors: &["Any", "PATHABLE"],
         descendants: &[
             "ACTION",
             "ACTIVITY",
@@ -7652,6 +9005,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -7661,6 +9015,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -7670,6 +9025,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -7682,6 +9038,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -7691,6 +9048,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -7700,6 +9058,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -7707,6 +9066,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "LOCATABLE_REF",
+        package: "org.openehr.base.base_types.identification",
+        generated_type: true,
         is_abstract: false,
         ancestors: &["OBJECT_REF"],
         descendants: &["LOCATABLE_REF"],
@@ -7719,6 +9080,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "type",
@@ -7728,6 +9090,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "id",
@@ -7737,6 +9100,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "path",
@@ -7746,13 +9110,41 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
+        name: "List",
+        package: "org.openehr.base.foundation_types.structure",
+        generated_type: false,
+        is_abstract: false,
+        ancestors: &["Any", "Container"],
+        descendants: &["List"],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[RmGenericParam {
+            name: "T",
+            conforms_to: Some("Any"),
+        }],
+    },
+    RmClass {
+        name: "Locale",
+        package: "org.openehr.base.base_types.builtins",
+        generated_type: false,
+        is_abstract: false,
+        ancestors: &[],
+        descendants: &["Locale"],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[],
+    },
+    RmClass {
         name: "MEASUREMENT_SERVICE",
+        package: "org.openehr.rm.support.measurement",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["MEASUREMENT_SERVICE"],
@@ -7762,6 +9154,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "MESSAGE",
+        package: "org.openehr.rm.ehr_extract.message",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["MESSAGE"],
@@ -7774,6 +9168,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "author",
@@ -7783,6 +9178,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "content",
@@ -7792,6 +9188,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "signature",
@@ -7801,6 +9198,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -7808,6 +9206,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "MESSAGE_CONTENT",
+        package: "org.openehr.rm.ehr_extract.message",
+        generated_type: true,
         is_abstract: true,
         ancestors: &[],
         descendants: &["SYNC_EXTRACT", "SYNC_EXTRACT_REQUEST"],
@@ -7816,9 +9216,22 @@ pub(super) static CLASSES: &[RmClass] = &[
         generic_params: &[],
     },
     RmClass {
-        name: "Multiplicity_interval",
+        name: "Math",
+        package: "org.openehr.base.base_types.builtins",
+        generated_type: false,
         is_abstract: false,
-        ancestors: &["Interval", "Proper_interval"],
+        ancestors: &[],
+        descendants: &["Math"],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[],
+    },
+    RmClass {
+        name: "Multiplicity_interval",
+        package: "org.openehr.base.foundation_types.interval",
+        generated_type: true,
+        is_abstract: false,
+        ancestors: &["Any", "Interval", "Proper_interval"],
         descendants: &["Multiplicity_interval"],
         attributes: &[
             RmAttribute {
@@ -7829,6 +9242,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "upper",
@@ -7838,6 +9252,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "lower_unbounded",
@@ -7847,6 +9262,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "upper_unbounded",
@@ -7856,6 +9272,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "lower_included",
@@ -7865,6 +9282,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "upper_included",
@@ -7874,13 +9292,34 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
+        name: "Numeric",
+        package: "org.openehr.base.foundation_types.primitive_types",
+        generated_type: false,
+        is_abstract: true,
+        ancestors: &["Any"],
+        descendants: &[
+            "DV_PROPORTION",
+            "Double",
+            "Integer",
+            "Integer64",
+            "PROPORTION_KIND",
+            "Real",
+        ],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[],
+    },
+    RmClass {
         name: "OBJECT_ID",
+        package: "org.openehr.base.base_types.identification",
+        generated_type: true,
         is_abstract: true,
         ancestors: &[],
         descendants: &[
@@ -7899,12 +9338,15 @@ pub(super) static CLASSES: &[RmClass] = &[
             type_params: &[],
             cardinality: None,
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
         name: "OBJECT_REF",
+        package: "org.openehr.base.base_types.identification",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &[
@@ -7922,6 +9364,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "type",
@@ -7931,6 +9374,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "id",
@@ -7940,6 +9384,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -7947,6 +9392,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "OBJECT_VERSION_ID",
+        package: "org.openehr.base.base_types.identification",
+        generated_type: true,
         is_abstract: false,
         ancestors: &["OBJECT_ID", "UID_BASED_ID"],
         descendants: &["OBJECT_VERSION_ID"],
@@ -7958,14 +9405,18 @@ pub(super) static CLASSES: &[RmClass] = &[
             type_params: &[],
             cardinality: None,
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
         name: "OBSERVATION",
+        package: "org.openehr.rm.composition.content.entry",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[
+            "Any",
             "CARE_ENTRY",
             "CONTENT_ITEM",
             "ENTRY",
@@ -7982,6 +9433,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -7991,6 +9443,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -8000,6 +9453,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -8012,6 +9466,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -8021,6 +9476,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -8030,6 +9486,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "language",
@@ -8039,6 +9496,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "encoding",
@@ -8048,6 +9506,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_participations",
@@ -8060,6 +9519,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "workflow_id",
@@ -8069,6 +9529,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "subject",
@@ -8078,6 +9539,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "provider",
@@ -8087,6 +9549,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "protocol",
@@ -8096,6 +9559,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "guideline_id",
@@ -8105,6 +9569,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "data",
@@ -8117,6 +9582,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 }],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "state",
@@ -8129,6 +9595,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 }],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: true,
@@ -8136,6 +9603,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "OPENEHR_CODE_SET_IDENTIFIERS",
+        package: "org.openehr.rm.support.terminology",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["OPENEHR_CODE_SET_IDENTIFIERS", "TERMINOLOGY_SERVICE"],
@@ -8145,8 +9614,11 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "OPENEHR_CONTENT_ITEM",
+        package: "org.openehr.rm.ehr_extract.openehr_extract",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[
+            "Any",
             "EXTRACT_CONTENT_ITEM",
             "EXTRACT_ITEM",
             "LOCATABLE",
@@ -8162,6 +9634,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -8171,6 +9644,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -8180,6 +9654,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -8192,6 +9667,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -8201,6 +9677,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -8210,6 +9687,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "is_primary",
@@ -8219,6 +9697,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "is_changed",
@@ -8228,6 +9707,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "is_masked",
@@ -8237,6 +9717,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "item",
@@ -8246,13 +9727,51 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
+        name: "OPENEHR_DEFINITIONS",
+        package: "org.openehr.base.base_types.definitions",
+        generated_type: false,
+        is_abstract: false,
+        ancestors: &["BASIC_DEFINITIONS"],
+        descendants: &[
+            "DV_BOOLEAN",
+            "DV_CODED_TEXT",
+            "DV_COUNT",
+            "DV_DATE",
+            "DV_DATE_TIME",
+            "DV_DURATION",
+            "DV_EHR_URI",
+            "DV_GENERAL_TIME_SPECIFICATION",
+            "DV_IDENTIFIER",
+            "DV_INTERVAL",
+            "DV_MULTIMEDIA",
+            "DV_ORDINAL",
+            "DV_PARAGRAPH",
+            "DV_PARSABLE",
+            "DV_PERIODIC_TIME_SPECIFICATION",
+            "DV_PROPORTION",
+            "DV_QUANTITY",
+            "DV_SCALE",
+            "DV_STATE",
+            "DV_TEXT",
+            "DV_TIME",
+            "DV_URI",
+            "OPENEHR_DEFINITIONS",
+        ],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[],
+    },
+    RmClass {
         name: "OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS",
+        package: "org.openehr.rm.support.terminology",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &[
@@ -8265,8 +9784,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "ORGANISATION",
+        package: "org.openehr.rm.demographic",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["ACTOR", "LOCATABLE", "PARTY", "PATHABLE"],
+        ancestors: &["ACTOR", "Any", "LOCATABLE", "PARTY", "PATHABLE"],
         descendants: &["ORGANISATION"],
         attributes: &[
             RmAttribute {
@@ -8277,6 +9798,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -8286,6 +9808,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -8295,6 +9818,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -8307,6 +9831,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -8316,6 +9841,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -8325,6 +9851,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "identities",
@@ -8337,6 +9864,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "contacts",
@@ -8349,6 +9877,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "details",
@@ -8358,6 +9887,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "relationships",
@@ -8370,6 +9900,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "languages",
@@ -8382,6 +9913,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "roles",
@@ -8394,6 +9926,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: Some("VERSIONED_PARTY"),
             },
         ],
         is_structure_root: false,
@@ -8401,6 +9934,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "ORIGINAL_VERSION",
+        package: "org.openehr.rm.common.change_control",
+        generated_type: true,
         is_abstract: false,
         ancestors: &["VERSION"],
         descendants: &["ORIGINAL_VERSION"],
@@ -8413,6 +9948,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: Some("CONTRIBUTION"),
             },
             RmAttribute {
                 name: "signature",
@@ -8422,6 +9958,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "commit_audit",
@@ -8431,6 +9968,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -8440,6 +9978,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "preceding_version_uid",
@@ -8449,6 +9988,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_input_version_uids",
@@ -8461,6 +10001,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "lifecycle_state",
@@ -8470,6 +10011,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "attestations",
@@ -8482,6 +10024,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "data",
@@ -8491,6 +10034,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -8500,7 +10044,75 @@ pub(super) static CLASSES: &[RmClass] = &[
         }],
     },
     RmClass {
+        name: "Octet",
+        package: "org.openehr.base.foundation_types.primitive_types",
+        generated_type: false,
+        is_abstract: false,
+        ancestors: &["Any", "Ordered"],
+        descendants: &["Octet"],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[],
+    },
+    RmClass {
+        name: "Ordered",
+        package: "org.openehr.base.foundation_types.primitive_types",
+        generated_type: false,
+        is_abstract: true,
+        ancestors: &["Any"],
+        descendants: &[
+            "Character",
+            "DV_COUNT",
+            "DV_DATE",
+            "DV_DATE_TIME",
+            "DV_DURATION",
+            "DV_ORDINAL",
+            "DV_PROPORTION",
+            "DV_QUANTITY",
+            "DV_SCALE",
+            "DV_TIME",
+            "Double",
+            "Integer",
+            "Integer64",
+            "Iso8601_date",
+            "Iso8601_date_time",
+            "Iso8601_duration",
+            "Iso8601_time",
+            "Iso8601_timezone",
+            "Octet",
+            "PROPORTION_KIND",
+            "Real",
+            "String",
+            "Uri",
+            "VALIDITY_KIND",
+            "VERSION_STATUS",
+        ],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[],
+    },
+    RmClass {
+        name: "Ordered_Numeric",
+        package: "org.openehr.base.foundation_types.primitive_types",
+        generated_type: false,
+        is_abstract: true,
+        ancestors: &["Any", "Numeric", "Ordered"],
+        descendants: &[
+            "DV_PROPORTION",
+            "Double",
+            "Integer",
+            "Integer64",
+            "PROPORTION_KIND",
+            "Real",
+        ],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[],
+    },
+    RmClass {
         name: "PARTICIPATION",
+        package: "org.openehr.rm.common.generic",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["PARTICIPATION"],
@@ -8513,6 +10125,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "mode",
@@ -8522,6 +10135,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "performer",
@@ -8531,6 +10145,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "time",
@@ -8543,6 +10158,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 }],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -8550,8 +10166,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "PARTY",
+        package: "org.openehr.rm.demographic",
+        generated_type: true,
         is_abstract: true,
-        ancestors: &["LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "LOCATABLE", "PATHABLE"],
         descendants: &["AGENT", "GROUP", "ORGANISATION", "PERSON", "ROLE"],
         attributes: &[
             RmAttribute {
@@ -8562,6 +10180,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -8571,6 +10190,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -8580,6 +10200,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -8592,6 +10213,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -8601,6 +10223,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -8610,6 +10233,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "identities",
@@ -8622,6 +10246,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "contacts",
@@ -8634,6 +10259,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "details",
@@ -8643,6 +10269,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "relationships",
@@ -8655,6 +10282,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -8662,6 +10290,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "PARTY_IDENTIFIED",
+        package: "org.openehr.rm.common.generic",
+        generated_type: true,
         is_abstract: false,
         ancestors: &["PARTY_PROXY"],
         descendants: &["PARTY_IDENTIFIED", "PARTY_RELATED"],
@@ -8674,6 +10304,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "name",
@@ -8683,6 +10314,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "identifiers",
@@ -8695,6 +10327,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -8702,8 +10335,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "PARTY_IDENTITY",
+        package: "org.openehr.rm.demographic",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "LOCATABLE", "PATHABLE"],
         descendants: &["PARTY_IDENTITY"],
         attributes: &[
             RmAttribute {
@@ -8714,6 +10349,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -8723,6 +10359,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -8732,6 +10369,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -8744,6 +10382,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -8753,6 +10392,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -8762,6 +10402,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "details",
@@ -8771,6 +10412,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -8778,6 +10420,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "PARTY_PROXY",
+        package: "org.openehr.rm.common.generic",
+        generated_type: true,
         is_abstract: true,
         ancestors: &[],
         descendants: &["PARTY_IDENTIFIED", "PARTY_RELATED", "PARTY_SELF"],
@@ -8789,12 +10433,15 @@ pub(super) static CLASSES: &[RmClass] = &[
             type_params: &[],
             cardinality: None,
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
         name: "PARTY_REF",
+        package: "org.openehr.base.base_types.identification",
+        generated_type: true,
         is_abstract: false,
         ancestors: &["OBJECT_REF"],
         descendants: &["PARTY_REF"],
@@ -8807,6 +10454,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "type",
@@ -8816,6 +10464,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "id",
@@ -8825,6 +10474,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -8832,6 +10482,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "PARTY_RELATED",
+        package: "org.openehr.rm.common.generic",
+        generated_type: true,
         is_abstract: false,
         ancestors: &["PARTY_IDENTIFIED", "PARTY_PROXY"],
         descendants: &["PARTY_RELATED"],
@@ -8844,6 +10496,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "name",
@@ -8853,6 +10506,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "identifiers",
@@ -8865,6 +10519,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "relationship",
@@ -8874,6 +10529,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -8881,8 +10537,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "PARTY_RELATIONSHIP",
+        package: "org.openehr.rm.demographic",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "LOCATABLE", "PATHABLE"],
         descendants: &["PARTY_RELATIONSHIP"],
         attributes: &[
             RmAttribute {
@@ -8893,6 +10551,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -8902,6 +10561,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -8911,6 +10571,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -8923,6 +10584,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -8932,6 +10594,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -8941,6 +10604,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "details",
@@ -8950,6 +10614,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "target",
@@ -8959,6 +10624,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: Some("VERSIONED_PARTY"),
             },
             RmAttribute {
                 name: "time_validity",
@@ -8971,6 +10637,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 }],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "source",
@@ -8980,6 +10647,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: Some("VERSIONED_PARTY"),
             },
         ],
         is_structure_root: false,
@@ -8987,6 +10655,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "PARTY_SELF",
+        package: "org.openehr.rm.common.generic",
+        generated_type: true,
         is_abstract: false,
         ancestors: &["PARTY_PROXY"],
         descendants: &["PARTY_SELF"],
@@ -8998,14 +10668,17 @@ pub(super) static CLASSES: &[RmClass] = &[
             type_params: &[],
             cardinality: None,
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
         name: "PATHABLE",
+        package: "org.openehr.rm.common.archetyped",
+        generated_type: true,
         is_abstract: true,
-        ancestors: &[],
+        ancestors: &["Any"],
         descendants: &[
             "ACTION",
             "ACTIVITY",
@@ -9056,8 +10729,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "PERSON",
+        package: "org.openehr.rm.demographic",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["ACTOR", "LOCATABLE", "PARTY", "PATHABLE"],
+        ancestors: &["ACTOR", "Any", "LOCATABLE", "PARTY", "PATHABLE"],
         descendants: &["PERSON"],
         attributes: &[
             RmAttribute {
@@ -9068,6 +10743,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -9077,6 +10753,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -9086,6 +10763,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -9098,6 +10776,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -9107,6 +10786,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -9116,6 +10796,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "identities",
@@ -9128,6 +10809,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "contacts",
@@ -9140,6 +10822,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "details",
@@ -9149,6 +10832,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "relationships",
@@ -9161,6 +10845,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "languages",
@@ -9173,6 +10858,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "roles",
@@ -9185,6 +10871,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: Some("VERSIONED_PARTY"),
             },
         ],
         is_structure_root: false,
@@ -9192,8 +10879,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "POINT_EVENT",
+        package: "org.openehr.rm.data_structures.history",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["EVENT", "LOCATABLE", "PATHABLE"],
+        ancestors: &["Any", "EVENT", "LOCATABLE", "PATHABLE"],
         descendants: &["POINT_EVENT"],
         attributes: &[
             RmAttribute {
@@ -9204,6 +10893,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -9213,6 +10903,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -9222,6 +10913,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -9234,6 +10926,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -9243,6 +10936,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -9252,6 +10946,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "time",
@@ -9261,6 +10956,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "state",
@@ -9270,6 +10966,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "data",
@@ -9279,6 +10976,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: true,
@@ -9288,9 +10986,25 @@ pub(super) static CLASSES: &[RmClass] = &[
         }],
     },
     RmClass {
-        name: "PROPORTION_KIND",
+        name: "PROCEDURE",
+        package: "org.openehr.base.foundation_types.functional",
+        generated_type: false,
         is_abstract: false,
-        ancestors: &[],
+        ancestors: &["ROUTINE"],
+        descendants: &["PROCEDURE"],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[RmGenericParam {
+            name: "ARGS",
+            conforms_to: Some("TUPLE"),
+        }],
+    },
+    RmClass {
+        name: "PROPORTION_KIND",
+        package: "org.openehr.rm.data_types.quantity",
+        generated_type: true,
+        is_abstract: false,
+        ancestors: &["Any", "Integer", "Numeric", "Ordered", "Ordered_Numeric"],
         descendants: &["DV_PROPORTION", "PROPORTION_KIND"],
         attributes: &[],
         is_structure_root: false,
@@ -9298,8 +11012,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "Point_interval",
+        package: "org.openehr.base.foundation_types.interval",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["Interval"],
+        ancestors: &["Any", "Interval"],
         descendants: &["Point_interval"],
         attributes: &[
             RmAttribute {
@@ -9310,6 +11026,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "upper",
@@ -9319,6 +11036,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "lower_unbounded",
@@ -9328,6 +11046,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "upper_unbounded",
@@ -9337,6 +11056,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "lower_included",
@@ -9346,6 +11066,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "upper_included",
@@ -9355,6 +11076,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -9365,8 +11087,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "Proper_interval",
+        package: "org.openehr.base.foundation_types.interval",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["Interval"],
+        ancestors: &["Any", "Interval"],
         descendants: &["Multiplicity_interval", "Proper_interval"],
         attributes: &[
             RmAttribute {
@@ -9377,6 +11101,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "upper",
@@ -9386,6 +11111,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "lower_unbounded",
@@ -9395,6 +11121,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "upper_unbounded",
@@ -9404,6 +11131,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "lower_included",
@@ -9413,6 +11141,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "upper_included",
@@ -9422,6 +11151,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -9431,7 +11161,20 @@ pub(super) static CLASSES: &[RmClass] = &[
         }],
     },
     RmClass {
+        name: "Quantity_converter",
+        package: "org.openehr.base.base_types.builtins",
+        generated_type: false,
+        is_abstract: false,
+        ancestors: &[],
+        descendants: &["Quantity_converter"],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[],
+    },
+    RmClass {
         name: "REFERENCE_RANGE",
+        package: "org.openehr.rm.data_types.quantity",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["REFERENCE_RANGE"],
@@ -9444,6 +11187,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "range",
@@ -9453,6 +11197,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -9463,6 +11208,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "RESOURCE_ANNOTATIONS",
+        package: "org.openehr.base.resource",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["RESOURCE_ANNOTATIONS"],
@@ -9501,12 +11248,15 @@ pub(super) static CLASSES: &[RmClass] = &[
             ],
             cardinality: None,
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
         name: "RESOURCE_DESCRIPTION",
+        package: "org.openehr.rm.common.resource",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["RESOURCE_DESCRIPTION"],
@@ -9528,6 +11278,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 ],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_contributors",
@@ -9540,6 +11291,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "lifecycle_state",
@@ -9549,6 +11301,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "resource_package_uri",
@@ -9558,6 +11311,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_details",
@@ -9576,6 +11330,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 ],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "parent_resource",
@@ -9585,6 +11340,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "details",
@@ -9603,6 +11359,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 ],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -9610,6 +11367,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "RESOURCE_DESCRIPTION_ITEM",
+        package: "org.openehr.rm.common.resource",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["RESOURCE_DESCRIPTION_ITEM"],
@@ -9622,6 +11381,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "purpose",
@@ -9631,6 +11391,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "keywords",
@@ -9643,6 +11404,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "use",
@@ -9652,6 +11414,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "misuse",
@@ -9661,6 +11424,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "copyright",
@@ -9670,6 +11434,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "original_resource_uri",
@@ -9688,6 +11453,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 ],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_details",
@@ -9706,6 +11472,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 ],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -9713,6 +11480,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "REVISION_HISTORY",
+        package: "org.openehr.rm.common.generic",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["REVISION_HISTORY"],
@@ -9727,12 +11496,15 @@ pub(super) static CLASSES: &[RmClass] = &[
                 upper: None,
             }),
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
         name: "REVISION_HISTORY_ITEM",
+        package: "org.openehr.rm.common.generic",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["REVISION_HISTORY_ITEM"],
@@ -9745,6 +11517,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "audits",
@@ -9757,6 +11530,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -9764,8 +11538,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "ROLE",
+        package: "org.openehr.rm.demographic",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &["LOCATABLE", "PARTY", "PATHABLE"],
+        ancestors: &["Any", "LOCATABLE", "PARTY", "PATHABLE"],
         descendants: &["ROLE"],
         attributes: &[
             RmAttribute {
@@ -9776,6 +11552,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -9785,6 +11562,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -9794,6 +11572,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -9806,6 +11585,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -9815,6 +11595,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -9824,6 +11605,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "identities",
@@ -9836,6 +11618,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "contacts",
@@ -9848,6 +11631,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "details",
@@ -9857,6 +11641,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "relationships",
@@ -9869,6 +11654,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "time_validity",
@@ -9881,6 +11667,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 }],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "performer",
@@ -9890,6 +11677,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: Some("VERSIONED_PARTY"),
             },
             RmAttribute {
                 name: "capabilities",
@@ -9902,15 +11690,43 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
-        name: "SECTION",
+        name: "ROUTINE",
+        package: "org.openehr.base.foundation_types.functional",
+        generated_type: false,
         is_abstract: false,
-        ancestors: &["CONTENT_ITEM", "LOCATABLE", "PATHABLE"],
+        ancestors: &[],
+        descendants: &["FUNCTION", "PROCEDURE", "ROUTINE"],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[RmGenericParam {
+            name: "ARGS",
+            conforms_to: Some("TUPLE"),
+        }],
+    },
+    RmClass {
+        name: "Real",
+        package: "org.openehr.base.foundation_types.primitive_types",
+        generated_type: false,
+        is_abstract: false,
+        ancestors: &["Any", "Numeric", "Ordered", "Ordered_Numeric"],
+        descendants: &["Real"],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[],
+    },
+    RmClass {
+        name: "SECTION",
+        package: "org.openehr.rm.composition.content.navigation",
+        generated_type: true,
+        is_abstract: false,
+        ancestors: &["Any", "CONTENT_ITEM", "LOCATABLE", "PATHABLE"],
         descendants: &["SECTION"],
         attributes: &[
             RmAttribute {
@@ -9921,6 +11737,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_node_id",
@@ -9930,6 +11747,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uid",
@@ -9939,6 +11757,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "links",
@@ -9951,6 +11770,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
             RmAttribute {
                 name: "archetype_details",
@@ -9960,6 +11780,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "feeder_audit",
@@ -9969,6 +11790,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "items",
@@ -9981,6 +11803,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: true,
+                ref_target: None,
             },
         ],
         is_structure_root: true,
@@ -9988,6 +11811,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "SYNC_EXTRACT",
+        package: "org.openehr.rm.ehr_extract.sync_extract",
+        generated_type: true,
         is_abstract: false,
         ancestors: &["MESSAGE_CONTENT"],
         descendants: &["SYNC_EXTRACT"],
@@ -10000,6 +11825,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "items",
@@ -10012,6 +11838,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -10019,6 +11846,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "SYNC_EXTRACT_REQUEST",
+        package: "org.openehr.rm.ehr_extract.sync_extract",
+        generated_type: true,
         is_abstract: false,
         ancestors: &["MESSAGE_CONTENT"],
         descendants: &["SYNC_EXTRACT_REQUEST"],
@@ -10030,12 +11859,15 @@ pub(super) static CLASSES: &[RmClass] = &[
             type_params: &[],
             cardinality: None,
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
         name: "SYNC_EXTRACT_SPEC",
+        package: "org.openehr.rm.ehr_extract.sync_extract",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["SYNC_EXTRACT_SPEC"],
@@ -10048,6 +11880,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "contribution_list",
@@ -10060,6 +11893,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "contributions_since",
@@ -10069,6 +11903,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "all_contributions",
@@ -10078,13 +11913,52 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
+        name: "Set",
+        package: "org.openehr.base.foundation_types.structure",
+        generated_type: false,
+        is_abstract: false,
+        ancestors: &["Any", "Container"],
+        descendants: &["Set"],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[RmGenericParam {
+            name: "T",
+            conforms_to: Some("Any"),
+        }],
+    },
+    RmClass {
+        name: "Statistical_evaluator",
+        package: "org.openehr.base.base_types.builtins",
+        generated_type: false,
+        is_abstract: false,
+        ancestors: &[],
+        descendants: &["Statistical_evaluator"],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[],
+    },
+    RmClass {
+        name: "String",
+        package: "org.openehr.base.foundation_types.primitive_types",
+        generated_type: false,
+        is_abstract: false,
+        ancestors: &["Any", "Ordered"],
+        descendants: &["String", "Uri", "VALIDITY_KIND", "VERSION_STATUS"],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[],
+    },
+    RmClass {
         name: "TEMPLATE_ID",
+        package: "org.openehr.base.base_types.identification",
+        generated_type: true,
         is_abstract: false,
         ancestors: &["OBJECT_ID"],
         descendants: &["TEMPLATE_ID"],
@@ -10096,12 +11970,15 @@ pub(super) static CLASSES: &[RmClass] = &[
             type_params: &[],
             cardinality: None,
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
         name: "TERMINOLOGY_ACCESS",
+        package: "org.openehr.rm.support.terminology",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["TERMINOLOGY_ACCESS"],
@@ -10111,6 +11988,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "TERMINOLOGY_ID",
+        package: "org.openehr.base.base_types.identification",
+        generated_type: true,
         is_abstract: false,
         ancestors: &["OBJECT_ID"],
         descendants: &["TERMINOLOGY_ID"],
@@ -10122,12 +12001,15 @@ pub(super) static CLASSES: &[RmClass] = &[
             type_params: &[],
             cardinality: None,
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
         name: "TERMINOLOGY_SERVICE",
+        package: "org.openehr.rm.support.terminology",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[
             "OPENEHR_CODE_SET_IDENTIFIERS",
@@ -10140,6 +12022,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "TERM_MAPPING",
+        package: "org.openehr.rm.data_types.text",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["TERM_MAPPING"],
@@ -10152,6 +12036,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "purpose",
@@ -10161,6 +12046,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "target",
@@ -10170,6 +12056,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -10177,6 +12064,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "TRANSLATION_DETAILS",
+        package: "org.openehr.rm.common.resource",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["TRANSLATION_DETAILS"],
@@ -10189,6 +12078,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "author",
@@ -10207,6 +12097,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 ],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "accreditaton",
@@ -10216,6 +12107,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "other_details",
@@ -10234,15 +12126,84 @@ pub(super) static CLASSES: &[RmClass] = &[
                 ],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
-        name: "Terminology_code",
+        name: "TUPLE",
+        package: "org.openehr.base.foundation_types.functional",
+        generated_type: false,
         is_abstract: false,
         ancestors: &[],
+        descendants: &["TUPLE", "TUPLE1", "TUPLE2"],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[],
+    },
+    RmClass {
+        name: "TUPLE1",
+        package: "org.openehr.base.foundation_types.functional",
+        generated_type: false,
+        is_abstract: false,
+        ancestors: &["TUPLE"],
+        descendants: &["TUPLE1"],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[RmGenericParam {
+            name: "A",
+            conforms_to: Some("Any"),
+        }],
+    },
+    RmClass {
+        name: "TUPLE2",
+        package: "org.openehr.base.foundation_types.functional",
+        generated_type: false,
+        is_abstract: false,
+        ancestors: &["TUPLE"],
+        descendants: &["TUPLE2"],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[
+            RmGenericParam {
+                name: "A",
+                conforms_to: Some("Any"),
+            },
+            RmGenericParam {
+                name: "B",
+                conforms_to: Some("Any"),
+            },
+        ],
+    },
+    RmClass {
+        name: "Temporal",
+        package: "org.openehr.base.foundation_types.time",
+        generated_type: false,
+        is_abstract: true,
+        ancestors: &["Any", "Ordered"],
+        descendants: &[
+            "DV_DATE",
+            "DV_DATE_TIME",
+            "DV_DURATION",
+            "DV_TIME",
+            "Iso8601_date",
+            "Iso8601_date_time",
+            "Iso8601_duration",
+            "Iso8601_time",
+            "Iso8601_timezone",
+        ],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[],
+    },
+    RmClass {
+        name: "Terminology_code",
+        package: "org.openehr.base.foundation_types.terminology",
+        generated_type: true,
+        is_abstract: false,
+        ancestors: &["Any"],
         descendants: &["Terminology_code"],
         attributes: &[
             RmAttribute {
@@ -10253,6 +12214,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "terminology_version",
@@ -10262,6 +12224,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "code_string",
@@ -10271,6 +12234,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "uri",
@@ -10280,6 +12244,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -10287,8 +12252,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "Terminology_term",
+        package: "org.openehr.base.foundation_types.terminology",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &[],
+        ancestors: &["Any"],
         descendants: &["Terminology_term"],
         attributes: &[
             RmAttribute {
@@ -10299,6 +12266,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "text",
@@ -10308,13 +12276,38 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
+        name: "Time_Definitions",
+        package: "org.openehr.base.foundation_types.time",
+        generated_type: false,
+        is_abstract: false,
+        ancestors: &[],
+        descendants: &[
+            "DV_DATE",
+            "DV_DATE_TIME",
+            "DV_DURATION",
+            "DV_TIME",
+            "Iso8601_date",
+            "Iso8601_date_time",
+            "Iso8601_duration",
+            "Iso8601_time",
+            "Iso8601_timezone",
+            "Time_Definitions",
+        ],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[],
+    },
+    RmClass {
         name: "UID",
+        package: "org.openehr.base.base_types.identification",
+        generated_type: true,
         is_abstract: true,
         ancestors: &[],
         descendants: &["INTERNET_ID", "ISO_OID", "UUID"],
@@ -10326,12 +12319,15 @@ pub(super) static CLASSES: &[RmClass] = &[
             type_params: &[],
             cardinality: None,
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
         name: "UID_BASED_ID",
+        package: "org.openehr.base.base_types.identification",
+        generated_type: true,
         is_abstract: true,
         ancestors: &["OBJECT_ID"],
         descendants: &["HIER_OBJECT_ID", "OBJECT_VERSION_ID"],
@@ -10343,12 +12339,15 @@ pub(super) static CLASSES: &[RmClass] = &[
             type_params: &[],
             cardinality: None,
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
         name: "UUID",
+        package: "org.openehr.base.base_types.identification",
+        generated_type: true,
         is_abstract: false,
         ancestors: &["UID"],
         descendants: &["UUID"],
@@ -10360,14 +12359,28 @@ pub(super) static CLASSES: &[RmClass] = &[
             type_params: &[],
             cardinality: None,
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
-        name: "VALIDITY_KIND",
+        name: "Uri",
+        package: "org.openehr.base.foundation_types.primitive_types",
+        generated_type: false,
         is_abstract: false,
-        ancestors: &[],
+        ancestors: &["Any", "Ordered", "String"],
+        descendants: &["Uri"],
+        attributes: &[],
+        is_structure_root: false,
+        generic_params: &[],
+    },
+    RmClass {
+        name: "VALIDITY_KIND",
+        package: "org.openehr.base.base_types.definitions",
+        generated_type: true,
+        is_abstract: false,
+        ancestors: &["Any", "Ordered", "String"],
         descendants: &["VALIDITY_KIND"],
         attributes: &[],
         is_structure_root: false,
@@ -10375,6 +12388,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "VERSION",
+        package: "org.openehr.rm.common.change_control",
+        generated_type: true,
         is_abstract: true,
         ancestors: &[],
         descendants: &["IMPORTED_VERSION", "ORIGINAL_VERSION"],
@@ -10387,6 +12402,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: Some("CONTRIBUTION"),
             },
             RmAttribute {
                 name: "signature",
@@ -10396,6 +12412,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "commit_audit",
@@ -10405,6 +12422,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -10415,6 +12433,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "VERSIONED_COMPOSITION",
+        package: "org.openehr.rm.ehr",
+        generated_type: true,
         is_abstract: false,
         ancestors: &["VERSIONED_OBJECT"],
         descendants: &["VERSIONED_COMPOSITION"],
@@ -10427,6 +12447,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "owner_id",
@@ -10436,6 +12457,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "time_created",
@@ -10445,6 +12467,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -10452,6 +12475,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "VERSIONED_EHR_ACCESS",
+        package: "org.openehr.rm.ehr",
+        generated_type: true,
         is_abstract: false,
         ancestors: &["VERSIONED_OBJECT"],
         descendants: &["VERSIONED_EHR_ACCESS"],
@@ -10464,6 +12489,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "owner_id",
@@ -10473,6 +12499,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "time_created",
@@ -10482,6 +12509,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -10489,6 +12517,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "VERSIONED_EHR_STATUS",
+        package: "org.openehr.rm.ehr",
+        generated_type: true,
         is_abstract: false,
         ancestors: &["VERSIONED_OBJECT"],
         descendants: &["VERSIONED_EHR_STATUS"],
@@ -10501,6 +12531,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "owner_id",
@@ -10510,6 +12541,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "time_created",
@@ -10519,6 +12551,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -10526,6 +12559,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "VERSIONED_FOLDER",
+        package: "org.openehr.rm.common.directory",
+        generated_type: true,
         is_abstract: false,
         ancestors: &["VERSIONED_OBJECT"],
         descendants: &["VERSIONED_FOLDER"],
@@ -10538,6 +12573,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "owner_id",
@@ -10547,6 +12583,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "time_created",
@@ -10556,6 +12593,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -10563,6 +12601,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "VERSIONED_OBJECT",
+        package: "org.openehr.rm.common.change_control",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &[
@@ -10582,6 +12622,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "owner_id",
@@ -10591,6 +12632,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "time_created",
@@ -10600,6 +12642,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -10610,6 +12653,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "VERSIONED_PARTY",
+        package: "org.openehr.rm.demographic",
+        generated_type: true,
         is_abstract: false,
         ancestors: &["VERSIONED_OBJECT"],
         descendants: &["VERSIONED_PARTY"],
@@ -10622,6 +12667,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "owner_id",
@@ -10631,6 +12677,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "time_created",
@@ -10640,6 +12687,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -10647,8 +12695,10 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "VERSION_STATUS",
+        package: "org.openehr.base.base_types.definitions",
+        generated_type: true,
         is_abstract: false,
-        ancestors: &[],
+        ancestors: &["Any", "Ordered", "String"],
         descendants: &["VERSION_STATUS"],
         attributes: &[],
         is_structure_root: false,
@@ -10656,6 +12706,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "VERSION_TREE_ID",
+        package: "org.openehr.base.base_types.identification",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["VERSION_TREE_ID"],
@@ -10667,12 +12719,15 @@ pub(super) static CLASSES: &[RmClass] = &[
             type_params: &[],
             cardinality: None,
             nonempty: false,
+            ref_target: None,
         }],
         is_structure_root: false,
         generic_params: &[],
     },
     RmClass {
         name: "X_CONTRIBUTION",
+        package: "org.openehr.rm.ehr_extract.sync_extract",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &["X_CONTRIBUTION"],
@@ -10685,6 +12740,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "audit",
@@ -10694,6 +12750,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "versions",
@@ -10709,6 +12766,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -10716,6 +12774,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "X_VERSIONED_COMPOSITION",
+        package: "org.openehr.rm.ehr_extract.openehr_extract",
+        generated_type: true,
         is_abstract: false,
         ancestors: &["X_VERSIONED_OBJECT"],
         descendants: &["X_VERSIONED_COMPOSITION"],
@@ -10728,6 +12788,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "owner_id",
@@ -10737,6 +12798,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: Some("EHR"),
             },
             RmAttribute {
                 name: "time_created",
@@ -10746,6 +12808,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "total_version_count",
@@ -10755,6 +12818,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "extract_version_count",
@@ -10764,6 +12828,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "revision_history",
@@ -10773,6 +12838,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "versions",
@@ -10788,6 +12854,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -10795,6 +12862,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "X_VERSIONED_EHR_ACCESS",
+        package: "org.openehr.rm.ehr_extract.openehr_extract",
+        generated_type: true,
         is_abstract: false,
         ancestors: &["X_VERSIONED_OBJECT"],
         descendants: &["X_VERSIONED_EHR_ACCESS"],
@@ -10807,6 +12876,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "owner_id",
@@ -10816,6 +12886,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: Some("EHR"),
             },
             RmAttribute {
                 name: "time_created",
@@ -10825,6 +12896,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "total_version_count",
@@ -10834,6 +12906,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "extract_version_count",
@@ -10843,6 +12916,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "revision_history",
@@ -10852,6 +12926,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "versions",
@@ -10867,6 +12942,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -10874,6 +12950,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "X_VERSIONED_EHR_STATUS",
+        package: "org.openehr.rm.ehr_extract.openehr_extract",
+        generated_type: true,
         is_abstract: false,
         ancestors: &["X_VERSIONED_OBJECT"],
         descendants: &["X_VERSIONED_EHR_STATUS"],
@@ -10886,6 +12964,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "owner_id",
@@ -10895,6 +12974,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: Some("EHR"),
             },
             RmAttribute {
                 name: "time_created",
@@ -10904,6 +12984,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "total_version_count",
@@ -10913,6 +12994,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "extract_version_count",
@@ -10922,6 +13004,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "revision_history",
@@ -10931,6 +13014,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "versions",
@@ -10946,6 +13030,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -10953,6 +13038,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "X_VERSIONED_FOLDER",
+        package: "org.openehr.rm.ehr_extract.openehr_extract",
+        generated_type: true,
         is_abstract: false,
         ancestors: &["X_VERSIONED_OBJECT"],
         descendants: &["X_VERSIONED_FOLDER"],
@@ -10965,6 +13052,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "owner_id",
@@ -10974,6 +13062,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: Some("EHR"),
             },
             RmAttribute {
                 name: "time_created",
@@ -10983,6 +13072,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "total_version_count",
@@ -10992,6 +13082,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "extract_version_count",
@@ -11001,6 +13092,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "revision_history",
@@ -11010,6 +13102,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "versions",
@@ -11025,6 +13118,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -11032,6 +13126,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "X_VERSIONED_OBJECT",
+        package: "org.openehr.rm.ehr_extract.openehr_extract",
+        generated_type: true,
         is_abstract: false,
         ancestors: &[],
         descendants: &[
@@ -11051,6 +13147,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "owner_id",
@@ -11060,6 +13157,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: Some("EHR"),
             },
             RmAttribute {
                 name: "time_created",
@@ -11069,6 +13167,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "total_version_count",
@@ -11078,6 +13177,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "extract_version_count",
@@ -11087,6 +13187,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "revision_history",
@@ -11096,6 +13197,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "versions",
@@ -11111,6 +13213,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,
@@ -11121,6 +13224,8 @@ pub(super) static CLASSES: &[RmClass] = &[
     },
     RmClass {
         name: "X_VERSIONED_PARTY",
+        package: "org.openehr.rm.ehr_extract.openehr_extract",
+        generated_type: true,
         is_abstract: false,
         ancestors: &["X_VERSIONED_OBJECT"],
         descendants: &["X_VERSIONED_PARTY"],
@@ -11133,6 +13238,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "owner_id",
@@ -11142,6 +13248,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: Some("EHR"),
             },
             RmAttribute {
                 name: "time_created",
@@ -11151,6 +13258,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "total_version_count",
@@ -11160,6 +13268,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "extract_version_count",
@@ -11169,6 +13278,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "revision_history",
@@ -11178,6 +13288,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 type_params: &[],
                 cardinality: None,
                 nonempty: false,
+                ref_target: None,
             },
             RmAttribute {
                 name: "versions",
@@ -11193,6 +13304,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     upper: None,
                 }),
                 nonempty: false,
+                ref_target: None,
             },
         ],
         is_structure_root: false,

@@ -380,7 +380,7 @@ fn flattened(types: &BTreeMap<String, XsdType>, name: &str) -> BTreeSet<String> 
 fn is_wire_class(name: &str) -> bool {
     name.chars()
         .all(|c| c.is_ascii_uppercase() || c == '_' || c.is_ascii_digit())
-        && model::class(name).is_some_and(|c| !c.is_abstract)
+        && model::class(name).is_some_and(|c| !c.is_abstract && c.generated_type)
         && model::enumeration(name).is_none()
 }
 
