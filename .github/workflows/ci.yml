@@ -581,6 +581,26 @@ jobs:
       - name: labels.sh declares the taxonomy and retires the old labels
         run: bash scripts/gh/labels.sh --self-test
 
+  # The FerroTERM the sandbox pins must read the terminology index the box
+  # carries (#3520): the v4.3.2 release's sandbox leg failed on a pin bump that
+  # moved the artifact layout. The check reads LAYOUT_VERSION at the pinned
+  # FerroTERM tag and compares it with deploy/hosted/ferroterm-index.env.
+  ferroterm-index-layout:
+    name: ferroterm-index-layout
+    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: The check refuses a differing and an unreadable layout
+        run: bash scripts/checks/ferroterm-index-layout.sh --self-test
+      - name: The pinned FerroTERM reads the box's index layout
+        run: bash scripts/checks/ferroterm-index-layout.sh
+
   # The hosted box's deploy script lives inside deploy/hosted/cloud-init.yaml
   # as a write_files block, where no other gate reads shell (#2974); this
   # extracts and shellchecks it, and checks that docker/Dockerfile bakes every
@@ -2670,6 +2690,7 @@ jobs:
       - workflow-lint
       - shellcheck
       - tracker-helpers
+      - ferroterm-index-layout
       - hosted-deploy-script
       - comment-style
       - default-style
