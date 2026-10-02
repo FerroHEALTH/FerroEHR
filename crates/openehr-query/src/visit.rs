@@ -452,7 +452,7 @@ pub fn walk_value_list_item<'ast, V: Visit<'ast> + ?Sized>(v: &mut V, node: &'as
 /// Visits every argument, or the terminology call.
 pub fn walk_function_call<'ast, V: Visit<'ast> + ?Sized>(v: &mut V, node: &'ast FunctionCall) {
     match node {
-        FunctionCall::Named { name: _, args } => {
+        FunctionCall::Builtin { args, .. } | FunctionCall::Other { name: _, args } => {
             for arg in args {
                 v.visit_terminal(arg);
             }
@@ -871,7 +871,7 @@ pub fn walk_value_list_item_mut<V: VisitMut + ?Sized>(v: &mut V, node: &mut Valu
 /// Visits every argument, or the terminology call.
 pub fn walk_function_call_mut<V: VisitMut + ?Sized>(v: &mut V, node: &mut FunctionCall) {
     match node {
-        FunctionCall::Named { name: _, args } => {
+        FunctionCall::Builtin { args, .. } | FunctionCall::Other { name: _, args } => {
             for arg in args {
                 v.visit_terminal_mut(arg);
             }

@@ -11,9 +11,10 @@
 //! [`super::plan`] after the whole IR is built.
 
 use openehr_query::ast::{
-    AggregateCall, ClassExprOperand, ColumnExpr, CompareOperand, ContainsExpr, FunctionCall,
-    IdentifiedExpr, LikeOperand, MatchesOperand, OrderByExpr, SelectQuery, SortOrder, StatFunc,
-    Terminal, TopDirection, ValueListItem, VersionPredicate, WhereExpr,
+    AggregateCall, BuiltinFunction, ClassExprOperand, ColumnExpr, CompareOperand, ContainsExpr,
+    DateTimeFunction, FunctionCall, IdentifiedExpr, LikeOperand, MatchesOperand, NumericFunction,
+    OrderByExpr, SelectQuery, SortOrder, StatFunc, StringFunction, Terminal, TopDirection,
+    ValueListItem, VersionPredicate, WhereExpr,
 };
 use openehr_rm::v1_2::model;
 
@@ -24,8 +25,8 @@ use super::analyze::{
 use super::error::{AnalysisError, AqlError, AqlFeatureError};
 use super::ir::{
     AggFunc, Bind, Coercion, Contained, ContainsTree, EhrPredicate, EhrSource, Expr, LikePattern,
-    Link, Operand, OrderKey, PathTarget, QueryIr, RmSource, ScalarFn, SelectColumn, SelectValue,
-    Source, SourceId, TypeSet, TypedLit, VersionScope, VersionSource,
+    Link, Operand, OrderKey, PathTarget, QueryIr, RmSource, SelectColumn, SelectValue, Source,
+    SourceId, TypeSet, TypedLit, VersionScope, VersionSource,
 };
 
 /// Lowers one parsed [`SelectQuery`] into a [`QueryIr`] (without parameter-
@@ -485,12 +486,17 @@ impl Planner {
         }
     }
 
-    fn lower_function(&self, call: &FunctionCall) -> Result<(ScalarFn, Vec<Operand>), AqlError> {
+    fn lower_function(
+        &self,
+        call: &FunctionCall,
+    ) -> Result<(BuiltinFunction, Vec<Operand>), AqlError> {
         match call {
             FunctionCall::Terminology(_) => Err(AqlFeatureError::TerminologyFunction.into()),
-            FunctionCall::Named { name, args } => {
-                let func = scalar_fn(name)
-                    .ok_or_else(|| AqlFeatureError::UnsupportedFunction(name.clone()))?;
+            FunctionCall::Other { name, .. } => {
+                Err(AqlFeatureError::UnsupportedFunction(name.clone()).into())
+            }
+            FunctionCall::Builtin { function, args, .. } => {
+                let func = *function;
                 check_function_arity(func, args.len())?;
                 let args = args
                     .iter()
@@ -569,58 +575,41 @@ fn non_numeric_leaf(target: &PathTarget) -> Option<&'static str> {
     }
 }
 
-/// Scalar-function arity (QUERY master03 §Functions): reject a call whose
+/// Built-in function arity (QUERY master03 §Functions): reject a call whose
 /// argument count is outside the declared signature.
-fn check_function_arity(func: ScalarFn, got: usize) -> Result<(), AqlError> {
-    let (name, expected, ok): (&'static str, &'static str, bool) = match func {
-        ScalarFn::Length => ("LENGTH", "1", got == 1),
-        ScalarFn::Substring => ("SUBSTRING", "2 or 3", got == 2 || got == 3),
-        ScalarFn::Position => ("POSITION", "2", got == 2),
-        ScalarFn::StrContains => ("CONTAINS", "2", got == 2),
-        ScalarFn::Concat => ("CONCAT", "at least 1", got >= 1),
-        ScalarFn::ConcatWs => ("CONCAT_WS", "at least 2", got >= 2),
-        ScalarFn::Abs => ("ABS", "1", got == 1),
-        ScalarFn::Ceil => ("CEIL", "1", got == 1),
-        ScalarFn::Floor => ("FLOOR", "1", got == 1),
-        ScalarFn::Round => ("ROUND", "1 or 2", got == 1 || got == 2),
-        ScalarFn::Mod => ("MOD", "2", got == 2),
-        ScalarFn::CurrentDate => ("CURRENT_DATE", "0", got == 0),
-        ScalarFn::CurrentTime => ("CURRENT_TIME", "0", got == 0),
-        ScalarFn::CurrentDateTime => ("CURRENT_DATE_TIME", "0", got == 0),
-        ScalarFn::Now => ("NOW", "0", got == 0),
-        ScalarFn::CurrentTimezone => ("CURRENT_TIMEZONE", "0", got == 0),
+fn check_function_arity(func: BuiltinFunction, got: usize) -> Result<(), AqlError> {
+    let (expected, ok): (&'static str, bool) = match func {
+        BuiltinFunction::String(f) => match f {
+            StringFunction::Length => ("1", got == 1),
+            StringFunction::Substring => ("2 or 3", got == 2 || got == 3),
+            StringFunction::Position | StringFunction::Contains => ("2", got == 2),
+            StringFunction::Concat => ("at least 1", got >= 1),
+            StringFunction::ConcatWs => ("at least 2", got >= 2),
+        },
+        BuiltinFunction::Numeric(f) => match f {
+            NumericFunction::Abs | NumericFunction::Ceil | NumericFunction::Floor => {
+                ("1", got == 1)
+            }
+            NumericFunction::Round => ("1 or 2", got == 1 || got == 2),
+            NumericFunction::Mod => ("2", got == 2),
+        },
+        BuiltinFunction::DateTime(
+            DateTimeFunction::CurrentDate
+            | DateTimeFunction::CurrentTime
+            | DateTimeFunction::CurrentDateTime
+            | DateTimeFunction::Now
+            | DateTimeFunction::CurrentTimezone,
+        ) => ("0", got == 0),
     };
     if ok {
         Ok(())
     } else {
         Err(AnalysisError::FunctionArity {
-            func: name,
+            func: func.as_str(),
             expected,
             got,
         }
         .into())
-    }
-}
-
-fn scalar_fn(name: &str) -> Option<ScalarFn> {
-    match name.to_ascii_lowercase().as_str() {
-        "length" => Some(ScalarFn::Length),
-        "substring" => Some(ScalarFn::Substring),
-        "position" => Some(ScalarFn::Position),
-        "concat" => Some(ScalarFn::Concat),
-        "concat_ws" => Some(ScalarFn::ConcatWs),
-        "abs" => Some(ScalarFn::Abs),
-        "ceil" => Some(ScalarFn::Ceil),
-        "floor" => Some(ScalarFn::Floor),
-        "round" => Some(ScalarFn::Round),
-        "mod" => Some(ScalarFn::Mod),
-        "current_date" => Some(ScalarFn::CurrentDate),
-        "current_time" => Some(ScalarFn::CurrentTime),
-        "current_date_time" => Some(ScalarFn::CurrentDateTime),
-        "now" => Some(ScalarFn::Now),
-        "current_timezone" => Some(ScalarFn::CurrentTimezone),
-        "contains" => Some(ScalarFn::StrContains),
-        _ => None,
     }
 }
 

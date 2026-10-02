@@ -17,6 +17,27 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **`openehr-query` classifies AQL function calls** (#3529). A call naming
+  one of the built-in functions in QUERY master03 §Functions parses to
+  `FunctionCall::Builtin` with a typed `BuiltinFunction` (`StringFunction`,
+  `NumericFunction`, `DateTimeFunction`); any other name parses to
+  `FunctionCall::Other`. Both keep the name as written, so `printer::to_aql`
+  returns it unchanged, `CONTAINS` included. `FunctionCall::Named` is gone, and
+  the `Token::Contains` lexer token now carries its spelling. The CDR's AQL
+  engine uses this classification instead of a function list of its own.
+- **`openehr-its` names every operation's declared parameters** (#3530).
+  Each generated `*Params` struct carries a `PARAMS` table of the path, query
+  and header parameters it holds (name as the OAS spells it, location,
+  required, explode, and the value kind its schema states), written in the
+  same pass as the struct. Each API group carries `ROUTE_PARAMS`, aligned with
+  `ROUTES`, and `routes::lookup` returns the matched operation's parameters
+  with `query_param`, `query_key` and `header_param` lookups, so an
+  intermediary can pass on exactly what an operation declares.
+- **`openehr-its` `ReqwestTransport` constructors take a
+  `reqwest::ClientBuilder`** (#3531). `ReqwestTransport::new` and the new
+  `with_builder_timeout` (replacing `with_client_timeout`) build the client
+  themselves, with redirects switched off.
+- **The `openehr-*` crates step to 0.0.77.**
 - **FerroTERM moves to 0.1.6 at `ghcr.io/ferrohealth/ferroterm`** (#3521).
   FerroTERM moved to the FerroHEALTH organization, and its releases from 0.1.6
   on publish there. The terminology compose overlay, the hosted sandbox, the
@@ -26,6 +47,14 @@ workflow refuses a tag that has no matching section here.
 
 ### Fixed
 
+- **`Client::forward` returns a redirect as received** (#3531). The client
+  built by `ReqwestTransport::with_timeout` used reqwest's default redirect
+  policy and followed up to ten redirects, re-sending the request and its
+  credentials to whatever host a `Location` named. Every `ReqwestTransport`
+  constructor now switches redirects off, so a `3xx` reaches the caller and
+  nothing is sent further. No ITS-REST 1.1.0 operation declares a `3xx`, so a
+  generated client call that receives one refuses it as an undocumented
+  status.
 - **A FerroTERM pin the sandbox's index cannot serve is refused on the pull
   request** (#3520). FerroTERM 0.1.5 moved its artifact layout to 7, and the
   v4.3.2 sandbox leg failed on the layout-6 index the box carried. A

@@ -243,6 +243,75 @@ pub struct AgentCreateParams {
     pub openehr_audit_details: Option<Vec<String>>,
 }
 
+impl AgentCreateParams {
+    /// The parameters of `agent_create`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "Prefer",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "return=representation",
+                "return=minimal",
+                "return=identifier",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "application/openehr.wt.flat+json",
+                "application/openehr.wt.structured+json",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "Content-Type",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "application/openehr.wt.flat+json",
+                "application/openehr.wt.structured+json",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "openehr-item-tag",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+        },
+        crate::rest::routes::Param {
+            name: "openehr-version-item-tag",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+        },
+        crate::rest::routes::Param {
+            name: "openehr-version",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "openehr-audit-details",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+        },
+    ];
+}
+
 /// Parameters for `agent_get` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentGetParams {
@@ -255,6 +324,38 @@ pub struct AgentGetParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// `Accept` (header)
     pub accept: Option<String>,
+}
+
+impl AgentGetParams {
+    /// The parameters of `agent_get`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "uid_based_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "version_at_time",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::DateTime,
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "application/openehr.wt.flat+json",
+                "application/openehr.wt.structured+json",
+            ]),
+        },
+    ];
 }
 
 /// Parameters for `agent_update` (path/query/header).
@@ -295,6 +396,82 @@ pub struct AgentUpdateParams {
     pub openehr_audit_details: Option<Vec<String>>,
 }
 
+impl AgentUpdateParams {
+    /// The parameters of `agent_update`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "uid_based_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Uuid,
+        },
+        crate::rest::routes::Param {
+            name: "If-Match",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "Prefer",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "return=representation",
+                "return=minimal",
+                "return=identifier",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "application/openehr.wt.flat+json",
+                "application/openehr.wt.structured+json",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "Content-Type",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "application/openehr.wt.flat+json",
+                "application/openehr.wt.structured+json",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "openehr-version-item-tag",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+        },
+        crate::rest::routes::Param {
+            name: "openehr-version",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "openehr-audit-details",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+        },
+    ];
+}
+
 /// Parameters for `agent_delete` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentDeleteParams {
@@ -312,6 +489,33 @@ pub struct AgentDeleteParams {
     /// DEFINED by the docs text — ITS-REST `docs/overview/Requests_and_responses.md` §openehr-version and openehr-audit-details — the same mandate; the section's example sends the header as several field lines, one per AUDIT_DETAILS attribute
     /// (The AUDIT_DETAILS attributes of the commit (`change_type`, `description`, `committer`, `system_id`); the OAS declares no parameter for it.)
     pub openehr_audit_details: Option<Vec<String>>,
+}
+
+impl AgentDeleteParams {
+    /// The parameters of `agent_delete`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "uid_based_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "openehr-version",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "openehr-audit-details",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+        },
+    ];
 }
 
 /// Parameters for `group_create` (path/query/header).
@@ -351,6 +555,75 @@ pub struct GroupCreateParams {
     pub openehr_audit_details: Option<Vec<String>>,
 }
 
+impl GroupCreateParams {
+    /// The parameters of `group_create`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "Prefer",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "return=representation",
+                "return=minimal",
+                "return=identifier",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "application/openehr.wt.flat+json",
+                "application/openehr.wt.structured+json",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "Content-Type",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "application/openehr.wt.flat+json",
+                "application/openehr.wt.structured+json",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "openehr-item-tag",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+        },
+        crate::rest::routes::Param {
+            name: "openehr-version-item-tag",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+        },
+        crate::rest::routes::Param {
+            name: "openehr-version",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "openehr-audit-details",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+        },
+    ];
+}
+
 /// Parameters for `group_get` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GroupGetParams {
@@ -363,6 +636,38 @@ pub struct GroupGetParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// `Accept` (header)
     pub accept: Option<String>,
+}
+
+impl GroupGetParams {
+    /// The parameters of `group_get`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "uid_based_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "version_at_time",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::DateTime,
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "application/openehr.wt.flat+json",
+                "application/openehr.wt.structured+json",
+            ]),
+        },
+    ];
 }
 
 /// Parameters for `group_update` (path/query/header).
@@ -403,6 +708,82 @@ pub struct GroupUpdateParams {
     pub openehr_audit_details: Option<Vec<String>>,
 }
 
+impl GroupUpdateParams {
+    /// The parameters of `group_update`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "uid_based_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Uuid,
+        },
+        crate::rest::routes::Param {
+            name: "If-Match",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "Prefer",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "return=representation",
+                "return=minimal",
+                "return=identifier",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "application/openehr.wt.flat+json",
+                "application/openehr.wt.structured+json",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "Content-Type",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "application/openehr.wt.flat+json",
+                "application/openehr.wt.structured+json",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "openehr-version-item-tag",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+        },
+        crate::rest::routes::Param {
+            name: "openehr-version",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "openehr-audit-details",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+        },
+    ];
+}
+
 /// Parameters for `group_delete` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GroupDeleteParams {
@@ -420,6 +801,33 @@ pub struct GroupDeleteParams {
     /// DEFINED by the docs text — ITS-REST `docs/overview/Requests_and_responses.md` §openehr-version and openehr-audit-details — the same mandate; the section's example sends the header as several field lines, one per AUDIT_DETAILS attribute
     /// (The AUDIT_DETAILS attributes of the commit (`change_type`, `description`, `committer`, `system_id`); the OAS declares no parameter for it.)
     pub openehr_audit_details: Option<Vec<String>>,
+}
+
+impl GroupDeleteParams {
+    /// The parameters of `group_delete`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "uid_based_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "openehr-version",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "openehr-audit-details",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+        },
+    ];
 }
 
 /// Parameters for `organisation_create` (path/query/header).
@@ -459,6 +867,75 @@ pub struct OrganisationCreateParams {
     pub openehr_audit_details: Option<Vec<String>>,
 }
 
+impl OrganisationCreateParams {
+    /// The parameters of `organisation_create`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "Prefer",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "return=representation",
+                "return=minimal",
+                "return=identifier",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "application/openehr.wt.flat+json",
+                "application/openehr.wt.structured+json",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "Content-Type",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "application/openehr.wt.flat+json",
+                "application/openehr.wt.structured+json",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "openehr-item-tag",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+        },
+        crate::rest::routes::Param {
+            name: "openehr-version-item-tag",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+        },
+        crate::rest::routes::Param {
+            name: "openehr-version",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "openehr-audit-details",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+        },
+    ];
+}
+
 /// Parameters for `organisation_get` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OrganisationGetParams {
@@ -471,6 +948,38 @@ pub struct OrganisationGetParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// `Accept` (header)
     pub accept: Option<String>,
+}
+
+impl OrganisationGetParams {
+    /// The parameters of `organisation_get`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "uid_based_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "version_at_time",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::DateTime,
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "application/openehr.wt.flat+json",
+                "application/openehr.wt.structured+json",
+            ]),
+        },
+    ];
 }
 
 /// Parameters for `organisation_update` (path/query/header).
@@ -511,6 +1020,82 @@ pub struct OrganisationUpdateParams {
     pub openehr_audit_details: Option<Vec<String>>,
 }
 
+impl OrganisationUpdateParams {
+    /// The parameters of `organisation_update`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "uid_based_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Uuid,
+        },
+        crate::rest::routes::Param {
+            name: "If-Match",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "Prefer",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "return=representation",
+                "return=minimal",
+                "return=identifier",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "application/openehr.wt.flat+json",
+                "application/openehr.wt.structured+json",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "Content-Type",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "application/openehr.wt.flat+json",
+                "application/openehr.wt.structured+json",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "openehr-version-item-tag",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+        },
+        crate::rest::routes::Param {
+            name: "openehr-version",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "openehr-audit-details",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+        },
+    ];
+}
+
 /// Parameters for `organisation_delete` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OrganisationDeleteParams {
@@ -528,6 +1113,33 @@ pub struct OrganisationDeleteParams {
     /// DEFINED by the docs text — ITS-REST `docs/overview/Requests_and_responses.md` §openehr-version and openehr-audit-details — the same mandate; the section's example sends the header as several field lines, one per AUDIT_DETAILS attribute
     /// (The AUDIT_DETAILS attributes of the commit (`change_type`, `description`, `committer`, `system_id`); the OAS declares no parameter for it.)
     pub openehr_audit_details: Option<Vec<String>>,
+}
+
+impl OrganisationDeleteParams {
+    /// The parameters of `organisation_delete`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "uid_based_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "openehr-version",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "openehr-audit-details",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+        },
+    ];
 }
 
 /// Parameters for `person_create` (path/query/header).
@@ -567,6 +1179,75 @@ pub struct PersonCreateParams {
     pub openehr_audit_details: Option<Vec<String>>,
 }
 
+impl PersonCreateParams {
+    /// The parameters of `person_create`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "Prefer",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "return=representation",
+                "return=minimal",
+                "return=identifier",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "application/openehr.wt.flat+json",
+                "application/openehr.wt.structured+json",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "Content-Type",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "application/openehr.wt.flat+json",
+                "application/openehr.wt.structured+json",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "openehr-item-tag",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+        },
+        crate::rest::routes::Param {
+            name: "openehr-version-item-tag",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+        },
+        crate::rest::routes::Param {
+            name: "openehr-version",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "openehr-audit-details",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+        },
+    ];
+}
+
 /// Parameters for `person_get` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PersonGetParams {
@@ -579,6 +1260,38 @@ pub struct PersonGetParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// `Accept` (header)
     pub accept: Option<String>,
+}
+
+impl PersonGetParams {
+    /// The parameters of `person_get`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "uid_based_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "version_at_time",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::DateTime,
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "application/openehr.wt.flat+json",
+                "application/openehr.wt.structured+json",
+            ]),
+        },
+    ];
 }
 
 /// Parameters for `person_update` (path/query/header).
@@ -619,6 +1332,82 @@ pub struct PersonUpdateParams {
     pub openehr_audit_details: Option<Vec<String>>,
 }
 
+impl PersonUpdateParams {
+    /// The parameters of `person_update`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "uid_based_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Uuid,
+        },
+        crate::rest::routes::Param {
+            name: "If-Match",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "Prefer",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "return=representation",
+                "return=minimal",
+                "return=identifier",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "application/openehr.wt.flat+json",
+                "application/openehr.wt.structured+json",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "Content-Type",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "application/openehr.wt.flat+json",
+                "application/openehr.wt.structured+json",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "openehr-version-item-tag",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+        },
+        crate::rest::routes::Param {
+            name: "openehr-version",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "openehr-audit-details",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+        },
+    ];
+}
+
 /// Parameters for `person_delete` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PersonDeleteParams {
@@ -636,6 +1425,33 @@ pub struct PersonDeleteParams {
     /// DEFINED by the docs text — ITS-REST `docs/overview/Requests_and_responses.md` §openehr-version and openehr-audit-details — the same mandate; the section's example sends the header as several field lines, one per AUDIT_DETAILS attribute
     /// (The AUDIT_DETAILS attributes of the commit (`change_type`, `description`, `committer`, `system_id`); the OAS declares no parameter for it.)
     pub openehr_audit_details: Option<Vec<String>>,
+}
+
+impl PersonDeleteParams {
+    /// The parameters of `person_delete`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "uid_based_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "openehr-version",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "openehr-audit-details",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+        },
+    ];
 }
 
 /// Parameters for `role_create` (path/query/header).
@@ -675,6 +1491,75 @@ pub struct RoleCreateParams {
     pub openehr_audit_details: Option<Vec<String>>,
 }
 
+impl RoleCreateParams {
+    /// The parameters of `role_create`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "Prefer",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "return=representation",
+                "return=minimal",
+                "return=identifier",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "application/openehr.wt.flat+json",
+                "application/openehr.wt.structured+json",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "Content-Type",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "application/openehr.wt.flat+json",
+                "application/openehr.wt.structured+json",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "openehr-item-tag",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+        },
+        crate::rest::routes::Param {
+            name: "openehr-version-item-tag",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+        },
+        crate::rest::routes::Param {
+            name: "openehr-version",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "openehr-audit-details",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+        },
+    ];
+}
+
 /// Parameters for `role_get` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RoleGetParams {
@@ -687,6 +1572,38 @@ pub struct RoleGetParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// `Accept` (header)
     pub accept: Option<String>,
+}
+
+impl RoleGetParams {
+    /// The parameters of `role_get`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "uid_based_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "version_at_time",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::DateTime,
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "application/openehr.wt.flat+json",
+                "application/openehr.wt.structured+json",
+            ]),
+        },
+    ];
 }
 
 /// Parameters for `role_update` (path/query/header).
@@ -727,6 +1644,82 @@ pub struct RoleUpdateParams {
     pub openehr_audit_details: Option<Vec<String>>,
 }
 
+impl RoleUpdateParams {
+    /// The parameters of `role_update`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "uid_based_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Uuid,
+        },
+        crate::rest::routes::Param {
+            name: "If-Match",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "Prefer",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "return=representation",
+                "return=minimal",
+                "return=identifier",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "application/openehr.wt.flat+json",
+                "application/openehr.wt.structured+json",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "Content-Type",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "application/json",
+                "application/xml",
+                "application/openehr.wt.flat+json",
+                "application/openehr.wt.structured+json",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "openehr-version-item-tag",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+        },
+        crate::rest::routes::Param {
+            name: "openehr-version",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "openehr-audit-details",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+        },
+    ];
+}
+
 /// Parameters for `role_delete` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RoleDeleteParams {
@@ -746,6 +1739,33 @@ pub struct RoleDeleteParams {
     pub openehr_audit_details: Option<Vec<String>>,
 }
 
+impl RoleDeleteParams {
+    /// The parameters of `role_delete`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "uid_based_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "openehr-version",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "openehr-audit-details",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+        },
+    ];
+}
+
 /// Parameters for `versioned_party_get` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VersionedPartyGetParams {
@@ -761,6 +1781,33 @@ pub struct VersionedPartyGetParams {
     pub content_type: Option<String>,
 }
 
+impl VersionedPartyGetParams {
+    /// The parameters of `versioned_party_get`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "versioned_object_uid",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Uuid,
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+        },
+        crate::rest::routes::Param {
+            name: "Content-Type",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+        },
+    ];
+}
+
 /// Parameters for `versioned_party_revision_history` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VersionedPartyRevisionHistoryParams {
@@ -774,6 +1821,33 @@ pub struct VersionedPartyRevisionHistoryParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// `Content-Type` (header)
     pub content_type: Option<String>,
+}
+
+impl VersionedPartyRevisionHistoryParams {
+    /// The parameters of `versioned_party_revision_history`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "versioned_object_uid",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Uuid,
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+        },
+        crate::rest::routes::Param {
+            name: "Content-Type",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+        },
+    ];
 }
 
 /// Parameters for `versioned_party_version_get_at_time` (path/query/header).
@@ -794,6 +1868,40 @@ pub struct VersionedPartyVersionGetAtTimeParams {
     pub content_type: Option<String>,
 }
 
+impl VersionedPartyVersionGetAtTimeParams {
+    /// The parameters of `versioned_party_version_get_at_time`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "versioned_object_uid",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Uuid,
+        },
+        crate::rest::routes::Param {
+            name: "version_at_time",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::DateTime,
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+        },
+        crate::rest::routes::Param {
+            name: "Content-Type",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+        },
+    ];
+}
+
 /// Parameters for `versioned_party_version_get_by_id` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VersionedPartyVersionGetByIdParams {
@@ -809,6 +1917,40 @@ pub struct VersionedPartyVersionGetByIdParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// `Content-Type` (header)
     pub content_type: Option<String>,
+}
+
+impl VersionedPartyVersionGetByIdParams {
+    /// The parameters of `versioned_party_version_get_by_id`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "versioned_object_uid",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Uuid,
+        },
+        crate::rest::routes::Param {
+            name: "version_uid",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+        },
+        crate::rest::routes::Param {
+            name: "Content-Type",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+        },
+    ];
 }
 
 /// Parameters for `contribution_create` (path/query/header).
@@ -834,6 +1976,44 @@ pub struct ContributionCreateParams {
     pub openehr_template_id: Option<String>,
 }
 
+impl ContributionCreateParams {
+    /// The parameters of `contribution_create`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "Prefer",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "return=representation",
+                "return=minimal",
+                "return=identifier",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+        },
+        crate::rest::routes::Param {
+            name: "Content-Type",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+        },
+        crate::rest::routes::Param {
+            name: "openehr-template-id",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+    ];
+}
+
 /// Parameters for `contribution_get` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContributionGetParams {
@@ -843,6 +2023,26 @@ pub struct ContributionGetParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// `Accept` (header)
     pub accept: Option<String>,
+}
+
+impl ContributionGetParams {
+    /// The parameters of `contribution_get`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "contribution_uid",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Uuid,
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+        },
+    ];
 }
 
 /// Parameters for `demographic_tags_get` (path/query/header).
@@ -863,6 +2063,40 @@ pub struct DemographicTagsGetParams {
     pub accept: Option<String>,
 }
 
+impl DemographicTagsGetParams {
+    /// The parameters of `demographic_tags_get`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "tag_key",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "tag_value",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "tag_target_path",
+            location: crate::rest::routes::ParamLocation::Query,
+            required: false,
+            explode: true,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+        },
+    ];
+}
+
 /// Parameters for `agent_tags_get` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentTagsGetParams {
@@ -872,6 +2106,26 @@ pub struct AgentTagsGetParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// `Accept` (header)
     pub accept: Option<String>,
+}
+
+impl AgentTagsGetParams {
+    /// The parameters of `agent_tags_get`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "uid_based_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+        },
+    ];
 }
 
 /// Parameters for `agent_tags_update` (path/query/header).
@@ -893,6 +2147,44 @@ pub struct AgentTagsUpdateParams {
     pub content_type: Option<String>,
 }
 
+impl AgentTagsUpdateParams {
+    /// The parameters of `agent_tags_update`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "uid_based_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "Prefer",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "return=representation",
+                "return=minimal",
+                "return=identifier",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+        },
+        crate::rest::routes::Param {
+            name: "Content-Type",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+        },
+    ];
+}
+
 /// Parameters for `agent_tags_delete` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentTagsDeleteParams {
@@ -900,6 +2192,26 @@ pub struct AgentTagsDeleteParams {
     pub uid_based_id: String,
     /// `key` (path)
     pub key: String,
+}
+
+impl AgentTagsDeleteParams {
+    /// The parameters of `agent_tags_delete`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "uid_based_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "key",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+    ];
 }
 
 /// Parameters for `group_tags_get` (path/query/header).
@@ -911,6 +2223,26 @@ pub struct GroupTagsGetParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// `Accept` (header)
     pub accept: Option<String>,
+}
+
+impl GroupTagsGetParams {
+    /// The parameters of `group_tags_get`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "uid_based_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+        },
+    ];
 }
 
 /// Parameters for `group_tags_update` (path/query/header).
@@ -932,6 +2264,44 @@ pub struct GroupTagsUpdateParams {
     pub content_type: Option<String>,
 }
 
+impl GroupTagsUpdateParams {
+    /// The parameters of `group_tags_update`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "uid_based_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "Prefer",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "return=representation",
+                "return=minimal",
+                "return=identifier",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+        },
+        crate::rest::routes::Param {
+            name: "Content-Type",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+        },
+    ];
+}
+
 /// Parameters for `group_tags_delete` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GroupTagsDeleteParams {
@@ -939,6 +2309,26 @@ pub struct GroupTagsDeleteParams {
     pub uid_based_id: String,
     /// `key` (path)
     pub key: String,
+}
+
+impl GroupTagsDeleteParams {
+    /// The parameters of `group_tags_delete`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "uid_based_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "key",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+    ];
 }
 
 /// Parameters for `organisation_tags_get` (path/query/header).
@@ -950,6 +2340,26 @@ pub struct OrganisationTagsGetParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// `Accept` (header)
     pub accept: Option<String>,
+}
+
+impl OrganisationTagsGetParams {
+    /// The parameters of `organisation_tags_get`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "uid_based_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+        },
+    ];
 }
 
 /// Parameters for `organisation_tags_update` (path/query/header).
@@ -971,6 +2381,44 @@ pub struct OrganisationTagsUpdateParams {
     pub content_type: Option<String>,
 }
 
+impl OrganisationTagsUpdateParams {
+    /// The parameters of `organisation_tags_update`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "uid_based_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "Prefer",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "return=representation",
+                "return=minimal",
+                "return=identifier",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+        },
+        crate::rest::routes::Param {
+            name: "Content-Type",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+        },
+    ];
+}
+
 /// Parameters for `organisation_tags_delete` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OrganisationTagsDeleteParams {
@@ -978,6 +2426,26 @@ pub struct OrganisationTagsDeleteParams {
     pub uid_based_id: String,
     /// `key` (path)
     pub key: String,
+}
+
+impl OrganisationTagsDeleteParams {
+    /// The parameters of `organisation_tags_delete`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "uid_based_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "key",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+    ];
 }
 
 /// Parameters for `person_tags_get` (path/query/header).
@@ -989,6 +2457,26 @@ pub struct PersonTagsGetParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// `Accept` (header)
     pub accept: Option<String>,
+}
+
+impl PersonTagsGetParams {
+    /// The parameters of `person_tags_get`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "uid_based_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+        },
+    ];
 }
 
 /// Parameters for `person_tags_update` (path/query/header).
@@ -1010,6 +2498,44 @@ pub struct PersonTagsUpdateParams {
     pub content_type: Option<String>,
 }
 
+impl PersonTagsUpdateParams {
+    /// The parameters of `person_tags_update`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "uid_based_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "Prefer",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "return=representation",
+                "return=minimal",
+                "return=identifier",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+        },
+        crate::rest::routes::Param {
+            name: "Content-Type",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+        },
+    ];
+}
+
 /// Parameters for `person_tags_delete` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PersonTagsDeleteParams {
@@ -1017,6 +2543,26 @@ pub struct PersonTagsDeleteParams {
     pub uid_based_id: String,
     /// `key` (path)
     pub key: String,
+}
+
+impl PersonTagsDeleteParams {
+    /// The parameters of `person_tags_delete`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "uid_based_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "key",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+    ];
 }
 
 /// Parameters for `role_tags_get` (path/query/header).
@@ -1028,6 +2574,26 @@ pub struct RoleTagsGetParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// `Accept` (header)
     pub accept: Option<String>,
+}
+
+impl RoleTagsGetParams {
+    /// The parameters of `role_tags_get`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "uid_based_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+        },
+    ];
 }
 
 /// Parameters for `role_tags_update` (path/query/header).
@@ -1049,6 +2615,44 @@ pub struct RoleTagsUpdateParams {
     pub content_type: Option<String>,
 }
 
+impl RoleTagsUpdateParams {
+    /// The parameters of `role_tags_update`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "uid_based_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "Prefer",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&[
+                "return=representation",
+                "return=minimal",
+                "return=identifier",
+            ]),
+        },
+        crate::rest::routes::Param {
+            name: "Accept",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+        },
+        crate::rest::routes::Param {
+            name: "Content-Type",
+            location: crate::rest::routes::ParamLocation::Header,
+            required: false,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+        },
+    ];
+}
+
 /// Parameters for `role_tags_delete` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RoleTagsDeleteParams {
@@ -1056,6 +2660,26 @@ pub struct RoleTagsDeleteParams {
     pub uid_based_id: String,
     /// `key` (path)
     pub key: String,
+}
+
+impl RoleTagsDeleteParams {
+    /// The parameters of `role_tags_delete`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[
+        crate::rest::routes::Param {
+            name: "uid_based_id",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+        crate::rest::routes::Param {
+            name: "key",
+            location: crate::rest::routes::ParamLocation::Path,
+            required: true,
+            explode: false,
+            kind: crate::rest::routes::ParamKind::Text,
+        },
+    ];
 }
 
 /// The response headers the OAS declares for the `201` answer of
@@ -8683,3 +10307,55 @@ pub const ROUTES: &[(&str, &str, &str)] = &[
         "role_tags_delete",
     ),
 ];
+
+/// The declared parameters of each operation, index-aligned with [`ROUTES`]:
+/// the operation's `*Params::PARAMS`, empty when it declares none.
+pub const ROUTE_PARAMS: &[&[crate::rest::routes::Param]] = &[
+    AgentCreateParams::PARAMS,
+    AgentGetParams::PARAMS,
+    AgentUpdateParams::PARAMS,
+    AgentDeleteParams::PARAMS,
+    GroupCreateParams::PARAMS,
+    GroupGetParams::PARAMS,
+    GroupUpdateParams::PARAMS,
+    GroupDeleteParams::PARAMS,
+    OrganisationCreateParams::PARAMS,
+    OrganisationGetParams::PARAMS,
+    OrganisationUpdateParams::PARAMS,
+    OrganisationDeleteParams::PARAMS,
+    PersonCreateParams::PARAMS,
+    PersonGetParams::PARAMS,
+    PersonUpdateParams::PARAMS,
+    PersonDeleteParams::PARAMS,
+    RoleCreateParams::PARAMS,
+    RoleGetParams::PARAMS,
+    RoleUpdateParams::PARAMS,
+    RoleDeleteParams::PARAMS,
+    VersionedPartyGetParams::PARAMS,
+    VersionedPartyRevisionHistoryParams::PARAMS,
+    VersionedPartyVersionGetAtTimeParams::PARAMS,
+    VersionedPartyVersionGetByIdParams::PARAMS,
+    ContributionCreateParams::PARAMS,
+    ContributionGetParams::PARAMS,
+    DemographicTagsGetParams::PARAMS,
+    AgentTagsGetParams::PARAMS,
+    AgentTagsUpdateParams::PARAMS,
+    AgentTagsDeleteParams::PARAMS,
+    GroupTagsGetParams::PARAMS,
+    GroupTagsUpdateParams::PARAMS,
+    GroupTagsDeleteParams::PARAMS,
+    OrganisationTagsGetParams::PARAMS,
+    OrganisationTagsUpdateParams::PARAMS,
+    OrganisationTagsDeleteParams::PARAMS,
+    PersonTagsGetParams::PARAMS,
+    PersonTagsUpdateParams::PARAMS,
+    PersonTagsDeleteParams::PARAMS,
+    RoleTagsGetParams::PARAMS,
+    RoleTagsUpdateParams::PARAMS,
+    RoleTagsDeleteParams::PARAMS,
+];
+
+const _: () = assert!(
+    ROUTE_PARAMS.len() == ROUTES.len(),
+    "ROUTE_PARAMS carries one row per ROUTES entry"
+);

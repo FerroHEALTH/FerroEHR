@@ -141,3 +141,126 @@ fn string_literals_with_escapes_round_trip_at_every_emission_site() {
         assert_round_trips(src);
     }
 }
+
+/// The single function call in `src`'s SELECT column.
+fn select_call(src: &str) -> openehr_query::ast::FunctionCall {
+    let parsed = openehr_query::parser::parse_str(src)
+        .unwrap_or_else(|e| panic!("fixture must parse: {src}\n  {e}"));
+    match parsed
+        .select
+        .columns
+        .into_iter()
+        .next()
+        .map(|expr| expr.column)
+    {
+        Some(openehr_query::ast::ColumnExpr::Function(call)) => call,
+        other => panic!("expected one function column in {src}, got {other:?}"),
+    }
+}
+
+/// Every built-in function QUERY master03 §Functions lists (the string,
+/// numeric and date-time groups) parses to its typed variant in upper, lower
+/// and mixed case, and the printer writes the name back as spelled.
+#[test]
+fn every_builtin_function_is_classified_and_round_trips_its_spelling() {
+    use openehr_query::ast::{
+        BuiltinFunction, DateTimeFunction, FunctionCall, NumericFunction, StringFunction,
+    };
+    let every = StringFunction::ALL
+        .iter()
+        .map(|f| BuiltinFunction::String(*f))
+        .chain(
+            NumericFunction::ALL
+                .iter()
+                .map(|f| BuiltinFunction::Numeric(*f)),
+        )
+        .chain(
+            DateTimeFunction::ALL
+                .iter()
+                .map(|f| BuiltinFunction::DateTime(*f)),
+        );
+    let mut seen = Vec::new();
+    for function in every {
+        let canonical = function.as_str();
+        let mixed: String = canonical
+            .chars()
+            .enumerate()
+            .map(|(i, c)| {
+                if i % 2 == 0 {
+                    c
+                } else {
+                    c.to_ascii_lowercase()
+                }
+            })
+            .collect();
+        for spelled in [canonical.to_owned(), canonical.to_ascii_lowercase(), mixed] {
+            let src = format!("SELECT {spelled}(e/ehr_id/value) FROM EHR e");
+            match select_call(&src) {
+                FunctionCall::Builtin {
+                    function: parsed,
+                    name,
+                    ..
+                } => {
+                    assert_eq!(parsed, function, "{src}");
+                    assert_eq!(name, spelled, "{src}");
+                }
+                other => panic!("{src} must classify as {function:?}, got {other:?}"),
+            }
+            let printed =
+                openehr_query::printer::to_aql(&openehr_query::parser::parse_str(&src).unwrap());
+            assert!(printed.contains(&format!("{spelled}(")), "{printed}");
+            assert_round_trips(&src);
+        }
+        seen.push(canonical);
+    }
+    // The spec's tables, verbatim (master03 §String/Numeric/Date and time
+    // functions): a function added to or dropped from a group fails here.
+    assert_eq!(
+        seen,
+        [
+            "LENGTH",
+            "CONTAINS",
+            "POSITION",
+            "SUBSTRING",
+            "CONCAT",
+            "CONCAT_WS",
+            "ABS",
+            "MOD",
+            "CEIL",
+            "FLOOR",
+            "ROUND",
+            "CURRENT_DATE",
+            "CURRENT_TIME",
+            "CURRENT_DATE_TIME",
+            "NOW",
+            "CURRENT_TIMEZONE",
+        ]
+    );
+}
+
+/// A name outside AQL's built-in functions, a product aggregate among them,
+/// parses to `FunctionCall::Other` with its spelling, and round-trips.
+#[test]
+fn a_name_outside_aql_is_other_and_round_trips() {
+    use openehr_query::ast::FunctionCall;
+    for spelled in ["MEDIAN", "median", "my_fn", "LENGTHS", "now2"] {
+        let src = format!("SELECT {spelled}(e/ehr_id/value, 1) FROM EHR e");
+        match select_call(&src) {
+            FunctionCall::Other { name, args } => {
+                assert_eq!(name, spelled, "{src}");
+                assert_eq!(args.len(), 2, "{src}");
+            }
+            other => panic!("{src} must be Other, got {other:?}"),
+        }
+        assert_round_trips(&src);
+    }
+}
+
+/// The string function `CONTAINS` shares its keyword with containment; in
+/// WHERE position it is classified too, and both uses survive a round trip.
+#[test]
+fn the_contains_function_beside_containment_round_trips() {
+    assert_round_trips(
+        "SELECT c FROM EHR e Contains COMPOSITION c WHERE contains(c/name/value, 'x') = true",
+    );
+}

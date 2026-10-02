@@ -20,6 +20,14 @@
 //! 6570 query expansion (`{?name*}`) is not a path segment and is ignored.
 //! The method must equal a declared one exactly: no openEHR spec governs
 //! routing a `HEAD` to a `GET`, so neither does this matcher.
+//!
+//! A match also names the operation's declared parameters ([`Param`]) — path,
+//! query and header — from the generated `ROUTE_PARAMS` table, which is each
+//! param struct's own `PARAMS`: the parameters the vendored OAS
+//! (`vendor/rest-oas/<group>-codegen.openapi.yaml`) declares, plus the request
+//! headers the ITS-REST docs text defines beyond them. An intermediary passes
+//! on exactly those; no openEHR spec governs forwarding, so which undeclared
+//! input it refuses is its own design.
 
 use http::Method;
 
@@ -28,16 +36,88 @@ use super::generated::{admin, definition, demographic, ehr, query, system};
 /// One generated route table: `(method, path, operation_id)` per operation.
 type RouteTable = &'static [(&'static str, &'static str, &'static str)];
 
-/// Every API group's name and route table, in the order the groups are
-/// generated.
-const GROUPS: &[(&str, RouteTable)] = &[
-    ("admin", admin::ROUTES),
-    ("definition", definition::ROUTES),
-    ("demographic", demographic::ROUTES),
-    ("ehr", ehr::ROUTES),
-    ("query", query::ROUTES),
-    ("system", system::ROUTES),
+/// One generated parameter table, index-aligned with its route table.
+type ParamTable = &'static [&'static [Param]];
+
+/// Every API group's name, route table and parameter table, in the order the
+/// groups are generated.
+const GROUPS: &[(&str, RouteTable, ParamTable)] = &[
+    ("admin", admin::ROUTES, admin::ROUTE_PARAMS),
+    ("definition", definition::ROUTES, definition::ROUTE_PARAMS),
+    (
+        "demographic",
+        demographic::ROUTES,
+        demographic::ROUTE_PARAMS,
+    ),
+    ("ehr", ehr::ROUTES, ehr::ROUTE_PARAMS),
+    ("query", query::ROUTES, query::ROUTE_PARAMS),
+    ("system", system::ROUTES, system::ROUTE_PARAMS),
 ];
+
+/// One parameter an operation declares, as its OAS Parameter Object states it.
+///
+/// The fields follow OAS 3.0.3 §Parameter Object
+/// (<https://spec.openapis.org/oas/v3.0.3#parameter-object>): `name` is spelled
+/// as the OAS spells it, `required` is the stated value (absent means
+/// `false`), and `explode` is the stated value or the style's default.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Param {
+    /// The parameter name, spelled as the OAS spells it.
+    pub name: &'static str,
+    /// Where the parameter travels.
+    pub location: ParamLocation,
+    /// Whether the operation requires the parameter.
+    pub required: bool,
+    /// Whether an array or object value spreads over several pairs: under the
+    /// `form` style each member of an exploded object is a query key of its own.
+    pub explode: bool,
+    /// The value shape the parameter's schema states.
+    pub kind: ParamKind,
+}
+
+/// Where a parameter travels (OAS 3.0.3 §Parameter Locations).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ParamLocation {
+    /// A `{name}` segment of the path template.
+    Path,
+    /// A query-string parameter.
+    Query,
+    /// A request header field.
+    Header,
+    /// A cookie.
+    Cookie,
+}
+
+/// The value shape a parameter's schema states: its `enum`, `type`, `format`
+/// and `items`, the `$ref`s resolved.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ParamKind {
+    /// A schema `enum`: the listed values, in document order, as wire text.
+    Enum(&'static [&'static str]),
+    /// `type: string` without a `format`.
+    Text,
+    /// `type: string`, `format: uuid`.
+    Uuid,
+    /// `type: string`, `format: date`.
+    Date,
+    /// `type: string`, `format: date-time` (the bundles also spell it
+    /// `datetime`).
+    DateTime,
+    /// `type: string` with a `format` none of the kinds above names.
+    Formatted(&'static str),
+    /// `type: integer`, whatever its `format`.
+    Integer,
+    /// `type: number`, whatever its `format`.
+    Number,
+    /// `type: boolean`.
+    Boolean,
+    /// `type: object`.
+    Object,
+    /// `type: array`, whose items have the inner kind.
+    Array(&'static ParamKind),
+    /// A schema that states no `type`.
+    Unspecified,
+}
 
 /// What a request's method and path address.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -67,6 +147,9 @@ pub struct RouteMatch {
     pub method: Method,
     /// The path parameters, in path order.
     pub path_params: Vec<PathParam>,
+    /// Every parameter the operation declares — path, query and header — in
+    /// declaration order.
+    pub params: &'static [Param],
 }
 
 impl RouteMatch {
@@ -74,6 +157,41 @@ impl RouteMatch {
     #[must_use]
     pub fn path_param(&self, name: &str) -> Option<&PathParam> {
         self.path_params.iter().find(|param| param.name == name)
+    }
+
+    /// The declared query parameter `name`, compared byte for byte.
+    #[must_use]
+    pub fn query_param(&self, name: &str) -> Option<&'static Param> {
+        self.declared(ParamLocation::Query)
+            .find(|param| param.name == name)
+    }
+
+    /// The declared request header `name`, compared case-insensitively: field
+    /// names are case-insensitive (RFC 9110 §5.1).
+    #[must_use]
+    pub fn header_param(&self, name: &str) -> Option<&'static Param> {
+        self.declared(ParamLocation::Header)
+            .find(|param| param.name.eq_ignore_ascii_case(name))
+    }
+
+    /// The declared parameter a query key `key` belongs to.
+    ///
+    /// That is the query parameter named `key`, else the exploded `form`-style
+    /// object parameter, whose members each travel as a query key of their own
+    /// (OAS 3.0.3 §Style Examples) — `query_parameters` on the AQL operations.
+    #[must_use]
+    pub fn query_key(&self, key: &str) -> Option<&'static Param> {
+        self.query_param(key).or_else(|| {
+            self.declared(ParamLocation::Query)
+                .find(|param| param.explode && param.kind == ParamKind::Object)
+        })
+    }
+
+    /// The declared parameters at `location`, in declaration order.
+    fn declared(&self, location: ParamLocation) -> impl Iterator<Item = &'static Param> {
+        self.params
+            .iter()
+            .filter(move |param| param.location == location)
     }
 }
 
@@ -151,21 +269,25 @@ fn matches_path(segments: &[Segment<'_>], parts: &[&str]) -> bool {
 pub fn lookup(method: &Method, path: &str) -> Lookup {
     let path = path.split('?').next().unwrap_or(path);
     let parts: Vec<&str> = path.strip_prefix('/').unwrap_or(path).split('/').collect();
-    let candidates: Vec<Candidate> = GROUPS
-        .iter()
-        .flat_map(|&(group, routes)| {
-            routes
-                .iter()
-                .map(move |&(method, template, operation_id)| Candidate {
-                    group,
-                    method,
-                    template,
-                    operation_id,
-                    segments: template_segments(template),
-                })
-        })
-        .filter(|candidate| matches_path(&candidate.segments, &parts))
-        .collect();
+    let candidates: Vec<Candidate> =
+        GROUPS
+            .iter()
+            .flat_map(|&(group, routes, params)| {
+                // The generated module asserts `ROUTE_PARAMS.len() == ROUTES.len()`
+                // at compile time, so the zip pairs every route with its row.
+                routes.iter().zip(params).map(
+                    move |(&(method, template, operation_id), &params)| Candidate {
+                        group,
+                        method,
+                        template,
+                        operation_id,
+                        params,
+                        segments: template_segments(template),
+                    },
+                )
+            })
+            .filter(|candidate| matches_path(&candidate.segments, &parts))
+            .collect();
     let Some(best) = candidates
         .iter()
         .map(|candidate| specificity(&candidate.segments))
@@ -208,6 +330,7 @@ pub fn lookup(method: &Method, path: &str) -> Lookup {
         template: chosen.template,
         method: method.clone(),
         path_params,
+        params: chosen.params,
     })
 }
 
@@ -217,5 +340,6 @@ struct Candidate {
     method: &'static str,
     template: &'static str,
     operation_id: &'static str,
+    params: &'static [Param],
     segments: Vec<Segment<'static>>,
 }

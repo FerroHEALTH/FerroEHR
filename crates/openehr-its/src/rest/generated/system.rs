@@ -58,6 +58,17 @@ pub struct OptionsParams {
     pub accept: Option<String>,
 }
 
+impl OptionsParams {
+    /// The parameters of `options`, one per field, in field order.
+    pub const PARAMS: &'static [crate::rest::routes::Param] = &[crate::rest::routes::Param {
+        name: "Accept",
+        location: crate::rest::routes::ParamLocation::Header,
+        required: false,
+        explode: false,
+        kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+    }];
+}
+
 /// The response headers the OAS declares for the `200` answer of
 /// `OPTIONS /`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -256,3 +267,12 @@ pub mod client {
 /// document order: `server::router` binds each to its trait method, and
 /// `crate::rest::routes::lookup` matches a request path against them.
 pub const ROUTES: &[(&str, &str, &str)] = &[("OPTIONS", "/", "options")];
+
+/// The declared parameters of each operation, index-aligned with [`ROUTES`]:
+/// the operation's `*Params::PARAMS`, empty when it declares none.
+pub const ROUTE_PARAMS: &[&[crate::rest::routes::Param]] = &[OptionsParams::PARAMS];
+
+const _: () = assert!(
+    ROUTE_PARAMS.len() == ROUTES.len(),
+    "ROUTE_PARAMS carries one row per ROUTES entry"
+);

@@ -460,18 +460,174 @@ pub enum ValueListItem {
 
 /// `functionCall` — a named function with terminal arguments (also covers
 /// `terminologyFunction`, kept as [`FunctionCall::Terminology`]).
+///
+/// A name is classified against the built-in functions QUERY master03
+/// §Functions defines (the grammar's `STRING_FUNCTION_ID`,
+/// `NUMERIC_FUNCTION_ID` and `DATE_TIME_FUNCTION_ID` groups); a name outside
+/// them is [`FunctionCall::Other`]. Both keep the name as spelled, so the
+/// printer round-trips it.
 #[derive(Debug, Clone, PartialEq)]
 pub enum FunctionCall {
-    /// `name ( terminal, … )` — `name` may be a grouped function-id or a plain
-    /// identifier (classified later).
-    Named {
-        /// The function name.
+    /// `name ( terminal, … )` naming an AQL built-in function.
+    Builtin {
+        /// The function the name denotes.
+        function: BuiltinFunction,
+        /// The name as written (AQL names are case-insensitive).
+        name: String,
+        /// The arguments.
+        args: Vec<Terminal>,
+    },
+    /// `IDENTIFIER ( terminal, … )` naming no AQL built-in function: the
+    /// spec's "various other functions may exist however in various AQL
+    /// implementations" (QUERY master03 §Functions).
+    Other {
+        /// The name as written.
         name: String,
         /// The arguments.
         args: Vec<Terminal>,
     },
     /// `terminology(str, str, str)`.
     Terminology(TerminologyFunction),
+}
+
+impl FunctionCall {
+    /// The call `name(args)`, classified: a built-in function when the name
+    /// denotes one, [`FunctionCall::Other`] otherwise.
+    #[must_use]
+    pub fn named(name: String, args: Vec<Terminal>) -> Self {
+        match BuiltinFunction::from_name(&name) {
+            Some(function) => Self::Builtin {
+                function,
+                name,
+                args,
+            },
+            None => Self::Other { name, args },
+        }
+    }
+}
+
+/// An AQL built-in single-row function (QUERY master03 §Functions), by group.
+///
+/// The aggregates and `TERMINOLOGY` are not here: their argument grammar
+/// differs, so the AST carries them as [`AggregateCall`] and
+/// [`TerminologyFunction`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum BuiltinFunction {
+    /// A string function (`STRING_FUNCTION_ID`).
+    String(StringFunction),
+    /// A numeric function (`NUMERIC_FUNCTION_ID`).
+    Numeric(NumericFunction),
+    /// A date and time function (`DATE_TIME_FUNCTION_ID`).
+    DateTime(DateTimeFunction),
+}
+
+impl BuiltinFunction {
+    /// The built-in function `name` denotes, compared case-insensitively, or
+    /// `None` when AQL defines no function of that name.
+    #[must_use]
+    pub fn from_name(name: &str) -> Option<Self> {
+        StringFunction::from_name(name)
+            .map(Self::String)
+            .or_else(|| NumericFunction::from_name(name).map(Self::Numeric))
+            .or_else(|| DateTimeFunction::from_name(name).map(Self::DateTime))
+    }
+
+    /// The function's name as the specification spells it.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::String(f) => f.as_str(),
+            Self::Numeric(f) => f.as_str(),
+            Self::DateTime(f) => f.as_str(),
+        }
+    }
+}
+
+/// Declares one function-id group: the enum, its spelled names, and the
+/// case-insensitive lookup.
+macro_rules! function_group {
+    ($(#[$meta:meta])* $name:ident { $($(#[$vmeta:meta])* $variant:ident => $spelling:literal,)+ }) => {
+        $(#[$meta])*
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+        pub enum $name {
+            $($(#[$vmeta])* $variant,)+
+        }
+
+        impl $name {
+            /// Every function of the group, in specification order.
+            pub const ALL: &[Self] = &[$(Self::$variant,)+];
+
+            /// The function `name` denotes, compared case-insensitively.
+            #[must_use]
+            pub fn from_name(name: &str) -> Option<Self> {
+                Self::ALL
+                    .iter()
+                    .copied()
+                    .find(|f| f.as_str().eq_ignore_ascii_case(name))
+            }
+
+            /// The function's name as the specification spells it.
+            #[must_use]
+            pub const fn as_str(self) -> &'static str {
+                match self {
+                    $(Self::$variant => $spelling,)+
+                }
+            }
+        }
+    };
+}
+
+function_group! {
+    /// A string function (QUERY master03 §Functions/String functions).
+    StringFunction {
+        /// `LENGTH(expression)`.
+        Length => "LENGTH",
+        /// `CONTAINS(expression, substring)`, the string function, not the
+        /// containment operator.
+        Contains => "CONTAINS",
+        /// `POSITION(substring, expression)`.
+        Position => "POSITION",
+        /// `SUBSTRING(expression, position[, length])`.
+        Substring => "SUBSTRING",
+        /// `CONCAT(expr1, expr2, …)`.
+        Concat => "CONCAT",
+        /// `CONCAT_WS(separator, expr1, expr2, …)`.
+        ConcatWs => "CONCAT_WS",
+    }
+}
+
+function_group! {
+    /// A numeric function (QUERY master03 §Functions/Numeric functions).
+    NumericFunction {
+        /// `ABS(expression)`.
+        Abs => "ABS",
+        /// `MOD(x, y)`.
+        Mod => "MOD",
+        /// `CEIL(expression)`.
+        Ceil => "CEIL",
+        /// `FLOOR(expression)`.
+        Floor => "FLOOR",
+        /// `ROUND(expression[, decimal])`.
+        Round => "ROUND",
+    }
+}
+
+function_group! {
+    /// A date and time function (QUERY master03 §Functions/Date and time
+    /// functions).
+    DateTimeFunction {
+        /// `CURRENT_DATE()`.
+        CurrentDate => "CURRENT_DATE",
+        /// `CURRENT_TIME()`.
+        CurrentTime => "CURRENT_TIME",
+        /// `CURRENT_DATE_TIME()`.
+        CurrentDateTime => "CURRENT_DATE_TIME",
+        /// `NOW()`, the specification's alias for `CURRENT_DATE_TIME()`, kept
+        /// apart so the query prints as written.
+        Now => "NOW",
+        /// `CURRENT_TIMEZONE()`.
+        CurrentTimezone => "CURRENT_TIMEZONE",
+    }
 }
 
 /// `terminologyFunction : TERMINOLOGY '(' STRING ',' STRING ',' STRING ')'`
