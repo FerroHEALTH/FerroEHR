@@ -190,9 +190,9 @@ fn attribute_type<'a>(
     })
 }
 
-/// A value of declared type `ty` (with its generic arguments): a model class
-/// recurses (abstract → first concrete descendant), a primitive comes from
-/// the table, anything else is recorded as unknown.
+/// A value of declared type `ty` (with its generic arguments): a class with a
+/// generated type recurses (abstract → first concrete descendant), a
+/// primitive comes from the table, anything else is recorded as unknown.
 fn value_for(
     ty: &str,
     ty_args: &[&openehr_rm::v1_2::model::RmTypeRef],
@@ -200,7 +200,7 @@ fn value_for(
     depth: usize,
     unknown: &mut BTreeSet<String>,
 ) -> Option<Value> {
-    if let Some(class) = openehr_rm::v1_2::model::class(ty) {
+    if let Some(class) = openehr_rm::v1_2::model::class(ty).filter(|c| c.generated_type) {
         let concrete = if class.is_abstract {
             cheapest_descendant(class.descendants)?
         } else {
@@ -232,7 +232,9 @@ fn cheapest_descendant(descendants: &[&'static str]) -> Option<&'static str> {
         .map(|d| {
             let cost = openehr_rm::v1_2::model::attributes(d)
                 .filter(|a| {
-                    a.is_mandatory && openehr_rm::v1_2::model::class(a.declared_type).is_some()
+                    a.is_mandatory
+                        && openehr_rm::v1_2::model::class(a.declared_type)
+                            .is_some_and(|c| c.generated_type)
                 })
                 .count();
             (*d, cost)
@@ -241,10 +243,11 @@ fn cheapest_descendant(descendants: &[&'static str]) -> Option<&'static str> {
         .map(|(d, _)| d)
 }
 
-/// Every concrete class of the static model, in declaration order.
+/// Every concrete class of the static model that has a generated type, in
+/// declaration order.
 fn concrete_classes() -> Vec<&'static str> {
     openehr_rm::v1_2::model::classes()
-        .filter(|c| !c.is_abstract)
+        .filter(|c| !c.is_abstract && c.generated_type)
         .map(|c| c.name)
         .collect()
 }

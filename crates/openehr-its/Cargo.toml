@@ -1,6 +1,6 @@
 [package]
 name = "openehr-its"
-version = "0.0.78"
+version = "0.0.79"
 description = "openEHR ITS (Implementation Technology Specifications): canonical JSON + canonical XML serialization of the RM, the generated ITS-REST 1.1.0 API contract, and the OPT 1.4 and AOM2 archetype XML codecs"
 edition.workspace = true
 rust-version.workspace = true
@@ -43,14 +43,14 @@ backon = { workspace = true, optional = true }
 secrecy = { workspace = true, optional = true }
 # The generated XML (de)serializers impl the crate's ToXml/FromXml traits for the
 # RM/BASE spec types, so these are real (non-dev) deps.
-openehr-base = { path = "../openehr-base", version = "0.0.78", optional = true }
-openehr-rm = { path = "../openehr-rm", version = "0.0.78", optional = true }
+openehr-base = { path = "../openehr-base", version = "0.0.79", optional = true }
+openehr-rm = { path = "../openehr-rm", version = "0.0.79", optional = true }
 # The native canonical-JSON codec (`json_codec/generated`, emit-json) implements
 # `ToJson` for EVERY generated spec type the `OpenEhrType` derive covers, so it
 # spans all five spec crates (not just the RM/BASE the XML codec needs).
-openehr-lang = { path = "../openehr-lang", version = "0.0.78", optional = true }
-openehr-am = { path = "../openehr-am", version = "0.0.78", optional = true }
-openehr-term = { path = "../openehr-term", version = "0.0.78", optional = true }
+openehr-lang = { path = "../openehr-lang", version = "0.0.79", optional = true }
+openehr-am = { path = "../openehr-am", version = "0.0.79", optional = true }
+openehr-term = { path = "../openehr-term", version = "0.0.79", optional = true }
 
 # The graph is layered so a consumer takes only the surfaces it reads, and so
 # the openEHR content layers stay free of anything that needs a native platform.

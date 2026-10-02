@@ -815,11 +815,19 @@ pub(crate) fn render_rm_model_files() -> Result<Vec<EmittedFile>, Box<dyn std::e
     for g in &rm.generations {
         let unit = g.unit()?;
         out.extend(rm_crate_files(prefix_gen_files(
-            emit_rm_model::emit_files(&unit.model),
+            emit_rm_model::emit_files(&unit.model, &rm_model_schemas(g, unit))?,
             g.spec.module,
         )));
     }
     Ok(out)
+}
+
+/// The verbatim schemas an RM generation's attribute model reads packages
+/// from: the unit's own, then its paired dependency generations'.
+fn rm_model_schemas<'a>(g: &'a ComposedGeneration, unit: &'a ComposedUnit) -> Vec<&'a BmmSchema> {
+    std::iter::once(&unit.schema)
+        .chain(&g.dep_schemas)
+        .collect()
 }
 
 /// Turn `openehr-rm`-destined generated files (paths relative to the crate's
@@ -1151,7 +1159,10 @@ fn render_crate_files(
                 .ok_or("an RM generation carries no specification unit")?;
             inject_rm_model(
                 &mut files,
-                prefix_gen_files(emit_rm_model::emit_files(&unit.model), module),
+                prefix_gen_files(
+                    emit_rm_model::emit_files(&unit.model, &rm_model_schemas(g, unit))?,
+                    module,
+                ),
                 module,
             );
             inject_validate(

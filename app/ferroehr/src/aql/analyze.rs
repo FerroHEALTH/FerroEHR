@@ -273,15 +273,18 @@ pub(crate) fn profile_defines_class(
     }
 }
 
-/// Expand a declared type name to its concrete descendant set. A primitive (or
-/// otherwise non-modelled) name is kept verbatim as a singleton.
+/// Expand a declared type name to its concrete descendant set. A BASE
+/// foundation type (a primitive, `Any`, an interval or ISO 8601 value) or a
+/// name outside the model is kept verbatim as a singleton: it is a value
+/// type, not substitutable RM content.
 fn expand_type(name: &str) -> Vec<String> {
-    match model::class(name) {
-        Some(_) => model::descendants(name)
+    if model::class(name).is_some() && !model::is_foundation_type(name) {
+        model::descendants(name)
             .iter()
             .map(|s| (*s).to_owned())
-            .collect(),
-        None => vec![name.to_owned()],
+            .collect()
+    } else {
+        vec![name.to_owned()]
     }
 }
 

@@ -15,7 +15,8 @@
 //! sets, container multiplicity, and the node-codec structure classification.
 
 use openehr_rm::v1_2::model::{
-    Container, ancestors, attribute, attributes, class, descendants, is_a, is_structure_root,
+    Container, PRIMITIVE_TYPES_PACKAGE, ancestors, attribute, attributes, class, classes,
+    conforms_to_ordered, descendants, is_a, is_foundation_type, is_primitive, is_structure_root,
 };
 
 #[test]
@@ -144,5 +145,151 @@ fn is_structure_root_matches_the_node_codec() {
         "DV_QUANTITY",
     ] {
         assert!(!is_structure_root(t), "{t} should NOT be a structure root");
+    }
+}
+
+/// The primitive types are model classes in the BASE `primitive_types` package:
+/// the BASE `foundation_types` master03 §Overview table (`Octet`, `Character`,
+/// `Boolean`, `Integer`, `Integer64`, `Real`, `Double`, `String`) plus `Uri`,
+/// the `String` subtype the package also declares. The abstract markers of the
+/// same package (`Ordered`, `Numeric`, …) are not primitives.
+#[test]
+fn the_primitives_are_the_concrete_classes_of_the_primitive_types_package() {
+    let mut primitives: Vec<&str> = classes()
+        .filter(|c| is_primitive(c.name))
+        .map(|c| c.name)
+        .collect();
+    primitives.sort_unstable();
+    assert_eq!(
+        primitives,
+        [
+            "Boolean",
+            "Character",
+            "Double",
+            "Integer",
+            "Integer64",
+            "Octet",
+            "Real",
+            "String",
+            "Uri"
+        ]
+    );
+    for marker in ["Ordered", "Numeric", "Ordered_Numeric", "Comparable"] {
+        let c = class(marker).expect("the marker is a model class");
+        assert_eq!(c.package, PRIMITIVE_TYPES_PACKAGE, "{marker}");
+        assert!(c.is_abstract && !is_primitive(marker), "{marker}");
+    }
+    assert!(!is_primitive("DV_TEXT") && !is_primitive("Iso8601_date_time"));
+    assert_eq!(
+        class("OBSERVATION").map(|c| c.package),
+        Some("org.openehr.rm.composition.content.entry")
+    );
+}
+
+/// `Ordered` conformance follows the BMM ancestry: `DV_ORDERED` and every
+/// subtype, the ordered primitives (`Integer` through `Ordered_Numeric`), and
+/// the ISO 8601 types; never `Boolean`, `DV_TEXT` or `DV_BOOLEAN`.
+#[test]
+fn ordered_conformance_follows_the_bmm_ancestry() {
+    for ordered in [
+        "Ordered",
+        "DV_ORDERED",
+        "DV_QUANTITY",
+        "DV_COUNT",
+        "DV_DATE_TIME",
+        "DV_ORDINAL",
+        "DV_SCALE",
+        "DV_PROPORTION",
+        "Integer",
+        "Integer64",
+        "Real",
+        "Double",
+        "String",
+        "Uri",
+        "Character",
+        "Octet",
+        "Iso8601_date_time",
+    ] {
+        assert!(conforms_to_ordered(ordered), "{ordered}");
+    }
+    for unordered in ["Boolean", "DV_TEXT", "DV_BOOLEAN", "DV_CODED_TEXT", "Any"] {
+        assert!(!conforms_to_ordered(unordered), "{unordered}");
+    }
+    assert!(ancestors("DV_ORDERED").contains(&"Ordered"));
+    assert!(ancestors("Integer").contains(&"Ordered_Numeric"));
+    // Every concrete descendant of `DV_ORDERED` conforms, by construction.
+    for d in descendants("DV_ORDERED") {
+        assert!(conforms_to_ordered(d), "{d}");
+    }
+}
+
+/// A reference-typed attribute names the class the RM text says it points to,
+/// through inheritance, and none where the text leaves the target open.
+#[test]
+fn reference_attributes_name_their_rm_target() {
+    let target = |class: &str, attr: &str| {
+        attribute(class, attr)
+            .unwrap_or_else(|| panic!("{class}.{attr} is in the model"))
+            .ref_target
+    };
+    assert_eq!(target("EHR", "ehr_status"), Some("EHR_STATUS"));
+    assert_eq!(target("EHR", "ehr_access"), Some("EHR_ACCESS"));
+    assert_eq!(target("EHR", "compositions"), Some("VERSIONED_COMPOSITION"));
+    assert_eq!(target("EHR", "contributions"), Some("CONTRIBUTION"));
+    assert_eq!(target("EHR", "directory"), Some("FOLDER"));
+    assert_eq!(target("EHR", "tags"), Some("ITEM_TAG"));
+    // Inherited from VERSION.
+    assert_eq!(
+        target("ORIGINAL_VERSION", "contribution"),
+        Some("CONTRIBUTION")
+    );
+    assert_eq!(
+        target("PARTY_RELATIONSHIP", "target"),
+        Some("VERSIONED_PARTY")
+    );
+    assert_eq!(
+        target("INSTRUCTION_DETAILS", "instruction_id"),
+        Some("INSTRUCTION")
+    );
+    // The text names no single class.
+    assert_eq!(target("VERSIONED_COMPOSITION", "owner_id"), None);
+    assert_eq!(target("FOLDER", "items"), None);
+    // Not a reference.
+    assert_eq!(target("EHR", "ehr_id"), None);
+    // Every named target is a model class, and only reference-typed
+    // attributes carry one.
+    for c in classes() {
+        for a in c.attributes {
+            if let Some(t) = a.ref_target {
+                assert!(class(t).is_some(), "{}.{} → {t}", c.name, a.name);
+                assert!(is_a(a.declared_type, "OBJECT_REF"), "{}.{}", c.name, a.name);
+            }
+        }
+    }
+}
+
+/// The foundation types are the classes of the BASE `foundation_types`
+/// packages: value types, never RM content.
+#[test]
+fn foundation_types_are_the_base_foundation_packages() {
+    for t in [
+        "Any",
+        "Integer",
+        "String",
+        "Ordered",
+        "List",
+        "Interval",
+        "Iso8601_date_time",
+    ] {
+        assert!(is_foundation_type(t), "{t}");
+    }
+    for t in [
+        "DV_TEXT",
+        "OBJECT_REF",
+        "CODE_PHRASE",
+        "PROPORTION_KIND",
+        "OBSERVATION",
+    ] {
+        assert!(!is_foundation_type(t), "{t}");
     }
 }

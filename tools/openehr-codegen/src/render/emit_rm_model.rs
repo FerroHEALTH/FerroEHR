@@ -11,14 +11,15 @@
 //! Two generated files under `openehr-rm/src/model/`:
 //! - `mod.rs` — the public API (`RmClass`, `RmAttribute`, `Container`, and the
 //!   `class`/`attribute`/`attributes`/`descendants`/`ancestors`/`is_a`/
-//!   `is_structure_root` functions + a `LazyLock` name index).
+//!   `is_primitive`/`conforms_to_ordered`/`is_structure_root` functions + a
+//!   `LazyLock` name index).
 //! - `data.rs` — the generated `static CLASSES: &[RmClass]` table.
 
 use crate::analyze::Model;
-use crate::load::bmm::{BmmClass, BmmEnumValue, BmmPropKind, BmmType};
-use crate::plan::overrides::class_binding;
+use crate::load::bmm::{BmmClass, BmmEnumValue, BmmPackage, BmmPropKind, BmmSchema, BmmType};
+use crate::plan::overrides::{class_binding, ref_target};
 use crate::render::emit::GenFile;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// Classes the node codec splits into their own `node` row — mirrored **verbatim**
 /// from `ferroehr::storage::codec::STRUCTURE_TYPES` (the codec decompose rule).
@@ -64,8 +65,13 @@ const STRUCTURE_ROOTS: &[&str] = &[
 /// One RM class row for the generated table.
 struct ClassModel {
     name: String,
+    /// The qualified BMM package the class is declared in.
+    package: String,
+    /// Whether `emit` generates a type for the class (not a mapped primitive,
+    /// container or data-less foundation class).
+    generated_type: bool,
     is_abstract: bool,
-    /// Transitive ancestors (spec names, mapped foundation types excluded), sorted.
+    /// Transitive ancestors (spec names), sorted.
     ancestors: Vec<String>,
     /// Transitive **concrete** descendants (incl. self if concrete), sorted.
     descendants: Vec<String>,
@@ -99,6 +105,9 @@ struct AttrModel {
     /// Optional container carrying a present-implies-non-empty invariant
     /// (`Option<NonEmptyVec<T>>` emission).
     nonempty: bool,
+    /// The class a reference-typed attribute points to, where the RM text
+    /// names one ([`crate::plan::overrides::REF_TARGETS`]).
+    ref_target: Option<String>,
 }
 
 /// A resolved type reference: a root spec name plus its own generic arguments.
@@ -134,12 +143,19 @@ enum EnumValueModel {
     Str(String),
 }
 
-/// Emit the `model/` files for `openehr-rm` from the merged BASE + RM model.
-#[must_use]
-pub(crate) fn emit_files(model: &Model) -> Vec<GenFile> {
-    let classes = build(model);
+/// Emit the `model/` files for `openehr-rm` from the merged BASE + RM model;
+/// `schemas` are the generation's verbatim BMM files, which carry the package
+/// each class is declared in.
+///
+/// # Errors
+/// Returns an error naming the attribute when a reference-typed attribute
+/// has no [`crate::plan::overrides::REF_TARGETS`] entry, or a class has no
+/// package in `schemas`.
+pub(crate) fn emit_files(model: &Model, schemas: &[&BmmSchema]) -> Result<Vec<GenFile>, String> {
+    let packages = package_index(schemas);
+    let classes = build(model, &packages)?;
     let enums = build_enums(model);
-    vec![
+    Ok(vec![
         GenFile {
             path: "model/mod.rs".to_string(),
             body: emit_mod(),
@@ -148,30 +164,57 @@ pub(crate) fn emit_files(model: &Model) -> Vec<GenFile> {
             path: "model/data.rs".to_string(),
             body: emit_data(&classes, &enums),
         },
-    ]
+    ])
 }
 
-/// Build the class table: every real spec class in the merged model (primitives
-/// and foundation marker/container types excluded), in name order.
-fn build(model: &Model) -> Vec<ClassModel> {
-    // Concrete, real spec classes — the descendant-set universe.
+/// Class name → qualified BMM package (`org.openehr.base.foundation_types.
+/// primitive_types`), over `schemas` in order; the first declaration wins.
+fn package_index(schemas: &[&BmmSchema]) -> BTreeMap<String, String> {
+    fn walk(p: &BmmPackage, prefix: &str, out: &mut BTreeMap<String, String>) {
+        let qualified = if prefix.is_empty() {
+            p.name.clone()
+        } else {
+            format!("{prefix}.{}", p.name)
+        };
+        for c in &p.classes {
+            out.entry(c.clone()).or_insert_with(|| qualified.clone());
+        }
+        for sub in &p.packages {
+            walk(sub, &qualified, out);
+        }
+    }
+    let mut out = BTreeMap::new();
+    for schema in schemas {
+        for p in &schema.packages {
+            walk(p, "", &mut out);
+        }
+    }
+    out
+}
+
+/// Build the class table: every class of the merged BASE + RM model, the
+/// foundation types included, in name order.
+fn build(model: &Model, packages: &BTreeMap<String, String>) -> Result<Vec<ClassModel>, String> {
+    // Concrete classes — the descendant-set universe.
     let concrete: Vec<&str> = model
         .class_iter()
-        .filter(|(n, c)| !Model::is_mapped(n) && !c.is_abstract)
+        .filter(|(_, c)| !c.is_abstract)
         .map(|(n, _)| n.as_str())
         .collect();
 
     let mut out = Vec::new();
     for (name, class) in model.class_iter() {
-        if Model::is_mapped(name) {
-            continue;
-        }
+        let package = packages
+            .get(name)
+            .ok_or_else(|| format!("class {name} is declared in no package of the generation"))?;
         out.push(ClassModel {
             name: name.clone(),
+            package: package.clone(),
+            generated_type: !Model::is_mapped(name),
             is_abstract: class.is_abstract,
             ancestors: ancestors_of(model, name),
             descendants: descendants_of(model, name, &concrete),
-            attributes: attributes_of(model, class),
+            attributes: attributes_of(model, class)?,
             is_structure_root: STRUCTURE_ROOTS.contains(&name.as_str()),
             generic_params: class
                 .generic_params
@@ -183,7 +226,7 @@ fn build(model: &Model) -> Vec<ClassModel> {
                 .collect(),
         });
     }
-    out
+    Ok(out)
 }
 
 /// Build the enumeration table: every `BMM_ENUMERATION` class (integer- or
@@ -192,9 +235,6 @@ fn build(model: &Model) -> Vec<ClassModel> {
 fn build_enums(model: &Model) -> Vec<EnumModel> {
     let mut out = Vec::new();
     for (name, class) in model.class_iter() {
-        if Model::is_mapped(name) {
-            continue;
-        }
         let Some(e) = &class.enumeration else {
             continue;
         };
@@ -234,7 +274,7 @@ fn enum_value(
     }
 }
 
-/// Transitive ancestors of `name` (mapped foundation types excluded), sorted.
+/// Transitive ancestors of `name`, as the BMM declares them, sorted.
 fn ancestors_of(model: &Model, name: &str) -> Vec<String> {
     let mut set = BTreeSet::new();
     collect_ancestors(model, name, &mut set);
@@ -244,11 +284,7 @@ fn ancestors_of(model: &Model, name: &str) -> Vec<String> {
 fn collect_ancestors(model: &Model, name: &str, out: &mut BTreeSet<String>) {
     if let Some(c) = model.get(name) {
         for a in &c.ancestors {
-            if !Model::is_mapped(a) {
-                out.insert(a.clone());
-            }
-            // Recurse even through a mapped ancestor: a real class can sit above
-            // one (rare, but keeps the closure honest).
+            out.insert(a.clone());
             collect_ancestors(model, a, out);
         }
     }
@@ -265,7 +301,7 @@ fn descendants_of(model: &Model, name: &str, concrete: &[&str]) -> Vec<String> {
 }
 
 /// The flattened (own + inherited) attributes of `class`, ancestor-first.
-fn attributes_of(model: &Model, class: &BmmClass) -> Vec<AttrModel> {
+fn attributes_of(model: &Model, class: &BmmClass) -> Result<Vec<AttrModel>, String> {
     model
         .flattened_props(class)
         .iter()
@@ -291,7 +327,21 @@ fn attributes_of(model: &Model, class: &BmmClass) -> Vec<AttrModel> {
                     }),
                 ),
             };
-            AttrModel {
+            let ref_target =
+                if declared_type == "OBJECT_REF" || model.inherits(&declared_type, "OBJECT_REF") {
+                    ref_target(&rp.owner, &rp.prop.name)
+                        .ok_or_else(|| {
+                            format!(
+                                "{}.{} is typed {declared_type} but has no REF_TARGETS entry",
+                                rp.owner, rp.prop.name
+                            )
+                        })?
+                        .target
+                        .map(str::to_string)
+                } else {
+                    None
+                };
+            Ok(AttrModel {
                 name: rp.prop.name.clone(),
                 declared_type,
                 container,
@@ -305,7 +355,8 @@ fn attributes_of(model: &Model, class: &BmmClass) -> Vec<AttrModel> {
                             attr == &rp.prop.name
                                 && (decl == &rp.owner || model.inherits(&rp.owner, decl))
                         }),
-            }
+                ref_target,
+            })
         })
         .collect()
 }
@@ -392,14 +443,20 @@ fn emit_mod() -> String {
 //! generated from the BASE + RM BMM meta-model (the same input as the `emit`
 //! target). No reflection, no hand-maintained tables.
 //!
-//! Covers every real spec class of `openehr-base` + `openehr-rm` (foundation
-//! primitives, containers, and marker types excluded). For each class it records
+//! Covers every class of the BASE + RM BMM, the BASE foundation types
+//! (primitives, the `Ordered` and `Numeric` markers, containers) included, each
+//! with the BMM package it is declared in. For each class it records
 //! the flattened (own + inherited) attributes with their declared spec type,
 //! generic type-argument tree, container kind + cardinality, and mandatory flag;
 //! the abstract flag; the class's own formal generic parameters; the transitive
 //! ancestor set; the transitive **concrete** descendant set; and a structure-node
 //! flag. Enumeration classes (`BMM_ENUMERATION`) additionally carry their named
 //! constants + values in a separate table (see [`enumeration`]).
+//!
+//! A reference-typed attribute (`OBJECT_REF`, `PARTY_REF`, `LOCATABLE_REF`)
+//! names the class it points to where the RM text states one
+//! ([`RmAttribute::ref_target`]); the BMM types the attribute by the
+//! reference class alone.
 //!
 //! # `is_structure_root`
 //!
@@ -423,9 +480,19 @@ mod data;
 pub struct RmClass {
     /// The spec class name, verbatim (e.g. `"OBSERVATION"`).
     pub name: &'static str,
+    /// The qualified BMM package the class is declared in (e.g.
+    /// `"org.openehr.rm.composition.content.entry"`).
+    pub package: &'static str,
+    /// Whether the generated `openehr-*` crates carry a type of their own for
+    /// this class. False for a primitive (a Rust scalar), a container (`Vec`,
+    /// map, set) and a foundation class that holds no data (the `Ordered` and
+    /// `Numeric` markers, the functional types, the built-in services, the
+    /// constant holders): none of them is ever a canonical-JSON object.
+    pub generated_type: bool,
     /// Whether the class is abstract (never instantiated directly).
     pub is_abstract: bool,
-    /// Transitive ancestor spec names (foundation primitives/markers excluded).
+    /// Transitive ancestor spec names, as the BMM declares them (`DV_ORDERED`
+    /// carries `Ordered`, `Integer` carries `Ordered_Numeric` and `Ordered`).
     pub ancestors: &'static [&'static str],
     /// Transitive **concrete** descendant spec names, including this class when
     /// it is itself concrete.
@@ -477,6 +544,11 @@ pub struct RmAttribute {
     /// An optional container carrying a present-implies-non-empty invariant:
     /// emitted `Option<NonEmptyVec<T>>`, so `[]` refuses at parse.
     pub nonempty: bool,
+    /// The class a reference-typed attribute points to (`EHR.ehr_status` →
+    /// `EHR_STATUS`), where the RM text names one; `None` for every other
+    /// attribute and for a reference whose target the text leaves open
+    /// (`VERSIONED_OBJECT.owner_id`, "e.g. the id of the containing EHR").
+    pub ref_target: Option<&'static str>,
 }
 
 /// A resolved type reference: a root spec name plus its own generic arguments.
@@ -606,6 +678,48 @@ pub fn is_a(sub: &str, sup: &str) -> bool {
     sub == sup || find(sub).is_some_and(|c| c.ancestors.contains(&sup))
 }
 
+/// The BMM package of the primitive types (BASE foundation_types
+/// master03-primitive_types.adoc §Overview).
+pub const PRIMITIVE_TYPES_PACKAGE: &str = "org.openehr.base.foundation_types.primitive_types";
+
+/// Whether `name` is a primitive type: a concrete class of the BASE
+/// `primitive_types` package (`Boolean`, `Character`, `Integer`, `Integer64`,
+/// `Octet`, `Real`, `Double`, `String`, `Uri`).
+#[must_use]
+pub fn is_primitive(name: &str) -> bool {
+    find(name).is_some_and(|c| !c.is_abstract && c.package == PRIMITIVE_TYPES_PACKAGE)
+}
+
+/// The root BMM package of the BASE foundation types.
+pub const FOUNDATION_TYPES_PACKAGE: &str = "org.openehr.base.foundation_types";
+
+/// Whether `name` is a BASE foundation type: a class of the
+/// `foundation_types` package or one of its sub-packages (primitives,
+/// structures, intervals, time and terminology types, `Any`).
+///
+/// A foundation type is a value type: BASE draws the inheritance among the
+/// primitives to "facilitate the type descriptions", substitutability for
+/// `Any` "is not assumed" (BASE foundation_types master03-primitive_types.adoc
+/// §Overview), and an enumeration such as `PROPORTION_KIND` is a descendant of
+/// `Integer` only as its underlying type. A consumer expanding a declared type
+/// to the RM content that may fill it therefore expands RM classes only.
+#[must_use]
+pub fn is_foundation_type(name: &str) -> bool {
+    find(name).is_some_and(|c| {
+        c.package
+            .strip_prefix(FOUNDATION_TYPES_PACKAGE)
+            .is_some_and(|rest| rest.is_empty() || rest.starts_with('.'))
+    })
+}
+
+/// Whether `name` is `Ordered` or conforms to it, so its values compare by the
+/// `Ordered` operators (QUERY master03 §ORDER BY: the operators "available to
+/// primitives and `Ordered` types").
+#[must_use]
+pub fn conforms_to_ordered(name: &str) -> bool {
+    is_a(name, "Ordered")
+}
+
 /// Whether the node codec splits `class` into its own `node` row (see module docs).
 #[must_use]
 pub fn is_structure_root(class: &str) -> bool {
@@ -644,8 +758,8 @@ fn emit_data(classes: &[ClassModel], enums: &[EnumModel]) -> String {
     );
     for c in classes {
         b.push_str(&format!(
-            "    RmClass {{\n        name: {:?},\n        is_abstract: {},\n",
-            c.name, c.is_abstract
+            "    RmClass {{\n        name: {:?},\n        package: {:?},\n        generated_type: {},\n        is_abstract: {},\n",
+            c.name, c.package, c.generated_type, c.is_abstract
         ));
         b.push_str(&format!(
             "        ancestors: &{},\n",
@@ -658,7 +772,7 @@ fn emit_data(classes: &[ClassModel], enums: &[EnumModel]) -> String {
         b.push_str("        attributes: &[\n");
         for a in &c.attributes {
             b.push_str(&format!(
-                "            RmAttribute {{ name: {:?}, declared_type: {:?}, container: Container::{}, is_mandatory: {}, type_params: &{}, cardinality: {}, nonempty: {} }},\n",
+                "            RmAttribute {{ name: {:?}, declared_type: {:?}, container: Container::{}, is_mandatory: {}, type_params: &{}, cardinality: {}, nonempty: {}, ref_target: {} }},\n",
                 a.name,
                 a.declared_type,
                 a.container,
@@ -666,6 +780,9 @@ fn emit_data(classes: &[ClassModel], enums: &[EnumModel]) -> String {
                 type_refs(&a.type_params),
                 cardinality(a.cardinality.as_ref()),
                 a.nonempty,
+                a.ref_target
+                    .as_ref()
+                    .map_or_else(|| "None".to_string(), |t| format!("Some({t:?})")),
             ));
         }
         b.push_str("        ],\n");

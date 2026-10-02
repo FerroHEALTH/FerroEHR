@@ -17,6 +17,25 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **The `openehr-rm` attribute model covers the BASE foundation types and
+  names reference targets** (#3537). The model (`v1_1::model`,
+  `v1_2::model`) now holds every class of the BASE + RM BMM, including the
+  primitives (`Boolean`, `Character`, `Integer`, `Integer64`, `Octet`,
+  `Real`, `Double`, `String`, `Uri`), the `Ordered` and `Numeric` markers and
+  the containers. Each class carries its BMM `package`, whether the
+  generated crates carry a type for it (`generated_type`), and its full BMM
+  ancestry as `ancestors`, so `DV_ORDERED` carries `Ordered`. The new
+  `is_primitive`, `is_foundation_type` and `conforms_to_ordered` lookups
+  answer the AQL ORDER BY question ("primitives and `Ordered` types", QUERY
+  master03 §ORDER BY). The AQL engine expands a declared type to its
+  descendants for RM classes only; a foundation type stays a value type. A
+  reference-typed attribute (`OBJECT_REF`, `PARTY_REF`, `LOCATABLE_REF`)
+  carries `ref_target`, the class the RM text says it points to
+  (`EHR.ehr_status` → `EHR_STATUS`, `PARTY_RELATIONSHIP.target` →
+  `VERSIONED_PARTY`), or `None` where the text names no single class. A
+  consumer that read "not in the model" as "primitive" now asks
+  `is_primitive`.
+- **The `openehr-*` crates step to 0.0.79.**
 - **`openehr-its` exposes the `Authorization` value it sends** (#3535).
   `Credentials::header_value` is public, so a consumer can validate a
   credential at configuration load with exactly the value the client sends.

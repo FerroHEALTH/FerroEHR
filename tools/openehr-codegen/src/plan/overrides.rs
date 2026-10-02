@@ -2876,3 +2876,233 @@ pub(crate) fn account_complex<'a>(
     out.sort_by(|a, b| (&a.class, &a.name).cmp(&(&b.class, &b.name)));
     out
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Reference targets (the class an OBJECT_REF attribute points to)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// The class one reference-typed RM attribute points to, as the RM text states
+/// it.
+///
+/// The BMM types every such attribute by the reference class alone
+/// (`OBJECT_REF`, `PARTY_REF`, `LOCATABLE_REF`); the target is stated only in the
+/// attribute's definition in the class text, which this entry quotes. `target`
+/// is `None` where the text names no single class ("e.g.", "usually", an
+/// external system), so every reference-typed attribute has exactly one entry
+/// and `emit-rm-model` refuses one without.
+pub(crate) struct RefTarget {
+    /// The class declaring the attribute.
+    pub class: &'static str,
+    /// The attribute.
+    pub attr: &'static str,
+    /// The class the reference points to, when the text names one.
+    pub target: Option<&'static str>,
+    /// The RM class text the target is read from.
+    pub citation: &'static str,
+}
+
+/// Every reference-typed attribute of the RM, with its target.
+pub(crate) const REF_TARGETS: &[RefTarget] = &[
+    RefTarget {
+        class: "EHR",
+        attr: "contributions",
+        target: Some("CONTRIBUTION"),
+        citation: "RM ehr UML/classes/org.openehr.rm.ehr.ehr.adoc: \"List of contributions \
+                   causing changes to this EHR.\"",
+    },
+    RefTarget {
+        class: "EHR",
+        attr: "ehr_status",
+        target: Some("EHR_STATUS"),
+        citation: "RM ehr UML/classes/org.openehr.rm.ehr.ehr.adoc: \"Reference to `EHR_STATUS` \
+                   object for this EHR.\"",
+    },
+    RefTarget {
+        class: "EHR",
+        attr: "ehr_access",
+        target: Some("EHR_ACCESS"),
+        citation: "RM ehr UML/classes/org.openehr.rm.ehr.ehr.adoc: \"Reference to `EHR_ACCESS` \
+                   object for this EHR.\"",
+    },
+    RefTarget {
+        class: "EHR",
+        attr: "compositions",
+        target: Some("VERSIONED_COMPOSITION"),
+        citation: "RM ehr UML/classes/org.openehr.rm.ehr.ehr.adoc: \"Master list of all \
+                   Versioned Composition references in this EHR.\"",
+    },
+    RefTarget {
+        class: "EHR",
+        attr: "directory",
+        target: Some("FOLDER"),
+        citation: "RM ehr UML/classes/org.openehr.rm.ehr.ehr.adoc: \"a reference to the first \
+                   member of `_folders_`\"; RM ehr master04-ehr_package.adoc §Folders: \
+                   \"versioned hierarchies of `FOLDER` objects\"",
+    },
+    RefTarget {
+        class: "EHR",
+        attr: "folders",
+        target: Some("FOLDER"),
+        citation: "RM ehr UML/classes/org.openehr.rm.ehr.ehr.adoc: \"Optional additional Folder \
+                   structures for this EHR.\"; RM ehr master04-ehr_package.adoc §Folders: \
+                   \"versioned hierarchies of `FOLDER` objects\"",
+    },
+    RefTarget {
+        class: "EHR",
+        attr: "tags",
+        target: Some("ITEM_TAG"),
+        citation: "RM ehr UML/classes/org.openehr.rm.ehr.ehr.adoc: \"Optional list of tags \
+                   associated with this EHR.\"; RM ehr master04-ehr_package.adoc §Tags: \"Tags \
+                   are associated with an EHR via the `EHR._tags_` attribute\"",
+    },
+    RefTarget {
+        class: "VERSIONED_OBJECT",
+        attr: "owner_id",
+        target: None,
+        citation: "RM common UML/classes/org.openehr.rm.common.versioned_object.adoc: \"e.g. the \
+                   id of the containing EHR or other relevant owning entity\" names no single \
+                   class",
+    },
+    RefTarget {
+        class: "CONTRIBUTION",
+        attr: "versions",
+        target: Some("VERSION"),
+        citation: "RM common UML/classes/org.openehr.rm.common.contribution.adoc: \"Set of \
+                   references to Versions causing changes to this EHR.\"",
+    },
+    RefTarget {
+        class: "VERSION",
+        attr: "contribution",
+        target: Some("CONTRIBUTION"),
+        citation: "RM common UML/classes/org.openehr.rm.common.version.adoc: \"Contribution in \
+                   which this version was added.\"",
+    },
+    RefTarget {
+        class: "PARTY_PROXY",
+        attr: "external_ref",
+        target: None,
+        citation: "RM common UML/classes/org.openehr.rm.common.party_proxy.adoc: \"information \
+                   for this party, in an external system\" names no class",
+    },
+    RefTarget {
+        class: "FOLDER",
+        attr: "items",
+        target: None,
+        citation: "RM common UML/classes/org.openehr.rm.common.folder.adoc: \"references to \
+                   other (usually) versioned objects\" names no single class",
+    },
+    RefTarget {
+        class: "ITEM_TAG",
+        attr: "owner_id",
+        target: None,
+        citation: "RM common UML/classes/org.openehr.rm.common.item_tag.adoc: \"Identifier of \
+                   owner object, such as EHR.\" names no single class",
+    },
+    RefTarget {
+        class: "EXTRACT_ACTION_REQUEST",
+        attr: "request_id",
+        target: Some("EXTRACT_REQUEST"),
+        citation: "RM ehr_extract UML/classes/org.openehr.rm.ehr_extract.extract_action_request.adoc: \
+                   \"Identifier of previous `EXTRACT_REQUEST`.\"",
+    },
+    RefTarget {
+        class: "EXTRACT_ENTITY_MANIFEST",
+        attr: "item_list",
+        target: None,
+        citation: "RM ehr_extract UML/classes/org.openehr.rm.ehr_extract.extract_entity_manifest.adoc: \
+                   \"List of Uids of items to be included in the Extract\" names no single class",
+    },
+    RefTarget {
+        class: "EXTRACT_ERROR",
+        attr: "request_id",
+        target: None,
+        citation: "RM ehr_extract UML/classes/org.openehr.rm.ehr_extract.extract_error.adoc: the \
+                   attribute carries no definition",
+    },
+    RefTarget {
+        class: "X_VERSIONED_OBJECT",
+        attr: "owner_id",
+        target: Some("EHR"),
+        citation: "RM ehr_extract UML/classes/org.openehr.rm.ehr_extract.x_versioned_object.adoc: \
+                   \"Owner_id from original `VERSIONED_OBJECT`, which identifies source EHR.\"",
+    },
+    RefTarget {
+        class: "ROLE",
+        attr: "performer",
+        target: Some("VERSIONED_PARTY"),
+        citation: "RM demographic UML/classes/org.openehr.rm.demographic.role.adoc: \"Reference \
+                   to Version container of Actor playing the role.\"",
+    },
+    RefTarget {
+        class: "ACTOR",
+        attr: "roles",
+        target: Some("VERSIONED_PARTY"),
+        citation: "RM demographic UML/classes/org.openehr.rm.demographic.actor.adoc: \
+                   \"Identifiers of the Version container for each Role played by this Party.\"",
+    },
+    RefTarget {
+        class: "PARTY_RELATIONSHIP",
+        attr: "source",
+        target: Some("VERSIONED_PARTY"),
+        citation: "RM demographic master02-demographic_package.adoc: \"`OBJECT_REFs` containing \
+                   `HIER_OBJECT_IDs` to denote the Version container of a Party\"",
+    },
+    RefTarget {
+        class: "PARTY_RELATIONSHIP",
+        attr: "target",
+        target: Some("VERSIONED_PARTY"),
+        citation: "RM demographic master02-demographic_package.adoc: \"`OBJECT_REFs` containing \
+                   `HIER_OBJECT_IDs` to denote the Version container of a Party\"",
+    },
+    RefTarget {
+        class: "PARTY",
+        attr: "reverse_relationships",
+        target: Some("PARTY_RELATIONSHIP"),
+        citation: "RM demographic UML/classes/org.openehr.rm.demographic.party.adoc: \"References \
+                   to relationships in which this Party takes part as target.\"",
+    },
+    RefTarget {
+        class: "CITATION",
+        attr: "source_ref",
+        target: None,
+        citation: "RM 1.1.0 BMM (openehr_rm_1.1.0.bmm.json) CITATION.source_ref: \"Reference to \
+                   original object.\" names no class; the vendored RM text defines no CITATION",
+    },
+    RefTarget {
+        class: "CITATION",
+        attr: "source_parent_ref",
+        target: None,
+        citation: "RM 1.1.0 BMM (openehr_rm_1.1.0.bmm.json) CITATION.source_parent_ref: \
+                   \"Reference to target's owning object.\" names no class; the vendored RM text \
+                   defines no CITATION",
+    },
+    RefTarget {
+        class: "CARE_ENTRY",
+        attr: "guideline_id",
+        target: None,
+        citation: "RM ehr UML/classes/org.openehr.rm.composition.care_entry.adoc: \"Optional \
+                   external identifier of guideline\" names no class",
+    },
+    RefTarget {
+        class: "INSTRUCTION_DETAILS",
+        attr: "instruction_id",
+        target: Some("INSTRUCTION"),
+        citation: "RM ehr UML/classes/org.openehr.rm.composition.instruction_details.adoc: \
+                   \"Reference to causing Instruction.\"",
+    },
+    RefTarget {
+        class: "ENTRY",
+        attr: "workflow_id",
+        target: None,
+        citation: "RM ehr UML/classes/org.openehr.rm.composition.entry.adoc: \"Identifier of \
+                   externally held workflow engine data\" names no class",
+    },
+];
+
+/// The reference-target entry of `class.attr`, when the attribute is
+/// reference-typed.
+pub(crate) fn ref_target(class: &str, attr: &str) -> Option<&'static RefTarget> {
+    REF_TARGETS
+        .iter()
+        .find(|r| r.class == class && r.attr == attr)
+}

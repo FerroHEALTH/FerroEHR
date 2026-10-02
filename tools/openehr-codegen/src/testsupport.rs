@@ -962,6 +962,24 @@ pub fn decision_maps() -> Vec<DeclMap> {
                 .collect(),
         },
         DeclMap {
+            map: "ref_target",
+            check_existence: true,
+            entries: overrides::REF_TARGETS
+                .iter()
+                .map(|e| DeclEntry {
+                    key: format!("{}.{}", e.class, e.attr),
+                    decision: e.target.map_or_else(
+                        || "the RM text names no target class".to_string(),
+                        |t| format!("references {t}"),
+                    ),
+                    citation: e.citation.to_string(),
+                    reason: "The BMM types the attribute by the reference class alone; the \
+                             target is stated only in the class text."
+                        .to_string(),
+                })
+                .collect(),
+        },
+        DeclMap {
             map: "class_binding",
             check_existence: true,
             entries: overrides::CLASS_BINDINGS

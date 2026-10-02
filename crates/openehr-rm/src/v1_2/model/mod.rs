@@ -6,14 +6,20 @@
 //! generated from the BASE + RM BMM meta-model (the same input as the `emit`
 //! target). No reflection, no hand-maintained tables.
 //!
-//! Covers every real spec class of `openehr-base` + `openehr-rm` (foundation
-//! primitives, containers, and marker types excluded). For each class it records
+//! Covers every class of the BASE + RM BMM, the BASE foundation types
+//! (primitives, the `Ordered` and `Numeric` markers, containers) included, each
+//! with the BMM package it is declared in. For each class it records
 //! the flattened (own + inherited) attributes with their declared spec type,
 //! generic type-argument tree, container kind + cardinality, and mandatory flag;
 //! the abstract flag; the class's own formal generic parameters; the transitive
 //! ancestor set; the transitive **concrete** descendant set; and a structure-node
 //! flag. Enumeration classes (`BMM_ENUMERATION`) additionally carry their named
 //! constants + values in a separate table (see [`enumeration`]).
+//!
+//! A reference-typed attribute (`OBJECT_REF`, `PARTY_REF`, `LOCATABLE_REF`)
+//! names the class it points to where the RM text states one
+//! ([`RmAttribute::ref_target`]); the BMM types the attribute by the
+//! reference class alone.
 //!
 //! # `is_structure_root`
 //!
@@ -37,9 +43,19 @@ mod data;
 pub struct RmClass {
     /// The spec class name, verbatim (e.g. `"OBSERVATION"`).
     pub name: &'static str,
+    /// The qualified BMM package the class is declared in (e.g.
+    /// `"org.openehr.rm.composition.content.entry"`).
+    pub package: &'static str,
+    /// Whether the generated `openehr-*` crates carry a type of their own for
+    /// this class. False for a primitive (a Rust scalar), a container (`Vec`,
+    /// map, set) and a foundation class that holds no data (the `Ordered` and
+    /// `Numeric` markers, the functional types, the built-in services, the
+    /// constant holders): none of them is ever a canonical-JSON object.
+    pub generated_type: bool,
     /// Whether the class is abstract (never instantiated directly).
     pub is_abstract: bool,
-    /// Transitive ancestor spec names (foundation primitives/markers excluded).
+    /// Transitive ancestor spec names, as the BMM declares them (`DV_ORDERED`
+    /// carries `Ordered`, `Integer` carries `Ordered_Numeric` and `Ordered`).
     pub ancestors: &'static [&'static str],
     /// Transitive **concrete** descendant spec names, including this class when
     /// it is itself concrete.
@@ -91,6 +107,11 @@ pub struct RmAttribute {
     /// An optional container carrying a present-implies-non-empty invariant:
     /// emitted `Option<NonEmptyVec<T>>`, so `[]` refuses at parse.
     pub nonempty: bool,
+    /// The class a reference-typed attribute points to (`EHR.ehr_status` →
+    /// `EHR_STATUS`), where the RM text names one; `None` for every other
+    /// attribute and for a reference whose target the text leaves open
+    /// (`VERSIONED_OBJECT.owner_id`, "e.g. the id of the containing EHR").
+    pub ref_target: Option<&'static str>,
 }
 
 /// A resolved type reference: a root spec name plus its own generic arguments.
@@ -218,6 +239,48 @@ pub fn ancestors(class: &str) -> &'static [&'static str] {
 #[must_use]
 pub fn is_a(sub: &str, sup: &str) -> bool {
     sub == sup || find(sub).is_some_and(|c| c.ancestors.contains(&sup))
+}
+
+/// The BMM package of the primitive types (BASE foundation_types
+/// master03-primitive_types.adoc §Overview).
+pub const PRIMITIVE_TYPES_PACKAGE: &str = "org.openehr.base.foundation_types.primitive_types";
+
+/// Whether `name` is a primitive type: a concrete class of the BASE
+/// `primitive_types` package (`Boolean`, `Character`, `Integer`, `Integer64`,
+/// `Octet`, `Real`, `Double`, `String`, `Uri`).
+#[must_use]
+pub fn is_primitive(name: &str) -> bool {
+    find(name).is_some_and(|c| !c.is_abstract && c.package == PRIMITIVE_TYPES_PACKAGE)
+}
+
+/// The root BMM package of the BASE foundation types.
+pub const FOUNDATION_TYPES_PACKAGE: &str = "org.openehr.base.foundation_types";
+
+/// Whether `name` is a BASE foundation type: a class of the
+/// `foundation_types` package or one of its sub-packages (primitives,
+/// structures, intervals, time and terminology types, `Any`).
+///
+/// A foundation type is a value type: BASE draws the inheritance among the
+/// primitives to "facilitate the type descriptions", substitutability for
+/// `Any` "is not assumed" (BASE foundation_types master03-primitive_types.adoc
+/// §Overview), and an enumeration such as `PROPORTION_KIND` is a descendant of
+/// `Integer` only as its underlying type. A consumer expanding a declared type
+/// to the RM content that may fill it therefore expands RM classes only.
+#[must_use]
+pub fn is_foundation_type(name: &str) -> bool {
+    find(name).is_some_and(|c| {
+        c.package
+            .strip_prefix(FOUNDATION_TYPES_PACKAGE)
+            .is_some_and(|rest| rest.is_empty() || rest.starts_with('.'))
+    })
+}
+
+/// Whether `name` is `Ordered` or conforms to it, so its values compare by the
+/// `Ordered` operators (QUERY master03 §ORDER BY: the operators "available to
+/// primitives and `Ordered` types").
+#[must_use]
+pub fn conforms_to_ordered(name: &str) -> bool {
+    is_a(name, "Ordered")
 }
 
 /// Whether the node codec splits `class` into its own `node` row (see module docs).
