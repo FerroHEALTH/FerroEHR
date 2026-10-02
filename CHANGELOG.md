@@ -26,6 +26,13 @@ workflow refuses a tag that has no matching section here.
 
 ### Fixed
 
+- **A FerroTERM pin the sandbox's index cannot serve is refused on the pull
+  request** (#3520). FerroTERM 0.1.5 moved its artifact layout to 7, and the
+  v4.3.2 sandbox leg failed on the layout-6 index the box carried. A
+  `ferroterm-index-layout` CI job reads the layout at the pinned FerroTERM tag
+  and refuses a pin that differs from `deploy/hosted/ferroterm-index.env`, the
+  record of the box's index. The box now runs FerroTERM 0.1.6 on a rebuilt
+  layout-7 index, and `deploy/hosted/README.md` documents the rebuild.
 - **The generated ITS-REST types keep the members an open schema allows**
   (#3526). OpenAPI 3.0.3 makes `additionalProperties` default to `true`, so
   every ITS-REST object schema that does not set it to `false` admits members

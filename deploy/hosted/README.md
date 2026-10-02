@@ -68,6 +68,7 @@ Two operational lessons, learned live at the cutover and load-bearing:
 | `ferroehr-viewer.sandbox.toml` | The viewer's sandbox posture | the same way |
 | `env.example` | A copy-to-`.env` template: the DB box's private-network DSN and the image references | never. `.env` is the operator's file, written by hand on the box |
 | `cloud-init-postgres.yaml` | The DATABASE box, fresh to serving state: the `deploy` user, key-only SSH, both firewalls, Docker, and the `ferroehr-postgres` compose posture bound to the private address | the DB server's user data at creation, once |
+| `ferroterm-index.env` | The record of the terminology index the box carries: its artifact layout, the `ferroterm-build` version and the editions. `scripts/checks/ferroterm-index-layout.sh` refuses a FerroTERM pin in `docker-compose.yml` whose layout differs | never. The index is built off-box and copied by the operator (below), and this file changes in the same pull request as the pin |
 | `docker/terminology/seed/` (in the repository) | The licence-free shaped code systems FerroTERM serves on the box | baked into the ferroehr image at `/opt/sandbox-posture/terminology/`; the compose file mounts it into FerroTERM straight from the image, so `deploy.sh` never handles it |
 
 The box holds **no checkout of this repository** and fetches nothing from it
@@ -177,6 +178,31 @@ From the next release on, `deploy.sh` keeps them current from the image, and
 each replaced file leaves a `.prev` copy beside it for rollback.
 `deploy.sh` itself does not self-update: a new version reaches the box by
 hand, or by rebuilding the box from `cloud-init.yaml`.
+
+## Rebuilding the terminology index
+
+FerroTERM refuses an index built for another artifact layout, so a pin bump
+that moves the layout needs a rebuilt index on the box before the release's
+`sandbox` leg runs; the `ferroterm-index-layout` CI job fails the pull request
+until `ferroterm-index.env` says so. Build both indexes off-box with the
+`ferroterm-build` that the pinned image ships, from the licensed releases:
+
+```sh
+IMG=ghcr.io/ferrohealth/ferroterm:<version>@sha256:<digest>
+docker run --rm --user "$(id -u):$(id -g)" -v <snomed-dir>:/in:ro -v <out>:/out \
+  --entrypoint /usr/local/bin/ferroterm-build "$IMG" \
+  --rf2 /in/SnomedCT_InternationalRF2_PRODUCTION_<date>.zip --out /out/int
+docker run --rm --user "$(id -u):$(id -g)" -v <loinc-dir>:/in:ro -v <out>:/out \
+  --entrypoint /usr/local/bin/ferroterm-build "$IMG" \
+  --loinc /in/Loinc_<version>.zip --out /out/loinc
+```
+
+Copy `<out>` to `/opt/ferroehr-sandbox/ferroterm-index.new/`, check that both
+`manifest.json` files carry the expected `storeLayout`, swap the directory for
+`ferroterm-index` (keeping the old one until the new one serves), set
+`FERROTERM_IMAGE` in `.env` when the box must run ahead of the image's
+posture, and run `docker compose up -d ferroterm`. The release archives never
+reach the box.
 
 ## How it is watched
 
