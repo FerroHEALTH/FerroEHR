@@ -1,6 +1,6 @@
 [package]
 name = "openehr-rm"
-version = "0.0.75"
+version = "0.0.76"
 description = "openEHR RM Reference Model, generated from BMM: generations v1_1 (RM 1.1.0) and v1_2 (RM 1.2.0, current)"
 edition.workspace = true
 rust-version.workspace = true
@@ -13,11 +13,11 @@ categories = ["data-structures", "science"]
 include = ["src/**", "README.md", "LICENSE-APACHE-2.0"]
 
 [dependencies]
-openehr-base = { path = "../openehr-base", version = "0.0.75" }
+openehr-base = { path = "../openehr-base", version = "0.0.76" }
 # The terminology-backed RM class invariants (`validate::terminology`) resolve
 # openEHR terminology groups + code sets against the vendored TERM 3.1.0 bundle.
 # `openehr-term` itself depends only on `openehr-base`, so this is acyclic.
-openehr-term = { path = "../openehr-term", version = "0.0.75" }
+openehr-term = { path = "../openehr-term", version = "0.0.76" }
 # Canonical-JSON (de)serialization is EMITTED manual `serde` impls on the spec
 # types (`openehr-codegen -- emit-json`, into `src/json_serde.rs`) — never a
 # derive. `serde_json` also backs the untyped `Value` RM representation used by

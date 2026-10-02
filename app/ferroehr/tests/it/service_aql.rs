@@ -87,8 +87,10 @@ fn uv<T: serde::de::DeserializeOwned>(
                 &json!({ "_type": "PARTY_IDENTIFIED", "name": "conformance tester" }),
             )
             .expect("committer"),
+            additional_properties: BTreeMap::new(),
         }),
         signature: None,
+        additional_properties: BTreeMap::new(),
     }
 }
 

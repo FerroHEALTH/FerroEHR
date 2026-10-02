@@ -62,6 +62,10 @@ pub struct ResultSetColumn {
     /// The `path` property of `ResultSetColumn`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub path: Option<String>,
+    /// The undeclared (`additionalProperties`) members of `ResultSetColumn`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `ResultSetRow` ITS-REST OAS component schema (a non-object shape, so
@@ -86,6 +90,10 @@ pub struct ResultSet {
     pub columns: Option<Vec<ResultSetColumn>>,
     /// The `rows` property of `ResultSet`.
     pub rows: Vec<ResultSetRow>,
+    /// The undeclared (`additionalProperties`) members of `ResultSet`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `Offset` ITS-REST OAS component schema (a non-object shape, so
@@ -111,6 +119,10 @@ pub struct AdhocQueryExecute {
     /// The `query_parameters` property of `AdhocQueryExecute`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub query_parameters: Option<QueryParameters>,
+    /// The undeclared (`additionalProperties`) members of `AdhocQueryExecute`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// The `Query` transport DTO of this API group (an ITS-REST OAS
@@ -132,6 +144,10 @@ pub struct Query {
     /// (A stored query with no $parameters must be executable with an empty body.)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub query_parameters: Option<QueryParameters>,
+    /// The undeclared (`additionalProperties`) members of `Query`, which
+    /// its ITS-REST OAS component schema leaves open (no `additionalProperties`, which defaults to `true`).
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 /// Parameters for `query_execute_adhoc_query` (path/query/header).

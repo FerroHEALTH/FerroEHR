@@ -24,6 +24,18 @@ workflow refuses a tag that has no matching section here.
   test pin `0.1.6@sha256:7ec4c962…`, and the book links
   <https://github.com/FerroHEALTH/FerroTERM>.
 
+### Fixed
+
+- **The generated ITS-REST types keep the members an open schema allows**
+  (#3526). OpenAPI 3.0.3 makes `additionalProperties` default to `true`, so
+  every ITS-REST object schema that does not set it to `false` admits members
+  beyond its declared properties. The `openehr-its` REST types for those
+  schemas now carry them in an `additional_properties` map, written back at
+  the object's own level, where they used to be dropped on decode. `Error` is
+  one of them, and the server now builds its error body from the generated
+  type with the `error` member in that map. The body carries the same three
+  members, with `error` now written after `message` and `validationErrors`.
+
 ## [4.3.2] - 2026-10-01
 
 ### Added

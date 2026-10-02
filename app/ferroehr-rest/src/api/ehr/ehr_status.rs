@@ -119,7 +119,7 @@ pub(super) async fn run(
             // re-reads the row it just wrote. Tags are judged before the commit
             // and written after it.
             let pending_tags = item_tags::pending(h)?;
-            match state.backend().replace_ehr_status_meta(ehr_id, uv).await {
+            match Box::pin(state.backend().replace_ehr_status_meta(ehr_id, uv)).await {
                 Ok(meta) => {
                     let stored_tags = item_tags::persist(
                         &state,

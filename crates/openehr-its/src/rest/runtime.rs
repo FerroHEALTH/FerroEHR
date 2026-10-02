@@ -323,6 +323,7 @@ pub(crate) fn error_response(
     let body = super::generated::common::Error {
         message,
         validation_errors,
+        additional_properties: std::collections::BTreeMap::new(),
     };
     match serde_json::to_vec(&body) {
         Ok(bytes) => (

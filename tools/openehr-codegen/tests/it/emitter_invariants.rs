@@ -1011,6 +1011,54 @@ fn oas_monomorphizations_emit_as_spec_types_not_dtos() {
     );
 }
 
+/// Every generated transport DTO is either closed or open, never silently lossy.
+///
+/// OpenAPI 3.0.3 §Schema Object: "Consistent with JSON Schema,
+/// `additionalProperties` defaults to `true`". So a schema refuses undeclared
+/// members only when it says `additionalProperties: false`, which the DTO
+/// realizes as `deny_unknown_fields`; every other schema keeps them in the
+/// flattened `additional_properties` map. A DTO with neither would drop
+/// members the schema admits (#3526).
+#[test]
+fn transport_dtos_are_closed_or_carry_the_extension_map() {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../crates/openehr-its/src/rest/generated");
+    let mut dtos = 0;
+    for entry in std::fs::read_dir(&dir).unwrap() {
+        let path = entry.unwrap().path();
+        if path.extension().is_none_or(|x| x != "rs") {
+            continue;
+        }
+        let body = std::fs::read_to_string(&path).unwrap();
+        for block in body.split("transport DTO of this API group").skip(1) {
+            let block = block.split("\n}\n").next().unwrap();
+            let name = block
+                .split("pub struct ")
+                .nth(1)
+                .and_then(|rest| rest.split([' ', '<']).next())
+                .unwrap();
+            let closed = block.contains("#[serde(deny_unknown_fields)]");
+            let open = block.contains("pub additional_properties:");
+            assert!(
+                closed != open,
+                "{}: {name} is {} — a DTO is closed (additionalProperties: false) or carries \
+                 the extension map, exactly one of the two",
+                path.display(),
+                if closed {
+                    "both closed and open"
+                } else {
+                    "neither closed nor open"
+                },
+            );
+            dtos += 1;
+        }
+    }
+    assert!(
+        dtos > 40,
+        "only {dtos} transport DTOs found — the scan lost its subject"
+    );
+}
+
 /// The shared-module fallback document carries the `allOf` BASE closure of the
 /// hoisted schemas, not the hoisted names alone.
 ///

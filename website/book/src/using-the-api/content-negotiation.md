@@ -413,12 +413,12 @@ machine-readable `error` reason phrase:
 
   ```json
   {
-    "error": "Unprocessable Entity",
     "message": "Composition validation failed",
     "validationErrors": [
       "/content[0]/data/events[0]/data/items[1]/value/magnitude: value out of range",
       "/content[0]/data/events[0]/data/items[2]/value/defining_code: code not in group"
-    ]
+    ],
+    "error": "Unprocessable Entity"
   }
   ```
 
@@ -432,7 +432,7 @@ machine-readable `error` reason phrase:
 - **All other errors** carry the same shape with an empty list:
 
   ```json
-  { "error": "Not Found", "message": "No EHR with id …", "validationErrors": [] }
+  { "message": "No EHR with id …", "validationErrors": [], "error": "Not Found" }
   ```
 
   This shape is used consistently, including for `405 Method Not Allowed` and
@@ -457,7 +457,7 @@ HTTP/1.1 405 Method Not Allowed
 Allow: GET,HEAD,PUT
 Content-Type: application/json
 
-{ "error": "Method Not Allowed", "message": "the request method is not allowed on this resource", "validationErrors": [] }
+{ "message": "the request method is not allowed on this resource", "validationErrors": [], "error": "Method Not Allowed" }
 ```
 
 When a resource is switched off by configuration (the

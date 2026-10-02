@@ -57,6 +57,7 @@ fn update_attestation(reason: &str) -> UpdateAttestation {
         )
         .expect("reason DV_TEXT"),
         is_pending: false,
+        additional_properties: std::collections::BTreeMap::new(),
     }
 }
 
@@ -68,6 +69,7 @@ fn contribution_audit(change_code: &str, committer_name: &str) -> UpdateAudit {
         change_type: change_type_coded(change_code),
         description: None,
         committer: committer_proxy(committer_name),
+        additional_properties: std::collections::BTreeMap::new(),
     })
 }
 
