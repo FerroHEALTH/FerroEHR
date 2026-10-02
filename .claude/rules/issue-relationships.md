@@ -55,9 +55,10 @@ issues) — do not create per-release "epic" parent issues (owner ruling
 2026-07-24: that double-books what the milestone already groups and muddies the
 cut trigger). Sub-issues express *decomposition*, milestones express *release*.
 
-When new work is discovered en route, its new issue (`gh issue create`) is
-**linked** — as a sub-issue of the issue it decomposes, or a dependency of the
-issue it sequences — not left as a prose "see also".
+When new work is discovered en route, its new issue (`scripts/gh/fields.sh
+new`, `issue-workflow.md`) is **linked** — as a sub-issue of the issue it
+decomposes, or a dependency of the issue it sequences — not left as a prose
+"see also".
 
 ### 2. Blocked-by — "Mark as blocked by" (sequencing)
 

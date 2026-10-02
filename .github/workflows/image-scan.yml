@@ -34,7 +34,7 @@
 # run stays GREEN: THE ISSUE IS THE ALERT. Until #2778 this lane also exited
 # non-zero on a finding, which made the red Monday run the signal; a red
 # scheduled run is invisible to anyone not watching the Actions tab, and the
-# issue (created or commented, `bug`/`P1`) reaches the tracker instead.
+# issue (created or commented, a `Bug`) reaches the tracker instead.
 name: Published image scan
 
 on:
@@ -205,4 +205,4 @@ jobs:
         with:
           title: "security(images): published images carry fixable HIGH/CRITICAL findings"
           body-file: body.md
-          labels: bug,P1
+          type: Bug

@@ -136,14 +136,17 @@ jobs:
             gh issue comment "$existing" --repo "$REPO" --body "$note"
             echo "commented on #${existing}"
           else
-            gh issue create --repo "$REPO" --title "$ISSUE_TITLE" \
-              --label bug --label P0 \
+            url="$(gh issue create --repo "$REPO" --title "$ISSUE_TITLE" \
               --body "The scheduled watch found the hosted sandbox not serving what it should. This issue is reused for as long as that holds, gains a comment whenever the diagnosis changes, and closes when a check finds it healthy again. Every individual check is in the workflow run history.
 
           ${note}
 
-          The sandbox runs on a box this repository provisions (deploy/hosted/, #2974), so nothing outside this repository is watching it. What to look at, in order: whether the box answers at all, then \`docker compose ps\` and the container logs on the box, then whether the deploy lane's last run went green."
-            echo "opened a new issue"
+          The sandbox runs on a box this repository provisions (deploy/hosted/, #2974), so nothing outside this repository is watching it. What to look at, in order: whether the box answers at all, then \`docker compose ps\` and the container logs on the box, then whether the deploy lane's last run went green.")"
+            # The native type through the REST update; the priority (Urgent)
+            # is an issue field no workflow token sets, so pickup sets it.
+            gh api --method PATCH "repos/${REPO}/issues/${url##*/}" -f type=Bug --silent ||
+              echo "::warning::${url} was filed without its issue type (Bug); set it with scripts/gh/fields.sh"
+            echo "opened ${url}"
           fi
 
       # And closed when it recovers, so an open issue always means a live

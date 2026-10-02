@@ -9,4 +9,4 @@ New issues filed while working a milestone belong to the CURRENT milestone (fix-
 
 **Why:** the owner said on 2026-09-14, after the storage-redesign sub-issues were filed into v5.0.0: "add all these new ones to milestone 4.3.1 please, not to v5". The v5.x milestones are the owner's own grouping for the application-layer refactors; the storage rework and everything blocked on it live in the patch line.
 
-**How to apply:** `gh issue create --milestone v4.3.1` (or the current one) for every issue filed this cycle; re-check `gh issue list --milestone v5.0.0` before ending a session and move anything I put there. Related: [[pr-closes-one-keyword-per-issue]], [[component-fixes-ride-current-patch]].
+**How to apply:** `scripts/gh/fields.sh new … --milestone v4.3.1` (or the current one) for every issue filed this cycle; re-check `gh issue list --milestone v5.0.0` before ending a session and move anything I put there. Related: [[pr-closes-one-keyword-per-issue]], [[component-fixes-ride-current-patch]].

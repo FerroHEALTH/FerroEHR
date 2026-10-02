@@ -20,7 +20,9 @@ does not decide the work is done on your behalf.
 
 1. **Identify the issue being closed** (the user names it, or it is the
    issue this branch's PR declares `Closes #N` for). Read it with
-   `gh issue view <n> --comments`; if it links a plan file
+   `gh issue view <n> --json title,body,comments` (never `--comments`, which
+   prints nothing for an issue without comments on gh 2.101.0); if it links
+   a plan file
    (`docs/plans/*.md`), that file's exit-criteria checklist also applies.
 2. **Verify every `## Acceptance criteria` checkbox is ticked** — in the issue
    body and in any linked plan file. If any remain `- [ ]`, stop and list
@@ -34,6 +36,10 @@ does not decide the work is done on your behalf.
    first (a parent's job is done only when its decomposition is). Closing this
    issue auto-unblocks anything it was `blocking`, which is expected; note any
    dependents that become workable so the handoff comment can point at them.
+2b. **Fields check** (`scripts/gh/fields.sh show <n>`;
+   `.claude/rules/issue-workflow.md`): the issue carries a type, a priority
+   and an effort, and a `Task` carries exactly one work-kind label. Set what
+   is missing before closing, so the closed record says what the work was.
 3. **Spec-adherence check:** for work that shipped spec-facing behaviour,
    confirm a conformance pass happened (`/spec-audit` findings addressed or
    filed as new issues). If it never happened, stop and say so — that is an

@@ -47,10 +47,19 @@
 # parsed as script or as a flag.
 #
 # Usage:
-#   file-issue.sh file --title T --body-file F [--labels a,b] [--dedup-key K]...
+#   file-issue.sh file --title T --body-file F [--type Bug|Feature|Task]
+#                      [--labels a,b] [--dedup-key K]...
 #                      [--state open|all] [--on-existing comment|update|skip]
 #                      [--repo R] [--dry-run]
 #   file-issue.sh find [--title T] [--dedup-key K]... [--state open|all] [--repo R]
+#
+# ISSUE TYPE. `--type` sets GitHub's native issue type on a created issue
+# (.claude/rules/issue-workflow.md §Type, priority and labels). It is set
+# through the REST issue update after the create, because `gh issue create
+# --type` resolves the name through an organisation query the workflow token
+# may not read. A refused type is a warning, never a lost finding: the issue
+# stands, and whoever picks it up sets the type with the priority and the
+# effort, which no lane sets.
 #
 # `file` prints one `file-issue: <outcome> …` line and, when `$GITHUB_OUTPUT` is
 # set, writes `issue=` and `outcome=` to it. `find` prints the matching issue
@@ -72,6 +81,7 @@ esac
 title=""
 body_file=""
 labels=""
+issue_type=""
 state="open"
 on_existing="comment"
 repo="${GITHUB_REPOSITORY:-}"
@@ -83,6 +93,7 @@ while [ "$#" -gt 0 ]; do
     --title) title="${2:?--title needs a value}"; shift 2 ;;
     --body-file) body_file="${2:?--body-file needs a value}"; shift 2 ;;
     --labels) labels="${2-}"; shift 2 ;;
+    --type) issue_type="${2:?--type needs a value}"; shift 2 ;;
     --dedup-key) dedup_keys+=("${2:?--dedup-key needs a value}"); shift 2 ;;
     --state) state="${2:?--state needs a value}"; shift 2 ;;
     --on-existing) on_existing="${2:?--on-existing needs a value}"; shift 2 ;;
@@ -95,6 +106,10 @@ done
 case "$state" in
   open | all) ;;
   *) echo "file-issue: --state must be open or all (got '$state')" >&2; exit 2 ;;
+esac
+case "$issue_type" in
+  "" | Bug | Feature | Task) ;;
+  *) echo "file-issue: --type must be Bug, Feature or Task (got '$issue_type')" >&2; exit 2 ;;
 esac
 case "$on_existing" in
   comment | update | skip) ;;
@@ -168,7 +183,7 @@ if [ "$dry_run" = 1 ]; then
   if [ -n "$existing" ]; then
     echo "file-issue: DRY-RUN would $on_existing on #$existing — $title"
   else
-    echo "file-issue: DRY-RUN would create — $title [${labels:-no labels}]"
+    echo "file-issue: DRY-RUN would create — $title <${issue_type:-no type}> [${labels:-no labels}]"
   fi
   emit "$existing" none
   exit 0
@@ -203,4 +218,12 @@ if [ -n "$labels" ]; then
 fi
 url="$(gh issue create "${gh_args[@]+"${gh_args[@]}"}" --title "$title" --body-file "$body_file" \
          "${label_args[@]+"${label_args[@]}"}")"
-emit "${url##*/}" created
+number="${url##*/}"
+if [ -n "$issue_type" ]; then
+  target="${repo:-$(gh repo view --json nameWithOwner --jq .nameWithOwner)}"
+  if ! gh api --method PATCH "repos/$target/issues/$number" \
+         -f type="$issue_type" --silent 2>/dev/null; then
+    echo "::warning::#$number was filed without its issue type ($issue_type); set it at pickup with scripts/gh/fields.sh"
+  fi
+fi
+emit "$number" created

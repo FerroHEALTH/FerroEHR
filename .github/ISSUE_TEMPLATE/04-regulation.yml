@@ -4,7 +4,8 @@
 name: Regulation or jurisdiction
 description: Ask FerroEHR to be measured against a regulation, a standard or a country's health-data law it does not cover yet
 title: "law(<jurisdiction>): <act or standard>"
-labels: ["regulation", "enhancement"]
+type: Feature
+labels: ["regulation"]
 body:
   - type: markdown
     attributes:

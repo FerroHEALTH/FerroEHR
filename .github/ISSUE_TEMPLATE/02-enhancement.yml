@@ -3,7 +3,7 @@
 
 name: Enhancement request
 description: New or extended functionality in the CDR, the viewer, the chart or the tooling
-labels: ["enhancement"]
+type: Feature
 body:
   - type: textarea
     id: summary

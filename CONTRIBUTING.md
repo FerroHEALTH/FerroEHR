@@ -130,8 +130,9 @@ You keep your copyright. Point 3 is what lets the Licensed Work stay one work wi
 ## Reporting issues
 
 Use the GitHub issue tracker; the chooser offers a form per kind (bug, enhancement,
-documentation defect, regulation or jurisdiction, task), and each form asks for what
-triage needs first. A question is a Discussion, not an issue. For suspected security
+documentation defect, regulation or jurisdiction, task), each form sets the issue's type
+(Bug, Feature or Task), and each asks for what triage needs first. Maintainers set the
+priority and the effort at triage. A question is a Discussion, not an issue. For suspected security
 vulnerabilities, **do not open a public issue**; see [SECURITY.md](SECURITY.md).
 
 ## Code of conduct

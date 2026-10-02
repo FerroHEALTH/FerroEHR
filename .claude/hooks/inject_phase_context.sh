@@ -26,7 +26,7 @@ date -u +%Y-%m-%dT%H:%M:%SZ >.claude/.session-start-time 2>/dev/null || true
 echo "=== spec oracle ==="
 echo "Vendored openEHR spec text + CNF test schedule: docs/specs/openehr/ (index: its README.md; use /spec-lookup). Implement and review all spec-facing behaviour against that text — never from memory or EHRbase behaviour alone (.claude/rules/spec-adherence.md)."
 echo
-echo "=== tracker: open GitHub issues (gh issue view <n> --comments for the contract + discussion) ==="
+echo "=== tracker: open GitHub issues (read one with: gh issue view <n> --json title,body,comments) ==="
 echo "--- pinned (current focus) ---"
 repo_nwo="$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null || true)"
 # shellcheck disable=SC2016 # $owner/$name are GraphQL variables, expanded by the server
@@ -34,19 +34,20 @@ gh api graphql \
   -f query='query($owner: String!, $name: String!) { repository(owner: $owner, name: $name) { pinnedIssues(first: 3) { nodes { issue { number title } } } } }' \
   -f owner="${repo_nwo%%/*}" -f name="${repo_nwo##*/}" \
   --jq '.data.repository.pinnedIssues.nodes[].issue | "#\(.number)  \(.title)"' 2>&1 || true
-echo "--- open (child-of = sub-issue; {k/n} = sub-issue progress; BLOCKED-by = has an open blocker — not a /next-task candidate; relationships: .claude/rules/issue-relationships.md) ---"
-# One batched GraphQL call yields each open issue's labels, milestone, parent,
-# sub-issue progress, and open blockers/blocks — so the tracker shows work
-# structure, not just a flat list. Falls back gracefully if gh/GraphQL fails.
-# shellcheck disable=SC2016 # $owner/$name are GraphQL variables and $labels/$b/$k are jq bindings
+echo "--- open (<Type/Priority>; child-of = sub-issue; {k/n} = sub-issue progress; BLOCKED-by = has an open blocker — not a /next-task candidate; relationships: .claude/rules/issue-relationships.md) ---"
+# One batched GraphQL call yields each open issue's type, priority, labels,
+# milestone, parent, sub-issue progress, and open blockers/blocks — so the
+# tracker shows work structure, not just a flat list. Falls back gracefully if gh/GraphQL fails.
+# shellcheck disable=SC2016 # $owner/$name are GraphQL variables and $tp/$labels/$b/$k are jq bindings
 gh api graphql \
-  -f query='query($owner: String!, $name: String!) { repository(owner: $owner, name: $name) { issues(first: 100, states: OPEN, orderBy: {field: CREATED_AT, direction: DESC}) { nodes { number title labels(first: 20) { nodes { name } } milestone { title } parent { number } subIssuesSummary { total completed } blockedBy(first: 30) { nodes { number state } } blocking(first: 30) { nodes { number state } } } } } }' \
+  -f query='query($owner: String!, $name: String!) { repository(owner: $owner, name: $name) { issues(first: 100, states: OPEN, orderBy: {field: CREATED_AT, direction: DESC}) { nodes { number title issueType { name } issueFieldValues(first: 10) { nodes { ... on IssueFieldSingleSelectValue { field { ... on IssueFieldSingleSelect { name } } value } } } labels(first: 20) { nodes { name } } milestone { title } parent { number } subIssuesSummary { total completed } blockedBy(first: 30) { nodes { number state } } blocking(first: 30) { nodes { number state } } } } } }' \
   -f owner="${repo_nwo%%/*}" -f name="${repo_nwo##*/}" \
   --jq '.data.repository.issues.nodes[]
+    | ((.issueType.name // "?") + "/" + ([.issueFieldValues.nodes[] | select(.field.name? == "Priority") | .value] | first // "?")) as $tp
     | ([.labels.nodes[].name] | join(", ")) as $labels
     | ([.blockedBy.nodes[] | select(.state == "OPEN") | "#\(.number)"]) as $b
     | ([.blocking.nodes[]  | select(.state == "OPEN") | "#\(.number)"]) as $k
-    | "#\(.number)  \(.title)  [\($labels)]"
+    | "#\(.number)  \(.title)  <\($tp)>  [\($labels)]"
       + (if .milestone then "  (\(.milestone.title))" else "" end)
       + (if .parent then "  child-of #\(.parent.number)" else "" end)
       + (if .subIssuesSummary.total > 0 then "  {\(.subIssuesSummary.completed)/\(.subIssuesSummary.total)}" else "" end)

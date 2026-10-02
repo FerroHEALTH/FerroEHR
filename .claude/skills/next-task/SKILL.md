@@ -18,14 +18,21 @@ separate step the caller takes after seeing the plan.
 ## Steps
 
 1. **Read the tracker**: `gh issue list --state open` (the SessionStart dump
-   annotates each issue with `{k/n}` sub-issue progress, `child-of #parent`,
-   and open `BLOCKED-by`/`blocks` edges) — take the pinned issue (current
-   focus) or the issue the user named. **Respect relationships**
+   annotates each issue with `<Type/Priority>`, `{k/n}` sub-issue progress,
+   `child-of #parent`, and open `BLOCKED-by`/`blocks` edges) — take the
+   pinned issue (current focus) or the issue the user named; otherwise the
+   highest `Priority` (`Urgent`, `High`, `Medium`, `Low`) wins and the oldest
+   issue goes first within a priority (`.claude/rules/issue-workflow.md`;
+   `Effort` never reorders). **Respect relationships**
    (`.claude/rules/issue-relationships.md`): do NOT pick an issue shown
    `BLOCKED-by` an open issue (surface its blocker as the real next task
    instead); for a parent issue, point at its next open child rather than the
-   parent itself. Then `gh issue view <n> --comments` for the full contract
-   (the opening summary + `## Acceptance criteria`) and the running discussion, and
+   parent itself. Then `gh issue view <n> --json title,body,comments --jq
+   '.title, .body, (.comments[] | "--- comment ---", .body)'` for the full
+   contract (the opening summary + `## Acceptance criteria`) and the running
+   discussion (never `--comments`: on gh 2.101.0 it prints nothing for an
+   issue without comments), `scripts/gh/fields.sh show <n>` for its type,
+   priority and effort, and
    `scripts/gh/rel.sh tree <n>` for its parent/children/blockers. If the issue
    links a plan file (`docs/plans/*.md`), read that too; its unchecked
    (`- [ ]`) tasks are the queue.
@@ -55,7 +62,9 @@ separate step the caller takes after seeing the plan.
      zero-drift gate (`docs/conformance/ferroehr/results.json` +
      `verdicts.json`), the `openehr-its` fidelity gates, or corpus tests.
 3. **When work on the picked issue actually starts** (the plan is accepted
-   and the session proceeds), move it to `In Progress` on the public roadmap
+   and the session proceeds), first set any of type, priority and effort the
+   issue arrived without (a scheduled lane files without them;
+   `scripts/gh/fields.sh`), then move it to `In Progress` on the public roadmap
    board: `scripts/gh/project.sh status <n> in-progress` — the one manual
    board move in the lifecycle (`.claude/rules/project-board.md`). If the
    session parks the issue unfinished, move it back
