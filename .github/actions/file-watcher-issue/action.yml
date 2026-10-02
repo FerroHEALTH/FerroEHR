@@ -31,8 +31,12 @@ inputs:
   body-file:
     description: Path to the markdown body (a file, so remote content is never an argument).
     required: true
+  type:
+    description: The native issue type (`Bug`, `Feature` or `Task`) set when the issue is CREATED; a token that may not set it leaves a warning.
+    required: false
+    default: ""
   labels:
-    description: Comma-separated labels applied when the issue is CREATED (ignored on a comment).
+    description: Comma-separated labels applied when the issue is CREATED (ignored on a comment). Never a type or priority label; those are issue fields.
     required: false
     default: ""
   dedup-key:
@@ -79,6 +83,7 @@ runs:
         TITLE: ${{ inputs.title }}
         BODY_FILE: ${{ inputs.body-file }}
         LABELS: ${{ inputs.labels }}
+        ISSUE_TYPE: ${{ inputs.type }}
         DEDUP_KEY: ${{ inputs.dedup-key }}
         STATE: ${{ inputs.state }}
         ON_EXISTING: ${{ inputs.on-existing }}
@@ -87,6 +92,9 @@ runs:
         set -euo pipefail
         args=(file --title "$TITLE" --body-file "$BODY_FILE" --repo "$REPO"
               --state "$STATE" --on-existing "$ON_EXISTING" --labels "$LABELS")
+        if [ -n "$ISSUE_TYPE" ]; then
+          args+=(--type "$ISSUE_TYPE")
+        fi
         if [ -n "$DEDUP_KEY" ]; then
           args+=(--dedup-key "$DEDUP_KEY")
         fi

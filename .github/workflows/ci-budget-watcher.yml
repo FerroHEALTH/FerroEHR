@@ -106,4 +106,5 @@ jobs:
         with:
           title: "ci: a sharded lane is past its wall-clock budget on main"
           body-file: body.md
-          labels: ci,P2
+          type: Task
+          labels: ci

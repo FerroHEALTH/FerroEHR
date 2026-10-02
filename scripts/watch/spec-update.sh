@@ -329,7 +329,7 @@ EOF
     if [[ -n "$num" ]] && gh issue view "$num" --json body --jq '.body' | grep -qF "$count_line"; then
       continue # unchanged since the last run
     fi
-    labels="spec-update"
+    labels="spec-update,chore"
     lbl=$(label_for_component "$comp" || true)
     [[ -n "${lbl:-}" ]] && labels="$labels,$lbl"
     if [[ "$DRY_RUN" = "1" ]] && [[ -z "$num" ]]; then
@@ -339,7 +339,7 @@ EOF
     # does not exist, replace its body in place when it does (the count updates
     # as the delta grows).
     "$FILE_ISSUE" file --title "$title" --body-file "$tmp/ahead-body.md" \
-      --labels "$labels" --on-existing update "${engine_dry[@]+"${engine_dry[@]}"}"
+      --type Task --labels "$labels" --on-existing update "${engine_dry[@]+"${engine_dry[@]}"}"
     echo "  $comp is $ahead commit(s) ahead"
     if [[ -n "$num" ]]; then
       ahead_updated=$((ahead_updated + 1))
@@ -412,7 +412,7 @@ while IFS="$US" read -r key component summary source resolved fixv comps status 
     short_summary="${short_summary:0:87}..."
   fi
   title="[spec-update] $key — $short_summary"
-  labels="spec-update"
+  labels="spec-update,chore"
   lbl=$([[ -n "$component" ]] && label_for_component "$component" || true)
   [[ -n "${lbl:-}" ]] && labels="$labels,$lbl"
 
@@ -449,7 +449,7 @@ EOF
   # `--on-existing skip` re-runs the dedup at filing time: a race that lands a
   # covering issue between the check above and here must not double-file, and
   # the counters below follow the engine's reported outcome rather than assuming.
-  engine_out=$("$FILE_ISSUE" file --title "$title" --body-file "$tmp/body.md" --labels "$labels" \
+  engine_out=$("$FILE_ISSUE" file --title "$title" --body-file "$tmp/body.md" --type Task --labels "$labels" \
     --dedup-key "$key" --state all --on-existing skip "${engine_dry[@]+"${engine_dry[@]}"}")
   printf '%s\n' "$engine_out"
   case "${engine_out##*$'\n'}" in

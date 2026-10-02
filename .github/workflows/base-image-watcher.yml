@@ -110,4 +110,5 @@ jobs:
         with:
           title: "chore(images): the pinned postgres base is stale — newer upstream bytes exist"
           body-file: body.md
-          labels: chore,P2
+          type: Task
+          labels: chore

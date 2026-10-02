@@ -122,7 +122,7 @@ _Opened automatically by \`.github/workflows/spec-release-watcher.yml\`._
 EOF
   lbl=$(label_for_component "$comp")
   up_label="upstream:${comp}-${latest}"
-  labels="spec-update,P1,$up_label"
+  labels="spec-update,chore,$up_label"
   [[ -n "$lbl" ]] && labels="$labels,$lbl"
   if [[ "$DRY_RUN" = "1" ]]; then
     sed 's/^/    │ /' "$tmp/body.md"
@@ -137,7 +137,7 @@ EOF
   # `--on-existing skip` re-runs the dedup at filing time: a race that lands a
   # covering issue between the check above and here must not double-file, and
   # the counters below follow the engine's reported outcome rather than assuming.
-  engine_out=$("$FILE_ISSUE" file --title "$title" --body-file "$tmp/body.md" --labels "$labels" \
+  engine_out=$("$FILE_ISSUE" file --title "$title" --body-file "$tmp/body.md" --type Task --labels "$labels" \
     --dedup-key "$comp" --dedup-key "$latest" --state all --on-existing skip \
     "${engine_dry[@]+"${engine_dry[@]}"}")
   printf '%s\n' "$engine_out"

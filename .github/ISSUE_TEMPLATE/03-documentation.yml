@@ -3,6 +3,7 @@
 
 name: Documentation defect
 description: A page on ferroehr.eu, the README or a chart README says something wrong, stale or missing
+type: Task
 labels: ["documentation"]
 body:
   - type: input

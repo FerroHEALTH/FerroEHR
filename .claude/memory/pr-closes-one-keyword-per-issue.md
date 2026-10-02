@@ -26,7 +26,7 @@ work in the next one silently removes it from this cut.
 How to apply:
 - Repeat the keyword per issue, then VERIFY after merge (`gh issue view <n>
   --json state`) — the parse is silent when it fails.
-- `gh issue create --milestone v<current>` on every new issue, including
+- `scripts/gh/fields.sh new … --milestone v<current>` on every new issue, including
   upstream-reports and follow-ups, unless the owner says otherwise. The one
   standing exception is `blocked-upstream`, which carries no milestone at all
   (it cannot promise a delivery).

@@ -80,5 +80,6 @@ jobs:
         with:
           title: "chore(conformance): the Veredictum pin is behind the published instrument"
           body-file: body.md
-          labels: chore,P1
+          type: Task
+          labels: chore
           on-existing: update

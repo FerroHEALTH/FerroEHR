@@ -3,7 +3,7 @@
 
 name: Bug report
 description: Wrong wire behaviour, a crash, a conformance divergence, a broken deployment artifact
-labels: ["bug"]
+type: Bug
 body:
   - type: checkboxes
     id: preflight

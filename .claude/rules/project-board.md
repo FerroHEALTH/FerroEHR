@@ -1,8 +1,10 @@
 # The public roadmap board (GitHub Project v2)
 
 The tracker is GitHub Issues (`CLAUDE.md` §Issue workflow); milestones are the
-release spine; labels carry type + priority; native edges carry
-decomposition/sequencing (`issue-relationships.md`). The **"FerroEHR Roadmap"
+release spine; the native issue type and the organisation's `Priority` and
+`Effort` issue fields carry type, priority and effort (`issue-workflow.md`);
+labels carry work kind and domain; native edges carry decomposition and
+sequencing (`issue-relationships.md`). The **"FerroEHR Roadmap"
 Project** (a GitHub Project v2 under the repo owner, public) exists for one
 reason: **outward transparency** — anyone can see what is planned, in
 progress, and shipped, without reading the raw issue list. It is a **VIEW over
@@ -18,8 +20,9 @@ has a canonical home:
 
 | Fact | Canonical home | NEVER duplicated as |
 |---|---|---|
-| Priority | `P0`–`P3` labels | a board Priority field |
-| Type | `bug`/`enhancement`/… labels | a board Type field |
+| Priority | the organisation's `Priority` issue field (`scripts/gh/fields.sh`) | a board Priority field |
+| Type | the native issue type (`Bug`/`Feature`/`Task`) | a board Type field |
+| Effort | the organisation's `Effort` issue field (`scripts/gh/fields.sh`) | a board Effort/estimate field |
 | Release | the `vX.Y.Z` milestone | a board Release/Iteration field |
 | Decomposition | native sub-issue edges | a board hierarchy field |
 | Sequencing | native blocked-by edges | a board Blocked column/field |
@@ -27,10 +30,11 @@ has a canonical home:
 Do not add custom fields, iteration fields, estimate fields, or extra Status
 options. A board-only fact has no backlink, is invisible to `gh issue`
 consumers (the SessionStart dump, `/phase-status`, `/next-task`), and rots the
-first time it disagrees with the label/milestone it shadows — the same decay
-class `issue-relationships.md` §No duplication bans for issue bodies. If the
-board ever needs to show a new fact, give the fact a canonical home on the
-ISSUE (label, milestone, native edge) and let the board filter/group on it.
+first time it disagrees with the field, label or milestone it shadows — the
+same decay class `issue-relationships.md` §No duplication bans for issue
+bodies. If the board ever needs to show a new fact, give the fact a canonical
+home on the ISSUE (issue field, label, milestone, native edge) and let the
+board filter/group on it.
 
 **The ONE sanctioned derived field: `Target date`.** The roadmap layout
 places items only by date/iteration fields — milestone due dates draw
@@ -48,8 +52,8 @@ Projects by itself, and clears it the moment the blocker closes) and the
 `blocked-upstream`/`upstream-confirmed` labels. A hand-moved status would
 double-book that and keep claiming "stalled" after the blocker closes.
 "Needs extra attention" is served by the **Needs attention** view (filter
-`is:open label:P0,blocked-upstream,upstream-confirmed`) — label-driven, so it
-empties itself. (Projects filters expose no `is:blocked` qualifier —
+`is:open label:blocked-upstream,upstream-confirmed`) — label-driven, so it
+empties itself; `Urgent` work shows in **Current focus**. (Projects filters expose no `is:blocked` qualifier —
 filtering-projects docs, read 2026-08-04 — which is exactly why the
 label/edge layer stays the source.)
 
@@ -136,10 +140,15 @@ grouping, the roadmap's date source, visible fields — is still UI-only):
    milestone markers ON, zoom Month, sort by Target date. Every open
    `vX.Y.Z` milestone carries a due date — set one when creating a
    milestone; the markers come from it.
-3. **Current focus** — `TABLE_LAYOUT`, filter `is:open label:P0,P1`;
-   columns Title/Status/Labels/Milestone/Sub-issues progress; no slice.
+3. **Current focus** — `TABLE_LAYOUT`, filter `is:open
+   priority:Urgent,High`; columns Title/Status/Type/Priority/Labels/
+   Milestone/Sub-issues progress; no slice. The filter reads the
+   organisation's `Priority` issue field, which the project shows only once
+   the field is added to it in the UI (`ProjectV2FieldType` has `ISSUE_TYPE`
+   but no issue-field type, so no mutation adds it; read 2026-10-02). Until
+   then the view is empty, while `type:` filters work already.
 4. **Needs attention** — `TABLE_LAYOUT`, filter
-   `is:open label:P0,blocked-upstream,upstream-confirmed`; same columns;
+   `is:open label:blocked-upstream,upstream-confirmed`; same columns;
    no slice.
 
 Built-in workflows (verified 2026-08-04: only `deleteProjectV2Workflow`

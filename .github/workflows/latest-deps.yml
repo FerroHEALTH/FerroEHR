@@ -102,4 +102,4 @@ jobs:
         with:
           title: "latest-deps: workspace no longer builds against the newest in-range dependencies"
           body-file: body.md
-          labels: bug,P2,ci
+          type: Bug

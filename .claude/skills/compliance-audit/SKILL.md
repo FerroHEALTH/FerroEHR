@@ -73,12 +73,13 @@ evidence, and what is missing.
    "compliant"/"certified" wording, a provision that reaches software and
    has no row. Each is a finding.
 5. **Record.** Post the article-by-article table on the audit's tracker issue
-   (one issue per act audited, in the standard body shape, typed `chore`,
-   labelled `regulation`, in the current milestone): article | requirement
+   (one issue per act audited, in the standard body shape, a `Task` with
+   `chore`, labelled `regulation`, in the current milestone): article | requirement
    (quoted) | addressee | status | evidence | issue. State coverage
    honestly: the articles not audited, the annexes not in the corpus, the
    consolidation the record is written against. Then file one issue per
-   gap and per page finding (`gh issue create`, typed, labelled
+   gap and per page finding (`scripts/gh/fields.sh new <type> <priority>
+   <effort> …`, labelled
    `regulation`, milestoned in the current milestone, a `Control:` line
    naming the legal source where the fix delivers a control), and link each
    to the audit issue with `scripts/gh/rel.sh parent`. Never silently

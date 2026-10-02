@@ -559,6 +559,28 @@ jobs:
       - name: The dangerous-command hook refuses and allows the shapes it documents
         run: bash .claude/hooks/block_dangerous_test.sh
 
+  # The tracker helpers set the native issue type and the Priority and Effort
+  # fields, and declare the label taxonomy (.claude/rules/issue-workflow.md).
+  # Each carries a --self-test against a stub gh, so a change to the mapping
+  # or to the GraphQL it speaks is caught without touching the live tracker.
+  tracker-helpers:
+    name: tracker-helpers
+    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: fields.sh files and sets type, priority and effort
+        run: bash scripts/gh/fields.sh --self-test
+      - name: migrate-fields.sh maps the retired labels
+        run: bash scripts/gh/migrate-fields.sh --self-test
+      - name: labels.sh declares the taxonomy and retires the old labels
+        run: bash scripts/gh/labels.sh --self-test
+
   # The hosted box's deploy script lives inside deploy/hosted/cloud-init.yaml
   # as a write_files block, where no other gate reads shell (#2974); this
   # extracts and shellchecks it, and checks that docker/Dockerfile bakes every
@@ -2647,6 +2669,7 @@ jobs:
       - workflow-audit
       - workflow-lint
       - shellcheck
+      - tracker-helpers
       - hosted-deploy-script
       - comment-style
       - default-style

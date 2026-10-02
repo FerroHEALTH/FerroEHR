@@ -3,6 +3,7 @@
 
 name: Task
 description: Maintenance, research, tooling or process work that is neither a defect nor a feature
+type: Task
 labels: ["chore"]
 body:
   - type: textarea
