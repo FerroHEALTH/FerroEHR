@@ -169,7 +169,50 @@ pub(crate) struct RmNames {
 /// `VERSION<T>` object"), whose OAS rendering flattens `T` into the per-group
 /// `data: Versionable` ref. The hoisted shared module emits the struct with
 /// the real generic parameter; each group aliases it at its own `Versionable`.
-const GENERIC_OVER: &[(&str, &str)] = &[("UpdateVersion", "data")];
+const GENERIC_OVER: &[(&str, &str)] = &[ENVELOPE];
+
+/// The one [`GENERIC_OVER`] envelope and its generic field.
+const ENVELOPE: (&str, &str) = ("UpdateVersion", "data");
+
+/// Component schemas whose list field carries the [`GENERIC_OVER`] envelope,
+/// and so take its type parameter: `NewContribution.versions`. Under a
+/// Simplified Formats `Content-Type` "the CONTRIBUTION envelope itself remains
+/// canonical JSON" and only "each `versions[i].data`" is FLAT or STRUCTURED
+/// (ITS-REST `operations/contribution_create.yaml` §Simplified Formats). The
+/// parameter defaults to the group's own content union, so the bare name keeps
+/// meaning the canonical body.
+const GENERIC_CARRIERS: &[(&str, &str)] = &[("NewContribution", "versions")];
+
+/// How a DTO struct carries the [`GENERIC_OVER`] type parameter.
+enum Generic {
+    /// Not generic.
+    None,
+    /// The envelope itself: `field` is typed `T`.
+    Param(&'static str),
+    /// A carrier: `field` holds envelopes over `T`, which defaults to `default`.
+    Carrier {
+        /// The carrying list field.
+        field: &'static str,
+        /// The group's own content union, the parameter's default.
+        default: String,
+    },
+}
+
+/// The group's type argument for the [`GENERIC_OVER`] envelope `name`: the
+/// flattened `field` ref (this group's `Versionable`).
+fn generic_arg(ctx: &Ctx, name: &str, field: &str) -> String {
+    ctx.oas
+        .schemas()
+        .into_iter()
+        .find(|(n, _)| n == name)
+        .and_then(|(_, schema)| {
+            ctx.oas
+                .resolve(schema)
+                .pointer(&format!("/properties/{field}"))
+                .map(|s| ctx.rust_type(s))
+        })
+        .unwrap_or_else(|| "serde_json::Value".to_string())
+}
 
 /// The `$ref` names a schema reaches, skipping a genericized field's subtree.
 fn ref_names_of(name: &str, schema: &Value, out: &mut BTreeSet<String>) {
@@ -738,7 +781,16 @@ fn emit_dto(b: &mut String, name: &str, schema: &Value, ctx: &Ctx) {
         let base = match (base_tag, props.is_empty()) {
             (Some(tag), false) => {
                 let data_ty = format!("{}Data", dto_type(name));
-                emit_struct(b, name, &data_ty, None, &props, &required, schema, ctx);
+                emit_struct(
+                    b,
+                    name,
+                    &data_ty,
+                    &Generic::None,
+                    &props,
+                    &required,
+                    schema,
+                    ctx,
+                );
                 Some((tag, data_ty))
             }
             _ => None,
@@ -755,24 +807,21 @@ fn emit_dto(b: &mut String, name: &str, schema: &Value, ctx: &Ctx) {
         // The SM-generic hoisted schema ([`GENERIC_OVER`]) emits with its real
         // type parameter in the shared module; the flattened field types as
         // `T` and each group binds it via a local alias.
-        let generic_field = if ctx.in_common {
+        let generic = if ctx.in_common {
             GENERIC_OVER
                 .iter()
                 .find(|(n, _)| *n == name)
-                .map(|(_, f)| *f)
+                .map_or(Generic::None, |(_, f)| Generic::Param(f))
+        } else if let Some((_, field)) = GENERIC_CARRIERS.iter().find(|(n, _)| *n == name) {
+            let (envelope, data) = ENVELOPE;
+            Generic::Carrier {
+                field,
+                default: generic_arg(ctx, envelope, data),
+            }
         } else {
-            None
+            Generic::None
         };
-        emit_struct(
-            b,
-            name,
-            &ty_name,
-            generic_field,
-            &props,
-            &required,
-            schema,
-            ctx,
-        );
+        emit_struct(b, name, &ty_name, &generic, &props, &required, schema, ctx);
     } else {
         // string/array/map/ref alias.
         let _ = writeln!(
@@ -787,9 +836,9 @@ fn emit_dto(b: &mut String, name: &str, schema: &Value, ctx: &Ctx) {
 }
 
 /// Emit one transport-DTO struct: `props`/`required` are the `allOf`-flattened
-/// shape ([`Ctx::merged_object`]), `generic_field` names the property carried as
-/// the type parameter `T` (the [`GENERIC_OVER`] envelope), and `schema` is the
-/// declaring schema, read for its `additionalProperties` policy.
+/// shape ([`Ctx::merged_object`]), `generic` says how the struct carries the
+/// [`GENERIC_OVER`] type parameter `T`, and `schema` is the declaring schema,
+/// read for its `additionalProperties` policy.
 #[expect(
     clippy::too_many_arguments,
     reason = "one emission site each for the schema's identity, its Rust name, the generic binding, the flattened shape and the declaring schema — bundling them into a struct would only rename the same arguments"
@@ -798,7 +847,7 @@ fn emit_struct(
     b: &mut String,
     name: &str,
     ty_name: &str,
-    generic_field: Option<&str>,
+    generic: &Generic,
     props: &[(String, Value)],
     all_required: &BTreeSet<String>,
     schema: &Value,
@@ -829,7 +878,11 @@ fn emit_struct(
     } else {
         ("", "")
     };
-    let generics = if generic_field.is_some() { "<T>" } else { "" };
+    let generics = match generic {
+        Generic::None => String::new(),
+        Generic::Param(_) => "<T>".to_string(),
+        Generic::Carrier { default, .. } => format!("<T = {default}>"),
+    };
     let _ = write!(
         b,
         "/// The `{name}` transport DTO of this API group (an ITS-REST OAS\n\
@@ -840,12 +893,18 @@ fn emit_struct(
     for (pname, pschema) in props {
         emit_struct_field(
             b,
-            StructField {
+            &StructField {
                 owner: name,
                 ty_name,
                 pname,
                 pschema,
-                is_generic: generic_field == Some(pname.as_str()),
+                ty: match generic {
+                    Generic::Param(field) if *field == pname.as_str() => Some("T".to_string()),
+                    Generic::Carrier { field, .. } if *field == pname.as_str() => {
+                        Some(carrier_field_type(&ctx.rust_type(pschema)))
+                    }
+                    _ => None,
+                },
                 is_required: required.contains(pname.as_str()),
             },
             ctx,
@@ -856,7 +915,7 @@ fn emit_struct(
 }
 
 /// One DTO field's emission inputs.
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 struct StructField<'a> {
     /// The OAS component schema name the field belongs to.
     owner: &'a str,
@@ -866,20 +925,32 @@ struct StructField<'a> {
     pname: &'a str,
     /// The OAS property schema.
     pschema: &'a Value,
-    /// Whether the field carries the DTO's generic parameter.
-    is_generic: bool,
+    /// The field's type where the DTO's generic parameter sets it.
+    ty: Option<String>,
     /// Whether the field is required after the docs-text-wins corrections.
     is_required: bool,
 }
 
-/// Emits one DTO field: its doc line, serde attributes and typed declaration.
-fn emit_struct_field(b: &mut String, f: StructField<'_>, ctx: &Ctx) {
-    let ident = field_id(f.pname);
-    let mut ty = if f.is_generic {
-        "T".to_string()
+/// The type of a [`GENERIC_CARRIERS`] field: its group-alias envelope items
+/// (`Vec<UpdateVersion>`) rebound to the shared envelope over `T`.
+fn carrier_field_type(ty: &str) -> String {
+    let envelope = dto_type(ENVELOPE.0);
+    let rebound = ty.replacen(
+        &format!("<{envelope}>"),
+        &format!("<super::common::{envelope}<T>>"),
+        1,
+    );
+    if rebound == ty {
+        format!("compile_error!(\"the carrier field type `{ty}` holds no `{envelope}` list\")")
     } else {
-        ctx.rust_type(f.pschema)
-    };
+        rebound
+    }
+}
+
+/// Emits one DTO field: its doc line, serde attributes and typed declaration.
+fn emit_struct_field(b: &mut String, f: &StructField<'_>, ctx: &Ctx) {
+    let ident = field_id(f.pname);
+    let mut ty = f.ty.clone().unwrap_or_else(|| ctx.rust_type(f.pschema));
     if !f.is_required {
         ty = format!("Option<{ty}>");
     }
@@ -1325,6 +1396,52 @@ fn json_request(op: &Operation) -> bool {
     op.request_media.iter().any(|m| m == "application/json")
 }
 
+/// The Simplified Formats media types (ITS-REST overview `Resources.md`
+/// §Simplified Formats).
+const SIMPLIFIED_MEDIA: [&str; 2] = [
+    "application/openehr.wt.flat+json",
+    "application/openehr.wt.structured+json",
+];
+
+/// Whether `op` takes a canonical-JSON body whose `Content-Type` parameter
+/// admits both Simplified Formats: its server body is then a
+/// `crate::rest::runtime::Payload`.
+fn simplified_request(op: &Operation, ctx: &Ctx) -> bool {
+    json_request(op)
+        && op.parameters.iter().any(|p| {
+            p.location == "header"
+                && p.name.eq_ignore_ascii_case("content-type")
+                && ctx
+                    .oas
+                    .resolve(&p.schema)
+                    .get("enum")
+                    .and_then(Value::as_array)
+                    .is_some_and(|values| {
+                        SIMPLIFIED_MEDIA
+                            .iter()
+                            .all(|m| values.iter().any(|v| v.as_str() == Some(m)))
+                    })
+        })
+}
+
+/// The server body type of `op`: its canonical type, or a `Payload` over the
+/// canonical type and its Simplified Formats form (a [`GENERIC_CARRIERS`]
+/// envelope over raw JSON content, any other body raw JSON).
+fn server_body_type(op: &Operation, schema: &Value, ctx: &Ctx) -> String {
+    let canonical = ctx.rust_type(schema);
+    if !simplified_request(op, ctx) {
+        return canonical;
+    }
+    let carrier =
+        Oas::ref_name(schema).is_some_and(|name| GENERIC_CARRIERS.iter().any(|(n, _)| *n == name));
+    let simplified = if carrier {
+        format!("{canonical}<serde_json::Value>")
+    } else {
+        "serde_json::Value".to_string()
+    };
+    format!("crate::rest::runtime::Payload<{canonical}, {simplified}>")
+}
+
 /// The headers struct of every documented response of `op` that declares
 /// headers, at group level so both halves name the same type.
 fn emit_response_headers(b: &mut String, op: &Operation) {
@@ -1585,7 +1702,7 @@ fn emit_trait_method(b: &mut String, op: &Operation, ctx: &Ctx) {
     }
     if let Some((schema, required)) = &op.request_body {
         let ty = if json_request(op) {
-            ctx.rust_type(schema)
+            server_body_type(op, schema, ctx)
         } else {
             "String".to_string()
         };
@@ -1740,7 +1857,12 @@ fn emit_server_handler(b: &mut String, op: &Operation, trait_name: &str, ctx: &C
         call_args.push("params");
     }
     if let Some((_, required)) = &op.request_body {
+        let simplified = simplified_request(op, ctx);
         let decode = match (json, *required) {
+            (true, true) if simplified => "crate::rest::server::payload_body(&headers, &body)?",
+            (true, false) if simplified => {
+                "crate::rest::server::payload_body_optional(&headers, &body)?"
+            }
             (true, true) => "crate::rest::server::json_body(&headers, &body)?",
             (true, false) => "crate::rest::server::json_body_optional(&headers, &body)?",
             (false, true) => "crate::rest::server::text_body(&body)?",

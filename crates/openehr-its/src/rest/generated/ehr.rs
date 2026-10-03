@@ -160,12 +160,12 @@ pub type UpdateVersion = super::common::UpdateVersion<Versionable>;
 /// The `NewContribution` transport DTO of this API group (an ITS-REST OAS
 /// component schema).
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NewContribution {
+pub struct NewContribution<T = Versionable> {
     /// The `uid` property of `NewContribution`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub uid: Option<openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId>,
     /// The `versions` property of `NewContribution`.
-    pub versions: Vec<UpdateVersion>,
+    pub versions: Vec<super::common::UpdateVersion<T>>,
     /// The `audit` property of `NewContribution`.
     pub audit: super::common::UpdateAudit,
     /// The undeclared (`additionalProperties`) members of `NewContribution`, which
@@ -4893,7 +4893,12 @@ pub mod server {
         async fn ehr_create(
             &self,
             params: EhrCreateParams,
-            body: Option<openehr_rm::v1_2::ehr::ehr_status::EhrStatus>,
+            body: Option<
+                crate::rest::runtime::Payload<
+                    openehr_rm::v1_2::ehr::ehr_status::EhrStatus,
+                    serde_json::Value,
+                >,
+            >,
         ) -> Result<EhrCreateResponse, crate::rest::runtime::Refusal> {
             Err(crate::rest::runtime::ApiError::NotImplemented.into())
         }
@@ -4908,7 +4913,12 @@ pub mod server {
         async fn ehr_create_with_id(
             &self,
             params: EhrCreateWithIdParams,
-            body: Option<openehr_rm::v1_2::ehr::ehr_status::EhrStatus>,
+            body: Option<
+                crate::rest::runtime::Payload<
+                    openehr_rm::v1_2::ehr::ehr_status::EhrStatus,
+                    serde_json::Value,
+                >,
+            >,
         ) -> Result<EhrCreateWithIdResponse, crate::rest::runtime::Refusal> {
             Err(crate::rest::runtime::ApiError::NotImplemented.into())
         }
@@ -4930,7 +4940,10 @@ pub mod server {
         async fn ehr_status_update(
             &self,
             params: EhrStatusUpdateParams,
-            body: openehr_rm::v1_2::ehr::ehr_status::EhrStatus,
+            body: crate::rest::runtime::Payload<
+                openehr_rm::v1_2::ehr::ehr_status::EhrStatus,
+                serde_json::Value,
+            >,
         ) -> Result<EhrStatusUpdateResponse, crate::rest::runtime::Refusal> {
             Err(crate::rest::runtime::ApiError::NotImplemented.into())
         }
@@ -4969,7 +4982,10 @@ pub mod server {
         async fn composition_create(
             &self,
             params: CompositionCreateParams,
-            body: openehr_rm::v1_2::composition::composition::Composition,
+            body: crate::rest::runtime::Payload<
+                openehr_rm::v1_2::composition::composition::Composition,
+                serde_json::Value,
+            >,
         ) -> Result<CompositionCreateResponse, crate::rest::runtime::Refusal> {
             Err(crate::rest::runtime::ApiError::NotImplemented.into())
         }
@@ -4984,7 +5000,10 @@ pub mod server {
         async fn composition_update(
             &self,
             params: CompositionUpdateParams,
-            body: openehr_rm::v1_2::composition::composition::Composition,
+            body: crate::rest::runtime::Payload<
+                openehr_rm::v1_2::composition::composition::Composition,
+                serde_json::Value,
+            >,
         ) -> Result<CompositionUpdateResponse, crate::rest::runtime::Refusal> {
             Err(crate::rest::runtime::ApiError::NotImplemented.into())
         }
@@ -5037,7 +5056,10 @@ pub mod server {
         async fn directory_update(
             &self,
             params: DirectoryUpdateParams,
-            body: openehr_rm::v1_2::common::directory::folder::Folder,
+            body: crate::rest::runtime::Payload<
+                openehr_rm::v1_2::common::directory::folder::Folder,
+                serde_json::Value,
+            >,
         ) -> Result<DirectoryUpdateResponse, crate::rest::runtime::Refusal> {
             Err(crate::rest::runtime::ApiError::NotImplemented.into())
         }
@@ -5045,7 +5067,10 @@ pub mod server {
         async fn directory_create(
             &self,
             params: DirectoryCreateParams,
-            body: openehr_rm::v1_2::common::directory::folder::Folder,
+            body: crate::rest::runtime::Payload<
+                openehr_rm::v1_2::common::directory::folder::Folder,
+                serde_json::Value,
+            >,
         ) -> Result<DirectoryCreateResponse, crate::rest::runtime::Refusal> {
             Err(crate::rest::runtime::ApiError::NotImplemented.into())
         }
@@ -5067,7 +5092,10 @@ pub mod server {
         async fn contribution_create(
             &self,
             params: ContributionCreateParams,
-            body: NewContribution,
+            body: crate::rest::runtime::Payload<
+                NewContribution,
+                NewContribution<serde_json::Value>,
+            >,
         ) -> Result<ContributionCreateResponse, crate::rest::runtime::Refusal> {
             Err(crate::rest::runtime::ApiError::NotImplemented.into())
         }
@@ -5418,7 +5446,7 @@ pub mod server {
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let params = EhrCreateParams::from_parts(&headers)?;
-            let body = crate::rest::server::json_body_optional(&headers, &body)?;
+            let body = crate::rest::server::payload_body_optional(&headers, &body)?;
             let reply: crate::rest::server::Reply = match api.ehr_create(params, body).await? {
                 EhrCreateResponse::Created { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::CREATED);
@@ -5485,7 +5513,7 @@ pub mod server {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let path = crate::rest::server::path_captures(path, &[("p2", "ehr_id")])?;
             let params = EhrCreateWithIdParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::json_body_optional(&headers, &body)?;
+            let body = crate::rest::server::payload_body_optional(&headers, &body)?;
             let reply: crate::rest::server::Reply =
                 match api.ehr_create_with_id(params, body).await? {
                     EhrCreateWithIdResponse::Created { body, headers } => {
@@ -5590,7 +5618,7 @@ pub mod server {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let path = crate::rest::server::path_captures(path, &[("p2", "ehr_id")])?;
             let params = EhrStatusUpdateParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let body = crate::rest::server::payload_body(&headers, &body)?;
             let reply: crate::rest::server::Reply =
                 match api.ehr_status_update(params, body).await? {
                     EhrStatusUpdateResponse::Ok { body, headers } => {
@@ -5754,7 +5782,7 @@ pub mod server {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let path = crate::rest::server::path_captures(path, &[("p2", "ehr_id")])?;
             let params = CompositionCreateParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let body = crate::rest::server::payload_body(&headers, &body)?;
             let reply: crate::rest::server::Reply =
                 match api.composition_create(params, body).await? {
                     CompositionCreateResponse::Created { body, headers } => {
@@ -5834,7 +5862,7 @@ pub mod server {
                 &[("p2", "ehr_id"), ("p4", "uid_based_id")],
             )?;
             let params = CompositionUpdateParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let body = crate::rest::server::payload_body(&headers, &body)?;
             let reply: crate::rest::server::Reply =
                 match api.composition_update(params, body).await? {
                     CompositionUpdateResponse::Ok { body, headers } => {
@@ -6078,7 +6106,7 @@ pub mod server {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let path = crate::rest::server::path_captures(path, &[("p2", "ehr_id")])?;
             let params = DirectoryUpdateParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let body = crate::rest::server::payload_body(&headers, &body)?;
             let reply: crate::rest::server::Reply = match api.directory_update(params, body).await?
             {
                 DirectoryUpdateResponse::Ok { body, headers } => {
@@ -6115,7 +6143,7 @@ pub mod server {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let path = crate::rest::server::path_captures(path, &[("p2", "ehr_id")])?;
             let params = DirectoryCreateParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let body = crate::rest::server::payload_body(&headers, &body)?;
             let reply: crate::rest::server::Reply = match api.directory_create(params, body).await?
             {
                 DirectoryCreateResponse::Created { body, headers } => {
@@ -6215,7 +6243,7 @@ pub mod server {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let path = crate::rest::server::path_captures(path, &[("p2", "ehr_id")])?;
             let params = ContributionCreateParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let body = crate::rest::server::payload_body(&headers, &body)?;
             let reply: crate::rest::server::Reply =
                 match api.contribution_create(params, body).await? {
                     ContributionCreateResponse::Created { body, headers } => {

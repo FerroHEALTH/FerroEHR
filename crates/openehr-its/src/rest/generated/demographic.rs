@@ -172,12 +172,12 @@ pub type UpdateVersion = super::common::UpdateVersion<Versionable>;
 /// The `NewContribution` transport DTO of this API group (an ITS-REST OAS
 /// component schema).
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NewContribution {
+pub struct NewContribution<T = Versionable> {
     /// The `uid` property of `NewContribution`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub uid: Option<openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId>,
     /// The `versions` property of `NewContribution`.
-    pub versions: Vec<UpdateVersion>,
+    pub versions: Vec<super::common::UpdateVersion<T>>,
     /// The `audit` property of `NewContribution`.
     pub audit: super::common::UpdateAudit,
     /// The undeclared (`additionalProperties`) members of `NewContribution`, which
@@ -6185,7 +6185,10 @@ pub mod server {
         async fn agent_create(
             &self,
             params: AgentCreateParams,
-            body: openehr_rm::v1_2::demographic::agent::Agent,
+            body: crate::rest::runtime::Payload<
+                openehr_rm::v1_2::demographic::agent::Agent,
+                serde_json::Value,
+            >,
         ) -> Result<AgentCreateResponse, crate::rest::runtime::Refusal> {
             Err(crate::rest::runtime::ApiError::NotImplemented.into())
         }
@@ -6200,7 +6203,10 @@ pub mod server {
         async fn agent_update(
             &self,
             params: AgentUpdateParams,
-            body: openehr_rm::v1_2::demographic::agent::Agent,
+            body: crate::rest::runtime::Payload<
+                openehr_rm::v1_2::demographic::agent::Agent,
+                serde_json::Value,
+            >,
         ) -> Result<AgentUpdateResponse, crate::rest::runtime::Refusal> {
             Err(crate::rest::runtime::ApiError::NotImplemented.into())
         }
@@ -6215,7 +6221,10 @@ pub mod server {
         async fn group_create(
             &self,
             params: GroupCreateParams,
-            body: openehr_rm::v1_2::demographic::group::Group,
+            body: crate::rest::runtime::Payload<
+                openehr_rm::v1_2::demographic::group::Group,
+                serde_json::Value,
+            >,
         ) -> Result<GroupCreateResponse, crate::rest::runtime::Refusal> {
             Err(crate::rest::runtime::ApiError::NotImplemented.into())
         }
@@ -6230,7 +6239,10 @@ pub mod server {
         async fn group_update(
             &self,
             params: GroupUpdateParams,
-            body: openehr_rm::v1_2::demographic::group::Group,
+            body: crate::rest::runtime::Payload<
+                openehr_rm::v1_2::demographic::group::Group,
+                serde_json::Value,
+            >,
         ) -> Result<GroupUpdateResponse, crate::rest::runtime::Refusal> {
             Err(crate::rest::runtime::ApiError::NotImplemented.into())
         }
@@ -6245,7 +6257,10 @@ pub mod server {
         async fn organisation_create(
             &self,
             params: OrganisationCreateParams,
-            body: openehr_rm::v1_2::demographic::organisation::Organisation,
+            body: crate::rest::runtime::Payload<
+                openehr_rm::v1_2::demographic::organisation::Organisation,
+                serde_json::Value,
+            >,
         ) -> Result<OrganisationCreateResponse, crate::rest::runtime::Refusal> {
             Err(crate::rest::runtime::ApiError::NotImplemented.into())
         }
@@ -6260,7 +6275,10 @@ pub mod server {
         async fn organisation_update(
             &self,
             params: OrganisationUpdateParams,
-            body: openehr_rm::v1_2::demographic::organisation::Organisation,
+            body: crate::rest::runtime::Payload<
+                openehr_rm::v1_2::demographic::organisation::Organisation,
+                serde_json::Value,
+            >,
         ) -> Result<OrganisationUpdateResponse, crate::rest::runtime::Refusal> {
             Err(crate::rest::runtime::ApiError::NotImplemented.into())
         }
@@ -6275,7 +6293,10 @@ pub mod server {
         async fn person_create(
             &self,
             params: PersonCreateParams,
-            body: openehr_rm::v1_2::demographic::person::Person,
+            body: crate::rest::runtime::Payload<
+                openehr_rm::v1_2::demographic::person::Person,
+                serde_json::Value,
+            >,
         ) -> Result<PersonCreateResponse, crate::rest::runtime::Refusal> {
             Err(crate::rest::runtime::ApiError::NotImplemented.into())
         }
@@ -6290,7 +6311,10 @@ pub mod server {
         async fn person_update(
             &self,
             params: PersonUpdateParams,
-            body: openehr_rm::v1_2::demographic::person::Person,
+            body: crate::rest::runtime::Payload<
+                openehr_rm::v1_2::demographic::person::Person,
+                serde_json::Value,
+            >,
         ) -> Result<PersonUpdateResponse, crate::rest::runtime::Refusal> {
             Err(crate::rest::runtime::ApiError::NotImplemented.into())
         }
@@ -6305,7 +6329,10 @@ pub mod server {
         async fn role_create(
             &self,
             params: RoleCreateParams,
-            body: openehr_rm::v1_2::demographic::role::Role,
+            body: crate::rest::runtime::Payload<
+                openehr_rm::v1_2::demographic::role::Role,
+                serde_json::Value,
+            >,
         ) -> Result<RoleCreateResponse, crate::rest::runtime::Refusal> {
             Err(crate::rest::runtime::ApiError::NotImplemented.into())
         }
@@ -6320,7 +6347,10 @@ pub mod server {
         async fn role_update(
             &self,
             params: RoleUpdateParams,
-            body: openehr_rm::v1_2::demographic::role::Role,
+            body: crate::rest::runtime::Payload<
+                openehr_rm::v1_2::demographic::role::Role,
+                serde_json::Value,
+            >,
         ) -> Result<RoleUpdateResponse, crate::rest::runtime::Refusal> {
             Err(crate::rest::runtime::ApiError::NotImplemented.into())
         }
@@ -6778,7 +6808,7 @@ pub mod server {
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let params = AgentCreateParams::from_parts(&headers)?;
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let body = crate::rest::server::payload_body(&headers, &body)?;
             let reply: crate::rest::server::Reply = match api.agent_create(params, body).await? {
                 AgentCreateResponse::Created { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::CREATED);
@@ -6850,7 +6880,7 @@ pub mod server {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
             let params = AgentUpdateParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let body = crate::rest::server::payload_body(&headers, &body)?;
             let reply: crate::rest::server::Reply = match api.agent_update(params, body).await? {
                 AgentUpdateResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
@@ -6909,7 +6939,7 @@ pub mod server {
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let params = GroupCreateParams::from_parts(&headers)?;
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let body = crate::rest::server::payload_body(&headers, &body)?;
             let reply: crate::rest::server::Reply = match api.group_create(params, body).await? {
                 GroupCreateResponse::Created { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::CREATED);
@@ -6981,7 +7011,7 @@ pub mod server {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
             let params = GroupUpdateParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let body = crate::rest::server::payload_body(&headers, &body)?;
             let reply: crate::rest::server::Reply = match api.group_update(params, body).await? {
                 GroupUpdateResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
@@ -7040,7 +7070,7 @@ pub mod server {
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let params = OrganisationCreateParams::from_parts(&headers)?;
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let body = crate::rest::server::payload_body(&headers, &body)?;
             let reply: crate::rest::server::Reply =
                 match api.organisation_create(params, body).await? {
                     OrganisationCreateResponse::Created { body, headers } => {
@@ -7114,7 +7144,7 @@ pub mod server {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
             let params = OrganisationUpdateParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let body = crate::rest::server::payload_body(&headers, &body)?;
             let reply: crate::rest::server::Reply =
                 match api.organisation_update(params, body).await? {
                     OrganisationUpdateResponse::Ok { body, headers } => {
@@ -7175,7 +7205,7 @@ pub mod server {
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let params = PersonCreateParams::from_parts(&headers)?;
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let body = crate::rest::server::payload_body(&headers, &body)?;
             let reply: crate::rest::server::Reply = match api.person_create(params, body).await? {
                 PersonCreateResponse::Created { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::CREATED);
@@ -7247,7 +7277,7 @@ pub mod server {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
             let params = PersonUpdateParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let body = crate::rest::server::payload_body(&headers, &body)?;
             let reply: crate::rest::server::Reply = match api.person_update(params, body).await? {
                 PersonUpdateResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
@@ -7306,7 +7336,7 @@ pub mod server {
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let params = RoleCreateParams::from_parts(&headers)?;
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let body = crate::rest::server::payload_body(&headers, &body)?;
             let reply: crate::rest::server::Reply = match api.role_create(params, body).await? {
                 RoleCreateResponse::Created { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::CREATED);
@@ -7378,7 +7408,7 @@ pub mod server {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
             let params = RoleUpdateParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let body = crate::rest::server::payload_body(&headers, &body)?;
             let reply: crate::rest::server::Reply = match api.role_update(params, body).await? {
                 RoleUpdateResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);

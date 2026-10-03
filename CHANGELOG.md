@@ -45,6 +45,18 @@ workflow refuses a tag that has no matching section here.
   carries them as `request_media`. `definition_query_version_store`, which
   declares no `Content-Type` parameter, now names `text/plain`, so a
   forwarding intermediary can set the header.
+- **A Simplified Formats CONTRIBUTION has a typed envelope** (#3541). The
+  generated `NewContribution` is generic over its version content,
+  `NewContribution<T = Versionable>`, so the bare name stays the canonical
+  body and `NewContribution<serde_json::Value>` reads the envelope of a FLAT
+  or STRUCTURED CONTRIBUTION, whose envelope stays canonical while each
+  `versions[i].data` is simplified (ITS-REST `contribution_create`
+  §Simplified Formats). The generated server admits
+  `application/openehr.wt.flat+json` and
+  `application/openehr.wt.structured+json` on every operation whose
+  `Content-Type` parameter declares them, and hands the implementation a
+  `rest::runtime::Payload` (`Canonical`, `Flat`, `Structured`); XML and
+  any other type stay `415`.
 - **The `openehr-*` crates step to 0.0.80.**
 - **The `openehr-rm` attribute model covers the BASE foundation types and
   names reference targets** (#3537). The model (`v1_1::model`,

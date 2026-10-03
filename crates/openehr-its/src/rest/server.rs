@@ -40,7 +40,7 @@ use super::generated::system::server::SystemApi;
 use super::generated::{admin, definition, demographic, ehr, query, system};
 use super::routes::{Lookup, lookup};
 use super::runtime::{
-    ApiError, HeaderError, Refusal, ResponseHeaders, error_response, merge_headers,
+    ApiError, HeaderError, Payload, Refusal, ResponseHeaders, error_response, merge_headers,
 };
 
 /// The canonical JSON media type, the only one the typed router reads and
@@ -140,19 +140,76 @@ pub(crate) fn json_body<T: serde::de::DeserializeOwned>(
     })
 }
 
-/// The canonical-JSON request body as a `T`, or `None` when the request
-/// sends none.
+/// The Simplified Flat media type (ITS-REST overview `Resources.md`
+/// §Simplified Formats).
+const SIMPLIFIED_FLAT: &str = "application/openehr.wt.flat+json";
+
+/// The Simplified Structured media type (ITS-REST overview `Resources.md`
+/// §Simplified Formats).
+const SIMPLIFIED_STRUCTURED: &str = "application/openehr.wt.structured+json";
+
+/// The request body of an operation whose `Content-Type` admits the Simplified
+/// Formats, in the representation the header selects; no `Content-Type` reads
+/// as canonical JSON, like [`json_body`].
 ///
 /// # Errors
-/// As [`json_body`], for a body that is present.
-pub(crate) fn json_body_optional<T: serde::de::DeserializeOwned>(
+/// Returns [`ApiError::UnsupportedMediaType`] under any other media type, and
+/// [`ApiError::BadRequest`] for an absent body or one that is not the
+/// selected representation.
+pub(crate) fn payload_body<C, S>(
     headers: &HeaderMap,
     body: &[u8],
-) -> Result<Option<T>, ApiError> {
+) -> Result<Payload<C, S>, ApiError>
+where
+    C: serde::de::DeserializeOwned,
+    S: serde::de::DeserializeOwned,
+{
+    let media = headers
+        .get(CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .map(|text| {
+            text.split(';')
+                .next()
+                .unwrap_or_default()
+                .trim()
+                .to_ascii_lowercase()
+        });
+    let simplified = |body: &[u8]| -> Result<S, ApiError> {
+        if is_blank(body) {
+            return Err(ApiError::BadRequest(
+                "this operation requires a request body".to_owned(),
+            ));
+        }
+        crate::json::from_canonical_json(utf8(body)?).map_err(|error| {
+            ApiError::BadRequest(format!(
+                "the request body is not the documented shape: {error}"
+            ))
+        })
+    };
+    match media.as_deref() {
+        Some(SIMPLIFIED_FLAT) => simplified(body).map(Payload::Flat),
+        Some(SIMPLIFIED_STRUCTURED) => simplified(body).map(Payload::Structured),
+        _ => json_body(headers, body).map(Payload::Canonical),
+    }
+}
+
+/// The request body of an operation whose `Content-Type` admits the Simplified
+/// Formats, or `None` when the request sends none.
+///
+/// # Errors
+/// As [`payload_body`].
+pub(crate) fn payload_body_optional<C, S>(
+    headers: &HeaderMap,
+    body: &[u8],
+) -> Result<Option<Payload<C, S>>, ApiError>
+where
+    C: serde::de::DeserializeOwned,
+    S: serde::de::DeserializeOwned,
+{
     if is_blank(body) {
         return Ok(None);
     }
-    json_body(headers, body).map(Some)
+    payload_body(headers, body).map(Some)
 }
 
 /// The request body as text (an OPT 1.4 XML upload, an ADL 2 archetype),
