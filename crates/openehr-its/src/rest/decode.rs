@@ -18,10 +18,13 @@
 use std::fmt;
 use std::str::FromStr;
 
-use http::HeaderMap;
+use http::{HeaderMap, HeaderValue};
 
 use super::routes::RouteMatch;
-use super::runtime::ApiError;
+use super::runtime::{ApiError, Payload};
+
+/// The canonical JSON media type.
+const CANONICAL_JSON: &str = "application/json";
 
 /// Parses `raw`, the text of parameter `name` at `location`, as a `T`.
 fn parse<T>(location: &str, name: &str, raw: &str) -> Result<T, ApiError>
@@ -296,4 +299,156 @@ where
         .map(|line| parse("header", name, line))
         .collect::<Result<Vec<T>, ApiError>>()
         .map(Some)
+}
+
+/// Whether the request's `Content-Type` admits a canonical-JSON body.
+///
+/// ITS-REST: "A client MAY use the header `Content-Type: application/json` in
+/// the requests to specify the JSON payload format"
+/// (`ITS-REST/specifications/docs/overview/Resources.md` §JSON Format), so an
+/// absent header admits it.
+///
+/// # Errors
+/// Returns [`ApiError::UnsupportedMediaType`] for any other media type.
+fn admit_json(content_type: Option<&HeaderValue>) -> Result<(), ApiError> {
+    let Some(value) = content_type else {
+        return Ok(());
+    };
+    let refused = || {
+        ApiError::UnsupportedMediaType(format!(
+            "this operation reads canonical JSON, not `{}`",
+            String::from_utf8_lossy(value.as_bytes())
+        ))
+    };
+    let text = value.to_str().map_err(|_opaque| refused())?;
+    let media = text.split(';').next().unwrap_or_default().trim();
+    if media.eq_ignore_ascii_case(CANONICAL_JSON) {
+        Ok(())
+    } else {
+        Err(refused())
+    }
+}
+
+/// Whether `body` carries no content at all.
+fn is_blank(body: &[u8]) -> bool {
+    body.iter().all(u8::is_ascii_whitespace)
+}
+
+/// The body of a request as UTF-8 text.
+fn utf8(body: &[u8]) -> Result<&str, ApiError> {
+    std::str::from_utf8(body)
+        .map_err(|_not_utf8| ApiError::BadRequest("the request body is not UTF-8 text".to_owned()))
+}
+
+/// The canonical-JSON request body as a `T`, which the operation requires.
+///
+/// The body decodes through the type's own strict reader
+/// ([`crate::json::from_canonical_json`]): an undeclared or repeated member is
+/// a refusal, which ITS-REST classes as `400` ("syntactically invalid
+/// content", `Requests_and_responses.md` §HTTP status codes).
+///
+/// # Errors
+/// Returns [`ApiError::UnsupportedMediaType`] under another `Content-Type`,
+/// and [`ApiError::BadRequest`] for an absent body or one that is not a `T`.
+pub(crate) fn json_body<T: serde::de::DeserializeOwned>(
+    content_type: Option<&HeaderValue>,
+    body: &[u8],
+) -> Result<T, ApiError> {
+    admit_json(content_type)?;
+    if is_blank(body) {
+        return Err(ApiError::BadRequest(
+            "this operation requires a request body".to_owned(),
+        ));
+    }
+    crate::json::from_canonical_json(utf8(body)?).map_err(|error| {
+        ApiError::BadRequest(format!(
+            "the request body is not the documented shape: {error}"
+        ))
+    })
+}
+
+/// The Simplified Flat media type (ITS-REST overview `Resources.md`
+/// §Simplified Formats).
+const SIMPLIFIED_FLAT: &str = "application/openehr.wt.flat+json";
+
+/// The Simplified Structured media type (ITS-REST overview `Resources.md`
+/// §Simplified Formats).
+const SIMPLIFIED_STRUCTURED: &str = "application/openehr.wt.structured+json";
+
+/// The request body of an operation whose `Content-Type` admits the Simplified
+/// Formats, in the representation the header selects; no `Content-Type` reads
+/// as canonical JSON, like [`json_body`].
+///
+/// # Errors
+/// Returns [`ApiError::UnsupportedMediaType`] under any other media type, and
+/// [`ApiError::BadRequest`] for an absent body or one that is not the
+/// selected representation.
+pub(crate) fn payload_body<C, S>(
+    content_type: Option<&HeaderValue>,
+    body: &[u8],
+) -> Result<Payload<C, S>, ApiError>
+where
+    C: serde::de::DeserializeOwned,
+    S: serde::de::DeserializeOwned,
+{
+    let media = content_type
+        .and_then(|value| value.to_str().ok())
+        .map(|text| {
+            text.split(';')
+                .next()
+                .unwrap_or_default()
+                .trim()
+                .to_ascii_lowercase()
+        });
+    let simplified = |body: &[u8]| -> Result<S, ApiError> {
+        if is_blank(body) {
+            return Err(ApiError::BadRequest(
+                "this operation requires a request body".to_owned(),
+            ));
+        }
+        crate::json::from_canonical_json(utf8(body)?).map_err(|error| {
+            ApiError::BadRequest(format!(
+                "the request body is not the documented shape: {error}"
+            ))
+        })
+    };
+    match media.as_deref() {
+        Some(SIMPLIFIED_FLAT) => simplified(body).map(Payload::Flat),
+        Some(SIMPLIFIED_STRUCTURED) => simplified(body).map(Payload::Structured),
+        _ => json_body(content_type, body).map(Payload::Canonical),
+    }
+}
+
+/// The request body of an operation whose `Content-Type` admits the Simplified
+/// Formats, or `None` when the request sends none.
+///
+/// # Errors
+/// As [`payload_body`].
+pub(crate) fn payload_body_optional<C, S>(
+    content_type: Option<&HeaderValue>,
+    body: &[u8],
+) -> Result<Option<Payload<C, S>>, ApiError>
+where
+    C: serde::de::DeserializeOwned,
+    S: serde::de::DeserializeOwned,
+{
+    if is_blank(body) {
+        return Ok(None);
+    }
+    payload_body(content_type, body).map(Some)
+}
+
+/// The request body as text (an OPT 1.4 XML upload, an ADL 2 archetype),
+/// which the operation requires.
+///
+/// # Errors
+/// Returns [`ApiError::BadRequest`] for an absent body or one that is not
+/// UTF-8.
+pub(crate) fn text_body(body: &[u8]) -> Result<String, ApiError> {
+    if body.is_empty() {
+        return Err(ApiError::BadRequest(
+            "this operation requires a request body".to_owned(),
+        ));
+    }
+    utf8(body).map(str::to_owned)
 }

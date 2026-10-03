@@ -128,6 +128,53 @@ pub(crate) fn strip_etag(raw: &str) -> &str {
 mod tests {
     use super::*;
 
+    /// Every ITS-REST path identifier has a parser here for its class: a
+    /// `HIER_OBJECT_ID` is read as the UUID the OAS declares (`format: uuid`,
+    /// [`parse_ehr_id`], [`parse_uuid`]), an `OBJECT_VERSION_ID` by
+    /// [`parse_version_uid`], and a `UID_BASED_ID` by the platform's
+    /// `parse_uid_based_id`. A re-vendored OAS that gives a `HIER_OBJECT_ID`
+    /// another form fails here before it reaches the UUID-keyed storage.
+    #[test]
+    fn every_path_identifier_class_has_its_parser() {
+        use openehr_its::rest::generated::{admin, definition, demographic, ehr, query, system};
+        use openehr_its::rest::routes::{IdentifierClass, Param, ParamKind, ParamLocation};
+        let tables: [&[&[Param]]; 6] = [
+            admin::ROUTE_PARAMS,
+            definition::ROUTE_PARAMS,
+            demographic::ROUTE_PARAMS,
+            ehr::ROUTE_PARAMS,
+            query::ROUTE_PARAMS,
+            system::ROUTE_PARAMS,
+        ];
+        let mut classes = std::collections::BTreeSet::new();
+        for row in tables.into_iter().flatten() {
+            for p in row.iter().filter(|p| p.location == ParamLocation::Path) {
+                let Some(class) = p.identifier else { continue };
+                classes.insert(class.as_str());
+                match class {
+                    IdentifierClass::HierObject => {
+                        assert_eq!(p.kind, ParamKind::Uuid, "{}", p.name);
+                    }
+                    IdentifierClass::ObjectVersion => {
+                        assert!(parse_version_uid(UID).is_ok(), "{}", p.name);
+                    }
+                    IdentifierClass::UidBased => {
+                        assert!(
+                            ferroehr::versioning::object_version_id::parse_uid_based_id(UID)
+                                .is_ok(),
+                            "{}",
+                            p.name
+                        );
+                    }
+                }
+            }
+        }
+        assert_eq!(
+            classes.into_iter().collect::<Vec<_>>(),
+            ["HIER_OBJECT_ID", "OBJECT_VERSION_ID", "UID_BASED_ID"]
+        );
+    }
+
     const UID: &str = "8849182c-82ad-4088-a07f-48ead4180515::openEHRSys.example.com::2";
 
     #[test]

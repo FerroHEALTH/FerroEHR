@@ -19,9 +19,9 @@ use openehr_its::rest::generated::demographic::ContributionGetParams;
 use openehr_its::rest::runtime::ApiError;
 
 use crate::api::RequestParts;
+use crate::negotiate;
 use crate::overview::error::RestError;
 use crate::state::AppState;
-use crate::{negotiate, params};
 use ferroehr::service::response::ServiceResponse;
 
 /// The `contribution_*` operations.
@@ -31,7 +31,6 @@ pub(super) async fn run(
     parts: RequestParts,
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let q = parts.query.as_deref();
     let base = state.config().server.base_path.clone();
 
     match op {
@@ -54,7 +53,10 @@ pub(super) async fn run(
             ))
         }
         "contribution_get" => {
-            let p = params::build::<ContributionGetParams>(&parts.path, q, h)?;
+            let p = parts.decode(
+                ContributionGetParams::from_request,
+                ContributionGetParams::PARAMS,
+            )?;
             let uid = p.contribution_uid.clone();
             let resp = state
                 .backend()

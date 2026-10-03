@@ -25,9 +25,9 @@ use openehr_its::rest::generated::definition::{
 };
 
 use crate::api::RequestParts;
+use crate::negotiate;
 use crate::overview::error::RestError;
 use crate::state::AppState;
-use crate::{negotiate, params};
 
 /// The default query formalism when `query_type` is absent
 /// (`parameters/query/query_type.yaml`: `default: "AQL"`).
@@ -37,7 +37,10 @@ const DEFAULT_QUERY_TYPE: &str = "AQL";
 /// under the qualified name (a prefix pattern; wildcard on empty).
 pub(super) async fn list(state: &AppState, parts: &RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let p = params::build::<DefinitionQueryListParams>(&parts.path, parts.query.as_deref(), h)?;
+    let p = parts.decode(
+        DefinitionQueryListParams::from_request,
+        DefinitionQueryListParams::PARAMS,
+    )?;
     Ok(negotiate::respond(
         h,
         StatusCode::OK,
@@ -74,8 +77,10 @@ pub(super) async fn list_all(
 /// unsupported-formalism reject rather than a blanket "invalid AQL" 400.
 pub(super) async fn store(state: &AppState, parts: &RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let p =
-        params::build::<DefinitionQueryStoreYamlParams>(&parts.path, parts.query.as_deref(), h)?;
+    let p = parts.decode(
+        DefinitionQueryStoreYamlParams::from_request,
+        DefinitionQueryStoreYamlParams::PARAMS,
+    )?;
     let name = p.qualified_query_name.clone();
     let query_type = p
         .query_type
@@ -112,8 +117,10 @@ pub(super) async fn version_get(
     parts: &RequestParts,
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let p =
-        params::build::<DefinitionQueryVersionGetParams>(&parts.path, parts.query.as_deref(), h)?;
+    let p = parts.decode(
+        DefinitionQueryVersionGetParams::from_request,
+        DefinitionQueryVersionGetParams::PARAMS,
+    )?;
     Ok(negotiate::respond(
         h,
         StatusCode::OK,
@@ -134,10 +141,9 @@ pub(super) async fn version_store(
     parts: &RequestParts,
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let p = params::build::<DefinitionQueryVersionStoreYamlParams>(
-        &parts.path,
-        parts.query.as_deref(),
-        h,
+    let p = parts.decode(
+        DefinitionQueryVersionStoreYamlParams::from_request,
+        DefinitionQueryVersionStoreYamlParams::PARAMS,
     )?;
     let name = p.qualified_query_name.clone();
     let version = p.version.clone();

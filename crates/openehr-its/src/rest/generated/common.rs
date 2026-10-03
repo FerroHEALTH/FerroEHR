@@ -260,7 +260,7 @@ impl<'de> ::serde::Deserialize<'de> for UpdateAudit {
     fn deserialize<__D: ::serde::Deserializer<'de>>(
         __deserializer: __D,
     ) -> ::core::result::Result<Self, __D::Error> {
-        const __TAGS: &[&str] = &["UPDATE_ATTESTATION", "UPDATE_AUDIT"];
+        const __TAGS: &[&str] = &["UPDATE_ATTESTATION", "UPDATE_AUDIT", "AUDIT_DETAILS"];
         struct __Visitor;
         impl<'de> ::serde::de::Visitor<'de> for __Visitor {
             type Value = UpdateAudit;
@@ -289,6 +289,11 @@ impl<'de> ::serde::Deserialize<'de> for UpdateAudit {
                             "UPDATE_AUDIT" => ::core::result::Result::Ok(UpdateAudit::UpdateAudit(
                                 ::serde::Deserialize::deserialize(__rest)?,
                             )),
+                            "AUDIT_DETAILS" => {
+                                ::core::result::Result::Ok(UpdateAudit::UpdateAudit(
+                                    ::serde::Deserialize::deserialize(__rest)?,
+                                ))
+                            }
                             __other => ::core::result::Result::Err(
                                 ::openehr_base::serde_support::unexpected_type(
                                     "UpdateAudit",
@@ -373,7 +378,10 @@ pub struct UpdateVersion<T> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub attestations: Option<Vec<UpdateAttestation>>,
     /// The `data` property of `UpdateVersion`.
-    pub data: T,
+    /// OPTIONAL by the docs text — RM common original_version.adoc §Attributes — `data` is `0..1`; RM common master06-change_control_package.adoc §Logical Deletion — "delete its `_data_`" and "set the `_lifecycle_state_` value to the code for `deleted`"
+    /// (A logical-deletion member carries no data; the released OAS lists `data` as required, which makes the RM's own deletion procedure unrepresentable.)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data: Option<T>,
     /// The `commit_audit` property of `UpdateVersion`.
     pub commit_audit: UpdateAudit,
     /// The undeclared (`additionalProperties`) members of `UpdateVersion`, which

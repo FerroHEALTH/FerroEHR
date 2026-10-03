@@ -132,10 +132,12 @@ pub(super) async fn run(
 /// declares.
 async fn create(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let q = parts.query.as_deref();
     let created = StatusCode::CREATED;
     let base = state.config().server.base_path.clone();
-    let p = params::build::<CompositionCreateParams>(&parts.path, q, h)?;
+    let p = parts.decode(
+        CompositionCreateParams::from_request,
+        CompositionCreateParams::PARAMS,
+    )?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
     let body = decode_composition_body(&state, h, &parts.body).await?;
     let uv = super::mk_update_version(
@@ -183,7 +185,10 @@ async fn get(state: AppState, parts: RequestParts) -> Result<Response, RestError
     let ok = StatusCode::OK;
     let no_content = StatusCode::NO_CONTENT;
     let base = state.config().server.base_path.clone();
-    let p = params::build::<CompositionGetParams>(&parts.path, q, h)?;
+    let p = parts.decode(
+        CompositionGetParams::from_request,
+        CompositionGetParams::PARAMS,
+    )?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
     let uid = parse_uid_based_id(&p.uid_based_id)?;
     // A bare COMPOSITION carries no `commit_audit`, so `Last-Modified`
@@ -273,11 +278,13 @@ async fn get(state: AppState, parts: RequestParts) -> Result<Response, RestError
 /// operation declares.
 async fn update(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let q = parts.query.as_deref();
     let ok = StatusCode::OK;
     let no_content = StatusCode::NO_CONTENT;
     let base = state.config().server.base_path.clone();
-    let p = params::build::<CompositionUpdateParams>(&parts.path, q, h)?;
+    let p = parts.decode(
+        CompositionUpdateParams::from_request,
+        CompositionUpdateParams::PARAMS,
+    )?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
     let uid = parse_uid_based_id(&p.uid_based_id)?;
     let body = decode_composition_body(&state, h, &parts.body).await?;
@@ -360,9 +367,11 @@ async fn update(state: AppState, parts: RequestParts) -> Result<Response, RestEr
 /// The parameter, precondition and commit rejections the operation declares.
 async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let q = parts.query.as_deref();
     let base = state.config().server.base_path.clone();
-    let p = params::build::<CompositionDeleteParams>(&parts.path, q, h)?;
+    let p = parts.decode(
+        CompositionDeleteParams::from_request,
+        CompositionDeleteParams::PARAMS,
+    )?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
     // composition_delete.yaml: the uid_based_id MUST be an OBJECT_VERSION_ID
     // (the preceding_version_uid to delete); a bare HIER_OBJECT_ID → 400.
@@ -436,9 +445,11 @@ async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestEr
 /// The parameter and read rejections the operation declares.
 async fn tags_get(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let q = parts.query.as_deref();
     let ok = StatusCode::OK;
-    let p = params::build::<CompositionTagsGetParams>(&parts.path, q, h)?;
+    let p = parts.decode(
+        CompositionTagsGetParams::from_request,
+        CompositionTagsGetParams::PARAMS,
+    )?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
     let tags = state
         .backend()
@@ -458,10 +469,12 @@ async fn tags_get(state: AppState, parts: RequestParts) -> Result<Response, Rest
 /// [`crate::api::item_tags::write_body`] states.
 async fn tags_update(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let q = parts.query.as_deref();
     let ok = StatusCode::OK;
     let no_content = StatusCode::NO_CONTENT;
-    let p = params::build::<CompositionTagsUpdateParams>(&parts.path, q, h)?;
+    let p = parts.decode(
+        CompositionTagsUpdateParams::from_request,
+        CompositionTagsUpdateParams::PARAMS,
+    )?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
     let body = item_tags::write_body(h, &parts.body)?;
     let tags = state
@@ -483,10 +496,11 @@ async fn tags_update(state: AppState, parts: RequestParts) -> Result<Response, R
 /// # Errors
 /// The parameter and delete rejections the operation declares.
 async fn tags_delete(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
-    let h = &parts.headers;
-    let q = parts.query.as_deref();
     let no_content = StatusCode::NO_CONTENT;
-    let p = params::build::<CompositionTagsDeleteParams>(&parts.path, q, h)?;
+    let p = parts.decode(
+        CompositionTagsDeleteParams::from_request,
+        CompositionTagsDeleteParams::PARAMS,
+    )?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
     state
         .backend()

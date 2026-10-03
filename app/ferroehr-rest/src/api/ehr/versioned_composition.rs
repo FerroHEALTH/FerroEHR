@@ -26,10 +26,10 @@ use openehr_rm::prelude::{Composition, RevisionHistory, Version, VersionedCompos
 
 use crate::api::RequestParts;
 use crate::api::ehr::VERSION_ROOT_TAG;
+use crate::negotiate;
 use crate::overview::error::RestError;
 use crate::overview::version_id::{parse_ehr_id, parse_uuid, parse_version_uid};
 use crate::state::AppState;
-use crate::{negotiate, params};
 
 pub(super) async fn run(
     state: AppState,
@@ -42,7 +42,10 @@ pub(super) async fn run(
 
     match op {
         "versioned_composition_get" => {
-            let p = params::build::<VersionedCompositionGetParams>(&parts.path, q, h)?;
+            let p = parts.decode(
+                VersionedCompositionGetParams::from_request,
+                VersionedCompositionGetParams::PARAMS,
+            )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let vo_id = parse_uuid(&p.versioned_object_uid, "versioned_object_uid")?;
             let resp = state
@@ -58,7 +61,10 @@ pub(super) async fn run(
             ))
         }
         "versioned_composition_revision_history" => {
-            let p = params::build::<VersionedCompositionRevisionHistoryParams>(&parts.path, q, h)?;
+            let p = parts.decode(
+                VersionedCompositionRevisionHistoryParams::from_request,
+                VersionedCompositionRevisionHistoryParams::PARAMS,
+            )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let vo_id = parse_uuid(&p.versioned_object_uid, "versioned_object_uid")?;
             let resp = state
@@ -74,7 +80,10 @@ pub(super) async fn run(
             ))
         }
         "versioned_composition_version_get_at_time" => {
-            let p = params::build::<VersionedCompositionVersionGetAtTimeParams>(&parts.path, q, h)?;
+            let p = parts.decode(
+                VersionedCompositionVersionGetAtTimeParams::from_request,
+                VersionedCompositionVersionGetAtTimeParams::PARAMS,
+            )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let vo_id = parse_uuid(&p.versioned_object_uid, "versioned_object_uid")?;
             let body = state
@@ -94,7 +103,10 @@ pub(super) async fn run(
             ))
         }
         "versioned_composition_version_get_by_id" => {
-            let p = params::build::<VersionedCompositionVersionGetByIdParams>(&parts.path, q, h)?;
+            let p = parts.decode(
+                VersionedCompositionVersionGetByIdParams::from_request,
+                VersionedCompositionVersionGetByIdParams::PARAMS,
+            )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let vo_id = parse_uuid(&p.versioned_object_uid, "versioned_object_uid")?;
             let ovid = parse_version_uid(&p.version_uid)?;

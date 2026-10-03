@@ -48,6 +48,55 @@ pub enum Payload<C, S> {
     Structured(S),
 }
 
+/// A response body in the full or the identifier form a `Prefer` header selects.
+///
+/// `Prefer: return=representation` asks for the full resource and
+/// `return=identifier` for its `Identifier` (ITS-REST overview
+/// `Requests_and_responses.md` §Prefer). The OAS declares such a body as `oneOf` the resource schema and
+/// `Identifier`. The two are disjoint by shape: `Identifier` requires `uid` as a
+/// string, and no full representation carries one, so a body is read as the
+/// full representation first and as the identifier form otherwise.
+#[derive(Debug, Clone)]
+pub enum Representation<T> {
+    /// The full representation.
+    Full(T),
+    /// The identifier form.
+    Identifier(super::generated::common::Identifier),
+}
+
+impl<T: serde::Serialize> serde::Serialize for Representation<T> {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            Self::Full(full) => full.serialize(serializer),
+            Self::Identifier(identifier) => identifier.serialize(serializer),
+        }
+    }
+}
+
+impl<'de, T: serde::de::DeserializeOwned> serde::Deserialize<'de> for Representation<T> {
+    #[expect(
+        clippy::disallowed_types,
+        reason = "a `oneOf` body is read twice, as the full and as the identifier form, so the \
+                  wire value is buffered once (#1694)"
+    )]
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        match serde_json::from_value::<T>(value.clone()) {
+            Ok(full) => Ok(Self::Full(full)),
+            Err(full) => {
+                serde_json::from_value(value)
+                    .map(Self::Identifier)
+                    .map_err(|identifier| {
+                        serde::de::Error::custom(format!(
+                            "neither the full representation ({full}) nor the identifier form \
+                     ({identifier})"
+                        ))
+                    })
+            }
+        }
+    }
+}
+
 /// The error a REST handler may return; carries the HTTP status the openEHR
 /// ITS-REST contract prescribes.
 #[derive(Debug, thiserror::Error)]

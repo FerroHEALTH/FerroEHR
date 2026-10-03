@@ -355,6 +355,24 @@ impl AgentCreateParams {
     }
 }
 
+/// Decodes the request body of `agent_create` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn agent_create_request_body(
+    content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<
+    crate::rest::runtime::Payload<openehr_rm::v1_2::demographic::agent::Agent, serde_json::Value>,
+    crate::rest::runtime::ApiError,
+> {
+    crate::rest::decode::payload_body(content_type, body)
+}
+
 /// Parameters for `agent_get` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentGetParams {
@@ -595,6 +613,24 @@ impl AgentUpdateParams {
     }
 }
 
+/// Decodes the request body of `agent_update` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn agent_update_request_body(
+    content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<
+    crate::rest::runtime::Payload<openehr_rm::v1_2::demographic::agent::Agent, serde_json::Value>,
+    crate::rest::runtime::ApiError,
+> {
+    crate::rest::decode::payload_body(content_type, body)
+}
+
 /// Parameters for `agent_delete` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentDeleteParams {
@@ -822,6 +858,24 @@ impl GroupCreateParams {
             )?,
         })
     }
+}
+
+/// Decodes the request body of `group_create` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn group_create_request_body(
+    content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<
+    crate::rest::runtime::Payload<openehr_rm::v1_2::demographic::group::Group, serde_json::Value>,
+    crate::rest::runtime::ApiError,
+> {
+    crate::rest::decode::payload_body(content_type, body)
 }
 
 /// Parameters for `group_get` (path/query/header).
@@ -1064,6 +1118,24 @@ impl GroupUpdateParams {
     }
 }
 
+/// Decodes the request body of `group_update` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn group_update_request_body(
+    content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<
+    crate::rest::runtime::Payload<openehr_rm::v1_2::demographic::group::Group, serde_json::Value>,
+    crate::rest::runtime::ApiError,
+> {
+    crate::rest::decode::payload_body(content_type, body)
+}
+
 /// Parameters for `group_delete` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GroupDeleteParams {
@@ -1291,6 +1363,27 @@ impl OrganisationCreateParams {
             )?,
         })
     }
+}
+
+/// Decodes the request body of `organisation_create` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn organisation_create_request_body(
+    content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<
+    crate::rest::runtime::Payload<
+        openehr_rm::v1_2::demographic::organisation::Organisation,
+        serde_json::Value,
+    >,
+    crate::rest::runtime::ApiError,
+> {
+    crate::rest::decode::payload_body(content_type, body)
 }
 
 /// Parameters for `organisation_get` (path/query/header).
@@ -1533,6 +1626,27 @@ impl OrganisationUpdateParams {
     }
 }
 
+/// Decodes the request body of `organisation_update` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn organisation_update_request_body(
+    content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<
+    crate::rest::runtime::Payload<
+        openehr_rm::v1_2::demographic::organisation::Organisation,
+        serde_json::Value,
+    >,
+    crate::rest::runtime::ApiError,
+> {
+    crate::rest::decode::payload_body(content_type, body)
+}
+
 /// Parameters for `organisation_delete` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OrganisationDeleteParams {
@@ -1760,6 +1874,24 @@ impl PersonCreateParams {
             )?,
         })
     }
+}
+
+/// Decodes the request body of `person_create` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn person_create_request_body(
+    content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<
+    crate::rest::runtime::Payload<openehr_rm::v1_2::demographic::person::Person, serde_json::Value>,
+    crate::rest::runtime::ApiError,
+> {
+    crate::rest::decode::payload_body(content_type, body)
 }
 
 /// Parameters for `person_get` (path/query/header).
@@ -2002,6 +2134,24 @@ impl PersonUpdateParams {
     }
 }
 
+/// Decodes the request body of `person_update` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn person_update_request_body(
+    content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<
+    crate::rest::runtime::Payload<openehr_rm::v1_2::demographic::person::Person, serde_json::Value>,
+    crate::rest::runtime::ApiError,
+> {
+    crate::rest::decode::payload_body(content_type, body)
+}
+
 /// Parameters for `person_delete` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PersonDeleteParams {
@@ -2229,6 +2379,24 @@ impl RoleCreateParams {
             )?,
         })
     }
+}
+
+/// Decodes the request body of `role_create` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn role_create_request_body(
+    content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<
+    crate::rest::runtime::Payload<openehr_rm::v1_2::demographic::role::Role, serde_json::Value>,
+    crate::rest::runtime::ApiError,
+> {
+    crate::rest::decode::payload_body(content_type, body)
 }
 
 /// Parameters for `role_get` (path/query/header).
@@ -2469,6 +2637,24 @@ impl RoleUpdateParams {
             )?,
         })
     }
+}
+
+/// Decodes the request body of `role_update` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn role_update_request_body(
+    content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<
+    crate::rest::runtime::Payload<openehr_rm::v1_2::demographic::role::Role, serde_json::Value>,
+    crate::rest::runtime::ApiError,
+> {
+    crate::rest::decode::payload_body(content_type, body)
 }
 
 /// Parameters for `role_delete` (path/query/header).
@@ -2963,6 +3149,21 @@ impl ContributionCreateParams {
     }
 }
 
+/// Decodes the request body of `contribution_create` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn contribution_create_request_body(
+    content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<NewContribution, crate::rest::runtime::ApiError> {
+    crate::rest::decode::json_body(content_type, body)
+}
+
 /// Parameters for `contribution_get` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContributionGetParams {
@@ -3258,6 +3459,21 @@ impl AgentTagsUpdateParams {
     }
 }
 
+/// Decodes the request body of `agent_tags_update` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn agent_tags_update_request_body(
+    content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<Vec<super::common::UpdateItemTag>, crate::rest::runtime::ApiError> {
+    crate::rest::decode::json_body(content_type, body)
+}
+
 /// Parameters for `agent_tags_delete` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentTagsDeleteParams {
@@ -3463,6 +3679,21 @@ impl GroupTagsUpdateParams {
             content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
         })
     }
+}
+
+/// Decodes the request body of `group_tags_update` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn group_tags_update_request_body(
+    content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<Vec<super::common::UpdateItemTag>, crate::rest::runtime::ApiError> {
+    crate::rest::decode::json_body(content_type, body)
 }
 
 /// Parameters for `group_tags_delete` (path/query/header).
@@ -3672,6 +3903,21 @@ impl OrganisationTagsUpdateParams {
     }
 }
 
+/// Decodes the request body of `organisation_tags_update` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn organisation_tags_update_request_body(
+    content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<Vec<super::common::UpdateItemTag>, crate::rest::runtime::ApiError> {
+    crate::rest::decode::json_body(content_type, body)
+}
+
 /// Parameters for `organisation_tags_delete` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OrganisationTagsDeleteParams {
@@ -3879,6 +4125,21 @@ impl PersonTagsUpdateParams {
     }
 }
 
+/// Decodes the request body of `person_tags_update` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn person_tags_update_request_body(
+    content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<Vec<super::common::UpdateItemTag>, crate::rest::runtime::ApiError> {
+    crate::rest::decode::json_body(content_type, body)
+}
+
 /// Parameters for `person_tags_delete` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PersonTagsDeleteParams {
@@ -4084,6 +4345,21 @@ impl RoleTagsUpdateParams {
             content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
         })
     }
+}
+
+/// Decodes the request body of `role_tags_update` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn role_tags_update_request_body(
+    content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<Vec<super::common::UpdateItemTag>, crate::rest::runtime::ApiError> {
+    crate::rest::decode::json_body(content_type, body)
 }
 
 /// Parameters for `role_tags_delete` (path/query/header).
@@ -5592,7 +5868,9 @@ pub mod server {
         /// The `201` answer.
         Created {
             /// The body, sent as canonical JSON; `None` sends no body.
-            body: Option<serde_json::Value>,
+            body: Option<
+                crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::agent::Agent>,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: AgentCreateCreatedHeaders,
         },
@@ -5625,7 +5903,7 @@ pub mod server {
         /// The `200` answer.
         Ok {
             /// The body, sent as canonical JSON.
-            body: serde_json::Value,
+            body: crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::agent::Agent>,
             /// The response headers the OAS declares for this answer.
             headers: AgentUpdateOkHeaders,
         },
@@ -5654,7 +5932,9 @@ pub mod server {
         /// The `201` answer.
         Created {
             /// The body, sent as canonical JSON; `None` sends no body.
-            body: Option<serde_json::Value>,
+            body: Option<
+                crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::group::Group>,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: GroupCreateCreatedHeaders,
         },
@@ -5687,7 +5967,7 @@ pub mod server {
         /// The `200` answer.
         Ok {
             /// The body, sent as canonical JSON.
-            body: serde_json::Value,
+            body: crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::group::Group>,
             /// The response headers the OAS declares for this answer.
             headers: GroupUpdateOkHeaders,
         },
@@ -5716,7 +5996,11 @@ pub mod server {
         /// The `201` answer.
         Created {
             /// The body, sent as canonical JSON; `None` sends no body.
-            body: Option<serde_json::Value>,
+            body: Option<
+                crate::rest::runtime::Representation<
+                    openehr_rm::v1_2::demographic::organisation::Organisation,
+                >,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: OrganisationCreateCreatedHeaders,
         },
@@ -5749,7 +6033,9 @@ pub mod server {
         /// The `200` answer.
         Ok {
             /// The body, sent as canonical JSON.
-            body: serde_json::Value,
+            body: crate::rest::runtime::Representation<
+                openehr_rm::v1_2::demographic::organisation::Organisation,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: OrganisationUpdateOkHeaders,
         },
@@ -5778,7 +6064,9 @@ pub mod server {
         /// The `201` answer.
         Created {
             /// The body, sent as canonical JSON; `None` sends no body.
-            body: Option<serde_json::Value>,
+            body: Option<
+                crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::person::Person>,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: PersonCreateCreatedHeaders,
         },
@@ -5811,7 +6099,8 @@ pub mod server {
         /// The `200` answer.
         Ok {
             /// The body, sent as canonical JSON.
-            body: serde_json::Value,
+            body:
+                crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::person::Person>,
             /// The response headers the OAS declares for this answer.
             headers: PersonUpdateOkHeaders,
         },
@@ -5840,7 +6129,9 @@ pub mod server {
         /// The `201` answer.
         Created {
             /// The body, sent as canonical JSON; `None` sends no body.
-            body: Option<serde_json::Value>,
+            body: Option<
+                crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::role::Role>,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: RoleCreateCreatedHeaders,
         },
@@ -5873,7 +6164,7 @@ pub mod server {
         /// The `200` answer.
         Ok {
             /// The body, sent as canonical JSON.
-            body: serde_json::Value,
+            body: crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::role::Role>,
             /// The response headers the OAS declares for this answer.
             headers: RoleUpdateOkHeaders,
         },
@@ -5954,7 +6245,11 @@ pub mod server {
         /// The `201` answer.
         Created {
             /// The body, sent as canonical JSON; `None` sends no body.
-            body: Option<serde_json::Value>,
+            body: Option<
+                crate::rest::runtime::Representation<
+                    openehr_rm::v1_2::common::change_control::contribution::Contribution,
+                >,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: ContributionCreateCreatedHeaders,
         },
@@ -6808,7 +7103,7 @@ pub mod server {
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let params = AgentCreateParams::from_parts(&headers)?;
-            let body = crate::rest::server::payload_body(&headers, &body)?;
+            let body = agent_create_request_body(headers.get(http::header::CONTENT_TYPE), &body)?;
             let reply: crate::rest::server::Reply = match api.agent_create(params, body).await? {
                 AgentCreateResponse::Created { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::CREATED);
@@ -6880,7 +7175,7 @@ pub mod server {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
             let params = AgentUpdateParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::payload_body(&headers, &body)?;
+            let body = agent_update_request_body(headers.get(http::header::CONTENT_TYPE), &body)?;
             let reply: crate::rest::server::Reply = match api.agent_update(params, body).await? {
                 AgentUpdateResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
@@ -6939,7 +7234,7 @@ pub mod server {
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let params = GroupCreateParams::from_parts(&headers)?;
-            let body = crate::rest::server::payload_body(&headers, &body)?;
+            let body = group_create_request_body(headers.get(http::header::CONTENT_TYPE), &body)?;
             let reply: crate::rest::server::Reply = match api.group_create(params, body).await? {
                 GroupCreateResponse::Created { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::CREATED);
@@ -7011,7 +7306,7 @@ pub mod server {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
             let params = GroupUpdateParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::payload_body(&headers, &body)?;
+            let body = group_update_request_body(headers.get(http::header::CONTENT_TYPE), &body)?;
             let reply: crate::rest::server::Reply = match api.group_update(params, body).await? {
                 GroupUpdateResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
@@ -7070,7 +7365,8 @@ pub mod server {
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let params = OrganisationCreateParams::from_parts(&headers)?;
-            let body = crate::rest::server::payload_body(&headers, &body)?;
+            let body =
+                organisation_create_request_body(headers.get(http::header::CONTENT_TYPE), &body)?;
             let reply: crate::rest::server::Reply =
                 match api.organisation_create(params, body).await? {
                     OrganisationCreateResponse::Created { body, headers } => {
@@ -7144,7 +7440,8 @@ pub mod server {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
             let params = OrganisationUpdateParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::payload_body(&headers, &body)?;
+            let body =
+                organisation_update_request_body(headers.get(http::header::CONTENT_TYPE), &body)?;
             let reply: crate::rest::server::Reply =
                 match api.organisation_update(params, body).await? {
                     OrganisationUpdateResponse::Ok { body, headers } => {
@@ -7205,7 +7502,7 @@ pub mod server {
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let params = PersonCreateParams::from_parts(&headers)?;
-            let body = crate::rest::server::payload_body(&headers, &body)?;
+            let body = person_create_request_body(headers.get(http::header::CONTENT_TYPE), &body)?;
             let reply: crate::rest::server::Reply = match api.person_create(params, body).await? {
                 PersonCreateResponse::Created { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::CREATED);
@@ -7277,7 +7574,7 @@ pub mod server {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
             let params = PersonUpdateParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::payload_body(&headers, &body)?;
+            let body = person_update_request_body(headers.get(http::header::CONTENT_TYPE), &body)?;
             let reply: crate::rest::server::Reply = match api.person_update(params, body).await? {
                 PersonUpdateResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
@@ -7336,7 +7633,7 @@ pub mod server {
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let params = RoleCreateParams::from_parts(&headers)?;
-            let body = crate::rest::server::payload_body(&headers, &body)?;
+            let body = role_create_request_body(headers.get(http::header::CONTENT_TYPE), &body)?;
             let reply: crate::rest::server::Reply = match api.role_create(params, body).await? {
                 RoleCreateResponse::Created { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::CREATED);
@@ -7408,7 +7705,7 @@ pub mod server {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
             let params = RoleUpdateParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::payload_body(&headers, &body)?;
+            let body = role_update_request_body(headers.get(http::header::CONTENT_TYPE), &body)?;
             let reply: crate::rest::server::Reply = match api.role_update(params, body).await? {
                 RoleUpdateResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
@@ -7591,7 +7888,8 @@ pub mod server {
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let params = ContributionCreateParams::from_parts(&headers)?;
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let body =
+                contribution_create_request_body(headers.get(http::header::CONTENT_TYPE), &body)?;
             let reply: crate::rest::server::Reply =
                 match api.contribution_create(params, body).await? {
                     ContributionCreateResponse::Created { body, headers } => {
@@ -7715,7 +8013,8 @@ pub mod server {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
             let params = AgentTagsUpdateParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let body =
+                agent_tags_update_request_body(headers.get(http::header::CONTENT_TYPE), &body)?;
             let reply: crate::rest::server::Reply =
                 match api.agent_tags_update(params, body).await? {
                     AgentTagsUpdateResponse::Ok { body, headers } => {
@@ -7805,7 +8104,8 @@ pub mod server {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
             let params = GroupTagsUpdateParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let body =
+                group_tags_update_request_body(headers.get(http::header::CONTENT_TYPE), &body)?;
             let reply: crate::rest::server::Reply =
                 match api.group_tags_update(params, body).await? {
                     GroupTagsUpdateResponse::Ok { body, headers } => {
@@ -7895,7 +8195,10 @@ pub mod server {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
             let params = OrganisationTagsUpdateParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let body = organisation_tags_update_request_body(
+                headers.get(http::header::CONTENT_TYPE),
+                &body,
+            )?;
             let reply: crate::rest::server::Reply =
                 match api.organisation_tags_update(params, body).await? {
                     OrganisationTagsUpdateResponse::Ok { body, headers } => {
@@ -7986,7 +8289,8 @@ pub mod server {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
             let params = PersonTagsUpdateParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let body =
+                person_tags_update_request_body(headers.get(http::header::CONTENT_TYPE), &body)?;
             let reply: crate::rest::server::Reply =
                 match api.person_tags_update(params, body).await? {
                     PersonTagsUpdateResponse::Ok { body, headers } => {
@@ -8076,7 +8380,8 @@ pub mod server {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
             let params = RoleTagsUpdateParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let body =
+                role_tags_update_request_body(headers.get(http::header::CONTENT_TYPE), &body)?;
             let reply: crate::rest::server::Reply = match api.role_tags_update(params, body).await?
             {
                 RoleTagsUpdateResponse::Ok { body, headers } => {
@@ -8136,7 +8441,9 @@ pub mod client {
         /// The `201` answer.
         Created {
             /// The body, decoded from canonical JSON; `None` when the service sent none.
-            body: Option<serde_json::Value>,
+            body: Option<
+                crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::agent::Agent>,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: AgentCreateCreatedHeaders,
         },
@@ -8189,7 +8496,7 @@ pub mod client {
         /// The `200` answer.
         Ok {
             /// The body, decoded from canonical JSON.
-            body: serde_json::Value,
+            body: crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::agent::Agent>,
             /// The response headers the OAS declares for this answer.
             headers: AgentUpdateOkHeaders,
         },
@@ -8257,7 +8564,9 @@ pub mod client {
         /// The `201` answer.
         Created {
             /// The body, decoded from canonical JSON; `None` when the service sent none.
-            body: Option<serde_json::Value>,
+            body: Option<
+                crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::group::Group>,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: GroupCreateCreatedHeaders,
         },
@@ -8310,7 +8619,7 @@ pub mod client {
         /// The `200` answer.
         Ok {
             /// The body, decoded from canonical JSON.
-            body: serde_json::Value,
+            body: crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::group::Group>,
             /// The response headers the OAS declares for this answer.
             headers: GroupUpdateOkHeaders,
         },
@@ -8378,7 +8687,11 @@ pub mod client {
         /// The `201` answer.
         Created {
             /// The body, decoded from canonical JSON; `None` when the service sent none.
-            body: Option<serde_json::Value>,
+            body: Option<
+                crate::rest::runtime::Representation<
+                    openehr_rm::v1_2::demographic::organisation::Organisation,
+                >,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: OrganisationCreateCreatedHeaders,
         },
@@ -8431,7 +8744,9 @@ pub mod client {
         /// The `200` answer.
         Ok {
             /// The body, decoded from canonical JSON.
-            body: serde_json::Value,
+            body: crate::rest::runtime::Representation<
+                openehr_rm::v1_2::demographic::organisation::Organisation,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: OrganisationUpdateOkHeaders,
         },
@@ -8499,7 +8814,9 @@ pub mod client {
         /// The `201` answer.
         Created {
             /// The body, decoded from canonical JSON; `None` when the service sent none.
-            body: Option<serde_json::Value>,
+            body: Option<
+                crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::person::Person>,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: PersonCreateCreatedHeaders,
         },
@@ -8552,7 +8869,8 @@ pub mod client {
         /// The `200` answer.
         Ok {
             /// The body, decoded from canonical JSON.
-            body: serde_json::Value,
+            body:
+                crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::person::Person>,
             /// The response headers the OAS declares for this answer.
             headers: PersonUpdateOkHeaders,
         },
@@ -8620,7 +8938,9 @@ pub mod client {
         /// The `201` answer.
         Created {
             /// The body, decoded from canonical JSON; `None` when the service sent none.
-            body: Option<serde_json::Value>,
+            body: Option<
+                crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::role::Role>,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: RoleCreateCreatedHeaders,
         },
@@ -8673,7 +8993,7 @@ pub mod client {
         /// The `200` answer.
         Ok {
             /// The body, decoded from canonical JSON.
-            body: serde_json::Value,
+            body: crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::role::Role>,
             /// The response headers the OAS declares for this answer.
             headers: RoleUpdateOkHeaders,
         },
@@ -8813,7 +9133,11 @@ pub mod client {
         /// The `201` answer.
         Created {
             /// The body, decoded from canonical JSON; `None` when the service sent none.
-            body: Option<serde_json::Value>,
+            body: Option<
+                crate::rest::runtime::Representation<
+                    openehr_rm::v1_2::common::change_control::contribution::Contribution,
+                >,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: ContributionCreateCreatedHeaders,
         },
@@ -11574,47 +11898,97 @@ const _: () = assert!(
 /// [`ROUTES`]: the `requestBody.content` keys of the OAS, in document order,
 /// empty when the operation takes no body.
 pub const ROUTE_REQUEST_MEDIA: &[&[&str]] = &[
-    &["application/json"],
+    &[
+        "application/json",
+        "application/xml",
+        "application/openehr.wt.flat+json",
+        "application/openehr.wt.structured+json",
+    ],
     &[],
-    &["application/json"],
+    &[
+        "application/json",
+        "application/xml",
+        "application/openehr.wt.flat+json",
+        "application/openehr.wt.structured+json",
+    ],
     &[],
-    &["application/json"],
+    &[
+        "application/json",
+        "application/xml",
+        "application/openehr.wt.flat+json",
+        "application/openehr.wt.structured+json",
+    ],
     &[],
-    &["application/json"],
+    &[
+        "application/json",
+        "application/xml",
+        "application/openehr.wt.flat+json",
+        "application/openehr.wt.structured+json",
+    ],
     &[],
-    &["application/json"],
+    &[
+        "application/json",
+        "application/xml",
+        "application/openehr.wt.flat+json",
+        "application/openehr.wt.structured+json",
+    ],
     &[],
-    &["application/json"],
+    &[
+        "application/json",
+        "application/xml",
+        "application/openehr.wt.flat+json",
+        "application/openehr.wt.structured+json",
+    ],
     &[],
-    &["application/json"],
+    &[
+        "application/json",
+        "application/xml",
+        "application/openehr.wt.flat+json",
+        "application/openehr.wt.structured+json",
+    ],
     &[],
-    &["application/json"],
+    &[
+        "application/json",
+        "application/xml",
+        "application/openehr.wt.flat+json",
+        "application/openehr.wt.structured+json",
+    ],
     &[],
-    &["application/json"],
+    &[
+        "application/json",
+        "application/xml",
+        "application/openehr.wt.flat+json",
+        "application/openehr.wt.structured+json",
+    ],
     &[],
-    &["application/json"],
-    &[],
-    &[],
-    &[],
-    &[],
-    &[],
-    &["application/json"],
-    &[],
-    &[],
-    &[],
-    &["application/json"],
-    &[],
-    &[],
-    &["application/json"],
-    &[],
-    &[],
-    &["application/json"],
-    &[],
-    &[],
-    &["application/json"],
+    &[
+        "application/json",
+        "application/xml",
+        "application/openehr.wt.flat+json",
+        "application/openehr.wt.structured+json",
+    ],
     &[],
     &[],
-    &["application/json"],
+    &[],
+    &[],
+    &[],
+    &["application/json", "application/xml"],
+    &[],
+    &[],
+    &[],
+    &["application/json", "application/xml"],
+    &[],
+    &[],
+    &["application/json", "application/xml"],
+    &[],
+    &[],
+    &["application/json", "application/xml"],
+    &[],
+    &[],
+    &["application/json", "application/xml"],
+    &[],
+    &[],
+    &["application/json", "application/xml"],
     &[],
 ];
 

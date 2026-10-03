@@ -17,6 +17,36 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **`openehr-its` types the `Prefer`-dependent response bodies** (#3548). A
+  response the OAS declares as `oneOf` a resource and `Identifier` (the
+  `201` and `200` answers of every create and update: EHR, `EHR_STATUS`,
+  COMPOSITION, DIRECTORY, CONTRIBUTION and the demographic parties) is now
+  `rest::runtime::Representation<T>`, either `Full(T)` or
+  `Identifier(Identifier)`, in place of `serde_json::Value`. A generator test
+  pins the bodies that remain untyped, with their reason.
+- **The generated CONTRIBUTION envelope reads a deleted version and an
+  `AUDIT_DETAILS` audit** (#3547). `UpdateVersion.data` is optional, because a
+  logical deletion commits a version with no data (RM common master06
+  §Logical Deletion; `ORIGINAL_VERSION.data` is `0..1`), and `UpdateAudit`
+  reads `_type: "AUDIT_DETAILS"` as its base, as the `contribution_create`
+  docs text tells servers to.
+- **`ferroehr-rest` decodes every ITS-REST request through the generated
+  contract** (#3545). Each handler reads its parameters with the generated
+  `*Params::from_request`, the CDR's own parameter decoder is gone, and the
+  Simplified Formats CONTRIBUTION path reads the typed `NewContribution`
+  envelope.
+- **Every ITS-REST request body has a public decoder** (#3551). Each operation
+  with a body gets `{operation}_request_body(content_type, bytes)` in its API
+  group, which returns the type the server trait receives (for
+  `contribution_create`, a `Payload` of the canonical or the Simplified Formats
+  envelope) and is the decoding the generated router itself runs. The body
+  decoding moved to `rest::decode`, so it needs only the `rest` feature.
+- **`ROUTE_REQUEST_MEDIA` admits every media type the `Content-Type` parameter
+  declares** (#3552). The released OAS lists only `application/json` under
+  `requestBody.content` where the operation's `Content-Type` parameter and the
+  docs text also admit XML and both Simplified Formats; `request_media` now
+  carries the union, and a test holds it equal to the parameter.
+- **The `openehr-*` crates step to 0.0.81.**
 - **`openehr-its` names the openEHR identifier class of every path
   parameter** (#3539). `rest::routes::Param` gains `identifier`, an
   `IdentifierClass` whose `as_str()` is the BASE class name: the
@@ -117,6 +147,11 @@ workflow refuses a tag that has no matching section here.
 
 ### Fixed
 
+- **A `+` in a query string is a literal plus** (#3545). The CDR decoded
+  query strings as HTML forms do, where `+` means a space, so an unencoded
+  offset such as `version_at_time=2024-01-01T00:00:00+01:00` lost its sign.
+  Query strings now decode per RFC 3986, as the OAS `style: form`
+  parameters (RFC 6570) define; a space is sent as `%20`.
 - **`Client::forward` returns a redirect as received** (#3531). The client
   built by `ReqwestTransport::with_timeout` used reqwest's default redirect
   policy and followed up to ten redirects, re-sending the request and its

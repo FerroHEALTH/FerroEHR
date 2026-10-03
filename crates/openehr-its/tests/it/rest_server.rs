@@ -26,8 +26,9 @@ use std::sync::{Arc, Mutex};
 use axum::body::Body;
 use http::{Method, StatusCode};
 use openehr_base::v1_3::base_types::identification::object_version_id::ObjectVersionId;
+use openehr_its::rest::generated::common::Identifier;
 use openehr_its::rest::generated::{admin, definition, demographic, ehr, query, system};
-use openehr_its::rest::runtime::{ApiError, Payload, Refusal};
+use openehr_its::rest::runtime::{ApiError, Payload, Refusal, Representation};
 use openehr_its::rest::server;
 use openehr_rm::v1_2::composition::composition::Composition;
 use openehr_rm::v1_2::demographic::person::Person;
@@ -96,7 +97,10 @@ impl ehr::server::EhrApi for Recorder {
         let etag = Some(format!("\"{EHR_ID}\""));
         if params.prefer.as_deref() == Some("return=representation") {
             return Ok(ehr::server::EhrCreateResponse::Created {
-                body: Some(json!({ "ehr_id": { "value": EHR_ID } })),
+                body: Some(Representation::Identifier(Identifier {
+                    uid: EHR_ID.to_owned(),
+                    additional_properties: std::collections::BTreeMap::new(),
+                })),
                 headers: ehr::EhrCreateCreatedHeaders { etag, location },
             });
         }
@@ -397,7 +401,7 @@ async fn a_create_answers_201_with_its_headers_or_204_minimal() -> TestResult {
         Some(etag.as_bytes())
     );
     let created: Value = serde_json::from_slice(&body)?;
-    assert_eq!(created, json!({ "ehr_id": { "value": EHR_ID } }));
+    assert_eq!(created, json!({ "uid": EHR_ID }));
 
     let minimal = request(Method::POST, "/ehr", &[("Prefer", "return=minimal")], "")?;
     let (status, headers, body) = send(app, minimal).await?;
@@ -779,7 +783,7 @@ fn a_simplified_contribution_envelope_reads_with_typed_version_uids() -> TestRes
                 .map(ObjectVersionId::value),
             Some(VERSION_UID)
         );
-        assert_eq!(version.data, serde_json::from_str::<Value>(data)?);
+        assert_eq!(version.data, Some(serde_json::from_str::<Value>(data)?));
     }
     Ok(())
 }
@@ -837,5 +841,124 @@ async fn contribution_create_admits_the_simplified_formats() -> TestResult {
             format!("contribution_create structured {preceding}"),
         ]
     );
+    Ok(())
+}
+
+/// A `201_EHR` body is `oneOf` `Ehr` and `Identifier` (ITS-REST
+/// `responses/201_EHR.yaml`): the released `Ehr` schema example reads as the
+/// full representation, the `Identifier` example as the identifier form, and
+/// each writes back unchanged.
+#[test]
+fn a_201_ehr_body_reads_either_form() -> TestResult {
+    // `schemas/ehr/Ehr.yaml` example.
+    let full = json!({
+        "system_id": { "value": "9624982A-9F42-41A5-9318-AE13D5F5031F" },
+        "ehr_id": { "value": "7d44b88c-4199-4bad-97dc-d78268e01398" },
+        "ehr_status": {
+            "id": {
+                "_type": "OBJECT_VERSION_ID",
+                "value": "8849182c-82ad-4088-a07f-48ead4180515::openEHRSys.example.com::1"
+            },
+            "namespace": "local",
+            "type": "EHR_STATUS"
+        },
+        "ehr_access": {
+            "id": {
+                "_type": "OBJECT_VERSION_ID",
+                "value": "59a8d0ac-140e-4feb-b2d6-af99f8e68af8::openEHRSys.example.com::1"
+            },
+            "namespace": "local",
+            "type": "EHR_ACCESS"
+        },
+        "time_created": { "value": "2015-01-20T19:30:22.765+01:00" }
+    });
+    // `schemas/others/Identifier.yaml` example.
+    let identifier =
+        json!({ "uid": "6cb19121-4307-4648-9da0-d62e4d51f19b::openEHRSys.example.com::2" });
+    let read: Representation<openehr_rm::v1_2::ehr::ehr::Ehr> =
+        serde_json::from_value(full.clone())?;
+    assert!(matches!(read, Representation::Full(_)), "{read:?}");
+    let read: Representation<openehr_rm::v1_2::ehr::ehr::Ehr> =
+        serde_json::from_value(identifier.clone())?;
+    let Representation::Identifier(id) = &read else {
+        return Err(format!("the identifier form read as {read:?}").into());
+    };
+    assert_eq!(
+        id.uid,
+        "6cb19121-4307-4648-9da0-d62e4d51f19b::openEHRSys.example.com::2"
+    );
+    assert_eq!(serde_json::to_value(&read)?, identifier);
+    let neither = serde_json::from_value::<Representation<openehr_rm::v1_2::ehr::ehr::Ehr>>(
+        json!({ "uid": 7 }),
+    );
+    assert!(neither.is_err(), "{neither:?}");
+    Ok(())
+}
+
+/// A CONTRIBUTION may carry a logical deletion, a version with no `data` (RM
+/// common master06 §Logical Deletion; `ORIGINAL_VERSION.data` is `0..1`), and
+/// an audit typed `AUDIT_DETAILS`, which servers "SHOULD additionally accept"
+/// (ITS-REST `operations/contribution_create.yaml`); the tag is kept on write.
+#[test]
+fn a_contribution_reads_a_deletion_and_an_audit_details_audit() -> TestResult {
+    let body = contribution_body("null")
+        .replace(r#""_type": "UPDATE_AUDIT""#, r#""_type": "AUDIT_DETAILS""#);
+    let mut value: Value = serde_json::from_str(&body)?;
+    let member = value
+        .pointer_mut("/versions/0")
+        .and_then(Value::as_object_mut)
+        .ok_or("one version member")?;
+    member.remove("data");
+    member.insert(
+        "lifecycle_state".to_owned(),
+        json!({
+            "_type": "DV_CODED_TEXT",
+            "value": "deleted",
+            "defining_code": { "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "523" }
+        }),
+    );
+    let parsed: ehr::NewContribution = serde_json::from_value(value)?;
+    let version = parsed.versions.first().ok_or("one version")?;
+    assert!(version.data.is_none());
+    let written = serde_json::to_value(&parsed)?;
+    assert_eq!(
+        written.pointer("/audit/_type"),
+        Some(&json!("AUDIT_DETAILS"))
+    );
+    assert_eq!(written.pointer("/versions/0/data"), None);
+    Ok(())
+}
+
+/// `contribution_create`'s public body decoder reads the representation the
+/// `Content-Type` selects, as the generated router does: canonical JSON (or no
+/// `Content-Type`), FLAT and STRUCTURED, and refuses XML with `415`.
+#[test]
+fn the_contribution_body_decodes_by_its_content_type() -> TestResult {
+    let flat = contribution_body(r#"{"vital_signs/language|code": "en"}"#);
+    let decode = |content_type: Option<&'static str>| {
+        let value = content_type.map(http::HeaderValue::from_static);
+        ehr::contribution_create_request_body(value.as_ref(), flat.as_bytes())
+    };
+    assert!(matches!(
+        decode(Some("application/openehr.wt.flat+json"))?,
+        Payload::Flat(_)
+    ));
+    assert!(matches!(
+        decode(Some(
+            "application/openehr.wt.structured+json; charset=utf-8"
+        ))?,
+        Payload::Structured(_)
+    ));
+    assert!(matches!(
+        decode(Some("application/xml")),
+        Err(ApiError::UnsupportedMediaType(_))
+    ));
+    // FLAT content is not a canonical version, under JSON or no Content-Type.
+    for content_type in [Some("application/json"), None] {
+        assert!(
+            matches!(decode(content_type), Err(ApiError::BadRequest(_))),
+            "{content_type:?}"
+        );
+    }
     Ok(())
 }

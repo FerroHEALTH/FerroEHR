@@ -243,11 +243,10 @@ pub(super) fn merge_body_and_url_parameters(
     body: std::collections::BTreeMap<String, serde_json::Value>,
     query: Option<&str>,
 ) -> Result<std::collections::BTreeMap<String, serde_json::Value>, RestError> {
-    let url_only = crate::params::named_query_parameters(
+    let url_only = crate::params::aql_binds(Some(crate::params::url_members(
         query,
-        std::collections::BTreeMap::new(),
         crate::params::QUERY_RESERVED_KEYS,
-    );
+    )))?;
     // A disagreement between the two carriers is loud, never silently won.
     for (key, url_value) in &url_only {
         if let Some(body_value) = body.get(key)

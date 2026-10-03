@@ -66,6 +66,7 @@ pub mod message;
 pub mod query;
 pub mod system;
 
+use std::borrow::Cow;
 use std::future::Future;
 use std::pin::Pin;
 
@@ -73,8 +74,10 @@ use axum::Router;
 use axum::extract::{FromRequestParts, RawPathParams};
 use axum::response::Response;
 use bytes::Bytes;
-use http::HeaderMap;
+use http::{HeaderMap, Method};
 use indexmap::IndexMap;
+use openehr_its::rest::routes::{Lookup, Param, ParamLocation, PathParam, RouteMatch, lookup};
+use openehr_its::rest::runtime::ApiError;
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::extensions::access::{ehr_access, pep};
@@ -98,6 +101,61 @@ pub(crate) struct RequestParts {
     pub(crate) query: Option<String>,
     pub(crate) headers: HeaderMap,
     pub(crate) body: Bytes,
+    /// The ITS-REST operation the method and group-relative path address
+    /// (`openehr_its::rest::routes::lookup`), `None` on an extension route the
+    /// ITS-REST route tables do not name.
+    pub(crate) route: Option<RouteMatch>,
+}
+
+impl RequestParts {
+    /// The route match a generated `*Params::from_request` decodes against.
+    ///
+    /// For an ITS-REST operation it is the match `routes::lookup` found. An
+    /// extension route the tables do not name (the `PARTY_RELATIONSHIP` and admin
+    /// extensions) reuses a generated struct, so its match is built from that
+    /// struct's declared path parameters (`params`) and the request's captures,
+    /// which is all `from_request` reads from it.
+    /// Decodes a generated `*Params` struct from this request with its
+    /// `from_request` and its declared `params`, over [`Self::route_for`].
+    ///
+    /// # Errors
+    /// Returns the [`ApiError`] the struct's decoding reports.
+    pub(crate) fn decode<P>(
+        &self,
+        from_request: fn(&RouteMatch, Option<&str>, &HeaderMap) -> Result<P, ApiError>,
+        params: &'static [Param],
+    ) -> Result<P, ApiError> {
+        from_request(
+            &self.route_for(params),
+            self.query.as_deref(),
+            &self.headers,
+        )
+    }
+
+    pub(crate) fn route_for(&self, params: &'static [Param]) -> Cow<'_, RouteMatch> {
+        if let Some(route) = &self.route {
+            return Cow::Borrowed(route);
+        }
+        let path_params = params
+            .iter()
+            .filter(|p| p.location == ParamLocation::Path)
+            .filter_map(|p| {
+                self.path.get(p.name).map(|raw| PathParam {
+                    name: p.name,
+                    raw: raw.clone(),
+                })
+            })
+            .collect();
+        Cow::Owned(RouteMatch {
+            group: "extension",
+            operation_id: "extension",
+            template: "",
+            method: Method::GET,
+            path_params,
+            params,
+            request_media: &[],
+        })
+    }
 }
 
 /// Decompose a whole axum [`Request`](axum::extract::Request) into the
@@ -121,6 +179,12 @@ pub(crate) async fn into_parts(request: axum::extract::Request) -> RequestParts 
         })
         .unwrap_or_default();
     let query = parts.uri.query().map(str::to_owned);
+    // The router nests this API under the base path, so `parts.uri` is already
+    // group-relative, which is the path `lookup` matches.
+    let route = match lookup(&parts.method, parts.uri.path()) {
+        Lookup::Matched(route) => Some(route),
+        Lookup::MethodNotAllowed { .. } | Lookup::NotFound => None,
+    };
     let headers = parts.headers;
     let body = axum::body::to_bytes(body, usize::MAX)
         .await
@@ -130,6 +194,7 @@ pub(crate) async fn into_parts(request: axum::extract::Request) -> RequestParts 
         query,
         headers,
         body,
+        route,
     }
 }
 

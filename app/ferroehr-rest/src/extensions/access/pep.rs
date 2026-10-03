@@ -834,6 +834,38 @@ mod tests {
         assert_eq!(err.status(), StatusCode::FORBIDDEN);
     }
 
+    /// Every ITS-REST operation the route tables name is either gated
+    /// (`Pre`/`Post`) or belongs to a family the matrix deliberately leaves to
+    /// RBAC: the item tags, and the definition, demographic, admin, query and
+    /// system groups. An EHR-area operation reaching `Skip` by falling through
+    /// fails here.
+    #[test]
+    fn every_route_is_gated_or_rbac_only_by_family() {
+        use openehr_its::rest::generated::{admin, definition, demographic, ehr, query, system};
+        type Group = (
+            &'static str,
+            &'static [(&'static str, &'static str, &'static str)],
+        );
+        let groups: [Group; 6] = [
+            ("admin", admin::ROUTES),
+            ("definition", definition::ROUTES),
+            ("demographic", demographic::ROUTES),
+            ("ehr", ehr::ROUTES),
+            ("query", query::ROUTES),
+            ("system", system::ROUTES),
+        ];
+        for (group, routes) in groups {
+            for (_, _, op) in routes {
+                if mode_of(op) == Mode::Skip {
+                    assert!(
+                        group != "ehr" || op.contains("_tags_"),
+                        "{op} ({group}) falls through to Skip without a decision"
+                    );
+                }
+            }
+        }
+    }
+
     #[test]
     fn mode_matrix() {
         assert_eq!(mode_of("ehr_create"), Mode::Pre);

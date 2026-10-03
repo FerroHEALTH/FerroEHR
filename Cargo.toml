@@ -315,10 +315,6 @@ uuid = { version = "1", features = ["serde"] }
 jiff = { version = "0.2.31", features = ["serde"] }   # 1.0 not yet out as of 2026-07; 0.2.31 pinned for ISO 8601 temporal work
 url = "2"
 urlencoding = "2.1.3"
-# WHATWG query-string pair splitting (`+`→space + percent-decoding in one call).
-# Already in the graph as a dependency of `url`; pinned explicitly because a
-# workspace member uses it directly rather than through `url`.
-form_urlencoded = "1.2.2"
 csv = "1.4"                        # RESULT_SET → CSV export (viewer BFF; verified live 2026-07-18)
 
 # ── Viewer (Leptos stack — app/ferroehr-viewer; pins re-verified live 2026-07-17) ──

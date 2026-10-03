@@ -28,9 +28,9 @@ use openehr_its::rest::runtime::ApiError;
 
 use crate::api::RequestParts;
 use crate::api::item_tags;
+use crate::negotiate;
 use crate::overview::error::RestError;
 use crate::state::AppState;
-use crate::{negotiate, params};
 use ferroehr::service::demographic::types::PartyKind;
 use http::StatusCode;
 
@@ -42,28 +42,25 @@ pub(super) async fn run(
     parts: RequestParts,
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let q = parts.query.as_deref();
     let seg = kind.segment();
+    // Each kind's own generated params struct, decoded for its `uid_based_id`.
+    macro_rules! uid_based_id {
+        ($params:ident) => {
+            parts
+                .decode($params::from_request, $params::PARAMS)?
+                .uid_based_id
+        };
+    }
 
     match action {
         "tags_get" => {
             // Each kind's own generated params type (see the module doc).
             let uid_based_id = match kind {
-                PartyKind::Agent => {
-                    params::build::<AgentTagsGetParams>(&parts.path, q, h)?.uid_based_id
-                }
-                PartyKind::Group => {
-                    params::build::<GroupTagsGetParams>(&parts.path, q, h)?.uid_based_id
-                }
-                PartyKind::Organisation => {
-                    params::build::<OrganisationTagsGetParams>(&parts.path, q, h)?.uid_based_id
-                }
-                PartyKind::Person => {
-                    params::build::<PersonTagsGetParams>(&parts.path, q, h)?.uid_based_id
-                }
-                PartyKind::Role => {
-                    params::build::<RoleTagsGetParams>(&parts.path, q, h)?.uid_based_id
-                }
+                PartyKind::Agent => uid_based_id!(AgentTagsGetParams),
+                PartyKind::Group => uid_based_id!(GroupTagsGetParams),
+                PartyKind::Organisation => uid_based_id!(OrganisationTagsGetParams),
+                PartyKind::Person => uid_based_id!(PersonTagsGetParams),
+                PartyKind::Role => uid_based_id!(RoleTagsGetParams),
             };
             let tags = state.backend().party_tags_get(kind, uid_based_id).await?;
             Ok(negotiate::respond(
@@ -74,21 +71,11 @@ pub(super) async fn run(
         }
         "tags_update" => {
             let uid_based_id = match kind {
-                PartyKind::Agent => {
-                    params::build::<AgentTagsUpdateParams>(&parts.path, q, h)?.uid_based_id
-                }
-                PartyKind::Group => {
-                    params::build::<GroupTagsUpdateParams>(&parts.path, q, h)?.uid_based_id
-                }
-                PartyKind::Organisation => {
-                    params::build::<OrganisationTagsUpdateParams>(&parts.path, q, h)?.uid_based_id
-                }
-                PartyKind::Person => {
-                    params::build::<PersonTagsUpdateParams>(&parts.path, q, h)?.uid_based_id
-                }
-                PartyKind::Role => {
-                    params::build::<RoleTagsUpdateParams>(&parts.path, q, h)?.uid_based_id
-                }
+                PartyKind::Agent => uid_based_id!(AgentTagsUpdateParams),
+                PartyKind::Group => uid_based_id!(GroupTagsUpdateParams),
+                PartyKind::Organisation => uid_based_id!(OrganisationTagsUpdateParams),
+                PartyKind::Person => uid_based_id!(PersonTagsUpdateParams),
+                PartyKind::Role => uid_based_id!(RoleTagsUpdateParams),
             };
             let body = item_tags::write_body(h, &parts.body)?;
             let tags = state
@@ -109,23 +96,38 @@ pub(super) async fn run(
         "tags_delete" => {
             let (uid_based_id, key) = match kind {
                 PartyKind::Agent => {
-                    let p = params::build::<AgentTagsDeleteParams>(&parts.path, q, h)?;
+                    let p = parts.decode(
+                        AgentTagsDeleteParams::from_request,
+                        AgentTagsDeleteParams::PARAMS,
+                    )?;
                     (p.uid_based_id, p.key)
                 }
                 PartyKind::Group => {
-                    let p = params::build::<GroupTagsDeleteParams>(&parts.path, q, h)?;
+                    let p = parts.decode(
+                        GroupTagsDeleteParams::from_request,
+                        GroupTagsDeleteParams::PARAMS,
+                    )?;
                     (p.uid_based_id, p.key)
                 }
                 PartyKind::Organisation => {
-                    let p = params::build::<OrganisationTagsDeleteParams>(&parts.path, q, h)?;
+                    let p = parts.decode(
+                        OrganisationTagsDeleteParams::from_request,
+                        OrganisationTagsDeleteParams::PARAMS,
+                    )?;
                     (p.uid_based_id, p.key)
                 }
                 PartyKind::Person => {
-                    let p = params::build::<PersonTagsDeleteParams>(&parts.path, q, h)?;
+                    let p = parts.decode(
+                        PersonTagsDeleteParams::from_request,
+                        PersonTagsDeleteParams::PARAMS,
+                    )?;
                     (p.uid_based_id, p.key)
                 }
                 PartyKind::Role => {
-                    let p = params::build::<RoleTagsDeleteParams>(&parts.path, q, h)?;
+                    let p = parts.decode(
+                        RoleTagsDeleteParams::from_request,
+                        RoleTagsDeleteParams::PARAMS,
+                    )?;
                     (p.uid_based_id, p.key)
                 }
             };
@@ -148,7 +150,10 @@ pub(super) async fn run_collection(
     parts: RequestParts,
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let p = params::build::<DemographicTagsGetParams>(&parts.path, parts.query.as_deref(), h)?;
+    let p = parts.decode(
+        DemographicTagsGetParams::from_request,
+        DemographicTagsGetParams::PARAMS,
+    )?;
     let tags = state
         .backend()
         .demographic_tags_get(p.tag_key, p.tag_value, p.tag_target_path)

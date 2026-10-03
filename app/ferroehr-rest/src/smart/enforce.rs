@@ -289,6 +289,44 @@ fn broaden(current: Option<Compartment>, candidate: Compartment) -> Compartment 
 
 #[cfg(test)]
 mod tests {
+    /// Every ITS-REST operation maps to the SMART family master08 §Resource
+    /// Scopes names for it (`composition-`, `aql-`, `template-`), and only the
+    /// operation families the grammar names no resource for (EHR, `EHR_STATUS`,
+    /// CONTRIBUTION, DIRECTORY, the demographic, admin and system groups) map to
+    /// none.
+    #[test]
+    fn every_route_has_its_family_or_none_by_adjudication() {
+        use openehr_its::rest::generated::{admin, definition, demographic, ehr, query, system};
+        type Group = (
+            &'static str,
+            &'static [(&'static str, &'static str, &'static str)],
+        );
+        let groups: [Group; 6] = [
+            ("admin", admin::ROUTES),
+            ("definition", definition::ROUTES),
+            ("demographic", demographic::ROUTES),
+            ("ehr", ehr::ROUTES),
+            ("query", query::ROUTES),
+            ("system", system::ROUTES),
+        ];
+        for (group, routes) in groups {
+            for (_, _, op) in routes {
+                let family = family_of_op(op);
+                match group {
+                    "query" => assert_eq!(family, Some(ResourceFamily::Aql), "{op}"),
+                    "definition" if op.starts_with("definition_query_") => {
+                        assert_eq!(family, Some(ResourceFamily::Aql), "{op}");
+                    }
+                    "definition" => assert_eq!(family, Some(ResourceFamily::Template), "{op}"),
+                    "ehr" if op.contains("composition") => {
+                        assert_eq!(family, Some(ResourceFamily::Composition), "{op}");
+                    }
+                    _ => assert_eq!(family, None, "{op} ({group})"),
+                }
+            }
+        }
+    }
+
     use super::*;
 
     fn scopes(s: &str) -> Vec<SmartScope> {

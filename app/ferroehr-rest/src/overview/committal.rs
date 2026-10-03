@@ -380,7 +380,7 @@ mod tests {
             signature: None,
             lifecycle_state: lifecycle_state_coded("532"),
             attestations: None,
-            data: serde_json::json!({ "_type": "COMPOSITION" }),
+            data: Some(serde_json::json!({ "_type": "COMPOSITION" })),
             commit_audit: UpdateAudit::UpdateAudit(UpdateAuditData {
                 _type: None,
                 system_id: None,

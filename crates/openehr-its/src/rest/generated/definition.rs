@@ -1043,6 +1043,21 @@ impl DefinitionTemplateAdl14UploadParams {
     }
 }
 
+/// Decodes the request body of `definition_template_adl1.4_upload` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn definition_template_adl1_4_upload_request_body(
+    _content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<String, crate::rest::runtime::ApiError> {
+    crate::rest::decode::text_body(body)
+}
+
 /// Parameters for `definition_template_adl1.4_get` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DefinitionTemplateAdl14GetParams {
@@ -1400,6 +1415,21 @@ impl DefinitionTemplateAdl2UploadParams {
             content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
         })
     }
+}
+
+/// Decodes the request body of `definition_template_adl2_upload` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn definition_template_adl2_upload_request_body(
+    _content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<String, crate::rest::runtime::ApiError> {
+    crate::rest::decode::text_body(body)
 }
 
 /// Parameters for `definition_template_adl2_get` (path/query/header).
@@ -1779,6 +1809,21 @@ impl DefinitionQueryStoreYamlParams {
     }
 }
 
+/// Decodes the request body of `definition_query_store.yaml` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn definition_query_store_yaml_request_body(
+    _content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<String, crate::rest::runtime::ApiError> {
+    crate::rest::decode::text_body(body)
+}
+
 /// Parameters for `definition_query_version_get` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DefinitionQueryVersionGetParams {
@@ -1933,6 +1978,21 @@ impl DefinitionQueryVersionStoreYamlParams {
             accept: crate::rest::decode::header_optional(headers, "Accept")?,
         })
     }
+}
+
+/// Decodes the request body of `definition_query_version_store.yaml` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn definition_query_version_store_yaml_request_body(
+    _content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<String, crate::rest::runtime::ApiError> {
+    crate::rest::decode::text_body(body)
 }
 
 /// The response headers the OAS declares for the `200` answer of
@@ -2668,7 +2728,10 @@ pub mod server {
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let params = DefinitionTemplateAdl14UploadParams::from_parts(&headers)?;
-            let body = crate::rest::server::text_body(&body)?;
+            let body = definition_template_adl1_4_upload_request_body(
+                headers.get(http::header::CONTENT_TYPE),
+                &body,
+            )?;
             let reply: crate::rest::server::Reply =
                 match api.definition_template_adl1_4_upload(params, body).await? {
                     DefinitionTemplateAdl14UploadResponse::Created { body, headers } => {
@@ -2793,7 +2856,10 @@ pub mod server {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;
             let params = DefinitionTemplateAdl2UploadParams::from_parts(&query, &headers)?;
-            let body = crate::rest::server::text_body(&body)?;
+            let body = definition_template_adl2_upload_request_body(
+                headers.get(http::header::CONTENT_TYPE),
+                &body,
+            )?;
             let reply: crate::rest::server::Reply =
                 match api.definition_template_adl2_upload(params, body).await? {
                     DefinitionTemplateAdl2UploadResponse::Created { body, headers } => {
@@ -2958,7 +3024,10 @@ pub mod server {
             let path = crate::rest::server::path_captures(path, &[("p3", "qualified_query_name")])?;
             let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;
             let params = DefinitionQueryStoreYamlParams::from_parts(&path, &query, &headers)?;
-            let body = crate::rest::server::text_body(&body)?;
+            let body = definition_query_store_yaml_request_body(
+                headers.get(http::header::CONTENT_TYPE),
+                &body,
+            )?;
             let reply: crate::rest::server::Reply =
                 match api.definition_query_store_yaml(params, body).await? {
                     DefinitionQueryStoreYamlResponse::Ok { headers } => {
@@ -3028,7 +3097,10 @@ pub mod server {
             let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;
             let params =
                 DefinitionQueryVersionStoreYamlParams::from_parts(&path, &query, &headers)?;
-            let body = crate::rest::server::text_body(&body)?;
+            let body = definition_query_version_store_yaml_request_body(
+                headers.get(http::header::CONTENT_TYPE),
+                &body,
+            )?;
             let reply: crate::rest::server::Reply = match api
                 .definition_query_version_store_yaml(params, body)
                 .await?

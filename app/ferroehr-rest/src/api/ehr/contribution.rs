@@ -57,13 +57,15 @@ pub(super) async fn run(
 
     match op {
         "contribution_create" => {
-            let p = params::build::<ContributionCreateParams>(&parts.path, q, h)?;
+            let p = parts.decode(
+                ContributionCreateParams::from_request,
+                ContributionCreateParams::PARAMS,
+            )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
-            // Committed as the raw wire body, not the typed SM
-            // `commit_contribution`: the typed `UpdateVersion` envelope cannot
-            // represent attestation-only (666) or delete (523) members, nor
-            // committer inheritance from the CONTRIBUTION audit (RM common
-            // master06 §Committal m4).
+            // TODO(#3550): commit through the typed `NewContribution`; the raw
+            // body stays while a member's `commit_audit` may inherit `committer`
+            // from the CONTRIBUTION audit (RM common master06 §Committal), which
+            // the generated `UpdateAudit` requires.
             // NOTE: a CONTRIBUTION commit is a wrapper DTO, not a single
             // canonical RM value with a defined canonical-XML shape — so it is
             // accepted as JSON only.
@@ -128,7 +130,10 @@ pub(super) async fn run(
             }
         }
         "contribution_get" => {
-            let p = params::build::<ContributionGetParams>(&parts.path, q, h)?;
+            let p = parts.decode(
+                ContributionGetParams::from_request,
+                ContributionGetParams::PARAMS,
+            )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let cid = parse_uuid(&p.contribution_uid, "contribution id")?;
             // `Prefer: resolve_refs` (Requests_and_responses §Representation
