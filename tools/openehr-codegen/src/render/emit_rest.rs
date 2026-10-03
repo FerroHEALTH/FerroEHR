@@ -169,7 +169,50 @@ pub(crate) struct RmNames {
 /// `VERSION<T>` object"), whose OAS rendering flattens `T` into the per-group
 /// `data: Versionable` ref. The hoisted shared module emits the struct with
 /// the real generic parameter; each group aliases it at its own `Versionable`.
-const GENERIC_OVER: &[(&str, &str)] = &[("UpdateVersion", "data")];
+const GENERIC_OVER: &[(&str, &str)] = &[ENVELOPE];
+
+/// The one [`GENERIC_OVER`] envelope and its generic field.
+const ENVELOPE: (&str, &str) = ("UpdateVersion", "data");
+
+/// Component schemas whose list field carries the [`GENERIC_OVER`] envelope,
+/// and so take its type parameter: `NewContribution.versions`. Under a
+/// Simplified Formats `Content-Type` "the CONTRIBUTION envelope itself remains
+/// canonical JSON" and only "each `versions[i].data`" is FLAT or STRUCTURED
+/// (ITS-REST `operations/contribution_create.yaml` §Simplified Formats). The
+/// parameter defaults to the group's own content union, so the bare name keeps
+/// meaning the canonical body.
+const GENERIC_CARRIERS: &[(&str, &str)] = &[("NewContribution", "versions")];
+
+/// How a DTO struct carries the [`GENERIC_OVER`] type parameter.
+enum Generic {
+    /// Not generic.
+    None,
+    /// The envelope itself: `field` is typed `T`.
+    Param(&'static str),
+    /// A carrier: `field` holds envelopes over `T`, which defaults to `default`.
+    Carrier {
+        /// The carrying list field.
+        field: &'static str,
+        /// The group's own content union, the parameter's default.
+        default: String,
+    },
+}
+
+/// The group's type argument for the [`GENERIC_OVER`] envelope `name`: the
+/// flattened `field` ref (this group's `Versionable`).
+fn generic_arg(ctx: &Ctx, name: &str, field: &str) -> String {
+    ctx.oas
+        .schemas()
+        .into_iter()
+        .find(|(n, _)| n == name)
+        .and_then(|(_, schema)| {
+            ctx.oas
+                .resolve(schema)
+                .pointer(&format!("/properties/{field}"))
+                .map(|s| ctx.rust_type(s))
+        })
+        .unwrap_or_else(|| "serde_json::Value".to_string())
+}
 
 /// The `$ref` names a schema reaches, skipping a genericized field's subtree.
 fn ref_names_of(name: &str, schema: &Value, out: &mut BTreeSet<String>) {
@@ -477,6 +520,24 @@ pub(crate) fn emit_group(
          const _: () = assert!(\n    \
          ROUTE_PARAMS.len() == ROUTES.len(),\n    \
          \"ROUTE_PARAMS carries one row per ROUTES entry\"\n\
+         );\n\n",
+    );
+    let _ = write!(
+        b,
+        "/// The request-body media types of each operation, index-aligned with\n\
+         /// [`ROUTES`]: the `requestBody.content` keys of the OAS, in document order,\n\
+         /// empty when the operation takes no body.\n\
+         pub const ROUTE_REQUEST_MEDIA: &[&[&str]] = &[\n"
+    );
+    for op in &ops {
+        let media: Vec<String> = op.request_media.iter().map(|m| format!("{m:?}")).collect();
+        let _ = writeln!(b, "    &[{}],", media.join(", "));
+    }
+    b.push_str(
+        "];\n\n\
+         const _: () = assert!(\n    \
+         ROUTE_REQUEST_MEDIA.len() == ROUTES.len(),\n    \
+         \"ROUTE_REQUEST_MEDIA carries one row per ROUTES entry\"\n\
          );\n",
     );
     b
@@ -720,7 +781,16 @@ fn emit_dto(b: &mut String, name: &str, schema: &Value, ctx: &Ctx) {
         let base = match (base_tag, props.is_empty()) {
             (Some(tag), false) => {
                 let data_ty = format!("{}Data", dto_type(name));
-                emit_struct(b, name, &data_ty, None, &props, &required, schema, ctx);
+                emit_struct(
+                    b,
+                    name,
+                    &data_ty,
+                    &Generic::None,
+                    &props,
+                    &required,
+                    schema,
+                    ctx,
+                );
                 Some((tag, data_ty))
             }
             _ => None,
@@ -737,24 +807,21 @@ fn emit_dto(b: &mut String, name: &str, schema: &Value, ctx: &Ctx) {
         // The SM-generic hoisted schema ([`GENERIC_OVER`]) emits with its real
         // type parameter in the shared module; the flattened field types as
         // `T` and each group binds it via a local alias.
-        let generic_field = if ctx.in_common {
+        let generic = if ctx.in_common {
             GENERIC_OVER
                 .iter()
                 .find(|(n, _)| *n == name)
-                .map(|(_, f)| *f)
+                .map_or(Generic::None, |(_, f)| Generic::Param(f))
+        } else if let Some((_, field)) = GENERIC_CARRIERS.iter().find(|(n, _)| *n == name) {
+            let (envelope, data) = ENVELOPE;
+            Generic::Carrier {
+                field,
+                default: generic_arg(ctx, envelope, data),
+            }
         } else {
-            None
+            Generic::None
         };
-        emit_struct(
-            b,
-            name,
-            &ty_name,
-            generic_field,
-            &props,
-            &required,
-            schema,
-            ctx,
-        );
+        emit_struct(b, name, &ty_name, &generic, &props, &required, schema, ctx);
     } else {
         // string/array/map/ref alias.
         let _ = writeln!(
@@ -769,9 +836,9 @@ fn emit_dto(b: &mut String, name: &str, schema: &Value, ctx: &Ctx) {
 }
 
 /// Emit one transport-DTO struct: `props`/`required` are the `allOf`-flattened
-/// shape ([`Ctx::merged_object`]), `generic_field` names the property carried as
-/// the type parameter `T` (the [`GENERIC_OVER`] envelope), and `schema` is the
-/// declaring schema, read for its `additionalProperties` policy.
+/// shape ([`Ctx::merged_object`]), `generic` says how the struct carries the
+/// [`GENERIC_OVER`] type parameter `T`, and `schema` is the declaring schema,
+/// read for its `additionalProperties` policy.
 #[expect(
     clippy::too_many_arguments,
     reason = "one emission site each for the schema's identity, its Rust name, the generic binding, the flattened shape and the declaring schema — bundling them into a struct would only rename the same arguments"
@@ -780,7 +847,7 @@ fn emit_struct(
     b: &mut String,
     name: &str,
     ty_name: &str,
-    generic_field: Option<&str>,
+    generic: &Generic,
     props: &[(String, Value)],
     all_required: &BTreeSet<String>,
     schema: &Value,
@@ -811,7 +878,11 @@ fn emit_struct(
     } else {
         ("", "")
     };
-    let generics = if generic_field.is_some() { "<T>" } else { "" };
+    let generics = match generic {
+        Generic::None => String::new(),
+        Generic::Param(_) => "<T>".to_string(),
+        Generic::Carrier { default, .. } => format!("<T = {default}>"),
+    };
     let _ = write!(
         b,
         "/// The `{name}` transport DTO of this API group (an ITS-REST OAS\n\
@@ -822,12 +893,18 @@ fn emit_struct(
     for (pname, pschema) in props {
         emit_struct_field(
             b,
-            StructField {
+            &StructField {
                 owner: name,
                 ty_name,
                 pname,
                 pschema,
-                is_generic: generic_field == Some(pname.as_str()),
+                ty: match generic {
+                    Generic::Param(field) if *field == pname.as_str() => Some("T".to_string()),
+                    Generic::Carrier { field, .. } if *field == pname.as_str() => {
+                        Some(carrier_field_type(&ctx.rust_type(pschema)))
+                    }
+                    _ => None,
+                },
                 is_required: required.contains(pname.as_str()),
             },
             ctx,
@@ -838,7 +915,7 @@ fn emit_struct(
 }
 
 /// One DTO field's emission inputs.
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 struct StructField<'a> {
     /// The OAS component schema name the field belongs to.
     owner: &'a str,
@@ -848,20 +925,32 @@ struct StructField<'a> {
     pname: &'a str,
     /// The OAS property schema.
     pschema: &'a Value,
-    /// Whether the field carries the DTO's generic parameter.
-    is_generic: bool,
+    /// The field's type where the DTO's generic parameter sets it.
+    ty: Option<String>,
     /// Whether the field is required after the docs-text-wins corrections.
     is_required: bool,
 }
 
-/// Emits one DTO field: its doc line, serde attributes and typed declaration.
-fn emit_struct_field(b: &mut String, f: StructField<'_>, ctx: &Ctx) {
-    let ident = field_id(f.pname);
-    let mut ty = if f.is_generic {
-        "T".to_string()
+/// The type of a [`GENERIC_CARRIERS`] field: its group-alias envelope items
+/// (`Vec<UpdateVersion>`) rebound to the shared envelope over `T`.
+fn carrier_field_type(ty: &str) -> String {
+    let envelope = dto_type(ENVELOPE.0);
+    let rebound = ty.replacen(
+        &format!("<{envelope}>"),
+        &format!("<super::common::{envelope}<T>>"),
+        1,
+    );
+    if rebound == ty {
+        format!("compile_error!(\"the carrier field type `{ty}` holds no `{envelope}` list\")")
     } else {
-        ctx.rust_type(f.pschema)
-    };
+        rebound
+    }
+}
+
+/// Emits one DTO field: its doc line, serde attributes and typed declaration.
+fn emit_struct_field(b: &mut String, f: &StructField<'_>, ctx: &Ctx) {
+    let ident = field_id(f.pname);
+    let mut ty = f.ty.clone().unwrap_or_else(|| ctx.rust_type(f.pschema));
     if !f.is_required {
         ty = format!("Option<{ty}>");
     }
@@ -1083,9 +1172,80 @@ fn emit_params_struct(b: &mut String, op: &Operation, ctx: &Ctx) {
         b,
         "impl {sname} {{\n    \
          /// The parameters of `{}`, one per field, in field order.\n    \
-         pub const PARAMS: &'static [crate::rest::routes::Param] = &[\n{table}    ];\n}}\n\n",
+         pub const PARAMS: &'static [crate::rest::routes::Param] = &[\n{table}    ];\n\n",
         op.operation_id
     );
+    emit_params_decoders(b, op, ctx);
+    b.push_str("}\n\n");
+}
+
+/// The `from_request` constructor of `op`'s param struct, the public form of
+/// the decoding the generated handler runs, and `from_parts`, the decoding
+/// itself, which both share.
+fn emit_params_decoders(b: &mut String, op: &Operation, ctx: &Ctx) {
+    let has = |location: &str| op.parameters.iter().any(|p| p.location == location);
+    let (path, query, header) = (has("path"), has("query"), has("header"));
+    let unused = |used: bool, name: &str| {
+        if used {
+            name.to_string()
+        } else {
+            format!("_{name}")
+        }
+    };
+    let mut parts: Vec<&str> = Vec::new();
+    let mut params: Vec<&str> = Vec::new();
+    let mut prelude = String::new();
+    if path {
+        prelude.push_str(
+            "        let path = crate::rest::decode::PathValues::from_route(matched)?;\n",
+        );
+        parts.push("&path");
+        params.push("path: &crate::rest::decode::PathValues");
+    }
+    if query {
+        prelude.push_str("        let query = crate::rest::decode::QueryPairs::parse(query)?;\n");
+        parts.push("&query");
+        params.push("query: &crate::rest::decode::QueryPairs");
+    }
+    if header {
+        parts.push("headers");
+        params.push("headers: &http::HeaderMap");
+    }
+    let _ = write!(
+        b,
+        "    /// Decodes the parameters of `{op_id}` from a request [`crate::rest::routes::lookup`]\n    \
+         /// matched to it: its path parameters, its query string without the `?`, and its\n    \
+         /// headers, exactly as the generated router decodes them.\n    \
+         ///\n    \
+         /// # Errors\n    \
+         /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is\n    \
+         /// missing, repeated where a single value is declared, not text, or not a valid value.\n    \
+         pub fn from_request(\n        \
+         {matched}: &crate::rest::routes::RouteMatch,\n        \
+         {query_arg}: Option<&str>,\n        \
+         {headers_arg}: &http::HeaderMap,\n    \
+         ) -> Result<Self, crate::rest::runtime::ApiError> {{\n\
+         {prelude}        Self::from_parts({parts})\n    \
+         }}\n\n    \
+         /// Decodes the parameters of `{op_id}` from the request's decoded parts.\n    \
+         pub(crate) fn from_parts({params}) -> Result<Self, crate::rest::runtime::ApiError> {{\n        \
+         Ok(Self {{\n",
+        op_id = op.operation_id,
+        matched = unused(path, "matched"),
+        query_arg = unused(query, "query"),
+        headers_arg = unused(header, "headers"),
+        parts = parts.join(", "),
+        params = params.join(", "),
+    );
+    for p in &op.parameters {
+        let _ = writeln!(
+            b,
+            "            {}: {},",
+            field_id(&p.name),
+            param_extraction(op, p, ctx)
+        );
+    }
+    b.push_str("        })\n    }\n");
 }
 
 /// The path of the hand-written parameter model the route tables carry.
@@ -1103,12 +1263,41 @@ fn param_entry(oas: &Oas, p: &Param) -> String {
         }
     };
     format!(
-        "{ROUTES_MODULE}::Param {{ name: {:?}, location: {location}, required: {}, explode: {}, kind: {} }}",
+        "{ROUTES_MODULE}::Param {{ name: {:?}, location: {location}, required: {}, explode: {}, kind: {}, identifier: {} }}",
         p.name,
         p.required,
         param_explode(p),
-        param_kind(oas, &p.schema)
+        param_kind(oas, &p.schema),
+        param_identifier(p)
     )
+}
+
+/// The `Option<crate::rest::routes::IdentifierClass>` expression of `p`: the
+/// class [`crate::plan::overrides::REST_PATH_IDENTIFIERS`] records for a path
+/// parameter's component, `None` for any other parameter.
+fn param_identifier(p: &Param) -> String {
+    if p.location != "path" {
+        return "None".to_string();
+    }
+    let Some(entry) = p
+        .component
+        .as_deref()
+        .and_then(crate::plan::overrides::rest_path_identifier)
+    else {
+        return format!(
+            "compile_error!(\"path parameter `{}` has no REST_PATH_IDENTIFIERS entry\")",
+            p.name
+        );
+    };
+    match entry.class {
+        None => "None".to_string(),
+        Some("HIER_OBJECT_ID") => format!("Some({ROUTES_MODULE}::IdentifierClass::HierObject)"),
+        Some("OBJECT_VERSION_ID") => {
+            format!("Some({ROUTES_MODULE}::IdentifierClass::ObjectVersion)")
+        }
+        Some("UID_BASED_ID") => format!("Some({ROUTES_MODULE}::IdentifierClass::UidBased)"),
+        Some(other) => format!("compile_error!(\"no IdentifierClass for `{other}`\")"),
+    }
 }
 
 /// Whether `p` explodes: its declared `explode`, else the OAS 3.0.3 default
@@ -1192,6 +1381,7 @@ fn append_docs_text_headers(op: &mut Operation<'_>) {
         op.parameters.push(Param {
             name: h.name.to_string(),
             location: "header".to_string(),
+            component: None,
             required: false,
             style: None,
             explode: None,
@@ -1204,6 +1394,52 @@ fn append_docs_text_headers(op: &mut Operation<'_>) {
 /// `application/json`); any other body travels as text.
 fn json_request(op: &Operation) -> bool {
     op.request_media.iter().any(|m| m == "application/json")
+}
+
+/// The Simplified Formats media types (ITS-REST overview `Resources.md`
+/// §Simplified Formats).
+const SIMPLIFIED_MEDIA: [&str; 2] = [
+    "application/openehr.wt.flat+json",
+    "application/openehr.wt.structured+json",
+];
+
+/// Whether `op` takes a canonical-JSON body whose `Content-Type` parameter
+/// admits both Simplified Formats: its server body is then a
+/// `crate::rest::runtime::Payload`.
+fn simplified_request(op: &Operation, ctx: &Ctx) -> bool {
+    json_request(op)
+        && op.parameters.iter().any(|p| {
+            p.location == "header"
+                && p.name.eq_ignore_ascii_case("content-type")
+                && ctx
+                    .oas
+                    .resolve(&p.schema)
+                    .get("enum")
+                    .and_then(Value::as_array)
+                    .is_some_and(|values| {
+                        SIMPLIFIED_MEDIA
+                            .iter()
+                            .all(|m| values.iter().any(|v| v.as_str() == Some(m)))
+                    })
+        })
+}
+
+/// The server body type of `op`: its canonical type, or a `Payload` over the
+/// canonical type and its Simplified Formats form (a [`GENERIC_CARRIERS`]
+/// envelope over raw JSON content, any other body raw JSON).
+fn server_body_type(op: &Operation, schema: &Value, ctx: &Ctx) -> String {
+    let canonical = ctx.rust_type(schema);
+    if !simplified_request(op, ctx) {
+        return canonical;
+    }
+    let carrier =
+        Oas::ref_name(schema).is_some_and(|name| GENERIC_CARRIERS.iter().any(|(n, _)| *n == name));
+    let simplified = if carrier {
+        format!("{canonical}<serde_json::Value>")
+    } else {
+        "serde_json::Value".to_string()
+    };
+    format!("crate::rest::runtime::Payload<{canonical}, {simplified}>")
 }
 
 /// The headers struct of every documented response of `op` that declares
@@ -1466,7 +1702,7 @@ fn emit_trait_method(b: &mut String, op: &Operation, ctx: &Ctx) {
     }
     if let Some((schema, required)) = &op.request_body {
         let ty = if json_request(op) {
-            ctx.rust_type(schema)
+            server_body_type(op, schema, ctx)
         } else {
             "String".to_string()
         };
@@ -1512,19 +1748,11 @@ fn param_shape(ty: &str) -> ParamShape {
 
 /// The extraction expression for one parameter, the inverse of what the
 /// client writes for it (`emit_query_param`, `emit_header_param`).
-fn param_extraction(
-    op: &Operation,
-    p: &Param,
-    captures: &BTreeMap<String, String>,
-    ctx: &Ctx,
-) -> String {
+fn param_extraction(op: &Operation, p: &Param, ctx: &Ctx) -> String {
     let shape = param_shape(&ctx.param_rust_type(&p.schema));
     let name = &p.name;
     match p.location.as_str() {
-        "path" => {
-            let capture = captures.get(name).map_or("", String::as_str);
-            format!("path.value(\"{capture}\", \"{name}\")?")
-        }
+        "path" => format!("path.value(\"{name}\")?"),
         "query" => match (shape, p.required) {
             (ParamShape::Scalar, true) => format!("query.required(\"{name}\")?"),
             (ParamShape::Scalar, false) => format!("query.optional(\"{name}\")?"),
@@ -1547,13 +1775,13 @@ fn param_extraction(
         },
         _ => match (shape, p.required) {
             (ParamShape::List, true) => {
-                format!("crate::rest::server::header_list_required(&headers, \"{name}\")?")
+                format!("crate::rest::decode::header_list_required(headers, \"{name}\")?")
             }
             (ParamShape::List, false) => {
-                format!("crate::rest::server::header_list(&headers, \"{name}\")?")
+                format!("crate::rest::decode::header_list(headers, \"{name}\")?")
             }
-            (_, true) => format!("crate::rest::server::header_required(&headers, \"{name}\")?"),
-            (_, false) => format!("crate::rest::server::header_optional(&headers, \"{name}\")?"),
+            (_, true) => format!("crate::rest::decode::header_required(headers, \"{name}\")?"),
+            (_, false) => format!("crate::rest::decode::header_optional(headers, \"{name}\")?"),
         },
     }
 }
@@ -1596,30 +1824,45 @@ fn emit_server_handler(b: &mut String, op: &Operation, trait_name: &str, ctx: &C
         op.method.to_uppercase(),
         op.path
     );
+    let mut parts: Vec<&str> = Vec::new();
     if has("path") {
-        b.push_str("            let path = crate::rest::server::PathCaptures::new(path)?;\n");
+        let names: Vec<String> = captures
+            .iter()
+            .map(|(name, capture)| format!("(\"{capture}\", \"{name}\")"))
+            .collect();
+        let _ = writeln!(
+            b,
+            "            let path = crate::rest::server::path_captures(path, &[{}])?;",
+            names.join(", ")
+        );
+        parts.push("&path");
     }
     if has("query") {
         b.push_str(
-            "            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;\n",
+            "            let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;\n",
         );
+        parts.push("&query");
+    }
+    if has("header") {
+        parts.push("&headers");
     }
     let mut call_args: Vec<&str> = Vec::new();
     if !op.parameters.is_empty() {
-        let _ = writeln!(b, "            let params = {} {{", param_struct_name(op));
-        for p in &op.parameters {
-            let _ = writeln!(
-                b,
-                "                {}: {},",
-                field_id(&p.name),
-                param_extraction(op, p, &captures, ctx)
-            );
-        }
-        b.push_str("            };\n");
+        let _ = writeln!(
+            b,
+            "            let params = {}::from_parts({})?;",
+            param_struct_name(op),
+            parts.join(", ")
+        );
         call_args.push("params");
     }
     if let Some((_, required)) = &op.request_body {
+        let simplified = simplified_request(op, ctx);
         let decode = match (json, *required) {
+            (true, true) if simplified => "crate::rest::server::payload_body(&headers, &body)?",
+            (true, false) if simplified => {
+                "crate::rest::server::payload_body_optional(&headers, &body)?"
+            }
             (true, true) => "crate::rest::server::json_body(&headers, &body)?",
             (true, false) => "crate::rest::server::json_body_optional(&headers, &body)?",
             (false, true) => "crate::rest::server::text_body(&body)?",

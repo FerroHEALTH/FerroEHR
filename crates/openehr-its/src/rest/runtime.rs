@@ -30,6 +30,24 @@ pub struct ValidationError {
     pub message: String,
 }
 
+/// A request body in the representation its `Content-Type` selects, for an
+/// operation whose `Content-Type` parameter admits the Simplified Formats.
+///
+/// `C` is the canonical-JSON body; `S` is the body whose versioned content is
+/// FLAT or STRUCTURED (ITS-REST overview `Resources.md` §Simplified Formats),
+/// which for a CONTRIBUTION keeps the envelope canonical ("Only the inner
+/// versioned payload - each `versions[i].data` … is serialized in the chosen
+/// FLAT or STRUCTURED form", `operations/contribution_create.yaml`).
+#[derive(Debug, Clone)]
+pub enum Payload<C, S> {
+    /// `application/json`, or no `Content-Type`.
+    Canonical(C),
+    /// `application/openehr.wt.flat+json`.
+    Flat(S),
+    /// `application/openehr.wt.structured+json`.
+    Structured(S),
+}
+
 /// The error a REST handler may return; carries the HTTP status the openEHR
 /// ITS-REST contract prescribes.
 #[derive(Debug, thiserror::Error)]

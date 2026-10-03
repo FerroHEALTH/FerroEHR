@@ -60,6 +60,9 @@ pub(crate) struct Param {
     pub name: String,
     /// `path` | `query` | `header`.
     pub location: String,
+    /// The `#/components/parameters/<name>` component the operation references,
+    /// when it references one rather than declaring the parameter inline.
+    pub component: Option<String>,
     pub required: bool,
     /// The declared `style`, when the parameter states one.
     pub style: Option<String>,
@@ -168,6 +171,30 @@ impl Oas {
 
     /// Resolve a local `$ref` (`#/components/...`) to the pointed-at value.
     #[must_use]
+    /// Every `#/components/parameters` entry as `(component, in, description)`,
+    /// in document order.
+    pub(crate) fn parameter_components(&self) -> Vec<(String, String, String)> {
+        let Some(params) = self
+            .root
+            .pointer("/components/parameters")
+            .and_then(Value::as_object)
+        else {
+            return Vec::new();
+        };
+        params
+            .iter()
+            .map(|(component, p)| {
+                let text = |key: &str| {
+                    p.get(key)
+                        .and_then(Value::as_str)
+                        .unwrap_or_default()
+                        .to_string()
+                };
+                (component.clone(), text("in"), text("description"))
+            })
+            .collect()
+    }
+
     pub(crate) fn resolve<'a>(&'a self, value: &'a Value) -> &'a Value {
         let mut cur = value;
         // Follow chained single-level `$ref`s (parameters/responses → schema).
@@ -238,6 +265,11 @@ impl Oas {
             return out;
         };
         for p in params {
+            let component = p
+                .get("$ref")
+                .and_then(Value::as_str)
+                .and_then(|r| r.strip_prefix("#/components/parameters/"))
+                .map(str::to_string);
             let p = self.resolve(p);
             let (Some(name), Some(location)) = (
                 p.get("name").and_then(Value::as_str),
@@ -248,6 +280,7 @@ impl Oas {
             out.push(Param {
                 name: name.to_string(),
                 location: location.to_string(),
+                component,
                 required: p.get("required").and_then(Value::as_bool).unwrap_or(false),
                 style: p.get("style").and_then(Value::as_str).map(str::to_string),
                 explode: p.get("explode").and_then(Value::as_bool),

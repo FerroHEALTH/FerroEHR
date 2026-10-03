@@ -39,19 +39,48 @@ type RouteTable = &'static [(&'static str, &'static str, &'static str)];
 /// One generated parameter table, index-aligned with its route table.
 type ParamTable = &'static [&'static [Param]];
 
+/// One generated request-media table, index-aligned with its route table.
+type MediaTable = &'static [&'static [&'static str]];
+
 /// Every API group's name, route table and parameter table, in the order the
 /// groups are generated.
-const GROUPS: &[(&str, RouteTable, ParamTable)] = &[
-    ("admin", admin::ROUTES, admin::ROUTE_PARAMS),
-    ("definition", definition::ROUTES, definition::ROUTE_PARAMS),
+const GROUPS: &[(&str, RouteTable, ParamTable, MediaTable)] = &[
+    (
+        "admin",
+        admin::ROUTES,
+        admin::ROUTE_PARAMS,
+        admin::ROUTE_REQUEST_MEDIA,
+    ),
+    (
+        "definition",
+        definition::ROUTES,
+        definition::ROUTE_PARAMS,
+        definition::ROUTE_REQUEST_MEDIA,
+    ),
     (
         "demographic",
         demographic::ROUTES,
         demographic::ROUTE_PARAMS,
+        demographic::ROUTE_REQUEST_MEDIA,
     ),
-    ("ehr", ehr::ROUTES, ehr::ROUTE_PARAMS),
-    ("query", query::ROUTES, query::ROUTE_PARAMS),
-    ("system", system::ROUTES, system::ROUTE_PARAMS),
+    (
+        "ehr",
+        ehr::ROUTES,
+        ehr::ROUTE_PARAMS,
+        ehr::ROUTE_REQUEST_MEDIA,
+    ),
+    (
+        "query",
+        query::ROUTES,
+        query::ROUTE_PARAMS,
+        query::ROUTE_REQUEST_MEDIA,
+    ),
+    (
+        "system",
+        system::ROUTES,
+        system::ROUTE_PARAMS,
+        system::ROUTE_REQUEST_MEDIA,
+    ),
 ];
 
 /// One parameter an operation declares, as its OAS Parameter Object states it.
@@ -73,6 +102,37 @@ pub struct Param {
     pub explode: bool,
     /// The value shape the parameter's schema states.
     pub kind: ParamKind,
+    /// The openEHR identifier class a path parameter carries, which the OAS
+    /// states only in the parameter's description (the RM attribute the value
+    /// is "taken from"); `None` for a value that is no openEHR identifier and
+    /// for every non-path parameter.
+    pub identifier: Option<IdentifierClass>,
+}
+
+/// An openEHR identifier class from BASE `base_types.identification`, the
+/// form a path parameter's value takes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum IdentifierClass {
+    /// `HIER_OBJECT_ID`: the `uid` of a versioned object, an EHR or a
+    /// contribution.
+    HierObject,
+    /// `OBJECT_VERSION_ID`: the `uid` of a `VERSION`
+    /// (`object_id::creating_system_id::version_tree_id`).
+    ObjectVersion,
+    /// `UID_BASED_ID`: either of the two above.
+    UidBased,
+}
+
+impl IdentifierClass {
+    /// The BASE class name (`"HIER_OBJECT_ID"`).
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::HierObject => "HIER_OBJECT_ID",
+            Self::ObjectVersion => "OBJECT_VERSION_ID",
+            Self::UidBased => "UID_BASED_ID",
+        }
+    }
 }
 
 /// Where a parameter travels (OAS 3.0.3 §Parameter Locations).
@@ -150,6 +210,11 @@ pub struct RouteMatch {
     /// Every parameter the operation declares — path, query and header — in
     /// declaration order.
     pub params: &'static [Param],
+    /// The media types the operation's request body is declared in (the OAS
+    /// `requestBody.content` keys, `text/plain` for a stored query), empty when
+    /// it takes no body. A forwarding intermediary sets `Content-Type` from
+    /// them where the operation declares no `Content-Type` parameter.
+    pub request_media: &'static [&'static str],
 }
 
 impl RouteMatch {
@@ -269,25 +334,26 @@ fn matches_path(segments: &[Segment<'_>], parts: &[&str]) -> bool {
 pub fn lookup(method: &Method, path: &str) -> Lookup {
     let path = path.split('?').next().unwrap_or(path);
     let parts: Vec<&str> = path.strip_prefix('/').unwrap_or(path).split('/').collect();
-    let candidates: Vec<Candidate> =
-        GROUPS
-            .iter()
-            .flat_map(|&(group, routes, params)| {
-                // The generated module asserts `ROUTE_PARAMS.len() == ROUTES.len()`
-                // at compile time, so the zip pairs every route with its row.
-                routes.iter().zip(params).map(
-                    move |(&(method, template, operation_id), &params)| Candidate {
-                        group,
-                        method,
-                        template,
-                        operation_id,
-                        params,
-                        segments: template_segments(template),
-                    },
-                )
-            })
-            .filter(|candidate| matches_path(&candidate.segments, &parts))
-            .collect();
+    let candidates: Vec<Candidate> = GROUPS
+        .iter()
+        .flat_map(|&(group, routes, params, media)| {
+            // The generated module asserts `ROUTE_PARAMS.len() == ROUTES.len()`
+            // and the same of `ROUTE_REQUEST_MEDIA` at compile time, so the
+            // zip pairs every route with its rows.
+            routes.iter().zip(params).zip(media).map(
+                move |((&(method, template, operation_id), &params), &request_media)| Candidate {
+                    group,
+                    method,
+                    template,
+                    operation_id,
+                    params,
+                    request_media,
+                    segments: template_segments(template),
+                },
+            )
+        })
+        .filter(|candidate| matches_path(&candidate.segments, &parts))
+        .collect();
     let Some(best) = candidates
         .iter()
         .map(|candidate| specificity(&candidate.segments))
@@ -331,6 +397,7 @@ pub fn lookup(method: &Method, path: &str) -> Lookup {
         method: method.clone(),
         path_params,
         params: chosen.params,
+        request_media: chosen.request_media,
     })
 }
 
@@ -341,5 +408,6 @@ struct Candidate {
     template: &'static str,
     operation_id: &'static str,
     params: &'static [Param],
+    request_media: &'static [&'static str],
     segments: Vec<Segment<'static>>,
 }

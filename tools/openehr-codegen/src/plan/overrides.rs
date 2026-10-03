@@ -3106,3 +3106,120 @@ pub(crate) fn ref_target(class: &str, attr: &str) -> Option<&'static RefTarget> 
         .iter()
         .find(|r| r.class == class && r.attr == attr)
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ITS-REST path identifiers (the openEHR identifier class a path parameter carries)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// The openEHR identifier class one ITS-REST path-parameter component carries.
+///
+/// The OAS states it only in the component's description, which names the RM
+/// attribute the value is "taken from"; the class is that attribute's BMM
+/// type. Every path-parameter component has exactly one entry, `class: None`
+/// where the value is no openEHR identifier, and `emit-rest` emits a
+/// `compile_error!` for a path parameter without one.
+pub(crate) struct RestPathIdentifier {
+    /// The `#/components/parameters/` name.
+    pub component: &'static str,
+    /// The BASE identifier class (`HIER_OBJECT_ID`, `OBJECT_VERSION_ID`,
+    /// `UID_BASED_ID`), or `None`.
+    pub class: Option<&'static str>,
+    /// The OAS description and the RM attribute type the class is read from.
+    pub citation: &'static str,
+}
+
+/// Every ITS-REST path-parameter component, with its identifier class.
+pub(crate) const REST_PATH_IDENTIFIERS: &[RestPathIdentifier] = &[
+    RestPathIdentifier {
+        component: "ehr_id",
+        class: Some("HIER_OBJECT_ID"),
+        citation: "OAS `ehr_id`: \"EHR identifier taken from EHR.ehr_id.value.\"; RM BMM \
+                   `EHR.ehr_id: HIER_OBJECT_ID`",
+    },
+    RestPathIdentifier {
+        component: "version_uid",
+        class: Some("OBJECT_VERSION_ID"),
+        citation: "OAS `version_uid`: \"VERSION identifier taken from VERSION.uid.value.\"; RM \
+                   BMM `VERSION.uid(): OBJECT_VERSION_ID`",
+    },
+    RestPathIdentifier {
+        component: "version_uid_COMPOSITION",
+        class: Some("OBJECT_VERSION_ID"),
+        citation: "OAS `version_uid_COMPOSITION`: \"VERSION identifier taken from \
+                   VERSION.uid.value.\"; RM BMM `VERSION.uid(): OBJECT_VERSION_ID`",
+    },
+    RestPathIdentifier {
+        component: "versioned_object_uid_COMPOSITION",
+        class: Some("HIER_OBJECT_ID"),
+        citation: "OAS `versioned_object_uid_COMPOSITION`: \"VERSIONED_COMPOSITION identifier \
+                   taken from VERSIONED_COMPOSITION.uid.value.\"; RM BMM \
+                   `VERSIONED_OBJECT.uid: HIER_OBJECT_ID`",
+    },
+    RestPathIdentifier {
+        component: "versioned_object_uid_PARTY",
+        class: Some("HIER_OBJECT_ID"),
+        citation: "OAS `versioned_object_uid_PARTY`: \"VERSIONED_PARTY identifier taken from \
+                   VERSIONED_PARTY.uid.value.\"; RM BMM `VERSIONED_OBJECT.uid: HIER_OBJECT_ID`",
+    },
+    RestPathIdentifier {
+        component: "contribution_uid",
+        class: Some("HIER_OBJECT_ID"),
+        citation: "OAS `contribution_uid`: \"The CONTRIBUTION uid.\"; RM BMM \
+                   `CONTRIBUTION.uid: HIER_OBJECT_ID`",
+    },
+    RestPathIdentifier {
+        component: "uid_based_id",
+        class: Some("UID_BASED_ID"),
+        citation: "OAS `uid_based_id`: \"it can take a form of an OBJECT_VERSION_ID identifier \
+                   taken from VERSION.uid.value (i.e. a `version_uid`), or a form of a \
+                   HIER_OBJECT_ID identifier taken from VERSIONED_OBJECT.uid.value\"; BASE BMM \
+                   `UID_BASED_ID` is the ancestor of both",
+    },
+    RestPathIdentifier {
+        component: "uid_based_id_as_version_uid",
+        class: Some("OBJECT_VERSION_ID"),
+        citation: "OAS `uid_based_id_as_version_uid`: \"An identifier in a form of an \
+                   OBJECT_VERSION_ID identifier taken from VERSION.uid.value\"",
+    },
+    RestPathIdentifier {
+        component: "uid_based_id_as_versioned_object_uid",
+        class: Some("HIER_OBJECT_ID"),
+        citation: "OAS `uid_based_id_as_versioned_object_uid`: \"An identifier in a form of a \
+                   HIER_OBJECT_ID identifier taken from VERSIONED_OBJECT.uid.value\"",
+    },
+    RestPathIdentifier {
+        component: "key",
+        class: None,
+        citation: "OAS `key`: \"The ITEM_TAG key.\"; RM BMM `ITEM_TAG.key: String`",
+    },
+    RestPathIdentifier {
+        component: "template_id",
+        class: None,
+        citation: "OAS `template_id`: \"Template identifier or partial reference.\", a \
+                   template name the REST API resolves, not an openEHR identifier object",
+    },
+    RestPathIdentifier {
+        component: "template_id_adl2",
+        class: None,
+        citation: "OAS `template_id_adl2`: \"Template identifier or partial reference.\", a \
+                   template name the REST API resolves, not an openEHR identifier object",
+    },
+    RestPathIdentifier {
+        component: "version",
+        class: None,
+        citation: "OAS `version`: \"A SEMVER version number.\"",
+    },
+    RestPathIdentifier {
+        component: "qualified_query_name",
+        class: None,
+        citation: "OAS `qualified_query_name`: \"The (fully qualified) name of the query to be \
+                   executed\"",
+    },
+];
+
+/// The identifier entry of path-parameter component `component`.
+pub(crate) fn rest_path_identifier(component: &str) -> Option<&'static RestPathIdentifier> {
+    REST_PATH_IDENTIFIERS
+        .iter()
+        .find(|r| r.component == component)
+}

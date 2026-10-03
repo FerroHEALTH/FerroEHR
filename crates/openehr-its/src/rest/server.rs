@@ -22,8 +22,6 @@
 //! name and the value are percent-decoded as RFC 3986 §2.1 defines it, so a
 //! `+` is a literal plus, not a space.
 
-use std::fmt;
-use std::str::FromStr;
 use std::sync::Arc;
 
 use axum::extract::RawPathParams;
@@ -32,6 +30,7 @@ use axum::response::IntoResponse as _;
 use http::header::{ALLOW, CONTENT_TYPE};
 use http::{HeaderMap, HeaderValue, StatusCode};
 
+use super::decode::PathValues;
 use super::generated::admin::server::AdminApi;
 use super::generated::definition::server::DefinitionApi;
 use super::generated::demographic::server::DemographicApi;
@@ -41,267 +40,38 @@ use super::generated::system::server::SystemApi;
 use super::generated::{admin, definition, demographic, ehr, query, system};
 use super::routes::{Lookup, lookup};
 use super::runtime::{
-    ApiError, HeaderError, Refusal, ResponseHeaders, error_response, merge_headers,
+    ApiError, HeaderError, Payload, Refusal, ResponseHeaders, error_response, merge_headers,
 };
 
 /// The canonical JSON media type, the only one the typed router reads and
 /// writes.
 const CANONICAL_JSON: &str = "application/json";
 
-/// Parses `raw`, the text of parameter `name` at `location`, as a `T`.
-fn parse<T>(location: &str, name: &str, raw: &str) -> Result<T, ApiError>
-where
-    T: FromStr,
-    T::Err: fmt::Display,
-{
-    raw.parse::<T>().map_err(|error| {
-        ApiError::BadRequest(format!(
-            "the {location} parameter `{name}` is not a valid value: {error}"
-        ))
-    })
-}
-
-/// The refusal for a required parameter the request does not carry.
-fn missing(location: &str, name: &str) -> ApiError {
-    ApiError::BadRequest(format!(
-        "the required {location} parameter `{name}` is missing"
-    ))
-}
-
-/// The path captures of one matched route, percent-decoded by axum.
-pub(crate) struct PathCaptures(RawPathParams);
-
-impl PathCaptures {
-    /// The captures axum extracted for the route.
-    ///
-    /// # Errors
-    /// Returns [`ApiError::BadRequest`] when a capture does not decode to
-    /// UTF-8 text.
-    pub(crate) fn new(
-        captured: Result<RawPathParams, RawPathParamsRejection>,
-    ) -> Result<Self, ApiError> {
-        captured.map(Self).map_err(|rejection| {
-            ApiError::BadRequest(format!("a path segment is not valid: {rejection}"))
-        })
-    }
-
-    /// The value of the path parameter `name`, captured as `capture`.
-    ///
-    /// # Errors
-    /// Returns [`ApiError::BadRequest`] naming the parameter when it is absent
-    /// or does not parse as a `T`.
-    pub(crate) fn value<T>(&self, capture: &str, name: &str) -> Result<T, ApiError>
-    where
-        T: FromStr,
-        T::Err: fmt::Display,
-    {
-        let raw = self
-            .0
+/// The path captures axum extracted for a route, renamed through `names`
+/// (`(capture, parameter)` pairs: the generated handler's positional captures
+/// `p2`, `p3`) to the operation's parameter names.
+///
+/// # Errors
+/// Returns [`ApiError::BadRequest`] when a capture does not decode to UTF-8
+/// text.
+pub(crate) fn path_captures(
+    captured: Result<RawPathParams, RawPathParamsRejection>,
+    names: &[(&str, &'static str)],
+) -> Result<PathValues, ApiError> {
+    let captured = captured.map_err(|rejection| {
+        ApiError::BadRequest(format!("a path segment is not valid: {rejection}"))
+    })?;
+    Ok(PathValues::new(
+        captured
             .iter()
-            .find_map(|(key, value)| (key == capture).then_some(value))
-            .ok_or_else(|| missing("path", name))?;
-        parse("path", name, raw)
-    }
-}
-
-/// The query pairs of one request, in order, each name and value decoded.
-pub(crate) struct QueryPairs(Vec<(String, String)>);
-
-impl QueryPairs {
-    /// The pairs of `query`, the request's query string without its `?`.
-    ///
-    /// # Errors
-    /// Returns [`ApiError::BadRequest`] when a name or value does not decode
-    /// to UTF-8 text.
-    pub(crate) fn parse(query: Option<&str>) -> Result<Self, ApiError> {
-        let mut pairs = Vec::new();
-        for pair in query.unwrap_or_default().split('&') {
-            if pair.is_empty() {
-                continue;
-            }
-            let (name, value) = pair.split_once('=').unwrap_or((pair, ""));
-            let decode = |text: &str| {
-                urlencoding::decode(text)
-                    .map(std::borrow::Cow::into_owned)
-                    .map_err(|_not_utf8| {
-                        ApiError::BadRequest(
-                            "the query string does not percent-decode to UTF-8 text".to_owned(),
-                        )
-                    })
-            };
-            pairs.push((decode(name)?, decode(value)?));
-        }
-        Ok(Self(pairs))
-    }
-
-    /// Every value given for `name`, in order.
-    fn values<'a>(&'a self, name: &'a str) -> impl Iterator<Item = &'a str> + 'a {
-        self.0
-            .iter()
-            .filter(move |(key, _)| key == name)
-            .map(|(_, value)| value.as_str())
-    }
-
-    /// The scalar query parameter `name`, when the request gives it.
-    ///
-    /// # Errors
-    /// Returns [`ApiError::BadRequest`] naming the parameter when it is given
-    /// more than once (a scalar `form` parameter is one pair) or does not parse
-    /// as a `T`.
-    pub(crate) fn optional<T>(&self, name: &str) -> Result<Option<T>, ApiError>
-    where
-        T: FromStr,
-        T::Err: fmt::Display,
-    {
-        let mut values = self.values(name);
-        let Some(first) = values.next() else {
-            return Ok(None);
-        };
-        if values.next().is_some() {
-            return Err(ApiError::BadRequest(format!(
-                "the query parameter `{name}` is given more than once"
-            )));
-        }
-        parse("query", name, first).map(Some)
-    }
-
-    /// The scalar query parameter `name`, which the operation requires.
-    ///
-    /// # Errors
-    /// Returns [`ApiError::BadRequest`] naming the parameter when it is absent,
-    /// repeated, or does not parse as a `T`.
-    pub(crate) fn required<T>(&self, name: &str) -> Result<T, ApiError>
-    where
-        T: FromStr,
-        T::Err: fmt::Display,
-    {
-        self.optional(name)?.ok_or_else(|| missing("query", name))
-    }
-
-    /// The members of the form-exploded object parameter `name`: every pair
-    /// whose name is not one of the operation's `declared` query parameters,
-    /// or `None` when there is none.
-    ///
-    /// A value is read the way the generated client writes it: a value that is
-    /// JSON text other than a JSON string (a number, a boolean, an object, an
-    /// array) is that value, and anything else is the text itself.
-    ///
-    /// # Errors
-    /// Returns [`ApiError::BadRequest`] naming the parameter when a member is
-    /// given more than once.
-    pub(crate) fn members<M, V>(&self, name: &str, declared: &[&str]) -> Result<Option<M>, ApiError>
-    where
-        M: FromIterator<(String, V)>,
-        V: serde::de::DeserializeOwned + From<String>,
-    {
-        let mut seen: Vec<&str> = Vec::new();
-        let mut members: Vec<(String, V)> = Vec::new();
-        for (key, value) in &self.0 {
-            if declared.contains(&key.as_str()) {
-                continue;
-            }
-            if seen.contains(&key.as_str()) {
-                return Err(ApiError::BadRequest(format!(
-                    "the member `{key}` of the query parameter `{name}` is given more than once"
-                )));
-            }
-            seen.push(key);
-            members.push((key.clone(), member_value(value)));
-        }
-        Ok((!members.is_empty()).then(|| members.into_iter().collect()))
-    }
-}
-
-/// One form-exploded object member's value, read as the client writes it.
-fn member_value<V>(raw: &str) -> V
-where
-    V: serde::de::DeserializeOwned + From<String>,
-{
-    if raw.starts_with('"') {
-        return V::from(raw.to_owned());
-    }
-    // NOTE: no openEHR spec governs a form-exploded member's text, our own design;
-    // text that is not JSON is legitimately the member's plain string value.
-    serde_json::from_str::<V>(raw).unwrap_or_else(|_not_json| V::from(raw.to_owned()))
-}
-
-/// The text of header `name`, its field lines joined with `, ` as RFC 9110
-/// §5.3 lets a recipient combine them, or `None` when absent.
-fn header_text(headers: &HeaderMap, name: &str) -> Result<Option<String>, ApiError> {
-    let mut joined: Option<String> = None;
-    for line in header_lines(headers, name)? {
-        match joined.as_mut() {
-            Some(text) => {
-                text.push_str(", ");
-                text.push_str(&line);
-            }
-            None => joined = Some(line),
-        }
-    }
-    Ok(joined)
-}
-
-/// Every field line of header `name`, in order.
-fn header_lines(headers: &HeaderMap, name: &str) -> Result<Vec<String>, ApiError> {
-    headers
-        .get_all(name)
-        .iter()
-        .map(|value| {
-            value.to_str().map(str::to_owned).map_err(|_opaque| {
-                ApiError::BadRequest(format!("the header `{name}` is not visible ASCII text"))
+            .filter_map(|(capture, value)| {
+                names
+                    .iter()
+                    .find(|(c, _)| *c == capture)
+                    .map(|(_, name)| (*name, value.to_owned()))
             })
-        })
-        .collect()
-}
-
-/// The header parameter `name`, when the request sends it.
-///
-/// # Errors
-/// Returns [`ApiError::BadRequest`] naming the header when it is not text or
-/// does not parse as a `T`.
-pub(crate) fn header_optional<T>(headers: &HeaderMap, name: &str) -> Result<Option<T>, ApiError>
-where
-    T: FromStr,
-    T::Err: fmt::Display,
-{
-    header_text(headers, name)?
-        .map(|text| parse("header", name, &text))
-        .transpose()
-}
-
-/// The header parameter `name`, which the operation requires.
-///
-/// # Errors
-/// Returns [`ApiError::BadRequest`] naming the header when it is absent, not
-/// text, or does not parse as a `T`.
-pub(crate) fn header_required<T>(headers: &HeaderMap, name: &str) -> Result<T, ApiError>
-where
-    T: FromStr,
-    T::Err: fmt::Display,
-{
-    header_optional(headers, name)?.ok_or_else(|| missing("header", name))
-}
-
-/// The list header parameter `name` (`style: simple, explode: true`), one
-/// item per field line as the client sends it, or `None` when absent.
-///
-/// # Errors
-/// Returns [`ApiError::BadRequest`] naming the header when a field line is not
-/// text or does not parse as a `T`.
-pub(crate) fn header_list<T>(headers: &HeaderMap, name: &str) -> Result<Option<Vec<T>>, ApiError>
-where
-    T: FromStr,
-    T::Err: fmt::Display,
-{
-    let lines = header_lines(headers, name)?;
-    if lines.is_empty() {
-        return Ok(None);
-    }
-    lines
-        .iter()
-        .map(|line| parse("header", name, line))
-        .collect::<Result<Vec<T>, ApiError>>()
-        .map(Some)
+            .collect(),
+    ))
 }
 
 /// Whether the request's `Content-Type` admits a canonical-JSON body.
@@ -370,19 +140,76 @@ pub(crate) fn json_body<T: serde::de::DeserializeOwned>(
     })
 }
 
-/// The canonical-JSON request body as a `T`, or `None` when the request
-/// sends none.
+/// The Simplified Flat media type (ITS-REST overview `Resources.md`
+/// §Simplified Formats).
+const SIMPLIFIED_FLAT: &str = "application/openehr.wt.flat+json";
+
+/// The Simplified Structured media type (ITS-REST overview `Resources.md`
+/// §Simplified Formats).
+const SIMPLIFIED_STRUCTURED: &str = "application/openehr.wt.structured+json";
+
+/// The request body of an operation whose `Content-Type` admits the Simplified
+/// Formats, in the representation the header selects; no `Content-Type` reads
+/// as canonical JSON, like [`json_body`].
 ///
 /// # Errors
-/// As [`json_body`], for a body that is present.
-pub(crate) fn json_body_optional<T: serde::de::DeserializeOwned>(
+/// Returns [`ApiError::UnsupportedMediaType`] under any other media type, and
+/// [`ApiError::BadRequest`] for an absent body or one that is not the
+/// selected representation.
+pub(crate) fn payload_body<C, S>(
     headers: &HeaderMap,
     body: &[u8],
-) -> Result<Option<T>, ApiError> {
+) -> Result<Payload<C, S>, ApiError>
+where
+    C: serde::de::DeserializeOwned,
+    S: serde::de::DeserializeOwned,
+{
+    let media = headers
+        .get(CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .map(|text| {
+            text.split(';')
+                .next()
+                .unwrap_or_default()
+                .trim()
+                .to_ascii_lowercase()
+        });
+    let simplified = |body: &[u8]| -> Result<S, ApiError> {
+        if is_blank(body) {
+            return Err(ApiError::BadRequest(
+                "this operation requires a request body".to_owned(),
+            ));
+        }
+        crate::json::from_canonical_json(utf8(body)?).map_err(|error| {
+            ApiError::BadRequest(format!(
+                "the request body is not the documented shape: {error}"
+            ))
+        })
+    };
+    match media.as_deref() {
+        Some(SIMPLIFIED_FLAT) => simplified(body).map(Payload::Flat),
+        Some(SIMPLIFIED_STRUCTURED) => simplified(body).map(Payload::Structured),
+        _ => json_body(headers, body).map(Payload::Canonical),
+    }
+}
+
+/// The request body of an operation whose `Content-Type` admits the Simplified
+/// Formats, or `None` when the request sends none.
+///
+/// # Errors
+/// As [`payload_body`].
+pub(crate) fn payload_body_optional<C, S>(
+    headers: &HeaderMap,
+    body: &[u8],
+) -> Result<Option<Payload<C, S>>, ApiError>
+where
+    C: serde::de::DeserializeOwned,
+    S: serde::de::DeserializeOwned,
+{
     if is_blank(body) {
         return Ok(None);
     }
-    json_body(headers, body).map(Some)
+    payload_body(headers, body).map(Some)
 }
 
 /// The request body as text (an OPT 1.4 XML upload, an ADL 2 archetype),

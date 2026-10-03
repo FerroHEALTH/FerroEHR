@@ -182,6 +182,7 @@ impl QueryExecuteAdhocQueryParams {
             required: true,
             explode: true,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "ehr_id",
@@ -189,6 +190,7 @@ impl QueryExecuteAdhocQueryParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "offset",
@@ -196,6 +198,7 @@ impl QueryExecuteAdhocQueryParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Integer,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "fetch",
@@ -203,6 +206,7 @@ impl QueryExecuteAdhocQueryParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Integer,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "query_parameters",
@@ -210,6 +214,7 @@ impl QueryExecuteAdhocQueryParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Object,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -217,8 +222,41 @@ impl QueryExecuteAdhocQueryParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `query_execute_adhoc_query` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        _matched: &crate::rest::routes::RouteMatch,
+        query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let query = crate::rest::decode::QueryPairs::parse(query)?;
+        Self::from_parts(&query, headers)
+    }
+
+    /// Decodes the parameters of `query_execute_adhoc_query` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        query: &crate::rest::decode::QueryPairs,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            q: query.required("q")?,
+            ehr_id: query.optional("ehr_id")?,
+            offset: query.optional("offset")?,
+            fetch: query.optional("fetch")?,
+            query_parameters: query
+                .members("query_parameters", &["q", "ehr_id", "offset", "fetch"])?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `query_execute_adhoc_query_body` (path/query/header).
@@ -243,6 +281,7 @@ impl QueryExecuteAdhocQueryBodyParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -250,8 +289,34 @@ impl QueryExecuteAdhocQueryBodyParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `query_execute_adhoc_query_body` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        _matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Self::from_parts(headers)
+    }
+
+    /// Decodes the parameters of `query_execute_adhoc_query_body` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+        })
+    }
 }
 
 /// Parameters for `query_execute_stored_query` (path/query/header).
@@ -286,6 +351,7 @@ impl QueryExecuteStoredQueryParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "ehr_id",
@@ -293,6 +359,7 @@ impl QueryExecuteStoredQueryParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "offset",
@@ -300,6 +367,7 @@ impl QueryExecuteStoredQueryParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Integer,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "fetch",
@@ -307,6 +375,7 @@ impl QueryExecuteStoredQueryParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Integer,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "query_parameters",
@@ -314,6 +383,7 @@ impl QueryExecuteStoredQueryParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Object,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -321,8 +391,42 @@ impl QueryExecuteStoredQueryParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `query_execute_stored_query` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        let query = crate::rest::decode::QueryPairs::parse(query)?;
+        Self::from_parts(&path, &query, headers)
+    }
+
+    /// Decodes the parameters of `query_execute_stored_query` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        query: &crate::rest::decode::QueryPairs,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            qualified_query_name: path.value("qualified_query_name")?,
+            ehr_id: query.optional("ehr_id")?,
+            offset: query.optional("offset")?,
+            fetch: query.optional("fetch")?,
+            query_parameters: query.members("query_parameters", &["ehr_id", "offset", "fetch"])?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `query_execute_stored_query_body` (path/query/header).
@@ -349,6 +453,7 @@ impl QueryExecuteStoredQueryBodyParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -356,6 +461,7 @@ impl QueryExecuteStoredQueryBodyParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -363,8 +469,37 @@ impl QueryExecuteStoredQueryBodyParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `query_execute_stored_query_body` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `query_execute_stored_query_body` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            qualified_query_name: path.value("qualified_query_name")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+        })
+    }
 }
 
 /// Parameters for `query_execute_stored_query_version` (path/query/header).
@@ -401,6 +536,7 @@ impl QueryExecuteStoredQueryVersionParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "version",
@@ -408,6 +544,7 @@ impl QueryExecuteStoredQueryVersionParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "ehr_id",
@@ -415,6 +552,7 @@ impl QueryExecuteStoredQueryVersionParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "offset",
@@ -422,6 +560,7 @@ impl QueryExecuteStoredQueryVersionParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Integer,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "fetch",
@@ -429,6 +568,7 @@ impl QueryExecuteStoredQueryVersionParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Integer,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "query_parameters",
@@ -436,6 +576,7 @@ impl QueryExecuteStoredQueryVersionParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Object,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -443,8 +584,43 @@ impl QueryExecuteStoredQueryVersionParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `query_execute_stored_query_version` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        let query = crate::rest::decode::QueryPairs::parse(query)?;
+        Self::from_parts(&path, &query, headers)
+    }
+
+    /// Decodes the parameters of `query_execute_stored_query_version` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        query: &crate::rest::decode::QueryPairs,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            qualified_query_name: path.value("qualified_query_name")?,
+            version: path.value("version")?,
+            ehr_id: query.optional("ehr_id")?,
+            offset: query.optional("offset")?,
+            fetch: query.optional("fetch")?,
+            query_parameters: query.members("query_parameters", &["ehr_id", "offset", "fetch"])?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `query_execute_stored_query_version_body` (path/query/header).
@@ -473,6 +649,7 @@ impl QueryExecuteStoredQueryVersionBodyParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "version",
@@ -480,6 +657,7 @@ impl QueryExecuteStoredQueryVersionBodyParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -487,6 +665,7 @@ impl QueryExecuteStoredQueryVersionBodyParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -494,8 +673,38 @@ impl QueryExecuteStoredQueryVersionBodyParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `query_execute_stored_query_version_body` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `query_execute_stored_query_version_body` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            qualified_query_name: path.value("qualified_query_name")?,
+            version: path.value("version")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+        })
+    }
 }
 
 /// The response headers the OAS declares for the `200` answer of
@@ -842,16 +1051,8 @@ pub mod server {
         S: QueryApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
-            let params = QueryExecuteAdhocQueryParams {
-                q: query.required("q")?,
-                ehr_id: query.optional("ehr_id")?,
-                offset: query.optional("offset")?,
-                fetch: query.optional("fetch")?,
-                query_parameters: query
-                    .members("query_parameters", &["q", "ehr_id", "offset", "fetch"])?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;
+            let params = QueryExecuteAdhocQueryParams::from_parts(&query, &headers)?;
             let reply: crate::rest::server::Reply =
                 match api.query_execute_adhoc_query(params).await? {
                     QueryExecuteAdhocQueryResponse::Ok { body, headers } => {
@@ -877,10 +1078,7 @@ pub mod server {
         S: QueryApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let params = QueryExecuteAdhocQueryBodyParams {
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-            };
+            let params = QueryExecuteAdhocQueryBodyParams::from_parts(&headers)?;
             let body = crate::rest::server::json_body(&headers, &body)?;
             let reply: crate::rest::server::Reply =
                 match api.query_execute_adhoc_query_body(params, body).await? {
@@ -911,17 +1109,9 @@ pub mod server {
         S: QueryApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
-            let params = QueryExecuteStoredQueryParams {
-                qualified_query_name: path.value("p2", "qualified_query_name")?,
-                ehr_id: query.optional("ehr_id")?,
-                offset: query.optional("offset")?,
-                fetch: query.optional("fetch")?,
-                query_parameters: query
-                    .members("query_parameters", &["ehr_id", "offset", "fetch"])?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p2", "qualified_query_name")])?;
+            let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;
+            let params = QueryExecuteStoredQueryParams::from_parts(&path, &query, &headers)?;
             let reply: crate::rest::server::Reply =
                 match api.query_execute_stored_query(params).await? {
                     QueryExecuteStoredQueryResponse::Ok { body, headers } => {
@@ -951,12 +1141,8 @@ pub mod server {
         S: QueryApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = QueryExecuteStoredQueryBodyParams {
-                qualified_query_name: path.value("p2", "qualified_query_name")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p2", "qualified_query_name")])?;
+            let params = QueryExecuteStoredQueryBodyParams::from_parts(&path, &headers)?;
             let body = crate::rest::server::json_body(&headers, &body)?;
             let reply: crate::rest::server::Reply =
                 match api.query_execute_stored_query_body(params, body).await? {
@@ -987,18 +1173,12 @@ pub mod server {
         S: QueryApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
-            let params = QueryExecuteStoredQueryVersionParams {
-                qualified_query_name: path.value("p2", "qualified_query_name")?,
-                version: path.value("p3", "version")?,
-                ehr_id: query.optional("ehr_id")?,
-                offset: query.optional("offset")?,
-                fetch: query.optional("fetch")?,
-                query_parameters: query
-                    .members("query_parameters", &["ehr_id", "offset", "fetch"])?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(
+                path,
+                &[("p2", "qualified_query_name"), ("p3", "version")],
+            )?;
+            let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;
+            let params = QueryExecuteStoredQueryVersionParams::from_parts(&path, &query, &headers)?;
             let reply: crate::rest::server::Reply =
                 match api.query_execute_stored_query_version(params).await? {
                     QueryExecuteStoredQueryVersionResponse::Ok { body, headers } => {
@@ -1028,13 +1208,11 @@ pub mod server {
         S: QueryApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = QueryExecuteStoredQueryVersionBodyParams {
-                qualified_query_name: path.value("p2", "qualified_query_name")?,
-                version: path.value("p3", "version")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-            };
+            let path = crate::rest::server::path_captures(
+                path,
+                &[("p2", "qualified_query_name"), ("p3", "version")],
+            )?;
+            let params = QueryExecuteStoredQueryVersionBodyParams::from_parts(&path, &headers)?;
             let body = crate::rest::server::json_body(&headers, &body)?;
             let reply: crate::rest::server::Reply = match api
                 .query_execute_stored_query_version_body(params, body)
@@ -1627,4 +1805,21 @@ pub const ROUTE_PARAMS: &[&[crate::rest::routes::Param]] = &[
 const _: () = assert!(
     ROUTE_PARAMS.len() == ROUTES.len(),
     "ROUTE_PARAMS carries one row per ROUTES entry"
+);
+
+/// The request-body media types of each operation, index-aligned with
+/// [`ROUTES`]: the `requestBody.content` keys of the OAS, in document order,
+/// empty when the operation takes no body.
+pub const ROUTE_REQUEST_MEDIA: &[&[&str]] = &[
+    &[],
+    &["application/json"],
+    &[],
+    &["application/json"],
+    &[],
+    &["application/json"],
+];
+
+const _: () = assert!(
+    ROUTE_REQUEST_MEDIA.len() == ROUTES.len(),
+    "ROUTE_REQUEST_MEDIA carries one row per ROUTES entry"
 );

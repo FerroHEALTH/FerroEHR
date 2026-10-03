@@ -28,6 +28,8 @@
 #[cfg(feature = "rest-client")]
 pub mod client;
 #[cfg(feature = "rest")]
+pub mod decode;
+#[cfg(feature = "rest")]
 pub mod generated;
 #[cfg(feature = "rest")]
 pub mod routes;

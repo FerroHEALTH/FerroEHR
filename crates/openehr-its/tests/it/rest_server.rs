@@ -25,8 +25,9 @@ use std::sync::{Arc, Mutex};
 
 use axum::body::Body;
 use http::{Method, StatusCode};
+use openehr_base::v1_3::base_types::identification::object_version_id::ObjectVersionId;
 use openehr_its::rest::generated::{admin, definition, demographic, ehr, query, system};
-use openehr_its::rest::runtime::{ApiError, Refusal};
+use openehr_its::rest::runtime::{ApiError, Payload, Refusal};
 use openehr_its::rest::server;
 use openehr_rm::v1_2::composition::composition::Composition;
 use openehr_rm::v1_2::demographic::person::Person;
@@ -83,7 +84,7 @@ impl ehr::server::EhrApi for Recorder {
     async fn ehr_create(
         &self,
         params: ehr::EhrCreateParams,
-        body: Option<EhrStatus>,
+        body: Option<Payload<EhrStatus, Value>>,
     ) -> Result<ehr::server::EhrCreateResponse, Refusal> {
         self.record(format!(
             "ehr_create prefer={:?} audit={:?} body={}",
@@ -104,6 +105,38 @@ impl ehr::server::EhrApi for Recorder {
         })
     }
 
+    async fn contribution_create(
+        &self,
+        _params: ehr::ContributionCreateParams,
+        body: Payload<ehr::NewContribution, ehr::NewContribution<Value>>,
+    ) -> Result<ehr::server::ContributionCreateResponse, Refusal> {
+        let (form, preceding) = match &body {
+            Payload::Canonical(c) => (
+                "canonical",
+                c.versions.first().map(|v| v.preceding_version_uid.clone()),
+            ),
+            Payload::Flat(c) => (
+                "flat",
+                c.versions.first().map(|v| v.preceding_version_uid.clone()),
+            ),
+            Payload::Structured(c) => (
+                "structured",
+                c.versions.first().map(|v| v.preceding_version_uid.clone()),
+            ),
+        };
+        self.record(format!(
+            "contribution_create {form} preceding={:?}",
+            preceding.flatten().map(|uid| uid.value().to_owned())
+        ));
+        Ok(ehr::server::ContributionCreateResponse::NoContent {
+            headers: ehr::ContributionCreateNoContentHeaders {
+                etag: None,
+                location: None,
+                content_type: None,
+            },
+        })
+    }
+
     async fn ehr_status_get_by_version_id(
         &self,
         params: ehr::EhrStatusGetByVersionIdParams,
@@ -118,7 +151,7 @@ impl ehr::server::EhrApi for Recorder {
     async fn composition_update(
         &self,
         params: ehr::CompositionUpdateParams,
-        _body: Composition,
+        _body: Payload<Composition, Value>,
     ) -> Result<ehr::server::CompositionUpdateResponse, Refusal> {
         self.record(format!("composition_update if_match={}", params.if_match));
         // The current version is `…::2`, so any other precondition fails.
@@ -526,7 +559,7 @@ impl demographic::server::DemographicApi for Parties {
     async fn person_update(
         &self,
         params: demographic::PersonUpdateParams,
-        _body: Person,
+        _body: Payload<Person, Value>,
     ) -> Result<demographic::server::PersonUpdateResponse, Refusal> {
         Err(Refusal::new(ApiError::PreconditionFailed(format!(
             "`{}` is not the latest version",
@@ -689,5 +722,120 @@ async fn the_fallbacks_answer_404_and_405_with_the_error_body() -> TestResult {
             "a bound route still serves"
         );
     }
+    Ok(())
+}
+
+/// A CONTRIBUTION whose envelope is canonical and whose version `data` is
+/// `data` (ITS-REST `operations/contribution_create.yaml` §Simplified Formats).
+fn contribution_body(data: &str) -> String {
+    format!(
+        r#"{{
+  "versions": [{{
+    "preceding_version_uid": {{ "_type": "OBJECT_VERSION_ID", "value": "{VERSION_UID}" }},
+    "lifecycle_state": {{
+      "_type": "DV_CODED_TEXT",
+      "value": "complete",
+      "defining_code": {{ "terminology_id": {{ "_type": "TERMINOLOGY_ID", "value": "openehr" }}, "code_string": "532" }}
+    }},
+    "commit_audit": {{
+      "_type": "UPDATE_AUDIT",
+      "change_type": {{
+        "_type": "DV_CODED_TEXT",
+        "value": "modification",
+        "defining_code": {{ "terminology_id": {{ "_type": "TERMINOLOGY_ID", "value": "openehr" }}, "code_string": "251" }}
+      }},
+      "committer": {{ "_type": "PARTY_IDENTIFIED", "name": "A. Clinician" }}
+    }},
+    "data": {data}
+  }}],
+  "audit": {{
+    "_type": "UPDATE_AUDIT",
+    "change_type": {{
+      "_type": "DV_CODED_TEXT",
+      "value": "modification",
+      "defining_code": {{ "terminology_id": {{ "_type": "TERMINOLOGY_ID", "value": "openehr" }}, "code_string": "251" }}
+    }},
+    "committer": {{ "_type": "PARTY_IDENTIFIED", "name": "A. Clinician" }}
+  }}
+}}"#
+    )
+}
+
+/// A FLAT and a STRUCTURED CONTRIBUTION parse to the envelope over raw JSON
+/// content, `preceding_version_uid` typed `OBJECT_VERSION_ID`, the content
+/// left as sent.
+#[test]
+fn a_simplified_contribution_envelope_reads_with_typed_version_uids() -> TestResult {
+    for data in [
+        r#"{"vital_signs/language|code": "en", "vital_signs/body_temperature:0/any_event:0/temperature|magnitude": 37.1}"#,
+        r#"{"vital_signs": {"language": [{"|code": "en"}]}}"#,
+    ] {
+        let parsed: ehr::NewContribution<Value> = serde_json::from_str(&contribution_body(data))?;
+        let version = parsed.versions.first().ok_or("one version")?;
+        assert_eq!(
+            version
+                .preceding_version_uid
+                .as_ref()
+                .map(ObjectVersionId::value),
+            Some(VERSION_UID)
+        );
+        assert_eq!(version.data, serde_json::from_str::<Value>(data)?);
+    }
+    Ok(())
+}
+
+/// `contribution_create` admits both Simplified Formats its `Content-Type`
+/// parameter declares and hands the implementation the matching `Payload`;
+/// canonical JSON stays canonical and XML is still `415`.
+#[tokio::test]
+async fn contribution_create_admits_the_simplified_formats() -> TestResult {
+    let (app, recorder) = recorder_app();
+    let uri = format!("/ehr/{EHR_ID}/contribution");
+    let flat = contribution_body(r#"{"vital_signs/language|code": "en"}"#);
+    for content_type in [
+        "application/openehr.wt.flat+json",
+        "application/openehr.wt.structured+json",
+    ] {
+        let (status, _, _) = send(
+            app.clone(),
+            request(Method::POST, &uri, &[("Content-Type", content_type)], &flat)?,
+        )
+        .await?;
+        assert_eq!(status, StatusCode::NO_CONTENT, "{content_type}");
+    }
+    let (status, _, _) = send(
+        app.clone(),
+        request(
+            Method::POST,
+            &uri,
+            &[("Content-Type", "application/xml")],
+            &flat,
+        )?,
+    )
+    .await?;
+    assert_eq!(status, StatusCode::UNSUPPORTED_MEDIA_TYPE);
+    let (status, _, _) = send(
+        app,
+        request(
+            Method::POST,
+            &uri,
+            &[("Content-Type", "application/json")],
+            &flat,
+        )?,
+    )
+    .await?;
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "FLAT content is not a canonical version"
+    );
+    let preceding = format!("preceding=Some({VERSION_UID:?})");
+    assert_eq!(
+        recorder.seen(),
+        [
+            format!("contribution_create flat {preceding}"),
+            format!("contribution_create structured {preceding}"),
+        ]
+    );
     Ok(())
 }

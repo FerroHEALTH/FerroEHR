@@ -160,12 +160,12 @@ pub type UpdateVersion = super::common::UpdateVersion<Versionable>;
 /// The `NewContribution` transport DTO of this API group (an ITS-REST OAS
 /// component schema).
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NewContribution {
+pub struct NewContribution<T = Versionable> {
     /// The `uid` property of `NewContribution`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub uid: Option<openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId>,
     /// The `versions` property of `NewContribution`.
-    pub versions: Vec<UpdateVersion>,
+    pub versions: Vec<super::common::UpdateVersion<T>>,
     /// The `audit` property of `NewContribution`.
     pub audit: super::common::UpdateAudit,
     /// The undeclared (`additionalProperties`) members of `NewContribution`, which
@@ -204,6 +204,7 @@ impl EhrGetBySubjectParams {
             required: true,
             explode: true,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "subject_namespace",
@@ -211,6 +212,7 @@ impl EhrGetBySubjectParams {
             required: true,
             explode: true,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -218,8 +220,37 @@ impl EhrGetBySubjectParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `ehr_get_by_subject` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        _matched: &crate::rest::routes::RouteMatch,
+        query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let query = crate::rest::decode::QueryPairs::parse(query)?;
+        Self::from_parts(&query, headers)
+    }
+
+    /// Decodes the parameters of `ehr_get_by_subject` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        query: &crate::rest::decode::QueryPairs,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            subject_id: query.required("subject_id")?,
+            subject_namespace: query.required("subject_namespace")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `ehr_create` (path/query/header).
@@ -264,6 +295,7 @@ impl EhrCreateParams {
                 "return=minimal",
                 "return=identifier",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -271,6 +303,7 @@ impl EhrCreateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -283,6 +316,7 @@ impl EhrCreateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version",
@@ -290,6 +324,7 @@ impl EhrCreateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-audit-details",
@@ -297,8 +332,40 @@ impl EhrCreateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `ehr_create` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        _matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Self::from_parts(headers)
+    }
+
+    /// Decodes the parameters of `ehr_create` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            prefer: crate::rest::decode::header_optional(headers, "Prefer")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+            openehr_version: crate::rest::decode::header_optional(headers, "openehr-version")?,
+            openehr_audit_details: crate::rest::decode::header_list(
+                headers,
+                "openehr-audit-details",
+            )?,
+        })
+    }
 }
 
 /// Parameters for `ehr_get_by_id` (path/query/header).
@@ -321,6 +388,7 @@ impl EhrGetByIdParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -328,8 +396,36 @@ impl EhrGetByIdParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `ehr_get_by_id` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `ehr_get_by_id` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `ehr_create_with_id` (path/query/header).
@@ -372,6 +468,7 @@ impl EhrCreateWithIdParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "Prefer",
@@ -383,6 +480,7 @@ impl EhrCreateWithIdParams {
                 "return=minimal",
                 "return=identifier",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -390,6 +488,7 @@ impl EhrCreateWithIdParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -402,6 +501,7 @@ impl EhrCreateWithIdParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version",
@@ -409,6 +509,7 @@ impl EhrCreateWithIdParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-audit-details",
@@ -416,8 +517,43 @@ impl EhrCreateWithIdParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `ehr_create_with_id` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `ehr_create_with_id` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            prefer: crate::rest::decode::header_optional(headers, "Prefer")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+            openehr_version: crate::rest::decode::header_optional(headers, "openehr-version")?,
+            openehr_audit_details: crate::rest::decode::header_list(
+                headers,
+                "openehr-audit-details",
+            )?,
+        })
+    }
 }
 
 /// Parameters for `ehr_status_get_by_version_id` (path/query/header).
@@ -442,6 +578,7 @@ impl EhrStatusGetByVersionIdParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "version_uid",
@@ -449,6 +586,7 @@ impl EhrStatusGetByVersionIdParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::ObjectVersion),
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -461,8 +599,37 @@ impl EhrStatusGetByVersionIdParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `ehr_status_get_by_version_id` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `ehr_status_get_by_version_id` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            version_uid: path.value("version_uid")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `ehr_status_get_at_time` (path/query/header).
@@ -488,6 +655,7 @@ impl EhrStatusGetAtTimeParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "version_at_time",
@@ -495,6 +663,7 @@ impl EhrStatusGetAtTimeParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::DateTime,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -507,8 +676,39 @@ impl EhrStatusGetAtTimeParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `ehr_status_get_at_time` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        let query = crate::rest::decode::QueryPairs::parse(query)?;
+        Self::from_parts(&path, &query, headers)
+    }
+
+    /// Decodes the parameters of `ehr_status_get_at_time` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        query: &crate::rest::decode::QueryPairs,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            version_at_time: query.optional("version_at_time")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `ehr_status_update` (path/query/header).
@@ -562,6 +762,7 @@ impl EhrStatusUpdateParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "If-Match",
@@ -569,6 +770,7 @@ impl EhrStatusUpdateParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Prefer",
@@ -580,6 +782,7 @@ impl EhrStatusUpdateParams {
                 "return=minimal",
                 "return=identifier",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -592,6 +795,7 @@ impl EhrStatusUpdateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -604,6 +808,7 @@ impl EhrStatusUpdateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-item-tag",
@@ -611,6 +816,7 @@ impl EhrStatusUpdateParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version-item-tag",
@@ -618,6 +824,7 @@ impl EhrStatusUpdateParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version",
@@ -625,6 +832,7 @@ impl EhrStatusUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-audit-details",
@@ -632,8 +840,49 @@ impl EhrStatusUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `ehr_status_update` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `ehr_status_update` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            if_match: crate::rest::decode::header_required(headers, "If-Match")?,
+            prefer: crate::rest::decode::header_optional(headers, "Prefer")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+            openehr_item_tag: crate::rest::decode::header_list(headers, "openehr-item-tag")?,
+            openehr_version_item_tag: crate::rest::decode::header_list(
+                headers,
+                "openehr-version-item-tag",
+            )?,
+            openehr_version: crate::rest::decode::header_optional(headers, "openehr-version")?,
+            openehr_audit_details: crate::rest::decode::header_list(
+                headers,
+                "openehr-audit-details",
+            )?,
+        })
+    }
 }
 
 /// Parameters for `versioned_ehr_status_get` (path/query/header).
@@ -660,6 +909,7 @@ impl VersionedEhrStatusGetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -667,6 +917,7 @@ impl VersionedEhrStatusGetParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -674,8 +925,37 @@ impl VersionedEhrStatusGetParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `versioned_ehr_status_get` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `versioned_ehr_status_get` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+        })
+    }
 }
 
 /// Parameters for `versioned_ehr_status_revision_history` (path/query/header).
@@ -702,6 +982,7 @@ impl VersionedEhrStatusRevisionHistoryParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -709,6 +990,7 @@ impl VersionedEhrStatusRevisionHistoryParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -716,8 +998,37 @@ impl VersionedEhrStatusRevisionHistoryParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `versioned_ehr_status_revision_history` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `versioned_ehr_status_revision_history` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+        })
+    }
 }
 
 /// Parameters for `versioned_ehr_status_version_get_at_time` (path/query/header).
@@ -747,6 +1058,7 @@ impl VersionedEhrStatusVersionGetAtTimeParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "version_at_time",
@@ -754,6 +1066,7 @@ impl VersionedEhrStatusVersionGetAtTimeParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::DateTime,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -761,6 +1074,7 @@ impl VersionedEhrStatusVersionGetAtTimeParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -768,8 +1082,40 @@ impl VersionedEhrStatusVersionGetAtTimeParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `versioned_ehr_status_version_get_at_time` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        let query = crate::rest::decode::QueryPairs::parse(query)?;
+        Self::from_parts(&path, &query, headers)
+    }
+
+    /// Decodes the parameters of `versioned_ehr_status_version_get_at_time` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        query: &crate::rest::decode::QueryPairs,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            version_at_time: query.optional("version_at_time")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+        })
+    }
 }
 
 /// Parameters for `versioned_ehr_status_version_get_by_id` (path/query/header).
@@ -798,6 +1144,7 @@ impl VersionedEhrStatusVersionGetByIdParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "version_uid",
@@ -805,6 +1152,7 @@ impl VersionedEhrStatusVersionGetByIdParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::ObjectVersion),
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -812,6 +1160,7 @@ impl VersionedEhrStatusVersionGetByIdParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -819,8 +1168,38 @@ impl VersionedEhrStatusVersionGetByIdParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `versioned_ehr_status_version_get_by_id` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `versioned_ehr_status_version_get_by_id` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            version_uid: path.value("version_uid")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+        })
+    }
 }
 
 /// Parameters for `composition_create` (path/query/header).
@@ -877,6 +1256,7 @@ impl CompositionCreateParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "Prefer",
@@ -888,6 +1268,7 @@ impl CompositionCreateParams {
                 "return=minimal",
                 "return=identifier",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -900,6 +1281,7 @@ impl CompositionCreateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -912,6 +1294,7 @@ impl CompositionCreateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-item-tag",
@@ -919,6 +1302,7 @@ impl CompositionCreateParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version-item-tag",
@@ -926,6 +1310,7 @@ impl CompositionCreateParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version",
@@ -933,6 +1318,7 @@ impl CompositionCreateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-audit-details",
@@ -940,6 +1326,7 @@ impl CompositionCreateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-template-id",
@@ -947,8 +1334,52 @@ impl CompositionCreateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `composition_create` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `composition_create` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            prefer: crate::rest::decode::header_optional(headers, "Prefer")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+            openehr_item_tag: crate::rest::decode::header_list(headers, "openehr-item-tag")?,
+            openehr_version_item_tag: crate::rest::decode::header_list(
+                headers,
+                "openehr-version-item-tag",
+            )?,
+            openehr_version: crate::rest::decode::header_optional(headers, "openehr-version")?,
+            openehr_audit_details: crate::rest::decode::header_list(
+                headers,
+                "openehr-audit-details",
+            )?,
+            openehr_template_id: crate::rest::decode::header_optional(
+                headers,
+                "openehr-template-id",
+            )?,
+        })
+    }
 }
 
 /// Parameters for `composition_get` (path/query/header).
@@ -976,6 +1407,7 @@ impl CompositionGetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "uid_based_id",
@@ -983,6 +1415,7 @@ impl CompositionGetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::UidBased),
         },
         crate::rest::routes::Param {
             name: "version_at_time",
@@ -990,6 +1423,7 @@ impl CompositionGetParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::DateTime,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1002,8 +1436,40 @@ impl CompositionGetParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `composition_get` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        let query = crate::rest::decode::QueryPairs::parse(query)?;
+        Self::from_parts(&path, &query, headers)
+    }
+
+    /// Decodes the parameters of `composition_get` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        query: &crate::rest::decode::QueryPairs,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            uid_based_id: path.value("uid_based_id")?,
+            version_at_time: query.optional("version_at_time")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `composition_update` (path/query/header).
@@ -1065,6 +1531,7 @@ impl CompositionUpdateParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "uid_based_id",
@@ -1072,6 +1539,7 @@ impl CompositionUpdateParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "If-Match",
@@ -1079,6 +1547,7 @@ impl CompositionUpdateParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Prefer",
@@ -1090,6 +1559,7 @@ impl CompositionUpdateParams {
                 "return=minimal",
                 "return=identifier",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1102,6 +1572,7 @@ impl CompositionUpdateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -1114,6 +1585,7 @@ impl CompositionUpdateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-item-tag",
@@ -1121,6 +1593,7 @@ impl CompositionUpdateParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version-item-tag",
@@ -1128,6 +1601,7 @@ impl CompositionUpdateParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version",
@@ -1135,6 +1609,7 @@ impl CompositionUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-audit-details",
@@ -1142,6 +1617,7 @@ impl CompositionUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-template-id",
@@ -1149,8 +1625,54 @@ impl CompositionUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `composition_update` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `composition_update` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            uid_based_id: path.value("uid_based_id")?,
+            if_match: crate::rest::decode::header_required(headers, "If-Match")?,
+            prefer: crate::rest::decode::header_optional(headers, "Prefer")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+            openehr_item_tag: crate::rest::decode::header_list(headers, "openehr-item-tag")?,
+            openehr_version_item_tag: crate::rest::decode::header_list(
+                headers,
+                "openehr-version-item-tag",
+            )?,
+            openehr_version: crate::rest::decode::header_optional(headers, "openehr-version")?,
+            openehr_audit_details: crate::rest::decode::header_list(
+                headers,
+                "openehr-audit-details",
+            )?,
+            openehr_template_id: crate::rest::decode::header_optional(
+                headers,
+                "openehr-template-id",
+            )?,
+        })
+    }
 }
 
 /// Parameters for `composition_delete` (path/query/header).
@@ -1183,6 +1705,7 @@ impl CompositionDeleteParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "uid_based_id",
@@ -1190,6 +1713,7 @@ impl CompositionDeleteParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::ObjectVersion),
         },
         crate::rest::routes::Param {
             name: "openehr-version",
@@ -1197,6 +1721,7 @@ impl CompositionDeleteParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-audit-details",
@@ -1204,8 +1729,41 @@ impl CompositionDeleteParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `composition_delete` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `composition_delete` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            uid_based_id: path.value("uid_based_id")?,
+            openehr_version: crate::rest::decode::header_optional(headers, "openehr-version")?,
+            openehr_audit_details: crate::rest::decode::header_list(
+                headers,
+                "openehr-audit-details",
+            )?,
+        })
+    }
 }
 
 /// Parameters for `versioned_composition_get` (path/query/header).
@@ -1234,6 +1792,7 @@ impl VersionedCompositionGetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "versioned_object_uid",
@@ -1241,6 +1800,7 @@ impl VersionedCompositionGetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1248,6 +1808,7 @@ impl VersionedCompositionGetParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -1255,8 +1816,38 @@ impl VersionedCompositionGetParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `versioned_composition_get` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `versioned_composition_get` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            versioned_object_uid: path.value("versioned_object_uid")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+        })
+    }
 }
 
 /// Parameters for `versioned_composition_revision_history` (path/query/header).
@@ -1285,6 +1876,7 @@ impl VersionedCompositionRevisionHistoryParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "versioned_object_uid",
@@ -1292,6 +1884,7 @@ impl VersionedCompositionRevisionHistoryParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1299,6 +1892,7 @@ impl VersionedCompositionRevisionHistoryParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -1306,8 +1900,38 @@ impl VersionedCompositionRevisionHistoryParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `versioned_composition_revision_history` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `versioned_composition_revision_history` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            versioned_object_uid: path.value("versioned_object_uid")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+        })
+    }
 }
 
 /// Parameters for `versioned_composition_version_get_at_time` (path/query/header).
@@ -1339,6 +1963,7 @@ impl VersionedCompositionVersionGetAtTimeParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "versioned_object_uid",
@@ -1346,6 +1971,7 @@ impl VersionedCompositionVersionGetAtTimeParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "version_at_time",
@@ -1353,6 +1979,7 @@ impl VersionedCompositionVersionGetAtTimeParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::DateTime,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1360,6 +1987,7 @@ impl VersionedCompositionVersionGetAtTimeParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -1367,8 +1995,41 @@ impl VersionedCompositionVersionGetAtTimeParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `versioned_composition_version_get_at_time` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        let query = crate::rest::decode::QueryPairs::parse(query)?;
+        Self::from_parts(&path, &query, headers)
+    }
+
+    /// Decodes the parameters of `versioned_composition_version_get_at_time` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        query: &crate::rest::decode::QueryPairs,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            versioned_object_uid: path.value("versioned_object_uid")?,
+            version_at_time: query.optional("version_at_time")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+        })
+    }
 }
 
 /// Parameters for `versioned_composition_version_get_by_id` (path/query/header).
@@ -1399,6 +2060,7 @@ impl VersionedCompositionVersionGetByIdParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "versioned_object_uid",
@@ -1406,6 +2068,7 @@ impl VersionedCompositionVersionGetByIdParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "version_uid",
@@ -1413,6 +2076,7 @@ impl VersionedCompositionVersionGetByIdParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::ObjectVersion),
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1420,6 +2084,7 @@ impl VersionedCompositionVersionGetByIdParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -1427,8 +2092,39 @@ impl VersionedCompositionVersionGetByIdParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `versioned_composition_version_get_by_id` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `versioned_composition_version_get_by_id` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            versioned_object_uid: path.value("versioned_object_uid")?,
+            version_uid: path.value("version_uid")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+        })
+    }
 }
 
 /// Parameters for `directory_get_at_time` (path/query/header).
@@ -1457,6 +2153,7 @@ impl DirectoryGetAtTimeParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "version_at_time",
@@ -1464,6 +2161,7 @@ impl DirectoryGetAtTimeParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::DateTime,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "path",
@@ -1471,6 +2169,7 @@ impl DirectoryGetAtTimeParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1483,8 +2182,40 @@ impl DirectoryGetAtTimeParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `directory_get_at_time` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        let query = crate::rest::decode::QueryPairs::parse(query)?;
+        Self::from_parts(&path, &query, headers)
+    }
+
+    /// Decodes the parameters of `directory_get_at_time` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        query: &crate::rest::decode::QueryPairs,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            version_at_time: query.optional("version_at_time")?,
+            path: query.optional("path")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `directory_update` (path/query/header).
@@ -1530,6 +2261,7 @@ impl DirectoryUpdateParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "If-Match",
@@ -1537,6 +2269,7 @@ impl DirectoryUpdateParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Prefer",
@@ -1548,6 +2281,7 @@ impl DirectoryUpdateParams {
                 "return=minimal",
                 "return=identifier",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1560,6 +2294,7 @@ impl DirectoryUpdateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -1572,6 +2307,7 @@ impl DirectoryUpdateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version",
@@ -1579,6 +2315,7 @@ impl DirectoryUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-audit-details",
@@ -1586,8 +2323,44 @@ impl DirectoryUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `directory_update` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `directory_update` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            if_match: crate::rest::decode::header_required(headers, "If-Match")?,
+            prefer: crate::rest::decode::header_optional(headers, "Prefer")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+            openehr_version: crate::rest::decode::header_optional(headers, "openehr-version")?,
+            openehr_audit_details: crate::rest::decode::header_list(
+                headers,
+                "openehr-audit-details",
+            )?,
+        })
+    }
 }
 
 /// Parameters for `directory_create` (path/query/header).
@@ -1630,6 +2403,7 @@ impl DirectoryCreateParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "Prefer",
@@ -1641,6 +2415,7 @@ impl DirectoryCreateParams {
                 "return=minimal",
                 "return=identifier",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1653,6 +2428,7 @@ impl DirectoryCreateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -1665,6 +2441,7 @@ impl DirectoryCreateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version",
@@ -1672,6 +2449,7 @@ impl DirectoryCreateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-audit-details",
@@ -1679,8 +2457,43 @@ impl DirectoryCreateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `directory_create` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `directory_create` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            prefer: crate::rest::decode::header_optional(headers, "Prefer")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+            openehr_version: crate::rest::decode::header_optional(headers, "openehr-version")?,
+            openehr_audit_details: crate::rest::decode::header_list(
+                headers,
+                "openehr-audit-details",
+            )?,
+        })
+    }
 }
 
 /// Parameters for `directory_delete` (path/query/header).
@@ -1714,6 +2527,7 @@ impl DirectoryDeleteParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "If-Match",
@@ -1721,6 +2535,7 @@ impl DirectoryDeleteParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version",
@@ -1728,6 +2543,7 @@ impl DirectoryDeleteParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-audit-details",
@@ -1735,8 +2551,41 @@ impl DirectoryDeleteParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `directory_delete` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `directory_delete` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            if_match: crate::rest::decode::header_required(headers, "If-Match")?,
+            openehr_version: crate::rest::decode::header_optional(headers, "openehr-version")?,
+            openehr_audit_details: crate::rest::decode::header_list(
+                headers,
+                "openehr-audit-details",
+            )?,
+        })
+    }
 }
 
 /// Parameters for `directory_get_by_version_id` (path/query/header).
@@ -1764,6 +2613,7 @@ impl DirectoryGetByVersionIdParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "version_uid",
@@ -1771,6 +2621,7 @@ impl DirectoryGetByVersionIdParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::ObjectVersion),
         },
         crate::rest::routes::Param {
             name: "path",
@@ -1778,6 +2629,7 @@ impl DirectoryGetByVersionIdParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1790,8 +2642,40 @@ impl DirectoryGetByVersionIdParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `directory_get_by_version_id` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        let query = crate::rest::decode::QueryPairs::parse(query)?;
+        Self::from_parts(&path, &query, headers)
+    }
+
+    /// Decodes the parameters of `directory_get_by_version_id` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        query: &crate::rest::decode::QueryPairs,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            version_uid: path.value("version_uid")?,
+            path: query.optional("path")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `contribution_create` (path/query/header).
@@ -1828,6 +2712,7 @@ impl ContributionCreateParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "Prefer",
@@ -1839,6 +2724,7 @@ impl ContributionCreateParams {
                 "return=minimal",
                 "return=identifier",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1851,6 +2737,7 @@ impl ContributionCreateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -1863,6 +2750,7 @@ impl ContributionCreateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-template-id",
@@ -1870,8 +2758,42 @@ impl ContributionCreateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `contribution_create` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `contribution_create` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            prefer: crate::rest::decode::header_optional(headers, "Prefer")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+            openehr_template_id: crate::rest::decode::header_optional(
+                headers,
+                "openehr-template-id",
+            )?,
+        })
+    }
 }
 
 /// Parameters for `contribution_get` (path/query/header).
@@ -1896,6 +2818,7 @@ impl ContributionGetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "contribution_uid",
@@ -1903,6 +2826,7 @@ impl ContributionGetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1915,8 +2839,37 @@ impl ContributionGetParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `contribution_get` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `contribution_get` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            contribution_uid: path.value("contribution_uid")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `ehr_tags_get` (path/query/header).
@@ -1948,6 +2901,7 @@ impl EhrTagsGetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "tag_key",
@@ -1955,6 +2909,7 @@ impl EhrTagsGetParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "tag_value",
@@ -1962,6 +2917,7 @@ impl EhrTagsGetParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "tag_target_path",
@@ -1969,6 +2925,7 @@ impl EhrTagsGetParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1976,8 +2933,41 @@ impl EhrTagsGetParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `ehr_tags_get` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        let query = crate::rest::decode::QueryPairs::parse(query)?;
+        Self::from_parts(&path, &query, headers)
+    }
+
+    /// Decodes the parameters of `ehr_tags_get` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        query: &crate::rest::decode::QueryPairs,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            tag_key: query.optional("tag_key")?,
+            tag_value: query.optional("tag_value")?,
+            tag_target_path: query.optional("tag_target_path")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `composition_tags_get` (path/query/header).
@@ -2002,6 +2992,7 @@ impl CompositionTagsGetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "uid_based_id",
@@ -2009,6 +3000,7 @@ impl CompositionTagsGetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::UidBased),
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -2016,8 +3008,37 @@ impl CompositionTagsGetParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `composition_tags_get` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `composition_tags_get` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            uid_based_id: path.value("uid_based_id")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `composition_tags_update` (path/query/header).
@@ -2050,6 +3071,7 @@ impl CompositionTagsUpdateParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "uid_based_id",
@@ -2057,6 +3079,7 @@ impl CompositionTagsUpdateParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::UidBased),
         },
         crate::rest::routes::Param {
             name: "Prefer",
@@ -2068,6 +3091,7 @@ impl CompositionTagsUpdateParams {
                 "return=minimal",
                 "return=identifier",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -2075,6 +3099,7 @@ impl CompositionTagsUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -2082,8 +3107,39 @@ impl CompositionTagsUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `composition_tags_update` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `composition_tags_update` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            uid_based_id: path.value("uid_based_id")?,
+            prefer: crate::rest::decode::header_optional(headers, "Prefer")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+        })
+    }
 }
 
 /// Parameters for `composition_tags_delete` (path/query/header).
@@ -2106,6 +3162,7 @@ impl CompositionTagsDeleteParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "uid_based_id",
@@ -2113,6 +3170,7 @@ impl CompositionTagsDeleteParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::UidBased),
         },
         crate::rest::routes::Param {
             name: "key",
@@ -2120,8 +3178,36 @@ impl CompositionTagsDeleteParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `composition_tags_delete` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        _headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path)
+    }
+
+    /// Decodes the parameters of `composition_tags_delete` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            uid_based_id: path.value("uid_based_id")?,
+            key: path.value("key")?,
+        })
+    }
 }
 
 /// Parameters for `ehr_status_tags_get` (path/query/header).
@@ -2146,6 +3232,7 @@ impl EhrStatusTagsGetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "uid_based_id",
@@ -2153,6 +3240,7 @@ impl EhrStatusTagsGetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::UidBased),
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -2160,8 +3248,37 @@ impl EhrStatusTagsGetParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `ehr_status_tags_get` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `ehr_status_tags_get` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            uid_based_id: path.value("uid_based_id")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `ehr_status_tags_update` (path/query/header).
@@ -2194,6 +3311,7 @@ impl EhrStatusTagsUpdateParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "uid_based_id",
@@ -2201,6 +3319,7 @@ impl EhrStatusTagsUpdateParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::UidBased),
         },
         crate::rest::routes::Param {
             name: "Prefer",
@@ -2212,6 +3331,7 @@ impl EhrStatusTagsUpdateParams {
                 "return=minimal",
                 "return=identifier",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -2219,6 +3339,7 @@ impl EhrStatusTagsUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -2226,8 +3347,39 @@ impl EhrStatusTagsUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `ehr_status_tags_update` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `ehr_status_tags_update` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            uid_based_id: path.value("uid_based_id")?,
+            prefer: crate::rest::decode::header_optional(headers, "Prefer")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+        })
+    }
 }
 
 /// Parameters for `ehr_status_tags_delete` (path/query/header).
@@ -2250,6 +3402,7 @@ impl EhrStatusTagsDeleteParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "uid_based_id",
@@ -2257,6 +3410,7 @@ impl EhrStatusTagsDeleteParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::UidBased),
         },
         crate::rest::routes::Param {
             name: "key",
@@ -2264,8 +3418,36 @@ impl EhrStatusTagsDeleteParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `ehr_status_tags_delete` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        _headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path)
+    }
+
+    /// Decodes the parameters of `ehr_status_tags_delete` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+            uid_based_id: path.value("uid_based_id")?,
+            key: path.value("key")?,
+        })
+    }
 }
 
 /// The response headers the OAS declares for the `200` answer of
@@ -3711,7 +4893,12 @@ pub mod server {
         async fn ehr_create(
             &self,
             params: EhrCreateParams,
-            body: Option<openehr_rm::v1_2::ehr::ehr_status::EhrStatus>,
+            body: Option<
+                crate::rest::runtime::Payload<
+                    openehr_rm::v1_2::ehr::ehr_status::EhrStatus,
+                    serde_json::Value,
+                >,
+            >,
         ) -> Result<EhrCreateResponse, crate::rest::runtime::Refusal> {
             Err(crate::rest::runtime::ApiError::NotImplemented.into())
         }
@@ -3726,7 +4913,12 @@ pub mod server {
         async fn ehr_create_with_id(
             &self,
             params: EhrCreateWithIdParams,
-            body: Option<openehr_rm::v1_2::ehr::ehr_status::EhrStatus>,
+            body: Option<
+                crate::rest::runtime::Payload<
+                    openehr_rm::v1_2::ehr::ehr_status::EhrStatus,
+                    serde_json::Value,
+                >,
+            >,
         ) -> Result<EhrCreateWithIdResponse, crate::rest::runtime::Refusal> {
             Err(crate::rest::runtime::ApiError::NotImplemented.into())
         }
@@ -3748,7 +4940,10 @@ pub mod server {
         async fn ehr_status_update(
             &self,
             params: EhrStatusUpdateParams,
-            body: openehr_rm::v1_2::ehr::ehr_status::EhrStatus,
+            body: crate::rest::runtime::Payload<
+                openehr_rm::v1_2::ehr::ehr_status::EhrStatus,
+                serde_json::Value,
+            >,
         ) -> Result<EhrStatusUpdateResponse, crate::rest::runtime::Refusal> {
             Err(crate::rest::runtime::ApiError::NotImplemented.into())
         }
@@ -3787,7 +4982,10 @@ pub mod server {
         async fn composition_create(
             &self,
             params: CompositionCreateParams,
-            body: openehr_rm::v1_2::composition::composition::Composition,
+            body: crate::rest::runtime::Payload<
+                openehr_rm::v1_2::composition::composition::Composition,
+                serde_json::Value,
+            >,
         ) -> Result<CompositionCreateResponse, crate::rest::runtime::Refusal> {
             Err(crate::rest::runtime::ApiError::NotImplemented.into())
         }
@@ -3802,7 +5000,10 @@ pub mod server {
         async fn composition_update(
             &self,
             params: CompositionUpdateParams,
-            body: openehr_rm::v1_2::composition::composition::Composition,
+            body: crate::rest::runtime::Payload<
+                openehr_rm::v1_2::composition::composition::Composition,
+                serde_json::Value,
+            >,
         ) -> Result<CompositionUpdateResponse, crate::rest::runtime::Refusal> {
             Err(crate::rest::runtime::ApiError::NotImplemented.into())
         }
@@ -3855,7 +5056,10 @@ pub mod server {
         async fn directory_update(
             &self,
             params: DirectoryUpdateParams,
-            body: openehr_rm::v1_2::common::directory::folder::Folder,
+            body: crate::rest::runtime::Payload<
+                openehr_rm::v1_2::common::directory::folder::Folder,
+                serde_json::Value,
+            >,
         ) -> Result<DirectoryUpdateResponse, crate::rest::runtime::Refusal> {
             Err(crate::rest::runtime::ApiError::NotImplemented.into())
         }
@@ -3863,7 +5067,10 @@ pub mod server {
         async fn directory_create(
             &self,
             params: DirectoryCreateParams,
-            body: openehr_rm::v1_2::common::directory::folder::Folder,
+            body: crate::rest::runtime::Payload<
+                openehr_rm::v1_2::common::directory::folder::Folder,
+                serde_json::Value,
+            >,
         ) -> Result<DirectoryCreateResponse, crate::rest::runtime::Refusal> {
             Err(crate::rest::runtime::ApiError::NotImplemented.into())
         }
@@ -3885,7 +5092,10 @@ pub mod server {
         async fn contribution_create(
             &self,
             params: ContributionCreateParams,
-            body: NewContribution,
+            body: crate::rest::runtime::Payload<
+                NewContribution,
+                NewContribution<serde_json::Value>,
+            >,
         ) -> Result<ContributionCreateResponse, crate::rest::runtime::Refusal> {
             Err(crate::rest::runtime::ApiError::NotImplemented.into())
         }
@@ -4209,12 +5419,8 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
-            let params = EhrGetBySubjectParams {
-                subject_id: query.required("subject_id")?,
-                subject_namespace: query.required("subject_namespace")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;
+            let params = EhrGetBySubjectParams::from_parts(&query, &headers)?;
             let reply: crate::rest::server::Reply = match api.ehr_get_by_subject(params).await? {
                 EhrGetBySubjectResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
@@ -4239,17 +5445,8 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let params = EhrCreateParams {
-                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
-                openehr_audit_details: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-audit-details",
-                )?,
-            };
-            let body = crate::rest::server::json_body_optional(&headers, &body)?;
+            let params = EhrCreateParams::from_parts(&headers)?;
+            let body = crate::rest::server::payload_body_optional(&headers, &body)?;
             let reply: crate::rest::server::Reply = match api.ehr_create(params, body).await? {
                 EhrCreateResponse::Created { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::CREATED);
@@ -4284,11 +5481,8 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = EhrGetByIdParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p2", "ehr_id")])?;
+            let params = EhrGetByIdParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply = match api.ehr_get_by_id(params).await? {
                 EhrGetByIdResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
@@ -4317,19 +5511,9 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = EhrCreateWithIdParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
-                openehr_audit_details: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-audit-details",
-                )?,
-            };
-            let body = crate::rest::server::json_body_optional(&headers, &body)?;
+            let path = crate::rest::server::path_captures(path, &[("p2", "ehr_id")])?;
+            let params = EhrCreateWithIdParams::from_parts(&path, &headers)?;
+            let body = crate::rest::server::payload_body_optional(&headers, &body)?;
             let reply: crate::rest::server::Reply =
                 match api.ehr_create_with_id(params, body).await? {
                     EhrCreateWithIdResponse::Created { body, headers } => {
@@ -4366,12 +5550,11 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = EhrStatusGetByVersionIdParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                version_uid: path.value("p4", "version_uid")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(
+                path,
+                &[("p2", "ehr_id"), ("p4", "version_uid")],
+            )?;
+            let params = EhrStatusGetByVersionIdParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply =
                 match api.ehr_status_get_by_version_id(params).await? {
                     EhrStatusGetByVersionIdResponse::Ok { body, headers } => {
@@ -4401,13 +5584,9 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
-            let params = EhrStatusGetAtTimeParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                version_at_time: query.optional("version_at_time")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p2", "ehr_id")])?;
+            let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;
+            let params = EhrStatusGetAtTimeParams::from_parts(&path, &query, &headers)?;
             let reply: crate::rest::server::Reply = match api.ehr_status_get_at_time(params).await?
             {
                 EhrStatusGetAtTimeResponse::Ok { body, headers } => {
@@ -4437,25 +5616,9 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = EhrStatusUpdateParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                if_match: crate::rest::server::header_required(&headers, "If-Match")?,
-                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-                openehr_item_tag: crate::rest::server::header_list(&headers, "openehr-item-tag")?,
-                openehr_version_item_tag: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-version-item-tag",
-                )?,
-                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
-                openehr_audit_details: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-audit-details",
-                )?,
-            };
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let path = crate::rest::server::path_captures(path, &[("p2", "ehr_id")])?;
+            let params = EhrStatusUpdateParams::from_parts(&path, &headers)?;
+            let body = crate::rest::server::payload_body(&headers, &body)?;
             let reply: crate::rest::server::Reply =
                 match api.ehr_status_update(params, body).await? {
                     EhrStatusUpdateResponse::Ok { body, headers } => {
@@ -4490,12 +5653,8 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = VersionedEhrStatusGetParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p2", "ehr_id")])?;
+            let params = VersionedEhrStatusGetParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply =
                 match api.versioned_ehr_status_get(params).await? {
                     VersionedEhrStatusGetResponse::Ok { body, headers } => {
@@ -4524,12 +5683,8 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = VersionedEhrStatusRevisionHistoryParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p2", "ehr_id")])?;
+            let params = VersionedEhrStatusRevisionHistoryParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply =
                 match api.versioned_ehr_status_revision_history(params).await? {
                     VersionedEhrStatusRevisionHistoryResponse::Ok { body, headers } => {
@@ -4559,14 +5714,10 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
-            let params = VersionedEhrStatusVersionGetAtTimeParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                version_at_time: query.optional("version_at_time")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p2", "ehr_id")])?;
+            let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;
+            let params =
+                VersionedEhrStatusVersionGetAtTimeParams::from_parts(&path, &query, &headers)?;
             let reply: crate::rest::server::Reply =
                 match api.versioned_ehr_status_version_get_at_time(params).await? {
                     VersionedEhrStatusVersionGetAtTimeResponse::Ok { body, headers } => {
@@ -4595,13 +5746,11 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = VersionedEhrStatusVersionGetByIdParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                version_uid: path.value("p5", "version_uid")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-            };
+            let path = crate::rest::server::path_captures(
+                path,
+                &[("p2", "ehr_id"), ("p5", "version_uid")],
+            )?;
+            let params = VersionedEhrStatusVersionGetByIdParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply =
                 match api.versioned_ehr_status_version_get_by_id(params).await? {
                     VersionedEhrStatusVersionGetByIdResponse::Ok { body, headers } => {
@@ -4631,28 +5780,9 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = CompositionCreateParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-                openehr_item_tag: crate::rest::server::header_list(&headers, "openehr-item-tag")?,
-                openehr_version_item_tag: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-version-item-tag",
-                )?,
-                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
-                openehr_audit_details: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-audit-details",
-                )?,
-                openehr_template_id: crate::rest::server::header_optional(
-                    &headers,
-                    "openehr-template-id",
-                )?,
-            };
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let path = crate::rest::server::path_captures(path, &[("p2", "ehr_id")])?;
+            let params = CompositionCreateParams::from_parts(&path, &headers)?;
+            let body = crate::rest::server::payload_body(&headers, &body)?;
             let reply: crate::rest::server::Reply =
                 match api.composition_create(params, body).await? {
                     CompositionCreateResponse::Created { body, headers } => {
@@ -4690,14 +5820,12 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
-            let params = CompositionGetParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                uid_based_id: path.value("p4", "uid_based_id")?,
-                version_at_time: query.optional("version_at_time")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(
+                path,
+                &[("p2", "ehr_id"), ("p4", "uid_based_id")],
+            )?;
+            let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;
+            let params = CompositionGetParams::from_parts(&path, &query, &headers)?;
             let reply: crate::rest::server::Reply = match api.composition_get(params).await? {
                 CompositionGetResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
@@ -4729,30 +5857,12 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = CompositionUpdateParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                uid_based_id: path.value("p4", "uid_based_id")?,
-                if_match: crate::rest::server::header_required(&headers, "If-Match")?,
-                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-                openehr_item_tag: crate::rest::server::header_list(&headers, "openehr-item-tag")?,
-                openehr_version_item_tag: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-version-item-tag",
-                )?,
-                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
-                openehr_audit_details: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-audit-details",
-                )?,
-                openehr_template_id: crate::rest::server::header_optional(
-                    &headers,
-                    "openehr-template-id",
-                )?,
-            };
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let path = crate::rest::server::path_captures(
+                path,
+                &[("p2", "ehr_id"), ("p4", "uid_based_id")],
+            )?;
+            let params = CompositionUpdateParams::from_parts(&path, &headers)?;
+            let body = crate::rest::server::payload_body(&headers, &body)?;
             let reply: crate::rest::server::Reply =
                 match api.composition_update(params, body).await? {
                     CompositionUpdateResponse::Ok { body, headers } => {
@@ -4787,16 +5897,11 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = CompositionDeleteParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                uid_based_id: path.value("p4", "uid_based_id")?,
-                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
-                openehr_audit_details: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-audit-details",
-                )?,
-            };
+            let path = crate::rest::server::path_captures(
+                path,
+                &[("p2", "ehr_id"), ("p4", "uid_based_id")],
+            )?;
+            let params = CompositionDeleteParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply = match api.composition_delete(params).await? {
                 CompositionDeleteResponse::NoContent { headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
@@ -4823,13 +5928,11 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = VersionedCompositionGetParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                versioned_object_uid: path.value("p4", "versioned_object_uid")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-            };
+            let path = crate::rest::server::path_captures(
+                path,
+                &[("p2", "ehr_id"), ("p4", "versioned_object_uid")],
+            )?;
+            let params = VersionedCompositionGetParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply =
                 match api.versioned_composition_get(params).await? {
                     VersionedCompositionGetResponse::Ok { body, headers } => {
@@ -4858,13 +5961,11 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = VersionedCompositionRevisionHistoryParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                versioned_object_uid: path.value("p4", "versioned_object_uid")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-            };
+            let path = crate::rest::server::path_captures(
+                path,
+                &[("p2", "ehr_id"), ("p4", "versioned_object_uid")],
+            )?;
+            let params = VersionedCompositionRevisionHistoryParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply =
                 match api.versioned_composition_revision_history(params).await? {
                     VersionedCompositionRevisionHistoryResponse::Ok { body, headers } => {
@@ -4894,15 +5995,13 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
-            let params = VersionedCompositionVersionGetAtTimeParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                versioned_object_uid: path.value("p4", "versioned_object_uid")?,
-                version_at_time: query.optional("version_at_time")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-            };
+            let path = crate::rest::server::path_captures(
+                path,
+                &[("p2", "ehr_id"), ("p4", "versioned_object_uid")],
+            )?;
+            let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;
+            let params =
+                VersionedCompositionVersionGetAtTimeParams::from_parts(&path, &query, &headers)?;
             let reply: crate::rest::server::Reply = match api
                 .versioned_composition_version_get_at_time(params)
                 .await?
@@ -4933,14 +6032,15 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = VersionedCompositionVersionGetByIdParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                versioned_object_uid: path.value("p4", "versioned_object_uid")?,
-                version_uid: path.value("p6", "version_uid")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-            };
+            let path = crate::rest::server::path_captures(
+                path,
+                &[
+                    ("p2", "ehr_id"),
+                    ("p6", "version_uid"),
+                    ("p4", "versioned_object_uid"),
+                ],
+            )?;
+            let params = VersionedCompositionVersionGetByIdParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply =
                 match api.versioned_composition_version_get_by_id(params).await? {
                     VersionedCompositionVersionGetByIdResponse::Ok { body, headers } => {
@@ -4970,14 +6070,9 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
-            let params = DirectoryGetAtTimeParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                version_at_time: query.optional("version_at_time")?,
-                path: query.optional("path")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p2", "ehr_id")])?;
+            let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;
+            let params = DirectoryGetAtTimeParams::from_parts(&path, &query, &headers)?;
             let reply: crate::rest::server::Reply = match api.directory_get_at_time(params).await? {
                 DirectoryGetAtTimeResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
@@ -5009,20 +6104,9 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = DirectoryUpdateParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                if_match: crate::rest::server::header_required(&headers, "If-Match")?,
-                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
-                openehr_audit_details: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-audit-details",
-                )?,
-            };
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let path = crate::rest::server::path_captures(path, &[("p2", "ehr_id")])?;
+            let params = DirectoryUpdateParams::from_parts(&path, &headers)?;
+            let body = crate::rest::server::payload_body(&headers, &body)?;
             let reply: crate::rest::server::Reply = match api.directory_update(params, body).await?
             {
                 DirectoryUpdateResponse::Ok { body, headers } => {
@@ -5057,19 +6141,9 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = DirectoryCreateParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
-                openehr_audit_details: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-audit-details",
-                )?,
-            };
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let path = crate::rest::server::path_captures(path, &[("p2", "ehr_id")])?;
+            let params = DirectoryCreateParams::from_parts(&path, &headers)?;
+            let body = crate::rest::server::payload_body(&headers, &body)?;
             let reply: crate::rest::server::Reply = match api.directory_create(params, body).await?
             {
                 DirectoryCreateResponse::Created { body, headers } => {
@@ -5105,16 +6179,8 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = DirectoryDeleteParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                if_match: crate::rest::server::header_required(&headers, "If-Match")?,
-                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
-                openehr_audit_details: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-audit-details",
-                )?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p2", "ehr_id")])?;
+            let params = DirectoryDeleteParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply = match api.directory_delete(params).await? {
                 DirectoryDeleteResponse::NoContent => {
                     crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT)
@@ -5140,14 +6206,12 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
-            let params = DirectoryGetByVersionIdParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                version_uid: path.value("p4", "version_uid")?,
-                path: query.optional("path")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(
+                path,
+                &[("p2", "ehr_id"), ("p4", "version_uid")],
+            )?;
+            let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;
+            let params = DirectoryGetByVersionIdParams::from_parts(&path, &query, &headers)?;
             let reply: crate::rest::server::Reply =
                 match api.directory_get_by_version_id(params).await? {
                     DirectoryGetByVersionIdResponse::Ok { body, headers } => {
@@ -5177,18 +6241,9 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = ContributionCreateParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-                openehr_template_id: crate::rest::server::header_optional(
-                    &headers,
-                    "openehr-template-id",
-                )?,
-            };
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let path = crate::rest::server::path_captures(path, &[("p2", "ehr_id")])?;
+            let params = ContributionCreateParams::from_parts(&path, &headers)?;
+            let body = crate::rest::server::payload_body(&headers, &body)?;
             let reply: crate::rest::server::Reply =
                 match api.contribution_create(params, body).await? {
                     ContributionCreateResponse::Created { body, headers } => {
@@ -5225,12 +6280,11 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = ContributionGetParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                contribution_uid: path.value("p4", "contribution_uid")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(
+                path,
+                &[("p4", "contribution_uid"), ("p2", "ehr_id")],
+            )?;
+            let params = ContributionGetParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply = match api.contribution_get(params).await? {
                 ContributionGetResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
@@ -5259,15 +6313,9 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
-            let params = EhrTagsGetParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                tag_key: query.optional("tag_key")?,
-                tag_value: query.optional("tag_value")?,
-                tag_target_path: query.optional("tag_target_path")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p2", "ehr_id")])?;
+            let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;
+            let params = EhrTagsGetParams::from_parts(&path, &query, &headers)?;
             let reply: crate::rest::server::Reply = match api.ehr_tags_get(params).await? {
                 EhrTagsGetResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
@@ -5295,12 +6343,11 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = CompositionTagsGetParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                uid_based_id: path.value("p4", "uid_based_id")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(
+                path,
+                &[("p2", "ehr_id"), ("p4", "uid_based_id")],
+            )?;
+            let params = CompositionTagsGetParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply = match api.composition_tags_get(params).await? {
                 CompositionTagsGetResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
@@ -5329,14 +6376,11 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = CompositionTagsUpdateParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                uid_based_id: path.value("p4", "uid_based_id")?,
-                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-            };
+            let path = crate::rest::server::path_captures(
+                path,
+                &[("p2", "ehr_id"), ("p4", "uid_based_id")],
+            )?;
+            let params = CompositionTagsUpdateParams::from_parts(&path, &headers)?;
             let body = crate::rest::server::json_body(&headers, &body)?;
             let reply: crate::rest::server::Reply =
                 match api.composition_tags_update(params, body).await? {
@@ -5368,12 +6412,11 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = CompositionTagsDeleteParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                uid_based_id: path.value("p4", "uid_based_id")?,
-                key: path.value("p6", "key")?,
-            };
+            let path = crate::rest::server::path_captures(
+                path,
+                &[("p2", "ehr_id"), ("p6", "key"), ("p4", "uid_based_id")],
+            )?;
+            let params = CompositionTagsDeleteParams::from_parts(&path)?;
             let reply: crate::rest::server::Reply =
                 match api.composition_tags_delete(params).await? {
                     CompositionTagsDeleteResponse::NoContent => {
@@ -5399,12 +6442,11 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = EhrStatusTagsGetParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                uid_based_id: path.value("p4", "uid_based_id")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(
+                path,
+                &[("p2", "ehr_id"), ("p4", "uid_based_id")],
+            )?;
+            let params = EhrStatusTagsGetParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply = match api.ehr_status_tags_get(params).await? {
                 EhrStatusTagsGetResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
@@ -5433,14 +6475,11 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = EhrStatusTagsUpdateParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                uid_based_id: path.value("p4", "uid_based_id")?,
-                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-            };
+            let path = crate::rest::server::path_captures(
+                path,
+                &[("p2", "ehr_id"), ("p4", "uid_based_id")],
+            )?;
+            let params = EhrStatusTagsUpdateParams::from_parts(&path, &headers)?;
             let body = crate::rest::server::json_body(&headers, &body)?;
             let reply: crate::rest::server::Reply =
                 match api.ehr_status_tags_update(params, body).await? {
@@ -5472,12 +6511,11 @@ pub mod server {
         S: EhrApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = EhrStatusTagsDeleteParams {
-                ehr_id: path.value("p2", "ehr_id")?,
-                uid_based_id: path.value("p4", "uid_based_id")?,
-                key: path.value("p6", "key")?,
-            };
+            let path = crate::rest::server::path_captures(
+                path,
+                &[("p2", "ehr_id"), ("p6", "key"), ("p4", "uid_based_id")],
+            )?;
+            let params = EhrStatusTagsDeleteParams::from_parts(&path)?;
             let reply: crate::rest::server::Reply = match api.ehr_status_tags_delete(params).await?
             {
                 EhrStatusTagsDeleteResponse::NoContent => {
@@ -8092,4 +9130,48 @@ pub const ROUTE_PARAMS: &[&[crate::rest::routes::Param]] = &[
 const _: () = assert!(
     ROUTE_PARAMS.len() == ROUTES.len(),
     "ROUTE_PARAMS carries one row per ROUTES entry"
+);
+
+/// The request-body media types of each operation, index-aligned with
+/// [`ROUTES`]: the `requestBody.content` keys of the OAS, in document order,
+/// empty when the operation takes no body.
+pub const ROUTE_REQUEST_MEDIA: &[&[&str]] = &[
+    &[],
+    &["application/json"],
+    &[],
+    &["application/json"],
+    &[],
+    &[],
+    &["application/json"],
+    &[],
+    &[],
+    &[],
+    &[],
+    &["application/json"],
+    &[],
+    &["application/json"],
+    &[],
+    &[],
+    &[],
+    &[],
+    &[],
+    &[],
+    &["application/json"],
+    &["application/json"],
+    &[],
+    &[],
+    &["application/json"],
+    &[],
+    &[],
+    &[],
+    &["application/json"],
+    &[],
+    &[],
+    &["application/json"],
+    &[],
+];
+
+const _: () = assert!(
+    ROUTE_REQUEST_MEDIA.len() == ROUTES.len(),
+    "ROUTE_REQUEST_MEDIA carries one row per ROUTES entry"
 );

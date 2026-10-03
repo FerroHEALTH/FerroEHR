@@ -66,7 +66,32 @@ impl OptionsParams {
         required: false,
         explode: false,
         kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+        identifier: None,
     }];
+
+    /// Decodes the parameters of `options` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        _matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Self::from_parts(headers)
+    }
+
+    /// Decodes the parameters of `options` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// The response headers the OAS declares for the `200` answer of
@@ -170,9 +195,7 @@ pub mod server {
         S: SystemApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let params = OptionsParams {
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let params = OptionsParams::from_parts(&headers)?;
             let reply: crate::rest::server::Reply = match api.options(params).await? {
                 OptionsResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
@@ -275,4 +298,14 @@ pub const ROUTE_PARAMS: &[&[crate::rest::routes::Param]] = &[OptionsParams::PARA
 const _: () = assert!(
     ROUTE_PARAMS.len() == ROUTES.len(),
     "ROUTE_PARAMS carries one row per ROUTES entry"
+);
+
+/// The request-body media types of each operation, index-aligned with
+/// [`ROUTES`]: the `requestBody.content` keys of the OAS, in document order,
+/// empty when the operation takes no body.
+pub const ROUTE_REQUEST_MEDIA: &[&[&str]] = &[&[]];
+
+const _: () = assert!(
+    ROUTE_REQUEST_MEDIA.len() == ROUTES.len(),
+    "ROUTE_REQUEST_MEDIA carries one row per ROUTES entry"
 );
