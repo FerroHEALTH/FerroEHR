@@ -710,3 +710,86 @@ fn routes_name_their_request_media() {
         }
     }
 }
+
+/// Wherever an operation with a request body declares a `Content-Type`
+/// parameter enum, its route's `request_media` admits exactly the same media
+/// types: the docs text admits
+/// what the parameter lists ("in addition to the canonical `application/json` /
+/// `application/xml`", ITS-REST `operations/contribution_create.yaml`), so
+/// `contribution_create` names XML and both Simplified Formats.
+#[test]
+fn request_media_agrees_with_the_content_type_parameter() {
+    use openehr_its::rest::routes::{Param, ParamKind, ParamLocation};
+    type Group = (
+        &'static [(&'static str, &'static str, &'static str)],
+        &'static [&'static [Param]],
+        &'static [&'static [&'static str]],
+    );
+    let groups: [Group; 6] = [
+        (
+            admin::ROUTES,
+            admin::ROUTE_PARAMS,
+            admin::ROUTE_REQUEST_MEDIA,
+        ),
+        (
+            definition::ROUTES,
+            definition::ROUTE_PARAMS,
+            definition::ROUTE_REQUEST_MEDIA,
+        ),
+        (
+            demographic::ROUTES,
+            demographic::ROUTE_PARAMS,
+            demographic::ROUTE_REQUEST_MEDIA,
+        ),
+        (ehr::ROUTES, ehr::ROUTE_PARAMS, ehr::ROUTE_REQUEST_MEDIA),
+        (
+            query::ROUTES,
+            query::ROUTE_PARAMS,
+            query::ROUTE_REQUEST_MEDIA,
+        ),
+        (
+            system::ROUTES,
+            system::ROUTE_PARAMS,
+            system::ROUTE_REQUEST_MEDIA,
+        ),
+    ];
+    let mut checked = 0;
+    for (routes, params, media) in groups {
+        for (((_, _, op), row), admitted) in routes.iter().zip(params.iter()).zip(media.iter()) {
+            let declared = row.iter().find(|p| {
+                p.location == ParamLocation::Header && p.name.eq_ignore_ascii_case("content-type")
+            });
+            // A bodyless operation (`versioned_party_get`) may still declare a
+            // `Content-Type`; it has no request media to agree with.
+            if admitted.is_empty() {
+                continue;
+            }
+            if let Some(Param {
+                kind: ParamKind::Enum(values),
+                ..
+            }) = declared
+            {
+                let mut want: Vec<&str> = values.to_vec();
+                let mut got: Vec<&str> = admitted.to_vec();
+                want.sort_unstable();
+                got.sort_unstable();
+                assert_eq!(got, want, "{op}");
+                checked += 1;
+            }
+        }
+    }
+    assert!(checked > 0, "no operation declares a Content-Type enum");
+    let m = matched(
+        &Method::POST,
+        "/ehr/7d44b88c-4199-4bad-97dc-d78268e01398/contribution",
+    )
+    .unwrap();
+    for media in [
+        "application/json",
+        "application/xml",
+        "application/openehr.wt.flat+json",
+        "application/openehr.wt.structured+json",
+    ] {
+        assert!(m.request_media.contains(&media), "{media}");
+    }
+}

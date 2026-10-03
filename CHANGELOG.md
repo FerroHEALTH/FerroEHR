@@ -35,6 +35,17 @@ workflow refuses a tag that has no matching section here.
   `*Params::from_request`, the CDR's own parameter decoder is gone, and the
   Simplified Formats CONTRIBUTION path reads the typed `NewContribution`
   envelope.
+- **Every ITS-REST request body has a public decoder** (#3551). Each operation
+  with a body gets `{operation}_request_body(content_type, bytes)` in its API
+  group, which returns the type the server trait receives (for
+  `contribution_create`, a `Payload` of the canonical or the Simplified Formats
+  envelope) and is the decoding the generated router itself runs. The body
+  decoding moved to `rest::decode`, so it needs only the `rest` feature.
+- **`ROUTE_REQUEST_MEDIA` admits every media type the `Content-Type` parameter
+  declares** (#3552). The released OAS lists only `application/json` under
+  `requestBody.content` where the operation's `Content-Type` parameter and the
+  docs text also admit XML and both Simplified Formats; `request_media` now
+  carries the union, and a test holds it equal to the parameter.
 - **The `openehr-*` crates step to 0.0.81.**
 - **`openehr-its` names the openEHR identifier class of every path
   parameter** (#3539). `rest::routes::Param` gains `identifier`, an

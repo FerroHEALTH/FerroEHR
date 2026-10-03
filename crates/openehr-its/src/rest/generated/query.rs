@@ -319,6 +319,21 @@ impl QueryExecuteAdhocQueryBodyParams {
     }
 }
 
+/// Decodes the request body of `query_execute_adhoc_query_body` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn query_execute_adhoc_query_body_request_body(
+    content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<AdhocQueryExecute, crate::rest::runtime::ApiError> {
+    crate::rest::decode::json_body(content_type, body)
+}
+
 /// Parameters for `query_execute_stored_query` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QueryExecuteStoredQueryParams {
@@ -500,6 +515,21 @@ impl QueryExecuteStoredQueryBodyParams {
             content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
         })
     }
+}
+
+/// Decodes the request body of `query_execute_stored_query_body` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn query_execute_stored_query_body_request_body(
+    content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<Query, crate::rest::runtime::ApiError> {
+    crate::rest::decode::json_body(content_type, body)
 }
 
 /// Parameters for `query_execute_stored_query_version` (path/query/header).
@@ -705,6 +735,21 @@ impl QueryExecuteStoredQueryVersionBodyParams {
             content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
         })
     }
+}
+
+/// Decodes the request body of `query_execute_stored_query_version_body` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn query_execute_stored_query_version_body_request_body(
+    content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<Query, crate::rest::runtime::ApiError> {
+    crate::rest::decode::json_body(content_type, body)
 }
 
 /// The response headers the OAS declares for the `200` answer of
@@ -1079,7 +1124,10 @@ pub mod server {
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let params = QueryExecuteAdhocQueryBodyParams::from_parts(&headers)?;
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let body = query_execute_adhoc_query_body_request_body(
+                headers.get(http::header::CONTENT_TYPE),
+                &body,
+            )?;
             let reply: crate::rest::server::Reply =
                 match api.query_execute_adhoc_query_body(params, body).await? {
                     QueryExecuteAdhocQueryBodyResponse::Ok { body, headers } => {
@@ -1143,7 +1191,10 @@ pub mod server {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let path = crate::rest::server::path_captures(path, &[("p2", "qualified_query_name")])?;
             let params = QueryExecuteStoredQueryBodyParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let body = query_execute_stored_query_body_request_body(
+                headers.get(http::header::CONTENT_TYPE),
+                &body,
+            )?;
             let reply: crate::rest::server::Reply =
                 match api.query_execute_stored_query_body(params, body).await? {
                     QueryExecuteStoredQueryBodyResponse::Ok { body, headers } => {
@@ -1213,7 +1264,10 @@ pub mod server {
                 &[("p2", "qualified_query_name"), ("p3", "version")],
             )?;
             let params = QueryExecuteStoredQueryVersionBodyParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let body = query_execute_stored_query_version_body_request_body(
+                headers.get(http::header::CONTENT_TYPE),
+                &body,
+            )?;
             let reply: crate::rest::server::Reply = match api
                 .query_execute_stored_query_version_body(params, body)
                 .await?

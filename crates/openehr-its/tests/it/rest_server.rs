@@ -928,3 +928,37 @@ fn a_contribution_reads_a_deletion_and_an_audit_details_audit() -> TestResult {
     assert_eq!(written.pointer("/versions/0/data"), None);
     Ok(())
 }
+
+/// `contribution_create`'s public body decoder reads the representation the
+/// `Content-Type` selects, as the generated router does: canonical JSON (or no
+/// `Content-Type`), FLAT and STRUCTURED, and refuses XML with `415`.
+#[test]
+fn the_contribution_body_decodes_by_its_content_type() -> TestResult {
+    let flat = contribution_body(r#"{"vital_signs/language|code": "en"}"#);
+    let decode = |content_type: Option<&'static str>| {
+        let value = content_type.map(http::HeaderValue::from_static);
+        ehr::contribution_create_request_body(value.as_ref(), flat.as_bytes())
+    };
+    assert!(matches!(
+        decode(Some("application/openehr.wt.flat+json"))?,
+        Payload::Flat(_)
+    ));
+    assert!(matches!(
+        decode(Some(
+            "application/openehr.wt.structured+json; charset=utf-8"
+        ))?,
+        Payload::Structured(_)
+    ));
+    assert!(matches!(
+        decode(Some("application/xml")),
+        Err(ApiError::UnsupportedMediaType(_))
+    ));
+    // FLAT content is not a canonical version, under JSON or no Content-Type.
+    for content_type in [Some("application/json"), None] {
+        assert!(
+            matches!(decode(content_type), Err(ApiError::BadRequest(_))),
+            "{content_type:?}"
+        );
+    }
+    Ok(())
+}

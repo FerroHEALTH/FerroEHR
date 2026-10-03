@@ -471,6 +471,7 @@ pub(crate) fn emit_group(
     }
     for op in &ops {
         emit_params_struct(&mut b, op, &ctx);
+        emit_request_body_decoder(&mut b, op, &ctx);
     }
 
     // ── per-response headers structs (shared by both halves) ──
@@ -530,7 +531,10 @@ pub(crate) fn emit_group(
          pub const ROUTE_REQUEST_MEDIA: &[&[&str]] = &[\n"
     );
     for op in &ops {
-        let media: Vec<String> = op.request_media.iter().map(|m| format!("{m:?}")).collect();
+        let media: Vec<String> = admitted_request_media(op, oas)
+            .iter()
+            .map(|m| format!("{m:?}"))
+            .collect();
         let _ = writeln!(b, "    &[{}],", media.join(", "));
     }
     b.push_str(
@@ -1218,6 +1222,60 @@ fn emit_params_struct(b: &mut String, op: &Operation, ctx: &Ctx) {
     b.push_str("}\n\n");
 }
 
+/// The public request-body decoder of `op`, `{operation}_request_body`: the
+/// decoding the generated handler runs, from the request's `Content-Type` and
+/// body bytes to the type the server trait receives.
+fn emit_request_body_decoder(b: &mut String, op: &Operation, ctx: &Ctx) {
+    let Some((schema, required)) = &op.request_body else {
+        return;
+    };
+    let json = json_request(op);
+    let simplified = simplified_request(op, ctx);
+    let ty = if json {
+        server_body_type(op, schema, ctx)
+    } else {
+        "String".to_string()
+    };
+    let (ty, call) = match (json, *required) {
+        (true, true) if simplified => (ty, "payload_body(content_type, body)"),
+        (true, false) if simplified => (
+            format!("Option<{ty}>"),
+            "payload_body_optional(content_type, body)",
+        ),
+        (true, true) => (ty, "json_body(content_type, body)"),
+        (true, false) => (
+            format!("Option<{ty}>"),
+            "json_body_optional(content_type, body)",
+        ),
+        (false, true) => (ty, "text_body(body)"),
+        (false, false) => (format!("Option<{ty}>"), "text_body_optional(body)"),
+    };
+    let content_type = if json {
+        "content_type"
+    } else {
+        "_content_type"
+    };
+    let _ = write!(
+        b,
+        "/// Decodes the request body of `{op_id}` from the request's `Content-Type`\n\
+         /// and body bytes, exactly as the generated router decodes it.\n\
+         ///\n\
+         /// # Errors\n\
+         /// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a\n\
+         /// `Content-Type` the operation does not read, and\n\
+         /// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where\n\
+         /// required or not the documented shape.\n\
+         pub fn {method}_request_body(\n    \
+         {content_type}: Option<&http::HeaderValue>,\n    \
+         body: &[u8],\n\
+         ) -> Result<{ty}, crate::rest::runtime::ApiError> {{\n    \
+         crate::rest::decode::{call}\n\
+         }}\n\n",
+        op_id = op.operation_id,
+        method = field_id(&op.operation_id),
+    );
+}
+
 /// The `from_request` constructor of `op`'s param struct, the public form of
 /// the decoding the generated handler runs, and `from_parts`, the decoding
 /// itself, which both share.
@@ -1433,6 +1491,33 @@ fn append_docs_text_headers(op: &mut Operation<'_>) {
 /// `application/json`); any other body travels as text.
 fn json_request(op: &Operation) -> bool {
     op.request_media.iter().any(|m| m == "application/json")
+}
+
+/// The media types `op`'s request body is admitted in: its `requestBody.content`
+/// keys, then any further type its `Content-Type` parameter enum declares, in
+/// document order.
+///
+/// The released OAS lists only `application/json` under `requestBody.content`
+/// for the operations whose `Content-Type` parameter and docs text also admit
+/// XML and the Simplified Formats ("in addition to the canonical
+/// `application/json` / `application/xml`", ITS-REST
+/// `operations/contribution_create.yaml` §Simplified Formats); the docs text
+/// wins.
+fn admitted_request_media(op: &Operation, oas: &Oas) -> Vec<String> {
+    let mut media = op.request_media.clone();
+    let declared = op
+        .parameters
+        .iter()
+        .filter(|p| p.location == "header" && p.name.eq_ignore_ascii_case("content-type"))
+        .filter_map(|p| oas.resolve(&p.schema).get("enum").and_then(Value::as_array))
+        .flatten()
+        .filter_map(Value::as_str);
+    for m in declared {
+        if !op.request_media.is_empty() && !media.iter().any(|known| known == m) {
+            media.push(m.to_string());
+        }
+    }
+    media
 }
 
 /// The Simplified Formats media types (ITS-REST overview `Resources.md`
@@ -1833,11 +1918,10 @@ fn emit_server_handler(b: &mut String, op: &Operation, trait_name: &str, ctx: &C
     let response = server_response_name(op);
     let (_, captures) = axum_path(op);
     let has = |location: &str| op.parameters.iter().any(|p| p.location == location);
-    let json = json_request(op);
     let mut extractors = String::from(
         "        axum::extract::State(api): axum::extract::State<std::sync::Arc<S>>,\n",
     );
-    if has("header") || (op.request_body.is_some() && json) {
+    if has("header") || op.request_body.is_some() {
         extractors.push_str("        headers: http::HeaderMap,\n");
     }
     if has("query") {
@@ -1895,19 +1979,11 @@ fn emit_server_handler(b: &mut String, op: &Operation, trait_name: &str, ctx: &C
         );
         call_args.push("params");
     }
-    if let Some((_, required)) = &op.request_body {
-        let simplified = simplified_request(op, ctx);
-        let decode = match (json, *required) {
-            (true, true) if simplified => "crate::rest::server::payload_body(&headers, &body)?",
-            (true, false) if simplified => {
-                "crate::rest::server::payload_body_optional(&headers, &body)?"
-            }
-            (true, true) => "crate::rest::server::json_body(&headers, &body)?",
-            (true, false) => "crate::rest::server::json_body_optional(&headers, &body)?",
-            (false, true) => "crate::rest::server::text_body(&body)?",
-            (false, false) => "crate::rest::server::text_body_optional(&body)?",
-        };
-        let _ = writeln!(b, "            let body = {decode};");
+    if op.request_body.is_some() {
+        let _ = writeln!(
+            b,
+            "            let body = {method}_request_body(headers.get(http::header::CONTENT_TYPE), &body)?;"
+        );
         call_args.push("body");
     }
     let _ = writeln!(

@@ -368,6 +368,29 @@ impl EhrCreateParams {
     }
 }
 
+/// Decodes the request body of `ehr_create` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn ehr_create_request_body(
+    content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<
+    Option<
+        crate::rest::runtime::Payload<
+            openehr_rm::v1_2::ehr::ehr_status::EhrStatus,
+            serde_json::Value,
+        >,
+    >,
+    crate::rest::runtime::ApiError,
+> {
+    crate::rest::decode::payload_body_optional(content_type, body)
+}
+
 /// Parameters for `ehr_get_by_id` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EhrGetByIdParams {
@@ -554,6 +577,29 @@ impl EhrCreateWithIdParams {
             )?,
         })
     }
+}
+
+/// Decodes the request body of `ehr_create_with_id` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn ehr_create_with_id_request_body(
+    content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<
+    Option<
+        crate::rest::runtime::Payload<
+            openehr_rm::v1_2::ehr::ehr_status::EhrStatus,
+            serde_json::Value,
+        >,
+    >,
+    crate::rest::runtime::ApiError,
+> {
+    crate::rest::decode::payload_body_optional(content_type, body)
 }
 
 /// Parameters for `ehr_status_get_by_version_id` (path/query/header).
@@ -883,6 +929,24 @@ impl EhrStatusUpdateParams {
             )?,
         })
     }
+}
+
+/// Decodes the request body of `ehr_status_update` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn ehr_status_update_request_body(
+    content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<
+    crate::rest::runtime::Payload<openehr_rm::v1_2::ehr::ehr_status::EhrStatus, serde_json::Value>,
+    crate::rest::runtime::ApiError,
+> {
+    crate::rest::decode::payload_body(content_type, body)
 }
 
 /// Parameters for `versioned_ehr_status_get` (path/query/header).
@@ -1382,6 +1446,27 @@ impl CompositionCreateParams {
     }
 }
 
+/// Decodes the request body of `composition_create` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn composition_create_request_body(
+    content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<
+    crate::rest::runtime::Payload<
+        openehr_rm::v1_2::composition::composition::Composition,
+        serde_json::Value,
+    >,
+    crate::rest::runtime::ApiError,
+> {
+    crate::rest::decode::payload_body(content_type, body)
+}
+
 /// Parameters for `composition_get` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompositionGetParams {
@@ -1673,6 +1758,27 @@ impl CompositionUpdateParams {
             )?,
         })
     }
+}
+
+/// Decodes the request body of `composition_update` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn composition_update_request_body(
+    content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<
+    crate::rest::runtime::Payload<
+        openehr_rm::v1_2::composition::composition::Composition,
+        serde_json::Value,
+    >,
+    crate::rest::runtime::ApiError,
+> {
+    crate::rest::decode::payload_body(content_type, body)
 }
 
 /// Parameters for `composition_delete` (path/query/header).
@@ -2363,6 +2469,27 @@ impl DirectoryUpdateParams {
     }
 }
 
+/// Decodes the request body of `directory_update` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn directory_update_request_body(
+    content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<
+    crate::rest::runtime::Payload<
+        openehr_rm::v1_2::common::directory::folder::Folder,
+        serde_json::Value,
+    >,
+    crate::rest::runtime::ApiError,
+> {
+    crate::rest::decode::payload_body(content_type, body)
+}
+
 /// Parameters for `directory_create` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DirectoryCreateParams {
@@ -2494,6 +2621,27 @@ impl DirectoryCreateParams {
             )?,
         })
     }
+}
+
+/// Decodes the request body of `directory_create` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn directory_create_request_body(
+    content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<
+    crate::rest::runtime::Payload<
+        openehr_rm::v1_2::common::directory::folder::Folder,
+        serde_json::Value,
+    >,
+    crate::rest::runtime::ApiError,
+> {
+    crate::rest::decode::payload_body(content_type, body)
 }
 
 /// Parameters for `directory_delete` (path/query/header).
@@ -2794,6 +2942,24 @@ impl ContributionCreateParams {
             )?,
         })
     }
+}
+
+/// Decodes the request body of `contribution_create` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn contribution_create_request_body(
+    content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<
+    crate::rest::runtime::Payload<NewContribution, NewContribution<serde_json::Value>>,
+    crate::rest::runtime::ApiError,
+> {
+    crate::rest::decode::payload_body(content_type, body)
 }
 
 /// Parameters for `contribution_get` (path/query/header).
@@ -3142,6 +3308,21 @@ impl CompositionTagsUpdateParams {
     }
 }
 
+/// Decodes the request body of `composition_tags_update` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn composition_tags_update_request_body(
+    content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<Vec<super::common::UpdateItemTag>, crate::rest::runtime::ApiError> {
+    crate::rest::decode::json_body(content_type, body)
+}
+
 /// Parameters for `composition_tags_delete` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompositionTagsDeleteParams {
@@ -3380,6 +3561,21 @@ impl EhrStatusTagsUpdateParams {
             content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
         })
     }
+}
+
+/// Decodes the request body of `ehr_status_tags_update` from the request's `Content-Type`
+/// and body bytes, exactly as the generated router decodes it.
+///
+/// # Errors
+/// Returns [`crate::rest::runtime::ApiError::UnsupportedMediaType`] for a
+/// `Content-Type` the operation does not read, and
+/// [`crate::rest::runtime::ApiError::BadRequest`] for a body that is absent where
+/// required or not the documented shape.
+pub fn ehr_status_tags_update_request_body(
+    content_type: Option<&http::HeaderValue>,
+    body: &[u8],
+) -> Result<Vec<super::common::UpdateItemTag>, crate::rest::runtime::ApiError> {
+    crate::rest::decode::json_body(content_type, body)
 }
 
 /// Parameters for `ehr_status_tags_delete` (path/query/header).
@@ -5463,7 +5659,7 @@ pub mod server {
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let params = EhrCreateParams::from_parts(&headers)?;
-            let body = crate::rest::server::payload_body_optional(&headers, &body)?;
+            let body = ehr_create_request_body(headers.get(http::header::CONTENT_TYPE), &body)?;
             let reply: crate::rest::server::Reply = match api.ehr_create(params, body).await? {
                 EhrCreateResponse::Created { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::CREATED);
@@ -5530,7 +5726,8 @@ pub mod server {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let path = crate::rest::server::path_captures(path, &[("p2", "ehr_id")])?;
             let params = EhrCreateWithIdParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::payload_body_optional(&headers, &body)?;
+            let body =
+                ehr_create_with_id_request_body(headers.get(http::header::CONTENT_TYPE), &body)?;
             let reply: crate::rest::server::Reply =
                 match api.ehr_create_with_id(params, body).await? {
                     EhrCreateWithIdResponse::Created { body, headers } => {
@@ -5635,7 +5832,8 @@ pub mod server {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let path = crate::rest::server::path_captures(path, &[("p2", "ehr_id")])?;
             let params = EhrStatusUpdateParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::payload_body(&headers, &body)?;
+            let body =
+                ehr_status_update_request_body(headers.get(http::header::CONTENT_TYPE), &body)?;
             let reply: crate::rest::server::Reply =
                 match api.ehr_status_update(params, body).await? {
                     EhrStatusUpdateResponse::Ok { body, headers } => {
@@ -5799,7 +5997,8 @@ pub mod server {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let path = crate::rest::server::path_captures(path, &[("p2", "ehr_id")])?;
             let params = CompositionCreateParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::payload_body(&headers, &body)?;
+            let body =
+                composition_create_request_body(headers.get(http::header::CONTENT_TYPE), &body)?;
             let reply: crate::rest::server::Reply =
                 match api.composition_create(params, body).await? {
                     CompositionCreateResponse::Created { body, headers } => {
@@ -5879,7 +6078,8 @@ pub mod server {
                 &[("p2", "ehr_id"), ("p4", "uid_based_id")],
             )?;
             let params = CompositionUpdateParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::payload_body(&headers, &body)?;
+            let body =
+                composition_update_request_body(headers.get(http::header::CONTENT_TYPE), &body)?;
             let reply: crate::rest::server::Reply =
                 match api.composition_update(params, body).await? {
                     CompositionUpdateResponse::Ok { body, headers } => {
@@ -6123,7 +6323,8 @@ pub mod server {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let path = crate::rest::server::path_captures(path, &[("p2", "ehr_id")])?;
             let params = DirectoryUpdateParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::payload_body(&headers, &body)?;
+            let body =
+                directory_update_request_body(headers.get(http::header::CONTENT_TYPE), &body)?;
             let reply: crate::rest::server::Reply = match api.directory_update(params, body).await?
             {
                 DirectoryUpdateResponse::Ok { body, headers } => {
@@ -6160,7 +6361,8 @@ pub mod server {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let path = crate::rest::server::path_captures(path, &[("p2", "ehr_id")])?;
             let params = DirectoryCreateParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::payload_body(&headers, &body)?;
+            let body =
+                directory_create_request_body(headers.get(http::header::CONTENT_TYPE), &body)?;
             let reply: crate::rest::server::Reply = match api.directory_create(params, body).await?
             {
                 DirectoryCreateResponse::Created { body, headers } => {
@@ -6260,7 +6462,8 @@ pub mod server {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
             let path = crate::rest::server::path_captures(path, &[("p2", "ehr_id")])?;
             let params = ContributionCreateParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::payload_body(&headers, &body)?;
+            let body =
+                contribution_create_request_body(headers.get(http::header::CONTENT_TYPE), &body)?;
             let reply: crate::rest::server::Reply =
                 match api.contribution_create(params, body).await? {
                     ContributionCreateResponse::Created { body, headers } => {
@@ -6398,7 +6601,10 @@ pub mod server {
                 &[("p2", "ehr_id"), ("p4", "uid_based_id")],
             )?;
             let params = CompositionTagsUpdateParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let body = composition_tags_update_request_body(
+                headers.get(http::header::CONTENT_TYPE),
+                &body,
+            )?;
             let reply: crate::rest::server::Reply =
                 match api.composition_tags_update(params, body).await? {
                     CompositionTagsUpdateResponse::Ok { body, headers } => {
@@ -6497,7 +6703,10 @@ pub mod server {
                 &[("p2", "ehr_id"), ("p4", "uid_based_id")],
             )?;
             let params = EhrStatusTagsUpdateParams::from_parts(&path, &headers)?;
-            let body = crate::rest::server::json_body(&headers, &body)?;
+            let body = ehr_status_tags_update_request_body(
+                headers.get(http::header::CONTENT_TYPE),
+                &body,
+            )?;
             let reply: crate::rest::server::Reply =
                 match api.ehr_status_tags_update(params, body).await? {
                     EhrStatusTagsUpdateResponse::Ok { body, headers } => {
@@ -9171,37 +9380,77 @@ const _: () = assert!(
 /// empty when the operation takes no body.
 pub const ROUTE_REQUEST_MEDIA: &[&[&str]] = &[
     &[],
-    &["application/json"],
+    &[
+        "application/json",
+        "application/xml",
+        "application/openehr.wt.flat+json",
+        "application/openehr.wt.structured+json",
+    ],
     &[],
-    &["application/json"],
-    &[],
-    &[],
-    &["application/json"],
-    &[],
-    &[],
-    &[],
-    &[],
-    &["application/json"],
-    &[],
-    &["application/json"],
-    &[],
-    &[],
+    &[
+        "application/json",
+        "application/xml",
+        "application/openehr.wt.flat+json",
+        "application/openehr.wt.structured+json",
+    ],
     &[],
     &[],
-    &[],
-    &[],
-    &["application/json"],
-    &["application/json"],
-    &[],
-    &[],
-    &["application/json"],
+    &[
+        "application/json",
+        "application/xml",
+        "application/openehr.wt.flat+json",
+        "application/openehr.wt.structured+json",
+    ],
     &[],
     &[],
     &[],
-    &["application/json"],
+    &[],
+    &[
+        "application/json",
+        "application/xml",
+        "application/openehr.wt.flat+json",
+        "application/openehr.wt.structured+json",
+    ],
+    &[],
+    &[
+        "application/json",
+        "application/xml",
+        "application/openehr.wt.flat+json",
+        "application/openehr.wt.structured+json",
+    ],
     &[],
     &[],
-    &["application/json"],
+    &[],
+    &[],
+    &[],
+    &[],
+    &[
+        "application/json",
+        "application/xml",
+        "application/openehr.wt.flat+json",
+        "application/openehr.wt.structured+json",
+    ],
+    &[
+        "application/json",
+        "application/xml",
+        "application/openehr.wt.flat+json",
+        "application/openehr.wt.structured+json",
+    ],
+    &[],
+    &[],
+    &[
+        "application/json",
+        "application/xml",
+        "application/openehr.wt.flat+json",
+        "application/openehr.wt.structured+json",
+    ],
+    &[],
+    &[],
+    &[],
+    &["application/json", "application/xml"],
+    &[],
+    &[],
+    &["application/json", "application/xml"],
     &[],
 ];
 
