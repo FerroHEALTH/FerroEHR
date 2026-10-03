@@ -186,7 +186,10 @@ pub(in crate::service) fn canonicalize<T: serde::Serialize>(
         signature: version.signature,
         lifecycle_state: version.lifecycle_state,
         attestations: version.attestations,
-        data: openehr_its::json::to_canonical_value(&version.data),
+        data: version
+            .data
+            .as_ref()
+            .map(openehr_its::json::to_canonical_value),
         commit_audit: version.commit_audit,
         additional_properties: version.additional_properties,
     }
@@ -231,6 +234,13 @@ fn resolve_envelope(
         .flatten()
         .map(crate::versioning::attestation::AttestationInput::from_update)
         .collect::<Result<Vec<_>, _>>()?;
+    // RM common master06 §Logical Deletion: only a deleting version carries no
+    // data, and these direct writes create or update content.
+    let canonical = data.ok_or_else(|| {
+        crate::service::error::ServiceError::BadRequest(SmError::precondition(
+            "the version carries no data, and this operation writes content",
+        ))
+    })?;
     let lifecycle = lifecycle_state.defining_code.code_string;
     Ok(CommitParts {
         audit,
@@ -240,7 +250,7 @@ fn resolve_envelope(
             signature,
             attestations,
         },
-        canonical: data,
+        canonical,
     })
 }
 

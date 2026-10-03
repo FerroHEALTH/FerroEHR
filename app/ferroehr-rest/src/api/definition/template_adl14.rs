@@ -31,10 +31,10 @@ use openehr_its::rest::runtime::ApiError;
 use openehr_rm::prelude::Composition;
 
 use crate::api::RequestParts;
+use crate::negotiate;
 use crate::negotiate::{AppliedPreference, WireFormat};
 use crate::overview::error::RestError;
 use crate::state::AppState;
-use crate::{negotiate, params};
 
 use super::dispatch::list_filter_and_page;
 
@@ -74,7 +74,7 @@ const TEMPLATE_DEF_FORMATS: &[WireFormat] = &[
 pub(super) async fn list(state: &AppState, parts: &RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
     let p =
-        params::build::<DefinitionTemplateAdl14ListParams>(&parts.path, parts.query.as_deref(), h)?;
+        DefinitionTemplateAdl14ListParams::from_request(parts.route()?, parts.query.as_deref(), h)?;
     let (filter, page) =
         list_filter_and_page(p.template_id, p.concept, p.version, p.offset, p.fetch);
     Ok(negotiate::respond(
@@ -88,7 +88,7 @@ pub(super) async fn list(state: &AppState, parts: &RequestParts) -> Result<Respo
 /// template (`operations/definition_template_adl1.4_upload.yaml`).
 pub(super) async fn upload(state: &AppState, parts: &RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
-    params::build::<DefinitionTemplateAdl14UploadParams>(&parts.path, parts.query.as_deref(), h)?;
+    DefinitionTemplateAdl14UploadParams::from_request(parts.route()?, parts.query.as_deref(), h)?;
     // The OPT 1.4 template arrives as canonical XML, the operation's single body
     // type, so a payload declaring another media type is refused before parsing
     // (`overview/Resources.md` §XML Format, a `415` MUST). An absent
@@ -121,7 +121,7 @@ pub(super) async fn upload(state: &AppState, parts: &RequestParts) -> Result<Res
 pub(super) async fn get(state: &AppState, parts: &RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
     let p =
-        params::build::<DefinitionTemplateAdl14GetParams>(&parts.path, parts.query.as_deref(), h)?;
+        DefinitionTemplateAdl14GetParams::from_request(parts.route()?, parts.query.as_deref(), h)?;
     let template_id = p.template_id.clone();
     // Resolved before touching storage, so an unsupported `Accept` is a clean
     // `406`; absent or `*/*` defaults to the canonical OPT.
@@ -159,8 +159,8 @@ pub(super) async fn example_get(
     parts: &RequestParts,
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let p = params::build::<DefinitionTemplateAdl14ExampleGetParams>(
-        &parts.path,
+    let p = DefinitionTemplateAdl14ExampleGetParams::from_request(
+        parts.route()?,
         parts.query.as_deref(),
         h,
     )?;

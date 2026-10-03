@@ -36,9 +36,6 @@ tower_governor = { workspace = true }
 # hyper's connection builder, reached through `axum_server::http_builder()` to
 # set the HTTP/1 and HTTP/2 connection-level bounds.
 hyper-util = { workspace = true }
-# WHATWG-conformant query-string pair splitting + decoding. Already in the graph
-# via `url`; named here because this crate uses it directly.
-form_urlencoded = { workspace = true }
 # `tower_governor` does not re-export the `governor` middleware marker its own
 # builder returns (`StateInformationMiddleware`, the `x-ratelimit-*` variant), so
 # the underlying crate is named directly to spell the layer type.

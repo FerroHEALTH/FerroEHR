@@ -998,6 +998,19 @@ pub fn decision_maps() -> Vec<DeclMap> {
                 .collect(),
         },
         DeclMap {
+            map: "rest_discriminator_alias",
+            check_existence: false,
+            entries: overrides::REST_DISCRIMINATOR_ALIASES
+                .iter()
+                .map(|e| DeclEntry {
+                    key: format!("{}#{}", e.schema, e.tag),
+                    decision: "read as the instantiable base".to_string(),
+                    citation: e.citation.to_string(),
+                    reason: e.reason.to_string(),
+                })
+                .collect(),
+        },
+        DeclMap {
             map: "class_binding",
             check_existence: true,
             entries: overrides::CLASS_BINDINGS

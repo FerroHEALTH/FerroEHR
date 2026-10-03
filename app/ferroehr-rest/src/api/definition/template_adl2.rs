@@ -38,10 +38,10 @@ use openehr_its::rest::runtime::ApiError;
 use openehr_rm::prelude::Composition;
 
 use crate::api::RequestParts;
+use crate::negotiate;
 use crate::negotiate::{AppliedPreference, WireFormat};
 use crate::overview::error::RestError;
 use crate::state::AppState;
-use crate::{negotiate, params};
 
 use super::dispatch::list_filter_and_page;
 
@@ -74,7 +74,7 @@ enum Adl2Repr {
 pub(super) async fn list(state: &AppState, parts: &RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
     let p =
-        params::build::<DefinitionTemplateAdl2ListParams>(&parts.path, parts.query.as_deref(), h)?;
+        DefinitionTemplateAdl2ListParams::from_request(parts.route()?, parts.query.as_deref(), h)?;
     let (filter, page) =
         list_filter_and_page(p.template_id, p.concept, p.version, p.offset, p.fetch);
     Ok(negotiate::respond(
@@ -95,7 +95,7 @@ pub(super) async fn upload(state: &AppState, parts: &RequestParts) -> Result<Res
     let h = &parts.headers;
     // Built for its parameter validation only: `Prefer` is read off the header
     // map through the shared negotiation predicates, like every write route.
-    params::build::<DefinitionTemplateAdl2UploadParams>(&parts.path, parts.query.as_deref(), h)?;
+    DefinitionTemplateAdl2UploadParams::from_request(parts.route()?, parts.query.as_deref(), h)?;
     // ADL2 arrives as `text/plain` source, the operation's single declared body
     // type, so a payload declaring another media type is refused `415` before
     // parsing (`Resources.md` §format rules). An absent `Content-Type` declares
@@ -130,7 +130,7 @@ pub(super) async fn upload(state: &AppState, parts: &RequestParts) -> Result<Res
 pub(super) async fn get(state: &AppState, parts: &RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
     let p =
-        params::build::<DefinitionTemplateAdl2GetParams>(&parts.path, parts.query.as_deref(), h)?;
+        DefinitionTemplateAdl2GetParams::from_request(parts.route()?, parts.query.as_deref(), h)?;
     render(state, h, p.template_id, None).await
 }
 
@@ -145,8 +145,8 @@ pub(super) async fn version_get(
     parts: &RequestParts,
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let p = params::build::<DefinitionTemplateAdl2VersionGetParams>(
-        &parts.path,
+    let p = DefinitionTemplateAdl2VersionGetParams::from_request(
+        parts.route()?,
         parts.query.as_deref(),
         h,
     )?;
@@ -164,8 +164,8 @@ pub(super) async fn example_get(
     parts: &RequestParts,
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let p = params::build::<DefinitionTemplateAdl2ExampleGetParams>(
-        &parts.path,
+    let p = DefinitionTemplateAdl2ExampleGetParams::from_request(
+        parts.route()?,
         parts.query.as_deref(),
         h,
     )?;

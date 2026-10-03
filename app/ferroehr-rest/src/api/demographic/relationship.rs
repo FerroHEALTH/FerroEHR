@@ -41,9 +41,9 @@ use openehr_its::rest::runtime::ApiError;
 use openehr_rm::prelude::PartyRelationship;
 
 use crate::api::{RequestParts, guarded_dispatch};
+use crate::negotiate;
 use crate::overview::error::{RestError, sm_api_error};
 use crate::state::AppState;
-use crate::{negotiate, params};
 use ferroehr::service::response::ServiceResponse;
 
 /// The `PARTY_RELATIONSHIP` extension routes as a native `utoipa-axum` router,
@@ -1046,7 +1046,7 @@ pub(super) async fn run(
 
     match op {
         "party_relationship_create" => {
-            let _p = params::build::<AgentCreateParams>(&parts.path, q, h)?;
+            let _p = AgentCreateParams::from_request(parts.route()?, q, h)?;
             let body = negotiate::rm_value::<PartyRelationship>(h, &parts.body)?;
             let resp = state
                 .backend()
@@ -1068,7 +1068,7 @@ pub(super) async fn run(
             ))
         }
         "party_relationship_get" => {
-            let p = params::build::<AgentGetParams>(&parts.path, q, h)?;
+            let p = AgentGetParams::from_request(parts.route()?, q, h)?;
             let resp = state
                 .backend()
                 .party_relationship_get(p.uid_based_id, p.version_at_time)
@@ -1079,7 +1079,7 @@ pub(super) async fn run(
             Ok(read_relationship(h, &resp))
         }
         "party_relationship_update" => {
-            let p = params::build::<AgentUpdateParams>(&parts.path, q, h)?;
+            let p = AgentUpdateParams::from_request(parts.route()?, q, h)?;
             let uid = p.uid_based_id.clone();
             let body = negotiate::rm_value::<PartyRelationship>(h, &parts.body)?;
             match state
@@ -1121,7 +1121,7 @@ pub(super) async fn run(
         // `version_uid` in `ETag`, matching the party delete this extension
         // mirrors (`409_PERSON_with_uid_based_id.yaml`'s convention).
         "party_relationship_delete" => {
-            let p = params::build::<AgentGetParams>(&parts.path, q, h)?;
+            let p = AgentGetParams::from_request(parts.route()?, q, h)?;
             let preceding = p.uid_based_id.clone();
             match state
                 .backend()
@@ -1160,7 +1160,7 @@ pub(super) async fn run(
         // Last-Modified" asks of VERSION / VERSIONED_OBJECT responses, and no
         // `Location` (§Location — creation/redirect only).
         "versioned_party_relationship_get" => {
-            let p = params::build::<VersionedPartyGetParams>(&parts.path, q, h)?;
+            let p = VersionedPartyGetParams::from_request(parts.route()?, q, h)?;
             let vo = p.versioned_object_uid.clone();
             let resp = state
                 .backend()
@@ -1169,7 +1169,7 @@ pub(super) async fn run(
             Ok(super::read_versioned(h, &vo, &resp.body))
         }
         "party_relationship_revision_history" => {
-            let p = params::build::<VersionedPartyGetParams>(&parts.path, q, h)?;
+            let p = VersionedPartyGetParams::from_request(parts.route()?, q, h)?;
             let vo = p.versioned_object_uid.clone();
             let resp = state
                 .backend()
@@ -1178,7 +1178,7 @@ pub(super) async fn run(
             Ok(super::read_versioned(h, &vo, &resp.body))
         }
         "party_relationship_version_get_at_time" => {
-            let p = params::build::<VersionedPartyVersionGetAtTimeParams>(&parts.path, q, h)?;
+            let p = VersionedPartyVersionGetAtTimeParams::from_request(parts.route()?, q, h)?;
             let resp = state
                 .backend()
                 .party_relationship_version_get_at_time(p.versioned_object_uid, p.version_at_time)
@@ -1188,7 +1188,7 @@ pub(super) async fn run(
             Ok(out)
         }
         "party_relationship_version_get_by_id" => {
-            let p = params::build::<VersionedPartyVersionGetByIdParams>(&parts.path, q, h)?;
+            let p = VersionedPartyVersionGetByIdParams::from_request(parts.route()?, q, h)?;
             let vo = p.versioned_object_uid.clone();
             let resp = state
                 .backend()

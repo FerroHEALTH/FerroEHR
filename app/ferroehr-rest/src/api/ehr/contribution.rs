@@ -57,7 +57,7 @@ pub(super) async fn run(
 
     match op {
         "contribution_create" => {
-            let p = params::build::<ContributionCreateParams>(&parts.path, q, h)?;
+            let p = ContributionCreateParams::from_request(parts.route()?, q, h)?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             // Committed as the raw wire body, not the typed SM
             // `commit_contribution`: the typed `UpdateVersion` envelope cannot
@@ -128,7 +128,7 @@ pub(super) async fn run(
             }
         }
         "contribution_get" => {
-            let p = params::build::<ContributionGetParams>(&parts.path, q, h)?;
+            let p = ContributionGetParams::from_request(parts.route()?, q, h)?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let cid = parse_uuid(&p.contribution_uid, "contribution id")?;
             // `Prefer: resolve_refs` (Requests_and_responses §Representation

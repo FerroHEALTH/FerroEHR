@@ -204,7 +204,7 @@ pub(super) fn mk_update_version<T>(
         signature: None,
         lifecycle_state: lifecycle_state_coded(LIFECYCLE_COMPLETE),
         attestations: None,
-        data,
+        data: Some(data),
         commit_audit: UpdateAudit::UpdateAudit(UpdateAuditData {
             _type: None,
             system_id: None,

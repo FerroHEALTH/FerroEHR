@@ -1,159 +1,128 @@
 // SPDX-FileCopyrightText: Vernum Projecten B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Rebuilds a generated `*Params` struct from the three HTTP sources.
+//! Request helpers the generated `*Params` decoding does not cover: the AQL
+//! binds of a query execution, the query reads of the extension routes, and the
+//! `openehr-item-tag` header wrappers.
 //!
-//! The ITS-REST contract combines an operation's path, query and header
-//! parameters into one generated `*Params` struct (`openehr_its::rest::generated`)
-//! while axum extracts the three separately. This module merges them into a
-//! multi-map keyed by parameter name — headers under the canonical HTTP name the
-//! generator's `#[serde(rename = "…")]` expects — and deserializes the struct
-//! from it.
-//!
-//! The deserializer is type-directed rather than a `serde_json::Value` because
-//! query and header values all arrive as strings while the generated params mix
-//! `String`, `i64`, `Option` and `Vec` fields: a JSON map cannot represent
-//! `"5"`-the-string and `5`-the-integer without knowing the target type, so
-//! serde drives the coercion instead.
+//! An ITS-REST operation's parameters decode through its generated
+//! `*Params::from_request` (`openehr_its::rest::generated`). A query string read
+//! here decodes the same way: RFC 3986 §2.1 percent-decoding, under which `+` is
+//! a literal plus, because the OAS gives every query parameter `style: form`,
+//! which OAS 3.0.3 §Parameter Object defines by RFC 6570 form expansion.
 
 #![expect(
     clippy::disallowed_types,
-    reason = "owner-approved 2026-08-03 (#1694 family 9): the wire boundary — one byte-to-JSON \
-              step per route, consumed by the typed decode"
+    reason = "owner-approved 2026-08-03 (#1694 family 9): the wire boundary — an AQL bind is \
+              a JSON criteria value, which the query request carries as one"
 )]
 
+use std::collections::BTreeMap;
+
 use http::{HeaderMap, HeaderValue};
-use indexmap::IndexMap;
-use serde::de::value::Error;
-use serde::de::{self, DeserializeOwned, Deserializer, IntoDeserializer, MapAccess, Visitor};
+use serde_json::Value;
 
 use openehr_its::rest::runtime::ApiError;
 use openehr_rm::prelude::ItemTag;
 
-/// Build the generated params struct `P` for an operation from its request
-/// sources.
-///
-/// `path` are the matched axum path parameters, `query` is the raw query string
-/// (the part after `?`, if any), and `headers` is the full header map. Header
-/// values are exposed under their canonical HTTP name so the generated
-/// `#[serde(rename = "Accept")]` (etc.) fields resolve.
-///
-/// # Errors
-///
-/// Returns [`ApiError::BadRequest`] when a supplied value cannot be coerced to
-/// the type the target field requires (e.g. a non-numeric `offset`).
-pub(crate) fn build<P: DeserializeOwned>(
-    path: &IndexMap<String, String>,
-    query: Option<&str>,
-    headers: &HeaderMap,
-) -> Result<P, ApiError> {
-    let mut values: IndexMap<String, Vec<String>> = IndexMap::new();
-
-    for (k, v) in path {
-        values.entry(k.clone()).or_default().push(v.clone());
-    }
-    if let Some(q) = query {
-        for (k, v) in form_urlencoded_pairs(q) {
-            values.entry(k).or_default().push(v);
-        }
-    }
-    for name in headers.keys() {
-        // Deserialization is case-sensitive on the generated rename, so the
-        // lower-cased wire name is exposed under the contract's spelling too.
-        // NOTE: no openEHR spec governs undecodable header bytes — our own
-        // design: refuse, because dropping the value would deserialize the
-        // request as if the header had never been sent.
-        let entry: Vec<String> = headers
-            .get_all(name)
-            .iter()
-            .map(|v| {
-                v.to_str().map(str::to_owned).map_err(|e| {
-                    tracing::debug!(header = %name, error = %e, "undecodable header value → 400");
-                    ApiError::BadRequest(format!(
-                        "header {name} carries a value that is not decodable as text"
-                    ))
-                })
-            })
-            .collect::<Result<_, _>>()?;
-        if entry.is_empty() {
-            continue;
-        }
-        values.insert(canonical_header_name(name.as_str()), entry);
-    }
-
-    P::deserialize(RequestValuesDeserializer { values })
-        .map_err(|e| ApiError::BadRequest(format!("invalid request parameters: {e}")))
-}
-
-/// Maps a lower-cased header name to the canonical spelling the ITS-REST
-/// contract's `#[serde(rename)]` expects.
-///
-/// An unknown header passes through unchanged and matches no field.
-fn canonical_header_name(lower: &str) -> String {
-    match lower {
-        "accept" => "Accept".to_owned(),
-        "content-type" => "Content-Type".to_owned(),
-        "prefer" => "Prefer".to_owned(),
-        "if-match" => "If-Match".to_owned(),
-        "if-none-match" => "If-None-Match".to_owned(),
-        other => other.to_owned(),
-    }
-}
-
-/// Splits a query string into decoded `application/x-www-form-urlencoded` pairs.
-///
-/// `form_urlencoded::parse` does the whole job — the pair split, the `+`-to-space
-/// rule and percent-decoding — to the WHATWG URL standard.
-fn form_urlencoded_pairs(query: &str) -> Vec<(String, String)> {
-    form_urlencoded::parse(query.as_bytes())
-        .map(|(key, value)| (key.into_owned(), value.into_owned()))
-        .collect()
-}
-
-/// Returns the named query parameters of a query-execution `GET` as AQL binds
-/// (ITS-REST `docs/query/Request.md` §"Query parameters").
-///
-/// Every query-string key that is not a reserved request control becomes a
-/// bind; a `$` prefix is tolerated and stripped (parameter names "SHOULD NOT be
-/// prefixed with `$`"). Values are read as JSON first and fall back to strings,
-/// and repeats are last-wins. Binds from the literal `query_parameters=<JSON
-/// object>` form arrive in `base`, and a name collision resolves to the named
-/// form.
-pub(crate) fn named_query_parameters(
-    query: Option<&str>,
-    base: std::collections::BTreeMap<String, serde_json::Value>,
-    reserved: &[&str],
-) -> std::collections::BTreeMap<String, serde_json::Value> {
-    let mut parameters = base;
-    let Some(query) = query else {
-        return parameters;
-    };
-    for (key, raw) in form_urlencoded_pairs(query) {
-        let name = key.strip_prefix('$').unwrap_or(&key);
-        if name.is_empty() || reserved.contains(&name) {
-            continue;
-        }
-        let value = serde_json::from_str::<serde_json::Value>(&raw)
-            .ok()
-            .filter(|v| !v.is_array() && !v.is_object())
-            .unwrap_or_else(|| serde_json::Value::String(raw.clone()));
-        parameters.insert(name.to_owned(), value);
-    }
-    parameters
-}
-
-/// The reserved query-string keys of the query-execution `GET`s: the request
-/// controls the contract itself defines.
+/// The query-string keys of the query-execution operations that are request
+/// controls rather than AQL binds.
 pub(crate) const QUERY_RESERVED_KEYS: &[&str] =
     &["ehr_id", "offset", "fetch", "q", "query_parameters"];
 
+/// The pairs of `query`, each name and value percent-decoded (RFC 3986 §2.1).
+///
+/// Octets that do not decode to UTF-8 are replaced, never dropped, so a pair
+/// keeps its place.
+fn query_pairs(query: &str) -> Vec<(String, String)> {
+    let decode = |text: &str| {
+        String::from_utf8_lossy(&urlencoding::decode_binary(text.as_bytes())).into_owned()
+    };
+    query
+        .split('&')
+        .filter(|pair| !pair.is_empty())
+        .map(|pair| {
+            let (name, value) = pair.split_once('=').unwrap_or((pair, ""));
+            (decode(name), decode(value))
+        })
+        .collect()
+}
+
 /// Looks up a single percent-decoded query-string parameter by key.
 pub(crate) fn query_param(query: Option<&str>, key: &str) -> Option<String> {
-    let query = query?;
-    form_urlencoded_pairs(query)
+    query_pairs(query?)
         .into_iter()
         .find(|(k, _)| k == key)
         .map(|(_, v)| v)
+}
+
+/// The members of the query string's named binds, outside `reserved`, each
+/// read as the generated `query_parameters` decoding reads a member: JSON text
+/// other than a JSON string is that value, anything else the text itself.
+pub(crate) fn url_members(query: Option<&str>, reserved: &[&str]) -> BTreeMap<String, Value> {
+    let Some(query) = query else {
+        return BTreeMap::new();
+    };
+    query_pairs(query)
+        .into_iter()
+        .filter(|(key, _)| !reserved.contains(&key.as_str()))
+        .map(|(key, raw)| {
+            let value = if raw.starts_with('"') {
+                Value::String(raw)
+            } else {
+                serde_json::from_str::<Value>(&raw).unwrap_or(Value::String(raw))
+            };
+            (key, value)
+        })
+        .collect()
+}
+
+/// The AQL binds of a query execution's `query_parameters` members (ITS-REST
+/// `docs/query/Request.md` §Query parameters).
+///
+/// A `$` prefix is stripped: members "SHOULD NOT be prefixed with `$` sign" and
+/// the server adds it. A member named `query_parameters` holding a JSON object
+/// contributes its entries, and a named member wins a collision with one. An
+/// array or object value binds as its JSON text, because an AQL parameter
+/// substitutes a criteria value (QUERY master03 §Parameters).
+///
+/// # Errors
+/// Returns [`ApiError::BadRequest`] when a `query_parameters` member is not a
+/// JSON object.
+pub(crate) fn aql_binds(
+    members: Option<BTreeMap<String, Value>>,
+) -> Result<BTreeMap<String, Value>, ApiError> {
+    let mut members = members.unwrap_or_default();
+    let mut binds = BTreeMap::new();
+    // NOTE: no openEHR spec governs a literal `query_parameters=<JSON object>`
+    // pair; our own extension accepts it beside the exploded form.
+    if let Some(object) = members.remove("query_parameters") {
+        let Value::Object(entries) = object else {
+            return Err(ApiError::BadRequest(
+                "the query parameter `query_parameters` is not a JSON object".to_owned(),
+            ));
+        };
+        for (key, value) in entries {
+            insert_bind(&mut binds, &key, value);
+        }
+    }
+    for (key, value) in members {
+        insert_bind(&mut binds, &key, value);
+    }
+    Ok(binds)
+}
+
+/// Binds `value` as `key`, the `$` stripped and a structured value as its text.
+fn insert_bind(binds: &mut BTreeMap<String, Value>, key: &str, value: Value) {
+    let name = key.strip_prefix('$').unwrap_or(key);
+    if name.is_empty() {
+        return;
+    }
+    let value = match value {
+        Value::Array(_) | Value::Object(_) => Value::String(value.to_string()),
+        scalar => scalar,
+    };
+    binds.insert(name.to_owned(), value);
 }
 
 // The `openehr-item-tag` / `openehr-version-item-tag` wrappers over the
@@ -421,191 +390,33 @@ pub(crate) fn key_value_pairs(input: &str) -> Vec<(String, String)> {
     out
 }
 
-/// Deserializer over the merged `name` to `[values]` multi-map.
-///
-/// Only map and struct shapes are meaningful at the top level; everything
-/// routes through the map accessor.
-struct RequestValuesDeserializer {
-    values: IndexMap<String, Vec<String>>,
-}
-
-impl<'de> Deserializer<'de> for RequestValuesDeserializer {
-    type Error = Error;
-
-    fn deserialize_any<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> {
-        visitor.visit_map(RequestMapAccess {
-            entries: self.values.into_iter().collect(),
-            cursor: 0,
-            value: None,
-        })
-    }
-
-    serde::forward_to_deserialize_any! {
-        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
-        tuple_struct map struct enum identifier ignored_any
-    }
-}
-
-/// Walks the multi-map entries, handing each value to [`ScalarDeserializer`].
-struct RequestMapAccess {
-    entries: Vec<(String, Vec<String>)>,
-    cursor: usize,
-    value: Option<Vec<String>>,
-}
-
-impl<'de> MapAccess<'de> for RequestMapAccess {
-    type Error = Error;
-
-    fn next_key_seed<K: de::DeserializeSeed<'de>>(
-        &mut self,
-        seed: K,
-    ) -> Result<Option<K::Value>, Self::Error> {
-        let Some((key, val)) = self.entries.get(self.cursor).cloned() else {
-            return Ok(None);
-        };
-        self.cursor += 1;
-        self.value = Some(val);
-        seed.deserialize(key.into_deserializer()).map(Some)
-    }
-
-    fn next_value_seed<S: de::DeserializeSeed<'de>>(
-        &mut self,
-        seed: S,
-    ) -> Result<S::Value, Self::Error> {
-        let values = self
-            .value
-            .take()
-            .ok_or_else(|| de::Error::custom("value requested before key"))?;
-        seed.deserialize(ScalarDeserializer { values })
-    }
-}
-
-/// Deserializes one parameter's value(s), coercing the raw string(s) to the
-/// type the target field asks for.
-struct ScalarDeserializer {
-    values: Vec<String>,
-}
-
-impl ScalarDeserializer {
-    fn first(&self) -> Result<&str, Error> {
-        self.values
-            .first()
-            .map(String::as_str)
-            .ok_or_else(|| de::Error::custom("empty parameter value"))
-    }
-}
-
-macro_rules! deserialize_parsed {
-    ($method:ident, $visit:ident, $ty:ty) => {
-        fn $method<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> {
-            let raw = self.first()?;
-            let parsed: $ty = raw.parse().map_err(|_| {
-                de::Error::custom(format!("expected {}, got {raw:?}", stringify!($ty)))
-            })?;
-            visitor.$visit(parsed)
-        }
-    };
-}
-
-impl<'de> Deserializer<'de> for ScalarDeserializer {
-    type Error = Error;
-
-    fn deserialize_any<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> {
-        // Untyped targets (e.g. `serde_json::Value`) receive the raw string.
-        visitor.visit_string(self.first()?.to_owned())
-    }
-
-    fn deserialize_str<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> {
-        visitor.visit_str(self.first()?)
-    }
-
-    fn deserialize_string<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> {
-        visitor.visit_string(self.first()?.to_owned())
-    }
-
-    deserialize_parsed!(deserialize_bool, visit_bool, bool);
-    deserialize_parsed!(deserialize_i8, visit_i8, i8);
-    deserialize_parsed!(deserialize_i16, visit_i16, i16);
-    deserialize_parsed!(deserialize_i32, visit_i32, i32);
-    deserialize_parsed!(deserialize_i64, visit_i64, i64);
-    deserialize_parsed!(deserialize_u8, visit_u8, u8);
-    deserialize_parsed!(deserialize_u16, visit_u16, u16);
-    deserialize_parsed!(deserialize_u32, visit_u32, u32);
-    deserialize_parsed!(deserialize_u64, visit_u64, u64);
-    deserialize_parsed!(deserialize_f32, visit_f32, f32);
-    deserialize_parsed!(deserialize_f64, visit_f64, f64);
-
-    fn deserialize_option<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> {
-        // A present key always deserializes to `Some`; missing keys never reach
-        // here (serde yields `None` for absent `Option` fields).
-        visitor.visit_some(self)
-    }
-
-    fn deserialize_seq<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> {
-        let elems = self
-            .values
-            .into_iter()
-            .map(|v| ScalarDeserializer { values: vec![v] });
-        visitor.visit_seq(de::value::SeqDeserializer::new(elems))
-    }
-
-    fn deserialize_map<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> {
-        // The only map-typed contract field is `query_parameters`
-        // (`BTreeMap<String, Value>`), rarely sent via the query string; when it
-        // is, the value is a JSON object literal.
-        let raw = self.first()?;
-        let json: serde_json::Value = serde_json::from_str(raw)
-            .map_err(|e| de::Error::custom(format!("expected JSON object: {e}")))?;
-        json.deserialize_map(visitor)
-            .map_err(|e: serde_json::Error| de::Error::custom(e))
-    }
-
-    fn deserialize_ignored_any<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> {
-        visitor.visit_unit()
-    }
-
-    serde::forward_to_deserialize_any! {
-        i128 u128 char bytes byte_buf unit unit_struct newtype_struct tuple
-        tuple_struct struct enum identifier
-    }
-}
-
-impl IntoDeserializer<'_, Error> for ScalarDeserializer {
-    type Deserializer = Self;
-    fn into_deserializer(self) -> Self {
-        self
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    // ── named query parameters (Request.md §Query parameters) ────────────────
+    use super::*;
+    use serde_json::json;
 
-    /// The documented GET form: arbitrary NAMED keys become AQL binds
-    /// (worked example `?temperature_from=36&temperature_unit=Cel`), JSON-first
-    /// typing with string fallback, `$` prefix tolerated-and-stripped,
-    /// reserved request controls excluded, and the JSON-object
-    /// `query_parameters` superset merged with named-wins collisions.
+    // ── AQL binds (Request.md §Query parameters) ─────────────────────────────
+
+    /// The documented GET form: named members become AQL binds (worked example
+    /// `?temperature_from=36&temperature_unit=Cel`), JSON-typed, `$` stripped,
+    /// a `query_parameters` object merged with named-wins collisions.
     #[test]
-    fn named_query_parameters_bind_per_the_docs_text() {
-        use serde_json::{Value, json};
-        let base: std::collections::BTreeMap<String, Value> = [
-            ("from_object".to_owned(), json!("x")),
-            ("shared".to_owned(), json!("object-form")),
-        ]
-        .into_iter()
-        .collect();
-        let got = named_query_parameters(
+    fn aql_binds_follow_the_docs_text() {
+        let members = url_members(
             Some(
                 "temperature_from=36&temperature_unit=Cel&$flagged=true\
                  &uid=90910cf0-66a0-4382-b1f8-c0f27e81b42d::openEHRSys.example.com::1\
-                 &offset=10&fetch=5&ehr_id=abc&q=SELECT&query_parameters=%7B%7D\
+                 &offset=10&fetch=5&ehr_id=abc&q=SELECT\
                  &shared=named-form&name=a+b",
             ),
-            base,
-            QUERY_RESERVED_KEYS,
+            &["ehr_id", "offset", "fetch", "q"],
         );
+        let mut members = members;
+        members.insert(
+            "query_parameters".to_owned(),
+            json!({"from_object": "x", "shared": "object-form"}),
+        );
+        let got = aql_binds(Some(members)).expect("binds");
         assert_eq!(got["temperature_from"], json!(36));
         assert_eq!(got["temperature_unit"], json!("Cel"));
         assert_eq!(got["flagged"], json!(true), "$ prefix stripped, JSON-typed");
@@ -620,7 +431,9 @@ mod tests {
             json!("named-form"),
             "named form wins a collision"
         );
-        assert_eq!(got["name"], json!("a b"), "form decoding applies");
+        // RFC 3986 gives `+` no meaning in a query component, and the OAS
+        // `style: form` (RFC 6570) percent-encodes a space as `%20`.
+        assert_eq!(got["name"], json!("a+b"), "a plus is a literal plus");
         for reserved in QUERY_RESERVED_KEYS {
             assert!(
                 !got.contains_key(*reserved),
@@ -629,118 +442,35 @@ mod tests {
         }
     }
 
-    /// Structured JSON literals stay strings on the named form (an array or
-    /// object as a bare query value is not a documented bind shape), and an
-    /// absent query string passes the base through untouched.
+    /// Structured JSON stays text (an array or object is not an AQL criteria
+    /// value), a non-object `query_parameters` is refused, and no members bind
+    /// nothing.
     #[test]
-    fn named_query_parameters_edges() {
-        use serde_json::{Value, json};
-        let got = named_query_parameters(
-            Some("list=%5B1%2C2%5D"),
-            std::collections::BTreeMap::new(),
-            QUERY_RESERVED_KEYS,
-        );
+    fn aql_binds_edges() {
+        let got = aql_binds(Some(url_members(Some("list=%5B1%2C2%5D"), &[]))).expect("binds");
         assert_eq!(got["list"], json!("[1,2]"), "structured literals stay text");
-        let base: std::collections::BTreeMap<String, Value> =
-            [("kept".to_owned(), json!(1))].into_iter().collect();
-        assert_eq!(
-            named_query_parameters(None, base.clone(), QUERY_RESERVED_KEYS),
-            base
+        let refused = aql_binds(Some(
+            [("query_parameters".to_owned(), json!(7))]
+                .into_iter()
+                .collect(),
+        ));
+        assert!(
+            matches!(refused, Err(ApiError::BadRequest(_))),
+            "{refused:?}"
         );
+        assert!(aql_binds(None).expect("binds").is_empty());
     }
 
-    use super::*;
-    use http::HeaderValue;
-    use serde::Deserialize;
-
-    fn path(pairs: &[(&str, &str)]) -> IndexMap<String, String> {
-        pairs
-            .iter()
-            .map(|(k, v)| ((*k).to_owned(), (*v).to_owned()))
-            .collect()
-    }
-
-    #[derive(Debug, Deserialize, PartialEq)]
-    struct Sample {
-        ehr_id: String,
-        offset: Option<i64>,
-        fetch: Option<i64>,
-        #[serde(rename = "Accept")]
-        accept: Option<String>,
-    }
-
-    #[test]
-    fn path_and_typed_query_and_header() {
-        let mut headers = HeaderMap::new();
-        headers.insert("accept", HeaderValue::from_static("application/json"));
-        let got: Sample = build(
-            &path(&[("ehr_id", "abc-123")]),
-            Some("offset=5&fetch=20"),
-            &headers,
-        )
-        .expect("params");
-        assert_eq!(
-            got,
-            Sample {
-                ehr_id: "abc-123".to_owned(),
-                offset: Some(5),
-                fetch: Some(20),
-                accept: Some("application/json".to_owned()),
-            }
-        );
-    }
-
-    #[test]
-    fn numeric_looking_string_stays_string() {
-        // `ehr_id` is a String field; a numeric-looking value must not be coerced.
-        let got: Sample =
-            build(&path(&[("ehr_id", "12345")]), None, &HeaderMap::new()).expect("params");
-        assert_eq!(got.ehr_id, "12345");
-        assert_eq!(got.offset, None);
-    }
-
-    #[test]
-    fn missing_optional_fields_are_none() {
-        let got: Sample =
-            build(&path(&[("ehr_id", "x")]), None, &HeaderMap::new()).expect("params");
-        assert_eq!(got.offset, None);
-        assert_eq!(got.accept, None);
-    }
-
-    #[test]
-    fn non_numeric_offset_is_bad_request() {
-        let err = build::<Sample>(
-            &path(&[("ehr_id", "x")]),
-            Some("offset=notanumber"),
-            &HeaderMap::new(),
-        )
-        .expect_err("should reject");
-        assert!(matches!(err, ApiError::BadRequest(_)), "got {err:?}");
-    }
-
-    #[derive(Debug, Deserialize, PartialEq)]
-    struct WithSeq {
-        #[serde(rename = "openehr-item-tag")]
-        tags: Option<Vec<String>>,
-    }
-
-    #[test]
-    fn repeated_header_becomes_seq() {
-        let mut headers = HeaderMap::new();
-        headers.append("openehr-item-tag", HeaderValue::from_static("a"));
-        headers.append("openehr-item-tag", HeaderValue::from_static("b"));
-        let got: WithSeq = build(&IndexMap::new(), None, &headers).expect("params");
-        assert_eq!(got.tags, Some(vec!["a".to_owned(), "b".to_owned()]));
-    }
-
+    /// RFC 3986 §2.1: `%20` is a space and `+` stays a plus.
     #[test]
     fn percent_and_plus_decoding() {
-        let pairs = form_urlencoded_pairs("q=SELECT%20c&name=a+b");
+        let pairs = query_pairs("q=SELECT%20c&name=a+b&tz=2024-01-01T00:00:00+01:00");
         assert_eq!(
             pairs,
             vec![
                 ("q".to_owned(), "SELECT c".to_owned()),
-                ("name".to_owned(), "a b".to_owned()),
+                ("name".to_owned(), "a+b".to_owned()),
+                ("tz".to_owned(), "2024-01-01T00:00:00+01:00".to_owned()),
             ]
         );
     }

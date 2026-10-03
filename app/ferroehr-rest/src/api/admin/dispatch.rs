@@ -30,8 +30,8 @@ use openehr_its::rest::runtime::ApiError;
 use crate::api::{BoxResponse, RequestParts};
 use crate::overview::error::RestError;
 
+use crate::negotiate;
 use crate::state::AppState;
-use crate::{negotiate, params};
 
 pub(crate) fn dispatch(state: AppState, op: &'static str, parts: RequestParts) -> BoxResponse {
     Box::pin(async move {
@@ -58,7 +58,7 @@ async fn run(
 
     match op {
         "admin_ehr_delete" => {
-            let p = params::build::<AdminEhrDeleteParams>(&parts.path, q, h)?;
+            let p = AdminEhrDeleteParams::from_request(parts.route()?, q, h)?;
             // SM physical_ehr_delete → 204 No Content; unknown EHR → 404
             // (the service maps `ehr_id_does_not_exist` to NotFound).
             state.backend().admin_ehr_delete(p.ehr_id).await?;

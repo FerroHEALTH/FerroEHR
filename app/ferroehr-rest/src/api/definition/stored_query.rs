@@ -25,9 +25,9 @@ use openehr_its::rest::generated::definition::{
 };
 
 use crate::api::RequestParts;
+use crate::negotiate;
 use crate::overview::error::RestError;
 use crate::state::AppState;
-use crate::{negotiate, params};
 
 /// The default query formalism when `query_type` is absent
 /// (`parameters/query/query_type.yaml`: `default: "AQL"`).
@@ -37,7 +37,7 @@ const DEFAULT_QUERY_TYPE: &str = "AQL";
 /// under the qualified name (a prefix pattern; wildcard on empty).
 pub(super) async fn list(state: &AppState, parts: &RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let p = params::build::<DefinitionQueryListParams>(&parts.path, parts.query.as_deref(), h)?;
+    let p = DefinitionQueryListParams::from_request(parts.route()?, parts.query.as_deref(), h)?;
     Ok(negotiate::respond(
         h,
         StatusCode::OK,
@@ -75,7 +75,7 @@ pub(super) async fn list_all(
 pub(super) async fn store(state: &AppState, parts: &RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
     let p =
-        params::build::<DefinitionQueryStoreYamlParams>(&parts.path, parts.query.as_deref(), h)?;
+        DefinitionQueryStoreYamlParams::from_request(parts.route()?, parts.query.as_deref(), h)?;
     let name = p.qualified_query_name.clone();
     let query_type = p
         .query_type
@@ -113,7 +113,7 @@ pub(super) async fn version_get(
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
     let p =
-        params::build::<DefinitionQueryVersionGetParams>(&parts.path, parts.query.as_deref(), h)?;
+        DefinitionQueryVersionGetParams::from_request(parts.route()?, parts.query.as_deref(), h)?;
     Ok(negotiate::respond(
         h,
         StatusCode::OK,
@@ -134,8 +134,8 @@ pub(super) async fn version_store(
     parts: &RequestParts,
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let p = params::build::<DefinitionQueryVersionStoreYamlParams>(
-        &parts.path,
+    let p = DefinitionQueryVersionStoreYamlParams::from_request(
+        parts.route()?,
         parts.query.as_deref(),
         h,
     )?;

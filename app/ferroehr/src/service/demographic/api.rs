@@ -46,6 +46,12 @@ fn version_uid(resp: ServiceResponse) -> String {
     resp.meta.map(|m| m.uid).unwrap_or_default()
 }
 
+/// The refusal of a create or update whose version carries no data: only a
+/// logical deletion has none (RM common master06 §Logical Deletion).
+fn no_party_data() -> SmError {
+    SmError::precondition("the version carries no data, and this operation writes content")
+}
+
 /// The [`PartyKind`] a commit envelope routes to, read off the RM `PARTY`
 /// subtype it carries (`i_party.adoc`: parties are addressed by their
 /// concrete RM type).
@@ -174,11 +180,15 @@ impl FerroEhrService {
     /// - [`SmError`] `precondition_violation` — the committed version uid does
     ///   not parse (defensive; the uid is server-generated).
     pub async fn create_party(&self, a_version: UpdateVersion<Party>) -> Result<VoId, SmError> {
-        let kind = party_kind_of(&a_version.data);
+        let kind = party_kind_of(a_version.data.as_ref().ok_or_else(no_party_data)?);
         let a_version = crate::service::ehr::canonicalize(a_version);
         let committal = envelope_committal(&a_version);
         let resp = self
-            .commit_new_party(kind, a_version.data, Some(&committal))
+            .commit_new_party(
+                kind,
+                a_version.data.ok_or_else(no_party_data)?,
+                Some(&committal),
+            )
             .await?;
         let (vo_id, _) = parse_version_uid(&version_uid(resp))?;
         Ok(vo_id)
@@ -308,7 +318,7 @@ impl FerroEhrService {
         a_versioned_party_id: VoId,
         a_version: UpdateVersion<Party>,
     ) -> Result<String, SmError> {
-        let kind = party_kind_of(&a_version.data);
+        let kind = party_kind_of(a_version.data.as_ref().ok_or_else(no_party_data)?);
         let a_version = crate::service::ehr::canonicalize(a_version);
         let expected = match &a_version.preceding_version_uid {
             Some(ovid) => Some(components(ovid)?.1),
@@ -319,7 +329,7 @@ impl FerroEhrService {
             .update_party_version(
                 kind,
                 a_versioned_party_id,
-                a_version.data,
+                a_version.data.ok_or_else(no_party_data)?,
                 expected,
                 Some(&committal),
             )
@@ -747,7 +757,7 @@ impl FerroEhrService {
         let a_version = crate::service::ehr::canonicalize(a_version);
         let committal = envelope_committal(&a_version);
         let resp = self
-            .create_relationship(a_version.data, Some(&committal))
+            .create_relationship(a_version.data.ok_or_else(no_party_data)?, Some(&committal))
             .await?;
         let (vo_id, _) = parse_version_uid(&version_uid(resp))?;
         Ok(vo_id)
@@ -864,7 +874,7 @@ impl FerroEhrService {
         let resp = self
             .update_relationship(
                 a_versioned_party_rel_id,
-                a_version.data,
+                a_version.data.ok_or_else(no_party_data)?,
                 expected,
                 Some(&committal),
             )

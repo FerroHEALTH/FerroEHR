@@ -1019,6 +1019,10 @@ fn emit_discriminator_enum(
         variants.push((tag.clone(), ty_name.clone(), data_ty.clone()));
     }
     let variants = variants;
+    // Docs-text aliases read as the instantiable base, keeping their own tag.
+    let aliases: Vec<&str> = crate::plan::overrides::rest_discriminator_aliases(name)
+        .map(|a| a.tag)
+        .collect();
     let tag_list = variants
         .iter()
         .map(|(t, _, _)| t.as_str())
@@ -1073,7 +1077,9 @@ fn emit_discriminator_enum(
          );\n                        match __t {{\n",
         tags = variants
             .iter()
-            .map(|(t, _, _)| format!("\"{t}\""))
+            .map(|(t, _, _)| t.as_str())
+            .chain(aliases.iter().copied())
+            .map(|t| format!("\"{t}\""))
             .collect::<Vec<_>>()
             .join(", ")
     );
@@ -1083,6 +1089,20 @@ fn emit_discriminator_enum(
             "                            \"{tag}\" => ::core::result::Result::Ok({ty_name}::{ref_name}(\n                                \
              ::serde::Deserialize::deserialize(__rest)?,\n                            )),\n"
         );
+    }
+    for tag in &aliases {
+        if base.is_some() {
+            let _ = write!(
+                b,
+                "                            \"{tag}\" => ::core::result::Result::Ok({ty_name}::{ty_name}(\n                                \
+                 ::serde::Deserialize::deserialize(__rest)?,\n                            )),\n"
+            );
+        } else {
+            let _ = writeln!(
+                b,
+                "                            \"{tag}\" => compile_error!(\"the alias `{tag}` needs an instantiable `{name}` base\"),"
+            );
+        }
     }
     // An object with no `_type` at all: the concrete base's own form when the
     // schema declares one, otherwise a refusal (an abstract slot cannot pick a

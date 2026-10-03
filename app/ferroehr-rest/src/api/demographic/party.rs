@@ -24,9 +24,9 @@ use openehr_rm::prelude::{Agent, Group, Organisation, Party, Person, Role};
 
 use crate::api::RequestParts;
 use crate::api::item_tags;
+use crate::negotiate;
 use crate::overview::error::{RestError, sm_api_error};
 use crate::state::AppState;
-use crate::{negotiate, params};
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::response::ServiceResponse;
 use ferroehr::service::status::CallStatusType;
@@ -50,7 +50,7 @@ pub(super) async fn run(
     match action {
         "create" => {
             // All per-kind `*CreateParams` are field-identical; reuse one.
-            let _p = params::build::<AgentCreateParams>(&parts.path, q, h)?;
+            let _p = AgentCreateParams::from_request(parts.route()?, q, h)?;
             let body = decode_party_body(kind, h, &parts.body, state.config().spec_profile)?;
             let pending_tags = item_tags::pending(h)?;
             let mut resp = state
@@ -79,7 +79,7 @@ pub(super) async fn run(
             Ok(out)
         }
         "get" => {
-            let p = params::build::<AgentGetParams>(&parts.path, q, h)?;
+            let p = AgentGetParams::from_request(parts.route()?, q, h)?;
             let resp = state
                 .backend()
                 .party_get(kind, p.uid_based_id, p.version_at_time)
@@ -91,7 +91,7 @@ pub(super) async fn run(
             Ok(read_party(kind, h, &resp))
         }
         "update" => {
-            let p = params::build::<AgentUpdateParams>(&parts.path, q, h)?;
+            let p = AgentUpdateParams::from_request(parts.route()?, q, h)?;
             let uid = p.uid_based_id.clone();
             let body = decode_party_body(kind, h, &parts.body, state.config().spec_profile)?;
             // Judged before the commit, so a defective tag refuses the request
@@ -207,7 +207,7 @@ async fn run_delete(
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
     // All per-kind delete params are field-identical; reuse one.
-    let p = params::build::<AgentDeleteParams>(&parts.path, parts.query.as_deref(), h)?;
+    let p = AgentDeleteParams::from_request(parts.route()?, parts.query.as_deref(), h)?;
     let preceding = p.uid_based_id.clone();
     // NOTE: the preceding version comes from the path `uid_based_id`, so
     // `If-Match` is accepted but never required — overview §"If-Match and

@@ -240,7 +240,7 @@ pub fn direct_envelope<T>(data: T) -> UpdateVersion<T> {
         // 532|complete| (RM common master06 §Version Lifecycle).
         lifecycle_state: lifecycle_state_coded(lifecycle::state::COMPLETE),
         attestations: None,
-        data,
+        data: Some(data),
         commit_audit: UpdateAudit::UpdateAudit(UpdateAuditData {
             _type: None,
             system_id: None,
@@ -327,7 +327,7 @@ mod tests {
         assert!(v.preceding_version_uid.is_some());
         assert_eq!(v.signature.as_deref(), Some("sig-bytes"));
         assert!(v.attestations.is_none());
-        assert!(matches!(v.data, Versionable::Composition(_)));
+        assert!(matches!(v.data, Some(Versionable::Composition(_))));
         let base = audit_base(&v.commit_audit);
         assert_eq!(base.change_type.defining_code.code_string, "251");
     }

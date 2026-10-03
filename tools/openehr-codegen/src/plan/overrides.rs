@@ -438,6 +438,15 @@ pub(crate) struct RestOptionalOverride {
 /// contract (`emit-rest`).
 pub(crate) const REST_OPTIONAL_OVERRIDES: &[RestOptionalOverride] = &[
     RestOptionalOverride {
+        dto: "UpdateVersion",
+        field: "data",
+        citation: "RM common original_version.adoc §Attributes — `data` is `0..1`; RM common \
+                   master06-change_control_package.adoc §Logical Deletion — the deleting commit \
+                   \"delete[s] its `_data_`\" and sets `lifecycle_state` to `deleted`",
+        reason: "A logical-deletion member carries no data; the released OAS lists `data` as \
+                 required, which makes the RM's own deletion procedure unrepresentable.",
+    },
+    RestOptionalOverride {
         dto: "Query",
         field: "offset",
         citation: "ITS-REST docs/query/Request.md §Common Headers and Query Parameters — \
@@ -3222,4 +3231,38 @@ pub(crate) fn rest_path_identifier(component: &str) -> Option<&'static RestPathI
     REST_PATH_IDENTIFIERS
         .iter()
         .find(|r| r.component == component)
+}
+
+/// One extra `_type` tag a discriminated ITS-REST schema reads as its own
+/// instantiable base, where the docs text tells servers to accept a tag the
+/// OAS `discriminator.mapping` does not list. The value keeps the tag it was
+/// sent with.
+pub(crate) struct RestDiscriminatorAlias {
+    /// The discriminated OAS component schema.
+    pub schema: &'static str,
+    /// The extra `_type` tag read as the schema's base.
+    pub tag: &'static str,
+    pub citation: &'static str,
+    pub reason: &'static str,
+}
+
+/// The docs-text-wins discriminator aliases for the generated ITS-REST contract.
+pub(crate) const REST_DISCRIMINATOR_ALIASES: &[RestDiscriminatorAlias] =
+    &[RestDiscriminatorAlias {
+        schema: "UpdateAudit",
+        tag: "AUDIT_DETAILS",
+        citation: "ITS-REST operations/contribution_create.yaml — \"Clients SHOULD send `_type: \
+               \"UPDATE_AUDIT\"`; for interoperability servers SHOULD additionally accept `_type: \
+               \"AUDIT_DETAILS\"` or an omitted `_type` for this attribute\"",
+        reason: "An `UPDATE_AUDIT` is structurally an `AUDIT_DETAILS` minus the server-assigned \
+             attributes, so the docs text has servers read either tag.",
+    }];
+
+/// The discriminator aliases of `schema`.
+pub(crate) fn rest_discriminator_aliases(
+    schema: &str,
+) -> impl Iterator<Item = &'static RestDiscriminatorAlias> + '_ {
+    REST_DISCRIMINATOR_ALIASES
+        .iter()
+        .filter(move |a| a.schema == schema)
 }

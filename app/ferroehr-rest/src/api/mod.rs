@@ -75,6 +75,8 @@ use axum::response::Response;
 use bytes::Bytes;
 use http::HeaderMap;
 use indexmap::IndexMap;
+use openehr_its::rest::routes::{Lookup, RouteMatch, lookup};
+use openehr_its::rest::runtime::ApiError;
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::extensions::access::{ehr_access, pep};
@@ -98,6 +100,26 @@ pub(crate) struct RequestParts {
     pub(crate) query: Option<String>,
     pub(crate) headers: HeaderMap,
     pub(crate) body: Bytes,
+    /// The ITS-REST operation the method and group-relative path address
+    /// (`openehr_its::rest::routes::lookup`), `None` on an extension route the
+    /// ITS-REST route tables do not name.
+    pub(crate) route: Option<RouteMatch>,
+}
+
+impl RequestParts {
+    /// The ITS-REST operation the request addresses.
+    ///
+    /// # Errors
+    /// Returns [`ApiError::Internal`] when the request reached an ITS-REST
+    /// handler but the route tables name no operation for it, a disagreement
+    /// between this router and the generated contract.
+    pub(crate) fn route(&self) -> Result<&RouteMatch, ApiError> {
+        self.route.as_ref().ok_or_else(|| {
+            ApiError::Internal(
+                "the ITS-REST route tables name no operation for this request".to_owned(),
+            )
+        })
+    }
 }
 
 /// Decompose a whole axum [`Request`](axum::extract::Request) into the
@@ -121,6 +143,12 @@ pub(crate) async fn into_parts(request: axum::extract::Request) -> RequestParts 
         })
         .unwrap_or_default();
     let query = parts.uri.query().map(str::to_owned);
+    // The router nests this API under the base path, so `parts.uri` is already
+    // group-relative, which is the path `lookup` matches.
+    let route = match lookup(&parts.method, parts.uri.path()) {
+        Lookup::Matched(route) => Some(route),
+        Lookup::MethodNotAllowed { .. } | Lookup::NotFound => None,
+    };
     let headers = parts.headers;
     let body = axum::body::to_bytes(body, usize::MAX)
         .await
@@ -130,6 +158,7 @@ pub(crate) async fn into_parts(request: axum::extract::Request) -> RequestParts 
         query,
         headers,
         body,
+        route,
     }
 }
 
