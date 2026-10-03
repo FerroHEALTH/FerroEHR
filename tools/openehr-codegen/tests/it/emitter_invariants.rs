@@ -1667,3 +1667,54 @@ fn complex_register_venues_are_real() {
         "Excluded"
     );
 }
+
+/// `REST_PATH_IDENTIFIERS` is held to the vendored OAS components: every path
+/// parameter of the codegen bundles has exactly one entry, no entry names a
+/// component the bundles no longer declare, and the description each entry
+/// quotes is the bundles' own text, so a re-vendored ITS-REST release that
+/// changes a parameter's meaning fails here instead of drifting.
+#[test]
+fn rest_path_identifiers_match_the_oas_components() {
+    let checks = testsupport::rest_path_identifiers().unwrap();
+    assert!(!checks.is_empty(), "no path-parameter component found");
+    for c in &checks {
+        let Some((class, citation)) = &c.entry else {
+            panic!(
+                "{}: a path parameter with no REST_PATH_IDENTIFIERS entry",
+                c.component
+            );
+        };
+        assert!(
+            !c.descriptions.is_empty(),
+            "{}: no vendored bundle declares this path parameter (stale entry)",
+            c.component
+        );
+        // The first quoted run of the citation is the OAS description it reads.
+        let quoted = citation
+            .split('"')
+            .nth(1)
+            .unwrap_or_else(|| panic!("{}: the citation quotes no OAS text", c.component));
+        for d in &c.descriptions {
+            assert!(
+                d.contains(quoted),
+                "{}: the citation quotes {quoted:?}, the bundle says {d:?}",
+                c.component
+            );
+        }
+        // A class is only claimed where the description names its source.
+        if let Some(class) = class {
+            assert!(
+                ["HIER_OBJECT_ID", "OBJECT_VERSION_ID", "UID_BASED_ID"].contains(&class.as_str()),
+                "{}: {class} is not a BASE identifier class",
+                c.component
+            );
+            assert!(
+                c.descriptions
+                    .iter()
+                    .all(|d| d.contains("uid") || d.contains("_id")),
+                "{}: the description names no identifier",
+                c.component
+            );
+        }
+    }
+}

@@ -1083,9 +1083,80 @@ fn emit_params_struct(b: &mut String, op: &Operation, ctx: &Ctx) {
         b,
         "impl {sname} {{\n    \
          /// The parameters of `{}`, one per field, in field order.\n    \
-         pub const PARAMS: &'static [crate::rest::routes::Param] = &[\n{table}    ];\n}}\n\n",
+         pub const PARAMS: &'static [crate::rest::routes::Param] = &[\n{table}    ];\n\n",
         op.operation_id
     );
+    emit_params_decoders(b, op, ctx);
+    b.push_str("}\n\n");
+}
+
+/// The `from_request` constructor of `op`'s param struct, the public form of
+/// the decoding the generated handler runs, and `from_parts`, the decoding
+/// itself, which both share.
+fn emit_params_decoders(b: &mut String, op: &Operation, ctx: &Ctx) {
+    let has = |location: &str| op.parameters.iter().any(|p| p.location == location);
+    let (path, query, header) = (has("path"), has("query"), has("header"));
+    let unused = |used: bool, name: &str| {
+        if used {
+            name.to_string()
+        } else {
+            format!("_{name}")
+        }
+    };
+    let mut parts: Vec<&str> = Vec::new();
+    let mut params: Vec<&str> = Vec::new();
+    let mut prelude = String::new();
+    if path {
+        prelude.push_str(
+            "        let path = crate::rest::decode::PathValues::from_route(matched)?;\n",
+        );
+        parts.push("&path");
+        params.push("path: &crate::rest::decode::PathValues");
+    }
+    if query {
+        prelude.push_str("        let query = crate::rest::decode::QueryPairs::parse(query)?;\n");
+        parts.push("&query");
+        params.push("query: &crate::rest::decode::QueryPairs");
+    }
+    if header {
+        parts.push("headers");
+        params.push("headers: &http::HeaderMap");
+    }
+    let _ = write!(
+        b,
+        "    /// Decodes the parameters of `{op_id}` from a request [`crate::rest::routes::lookup`]\n    \
+         /// matched to it: its path parameters, its query string without the `?`, and its\n    \
+         /// headers, exactly as the generated router decodes them.\n    \
+         ///\n    \
+         /// # Errors\n    \
+         /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is\n    \
+         /// missing, repeated where a single value is declared, not text, or not a valid value.\n    \
+         pub fn from_request(\n        \
+         {matched}: &crate::rest::routes::RouteMatch,\n        \
+         {query_arg}: Option<&str>,\n        \
+         {headers_arg}: &http::HeaderMap,\n    \
+         ) -> Result<Self, crate::rest::runtime::ApiError> {{\n\
+         {prelude}        Self::from_parts({parts})\n    \
+         }}\n\n    \
+         /// Decodes the parameters of `{op_id}` from the request's decoded parts.\n    \
+         pub(crate) fn from_parts({params}) -> Result<Self, crate::rest::runtime::ApiError> {{\n        \
+         Ok(Self {{\n",
+        op_id = op.operation_id,
+        matched = unused(path, "matched"),
+        query_arg = unused(query, "query"),
+        headers_arg = unused(header, "headers"),
+        parts = parts.join(", "),
+        params = params.join(", "),
+    );
+    for p in &op.parameters {
+        let _ = writeln!(
+            b,
+            "            {}: {},",
+            field_id(&p.name),
+            param_extraction(op, p, ctx)
+        );
+    }
+    b.push_str("        })\n    }\n");
 }
 
 /// The path of the hand-written parameter model the route tables carry.
@@ -1103,12 +1174,41 @@ fn param_entry(oas: &Oas, p: &Param) -> String {
         }
     };
     format!(
-        "{ROUTES_MODULE}::Param {{ name: {:?}, location: {location}, required: {}, explode: {}, kind: {} }}",
+        "{ROUTES_MODULE}::Param {{ name: {:?}, location: {location}, required: {}, explode: {}, kind: {}, identifier: {} }}",
         p.name,
         p.required,
         param_explode(p),
-        param_kind(oas, &p.schema)
+        param_kind(oas, &p.schema),
+        param_identifier(p)
     )
+}
+
+/// The `Option<crate::rest::routes::IdentifierClass>` expression of `p`: the
+/// class [`crate::plan::overrides::REST_PATH_IDENTIFIERS`] records for a path
+/// parameter's component, `None` for any other parameter.
+fn param_identifier(p: &Param) -> String {
+    if p.location != "path" {
+        return "None".to_string();
+    }
+    let Some(entry) = p
+        .component
+        .as_deref()
+        .and_then(crate::plan::overrides::rest_path_identifier)
+    else {
+        return format!(
+            "compile_error!(\"path parameter `{}` has no REST_PATH_IDENTIFIERS entry\")",
+            p.name
+        );
+    };
+    match entry.class {
+        None => "None".to_string(),
+        Some("HIER_OBJECT_ID") => format!("Some({ROUTES_MODULE}::IdentifierClass::HierObject)"),
+        Some("OBJECT_VERSION_ID") => {
+            format!("Some({ROUTES_MODULE}::IdentifierClass::ObjectVersion)")
+        }
+        Some("UID_BASED_ID") => format!("Some({ROUTES_MODULE}::IdentifierClass::UidBased)"),
+        Some(other) => format!("compile_error!(\"no IdentifierClass for `{other}`\")"),
+    }
 }
 
 /// Whether `p` explodes: its declared `explode`, else the OAS 3.0.3 default
@@ -1192,6 +1292,7 @@ fn append_docs_text_headers(op: &mut Operation<'_>) {
         op.parameters.push(Param {
             name: h.name.to_string(),
             location: "header".to_string(),
+            component: None,
             required: false,
             style: None,
             explode: None,
@@ -1512,19 +1613,11 @@ fn param_shape(ty: &str) -> ParamShape {
 
 /// The extraction expression for one parameter, the inverse of what the
 /// client writes for it (`emit_query_param`, `emit_header_param`).
-fn param_extraction(
-    op: &Operation,
-    p: &Param,
-    captures: &BTreeMap<String, String>,
-    ctx: &Ctx,
-) -> String {
+fn param_extraction(op: &Operation, p: &Param, ctx: &Ctx) -> String {
     let shape = param_shape(&ctx.param_rust_type(&p.schema));
     let name = &p.name;
     match p.location.as_str() {
-        "path" => {
-            let capture = captures.get(name).map_or("", String::as_str);
-            format!("path.value(\"{capture}\", \"{name}\")?")
-        }
+        "path" => format!("path.value(\"{name}\")?"),
         "query" => match (shape, p.required) {
             (ParamShape::Scalar, true) => format!("query.required(\"{name}\")?"),
             (ParamShape::Scalar, false) => format!("query.optional(\"{name}\")?"),
@@ -1547,13 +1640,13 @@ fn param_extraction(
         },
         _ => match (shape, p.required) {
             (ParamShape::List, true) => {
-                format!("crate::rest::server::header_list_required(&headers, \"{name}\")?")
+                format!("crate::rest::decode::header_list_required(headers, \"{name}\")?")
             }
             (ParamShape::List, false) => {
-                format!("crate::rest::server::header_list(&headers, \"{name}\")?")
+                format!("crate::rest::decode::header_list(headers, \"{name}\")?")
             }
-            (_, true) => format!("crate::rest::server::header_required(&headers, \"{name}\")?"),
-            (_, false) => format!("crate::rest::server::header_optional(&headers, \"{name}\")?"),
+            (_, true) => format!("crate::rest::decode::header_required(headers, \"{name}\")?"),
+            (_, false) => format!("crate::rest::decode::header_optional(headers, \"{name}\")?"),
         },
     }
 }
@@ -1596,26 +1689,36 @@ fn emit_server_handler(b: &mut String, op: &Operation, trait_name: &str, ctx: &C
         op.method.to_uppercase(),
         op.path
     );
+    let mut parts: Vec<&str> = Vec::new();
     if has("path") {
-        b.push_str("            let path = crate::rest::server::PathCaptures::new(path)?;\n");
+        let names: Vec<String> = captures
+            .iter()
+            .map(|(name, capture)| format!("(\"{capture}\", \"{name}\")"))
+            .collect();
+        let _ = writeln!(
+            b,
+            "            let path = crate::rest::server::path_captures(path, &[{}])?;",
+            names.join(", ")
+        );
+        parts.push("&path");
     }
     if has("query") {
         b.push_str(
-            "            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;\n",
+            "            let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;\n",
         );
+        parts.push("&query");
+    }
+    if has("header") {
+        parts.push("&headers");
     }
     let mut call_args: Vec<&str> = Vec::new();
     if !op.parameters.is_empty() {
-        let _ = writeln!(b, "            let params = {} {{", param_struct_name(op));
-        for p in &op.parameters {
-            let _ = writeln!(
-                b,
-                "                {}: {},",
-                field_id(&p.name),
-                param_extraction(op, p, &captures, ctx)
-            );
-        }
-        b.push_str("            };\n");
+        let _ = writeln!(
+            b,
+            "            let params = {}::from_parts({})?;",
+            param_struct_name(op),
+            parts.join(", ")
+        );
         call_args.push("params");
     }
     if let Some((_, required)) = &op.request_body {

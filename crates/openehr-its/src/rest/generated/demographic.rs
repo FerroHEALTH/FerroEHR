@@ -256,6 +256,7 @@ impl AgentCreateParams {
                 "return=minimal",
                 "return=identifier",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -268,6 +269,7 @@ impl AgentCreateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -280,6 +282,7 @@ impl AgentCreateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-item-tag",
@@ -287,6 +290,7 @@ impl AgentCreateParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version-item-tag",
@@ -294,6 +298,7 @@ impl AgentCreateParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version",
@@ -301,6 +306,7 @@ impl AgentCreateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-audit-details",
@@ -308,8 +314,45 @@ impl AgentCreateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `agent_create` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        _matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Self::from_parts(headers)
+    }
+
+    /// Decodes the parameters of `agent_create` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            prefer: crate::rest::decode::header_optional(headers, "Prefer")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+            openehr_item_tag: crate::rest::decode::header_list(headers, "openehr-item-tag")?,
+            openehr_version_item_tag: crate::rest::decode::header_list(
+                headers,
+                "openehr-version-item-tag",
+            )?,
+            openehr_version: crate::rest::decode::header_optional(headers, "openehr-version")?,
+            openehr_audit_details: crate::rest::decode::header_list(
+                headers,
+                "openehr-audit-details",
+            )?,
+        })
+    }
 }
 
 /// Parameters for `agent_get` (path/query/header).
@@ -335,6 +378,7 @@ impl AgentGetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::UidBased),
         },
         crate::rest::routes::Param {
             name: "version_at_time",
@@ -342,6 +386,7 @@ impl AgentGetParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::DateTime,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -354,8 +399,39 @@ impl AgentGetParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `agent_get` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        let query = crate::rest::decode::QueryPairs::parse(query)?;
+        Self::from_parts(&path, &query, headers)
+    }
+
+    /// Decodes the parameters of `agent_get` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        query: &crate::rest::decode::QueryPairs,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            uid_based_id: path.value("uid_based_id")?,
+            version_at_time: query.optional("version_at_time")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `agent_update` (path/query/header).
@@ -405,6 +481,7 @@ impl AgentUpdateParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "If-Match",
@@ -412,6 +489,7 @@ impl AgentUpdateParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Prefer",
@@ -423,6 +501,7 @@ impl AgentUpdateParams {
                 "return=minimal",
                 "return=identifier",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -435,6 +514,7 @@ impl AgentUpdateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -447,6 +527,7 @@ impl AgentUpdateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version-item-tag",
@@ -454,6 +535,7 @@ impl AgentUpdateParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version",
@@ -461,6 +543,7 @@ impl AgentUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-audit-details",
@@ -468,8 +551,48 @@ impl AgentUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `agent_update` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `agent_update` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            uid_based_id: path.value("uid_based_id")?,
+            if_match: crate::rest::decode::header_required(headers, "If-Match")?,
+            prefer: crate::rest::decode::header_optional(headers, "Prefer")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+            openehr_version_item_tag: crate::rest::decode::header_list(
+                headers,
+                "openehr-version-item-tag",
+            )?,
+            openehr_version: crate::rest::decode::header_optional(headers, "openehr-version")?,
+            openehr_audit_details: crate::rest::decode::header_list(
+                headers,
+                "openehr-audit-details",
+            )?,
+        })
+    }
 }
 
 /// Parameters for `agent_delete` (path/query/header).
@@ -500,6 +623,7 @@ impl AgentDeleteParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::ObjectVersion),
         },
         crate::rest::routes::Param {
             name: "openehr-version",
@@ -507,6 +631,7 @@ impl AgentDeleteParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-audit-details",
@@ -514,8 +639,40 @@ impl AgentDeleteParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `agent_delete` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `agent_delete` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            uid_based_id: path.value("uid_based_id")?,
+            openehr_version: crate::rest::decode::header_optional(headers, "openehr-version")?,
+            openehr_audit_details: crate::rest::decode::header_list(
+                headers,
+                "openehr-audit-details",
+            )?,
+        })
+    }
 }
 
 /// Parameters for `group_create` (path/query/header).
@@ -568,6 +725,7 @@ impl GroupCreateParams {
                 "return=minimal",
                 "return=identifier",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -580,6 +738,7 @@ impl GroupCreateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -592,6 +751,7 @@ impl GroupCreateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-item-tag",
@@ -599,6 +759,7 @@ impl GroupCreateParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version-item-tag",
@@ -606,6 +767,7 @@ impl GroupCreateParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version",
@@ -613,6 +775,7 @@ impl GroupCreateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-audit-details",
@@ -620,8 +783,45 @@ impl GroupCreateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `group_create` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        _matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Self::from_parts(headers)
+    }
+
+    /// Decodes the parameters of `group_create` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            prefer: crate::rest::decode::header_optional(headers, "Prefer")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+            openehr_item_tag: crate::rest::decode::header_list(headers, "openehr-item-tag")?,
+            openehr_version_item_tag: crate::rest::decode::header_list(
+                headers,
+                "openehr-version-item-tag",
+            )?,
+            openehr_version: crate::rest::decode::header_optional(headers, "openehr-version")?,
+            openehr_audit_details: crate::rest::decode::header_list(
+                headers,
+                "openehr-audit-details",
+            )?,
+        })
+    }
 }
 
 /// Parameters for `group_get` (path/query/header).
@@ -647,6 +847,7 @@ impl GroupGetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::UidBased),
         },
         crate::rest::routes::Param {
             name: "version_at_time",
@@ -654,6 +855,7 @@ impl GroupGetParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::DateTime,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -666,8 +868,39 @@ impl GroupGetParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `group_get` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        let query = crate::rest::decode::QueryPairs::parse(query)?;
+        Self::from_parts(&path, &query, headers)
+    }
+
+    /// Decodes the parameters of `group_get` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        query: &crate::rest::decode::QueryPairs,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            uid_based_id: path.value("uid_based_id")?,
+            version_at_time: query.optional("version_at_time")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `group_update` (path/query/header).
@@ -717,6 +950,7 @@ impl GroupUpdateParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "If-Match",
@@ -724,6 +958,7 @@ impl GroupUpdateParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Prefer",
@@ -735,6 +970,7 @@ impl GroupUpdateParams {
                 "return=minimal",
                 "return=identifier",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -747,6 +983,7 @@ impl GroupUpdateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -759,6 +996,7 @@ impl GroupUpdateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version-item-tag",
@@ -766,6 +1004,7 @@ impl GroupUpdateParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version",
@@ -773,6 +1012,7 @@ impl GroupUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-audit-details",
@@ -780,8 +1020,48 @@ impl GroupUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `group_update` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `group_update` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            uid_based_id: path.value("uid_based_id")?,
+            if_match: crate::rest::decode::header_required(headers, "If-Match")?,
+            prefer: crate::rest::decode::header_optional(headers, "Prefer")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+            openehr_version_item_tag: crate::rest::decode::header_list(
+                headers,
+                "openehr-version-item-tag",
+            )?,
+            openehr_version: crate::rest::decode::header_optional(headers, "openehr-version")?,
+            openehr_audit_details: crate::rest::decode::header_list(
+                headers,
+                "openehr-audit-details",
+            )?,
+        })
+    }
 }
 
 /// Parameters for `group_delete` (path/query/header).
@@ -812,6 +1092,7 @@ impl GroupDeleteParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::ObjectVersion),
         },
         crate::rest::routes::Param {
             name: "openehr-version",
@@ -819,6 +1100,7 @@ impl GroupDeleteParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-audit-details",
@@ -826,8 +1108,40 @@ impl GroupDeleteParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `group_delete` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `group_delete` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            uid_based_id: path.value("uid_based_id")?,
+            openehr_version: crate::rest::decode::header_optional(headers, "openehr-version")?,
+            openehr_audit_details: crate::rest::decode::header_list(
+                headers,
+                "openehr-audit-details",
+            )?,
+        })
+    }
 }
 
 /// Parameters for `organisation_create` (path/query/header).
@@ -880,6 +1194,7 @@ impl OrganisationCreateParams {
                 "return=minimal",
                 "return=identifier",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -892,6 +1207,7 @@ impl OrganisationCreateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -904,6 +1220,7 @@ impl OrganisationCreateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-item-tag",
@@ -911,6 +1228,7 @@ impl OrganisationCreateParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version-item-tag",
@@ -918,6 +1236,7 @@ impl OrganisationCreateParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version",
@@ -925,6 +1244,7 @@ impl OrganisationCreateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-audit-details",
@@ -932,8 +1252,45 @@ impl OrganisationCreateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `organisation_create` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        _matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Self::from_parts(headers)
+    }
+
+    /// Decodes the parameters of `organisation_create` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            prefer: crate::rest::decode::header_optional(headers, "Prefer")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+            openehr_item_tag: crate::rest::decode::header_list(headers, "openehr-item-tag")?,
+            openehr_version_item_tag: crate::rest::decode::header_list(
+                headers,
+                "openehr-version-item-tag",
+            )?,
+            openehr_version: crate::rest::decode::header_optional(headers, "openehr-version")?,
+            openehr_audit_details: crate::rest::decode::header_list(
+                headers,
+                "openehr-audit-details",
+            )?,
+        })
+    }
 }
 
 /// Parameters for `organisation_get` (path/query/header).
@@ -959,6 +1316,7 @@ impl OrganisationGetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::UidBased),
         },
         crate::rest::routes::Param {
             name: "version_at_time",
@@ -966,6 +1324,7 @@ impl OrganisationGetParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::DateTime,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -978,8 +1337,39 @@ impl OrganisationGetParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `organisation_get` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        let query = crate::rest::decode::QueryPairs::parse(query)?;
+        Self::from_parts(&path, &query, headers)
+    }
+
+    /// Decodes the parameters of `organisation_get` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        query: &crate::rest::decode::QueryPairs,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            uid_based_id: path.value("uid_based_id")?,
+            version_at_time: query.optional("version_at_time")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `organisation_update` (path/query/header).
@@ -1029,6 +1419,7 @@ impl OrganisationUpdateParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "If-Match",
@@ -1036,6 +1427,7 @@ impl OrganisationUpdateParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Prefer",
@@ -1047,6 +1439,7 @@ impl OrganisationUpdateParams {
                 "return=minimal",
                 "return=identifier",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1059,6 +1452,7 @@ impl OrganisationUpdateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -1071,6 +1465,7 @@ impl OrganisationUpdateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version-item-tag",
@@ -1078,6 +1473,7 @@ impl OrganisationUpdateParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version",
@@ -1085,6 +1481,7 @@ impl OrganisationUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-audit-details",
@@ -1092,8 +1489,48 @@ impl OrganisationUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `organisation_update` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `organisation_update` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            uid_based_id: path.value("uid_based_id")?,
+            if_match: crate::rest::decode::header_required(headers, "If-Match")?,
+            prefer: crate::rest::decode::header_optional(headers, "Prefer")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+            openehr_version_item_tag: crate::rest::decode::header_list(
+                headers,
+                "openehr-version-item-tag",
+            )?,
+            openehr_version: crate::rest::decode::header_optional(headers, "openehr-version")?,
+            openehr_audit_details: crate::rest::decode::header_list(
+                headers,
+                "openehr-audit-details",
+            )?,
+        })
+    }
 }
 
 /// Parameters for `organisation_delete` (path/query/header).
@@ -1124,6 +1561,7 @@ impl OrganisationDeleteParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::ObjectVersion),
         },
         crate::rest::routes::Param {
             name: "openehr-version",
@@ -1131,6 +1569,7 @@ impl OrganisationDeleteParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-audit-details",
@@ -1138,8 +1577,40 @@ impl OrganisationDeleteParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `organisation_delete` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `organisation_delete` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            uid_based_id: path.value("uid_based_id")?,
+            openehr_version: crate::rest::decode::header_optional(headers, "openehr-version")?,
+            openehr_audit_details: crate::rest::decode::header_list(
+                headers,
+                "openehr-audit-details",
+            )?,
+        })
+    }
 }
 
 /// Parameters for `person_create` (path/query/header).
@@ -1192,6 +1663,7 @@ impl PersonCreateParams {
                 "return=minimal",
                 "return=identifier",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1204,6 +1676,7 @@ impl PersonCreateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -1216,6 +1689,7 @@ impl PersonCreateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-item-tag",
@@ -1223,6 +1697,7 @@ impl PersonCreateParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version-item-tag",
@@ -1230,6 +1705,7 @@ impl PersonCreateParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version",
@@ -1237,6 +1713,7 @@ impl PersonCreateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-audit-details",
@@ -1244,8 +1721,45 @@ impl PersonCreateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `person_create` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        _matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Self::from_parts(headers)
+    }
+
+    /// Decodes the parameters of `person_create` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            prefer: crate::rest::decode::header_optional(headers, "Prefer")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+            openehr_item_tag: crate::rest::decode::header_list(headers, "openehr-item-tag")?,
+            openehr_version_item_tag: crate::rest::decode::header_list(
+                headers,
+                "openehr-version-item-tag",
+            )?,
+            openehr_version: crate::rest::decode::header_optional(headers, "openehr-version")?,
+            openehr_audit_details: crate::rest::decode::header_list(
+                headers,
+                "openehr-audit-details",
+            )?,
+        })
+    }
 }
 
 /// Parameters for `person_get` (path/query/header).
@@ -1271,6 +1785,7 @@ impl PersonGetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::UidBased),
         },
         crate::rest::routes::Param {
             name: "version_at_time",
@@ -1278,6 +1793,7 @@ impl PersonGetParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::DateTime,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1290,8 +1806,39 @@ impl PersonGetParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `person_get` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        let query = crate::rest::decode::QueryPairs::parse(query)?;
+        Self::from_parts(&path, &query, headers)
+    }
+
+    /// Decodes the parameters of `person_get` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        query: &crate::rest::decode::QueryPairs,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            uid_based_id: path.value("uid_based_id")?,
+            version_at_time: query.optional("version_at_time")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `person_update` (path/query/header).
@@ -1341,6 +1888,7 @@ impl PersonUpdateParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "If-Match",
@@ -1348,6 +1896,7 @@ impl PersonUpdateParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Prefer",
@@ -1359,6 +1908,7 @@ impl PersonUpdateParams {
                 "return=minimal",
                 "return=identifier",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1371,6 +1921,7 @@ impl PersonUpdateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -1383,6 +1934,7 @@ impl PersonUpdateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version-item-tag",
@@ -1390,6 +1942,7 @@ impl PersonUpdateParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version",
@@ -1397,6 +1950,7 @@ impl PersonUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-audit-details",
@@ -1404,8 +1958,48 @@ impl PersonUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `person_update` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `person_update` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            uid_based_id: path.value("uid_based_id")?,
+            if_match: crate::rest::decode::header_required(headers, "If-Match")?,
+            prefer: crate::rest::decode::header_optional(headers, "Prefer")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+            openehr_version_item_tag: crate::rest::decode::header_list(
+                headers,
+                "openehr-version-item-tag",
+            )?,
+            openehr_version: crate::rest::decode::header_optional(headers, "openehr-version")?,
+            openehr_audit_details: crate::rest::decode::header_list(
+                headers,
+                "openehr-audit-details",
+            )?,
+        })
+    }
 }
 
 /// Parameters for `person_delete` (path/query/header).
@@ -1436,6 +2030,7 @@ impl PersonDeleteParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::ObjectVersion),
         },
         crate::rest::routes::Param {
             name: "openehr-version",
@@ -1443,6 +2038,7 @@ impl PersonDeleteParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-audit-details",
@@ -1450,8 +2046,40 @@ impl PersonDeleteParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `person_delete` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `person_delete` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            uid_based_id: path.value("uid_based_id")?,
+            openehr_version: crate::rest::decode::header_optional(headers, "openehr-version")?,
+            openehr_audit_details: crate::rest::decode::header_list(
+                headers,
+                "openehr-audit-details",
+            )?,
+        })
+    }
 }
 
 /// Parameters for `role_create` (path/query/header).
@@ -1504,6 +2132,7 @@ impl RoleCreateParams {
                 "return=minimal",
                 "return=identifier",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1516,6 +2145,7 @@ impl RoleCreateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -1528,6 +2158,7 @@ impl RoleCreateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-item-tag",
@@ -1535,6 +2166,7 @@ impl RoleCreateParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version-item-tag",
@@ -1542,6 +2174,7 @@ impl RoleCreateParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version",
@@ -1549,6 +2182,7 @@ impl RoleCreateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-audit-details",
@@ -1556,8 +2190,45 @@ impl RoleCreateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `role_create` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        _matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Self::from_parts(headers)
+    }
+
+    /// Decodes the parameters of `role_create` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            prefer: crate::rest::decode::header_optional(headers, "Prefer")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+            openehr_item_tag: crate::rest::decode::header_list(headers, "openehr-item-tag")?,
+            openehr_version_item_tag: crate::rest::decode::header_list(
+                headers,
+                "openehr-version-item-tag",
+            )?,
+            openehr_version: crate::rest::decode::header_optional(headers, "openehr-version")?,
+            openehr_audit_details: crate::rest::decode::header_list(
+                headers,
+                "openehr-audit-details",
+            )?,
+        })
+    }
 }
 
 /// Parameters for `role_get` (path/query/header).
@@ -1583,6 +2254,7 @@ impl RoleGetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::UidBased),
         },
         crate::rest::routes::Param {
             name: "version_at_time",
@@ -1590,6 +2262,7 @@ impl RoleGetParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::DateTime,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1602,8 +2275,39 @@ impl RoleGetParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `role_get` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        let query = crate::rest::decode::QueryPairs::parse(query)?;
+        Self::from_parts(&path, &query, headers)
+    }
+
+    /// Decodes the parameters of `role_get` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        query: &crate::rest::decode::QueryPairs,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            uid_based_id: path.value("uid_based_id")?,
+            version_at_time: query.optional("version_at_time")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `role_update` (path/query/header).
@@ -1653,6 +2357,7 @@ impl RoleUpdateParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "If-Match",
@@ -1660,6 +2365,7 @@ impl RoleUpdateParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Prefer",
@@ -1671,6 +2377,7 @@ impl RoleUpdateParams {
                 "return=minimal",
                 "return=identifier",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1683,6 +2390,7 @@ impl RoleUpdateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -1695,6 +2403,7 @@ impl RoleUpdateParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version-item-tag",
@@ -1702,6 +2411,7 @@ impl RoleUpdateParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Object),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-version",
@@ -1709,6 +2419,7 @@ impl RoleUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-audit-details",
@@ -1716,8 +2427,48 @@ impl RoleUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `role_update` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `role_update` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            uid_based_id: path.value("uid_based_id")?,
+            if_match: crate::rest::decode::header_required(headers, "If-Match")?,
+            prefer: crate::rest::decode::header_optional(headers, "Prefer")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+            openehr_version_item_tag: crate::rest::decode::header_list(
+                headers,
+                "openehr-version-item-tag",
+            )?,
+            openehr_version: crate::rest::decode::header_optional(headers, "openehr-version")?,
+            openehr_audit_details: crate::rest::decode::header_list(
+                headers,
+                "openehr-audit-details",
+            )?,
+        })
+    }
 }
 
 /// Parameters for `role_delete` (path/query/header).
@@ -1748,6 +2499,7 @@ impl RoleDeleteParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::ObjectVersion),
         },
         crate::rest::routes::Param {
             name: "openehr-version",
@@ -1755,6 +2507,7 @@ impl RoleDeleteParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-audit-details",
@@ -1762,8 +2515,40 @@ impl RoleDeleteParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Array(&crate::rest::routes::ParamKind::Text),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `role_delete` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `role_delete` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            uid_based_id: path.value("uid_based_id")?,
+            openehr_version: crate::rest::decode::header_optional(headers, "openehr-version")?,
+            openehr_audit_details: crate::rest::decode::header_list(
+                headers,
+                "openehr-audit-details",
+            )?,
+        })
+    }
 }
 
 /// Parameters for `versioned_party_get` (path/query/header).
@@ -1790,6 +2575,7 @@ impl VersionedPartyGetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1797,6 +2583,7 @@ impl VersionedPartyGetParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -1804,8 +2591,37 @@ impl VersionedPartyGetParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `versioned_party_get` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `versioned_party_get` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            versioned_object_uid: path.value("versioned_object_uid")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+        })
+    }
 }
 
 /// Parameters for `versioned_party_revision_history` (path/query/header).
@@ -1832,6 +2648,7 @@ impl VersionedPartyRevisionHistoryParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1839,6 +2656,7 @@ impl VersionedPartyRevisionHistoryParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -1846,8 +2664,37 @@ impl VersionedPartyRevisionHistoryParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `versioned_party_revision_history` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `versioned_party_revision_history` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            versioned_object_uid: path.value("versioned_object_uid")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+        })
+    }
 }
 
 /// Parameters for `versioned_party_version_get_at_time` (path/query/header).
@@ -1877,6 +2724,7 @@ impl VersionedPartyVersionGetAtTimeParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "version_at_time",
@@ -1884,6 +2732,7 @@ impl VersionedPartyVersionGetAtTimeParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::DateTime,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1891,6 +2740,7 @@ impl VersionedPartyVersionGetAtTimeParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -1898,8 +2748,40 @@ impl VersionedPartyVersionGetAtTimeParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `versioned_party_version_get_at_time` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        let query = crate::rest::decode::QueryPairs::parse(query)?;
+        Self::from_parts(&path, &query, headers)
+    }
+
+    /// Decodes the parameters of `versioned_party_version_get_at_time` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        query: &crate::rest::decode::QueryPairs,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            versioned_object_uid: path.value("versioned_object_uid")?,
+            version_at_time: query.optional("version_at_time")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+        })
+    }
 }
 
 /// Parameters for `versioned_party_version_get_by_id` (path/query/header).
@@ -1928,6 +2810,7 @@ impl VersionedPartyVersionGetByIdParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "version_uid",
@@ -1935,6 +2818,7 @@ impl VersionedPartyVersionGetByIdParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::ObjectVersion),
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1942,6 +2826,7 @@ impl VersionedPartyVersionGetByIdParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -1949,8 +2834,38 @@ impl VersionedPartyVersionGetByIdParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `versioned_party_version_get_by_id` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `versioned_party_version_get_by_id` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            versioned_object_uid: path.value("versioned_object_uid")?,
+            version_uid: path.value("version_uid")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+        })
+    }
 }
 
 /// Parameters for `contribution_create` (path/query/header).
@@ -1989,6 +2904,7 @@ impl ContributionCreateParams {
                 "return=minimal",
                 "return=identifier",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1996,6 +2912,7 @@ impl ContributionCreateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -2003,6 +2920,7 @@ impl ContributionCreateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "openehr-template-id",
@@ -2010,8 +2928,39 @@ impl ContributionCreateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `contribution_create` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        _matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Self::from_parts(headers)
+    }
+
+    /// Decodes the parameters of `contribution_create` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            prefer: crate::rest::decode::header_optional(headers, "Prefer")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+            openehr_template_id: crate::rest::decode::header_optional(
+                headers,
+                "openehr-template-id",
+            )?,
+        })
+    }
 }
 
 /// Parameters for `contribution_get` (path/query/header).
@@ -2034,6 +2983,7 @@ impl ContributionGetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Uuid,
+            identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -2041,8 +2991,36 @@ impl ContributionGetParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `contribution_get` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `contribution_get` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            contribution_uid: path.value("contribution_uid")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `demographic_tags_get` (path/query/header).
@@ -2072,6 +3050,7 @@ impl DemographicTagsGetParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "tag_value",
@@ -2079,6 +3058,7 @@ impl DemographicTagsGetParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "tag_target_path",
@@ -2086,6 +3066,7 @@ impl DemographicTagsGetParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -2093,8 +3074,38 @@ impl DemographicTagsGetParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `demographic_tags_get` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        _matched: &crate::rest::routes::RouteMatch,
+        query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let query = crate::rest::decode::QueryPairs::parse(query)?;
+        Self::from_parts(&query, headers)
+    }
+
+    /// Decodes the parameters of `demographic_tags_get` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        query: &crate::rest::decode::QueryPairs,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            tag_key: query.optional("tag_key")?,
+            tag_value: query.optional("tag_value")?,
+            tag_target_path: query.optional("tag_target_path")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `agent_tags_get` (path/query/header).
@@ -2117,6 +3128,7 @@ impl AgentTagsGetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::UidBased),
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -2124,8 +3136,36 @@ impl AgentTagsGetParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `agent_tags_get` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `agent_tags_get` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            uid_based_id: path.value("uid_based_id")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `agent_tags_update` (path/query/header).
@@ -2156,6 +3196,7 @@ impl AgentTagsUpdateParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::UidBased),
         },
         crate::rest::routes::Param {
             name: "Prefer",
@@ -2167,6 +3208,7 @@ impl AgentTagsUpdateParams {
                 "return=minimal",
                 "return=identifier",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -2174,6 +3216,7 @@ impl AgentTagsUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -2181,8 +3224,38 @@ impl AgentTagsUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `agent_tags_update` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `agent_tags_update` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            uid_based_id: path.value("uid_based_id")?,
+            prefer: crate::rest::decode::header_optional(headers, "Prefer")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+        })
+    }
 }
 
 /// Parameters for `agent_tags_delete` (path/query/header).
@@ -2203,6 +3276,7 @@ impl AgentTagsDeleteParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::UidBased),
         },
         crate::rest::routes::Param {
             name: "key",
@@ -2210,8 +3284,35 @@ impl AgentTagsDeleteParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `agent_tags_delete` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        _headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path)
+    }
+
+    /// Decodes the parameters of `agent_tags_delete` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            uid_based_id: path.value("uid_based_id")?,
+            key: path.value("key")?,
+        })
+    }
 }
 
 /// Parameters for `group_tags_get` (path/query/header).
@@ -2234,6 +3335,7 @@ impl GroupTagsGetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::UidBased),
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -2241,8 +3343,36 @@ impl GroupTagsGetParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `group_tags_get` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `group_tags_get` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            uid_based_id: path.value("uid_based_id")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `group_tags_update` (path/query/header).
@@ -2273,6 +3403,7 @@ impl GroupTagsUpdateParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::UidBased),
         },
         crate::rest::routes::Param {
             name: "Prefer",
@@ -2284,6 +3415,7 @@ impl GroupTagsUpdateParams {
                 "return=minimal",
                 "return=identifier",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -2291,6 +3423,7 @@ impl GroupTagsUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -2298,8 +3431,38 @@ impl GroupTagsUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `group_tags_update` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `group_tags_update` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            uid_based_id: path.value("uid_based_id")?,
+            prefer: crate::rest::decode::header_optional(headers, "Prefer")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+        })
+    }
 }
 
 /// Parameters for `group_tags_delete` (path/query/header).
@@ -2320,6 +3483,7 @@ impl GroupTagsDeleteParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::UidBased),
         },
         crate::rest::routes::Param {
             name: "key",
@@ -2327,8 +3491,35 @@ impl GroupTagsDeleteParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `group_tags_delete` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        _headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path)
+    }
+
+    /// Decodes the parameters of `group_tags_delete` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            uid_based_id: path.value("uid_based_id")?,
+            key: path.value("key")?,
+        })
+    }
 }
 
 /// Parameters for `organisation_tags_get` (path/query/header).
@@ -2351,6 +3542,7 @@ impl OrganisationTagsGetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::UidBased),
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -2358,8 +3550,36 @@ impl OrganisationTagsGetParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `organisation_tags_get` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `organisation_tags_get` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            uid_based_id: path.value("uid_based_id")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `organisation_tags_update` (path/query/header).
@@ -2390,6 +3610,7 @@ impl OrganisationTagsUpdateParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::UidBased),
         },
         crate::rest::routes::Param {
             name: "Prefer",
@@ -2401,6 +3622,7 @@ impl OrganisationTagsUpdateParams {
                 "return=minimal",
                 "return=identifier",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -2408,6 +3630,7 @@ impl OrganisationTagsUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -2415,8 +3638,38 @@ impl OrganisationTagsUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `organisation_tags_update` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `organisation_tags_update` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            uid_based_id: path.value("uid_based_id")?,
+            prefer: crate::rest::decode::header_optional(headers, "Prefer")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+        })
+    }
 }
 
 /// Parameters for `organisation_tags_delete` (path/query/header).
@@ -2437,6 +3690,7 @@ impl OrganisationTagsDeleteParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::UidBased),
         },
         crate::rest::routes::Param {
             name: "key",
@@ -2444,8 +3698,35 @@ impl OrganisationTagsDeleteParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `organisation_tags_delete` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        _headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path)
+    }
+
+    /// Decodes the parameters of `organisation_tags_delete` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            uid_based_id: path.value("uid_based_id")?,
+            key: path.value("key")?,
+        })
+    }
 }
 
 /// Parameters for `person_tags_get` (path/query/header).
@@ -2468,6 +3749,7 @@ impl PersonTagsGetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::UidBased),
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -2475,8 +3757,36 @@ impl PersonTagsGetParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `person_tags_get` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `person_tags_get` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            uid_based_id: path.value("uid_based_id")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `person_tags_update` (path/query/header).
@@ -2507,6 +3817,7 @@ impl PersonTagsUpdateParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::UidBased),
         },
         crate::rest::routes::Param {
             name: "Prefer",
@@ -2518,6 +3829,7 @@ impl PersonTagsUpdateParams {
                 "return=minimal",
                 "return=identifier",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -2525,6 +3837,7 @@ impl PersonTagsUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -2532,8 +3845,38 @@ impl PersonTagsUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `person_tags_update` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `person_tags_update` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            uid_based_id: path.value("uid_based_id")?,
+            prefer: crate::rest::decode::header_optional(headers, "Prefer")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+        })
+    }
 }
 
 /// Parameters for `person_tags_delete` (path/query/header).
@@ -2554,6 +3897,7 @@ impl PersonTagsDeleteParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::UidBased),
         },
         crate::rest::routes::Param {
             name: "key",
@@ -2561,8 +3905,35 @@ impl PersonTagsDeleteParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `person_tags_delete` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        _headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path)
+    }
+
+    /// Decodes the parameters of `person_tags_delete` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            uid_based_id: path.value("uid_based_id")?,
+            key: path.value("key")?,
+        })
+    }
 }
 
 /// Parameters for `role_tags_get` (path/query/header).
@@ -2585,6 +3956,7 @@ impl RoleTagsGetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::UidBased),
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -2592,8 +3964,36 @@ impl RoleTagsGetParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `role_tags_get` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `role_tags_get` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            uid_based_id: path.value("uid_based_id")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `role_tags_update` (path/query/header).
@@ -2624,6 +4024,7 @@ impl RoleTagsUpdateParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::UidBased),
         },
         crate::rest::routes::Param {
             name: "Prefer",
@@ -2635,6 +4036,7 @@ impl RoleTagsUpdateParams {
                 "return=minimal",
                 "return=identifier",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -2642,6 +4044,7 @@ impl RoleTagsUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -2649,8 +4052,38 @@ impl RoleTagsUpdateParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json", "application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `role_tags_update` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `role_tags_update` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            uid_based_id: path.value("uid_based_id")?,
+            prefer: crate::rest::decode::header_optional(headers, "Prefer")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+        })
+    }
 }
 
 /// Parameters for `role_tags_delete` (path/query/header).
@@ -2671,6 +4104,7 @@ impl RoleTagsDeleteParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: Some(crate::rest::routes::IdentifierClass::UidBased),
         },
         crate::rest::routes::Param {
             name: "key",
@@ -2678,8 +4112,35 @@ impl RoleTagsDeleteParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `role_tags_delete` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        _headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path)
+    }
+
+    /// Decodes the parameters of `role_tags_delete` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            uid_based_id: path.value("uid_based_id")?,
+            key: path.value("key")?,
+        })
+    }
 }
 
 /// The response headers the OAS declares for the `201` answer of
@@ -5316,21 +6777,7 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let params = AgentCreateParams {
-                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-                openehr_item_tag: crate::rest::server::header_list(&headers, "openehr-item-tag")?,
-                openehr_version_item_tag: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-version-item-tag",
-                )?,
-                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
-                openehr_audit_details: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-audit-details",
-                )?,
-            };
+            let params = AgentCreateParams::from_parts(&headers)?;
             let body = crate::rest::server::json_body(&headers, &body)?;
             let reply: crate::rest::server::Reply = match api.agent_create(params, body).await? {
                 AgentCreateResponse::Created { body, headers } => {
@@ -5367,13 +6814,9 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
-            let params = AgentGetParams {
-                uid_based_id: path.value("p3", "uid_based_id")?,
-                version_at_time: query.optional("version_at_time")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
+            let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;
+            let params = AgentGetParams::from_parts(&path, &query, &headers)?;
             let reply: crate::rest::server::Reply = match api.agent_get(params).await? {
                 AgentGetResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
@@ -5405,23 +6848,8 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = AgentUpdateParams {
-                uid_based_id: path.value("p3", "uid_based_id")?,
-                if_match: crate::rest::server::header_required(&headers, "If-Match")?,
-                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-                openehr_version_item_tag: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-version-item-tag",
-                )?,
-                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
-                openehr_audit_details: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-audit-details",
-                )?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
+            let params = AgentUpdateParams::from_parts(&path, &headers)?;
             let body = crate::rest::server::json_body(&headers, &body)?;
             let reply: crate::rest::server::Reply = match api.agent_update(params, body).await? {
                 AgentUpdateResponse::Ok { body, headers } => {
@@ -5455,15 +6883,8 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = AgentDeleteParams {
-                uid_based_id: path.value("p3", "uid_based_id")?,
-                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
-                openehr_audit_details: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-audit-details",
-                )?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
+            let params = AgentDeleteParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply = match api.agent_delete(params).await? {
                 AgentDeleteResponse::NoContent { headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
@@ -5487,21 +6908,7 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let params = GroupCreateParams {
-                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-                openehr_item_tag: crate::rest::server::header_list(&headers, "openehr-item-tag")?,
-                openehr_version_item_tag: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-version-item-tag",
-                )?,
-                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
-                openehr_audit_details: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-audit-details",
-                )?,
-            };
+            let params = GroupCreateParams::from_parts(&headers)?;
             let body = crate::rest::server::json_body(&headers, &body)?;
             let reply: crate::rest::server::Reply = match api.group_create(params, body).await? {
                 GroupCreateResponse::Created { body, headers } => {
@@ -5538,13 +6945,9 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
-            let params = GroupGetParams {
-                uid_based_id: path.value("p3", "uid_based_id")?,
-                version_at_time: query.optional("version_at_time")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
+            let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;
+            let params = GroupGetParams::from_parts(&path, &query, &headers)?;
             let reply: crate::rest::server::Reply = match api.group_get(params).await? {
                 GroupGetResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
@@ -5576,23 +6979,8 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = GroupUpdateParams {
-                uid_based_id: path.value("p3", "uid_based_id")?,
-                if_match: crate::rest::server::header_required(&headers, "If-Match")?,
-                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-                openehr_version_item_tag: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-version-item-tag",
-                )?,
-                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
-                openehr_audit_details: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-audit-details",
-                )?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
+            let params = GroupUpdateParams::from_parts(&path, &headers)?;
             let body = crate::rest::server::json_body(&headers, &body)?;
             let reply: crate::rest::server::Reply = match api.group_update(params, body).await? {
                 GroupUpdateResponse::Ok { body, headers } => {
@@ -5626,15 +7014,8 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = GroupDeleteParams {
-                uid_based_id: path.value("p3", "uid_based_id")?,
-                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
-                openehr_audit_details: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-audit-details",
-                )?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
+            let params = GroupDeleteParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply = match api.group_delete(params).await? {
                 GroupDeleteResponse::NoContent { headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
@@ -5658,21 +7039,7 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let params = OrganisationCreateParams {
-                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-                openehr_item_tag: crate::rest::server::header_list(&headers, "openehr-item-tag")?,
-                openehr_version_item_tag: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-version-item-tag",
-                )?,
-                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
-                openehr_audit_details: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-audit-details",
-                )?,
-            };
+            let params = OrganisationCreateParams::from_parts(&headers)?;
             let body = crate::rest::server::json_body(&headers, &body)?;
             let reply: crate::rest::server::Reply =
                 match api.organisation_create(params, body).await? {
@@ -5711,13 +7078,9 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
-            let params = OrganisationGetParams {
-                uid_based_id: path.value("p3", "uid_based_id")?,
-                version_at_time: query.optional("version_at_time")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
+            let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;
+            let params = OrganisationGetParams::from_parts(&path, &query, &headers)?;
             let reply: crate::rest::server::Reply = match api.organisation_get(params).await? {
                 OrganisationGetResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
@@ -5749,23 +7112,8 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = OrganisationUpdateParams {
-                uid_based_id: path.value("p3", "uid_based_id")?,
-                if_match: crate::rest::server::header_required(&headers, "If-Match")?,
-                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-                openehr_version_item_tag: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-version-item-tag",
-                )?,
-                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
-                openehr_audit_details: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-audit-details",
-                )?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
+            let params = OrganisationUpdateParams::from_parts(&path, &headers)?;
             let body = crate::rest::server::json_body(&headers, &body)?;
             let reply: crate::rest::server::Reply =
                 match api.organisation_update(params, body).await? {
@@ -5801,15 +7149,8 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = OrganisationDeleteParams {
-                uid_based_id: path.value("p3", "uid_based_id")?,
-                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
-                openehr_audit_details: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-audit-details",
-                )?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
+            let params = OrganisationDeleteParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply = match api.organisation_delete(params).await? {
                 OrganisationDeleteResponse::NoContent { headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
@@ -5833,21 +7174,7 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let params = PersonCreateParams {
-                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-                openehr_item_tag: crate::rest::server::header_list(&headers, "openehr-item-tag")?,
-                openehr_version_item_tag: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-version-item-tag",
-                )?,
-                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
-                openehr_audit_details: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-audit-details",
-                )?,
-            };
+            let params = PersonCreateParams::from_parts(&headers)?;
             let body = crate::rest::server::json_body(&headers, &body)?;
             let reply: crate::rest::server::Reply = match api.person_create(params, body).await? {
                 PersonCreateResponse::Created { body, headers } => {
@@ -5884,13 +7211,9 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
-            let params = PersonGetParams {
-                uid_based_id: path.value("p3", "uid_based_id")?,
-                version_at_time: query.optional("version_at_time")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
+            let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;
+            let params = PersonGetParams::from_parts(&path, &query, &headers)?;
             let reply: crate::rest::server::Reply = match api.person_get(params).await? {
                 PersonGetResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
@@ -5922,23 +7245,8 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = PersonUpdateParams {
-                uid_based_id: path.value("p3", "uid_based_id")?,
-                if_match: crate::rest::server::header_required(&headers, "If-Match")?,
-                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-                openehr_version_item_tag: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-version-item-tag",
-                )?,
-                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
-                openehr_audit_details: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-audit-details",
-                )?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
+            let params = PersonUpdateParams::from_parts(&path, &headers)?;
             let body = crate::rest::server::json_body(&headers, &body)?;
             let reply: crate::rest::server::Reply = match api.person_update(params, body).await? {
                 PersonUpdateResponse::Ok { body, headers } => {
@@ -5972,15 +7280,8 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = PersonDeleteParams {
-                uid_based_id: path.value("p3", "uid_based_id")?,
-                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
-                openehr_audit_details: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-audit-details",
-                )?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
+            let params = PersonDeleteParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply = match api.person_delete(params).await? {
                 PersonDeleteResponse::NoContent { headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
@@ -6004,21 +7305,7 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let params = RoleCreateParams {
-                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-                openehr_item_tag: crate::rest::server::header_list(&headers, "openehr-item-tag")?,
-                openehr_version_item_tag: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-version-item-tag",
-                )?,
-                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
-                openehr_audit_details: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-audit-details",
-                )?,
-            };
+            let params = RoleCreateParams::from_parts(&headers)?;
             let body = crate::rest::server::json_body(&headers, &body)?;
             let reply: crate::rest::server::Reply = match api.role_create(params, body).await? {
                 RoleCreateResponse::Created { body, headers } => {
@@ -6055,13 +7342,9 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
-            let params = RoleGetParams {
-                uid_based_id: path.value("p3", "uid_based_id")?,
-                version_at_time: query.optional("version_at_time")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
+            let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;
+            let params = RoleGetParams::from_parts(&path, &query, &headers)?;
             let reply: crate::rest::server::Reply = match api.role_get(params).await? {
                 RoleGetResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
@@ -6093,23 +7376,8 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = RoleUpdateParams {
-                uid_based_id: path.value("p3", "uid_based_id")?,
-                if_match: crate::rest::server::header_required(&headers, "If-Match")?,
-                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-                openehr_version_item_tag: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-version-item-tag",
-                )?,
-                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
-                openehr_audit_details: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-audit-details",
-                )?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
+            let params = RoleUpdateParams::from_parts(&path, &headers)?;
             let body = crate::rest::server::json_body(&headers, &body)?;
             let reply: crate::rest::server::Reply = match api.role_update(params, body).await? {
                 RoleUpdateResponse::Ok { body, headers } => {
@@ -6143,15 +7411,8 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = RoleDeleteParams {
-                uid_based_id: path.value("p3", "uid_based_id")?,
-                openehr_version: crate::rest::server::header_optional(&headers, "openehr-version")?,
-                openehr_audit_details: crate::rest::server::header_list(
-                    &headers,
-                    "openehr-audit-details",
-                )?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
+            let params = RoleDeleteParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply = match api.role_delete(params).await? {
                 RoleDeleteResponse::NoContent { headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT);
@@ -6178,12 +7439,8 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = VersionedPartyGetParams {
-                versioned_object_uid: path.value("p3", "versioned_object_uid")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "versioned_object_uid")])?;
+            let params = VersionedPartyGetParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply = match api.versioned_party_get(params).await? {
                 VersionedPartyGetResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
@@ -6211,12 +7468,8 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = VersionedPartyRevisionHistoryParams {
-                versioned_object_uid: path.value("p3", "versioned_object_uid")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "versioned_object_uid")])?;
+            let params = VersionedPartyRevisionHistoryParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply =
                 match api.versioned_party_revision_history(params).await? {
                     VersionedPartyRevisionHistoryResponse::Ok { body, headers } => {
@@ -6246,14 +7499,9 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
-            let params = VersionedPartyVersionGetAtTimeParams {
-                versioned_object_uid: path.value("p3", "versioned_object_uid")?,
-                version_at_time: query.optional("version_at_time")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "versioned_object_uid")])?;
+            let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;
+            let params = VersionedPartyVersionGetAtTimeParams::from_parts(&path, &query, &headers)?;
             let reply: crate::rest::server::Reply =
                 match api.versioned_party_version_get_at_time(params).await? {
                     VersionedPartyVersionGetAtTimeResponse::Ok { body, headers } => {
@@ -6282,13 +7530,11 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = VersionedPartyVersionGetByIdParams {
-                versioned_object_uid: path.value("p3", "versioned_object_uid")?,
-                version_uid: path.value("p5", "version_uid")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-            };
+            let path = crate::rest::server::path_captures(
+                path,
+                &[("p5", "version_uid"), ("p3", "versioned_object_uid")],
+            )?;
+            let params = VersionedPartyVersionGetByIdParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply =
                 match api.versioned_party_version_get_by_id(params).await? {
                     VersionedPartyVersionGetByIdResponse::Ok { body, headers } => {
@@ -6314,15 +7560,7 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let params = ContributionCreateParams {
-                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-                openehr_template_id: crate::rest::server::header_optional(
-                    &headers,
-                    "openehr-template-id",
-                )?,
-            };
+            let params = ContributionCreateParams::from_parts(&headers)?;
             let body = crate::rest::server::json_body(&headers, &body)?;
             let reply: crate::rest::server::Reply =
                 match api.contribution_create(params, body).await? {
@@ -6360,11 +7598,8 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = ContributionGetParams {
-                contribution_uid: path.value("p3", "contribution_uid")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "contribution_uid")])?;
+            let params = ContributionGetParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply = match api.contribution_get(params).await? {
                 ContributionGetResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
@@ -6389,13 +7624,8 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
-            let params = DemographicTagsGetParams {
-                tag_key: query.optional("tag_key")?,
-                tag_value: query.optional("tag_value")?,
-                tag_target_path: query.optional("tag_target_path")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;
+            let params = DemographicTagsGetParams::from_parts(&query, &headers)?;
             let reply: crate::rest::server::Reply = match api.demographic_tags_get(params).await? {
                 DemographicTagsGetResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
@@ -6423,11 +7653,8 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = AgentTagsGetParams {
-                uid_based_id: path.value("p3", "uid_based_id")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
+            let params = AgentTagsGetParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply = match api.agent_tags_get(params).await? {
                 AgentTagsGetResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
@@ -6456,13 +7683,8 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = AgentTagsUpdateParams {
-                uid_based_id: path.value("p3", "uid_based_id")?,
-                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
+            let params = AgentTagsUpdateParams::from_parts(&path, &headers)?;
             let body = crate::rest::server::json_body(&headers, &body)?;
             let reply: crate::rest::server::Reply =
                 match api.agent_tags_update(params, body).await? {
@@ -6494,11 +7716,9 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = AgentTagsDeleteParams {
-                uid_based_id: path.value("p3", "uid_based_id")?,
-                key: path.value("p5", "key")?,
-            };
+            let path =
+                crate::rest::server::path_captures(path, &[("p5", "key"), ("p3", "uid_based_id")])?;
+            let params = AgentTagsDeleteParams::from_parts(&path)?;
             let reply: crate::rest::server::Reply = match api.agent_tags_delete(params).await? {
                 AgentTagsDeleteResponse::NoContent => {
                     crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT)
@@ -6523,11 +7743,8 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = GroupTagsGetParams {
-                uid_based_id: path.value("p3", "uid_based_id")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
+            let params = GroupTagsGetParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply = match api.group_tags_get(params).await? {
                 GroupTagsGetResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
@@ -6556,13 +7773,8 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = GroupTagsUpdateParams {
-                uid_based_id: path.value("p3", "uid_based_id")?,
-                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
+            let params = GroupTagsUpdateParams::from_parts(&path, &headers)?;
             let body = crate::rest::server::json_body(&headers, &body)?;
             let reply: crate::rest::server::Reply =
                 match api.group_tags_update(params, body).await? {
@@ -6594,11 +7806,9 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = GroupTagsDeleteParams {
-                uid_based_id: path.value("p3", "uid_based_id")?,
-                key: path.value("p5", "key")?,
-            };
+            let path =
+                crate::rest::server::path_captures(path, &[("p5", "key"), ("p3", "uid_based_id")])?;
+            let params = GroupTagsDeleteParams::from_parts(&path)?;
             let reply: crate::rest::server::Reply = match api.group_tags_delete(params).await? {
                 GroupTagsDeleteResponse::NoContent => {
                     crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT)
@@ -6623,11 +7833,8 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = OrganisationTagsGetParams {
-                uid_based_id: path.value("p3", "uid_based_id")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
+            let params = OrganisationTagsGetParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply = match api.organisation_tags_get(params).await? {
                 OrganisationTagsGetResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
@@ -6656,13 +7863,8 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = OrganisationTagsUpdateParams {
-                uid_based_id: path.value("p3", "uid_based_id")?,
-                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
+            let params = OrganisationTagsUpdateParams::from_parts(&path, &headers)?;
             let body = crate::rest::server::json_body(&headers, &body)?;
             let reply: crate::rest::server::Reply =
                 match api.organisation_tags_update(params, body).await? {
@@ -6694,11 +7896,9 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = OrganisationTagsDeleteParams {
-                uid_based_id: path.value("p3", "uid_based_id")?,
-                key: path.value("p5", "key")?,
-            };
+            let path =
+                crate::rest::server::path_captures(path, &[("p5", "key"), ("p3", "uid_based_id")])?;
+            let params = OrganisationTagsDeleteParams::from_parts(&path)?;
             let reply: crate::rest::server::Reply =
                 match api.organisation_tags_delete(params).await? {
                     OrganisationTagsDeleteResponse::NoContent => {
@@ -6724,11 +7924,8 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = PersonTagsGetParams {
-                uid_based_id: path.value("p3", "uid_based_id")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
+            let params = PersonTagsGetParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply = match api.person_tags_get(params).await? {
                 PersonTagsGetResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
@@ -6757,13 +7954,8 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = PersonTagsUpdateParams {
-                uid_based_id: path.value("p3", "uid_based_id")?,
-                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
+            let params = PersonTagsUpdateParams::from_parts(&path, &headers)?;
             let body = crate::rest::server::json_body(&headers, &body)?;
             let reply: crate::rest::server::Reply =
                 match api.person_tags_update(params, body).await? {
@@ -6795,11 +7987,9 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = PersonTagsDeleteParams {
-                uid_based_id: path.value("p3", "uid_based_id")?,
-                key: path.value("p5", "key")?,
-            };
+            let path =
+                crate::rest::server::path_captures(path, &[("p5", "key"), ("p3", "uid_based_id")])?;
+            let params = PersonTagsDeleteParams::from_parts(&path)?;
             let reply: crate::rest::server::Reply = match api.person_tags_delete(params).await? {
                 PersonTagsDeleteResponse::NoContent => {
                     crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT)
@@ -6824,11 +8014,8 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = RoleTagsGetParams {
-                uid_based_id: path.value("p3", "uid_based_id")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
+            let params = RoleTagsGetParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply = match api.role_tags_get(params).await? {
                 RoleTagsGetResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
@@ -6857,13 +8044,8 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = RoleTagsUpdateParams {
-                uid_based_id: path.value("p3", "uid_based_id")?,
-                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "uid_based_id")])?;
+            let params = RoleTagsUpdateParams::from_parts(&path, &headers)?;
             let body = crate::rest::server::json_body(&headers, &body)?;
             let reply: crate::rest::server::Reply = match api.role_tags_update(params, body).await?
             {
@@ -6895,11 +8077,9 @@ pub mod server {
         S: DemographicApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = RoleTagsDeleteParams {
-                uid_based_id: path.value("p3", "uid_based_id")?,
-                key: path.value("p5", "key")?,
-            };
+            let path =
+                crate::rest::server::path_captures(path, &[("p5", "key"), ("p3", "uid_based_id")])?;
+            let params = RoleTagsDeleteParams::from_parts(&path)?;
             let reply: crate::rest::server::Reply = match api.role_tags_delete(params).await? {
                 RoleTagsDeleteResponse::NoContent => {
                     crate::rest::server::Reply::new(http::StatusCode::NO_CONTENT)

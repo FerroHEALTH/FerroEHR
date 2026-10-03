@@ -530,3 +530,141 @@ fn a_match_names_its_declared_query_parameters_and_headers() -> TestResult {
     assert_eq!(audit.kind, ParamKind::Array(&ParamKind::Text));
     Ok(())
 }
+
+/// Every EHR-area and demographic path parameter that carries an openEHR
+/// identifier names its BASE class, and the two `uid_based_id` variants keep
+/// their distinct classes per operation (OAS `uid_based_id`,
+/// `uid_based_id_as_version_uid`, `uid_based_id_as_versioned_object_uid`).
+#[test]
+fn path_parameters_name_their_identifier_class() {
+    use openehr_its::rest::routes::{IdentifierClass, Param, ParamLocation};
+    type Group = (
+        &'static [(&'static str, &'static str, &'static str)],
+        &'static [&'static [Param]],
+    );
+    let groups: [Group; 6] = [
+        (admin::ROUTES, admin::ROUTE_PARAMS),
+        (definition::ROUTES, definition::ROUTE_PARAMS),
+        (demographic::ROUTES, demographic::ROUTE_PARAMS),
+        (ehr::ROUTES, ehr::ROUTE_PARAMS),
+        (query::ROUTES, query::ROUTE_PARAMS),
+        (system::ROUTES, system::ROUTE_PARAMS),
+    ];
+    let mut uid_based = BTreeMap::new();
+    for (routes, params) in groups {
+        for ((_, _, operation), row) in routes.iter().zip(params.iter()) {
+            for p in row.iter().filter(|p| p.location == ParamLocation::Path) {
+                let expected = match p.name {
+                    "ehr_id" | "versioned_object_uid" | "contribution_uid" => {
+                        Some(IdentifierClass::HierObject)
+                    }
+                    "version_uid" => Some(IdentifierClass::ObjectVersion),
+                    "uid_based_id" => {
+                        uid_based.insert(*operation, p.identifier);
+                        continue;
+                    }
+                    _ => None,
+                };
+                assert_eq!(p.identifier, expected, "{operation}: {}", p.name);
+            }
+            for p in row.iter().filter(|p| p.location != ParamLocation::Path) {
+                assert_eq!(p.identifier, None, "{operation}: {}", p.name);
+            }
+        }
+    }
+    for (operation, class) in [
+        ("composition_get", IdentifierClass::UidBased),
+        ("composition_update", IdentifierClass::HierObject),
+        ("composition_delete", IdentifierClass::ObjectVersion),
+        ("composition_tags_get", IdentifierClass::UidBased),
+        ("person_get", IdentifierClass::UidBased),
+        ("person_update", IdentifierClass::HierObject),
+        ("person_delete", IdentifierClass::ObjectVersion),
+    ] {
+        assert_eq!(uid_based.get(operation), Some(&Some(class)), "{operation}");
+    }
+    assert_eq!(IdentifierClass::ObjectVersion.as_str(), "OBJECT_VERSION_ID");
+}
+
+/// `from_request` decodes an AQL query string as the generated router does:
+/// the declared keys into their fields, every other pair into
+/// `query_parameters` with its value read as JSON when it parses (ITS-REST
+/// `query/` `query_parameters`, OAS `style: form, explode: true`), and `+`
+/// kept as a literal plus (RFC 3986 §2.1).
+#[test]
+fn from_request_decodes_the_adhoc_query_string() {
+    let m = matched(&Method::GET, "/query/aql").unwrap();
+    let params = query::QueryExecuteAdhocQueryParams::from_request(
+        &m,
+        Some("q=SELECT+1&offset=1&fetch=2&uid=x&n=3"),
+        &http::HeaderMap::new(),
+    )
+    .unwrap();
+    assert_eq!(params.q, "SELECT+1");
+    assert_eq!(params.offset, Some(1));
+    assert_eq!(params.fetch, Some(2));
+    let members = params.query_parameters.unwrap();
+    assert_eq!(members.len(), 2);
+    assert_eq!(members.get("uid"), Some(&serde_json::json!("x")));
+    assert_eq!(members.get("n"), Some(&serde_json::json!(3)));
+}
+
+/// A repeated member and a missing required parameter are refused with the
+/// `400` the generated handler returns, naming the parameter.
+#[test]
+fn from_request_refuses_as_the_router_does() {
+    let m = matched(&Method::GET, "/query/aql").unwrap();
+    let refused = |query: &str| match query::QueryExecuteAdhocQueryParams::from_request(
+        &m,
+        Some(query),
+        &http::HeaderMap::new(),
+    ) {
+        Err(openehr_its::rest::runtime::ApiError::BadRequest(message)) => message,
+        other => panic!("{query}: expected a 400, got {other:?}"),
+    };
+    assert_eq!(
+        refused("q=a&uid=x&uid=y"),
+        "the member `uid` of the query parameter `query_parameters` is given more than once"
+    );
+    assert_eq!(
+        refused("offset=1"),
+        "the required query parameter `q` is missing"
+    );
+    assert_eq!(
+        refused("q=a&offset=one"),
+        "the query parameter `offset` is not a valid value: invalid digit found in string"
+    );
+}
+
+/// The stored-query operations decode their path parameters (percent-decoded)
+/// and query string, and `definition_query_store` its path, query and
+/// headers.
+#[test]
+fn from_request_covers_the_stored_query_operations() {
+    let mut headers = http::HeaderMap::new();
+    headers.insert("accept", http::HeaderValue::from_static("application/json"));
+    let m = matched(&Method::GET, "/query/org.example%3A%3Avitals").unwrap();
+    let p = query::QueryExecuteStoredQueryParams::from_request(&m, Some("ehr_id=e1&n=2"), &headers)
+        .unwrap();
+    assert_eq!(p.qualified_query_name, "org.example::vitals");
+    assert_eq!(p.ehr_id.as_deref(), Some("e1"));
+    assert_eq!(p.accept.as_deref(), Some("application/json"));
+    assert_eq!(
+        p.query_parameters.unwrap().get("n"),
+        Some(&serde_json::json!(2))
+    );
+    let m = matched(&Method::GET, "/query/org.example::vitals/1.0.2").unwrap();
+    let p = query::QueryExecuteStoredQueryVersionParams::from_request(&m, None, &headers).unwrap();
+    assert_eq!(p.qualified_query_name, "org.example::vitals");
+    assert_eq!(p.version, "1.0.2");
+    assert!(p.query_parameters.is_none());
+    let m = matched(&Method::PUT, "/definition/query/org.example::vitals").unwrap();
+    let p = definition::DefinitionQueryStoreYamlParams::from_request(
+        &m,
+        Some("query_type=AQL"),
+        &headers,
+    )
+    .unwrap();
+    assert_eq!(p.qualified_query_name, "org.example::vitals");
+    assert_eq!(p.query_type.as_deref(), Some("AQL"));
+}

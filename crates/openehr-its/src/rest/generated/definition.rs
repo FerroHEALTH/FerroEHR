@@ -886,6 +886,7 @@ impl DefinitionTemplateAdl14ListParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "template_id",
@@ -893,6 +894,7 @@ impl DefinitionTemplateAdl14ListParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "concept",
@@ -900,6 +902,7 @@ impl DefinitionTemplateAdl14ListParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "version",
@@ -907,6 +910,7 @@ impl DefinitionTemplateAdl14ListParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "offset",
@@ -914,6 +918,7 @@ impl DefinitionTemplateAdl14ListParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Integer,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "fetch",
@@ -921,8 +926,40 @@ impl DefinitionTemplateAdl14ListParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Integer,
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `definition_template_adl1.4_list` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        _matched: &crate::rest::routes::RouteMatch,
+        query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let query = crate::rest::decode::QueryPairs::parse(query)?;
+        Self::from_parts(&query, headers)
+    }
+
+    /// Decodes the parameters of `definition_template_adl1.4_list` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        query: &crate::rest::decode::QueryPairs,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            template_id: query.optional("template_id")?,
+            concept: query.optional("concept")?,
+            version: query.optional("version")?,
+            offset: query.optional("offset")?,
+            fetch: query.optional("fetch")?,
+        })
+    }
 }
 
 /// Parameters for `definition_template_adl1.4_upload` (path/query/header).
@@ -955,6 +992,7 @@ impl DefinitionTemplateAdl14UploadParams {
                 "return=minimal",
                 "return=identifier",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -966,6 +1004,7 @@ impl DefinitionTemplateAdl14UploadParams {
                 "application/xml",
                 "application/openehr.wt+json",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -973,8 +1012,35 @@ impl DefinitionTemplateAdl14UploadParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/xml"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `definition_template_adl1.4_upload` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        _matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Self::from_parts(headers)
+    }
+
+    /// Decodes the parameters of `definition_template_adl1.4_upload` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            prefer: crate::rest::decode::header_optional(headers, "Prefer")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+        })
+    }
 }
 
 /// Parameters for `definition_template_adl1.4_get` (path/query/header).
@@ -997,6 +1063,7 @@ impl DefinitionTemplateAdl14GetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1008,8 +1075,36 @@ impl DefinitionTemplateAdl14GetParams {
                 "application/xml",
                 "application/openehr.wt+json",
             ]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `definition_template_adl1.4_get` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `definition_template_adl1.4_get` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            template_id: path.value("template_id")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `definition_template_adl1.4_example_get` (path/query/header).
@@ -1038,6 +1133,7 @@ impl DefinitionTemplateAdl14ExampleGetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "type",
@@ -1045,6 +1141,7 @@ impl DefinitionTemplateAdl14ExampleGetParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Enum(&["input", "output"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "detail_level",
@@ -1052,6 +1149,7 @@ impl DefinitionTemplateAdl14ExampleGetParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Enum(&["required", "medium", "complete"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1064,8 +1162,40 @@ impl DefinitionTemplateAdl14ExampleGetParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `definition_template_adl1.4_example_get` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        let query = crate::rest::decode::QueryPairs::parse(query)?;
+        Self::from_parts(&path, &query, headers)
+    }
+
+    /// Decodes the parameters of `definition_template_adl1.4_example_get` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        query: &crate::rest::decode::QueryPairs,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            template_id: path.value("template_id")?,
+            r#type: query.optional("type")?,
+            detail_level: query.optional("detail_level")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `definition_template_adl2_list` (path/query/header).
@@ -1101,6 +1231,7 @@ impl DefinitionTemplateAdl2ListParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "template_id",
@@ -1108,6 +1239,7 @@ impl DefinitionTemplateAdl2ListParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "concept",
@@ -1115,6 +1247,7 @@ impl DefinitionTemplateAdl2ListParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "version",
@@ -1122,6 +1255,7 @@ impl DefinitionTemplateAdl2ListParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "offset",
@@ -1129,6 +1263,7 @@ impl DefinitionTemplateAdl2ListParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Integer,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "fetch",
@@ -1136,8 +1271,40 @@ impl DefinitionTemplateAdl2ListParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Integer,
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `definition_template_adl2_list` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        _matched: &crate::rest::routes::RouteMatch,
+        query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let query = crate::rest::decode::QueryPairs::parse(query)?;
+        Self::from_parts(&query, headers)
+    }
+
+    /// Decodes the parameters of `definition_template_adl2_list` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        query: &crate::rest::decode::QueryPairs,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            template_id: query.optional("template_id")?,
+            concept: query.optional("concept")?,
+            version: query.optional("version")?,
+            offset: query.optional("offset")?,
+            fetch: query.optional("fetch")?,
+        })
+    }
 }
 
 /// Parameters for `definition_template_adl2_upload` (path/query/header).
@@ -1169,6 +1336,7 @@ impl DefinitionTemplateAdl2UploadParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Prefer",
@@ -1180,6 +1348,7 @@ impl DefinitionTemplateAdl2UploadParams {
                 "return=minimal",
                 "return=identifier",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1191,6 +1360,7 @@ impl DefinitionTemplateAdl2UploadParams {
                 "application/xml",
                 "text/plain",
             ]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -1198,8 +1368,38 @@ impl DefinitionTemplateAdl2UploadParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["text/plain"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `definition_template_adl2_upload` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        _matched: &crate::rest::routes::RouteMatch,
+        query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let query = crate::rest::decode::QueryPairs::parse(query)?;
+        Self::from_parts(&query, headers)
+    }
+
+    /// Decodes the parameters of `definition_template_adl2_upload` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        query: &crate::rest::decode::QueryPairs,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            version: query.optional("version")?,
+            prefer: crate::rest::decode::header_optional(headers, "Prefer")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+        })
+    }
 }
 
 /// Parameters for `definition_template_adl2_get` (path/query/header).
@@ -1222,6 +1422,7 @@ impl DefinitionTemplateAdl2GetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1233,8 +1434,36 @@ impl DefinitionTemplateAdl2GetParams {
                 "application/xml",
                 "text/plain",
             ]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `definition_template_adl2_get` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `definition_template_adl2_get` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            template_id: path.value("template_id")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `definition_template_adl2_example_get` (path/query/header).
@@ -1263,6 +1492,7 @@ impl DefinitionTemplateAdl2ExampleGetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "type",
@@ -1270,6 +1500,7 @@ impl DefinitionTemplateAdl2ExampleGetParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Enum(&["input", "output"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "detail_level",
@@ -1277,6 +1508,7 @@ impl DefinitionTemplateAdl2ExampleGetParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Enum(&["required", "medium", "complete"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1289,8 +1521,40 @@ impl DefinitionTemplateAdl2ExampleGetParams {
                 "application/openehr.wt.flat+json",
                 "application/openehr.wt.structured+json",
             ]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `definition_template_adl2_example_get` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        let query = crate::rest::decode::QueryPairs::parse(query)?;
+        Self::from_parts(&path, &query, headers)
+    }
+
+    /// Decodes the parameters of `definition_template_adl2_example_get` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        query: &crate::rest::decode::QueryPairs,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            template_id: path.value("template_id")?,
+            r#type: query.optional("type")?,
+            detail_level: query.optional("detail_level")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `definition_template_adl2_version_get` (path/query/header).
@@ -1315,6 +1579,7 @@ impl DefinitionTemplateAdl2VersionGetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "version",
@@ -1322,6 +1587,7 @@ impl DefinitionTemplateAdl2VersionGetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1333,8 +1599,37 @@ impl DefinitionTemplateAdl2VersionGetParams {
                 "application/xml",
                 "text/plain",
             ]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `definition_template_adl2_version_get` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `definition_template_adl2_version_get` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            template_id: path.value("template_id")?,
+            version: path.value("version")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `definition_query_list` (path/query/header).
@@ -1357,6 +1652,7 @@ impl DefinitionQueryListParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1364,8 +1660,36 @@ impl DefinitionQueryListParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `definition_query_list` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `definition_query_list` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            qualified_query_name: path.value("qualified_query_name")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `definition_query_store.yaml` (path/query/header).
@@ -1395,6 +1719,7 @@ impl DefinitionQueryStoreYamlParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "query_type",
@@ -1402,6 +1727,7 @@ impl DefinitionQueryStoreYamlParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1409,6 +1735,7 @@ impl DefinitionQueryStoreYamlParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Content-Type",
@@ -1416,8 +1743,40 @@ impl DefinitionQueryStoreYamlParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["text/plain"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `definition_query_store.yaml` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        let query = crate::rest::decode::QueryPairs::parse(query)?;
+        Self::from_parts(&path, &query, headers)
+    }
+
+    /// Decodes the parameters of `definition_query_store.yaml` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        query: &crate::rest::decode::QueryPairs,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            qualified_query_name: path.value("qualified_query_name")?,
+            query_type: query.optional("query_type")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+            content_type: crate::rest::decode::header_optional(headers, "Content-Type")?,
+        })
+    }
 }
 
 /// Parameters for `definition_query_version_get` (path/query/header).
@@ -1442,6 +1801,7 @@ impl DefinitionQueryVersionGetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "version",
@@ -1449,6 +1809,7 @@ impl DefinitionQueryVersionGetParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1456,8 +1817,37 @@ impl DefinitionQueryVersionGetParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `definition_query_version_get` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path, headers)
+    }
+
+    /// Decodes the parameters of `definition_query_version_get` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            qualified_query_name: path.value("qualified_query_name")?,
+            version: path.value("version")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// Parameters for `definition_query_version_store.yaml` (path/query/header).
@@ -1485,6 +1875,7 @@ impl DefinitionQueryVersionStoreYamlParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "version",
@@ -1492,6 +1883,7 @@ impl DefinitionQueryVersionStoreYamlParams {
             required: true,
             explode: false,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "query_type",
@@ -1499,6 +1891,7 @@ impl DefinitionQueryVersionStoreYamlParams {
             required: false,
             explode: true,
             kind: crate::rest::routes::ParamKind::Text,
+            identifier: None,
         },
         crate::rest::routes::Param {
             name: "Accept",
@@ -1506,8 +1899,40 @@ impl DefinitionQueryVersionStoreYamlParams {
             required: false,
             explode: false,
             kind: crate::rest::routes::ParamKind::Enum(&["application/json"]),
+            identifier: None,
         },
     ];
+
+    /// Decodes the parameters of `definition_query_version_store.yaml` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        query: Option<&str>,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        let query = crate::rest::decode::QueryPairs::parse(query)?;
+        Self::from_parts(&path, &query, headers)
+    }
+
+    /// Decodes the parameters of `definition_query_version_store.yaml` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+        query: &crate::rest::decode::QueryPairs,
+        headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            qualified_query_name: path.value("qualified_query_name")?,
+            version: path.value("version")?,
+            query_type: query.optional("query_type")?,
+            accept: crate::rest::decode::header_optional(headers, "Accept")?,
+        })
+    }
 }
 
 /// The response headers the OAS declares for the `200` answer of
@@ -2215,15 +2640,8 @@ pub mod server {
         S: DefinitionApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
-            let params = DefinitionTemplateAdl14ListParams {
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                template_id: query.optional("template_id")?,
-                concept: query.optional("concept")?,
-                version: query.optional("version")?,
-                offset: query.optional("offset")?,
-                fetch: query.optional("fetch")?,
-            };
+            let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;
+            let params = DefinitionTemplateAdl14ListParams::from_parts(&query, &headers)?;
             let reply: crate::rest::server::Reply =
                 match api.definition_template_adl1_4_list(params).await? {
                     DefinitionTemplateAdl14ListResponse::Ok { body, headers } => {
@@ -2249,11 +2667,7 @@ pub mod server {
         S: DefinitionApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let params = DefinitionTemplateAdl14UploadParams {
-                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-            };
+            let params = DefinitionTemplateAdl14UploadParams::from_parts(&headers)?;
             let body = crate::rest::server::text_body(&body)?;
             let reply: crate::rest::server::Reply =
                 match api.definition_template_adl1_4_upload(params, body).await? {
@@ -2289,11 +2703,8 @@ pub mod server {
         S: DefinitionApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = DefinitionTemplateAdl14GetParams {
-                template_id: path.value("p4", "template_id")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p4", "template_id")])?;
+            let params = DefinitionTemplateAdl14GetParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply =
                 match api.definition_template_adl1_4_get(params).await? {
                     DefinitionTemplateAdl14GetResponse::Ok { body, headers } => {
@@ -2323,14 +2734,10 @@ pub mod server {
         S: DefinitionApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
-            let params = DefinitionTemplateAdl14ExampleGetParams {
-                template_id: path.value("p4", "template_id")?,
-                r#type: query.optional("type")?,
-                detail_level: query.optional("detail_level")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p4", "template_id")])?;
+            let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;
+            let params =
+                DefinitionTemplateAdl14ExampleGetParams::from_parts(&path, &query, &headers)?;
             let reply: crate::rest::server::Reply =
                 match api.definition_template_adl1_4_example_get(params).await? {
                     DefinitionTemplateAdl14ExampleGetResponse::Ok { body, headers } => {
@@ -2356,15 +2763,8 @@ pub mod server {
         S: DefinitionApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
-            let params = DefinitionTemplateAdl2ListParams {
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                template_id: query.optional("template_id")?,
-                concept: query.optional("concept")?,
-                version: query.optional("version")?,
-                offset: query.optional("offset")?,
-                fetch: query.optional("fetch")?,
-            };
+            let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;
+            let params = DefinitionTemplateAdl2ListParams::from_parts(&query, &headers)?;
             let reply: crate::rest::server::Reply =
                 match api.definition_template_adl2_list(params).await? {
                     DefinitionTemplateAdl2ListResponse::Ok { body, headers } => {
@@ -2391,13 +2791,8 @@ pub mod server {
         S: DefinitionApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
-            let params = DefinitionTemplateAdl2UploadParams {
-                version: query.optional("version")?,
-                prefer: crate::rest::server::header_optional(&headers, "Prefer")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-            };
+            let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;
+            let params = DefinitionTemplateAdl2UploadParams::from_parts(&query, &headers)?;
             let body = crate::rest::server::text_body(&body)?;
             let reply: crate::rest::server::Reply =
                 match api.definition_template_adl2_upload(params, body).await? {
@@ -2433,11 +2828,8 @@ pub mod server {
         S: DefinitionApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = DefinitionTemplateAdl2GetParams {
-                template_id: path.value("p4", "template_id")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p4", "template_id")])?;
+            let params = DefinitionTemplateAdl2GetParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply =
                 match api.definition_template_adl2_get(params).await? {
                     DefinitionTemplateAdl2GetResponse::Ok { body, headers } => {
@@ -2467,14 +2859,10 @@ pub mod server {
         S: DefinitionApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
-            let params = DefinitionTemplateAdl2ExampleGetParams {
-                template_id: path.value("p4", "template_id")?,
-                r#type: query.optional("type")?,
-                detail_level: query.optional("detail_level")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p4", "template_id")])?;
+            let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;
+            let params =
+                DefinitionTemplateAdl2ExampleGetParams::from_parts(&path, &query, &headers)?;
             let reply: crate::rest::server::Reply =
                 match api.definition_template_adl2_example_get(params).await? {
                     DefinitionTemplateAdl2ExampleGetResponse::Ok { body, headers } => {
@@ -2503,12 +2891,11 @@ pub mod server {
         S: DefinitionApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = DefinitionTemplateAdl2VersionGetParams {
-                template_id: path.value("p4", "template_id")?,
-                version: path.value("p5", "version")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(
+                path,
+                &[("p4", "template_id"), ("p5", "version")],
+            )?;
+            let params = DefinitionTemplateAdl2VersionGetParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply =
                 match api.definition_template_adl2_version_get(params).await? {
                     DefinitionTemplateAdl2VersionGetResponse::Ok { body, headers } => {
@@ -2537,11 +2924,8 @@ pub mod server {
         S: DefinitionApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = DefinitionQueryListParams {
-                qualified_query_name: path.value("p3", "qualified_query_name")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "qualified_query_name")])?;
+            let params = DefinitionQueryListParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply = match api.definition_query_list(params).await? {
                 DefinitionQueryListResponse::Ok { body, headers } => {
                     let mut reply = crate::rest::server::Reply::new(http::StatusCode::OK);
@@ -2571,14 +2955,9 @@ pub mod server {
         S: DefinitionApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
-            let params = DefinitionQueryStoreYamlParams {
-                qualified_query_name: path.value("p3", "qualified_query_name")?,
-                query_type: query.optional("query_type")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-                content_type: crate::rest::server::header_optional(&headers, "Content-Type")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "qualified_query_name")])?;
+            let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;
+            let params = DefinitionQueryStoreYamlParams::from_parts(&path, &query, &headers)?;
             let body = crate::rest::server::text_body(&body)?;
             let reply: crate::rest::server::Reply =
                 match api.definition_query_store_yaml(params, body).await? {
@@ -2607,12 +2986,11 @@ pub mod server {
         S: DefinitionApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = DefinitionQueryVersionGetParams {
-                qualified_query_name: path.value("p3", "qualified_query_name")?,
-                version: path.value("p4", "version")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(
+                path,
+                &[("p3", "qualified_query_name"), ("p4", "version")],
+            )?;
+            let params = DefinitionQueryVersionGetParams::from_parts(&path, &headers)?;
             let reply: crate::rest::server::Reply =
                 match api.definition_query_version_get(params).await? {
                     DefinitionQueryVersionGetResponse::Ok { body, headers } => {
@@ -2643,14 +3021,13 @@ pub mod server {
         S: DefinitionApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
-            let params = DefinitionQueryVersionStoreYamlParams {
-                qualified_query_name: path.value("p3", "qualified_query_name")?,
-                version: path.value("p4", "version")?,
-                query_type: query.optional("query_type")?,
-                accept: crate::rest::server::header_optional(&headers, "Accept")?,
-            };
+            let path = crate::rest::server::path_captures(
+                path,
+                &[("p3", "qualified_query_name"), ("p4", "version")],
+            )?;
+            let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;
+            let params =
+                DefinitionQueryVersionStoreYamlParams::from_parts(&path, &query, &headers)?;
             let body = crate::rest::server::text_body(&body)?;
             let reply: crate::rest::server::Reply = match api
                 .definition_query_version_store_yaml(params, body)

@@ -17,6 +17,29 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **`openehr-its` names the openEHR identifier class of every path
+  parameter** (#3539). `rest::routes::Param` gains `identifier`, an
+  `IdentifierClass` whose `as_str()` is the BASE class name: the
+  class the ITS-REST OAS states only in the parameter's description, as the
+  BMM type of the RM attribute the value is "taken from". `ehr_id`,
+  `versioned_object_uid` and `contribution_uid` carry `HIER_OBJECT_ID`,
+  `version_uid` carries `OBJECT_VERSION_ID`, and `uid_based_id` keeps its
+  per-operation class: `UID_BASED_ID` on a read, `HIER_OBJECT_ID` on an
+  update, `OBJECT_VERSION_ID` on a delete (`IdentifierClass::UidBased`,
+  `HierObject`, `ObjectVersion`). The table is generated from a
+  decision map that a codegen test holds to the vendored OAS descriptions.
+- **Every generated `*Params` struct decodes a matched request** (#3540).
+  `from_request(matched, query, headers)` takes the `RouteMatch` from
+  `routes::lookup`, the query string and the headers, and runs the decoding
+  the generated router runs: the declared keys into their fields, the members
+  of a form-exploded object such as the AQL `query_parameters` read as JSON
+  where they parse, `+` as a literal plus, and a `400` naming the parameter
+  for a missing, repeated or invalid one. The generated handlers call the
+  same decoding, so an intermediary and the router cannot read a request
+  differently. The decoding moved from `rest::server` to the new
+  `rest::decode`, which needs only the `rest` feature, not the axum server
+  half.
+- **The `openehr-*` crates step to 0.0.80.**
 - **The `openehr-rm` attribute model covers the BASE foundation types and
   names reference targets** (#3537). The model (`v1_1::model`,
   `v1_2::model`) now holds every class of the BASE + RM BMM, including the

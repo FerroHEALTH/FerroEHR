@@ -980,6 +980,24 @@ pub fn decision_maps() -> Vec<DeclMap> {
                 .collect(),
         },
         DeclMap {
+            map: "rest_path_identifier",
+            check_existence: false,
+            entries: overrides::REST_PATH_IDENTIFIERS
+                .iter()
+                .map(|e| DeclEntry {
+                    key: e.component.to_string(),
+                    decision: e.class.map_or_else(
+                        || "no openEHR identifier".to_string(),
+                        |c| format!("carries a {c}"),
+                    ),
+                    citation: e.citation.to_string(),
+                    reason: "The OAS states the identifier class only in the parameter's \
+                             description."
+                        .to_string(),
+                })
+                .collect(),
+        },
+        DeclMap {
             map: "class_binding",
             check_existence: true,
             entries: overrides::CLASS_BINDINGS
@@ -2250,4 +2268,66 @@ fn push_lost_variants(
             problem: "an abstract type appears as an xsi:type variant",
         });
     }
+}
+
+/// One ITS-REST path-parameter component as the vendored codegen bundles
+/// declare it, beside its `REST_PATH_IDENTIFIERS` entry.
+#[derive(Debug)]
+pub struct RestPathIdentifierCheck {
+    /// The `#/components/parameters/` name.
+    pub component: String,
+    /// The component's description in each bundle that declares it as a path
+    /// parameter (whitespace-normalised).
+    pub descriptions: Vec<String>,
+    /// The entry's identifier class, `None` when the component has no entry.
+    pub entry: Option<(Option<String>, String)>,
+}
+
+/// Every path-parameter component of the vendored `*-codegen` OAS bundles and
+/// every `REST_PATH_IDENTIFIERS` entry, joined by component name.
+///
+/// # Errors
+/// Returns an error if a vendored OAS bundle cannot be read or parsed.
+pub fn rest_path_identifiers() -> Result<Vec<RestPathIdentifierCheck>, Error> {
+    let oas_dir = std::path::Path::new(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../crates/openehr-its/vendor/rest-oas"
+    ))
+    .to_path_buf();
+    let mut descriptions: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    let mut paths: Vec<std::path::PathBuf> = std::fs::read_dir(&oas_dir)
+        .map_err(|e| e.to_string())?
+        .filter_map(Result::ok)
+        .map(|e| e.path())
+        .filter(|p| {
+            p.file_name()
+                .and_then(|n| n.to_str())
+                .is_some_and(|n| n.ends_with("-codegen.openapi.yaml"))
+        })
+        .collect();
+    paths.sort();
+    for path in paths {
+        for (component, location, description) in
+            oas::Oas::parse_file(&path)?.parameter_components()
+        {
+            if location == "path" {
+                descriptions
+                    .entry(component)
+                    .or_default()
+                    .push(description.split_whitespace().collect::<Vec<_>>().join(" "));
+            }
+        }
+    }
+    for entry in overrides::REST_PATH_IDENTIFIERS {
+        descriptions.entry(entry.component.to_string()).or_default();
+    }
+    Ok(descriptions
+        .into_iter()
+        .map(|(component, descriptions)| RestPathIdentifierCheck {
+            entry: overrides::rest_path_identifier(&component)
+                .map(|e| (e.class.map(str::to_string), e.citation.to_string())),
+            component,
+            descriptions,
+        })
+        .collect())
 }

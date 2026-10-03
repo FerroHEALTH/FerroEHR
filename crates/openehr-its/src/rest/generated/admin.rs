@@ -32,7 +32,33 @@ impl AdminEhrDeleteParams {
         required: true,
         explode: false,
         kind: crate::rest::routes::ParamKind::Uuid,
+        identifier: Some(crate::rest::routes::IdentifierClass::HierObject),
     }];
+
+    /// Decodes the parameters of `admin_ehr_delete` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        matched: &crate::rest::routes::RouteMatch,
+        _query: Option<&str>,
+        _headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let path = crate::rest::decode::PathValues::from_route(matched)?;
+        Self::from_parts(&path)
+    }
+
+    /// Decodes the parameters of `admin_ehr_delete` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        path: &crate::rest::decode::PathValues,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: path.value("ehr_id")?,
+        })
+    }
 }
 
 /// Parameters for `admin_ehr_delete_all` (path/query/header).
@@ -51,7 +77,33 @@ impl AdminEhrDeleteAllParams {
         required: false,
         explode: true,
         kind: crate::rest::routes::ParamKind::Uuid,
+        identifier: None,
     }];
+
+    /// Decodes the parameters of `admin_ehr_delete_all` from a request [`crate::rest::routes::lookup`]
+    /// matched to it: its path parameters, its query string without the `?`, and its
+    /// headers, exactly as the generated router decodes them.
+    ///
+    /// # Errors
+    /// Returns [`crate::rest::runtime::ApiError::BadRequest`] naming the parameter that is
+    /// missing, repeated where a single value is declared, not text, or not a valid value.
+    pub fn from_request(
+        _matched: &crate::rest::routes::RouteMatch,
+        query: Option<&str>,
+        _headers: &http::HeaderMap,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        let query = crate::rest::decode::QueryPairs::parse(query)?;
+        Self::from_parts(&query)
+    }
+
+    /// Decodes the parameters of `admin_ehr_delete_all` from the request's decoded parts.
+    pub(crate) fn from_parts(
+        query: &crate::rest::decode::QueryPairs,
+    ) -> Result<Self, crate::rest::runtime::ApiError> {
+        Ok(Self {
+            ehr_id: query.optional("ehr_id")?,
+        })
+    }
 }
 
 /// The server half of the `admin` API group (ITS-REST): the `AdminApi`
@@ -162,10 +214,8 @@ pub mod server {
         S: AdminApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let path = crate::rest::server::PathCaptures::new(path)?;
-            let params = AdminEhrDeleteParams {
-                ehr_id: path.value("p3", "ehr_id")?,
-            };
+            let path = crate::rest::server::path_captures(path, &[("p3", "ehr_id")])?;
+            let params = AdminEhrDeleteParams::from_parts(&path)?;
             let reply: crate::rest::server::Reply = match api.admin_ehr_delete(params).await? {
                 AdminEhrDeleteResponse::Accepted => {
                     crate::rest::server::Reply::new(http::StatusCode::ACCEPTED)
@@ -189,10 +239,8 @@ pub mod server {
         S: AdminApi + Send + Sync + 'static,
     {
         let served: Result<axum::response::Response, crate::rest::runtime::Refusal> = async {
-            let query = crate::rest::server::QueryPairs::parse(query.as_deref())?;
-            let params = AdminEhrDeleteAllParams {
-                ehr_id: query.optional("ehr_id")?,
-            };
+            let query = crate::rest::decode::QueryPairs::parse(query.as_deref())?;
+            let params = AdminEhrDeleteAllParams::from_parts(&query)?;
             let reply: crate::rest::server::Reply = match api.admin_ehr_delete_all(params).await? {
                 AdminEhrDeleteAllResponse::Accepted => {
                     crate::rest::server::Reply::new(http::StatusCode::ACCEPTED)

@@ -73,6 +73,37 @@ pub struct Param {
     pub explode: bool,
     /// The value shape the parameter's schema states.
     pub kind: ParamKind,
+    /// The openEHR identifier class a path parameter carries, which the OAS
+    /// states only in the parameter's description (the RM attribute the value
+    /// is "taken from"); `None` for a value that is no openEHR identifier and
+    /// for every non-path parameter.
+    pub identifier: Option<IdentifierClass>,
+}
+
+/// An openEHR identifier class from BASE `base_types.identification`, the
+/// form a path parameter's value takes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum IdentifierClass {
+    /// `HIER_OBJECT_ID`: the `uid` of a versioned object, an EHR or a
+    /// contribution.
+    HierObject,
+    /// `OBJECT_VERSION_ID`: the `uid` of a `VERSION`
+    /// (`object_id::creating_system_id::version_tree_id`).
+    ObjectVersion,
+    /// `UID_BASED_ID`: either of the two above.
+    UidBased,
+}
+
+impl IdentifierClass {
+    /// The BASE class name (`"HIER_OBJECT_ID"`).
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::HierObject => "HIER_OBJECT_ID",
+            Self::ObjectVersion => "OBJECT_VERSION_ID",
+            Self::UidBased => "UID_BASED_ID",
+        }
+    }
 }
 
 /// Where a parameter travels (OAS 3.0.3 §Parameter Locations).

@@ -1,6 +1,6 @@
 [package]
 name = "openehr-adl"
-version = "0.0.79"
+version = "0.0.80"
 description = "openEHR ADL 2.4.0: hand-written ADL2/cADL/ODIN parser, AOM2 validation catalogue, specialisation flattener, OPT2 generator, and ADL 1.4→2 conversion over the generated openehr_am::v2_4::aom2 model"
 edition.workspace = true
 rust-version.workspace = true
@@ -16,11 +16,11 @@ include = ["src/**", "README.md", "LICENSE"]
 thiserror.workspace = true   # typed SyntaxError
 regex.workspace = true       # compile-check cADL C_STRING / slot archetype-id regexes (SCSRE; master04.5)
 serde_json.workspace = true  # default_value payloads (C_DEFINED_OBJECT.default_value: serde_json::Value)
-openehr-base = { path = "../openehr-base", version = "0.0.79" }   # VersionStatus for the parsed HRID
-openehr-am = { path = "../openehr-am", version = "0.0.79" }       # v2_4 ArchetypeHrid (the identification target type)
-openehr-rm = { path = "../openehr-rm", version = "0.0.79" }       # openehr_rm::model — the generated RM attribute/type oracle (ProductionRmModel)
-openehr-lang = { path = "../openehr-lang", version = "0.0.79" }   # openehr_lang::odin — the ODIN section parser
-openehr-term = { path = "../openehr-term", version = "0.0.79" }   # the languages code set for the RM resource-meta rows
+openehr-base = { path = "../openehr-base", version = "0.0.80" }   # VersionStatus for the parsed HRID
+openehr-am = { path = "../openehr-am", version = "0.0.80" }       # v2_4 ArchetypeHrid (the identification target type)
+openehr-rm = { path = "../openehr-rm", version = "0.0.80" }       # openehr_rm::model — the generated RM attribute/type oracle (ProductionRmModel)
+openehr-lang = { path = "../openehr-lang", version = "0.0.80" }   # openehr_lang::odin — the ODIN section parser
+openehr-term = { path = "../openehr-term", version = "0.0.80" }   # the languages code set for the RM resource-meta rows
 uuid.workspace = true        # meta uid/build_uid (AUTHORED_ARCHETYPE.uid: Uuid)
 indexmap.workspace = true    # OdinValue::Object body (insertion-ordered map)
 
