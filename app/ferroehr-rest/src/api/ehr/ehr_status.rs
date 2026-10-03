@@ -57,10 +57,9 @@ pub(super) async fn run(
 
     match op {
         "ehr_status_get_by_version_id" => {
-            let p = EhrStatusGetByVersionIdParams::from_request(
-                &parts.route_for(EhrStatusGetByVersionIdParams::PARAMS),
-                q,
-                h,
+            let p = parts.decode(
+                EhrStatusGetByVersionIdParams::from_request,
+                EhrStatusGetByVersionIdParams::PARAMS,
             )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let (vo_id, version) = super::version_components(&parse_version_uid(&p.version_uid)?)?;
@@ -88,10 +87,9 @@ pub(super) async fn run(
             ))
         }
         "ehr_status_get_at_time" => {
-            let p = EhrStatusGetAtTimeParams::from_request(
-                &parts.route_for(EhrStatusGetAtTimeParams::PARAMS),
-                q,
-                h,
+            let p = parts.decode(
+                EhrStatusGetAtTimeParams::from_request,
+                EhrStatusGetAtTimeParams::PARAMS,
             )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             // Same derivation as the by-version read: the version metadata
@@ -111,10 +109,9 @@ pub(super) async fn run(
             ))
         }
         "ehr_status_update" => {
-            let p = EhrStatusUpdateParams::from_request(
-                &parts.route_for(EhrStatusUpdateParams::PARAMS),
-                q,
-                h,
+            let p = parts.decode(
+                EhrStatusUpdateParams::from_request,
+                EhrStatusUpdateParams::PARAMS,
             )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let body = negotiate::rm_value::<EhrStatus>(h, &parts.body)?;
@@ -179,10 +176,9 @@ pub(super) async fn run(
             }
         }
         "ehr_status_tags_get" => {
-            let p = EhrStatusTagsGetParams::from_request(
-                &parts.route_for(EhrStatusTagsGetParams::PARAMS),
-                q,
-                h,
+            let p = parts.decode(
+                EhrStatusTagsGetParams::from_request,
+                EhrStatusTagsGetParams::PARAMS,
             )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let tags = state
@@ -196,10 +192,9 @@ pub(super) async fn run(
             ))
         }
         "ehr_status_tags_update" => {
-            let p = EhrStatusTagsUpdateParams::from_request(
-                &parts.route_for(EhrStatusTagsUpdateParams::PARAMS),
-                q,
-                h,
+            let p = parts.decode(
+                EhrStatusTagsUpdateParams::from_request,
+                EhrStatusTagsUpdateParams::PARAMS,
             )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let body = item_tags::write_body(h, &parts.body)?;
@@ -217,10 +212,9 @@ pub(super) async fn run(
             ))
         }
         "ehr_status_tags_delete" => {
-            let p = EhrStatusTagsDeleteParams::from_request(
-                &parts.route_for(EhrStatusTagsDeleteParams::PARAMS),
-                q,
-                h,
+            let p = parts.decode(
+                EhrStatusTagsDeleteParams::from_request,
+                EhrStatusTagsDeleteParams::PARAMS,
             )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             state

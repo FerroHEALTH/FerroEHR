@@ -42,10 +42,9 @@ pub(super) async fn run(
 
     match op {
         "versioned_composition_get" => {
-            let p = VersionedCompositionGetParams::from_request(
-                &parts.route_for(VersionedCompositionGetParams::PARAMS),
-                q,
-                h,
+            let p = parts.decode(
+                VersionedCompositionGetParams::from_request,
+                VersionedCompositionGetParams::PARAMS,
             )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let vo_id = parse_uuid(&p.versioned_object_uid, "versioned_object_uid")?;
@@ -62,10 +61,9 @@ pub(super) async fn run(
             ))
         }
         "versioned_composition_revision_history" => {
-            let p = VersionedCompositionRevisionHistoryParams::from_request(
-                &parts.route_for(VersionedCompositionRevisionHistoryParams::PARAMS),
-                q,
-                h,
+            let p = parts.decode(
+                VersionedCompositionRevisionHistoryParams::from_request,
+                VersionedCompositionRevisionHistoryParams::PARAMS,
             )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let vo_id = parse_uuid(&p.versioned_object_uid, "versioned_object_uid")?;
@@ -82,10 +80,9 @@ pub(super) async fn run(
             ))
         }
         "versioned_composition_version_get_at_time" => {
-            let p = VersionedCompositionVersionGetAtTimeParams::from_request(
-                &parts.route_for(VersionedCompositionVersionGetAtTimeParams::PARAMS),
-                q,
-                h,
+            let p = parts.decode(
+                VersionedCompositionVersionGetAtTimeParams::from_request,
+                VersionedCompositionVersionGetAtTimeParams::PARAMS,
             )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let vo_id = parse_uuid(&p.versioned_object_uid, "versioned_object_uid")?;
@@ -106,10 +103,9 @@ pub(super) async fn run(
             ))
         }
         "versioned_composition_version_get_by_id" => {
-            let p = VersionedCompositionVersionGetByIdParams::from_request(
-                &parts.route_for(VersionedCompositionVersionGetByIdParams::PARAMS),
-                q,
-                h,
+            let p = parts.decode(
+                VersionedCompositionVersionGetByIdParams::from_request,
+                VersionedCompositionVersionGetByIdParams::PARAMS,
             )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let vo_id = parse_uuid(&p.versioned_object_uid, "versioned_object_uid")?;

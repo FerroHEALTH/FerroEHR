@@ -37,10 +37,9 @@ const DEFAULT_QUERY_TYPE: &str = "AQL";
 /// under the qualified name (a prefix pattern; wildcard on empty).
 pub(super) async fn list(state: &AppState, parts: &RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let p = DefinitionQueryListParams::from_request(
-        &parts.route_for(DefinitionQueryListParams::PARAMS),
-        parts.query.as_deref(),
-        h,
+    let p = parts.decode(
+        DefinitionQueryListParams::from_request,
+        DefinitionQueryListParams::PARAMS,
     )?;
     Ok(negotiate::respond(
         h,
@@ -78,10 +77,9 @@ pub(super) async fn list_all(
 /// unsupported-formalism reject rather than a blanket "invalid AQL" 400.
 pub(super) async fn store(state: &AppState, parts: &RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let p = DefinitionQueryStoreYamlParams::from_request(
-        &parts.route_for(DefinitionQueryStoreYamlParams::PARAMS),
-        parts.query.as_deref(),
-        h,
+    let p = parts.decode(
+        DefinitionQueryStoreYamlParams::from_request,
+        DefinitionQueryStoreYamlParams::PARAMS,
     )?;
     let name = p.qualified_query_name.clone();
     let query_type = p
@@ -119,10 +117,9 @@ pub(super) async fn version_get(
     parts: &RequestParts,
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let p = DefinitionQueryVersionGetParams::from_request(
-        &parts.route_for(DefinitionQueryVersionGetParams::PARAMS),
-        parts.query.as_deref(),
-        h,
+    let p = parts.decode(
+        DefinitionQueryVersionGetParams::from_request,
+        DefinitionQueryVersionGetParams::PARAMS,
     )?;
     Ok(negotiate::respond(
         h,
@@ -144,10 +141,9 @@ pub(super) async fn version_store(
     parts: &RequestParts,
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let p = DefinitionQueryVersionStoreYamlParams::from_request(
-        &parts.route_for(DefinitionQueryVersionStoreYamlParams::PARAMS),
-        parts.query.as_deref(),
-        h,
+    let p = parts.decode(
+        DefinitionQueryVersionStoreYamlParams::from_request,
+        DefinitionQueryVersionStoreYamlParams::PARAMS,
     )?;
     let name = p.qualified_query_name.clone();
     let version = p.version.clone();

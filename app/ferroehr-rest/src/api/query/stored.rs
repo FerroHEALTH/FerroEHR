@@ -47,10 +47,9 @@ pub(super) async fn execute(
     match op {
         // GET /query/{name} — latest version; paging/scope in the query string.
         "query_execute_stored_query" => {
-            let p = QueryExecuteStoredQueryParams::from_request(
-                &parts.route_for(QueryExecuteStoredQueryParams::PARAMS),
-                q,
-                h,
+            let p = parts.decode(
+                QueryExecuteStoredQueryParams::from_request,
+                QueryExecuteStoredQueryParams::PARAMS,
             )?;
             // Named parameter binds per Request.md §Query parameters — the
             // documented GET form; the JSON-object `query_parameters` stays
@@ -81,10 +80,9 @@ pub(super) async fn execute(
         }
         // GET /query/{name}/{version} — explicit SEMVER version.
         "query_execute_stored_query_version" => {
-            let p = QueryExecuteStoredQueryVersionParams::from_request(
-                &parts.route_for(QueryExecuteStoredQueryVersionParams::PARAMS),
-                q,
-                h,
+            let p = parts.decode(
+                QueryExecuteStoredQueryVersionParams::from_request,
+                QueryExecuteStoredQueryVersionParams::PARAMS,
             )?;
             let parameters = params::aql_binds(p.query_parameters)?;
             let request = scope.apply(AqlQueryRequest {

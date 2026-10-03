@@ -1037,7 +1037,6 @@ pub(super) async fn run(
 ) -> Result<Response, RestError> {
     const SEG: &str = "party_relationship";
     let h = &parts.headers;
-    let q = parts.query.as_deref();
     let base = state.config().server.base_path.clone();
 
     // PARTY_RELATIONSHIP is not templated → no Simplified-Formats mapping;
@@ -1046,8 +1045,7 @@ pub(super) async fn run(
 
     match op {
         "party_relationship_create" => {
-            let _p =
-                AgentCreateParams::from_request(&parts.route_for(AgentCreateParams::PARAMS), q, h)?;
+            let _p = parts.decode(AgentCreateParams::from_request, AgentCreateParams::PARAMS)?;
             let body = negotiate::rm_value::<PartyRelationship>(h, &parts.body)?;
             let resp = state
                 .backend()
@@ -1069,7 +1067,7 @@ pub(super) async fn run(
             ))
         }
         "party_relationship_get" => {
-            let p = AgentGetParams::from_request(&parts.route_for(AgentGetParams::PARAMS), q, h)?;
+            let p = parts.decode(AgentGetParams::from_request, AgentGetParams::PARAMS)?;
             let resp = state
                 .backend()
                 .party_relationship_get(p.uid_based_id, p.version_at_time)
@@ -1080,8 +1078,7 @@ pub(super) async fn run(
             Ok(read_relationship(h, &resp))
         }
         "party_relationship_update" => {
-            let p =
-                AgentUpdateParams::from_request(&parts.route_for(AgentUpdateParams::PARAMS), q, h)?;
+            let p = parts.decode(AgentUpdateParams::from_request, AgentUpdateParams::PARAMS)?;
             let uid = p.uid_based_id.clone();
             let body = negotiate::rm_value::<PartyRelationship>(h, &parts.body)?;
             match state
@@ -1123,7 +1120,7 @@ pub(super) async fn run(
         // `version_uid` in `ETag`, matching the party delete this extension
         // mirrors (`409_PERSON_with_uid_based_id.yaml`'s convention).
         "party_relationship_delete" => {
-            let p = AgentGetParams::from_request(&parts.route_for(AgentGetParams::PARAMS), q, h)?;
+            let p = parts.decode(AgentGetParams::from_request, AgentGetParams::PARAMS)?;
             let preceding = p.uid_based_id.clone();
             match state
                 .backend()
@@ -1162,10 +1159,9 @@ pub(super) async fn run(
         // Last-Modified" asks of VERSION / VERSIONED_OBJECT responses, and no
         // `Location` (§Location — creation/redirect only).
         "versioned_party_relationship_get" => {
-            let p = VersionedPartyGetParams::from_request(
-                &parts.route_for(VersionedPartyGetParams::PARAMS),
-                q,
-                h,
+            let p = parts.decode(
+                VersionedPartyGetParams::from_request,
+                VersionedPartyGetParams::PARAMS,
             )?;
             let vo = p.versioned_object_uid.clone();
             let resp = state
@@ -1175,10 +1171,9 @@ pub(super) async fn run(
             Ok(super::read_versioned(h, &vo, &resp.body))
         }
         "party_relationship_revision_history" => {
-            let p = VersionedPartyGetParams::from_request(
-                &parts.route_for(VersionedPartyGetParams::PARAMS),
-                q,
-                h,
+            let p = parts.decode(
+                VersionedPartyGetParams::from_request,
+                VersionedPartyGetParams::PARAMS,
             )?;
             let vo = p.versioned_object_uid.clone();
             let resp = state
@@ -1188,10 +1183,9 @@ pub(super) async fn run(
             Ok(super::read_versioned(h, &vo, &resp.body))
         }
         "party_relationship_version_get_at_time" => {
-            let p = VersionedPartyVersionGetAtTimeParams::from_request(
-                &parts.route_for(VersionedPartyVersionGetAtTimeParams::PARAMS),
-                q,
-                h,
+            let p = parts.decode(
+                VersionedPartyVersionGetAtTimeParams::from_request,
+                VersionedPartyVersionGetAtTimeParams::PARAMS,
             )?;
             let resp = state
                 .backend()
@@ -1202,10 +1196,9 @@ pub(super) async fn run(
             Ok(out)
         }
         "party_relationship_version_get_by_id" => {
-            let p = VersionedPartyVersionGetByIdParams::from_request(
-                &parts.route_for(VersionedPartyVersionGetByIdParams::PARAMS),
-                q,
-                h,
+            let p = parts.decode(
+                VersionedPartyVersionGetByIdParams::from_request,
+                VersionedPartyVersionGetByIdParams::PARAMS,
             )?;
             let vo = p.versioned_object_uid.clone();
             let resp = state

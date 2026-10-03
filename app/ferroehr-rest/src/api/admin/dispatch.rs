@@ -53,15 +53,13 @@ async fn run(
     if let Some(refusal) = admin_group_gate(&state) {
         return Ok(refusal);
     }
-    let h = &parts.headers;
     let q = parts.query.as_deref();
 
     match op {
         "admin_ehr_delete" => {
-            let p = AdminEhrDeleteParams::from_request(
-                &parts.route_for(AdminEhrDeleteParams::PARAMS),
-                q,
-                h,
+            let p = parts.decode(
+                AdminEhrDeleteParams::from_request,
+                AdminEhrDeleteParams::PARAMS,
             )?;
             // SM physical_ehr_delete → 204 No Content; unknown EHR → 404
             // (the service maps `ehr_id_does_not_exist` to NotFound).

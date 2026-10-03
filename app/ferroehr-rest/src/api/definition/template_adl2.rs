@@ -73,10 +73,9 @@ enum Adl2Repr {
 /// the adapter.
 pub(super) async fn list(state: &AppState, parts: &RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let p = DefinitionTemplateAdl2ListParams::from_request(
-        &parts.route_for(DefinitionTemplateAdl2ListParams::PARAMS),
-        parts.query.as_deref(),
-        h,
+    let p = parts.decode(
+        DefinitionTemplateAdl2ListParams::from_request,
+        DefinitionTemplateAdl2ListParams::PARAMS,
     )?;
     let (filter, page) =
         list_filter_and_page(p.template_id, p.concept, p.version, p.offset, p.fetch);
@@ -98,10 +97,9 @@ pub(super) async fn upload(state: &AppState, parts: &RequestParts) -> Result<Res
     let h = &parts.headers;
     // Built for its parameter validation only: `Prefer` is read off the header
     // map through the shared negotiation predicates, like every write route.
-    DefinitionTemplateAdl2UploadParams::from_request(
-        &parts.route_for(DefinitionTemplateAdl2UploadParams::PARAMS),
-        parts.query.as_deref(),
-        h,
+    parts.decode(
+        DefinitionTemplateAdl2UploadParams::from_request,
+        DefinitionTemplateAdl2UploadParams::PARAMS,
     )?;
     // ADL2 arrives as `text/plain` source, the operation's single declared body
     // type, so a payload declaring another media type is refused `415` before
@@ -136,10 +134,9 @@ pub(super) async fn upload(state: &AppState, parts: &RequestParts) -> Result<Res
 /// acceptable. Unknown `template_id` → `404`.
 pub(super) async fn get(state: &AppState, parts: &RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let p = DefinitionTemplateAdl2GetParams::from_request(
-        &parts.route_for(DefinitionTemplateAdl2GetParams::PARAMS),
-        parts.query.as_deref(),
-        h,
+    let p = parts.decode(
+        DefinitionTemplateAdl2GetParams::from_request,
+        DefinitionTemplateAdl2GetParams::PARAMS,
     )?;
     render(state, h, p.template_id, None).await
 }
@@ -155,10 +152,9 @@ pub(super) async fn version_get(
     parts: &RequestParts,
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let p = DefinitionTemplateAdl2VersionGetParams::from_request(
-        &parts.route_for(DefinitionTemplateAdl2VersionGetParams::PARAMS),
-        parts.query.as_deref(),
-        h,
+    let p = parts.decode(
+        DefinitionTemplateAdl2VersionGetParams::from_request,
+        DefinitionTemplateAdl2VersionGetParams::PARAMS,
     )?;
     render(state, h, p.template_id, Some(p.version)).await
 }
@@ -174,10 +170,9 @@ pub(super) async fn example_get(
     parts: &RequestParts,
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let p = DefinitionTemplateAdl2ExampleGetParams::from_request(
-        &parts.route_for(DefinitionTemplateAdl2ExampleGetParams::PARAMS),
-        parts.query.as_deref(),
-        h,
+    let p = parts.decode(
+        DefinitionTemplateAdl2ExampleGetParams::from_request,
+        DefinitionTemplateAdl2ExampleGetParams::PARAMS,
     )?;
     // An unknown template is a 404, an invalid `type`/`detail_level` a 400, and
     // an uncompilable template a 422.

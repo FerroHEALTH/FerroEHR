@@ -31,7 +31,6 @@ pub(super) async fn run(
     parts: RequestParts,
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let q = parts.query.as_deref();
     let base = state.config().server.base_path.clone();
 
     match op {
@@ -54,10 +53,9 @@ pub(super) async fn run(
             ))
         }
         "contribution_get" => {
-            let p = ContributionGetParams::from_request(
-                &parts.route_for(ContributionGetParams::PARAMS),
-                q,
-                h,
+            let p = parts.decode(
+                ContributionGetParams::from_request,
+                ContributionGetParams::PARAMS,
             )?;
             let uid = p.contribution_uid.clone();
             let resp = state

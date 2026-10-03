@@ -35,15 +35,13 @@ pub(super) async fn run(
     parts: RequestParts,
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let q = parts.query.as_deref();
     let ok = StatusCode::OK;
 
     match op {
         "versioned_party_get" => {
-            let p = VersionedPartyGetParams::from_request(
-                &parts.route_for(VersionedPartyGetParams::PARAMS),
-                q,
-                h,
+            let p = parts.decode(
+                VersionedPartyGetParams::from_request,
+                VersionedPartyGetParams::PARAMS,
             )?;
             let resp = state
                 .backend()
@@ -60,10 +58,9 @@ pub(super) async fn run(
             Ok(out)
         }
         "versioned_party_revision_history" => {
-            let p = VersionedPartyGetParams::from_request(
-                &parts.route_for(VersionedPartyGetParams::PARAMS),
-                q,
-                h,
+            let p = parts.decode(
+                VersionedPartyGetParams::from_request,
+                VersionedPartyGetParams::PARAMS,
             )?;
             let vo = p.versioned_object_uid.clone();
             let resp = state
@@ -75,10 +72,9 @@ pub(super) async fn run(
             Ok(super::read_versioned(h, &vo, &resp.body))
         }
         "versioned_party_version_get_at_time" => {
-            let p = VersionedPartyVersionGetAtTimeParams::from_request(
-                &parts.route_for(VersionedPartyVersionGetAtTimeParams::PARAMS),
-                q,
-                h,
+            let p = parts.decode(
+                VersionedPartyVersionGetAtTimeParams::from_request,
+                VersionedPartyVersionGetAtTimeParams::PARAMS,
             )?;
             // 200_VERSION_at_time analogue: the served VERSION's ETag +
             // Last-Modified (its commit instant rides the response metadata).
@@ -91,10 +87,9 @@ pub(super) async fn run(
             Ok(out)
         }
         "versioned_party_version_get_by_id" => {
-            let p = VersionedPartyVersionGetByIdParams::from_request(
-                &parts.route_for(VersionedPartyVersionGetByIdParams::PARAMS),
-                q,
-                h,
+            let p = parts.decode(
+                VersionedPartyVersionGetByIdParams::from_request,
+                VersionedPartyVersionGetByIdParams::PARAMS,
             )?;
             let vo = p.versioned_object_uid.clone();
             let resp = state

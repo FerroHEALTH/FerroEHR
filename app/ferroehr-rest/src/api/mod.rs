@@ -77,6 +77,7 @@ use bytes::Bytes;
 use http::{HeaderMap, Method};
 use indexmap::IndexMap;
 use openehr_its::rest::routes::{Lookup, Param, ParamLocation, PathParam, RouteMatch, lookup};
+use openehr_its::rest::runtime::ApiError;
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::extensions::access::{ehr_access, pep};
@@ -110,10 +111,27 @@ impl RequestParts {
     /// The route match a generated `*Params::from_request` decodes against.
     ///
     /// For an ITS-REST operation it is the match `routes::lookup` found. An
-    /// extension route the tables do not name (the PARTY_RELATIONSHIP and admin
+    /// extension route the tables do not name (the `PARTY_RELATIONSHIP` and admin
     /// extensions) reuses a generated struct, so its match is built from that
     /// struct's declared path parameters (`params`) and the request's captures,
     /// which is all `from_request` reads from it.
+    /// Decodes a generated `*Params` struct from this request with its
+    /// `from_request` and its declared `params`, over [`Self::route_for`].
+    ///
+    /// # Errors
+    /// Returns the [`ApiError`] the struct's decoding reports.
+    pub(crate) fn decode<P>(
+        &self,
+        from_request: fn(&RouteMatch, Option<&str>, &HeaderMap) -> Result<P, ApiError>,
+        params: &'static [Param],
+    ) -> Result<P, ApiError> {
+        from_request(
+            &self.route_for(params),
+            self.query.as_deref(),
+            &self.headers,
+        )
+    }
+
     pub(crate) fn route_for(&self, params: &'static [Param]) -> Cow<'_, RouteMatch> {
         if let Some(route) = &self.route {
             return Cow::Borrowed(route);

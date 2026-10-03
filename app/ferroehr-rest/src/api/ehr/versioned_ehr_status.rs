@@ -42,10 +42,9 @@ pub(super) async fn run(
 
     match op {
         "versioned_ehr_status_get" => {
-            let p = VersionedEhrStatusGetParams::from_request(
-                &parts.route_for(VersionedEhrStatusGetParams::PARAMS),
-                q,
-                h,
+            let p = parts.decode(
+                VersionedEhrStatusGetParams::from_request,
+                VersionedEhrStatusGetParams::PARAMS,
             )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let resp = state
@@ -61,10 +60,9 @@ pub(super) async fn run(
             ))
         }
         "versioned_ehr_status_revision_history" => {
-            let p = VersionedEhrStatusRevisionHistoryParams::from_request(
-                &parts.route_for(VersionedEhrStatusRevisionHistoryParams::PARAMS),
-                q,
-                h,
+            let p = parts.decode(
+                VersionedEhrStatusRevisionHistoryParams::from_request,
+                VersionedEhrStatusRevisionHistoryParams::PARAMS,
             )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let resp = state
@@ -80,10 +78,9 @@ pub(super) async fn run(
             ))
         }
         "versioned_ehr_status_version_get_at_time" => {
-            let p = VersionedEhrStatusVersionGetAtTimeParams::from_request(
-                &parts.route_for(VersionedEhrStatusVersionGetAtTimeParams::PARAMS),
-                q,
-                h,
+            let p = parts.decode(
+                VersionedEhrStatusVersionGetAtTimeParams::from_request,
+                VersionedEhrStatusVersionGetAtTimeParams::PARAMS,
             )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let body = state
@@ -103,10 +100,9 @@ pub(super) async fn run(
             ))
         }
         "versioned_ehr_status_version_get_by_id" => {
-            let p = VersionedEhrStatusVersionGetByIdParams::from_request(
-                &parts.route_for(VersionedEhrStatusVersionGetByIdParams::PARAMS),
-                q,
-                h,
+            let p = parts.decode(
+                VersionedEhrStatusVersionGetByIdParams::from_request,
+                VersionedEhrStatusVersionGetByIdParams::PARAMS,
             )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let (vo_id, version) = super::version_components(&parse_version_uid(&p.version_uid)?)?;
