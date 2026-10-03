@@ -68,7 +68,11 @@ async fn get_at_time(state: AppState, parts: RequestParts) -> Result<Response, R
     let q = parts.query.as_deref();
     let ok = StatusCode::OK;
     let no_content = StatusCode::NO_CONTENT;
-    let p = DirectoryGetAtTimeParams::from_request(parts.route()?, q, h)?;
+    let p = DirectoryGetAtTimeParams::from_request(
+        &parts.route_for(DirectoryGetAtTimeParams::PARAMS),
+        q,
+        h,
+    )?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
     let resp = state
         .backend()
@@ -98,7 +102,8 @@ async fn update(state: AppState, parts: RequestParts) -> Result<Response, RestEr
     let ok = StatusCode::OK;
     let no_content = StatusCode::NO_CONTENT;
     let base = state.config().server.base_path.clone();
-    let p = DirectoryUpdateParams::from_request(parts.route()?, q, h)?;
+    let p =
+        DirectoryUpdateParams::from_request(&parts.route_for(DirectoryUpdateParams::PARAMS), q, h)?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
     let body = negotiate::rm_value::<Folder>(h, &parts.body)?;
     let uv = super::mk_update_version(
@@ -172,7 +177,8 @@ async fn create(state: AppState, parts: RequestParts) -> Result<Response, RestEr
     let q = parts.query.as_deref();
     let created = StatusCode::CREATED;
     let base = state.config().server.base_path.clone();
-    let p = DirectoryCreateParams::from_request(parts.route()?, q, h)?;
+    let p =
+        DirectoryCreateParams::from_request(&parts.route_for(DirectoryCreateParams::PARAMS), q, h)?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
     let body = negotiate::rm_value::<Folder>(h, &parts.body)?;
     let uv = super::mk_update_version(h, body, super::CHANGE_CREATION, "DIRECTORY creation", None)?;
@@ -220,7 +226,8 @@ async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestEr
     let h = &parts.headers;
     let q = parts.query.as_deref();
     let base = state.config().server.base_path.clone();
-    let p = DirectoryDeleteParams::from_request(parts.route()?, q, h)?;
+    let p =
+        DirectoryDeleteParams::from_request(&parts.route_for(DirectoryDeleteParams::PARAMS), q, h)?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
     // A DELETE commits a `523|deleted|` version, so the committal headers apply
     // here too (overview §"openehr-version and openehr-audit-details").
@@ -269,7 +276,11 @@ async fn get_by_version_id(state: AppState, parts: RequestParts) -> Result<Respo
     let q = parts.query.as_deref();
     let ok = StatusCode::OK;
     let no_content = StatusCode::NO_CONTENT;
-    let p = DirectoryGetByVersionIdParams::from_request(parts.route()?, q, h)?;
+    let p = DirectoryGetByVersionIdParams::from_request(
+        &parts.route_for(DirectoryGetByVersionIdParams::PARAMS),
+        q,
+        h,
+    )?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
     let ovid = parse_version_uid(&p.version_uid)?;
     let resp = state

@@ -58,7 +58,11 @@ async fn run(
 
     match op {
         "admin_ehr_delete" => {
-            let p = AdminEhrDeleteParams::from_request(parts.route()?, q, h)?;
+            let p = AdminEhrDeleteParams::from_request(
+                &parts.route_for(AdminEhrDeleteParams::PARAMS),
+                q,
+                h,
+            )?;
             // SM physical_ehr_delete → 204 No Content; unknown EHR → 404
             // (the service maps `ehr_id_does_not_exist` to NotFound).
             state.backend().admin_ehr_delete(p.ehr_id).await?;

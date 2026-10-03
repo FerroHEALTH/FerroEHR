@@ -42,7 +42,11 @@ pub(super) async fn execute(
     match op {
         // GET /query/aql — `q` + paging/scope in the query string.
         "query_execute_adhoc_query" => {
-            let p = QueryExecuteAdhocQueryParams::from_request(parts.route()?, q, h)?;
+            let p = QueryExecuteAdhocQueryParams::from_request(
+                &parts.route_for(QueryExecuteAdhocQueryParams::PARAMS),
+                q,
+                h,
+            )?;
             // Named parameter binds per Request.md §Query parameters (the
             // documented GET form); the JSON-object `query_parameters` stays
             // an accepted superset.

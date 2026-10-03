@@ -37,7 +37,11 @@ const DEFAULT_QUERY_TYPE: &str = "AQL";
 /// under the qualified name (a prefix pattern; wildcard on empty).
 pub(super) async fn list(state: &AppState, parts: &RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let p = DefinitionQueryListParams::from_request(parts.route()?, parts.query.as_deref(), h)?;
+    let p = DefinitionQueryListParams::from_request(
+        &parts.route_for(DefinitionQueryListParams::PARAMS),
+        parts.query.as_deref(),
+        h,
+    )?;
     Ok(negotiate::respond(
         h,
         StatusCode::OK,
@@ -74,8 +78,11 @@ pub(super) async fn list_all(
 /// unsupported-formalism reject rather than a blanket "invalid AQL" 400.
 pub(super) async fn store(state: &AppState, parts: &RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let p =
-        DefinitionQueryStoreYamlParams::from_request(parts.route()?, parts.query.as_deref(), h)?;
+    let p = DefinitionQueryStoreYamlParams::from_request(
+        &parts.route_for(DefinitionQueryStoreYamlParams::PARAMS),
+        parts.query.as_deref(),
+        h,
+    )?;
     let name = p.qualified_query_name.clone();
     let query_type = p
         .query_type
@@ -112,8 +119,11 @@ pub(super) async fn version_get(
     parts: &RequestParts,
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let p =
-        DefinitionQueryVersionGetParams::from_request(parts.route()?, parts.query.as_deref(), h)?;
+    let p = DefinitionQueryVersionGetParams::from_request(
+        &parts.route_for(DefinitionQueryVersionGetParams::PARAMS),
+        parts.query.as_deref(),
+        h,
+    )?;
     Ok(negotiate::respond(
         h,
         StatusCode::OK,
@@ -135,7 +145,7 @@ pub(super) async fn version_store(
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
     let p = DefinitionQueryVersionStoreYamlParams::from_request(
-        parts.route()?,
+        &parts.route_for(DefinitionQueryVersionStoreYamlParams::PARAMS),
         parts.query.as_deref(),
         h,
     )?;

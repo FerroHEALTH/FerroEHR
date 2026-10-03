@@ -57,7 +57,11 @@ pub(super) async fn run(
 
     match op {
         "ehr_status_get_by_version_id" => {
-            let p = EhrStatusGetByVersionIdParams::from_request(parts.route()?, q, h)?;
+            let p = EhrStatusGetByVersionIdParams::from_request(
+                &parts.route_for(EhrStatusGetByVersionIdParams::PARAMS),
+                q,
+                h,
+            )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let (vo_id, version) = super::version_components(&parse_version_uid(&p.version_uid)?)?;
             // A bare EHR_STATUS carries no `commit_audit`, so `Last-Modified`
@@ -84,7 +88,11 @@ pub(super) async fn run(
             ))
         }
         "ehr_status_get_at_time" => {
-            let p = EhrStatusGetAtTimeParams::from_request(parts.route()?, q, h)?;
+            let p = EhrStatusGetAtTimeParams::from_request(
+                &parts.route_for(EhrStatusGetAtTimeParams::PARAMS),
+                q,
+                h,
+            )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             // Same derivation as the by-version read: the version metadata
             // carries the `Last-Modified` instant.
@@ -103,7 +111,11 @@ pub(super) async fn run(
             ))
         }
         "ehr_status_update" => {
-            let p = EhrStatusUpdateParams::from_request(parts.route()?, q, h)?;
+            let p = EhrStatusUpdateParams::from_request(
+                &parts.route_for(EhrStatusUpdateParams::PARAMS),
+                q,
+                h,
+            )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let body = negotiate::rm_value::<EhrStatus>(h, &parts.body)?;
             let uv = super::mk_update_version(
@@ -167,7 +179,11 @@ pub(super) async fn run(
             }
         }
         "ehr_status_tags_get" => {
-            let p = EhrStatusTagsGetParams::from_request(parts.route()?, q, h)?;
+            let p = EhrStatusTagsGetParams::from_request(
+                &parts.route_for(EhrStatusTagsGetParams::PARAMS),
+                q,
+                h,
+            )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let tags = state
                 .backend()
@@ -180,7 +196,11 @@ pub(super) async fn run(
             ))
         }
         "ehr_status_tags_update" => {
-            let p = EhrStatusTagsUpdateParams::from_request(parts.route()?, q, h)?;
+            let p = EhrStatusTagsUpdateParams::from_request(
+                &parts.route_for(EhrStatusTagsUpdateParams::PARAMS),
+                q,
+                h,
+            )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let body = item_tags::write_body(h, &parts.body)?;
             let tags = state
@@ -197,7 +217,11 @@ pub(super) async fn run(
             ))
         }
         "ehr_status_tags_delete" => {
-            let p = EhrStatusTagsDeleteParams::from_request(parts.route()?, q, h)?;
+            let p = EhrStatusTagsDeleteParams::from_request(
+                &parts.route_for(EhrStatusTagsDeleteParams::PARAMS),
+                q,
+                h,
+            )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             state
                 .backend()

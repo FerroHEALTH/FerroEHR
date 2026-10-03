@@ -50,19 +50,44 @@ pub(super) async fn run(
             // Each kind's own generated params type (see the module doc).
             let uid_based_id = match kind {
                 PartyKind::Agent => {
-                    AgentTagsGetParams::from_request(parts.route()?, q, h)?.uid_based_id
+                    AgentTagsGetParams::from_request(
+                        &parts.route_for(AgentTagsGetParams::PARAMS),
+                        q,
+                        h,
+                    )?
+                    .uid_based_id
                 }
                 PartyKind::Group => {
-                    GroupTagsGetParams::from_request(parts.route()?, q, h)?.uid_based_id
+                    GroupTagsGetParams::from_request(
+                        &parts.route_for(GroupTagsGetParams::PARAMS),
+                        q,
+                        h,
+                    )?
+                    .uid_based_id
                 }
                 PartyKind::Organisation => {
-                    OrganisationTagsGetParams::from_request(parts.route()?, q, h)?.uid_based_id
+                    OrganisationTagsGetParams::from_request(
+                        &parts.route_for(OrganisationTagsGetParams::PARAMS),
+                        q,
+                        h,
+                    )?
+                    .uid_based_id
                 }
                 PartyKind::Person => {
-                    PersonTagsGetParams::from_request(parts.route()?, q, h)?.uid_based_id
+                    PersonTagsGetParams::from_request(
+                        &parts.route_for(PersonTagsGetParams::PARAMS),
+                        q,
+                        h,
+                    )?
+                    .uid_based_id
                 }
                 PartyKind::Role => {
-                    RoleTagsGetParams::from_request(parts.route()?, q, h)?.uid_based_id
+                    RoleTagsGetParams::from_request(
+                        &parts.route_for(RoleTagsGetParams::PARAMS),
+                        q,
+                        h,
+                    )?
+                    .uid_based_id
                 }
             };
             let tags = state.backend().party_tags_get(kind, uid_based_id).await?;
@@ -75,19 +100,44 @@ pub(super) async fn run(
         "tags_update" => {
             let uid_based_id = match kind {
                 PartyKind::Agent => {
-                    AgentTagsUpdateParams::from_request(parts.route()?, q, h)?.uid_based_id
+                    AgentTagsUpdateParams::from_request(
+                        &parts.route_for(AgentTagsUpdateParams::PARAMS),
+                        q,
+                        h,
+                    )?
+                    .uid_based_id
                 }
                 PartyKind::Group => {
-                    GroupTagsUpdateParams::from_request(parts.route()?, q, h)?.uid_based_id
+                    GroupTagsUpdateParams::from_request(
+                        &parts.route_for(GroupTagsUpdateParams::PARAMS),
+                        q,
+                        h,
+                    )?
+                    .uid_based_id
                 }
                 PartyKind::Organisation => {
-                    OrganisationTagsUpdateParams::from_request(parts.route()?, q, h)?.uid_based_id
+                    OrganisationTagsUpdateParams::from_request(
+                        &parts.route_for(OrganisationTagsUpdateParams::PARAMS),
+                        q,
+                        h,
+                    )?
+                    .uid_based_id
                 }
                 PartyKind::Person => {
-                    PersonTagsUpdateParams::from_request(parts.route()?, q, h)?.uid_based_id
+                    PersonTagsUpdateParams::from_request(
+                        &parts.route_for(PersonTagsUpdateParams::PARAMS),
+                        q,
+                        h,
+                    )?
+                    .uid_based_id
                 }
                 PartyKind::Role => {
-                    RoleTagsUpdateParams::from_request(parts.route()?, q, h)?.uid_based_id
+                    RoleTagsUpdateParams::from_request(
+                        &parts.route_for(RoleTagsUpdateParams::PARAMS),
+                        q,
+                        h,
+                    )?
+                    .uid_based_id
                 }
             };
             let body = item_tags::write_body(h, &parts.body)?;
@@ -109,23 +159,43 @@ pub(super) async fn run(
         "tags_delete" => {
             let (uid_based_id, key) = match kind {
                 PartyKind::Agent => {
-                    let p = AgentTagsDeleteParams::from_request(parts.route()?, q, h)?;
+                    let p = AgentTagsDeleteParams::from_request(
+                        &parts.route_for(AgentTagsDeleteParams::PARAMS),
+                        q,
+                        h,
+                    )?;
                     (p.uid_based_id, p.key)
                 }
                 PartyKind::Group => {
-                    let p = GroupTagsDeleteParams::from_request(parts.route()?, q, h)?;
+                    let p = GroupTagsDeleteParams::from_request(
+                        &parts.route_for(GroupTagsDeleteParams::PARAMS),
+                        q,
+                        h,
+                    )?;
                     (p.uid_based_id, p.key)
                 }
                 PartyKind::Organisation => {
-                    let p = OrganisationTagsDeleteParams::from_request(parts.route()?, q, h)?;
+                    let p = OrganisationTagsDeleteParams::from_request(
+                        &parts.route_for(OrganisationTagsDeleteParams::PARAMS),
+                        q,
+                        h,
+                    )?;
                     (p.uid_based_id, p.key)
                 }
                 PartyKind::Person => {
-                    let p = PersonTagsDeleteParams::from_request(parts.route()?, q, h)?;
+                    let p = PersonTagsDeleteParams::from_request(
+                        &parts.route_for(PersonTagsDeleteParams::PARAMS),
+                        q,
+                        h,
+                    )?;
                     (p.uid_based_id, p.key)
                 }
                 PartyKind::Role => {
-                    let p = RoleTagsDeleteParams::from_request(parts.route()?, q, h)?;
+                    let p = RoleTagsDeleteParams::from_request(
+                        &parts.route_for(RoleTagsDeleteParams::PARAMS),
+                        q,
+                        h,
+                    )?;
                     (p.uid_based_id, p.key)
                 }
             };
@@ -148,7 +218,11 @@ pub(super) async fn run_collection(
     parts: RequestParts,
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let p = DemographicTagsGetParams::from_request(parts.route()?, parts.query.as_deref(), h)?;
+    let p = DemographicTagsGetParams::from_request(
+        &parts.route_for(DemographicTagsGetParams::PARAMS),
+        parts.query.as_deref(),
+        h,
+    )?;
     let tags = state
         .backend()
         .demographic_tags_get(p.tag_key, p.tag_value, p.tag_target_path)

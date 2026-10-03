@@ -50,7 +50,11 @@ pub(super) async fn run(
 
     match op {
         "ehr_get_by_subject" => {
-            let p = EhrGetBySubjectParams::from_request(parts.route()?, q, h)?;
+            let p = EhrGetBySubjectParams::from_request(
+                &parts.route_for(EhrGetBySubjectParams::PARAMS),
+                q,
+                h,
+            )?;
             let body = state
                 .backend()
                 .ehr_object_for_subject(&p.subject_id, &p.subject_namespace)
@@ -64,7 +68,8 @@ pub(super) async fn run(
             Ok(ehr_read_response(h, ok, &body))
         }
         "ehr_create" => {
-            let _p = EhrCreateParams::from_request(parts.route()?, q, h)?;
+            let _p =
+                EhrCreateParams::from_request(&parts.route_for(EhrCreateParams::PARAMS), q, h)?;
             let status = negotiate::optional_rm_value::<EhrStatus>(h, &parts.body)?;
             // The service returns the created EHR's own resource metadata
             // (ehr_id + creation instant) — the write path never rebuilds a
@@ -77,7 +82,11 @@ pub(super) async fn run(
             ehr_write_response(&state, h, &base, ehr_id, meta).await
         }
         "ehr_create_with_id" => {
-            let p = EhrCreateWithIdParams::from_request(parts.route()?, q, h)?;
+            let p = EhrCreateWithIdParams::from_request(
+                &parts.route_for(EhrCreateWithIdParams::PARAMS),
+                q,
+                h,
+            )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let status = negotiate::optional_rm_value::<EhrStatus>(h, &parts.body)?;
             let committal = create_committal(h)?;
@@ -88,13 +97,15 @@ pub(super) async fn run(
             ehr_write_response(&state, h, &base, ehr_id, meta).await
         }
         "ehr_get_by_id" => {
-            let p = EhrGetByIdParams::from_request(parts.route()?, q, h)?;
+            let p =
+                EhrGetByIdParams::from_request(&parts.route_for(EhrGetByIdParams::PARAMS), q, h)?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let body = state.backend().ehr_object(ehr_id).await?;
             Ok(ehr_read_response(h, ok, &body))
         }
         "ehr_tags_get" => {
-            let p = EhrTagsGetParams::from_request(parts.route()?, q, h)?;
+            let p =
+                EhrTagsGetParams::from_request(&parts.route_for(EhrTagsGetParams::PARAMS), q, h)?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let tags = state
                 .backend()

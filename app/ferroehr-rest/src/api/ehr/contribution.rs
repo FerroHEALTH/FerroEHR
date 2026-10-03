@@ -57,7 +57,11 @@ pub(super) async fn run(
 
     match op {
         "contribution_create" => {
-            let p = ContributionCreateParams::from_request(parts.route()?, q, h)?;
+            let p = ContributionCreateParams::from_request(
+                &parts.route_for(ContributionCreateParams::PARAMS),
+                q,
+                h,
+            )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             // TODO(#3550): commit through the typed `NewContribution`; the raw
             // body stays while a member's `commit_audit` may inherit `committer`
@@ -127,7 +131,11 @@ pub(super) async fn run(
             }
         }
         "contribution_get" => {
-            let p = ContributionGetParams::from_request(parts.route()?, q, h)?;
+            let p = ContributionGetParams::from_request(
+                &parts.route_for(ContributionGetParams::PARAMS),
+                q,
+                h,
+            )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let cid = parse_uuid(&p.contribution_uid, "contribution id")?;
             // `Prefer: resolve_refs` (Requests_and_responses §Representation

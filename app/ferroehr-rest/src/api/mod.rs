@@ -66,6 +66,7 @@ pub mod message;
 pub mod query;
 pub mod system;
 
+use std::borrow::Cow;
 use std::future::Future;
 use std::pin::Pin;
 
@@ -73,10 +74,9 @@ use axum::Router;
 use axum::extract::{FromRequestParts, RawPathParams};
 use axum::response::Response;
 use bytes::Bytes;
-use http::HeaderMap;
+use http::{HeaderMap, Method};
 use indexmap::IndexMap;
-use openehr_its::rest::routes::{Lookup, RouteMatch, lookup};
-use openehr_its::rest::runtime::ApiError;
+use openehr_its::rest::routes::{Lookup, Param, ParamLocation, PathParam, RouteMatch, lookup};
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::extensions::access::{ehr_access, pep};
@@ -107,17 +107,35 @@ pub(crate) struct RequestParts {
 }
 
 impl RequestParts {
-    /// The ITS-REST operation the request addresses.
+    /// The route match a generated `*Params::from_request` decodes against.
     ///
-    /// # Errors
-    /// Returns [`ApiError::Internal`] when the request reached an ITS-REST
-    /// handler but the route tables name no operation for it, a disagreement
-    /// between this router and the generated contract.
-    pub(crate) fn route(&self) -> Result<&RouteMatch, ApiError> {
-        self.route.as_ref().ok_or_else(|| {
-            ApiError::Internal(
-                "the ITS-REST route tables name no operation for this request".to_owned(),
-            )
+    /// For an ITS-REST operation it is the match `routes::lookup` found. An
+    /// extension route the tables do not name (the PARTY_RELATIONSHIP and admin
+    /// extensions) reuses a generated struct, so its match is built from that
+    /// struct's declared path parameters (`params`) and the request's captures,
+    /// which is all `from_request` reads from it.
+    pub(crate) fn route_for(&self, params: &'static [Param]) -> Cow<'_, RouteMatch> {
+        if let Some(route) = &self.route {
+            return Cow::Borrowed(route);
+        }
+        let path_params = params
+            .iter()
+            .filter(|p| p.location == ParamLocation::Path)
+            .filter_map(|p| {
+                self.path.get(p.name).map(|raw| PathParam {
+                    name: p.name,
+                    raw: raw.clone(),
+                })
+            })
+            .collect();
+        Cow::Owned(RouteMatch {
+            group: "extension",
+            operation_id: "extension",
+            template: "",
+            method: Method::GET,
+            path_params,
+            params,
+            request_media: &[],
         })
     }
 }

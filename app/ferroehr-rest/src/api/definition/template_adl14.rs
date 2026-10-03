@@ -73,8 +73,11 @@ const TEMPLATE_DEF_FORMATS: &[WireFormat] = &[
 /// + [`Page`](ferroehr::service::list::Page).
 pub(super) async fn list(state: &AppState, parts: &RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let p =
-        DefinitionTemplateAdl14ListParams::from_request(parts.route()?, parts.query.as_deref(), h)?;
+    let p = DefinitionTemplateAdl14ListParams::from_request(
+        &parts.route_for(DefinitionTemplateAdl14ListParams::PARAMS),
+        parts.query.as_deref(),
+        h,
+    )?;
     let (filter, page) =
         list_filter_and_page(p.template_id, p.concept, p.version, p.offset, p.fetch);
     Ok(negotiate::respond(
@@ -88,7 +91,11 @@ pub(super) async fn list(state: &AppState, parts: &RequestParts) -> Result<Respo
 /// template (`operations/definition_template_adl1.4_upload.yaml`).
 pub(super) async fn upload(state: &AppState, parts: &RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
-    DefinitionTemplateAdl14UploadParams::from_request(parts.route()?, parts.query.as_deref(), h)?;
+    DefinitionTemplateAdl14UploadParams::from_request(
+        &parts.route_for(DefinitionTemplateAdl14UploadParams::PARAMS),
+        parts.query.as_deref(),
+        h,
+    )?;
     // The OPT 1.4 template arrives as canonical XML, the operation's single body
     // type, so a payload declaring another media type is refused before parsing
     // (`overview/Resources.md` §XML Format, a `415` MUST). An absent
@@ -120,8 +127,11 @@ pub(super) async fn upload(state: &AppState, parts: &RequestParts) -> Result<Res
 /// negotiation).
 pub(super) async fn get(state: &AppState, parts: &RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let p =
-        DefinitionTemplateAdl14GetParams::from_request(parts.route()?, parts.query.as_deref(), h)?;
+    let p = DefinitionTemplateAdl14GetParams::from_request(
+        &parts.route_for(DefinitionTemplateAdl14GetParams::PARAMS),
+        parts.query.as_deref(),
+        h,
+    )?;
     let template_id = p.template_id.clone();
     // Resolved before touching storage, so an unsupported `Accept` is a clean
     // `406`; absent or `*/*` defaults to the canonical OPT.
@@ -160,7 +170,7 @@ pub(super) async fn example_get(
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
     let p = DefinitionTemplateAdl14ExampleGetParams::from_request(
-        parts.route()?,
+        &parts.route_for(DefinitionTemplateAdl14ExampleGetParams::PARAMS),
         parts.query.as_deref(),
         h,
     )?;

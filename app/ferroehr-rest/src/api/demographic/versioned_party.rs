@@ -40,7 +40,11 @@ pub(super) async fn run(
 
     match op {
         "versioned_party_get" => {
-            let p = VersionedPartyGetParams::from_request(parts.route()?, q, h)?;
+            let p = VersionedPartyGetParams::from_request(
+                &parts.route_for(VersionedPartyGetParams::PARAMS),
+                q,
+                h,
+            )?;
             let resp = state
                 .backend()
                 .versioned_party_get(p.versioned_object_uid)
@@ -56,7 +60,11 @@ pub(super) async fn run(
             Ok(out)
         }
         "versioned_party_revision_history" => {
-            let p = VersionedPartyGetParams::from_request(parts.route()?, q, h)?;
+            let p = VersionedPartyGetParams::from_request(
+                &parts.route_for(VersionedPartyGetParams::PARAMS),
+                q,
+                h,
+            )?;
             let vo = p.versioned_object_uid.clone();
             let resp = state
                 .backend()
@@ -67,7 +75,11 @@ pub(super) async fn run(
             Ok(super::read_versioned(h, &vo, &resp.body))
         }
         "versioned_party_version_get_at_time" => {
-            let p = VersionedPartyVersionGetAtTimeParams::from_request(parts.route()?, q, h)?;
+            let p = VersionedPartyVersionGetAtTimeParams::from_request(
+                &parts.route_for(VersionedPartyVersionGetAtTimeParams::PARAMS),
+                q,
+                h,
+            )?;
             // 200_VERSION_at_time analogue: the served VERSION's ETag +
             // Last-Modified (its commit instant rides the response metadata).
             let resp = state
@@ -79,7 +91,11 @@ pub(super) async fn run(
             Ok(out)
         }
         "versioned_party_version_get_by_id" => {
-            let p = VersionedPartyVersionGetByIdParams::from_request(parts.route()?, q, h)?;
+            let p = VersionedPartyVersionGetByIdParams::from_request(
+                &parts.route_for(VersionedPartyVersionGetByIdParams::PARAMS),
+                q,
+                h,
+            )?;
             let vo = p.versioned_object_uid.clone();
             let resp = state
                 .backend()

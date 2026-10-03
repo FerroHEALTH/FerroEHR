@@ -54,7 +54,11 @@ pub(super) async fn run(
             ))
         }
         "contribution_get" => {
-            let p = ContributionGetParams::from_request(parts.route()?, q, h)?;
+            let p = ContributionGetParams::from_request(
+                &parts.route_for(ContributionGetParams::PARAMS),
+                q,
+                h,
+            )?;
             let uid = p.contribution_uid.clone();
             let resp = state
                 .backend()
