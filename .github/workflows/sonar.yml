@@ -304,7 +304,10 @@ jobs:
         if: github.event_name == 'push'
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: bash scripts/sonar/issues-to-sarif.sh rubentalstra_FerroEHR sonar-findings.sarif
+        run: |
+          project_key=$(sed -n 's/^sonar\.projectKey=//p' sonar-project.properties)
+          test -n "$project_key"
+          bash scripts/sonar/issues-to-sarif.sh "$project_key" sonar-findings.sarif
       - name: Upload the findings to code scanning
         if: github.event_name == 'push'
         uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
