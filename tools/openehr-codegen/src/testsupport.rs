@@ -2331,3 +2331,46 @@ pub fn rest_path_identifiers() -> Result<Vec<RestPathIdentifierCheck>, Error> {
         })
         .collect())
 }
+
+/// One operation of the vendored `*-codegen` OAS bundles: whether it declares
+/// a request body, and the media types the loader read for it.
+#[derive(Debug)]
+pub struct RequestMediaCheck {
+    /// The `operationId`.
+    pub operation_id: String,
+    /// Whether the operation declares a `requestBody`.
+    pub has_body: bool,
+    /// The `requestBody.content` keys the loader read.
+    pub request_media: Vec<String>,
+}
+
+/// Every operation of the vendored `*-codegen` OAS bundles with its request
+/// media types.
+///
+/// # Errors
+/// Returns an error if a vendored OAS bundle cannot be read or parsed.
+pub fn request_media() -> Result<Vec<RequestMediaCheck>, Error> {
+    let oas_dir = std::path::Path::new(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../crates/openehr-its/vendor/rest-oas"
+    ))
+    .to_path_buf();
+    let mut out = Vec::new();
+    for entry in std::fs::read_dir(&oas_dir).map_err(|e| e.to_string())? {
+        let path = entry.map_err(|e| e.to_string())?.path();
+        if path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .is_some_and(|n| n.ends_with("-codegen.openapi.yaml"))
+        {
+            for op in oas::Oas::parse_file(&path)?.operations() {
+                out.push(RequestMediaCheck {
+                    operation_id: op.operation_id,
+                    has_body: op.request_body.is_some(),
+                    request_media: op.request_media,
+                });
+            }
+        }
+    }
+    Ok(out)
+}

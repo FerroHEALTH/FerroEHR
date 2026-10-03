@@ -299,3 +299,13 @@ const _: () = assert!(
     ROUTE_PARAMS.len() == ROUTES.len(),
     "ROUTE_PARAMS carries one row per ROUTES entry"
 );
+
+/// The request-body media types of each operation, index-aligned with
+/// [`ROUTES`]: the `requestBody.content` keys of the OAS, in document order,
+/// empty when the operation takes no body.
+pub const ROUTE_REQUEST_MEDIA: &[&[&str]] = &[&[]];
+
+const _: () = assert!(
+    ROUTE_REQUEST_MEDIA.len() == ROUTES.len(),
+    "ROUTE_REQUEST_MEDIA carries one row per ROUTES entry"
+);

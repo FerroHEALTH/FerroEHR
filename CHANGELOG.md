@@ -39,6 +39,12 @@ workflow refuses a tag that has no matching section here.
   differently. The decoding moved from `rest::server` to the new
   `rest::decode`, which needs only the `rest` feature, not the axum server
   half.
+- **The ITS-REST route table names each operation's request-body media
+  types** (#3543). Each API group carries `ROUTE_REQUEST_MEDIA`, aligned with
+  `ROUTES`, holding the OAS `requestBody.content` keys, and `RouteMatch`
+  carries them as `request_media`. `definition_query_version_store`, which
+  declares no `Content-Type` parameter, now names `text/plain`, so a
+  forwarding intermediary can set the header.
 - **The `openehr-*` crates step to 0.0.80.**
 - **The `openehr-rm` attribute model covers the BASE foundation types and
   names reference targets** (#3537). The model (`v1_1::model`,

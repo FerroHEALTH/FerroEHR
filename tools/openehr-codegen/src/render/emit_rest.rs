@@ -477,6 +477,24 @@ pub(crate) fn emit_group(
          const _: () = assert!(\n    \
          ROUTE_PARAMS.len() == ROUTES.len(),\n    \
          \"ROUTE_PARAMS carries one row per ROUTES entry\"\n\
+         );\n\n",
+    );
+    let _ = write!(
+        b,
+        "/// The request-body media types of each operation, index-aligned with\n\
+         /// [`ROUTES`]: the `requestBody.content` keys of the OAS, in document order,\n\
+         /// empty when the operation takes no body.\n\
+         pub const ROUTE_REQUEST_MEDIA: &[&[&str]] = &[\n"
+    );
+    for op in &ops {
+        let media: Vec<String> = op.request_media.iter().map(|m| format!("{m:?}")).collect();
+        let _ = writeln!(b, "    &[{}],", media.join(", "));
+    }
+    b.push_str(
+        "];\n\n\
+         const _: () = assert!(\n    \
+         ROUTE_REQUEST_MEDIA.len() == ROUTES.len(),\n    \
+         \"ROUTE_REQUEST_MEDIA carries one row per ROUTES entry\"\n\
          );\n",
     );
     b

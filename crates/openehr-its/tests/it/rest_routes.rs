@@ -668,3 +668,45 @@ fn from_request_covers_the_stored_query_operations() {
     assert_eq!(p.qualified_query_name, "org.example::vitals");
     assert_eq!(p.query_type.as_deref(), Some("AQL"));
 }
+
+/// A route names the media types its request body is declared in: `text/plain`
+/// for `definition_query_version_store`, which declares no `Content-Type`
+/// parameter, and, wherever a `Content-Type` parameter declares an enum, media
+/// that enum admits.
+#[test]
+fn routes_name_their_request_media() {
+    use openehr_its::rest::routes::{Param, ParamKind, ParamLocation};
+    let m = matched(&Method::PUT, "/definition/query/org.example::vitals/1.0.0").unwrap();
+    assert_eq!(m.operation_id, "definition_query_version_store.yaml");
+    assert_eq!(m.request_media, ["text/plain"]);
+    assert!(m.header_param("Content-Type").is_none());
+    let m = matched(&Method::GET, "/query/aql").unwrap();
+    assert!(m.request_media.is_empty());
+    for (method, path) in [
+        (
+            Method::POST,
+            "/ehr/7d44b88c-4199-4bad-97dc-d78268e01398/contribution",
+        ),
+        (Method::POST, "/query/aql"),
+        (Method::PUT, "/definition/query/org.example::vitals"),
+        (Method::POST, "/definition/template/adl1.4"),
+    ] {
+        let m = matched(&method, path).unwrap();
+        assert!(!m.request_media.is_empty(), "{method} {path}");
+        let declared = m.params.iter().find(|p| {
+            p.location == ParamLocation::Header && p.name.eq_ignore_ascii_case("content-type")
+        });
+        if let Some(Param {
+            kind: ParamKind::Enum(values),
+            ..
+        }) = declared
+        {
+            for media in m.request_media {
+                assert!(
+                    values.contains(media),
+                    "{method} {path}: {media} not in {values:?}"
+                );
+            }
+        }
+    }
+}

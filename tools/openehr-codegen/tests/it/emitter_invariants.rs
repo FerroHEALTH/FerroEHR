@@ -1718,3 +1718,25 @@ fn rest_path_identifiers_match_the_oas_components() {
         }
     }
 }
+
+/// Every OAS operation that declares a request body has its media types, the
+/// `requestBody.content` keys the route table's `ROUTE_REQUEST_MEDIA` carries,
+/// and none is claimed for an operation without a body.
+#[test]
+fn every_request_body_has_its_media_types() {
+    let ops = testsupport::request_media().unwrap();
+    assert!(
+        ops.iter().any(|o| o.has_body),
+        "no operation with a body found"
+    );
+    for o in &ops {
+        assert_eq!(
+            o.has_body,
+            !o.request_media.is_empty(),
+            "{}: body declared {}, media {:?}",
+            o.operation_id,
+            o.has_body,
+            o.request_media
+        );
+    }
+}
