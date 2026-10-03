@@ -5592,7 +5592,9 @@ pub mod server {
         /// The `201` answer.
         Created {
             /// The body, sent as canonical JSON; `None` sends no body.
-            body: Option<serde_json::Value>,
+            body: Option<
+                crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::agent::Agent>,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: AgentCreateCreatedHeaders,
         },
@@ -5625,7 +5627,7 @@ pub mod server {
         /// The `200` answer.
         Ok {
             /// The body, sent as canonical JSON.
-            body: serde_json::Value,
+            body: crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::agent::Agent>,
             /// The response headers the OAS declares for this answer.
             headers: AgentUpdateOkHeaders,
         },
@@ -5654,7 +5656,9 @@ pub mod server {
         /// The `201` answer.
         Created {
             /// The body, sent as canonical JSON; `None` sends no body.
-            body: Option<serde_json::Value>,
+            body: Option<
+                crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::group::Group>,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: GroupCreateCreatedHeaders,
         },
@@ -5687,7 +5691,7 @@ pub mod server {
         /// The `200` answer.
         Ok {
             /// The body, sent as canonical JSON.
-            body: serde_json::Value,
+            body: crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::group::Group>,
             /// The response headers the OAS declares for this answer.
             headers: GroupUpdateOkHeaders,
         },
@@ -5716,7 +5720,11 @@ pub mod server {
         /// The `201` answer.
         Created {
             /// The body, sent as canonical JSON; `None` sends no body.
-            body: Option<serde_json::Value>,
+            body: Option<
+                crate::rest::runtime::Representation<
+                    openehr_rm::v1_2::demographic::organisation::Organisation,
+                >,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: OrganisationCreateCreatedHeaders,
         },
@@ -5749,7 +5757,9 @@ pub mod server {
         /// The `200` answer.
         Ok {
             /// The body, sent as canonical JSON.
-            body: serde_json::Value,
+            body: crate::rest::runtime::Representation<
+                openehr_rm::v1_2::demographic::organisation::Organisation,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: OrganisationUpdateOkHeaders,
         },
@@ -5778,7 +5788,9 @@ pub mod server {
         /// The `201` answer.
         Created {
             /// The body, sent as canonical JSON; `None` sends no body.
-            body: Option<serde_json::Value>,
+            body: Option<
+                crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::person::Person>,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: PersonCreateCreatedHeaders,
         },
@@ -5811,7 +5823,8 @@ pub mod server {
         /// The `200` answer.
         Ok {
             /// The body, sent as canonical JSON.
-            body: serde_json::Value,
+            body:
+                crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::person::Person>,
             /// The response headers the OAS declares for this answer.
             headers: PersonUpdateOkHeaders,
         },
@@ -5840,7 +5853,9 @@ pub mod server {
         /// The `201` answer.
         Created {
             /// The body, sent as canonical JSON; `None` sends no body.
-            body: Option<serde_json::Value>,
+            body: Option<
+                crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::role::Role>,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: RoleCreateCreatedHeaders,
         },
@@ -5873,7 +5888,7 @@ pub mod server {
         /// The `200` answer.
         Ok {
             /// The body, sent as canonical JSON.
-            body: serde_json::Value,
+            body: crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::role::Role>,
             /// The response headers the OAS declares for this answer.
             headers: RoleUpdateOkHeaders,
         },
@@ -5954,7 +5969,11 @@ pub mod server {
         /// The `201` answer.
         Created {
             /// The body, sent as canonical JSON; `None` sends no body.
-            body: Option<serde_json::Value>,
+            body: Option<
+                crate::rest::runtime::Representation<
+                    openehr_rm::v1_2::common::change_control::contribution::Contribution,
+                >,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: ContributionCreateCreatedHeaders,
         },
@@ -8136,7 +8155,9 @@ pub mod client {
         /// The `201` answer.
         Created {
             /// The body, decoded from canonical JSON; `None` when the service sent none.
-            body: Option<serde_json::Value>,
+            body: Option<
+                crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::agent::Agent>,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: AgentCreateCreatedHeaders,
         },
@@ -8189,7 +8210,7 @@ pub mod client {
         /// The `200` answer.
         Ok {
             /// The body, decoded from canonical JSON.
-            body: serde_json::Value,
+            body: crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::agent::Agent>,
             /// The response headers the OAS declares for this answer.
             headers: AgentUpdateOkHeaders,
         },
@@ -8257,7 +8278,9 @@ pub mod client {
         /// The `201` answer.
         Created {
             /// The body, decoded from canonical JSON; `None` when the service sent none.
-            body: Option<serde_json::Value>,
+            body: Option<
+                crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::group::Group>,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: GroupCreateCreatedHeaders,
         },
@@ -8310,7 +8333,7 @@ pub mod client {
         /// The `200` answer.
         Ok {
             /// The body, decoded from canonical JSON.
-            body: serde_json::Value,
+            body: crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::group::Group>,
             /// The response headers the OAS declares for this answer.
             headers: GroupUpdateOkHeaders,
         },
@@ -8378,7 +8401,11 @@ pub mod client {
         /// The `201` answer.
         Created {
             /// The body, decoded from canonical JSON; `None` when the service sent none.
-            body: Option<serde_json::Value>,
+            body: Option<
+                crate::rest::runtime::Representation<
+                    openehr_rm::v1_2::demographic::organisation::Organisation,
+                >,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: OrganisationCreateCreatedHeaders,
         },
@@ -8431,7 +8458,9 @@ pub mod client {
         /// The `200` answer.
         Ok {
             /// The body, decoded from canonical JSON.
-            body: serde_json::Value,
+            body: crate::rest::runtime::Representation<
+                openehr_rm::v1_2::demographic::organisation::Organisation,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: OrganisationUpdateOkHeaders,
         },
@@ -8499,7 +8528,9 @@ pub mod client {
         /// The `201` answer.
         Created {
             /// The body, decoded from canonical JSON; `None` when the service sent none.
-            body: Option<serde_json::Value>,
+            body: Option<
+                crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::person::Person>,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: PersonCreateCreatedHeaders,
         },
@@ -8552,7 +8583,8 @@ pub mod client {
         /// The `200` answer.
         Ok {
             /// The body, decoded from canonical JSON.
-            body: serde_json::Value,
+            body:
+                crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::person::Person>,
             /// The response headers the OAS declares for this answer.
             headers: PersonUpdateOkHeaders,
         },
@@ -8620,7 +8652,9 @@ pub mod client {
         /// The `201` answer.
         Created {
             /// The body, decoded from canonical JSON; `None` when the service sent none.
-            body: Option<serde_json::Value>,
+            body: Option<
+                crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::role::Role>,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: RoleCreateCreatedHeaders,
         },
@@ -8673,7 +8707,7 @@ pub mod client {
         /// The `200` answer.
         Ok {
             /// The body, decoded from canonical JSON.
-            body: serde_json::Value,
+            body: crate::rest::runtime::Representation<openehr_rm::v1_2::demographic::role::Role>,
             /// The response headers the OAS declares for this answer.
             headers: RoleUpdateOkHeaders,
         },
@@ -8813,7 +8847,11 @@ pub mod client {
         /// The `201` answer.
         Created {
             /// The body, decoded from canonical JSON; `None` when the service sent none.
-            body: Option<serde_json::Value>,
+            body: Option<
+                crate::rest::runtime::Representation<
+                    openehr_rm::v1_2::common::change_control::contribution::Contribution,
+                >,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: ContributionCreateCreatedHeaders,
         },

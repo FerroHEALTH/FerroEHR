@@ -4432,7 +4432,7 @@ pub mod server {
         /// The `201` answer.
         Created {
             /// The body, sent as canonical JSON; `None` sends no body.
-            body: Option<serde_json::Value>,
+            body: Option<crate::rest::runtime::Representation<openehr_rm::v1_2::ehr::ehr::Ehr>>,
             /// The response headers the OAS declares for this answer.
             headers: EhrCreateCreatedHeaders,
         },
@@ -4463,7 +4463,7 @@ pub mod server {
         /// The `201` answer.
         Created {
             /// The body, sent as canonical JSON; `None` sends no body.
-            body: Option<serde_json::Value>,
+            body: Option<crate::rest::runtime::Representation<openehr_rm::v1_2::ehr::ehr::Ehr>>,
             /// The response headers the OAS declares for this answer.
             headers: EhrCreateWithIdCreatedHeaders,
         },
@@ -4507,7 +4507,8 @@ pub mod server {
         /// The `200` answer.
         Ok {
             /// The body, sent as canonical JSON.
-            body: serde_json::Value,
+            body:
+                crate::rest::runtime::Representation<openehr_rm::v1_2::ehr::ehr_status::EhrStatus>,
             /// The response headers the OAS declares for this answer.
             headers: EhrStatusUpdateOkHeaders,
         },
@@ -4577,7 +4578,11 @@ pub mod server {
         /// The `201` answer.
         Created {
             /// The body, sent as canonical JSON; `None` sends no body.
-            body: Option<serde_json::Value>,
+            body: Option<
+                crate::rest::runtime::Representation<
+                    openehr_rm::v1_2::composition::composition::Composition,
+                >,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: CompositionCreateCreatedHeaders,
         },
@@ -4610,7 +4615,9 @@ pub mod server {
         /// The `200` answer.
         Ok {
             /// The body, sent as canonical JSON.
-            body: serde_json::Value,
+            body: crate::rest::runtime::Representation<
+                openehr_rm::v1_2::composition::composition::Composition,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: CompositionUpdateOkHeaders,
         },
@@ -4706,7 +4713,9 @@ pub mod server {
         /// The `200` answer.
         Ok {
             /// The body, sent as canonical JSON.
-            body: serde_json::Value,
+            body: crate::rest::runtime::Representation<
+                openehr_rm::v1_2::common::directory::folder::Folder,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: DirectoryUpdateOkHeaders,
         },
@@ -4724,7 +4733,11 @@ pub mod server {
         /// The `201` answer.
         Created {
             /// The body, sent as canonical JSON; `None` sends no body.
-            body: Option<serde_json::Value>,
+            body: Option<
+                crate::rest::runtime::Representation<
+                    openehr_rm::v1_2::common::directory::folder::Folder,
+                >,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: DirectoryCreateCreatedHeaders,
         },
@@ -4763,7 +4776,11 @@ pub mod server {
         /// The `201` answer.
         Created {
             /// The body, sent as canonical JSON; `None` sends no body.
-            body: Option<serde_json::Value>,
+            body: Option<
+                crate::rest::runtime::Representation<
+                    openehr_rm::v1_2::common::change_control::contribution::Contribution,
+                >,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: ContributionCreateCreatedHeaders,
         },
@@ -6561,7 +6578,7 @@ pub mod client {
         /// The `201` answer.
         Created {
             /// The body, decoded from canonical JSON; `None` when the service sent none.
-            body: Option<serde_json::Value>,
+            body: Option<crate::rest::runtime::Representation<openehr_rm::v1_2::ehr::ehr::Ehr>>,
             /// The response headers the OAS declares for this answer.
             headers: EhrCreateCreatedHeaders,
         },
@@ -6607,7 +6624,7 @@ pub mod client {
         /// The `201` answer.
         Created {
             /// The body, decoded from canonical JSON; `None` when the service sent none.
-            body: Option<serde_json::Value>,
+            body: Option<crate::rest::runtime::Representation<openehr_rm::v1_2::ehr::ehr::Ehr>>,
             /// The response headers the OAS declares for this answer.
             headers: EhrCreateWithIdCreatedHeaders,
         },
@@ -6676,7 +6693,8 @@ pub mod client {
         /// The `200` answer.
         Ok {
             /// The body, decoded from canonical JSON.
-            body: serde_json::Value,
+            body:
+                crate::rest::runtime::Representation<openehr_rm::v1_2::ehr::ehr_status::EhrStatus>,
             /// The response headers the OAS declares for this answer.
             headers: EhrStatusUpdateOkHeaders,
         },
@@ -6788,7 +6806,11 @@ pub mod client {
         /// The `201` answer.
         Created {
             /// The body, decoded from canonical JSON; `None` when the service sent none.
-            body: Option<serde_json::Value>,
+            body: Option<
+                crate::rest::runtime::Representation<
+                    openehr_rm::v1_2::composition::composition::Composition,
+                >,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: CompositionCreateCreatedHeaders,
         },
@@ -6841,7 +6863,9 @@ pub mod client {
         /// The `200` answer.
         Ok {
             /// The body, decoded from canonical JSON.
-            body: serde_json::Value,
+            body: crate::rest::runtime::Representation<
+                openehr_rm::v1_2::composition::composition::Composition,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: CompositionUpdateOkHeaders,
         },
@@ -7001,7 +7025,9 @@ pub mod client {
         /// The `200` answer.
         Ok {
             /// The body, decoded from canonical JSON.
-            body: serde_json::Value,
+            body: crate::rest::runtime::Representation<
+                openehr_rm::v1_2::common::directory::folder::Folder,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: DirectoryUpdateOkHeaders,
         },
@@ -7036,7 +7062,11 @@ pub mod client {
         /// The `201` answer.
         Created {
             /// The body, decoded from canonical JSON; `None` when the service sent none.
-            body: Option<serde_json::Value>,
+            body: Option<
+                crate::rest::runtime::Representation<
+                    openehr_rm::v1_2::common::directory::folder::Folder,
+                >,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: DirectoryCreateCreatedHeaders,
         },
@@ -7107,7 +7137,11 @@ pub mod client {
         /// The `201` answer.
         Created {
             /// The body, decoded from canonical JSON; `None` when the service sent none.
-            body: Option<serde_json::Value>,
+            body: Option<
+                crate::rest::runtime::Representation<
+                    openehr_rm::v1_2::common::change_control::contribution::Contribution,
+                >,
+            >,
             /// The response headers the OAS declares for this answer.
             headers: ContributionCreateCreatedHeaders,
         },

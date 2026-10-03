@@ -603,6 +603,25 @@ impl Ctx<'_> {
         if let Some(name) = Oas::ref_name(schema) {
             return self.ref_type(&name, schema);
         }
+        // `oneOf` a resource and `Identifier`: the full and the identifier form
+        // a `Prefer` header selects, read by the runtime's `Representation`.
+        if let Some([first, second]) = schema
+            .get("oneOf")
+            .and_then(Value::as_array)
+            .map(Vec::as_slice)
+        {
+            let full = match (Oas::ref_name(first), Oas::ref_name(second)) {
+                (Some(_), Some(id)) if id == "Identifier" => Some(first),
+                (Some(id), Some(_)) if id == "Identifier" => Some(second),
+                _ => None,
+            };
+            if let Some(full) = full {
+                return format!(
+                    "crate::rest::runtime::Representation<{}>",
+                    self.rust_type(full)
+                );
+            }
+        }
         // `allOf` COMPOSITION. A schema whose only structural content is a
         // single-`$ref` `allOf` is a pure alias for its referent — OAS 3.0
         // composes independently-validated definitions

@@ -35,6 +35,7 @@ use bytes::Bytes;
 use http::{HeaderMap, StatusCode};
 use serde_json::{Map, Value};
 
+use openehr_its::rest::generated::ehr::NewContribution;
 use openehr_its::rest::runtime::ApiError;
 
 use crate::negotiate;
@@ -239,9 +240,12 @@ pub(crate) fn composition_structured_response_with(
 // are simplifiable — others refuse (create `422`; get `406` naming COMPOSITION).
 
 /// Convert a simplified CONTRIBUTION request into a canonical envelope: the
-/// envelope stays canonical JSON; each present `versions[i].data` is rebuilt
-/// from the simplified `format` into a canonical COMPOSITION using the
-/// `openehr-template-id` header. Missing header → `422`.
+/// envelope stays canonical JSON and reads as the generated
+/// `NewContribution<Value>`; each present `versions[i].data` is rebuilt from the
+/// simplified `format` into a canonical COMPOSITION using the
+/// `openehr-template-id` header. A version with no `data` is a logical deletion
+/// (RM common master06 §Logical Deletion) and passes through. Missing header →
+/// `422`.
 pub(crate) async fn contribution_from_simplified(
     state: &AppState,
     headers: &HeaderMap,
@@ -249,9 +253,9 @@ pub(crate) async fn contribution_from_simplified(
     format: WireFormat,
 ) -> Result<Value, RestError> {
     let template_id = header_template_id(headers).ok_or_else(missing_template_id)?;
-    let mut envelope: Value = serde_json::from_slice(body).map_err(|e| {
+    let mut envelope: NewContribution<Value> = serde_json::from_slice(body).map_err(|e| {
         RestError(ApiError::BadRequest(format!(
-            "invalid CONTRIBUTION envelope JSON: {e}"
+            "invalid CONTRIBUTION envelope: {e}"
         )))
     })?;
     let wt = state
@@ -260,15 +264,9 @@ pub(crate) async fn contribution_from_simplified(
         .await
         .map_err(RestError::from)?;
     let now = now();
-    let Some(versions) = envelope.get_mut("versions").and_then(Value::as_array_mut) else {
-        return Ok(envelope);
-    };
-    for version in versions.iter_mut() {
-        let Some(obj) = version.as_object_mut() else {
+    for version in &mut envelope.versions {
+        let Some(data) = version.data.as_mut() else {
             continue;
-        };
-        let Some(data) = obj.get("data") else {
-            continue; // attestation-only / delete members carry no data
         };
         let comp = match format {
             WireFormat::Flat => {
@@ -289,9 +287,13 @@ pub(crate) async fn contribution_from_simplified(
             }
         }
         .map_err(|e| flat_input_err(&e))?;
-        obj.insert("data".to_owned(), comp);
+        *data = comp;
     }
-    Ok(envelope)
+    serde_json::to_value(&envelope).map_err(|e| {
+        internal(format!(
+            "the canonical CONTRIBUTION envelope does not encode: {e}"
+        ))
+    })
 }
 
 /// Render a stored CONTRIBUTION body in a simplified `format`: the envelope

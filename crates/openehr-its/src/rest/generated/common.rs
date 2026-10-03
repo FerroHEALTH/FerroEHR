@@ -378,7 +378,7 @@ pub struct UpdateVersion<T> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub attestations: Option<Vec<UpdateAttestation>>,
     /// The `data` property of `UpdateVersion`.
-    /// OPTIONAL by the docs text — RM common original_version.adoc §Attributes — `data` is `0..1`; RM common master06-change_control_package.adoc §Logical Deletion — the deleting commit "delete[s] its `_data_`" and sets `lifecycle_state` to `deleted`
+    /// OPTIONAL by the docs text — RM common original_version.adoc §Attributes — `data` is `0..1`; RM common master06-change_control_package.adoc §Logical Deletion — "delete its `_data_`" and "set the `_lifecycle_state_` value to the code for `deleted`"
     /// (A logical-deletion member carries no data; the released OAS lists `data` as required, which makes the RM's own deletion procedure unrepresentable.)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub data: Option<T>,
