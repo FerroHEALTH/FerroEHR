@@ -5,8 +5,8 @@
       "url": "https://api.sonarcloud.io/mcp",
       "headers": {
         "Authorization": "Bearer ${SONARQUBE_TOKEN}",
-        "SONARQUBE_ORG": "rubentalstra",
-        "SONARQUBE_PROJECT_KEY": "rubentalstra_FerroEHR"
+        "SONARQUBE_ORG": "ferrohealth",
+        "SONARQUBE_PROJECT_KEY": "FerroHEALTH_FerroEHR"
       }
     }
   }
