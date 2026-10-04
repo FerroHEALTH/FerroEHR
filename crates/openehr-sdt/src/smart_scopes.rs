@@ -318,6 +318,99 @@ impl SmartScope {
     }
 }
 
+impl fmt::Display for SmartScope {
+    /// The scope in the grammar's canonical form; `SmartScope::parse` reads it
+    /// back to the same value for every scope the parser produced.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SmartScope::Launch => f.write_str("launch"),
+            SmartScope::LaunchContext(ctx) => write!(f, "launch/{ctx}"),
+            SmartScope::Identity(raw) | SmartScope::Other(raw) => f.write_str(raw),
+            SmartScope::Resource(scope) => scope.fmt(f),
+        }
+    }
+}
+
+impl SmartScope {
+    /// The space-delimited `scope` string for `scopes`, the printer matching
+    /// [`SmartScope::parse_all`]: each scope in its canonical form, joined by
+    /// one space.
+    #[must_use]
+    pub fn format_all<'a>(scopes: impl IntoIterator<Item = &'a SmartScope>) -> String {
+        let mut out = String::new();
+        for scope in scopes {
+            if !out.is_empty() {
+                out.push(' ');
+            }
+            out.push_str(&scope.to_string());
+        }
+        out
+    }
+}
+
+impl fmt::Display for LaunchContext {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            LaunchContext::Patient => f.write_str("patient"),
+            LaunchContext::Episode => f.write_str("episode"),
+            LaunchContext::Other(raw) => f.write_str(raw),
+        }
+    }
+}
+
+impl fmt::Display for ResourceScope {
+    /// `<compartment>/<resource>.<permission>` (master08 §Resource Scopes),
+    /// the permissions in the grammar's `c`/`r`/`u`/`d`/`s` order.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}/{}.{}",
+            self.compartment, self.resource, self.permissions
+        )
+    }
+}
+
+impl fmt::Display for Compartment {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Compartment::Patient => "patient",
+            Compartment::User => "user",
+            Compartment::System => "system",
+        })
+    }
+}
+
+impl fmt::Display for ResourceSelector {
+    /// `template-<id>`, `composition-<id>` or `aql-<name>`.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let family = match self.family() {
+            ResourceFamily::Template => "template",
+            ResourceFamily::Composition => "composition",
+            ResourceFamily::Aql => "aql",
+        };
+        write!(f, "{family}-{}", self.pattern())
+    }
+}
+
+impl fmt::Display for Permissions {
+    /// The granted letters in the grammar's `c`/`r`/`u`/`d`/`s` order; an
+    /// empty set prints nothing, which the grammar does not accept as a tail.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (granted, letter) in [
+            (self.create, "c"),
+            (self.read, "r"),
+            (self.update, "u"),
+            (self.delete, "d"),
+            (self.search, "s"),
+        ] {
+            if granted {
+                f.write_str(letter)?;
+            }
+        }
+        Ok(())
+    }
+}
+
 /// Parse the `<compartment>/<resource>.<permission>` form. `None` when it is not
 /// a well-formed resource scope (the caller then keeps it as `Other`).
 fn parse_resource_scope(raw: &str) -> Option<ResourceScope> {
@@ -623,6 +716,96 @@ mod tests {
         assert_eq!(scopes[0], SmartScope::Identity("openid".to_owned()));
         assert_eq!(scopes[1], SmartScope::LaunchContext(LaunchContext::Patient));
         assert!(matches!(scopes[2], SmartScope::Resource(_)));
+    }
+
+    // ── printing back in the grammar (Display) ────────────────────────────────
+
+    #[test]
+    fn display_prints_the_canonical_form() {
+        for (raw, canonical) in [
+            ("launch", "launch"),
+            ("launch/patient", "launch/patient"),
+            ("launch/encounter", "launch/encounter"),
+            ("openid", "openid"),
+            ("patient/composition-*.rs", "patient/composition-*.rs"),
+            (
+                "user/template-MyHospital::Template.v0.duc",
+                "user/template-MyHospital::Template.v0.cud",
+            ),
+            (
+                "system/aql-org.openehr::bloodpressure.v1.srrs",
+                "system/aql-org.openehr::bloodpressure.v1.rs",
+            ),
+            ("admin/composition-*.r", "admin/composition-*.r"),
+        ] {
+            assert_eq!(SmartScope::parse(raw).to_string(), canonical, "{raw}");
+        }
+    }
+
+    #[test]
+    fn display_round_trips_through_parse() {
+        let samples = [
+            "",
+            "launch",
+            "launch/",
+            "launch/patient",
+            "launch/episode",
+            "launch/x/y",
+            "openid",
+            "profile",
+            "fhirUser",
+            "offline_access",
+            "online_access",
+            "patient/composition-*.r",
+            "user/template-**.cruds",
+            "system/aql-*.sdcru",
+            "patient/composition-a/b.c.r",
+            "patient/composition-.r",
+            "patient/aql-x.",
+            "patient/aql-x.rx",
+            "patient/*.rs",
+            "user/composition-a b.r",
+            "system/x-y.r",
+        ];
+        for raw in samples {
+            let parsed = SmartScope::parse(raw);
+            let printed = parsed.to_string();
+            assert_eq!(SmartScope::parse(&printed), parsed, "{raw}");
+            // The canonical form is a fixed point.
+            assert_eq!(SmartScope::parse(&printed).to_string(), printed, "{raw}");
+        }
+    }
+
+    #[test]
+    fn permutations_of_every_permission_set_round_trip() {
+        let letters = ['c', 'r', 'u', 'd', 's'];
+        for mask in 1u8..32 {
+            let mut tail: Vec<char> = letters
+                .iter()
+                .enumerate()
+                .filter(|(i, _)| mask & (1 << i) != 0)
+                .map(|(_, c)| *c)
+                .collect();
+            tail.reverse();
+            let tail: String = tail.into_iter().collect();
+            let raw = format!("patient/composition-*.{tail}");
+            let parsed = SmartScope::parse(&raw);
+            assert!(matches!(parsed, SmartScope::Resource(_)), "{raw}");
+            assert_eq!(SmartScope::parse(&parsed.to_string()), parsed, "{raw}");
+        }
+    }
+
+    #[test]
+    fn format_all_matches_parse_all() {
+        let claim = "openid  launch/patient\tpatient/composition-*.sr user/*.rs";
+        let scopes = SmartScope::parse_all(claim);
+        let printed = SmartScope::format_all(&scopes);
+        assert_eq!(
+            printed,
+            "openid launch/patient patient/composition-*.rs user/*.rs"
+        );
+        assert_eq!(SmartScope::parse_all(&printed), scopes);
+        assert_eq!(SmartScope::format_all(&[]), "");
     }
 
     #[test]

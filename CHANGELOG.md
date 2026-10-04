@@ -15,6 +15,20 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+### Added
+
+- **The `openehr-its` client sends DPoP-bound tokens** (#3558).
+  `Credentials::Dpop` writes `Authorization: DPoP <token>` (RFC 9449 §7.1),
+  and a `DpopProver` given with `Client::with_dpop_prover` signs the `DPoP`
+  proof over each request's final method, URL and access token. A
+  `use_dpop_nonce` challenge (RFC 9449 §8 and §9) is answered with one re-send
+  carrying the supplied nonce.
+- **`openehr-sdt` prints a SMART scope back in the grammar** (#3557).
+  `SmartScope` and `ResourceScope` implement `Display`, writing the canonical
+  form (permissions in `c`/`r`/`u`/`d`/`s` order), and
+  `SmartScope::format_all` prints a scope list as the space-delimited string
+  `SmartScope::parse_all` reads.
+
 ### Changed
 
 - **`openehr-its` types the `Prefer`-dependent response bodies** (#3548). A
