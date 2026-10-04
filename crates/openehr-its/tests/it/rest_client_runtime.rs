@@ -582,7 +582,8 @@ fn an_authorization_option_is_hidden_from_debug() -> TestResult {
 // ── DPoP (RFC 9449) ─────────────────────────────────────────────────────────
 
 /// A prover that signs nothing: its proof names the method, the URI and the
-/// nonce it was last given, so a mock can match on what it saw.
+/// nonce it was last given, so a mock can match on what it saw. The nonce is
+/// tagged so the proof never ends in a space, which the receiving server trims.
 #[derive(Debug, Default)]
 struct EchoProver {
     nonce: std::sync::Mutex<Option<String>>,
@@ -601,7 +602,7 @@ impl DpopProver for EchoProver {
             .clone()
             .unwrap_or_default();
         Ok(format!(
-            "{} {} {} {nonce}",
+            "{} {} {} nonce={nonce}",
             request.method(),
             request.uri(),
             request.access_token().expose_secret()
@@ -624,7 +625,7 @@ async fn a_dpop_credential_sends_the_dpop_scheme_and_a_proof_over_the_final_url(
     Mock::given(method("GET"))
         .and(path(format!("/ehr/{EHR_ID}")))
         .and(header("authorization", "DPoP tok"))
-        .and(header("dpop", format!("GET {url} tok ").as_str()))
+        .and(header("dpop", format!("GET {url} tok nonce=").as_str()))
         .respond_with(ResponseTemplate::new(204))
         .expect(1)
         .mount(&server)
@@ -648,7 +649,7 @@ async fn a_dpop_nonce_challenge_is_answered_with_one_resend() -> TestResult {
     let server = MockServer::start().await;
     let url = format!("{}/ehr/{EHR_ID}", server.uri());
     Mock::given(method("GET"))
-        .and(header("dpop", format!("GET {url} tok ").as_str()))
+        .and(header("dpop", format!("GET {url} tok nonce=").as_str()))
         .respond_with(
             ResponseTemplate::new(401)
                 .insert_header("www-authenticate", r#"DPoP error="use_dpop_nonce""#)
@@ -658,7 +659,7 @@ async fn a_dpop_nonce_challenge_is_answered_with_one_resend() -> TestResult {
         .mount(&server)
         .await;
     Mock::given(method("GET"))
-        .and(header("dpop", format!("GET {url} tok n1").as_str()))
+        .and(header("dpop", format!("GET {url} tok nonce=n1").as_str()))
         .respond_with(ResponseTemplate::new(404))
         .expect(1)
         .mount(&server)
