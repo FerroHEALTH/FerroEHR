@@ -50,6 +50,14 @@ pub struct RequestTimeout(pub Duration);
 /// caller's deadline is not kept. An engine sends each request once and
 /// returns the answer it read, a `3xx` included: following a redirect would
 /// re-send the request, credentials and all, to a host the caller never named.
+/// The client itself sends a request again only within its [`RetryPolicy`]
+/// and, under [`Credentials::Dpop`] with a [`DpopProver`], once more to the
+/// same URL to answer a `use_dpop_nonce` challenge (RFC 9449 §8 and §9).
+///
+/// An engine that wraps another may add request headers. A DPoP client
+/// without a [`DpopProver`] adds its `DPoP` proof this way: the request it
+/// receives carries the final method and URI, and `Authorization: DPoP
+/// <token>` names the access token the proof's `ath` hashes (RFC 9449 §4.2).
 #[async_trait::async_trait]
 pub trait Transport: Send + Sync {
     /// Sends `request` and reads the whole response.
@@ -194,9 +202,9 @@ impl Transport for ReqwestTransport {
 /// ITS-REST leaves the scheme to the service ("Clients MUST send valid
 /// `Authorization` … headers in their requests when required",
 /// `ITS-REST/specifications/docs/overview/Requests_and_responses.md`
-/// §Authentication and authorization); Basic and Bearer cover the shipped
-/// servers. The secret is a [`SecretString`]: `Debug` never prints it and the
-/// memory is zeroed on drop.
+/// §Authentication and authorization); Basic, Bearer and DPoP cover the
+/// shipped servers. The secret is a [`SecretString`]: `Debug` never prints it
+/// and the memory is zeroed on drop.
 #[derive(Clone)]
 pub enum Credentials {
     /// HTTP Basic (RFC 7617).
@@ -208,6 +216,13 @@ pub enum Credentials {
     },
     /// A bearer token (RFC 6750), sent verbatim after `Bearer `.
     Bearer(SecretString),
+    /// A DPoP-bound access token (RFC 9449), sent verbatim after `DPoP `
+    /// (§7.1).
+    ///
+    /// Every request also needs a `DPoP` proof header: the client asks the
+    /// [`DpopProver`] it was given ([`Client::with_dpop_prover`]) for one, or a
+    /// wrapping [`Transport`] adds it.
+    Dpop(SecretString),
 }
 
 impl fmt::Debug for Credentials {
@@ -219,6 +234,7 @@ impl fmt::Debug for Credentials {
                 .field("password", &"<redacted>")
                 .finish(),
             Self::Bearer(_) => f.debug_tuple("Bearer").field(&"<redacted>").finish(),
+            Self::Dpop(_) => f.debug_tuple("Dpop").field(&"<redacted>").finish(),
         }
     }
 }
@@ -239,6 +255,12 @@ impl Credentials {
         Self::Bearer(token.into())
     }
 
+    /// A DPoP-bound access token.
+    #[must_use]
+    pub fn dpop(token: impl Into<SecretString>) -> Self {
+        Self::Dpop(token.into())
+    }
+
     /// The `Authorization` field value the client sends for these
     /// credentials, marked sensitive.
     ///
@@ -247,7 +269,8 @@ impl Credentials {
     /// The basic form follows RFC 7617 §2: the user-id carries no colon, and
     /// neither the user-id nor the password carries a control character (the
     /// `CTL` of RFC 5234 Appendix B.1). The bearer form follows the `b64token`
-    /// syntax of RFC 6750 §2.1.
+    /// syntax of RFC 6750 §2.1, and the DPoP form the `token68` syntax of
+    /// RFC 9449 §7.1, which admits the same characters.
     ///
     /// # Errors
     /// Returns [`InvalidCredentials`] naming the rule the credentials break;
@@ -280,6 +303,12 @@ impl Credentials {
                     return Err(InvalidCredentials::NotB64Token);
                 }
                 format!("Bearer {}", token.expose_secret())
+            }
+            Self::Dpop(token) => {
+                if !is_b64token(token.expose_secret()) {
+                    return Err(InvalidCredentials::NotToken68);
+                }
+                format!("DPoP {}", token.expose_secret())
             }
         };
         let mut value =
@@ -315,6 +344,9 @@ pub enum InvalidCredentials {
     /// A bearer token is not a `b64token` (RFC 6750 §2.1).
     #[error("the bearer token is not a b64token (RFC 6750 §2.1)")]
     NotB64Token,
+    /// A DPoP access token is not a `token68` (RFC 9449 §7.1).
+    #[error("the DPoP access token is not a token68 (RFC 9449 §7.1)")]
+    NotToken68,
     /// The composed value is not a legal header value.
     #[error("the credentials do not form a legal Authorization header value")]
     NotAHeaderValue(#[source] http::header::InvalidHeaderValue),
@@ -398,6 +430,106 @@ impl CredentialsError {
             source: source.into(),
         }
     }
+}
+
+/// The `DPoP` request header carrying the proof JWT (RFC 9449 §4.1).
+const DPOP: HeaderName = HeaderName::from_static("dpop");
+
+/// The `DPoP-Nonce` response header carrying a server-provided nonce
+/// (RFC 9449 §8.1 and §9).
+const DPOP_NONCE: HeaderName = HeaderName::from_static("dpop-nonce");
+
+/// A source of DPoP proofs (RFC 9449 §4), asked once per send under
+/// [`Credentials::Dpop`].
+///
+/// The client hands the prover the final method and URI of the request and
+/// the access token, and sends what it returns as the `DPoP` header. The
+/// prover owns the key pair and the claims: `htm` from the method, `htu` from
+/// the URI without its query and fragment (§4.2), `ath` from the access token,
+/// a fresh `jti` and `iat`, and the latest nonce it was given.
+#[async_trait::async_trait]
+pub trait DpopProver: Send + Sync + fmt::Debug {
+    /// The compact-serialized proof JWT for one request.
+    ///
+    /// # Errors
+    /// Returns a [`CredentialsError`] when no proof can be made; the call then
+    /// fails with [`ClientError::DpopProof`] before anything is sent.
+    async fn proof(&self, request: &DpopProofRequest<'_>) -> Result<String, CredentialsError>;
+
+    /// Records the nonce the service supplied in a `DPoP-Nonce` header, which
+    /// every later proof carries as its `nonce` claim (RFC 9449 §8 and §9).
+    ///
+    /// Called on the answering task for every answer that carries one, before
+    /// the client re-sends a request the service refused with
+    /// `use_dpop_nonce`; it must not block.
+    fn nonce(&self, nonce: &str);
+}
+
+#[async_trait::async_trait]
+impl<P: DpopProver + ?Sized> DpopProver for Arc<P> {
+    async fn proof(&self, request: &DpopProofRequest<'_>) -> Result<String, CredentialsError> {
+        P::proof(self, request).await
+    }
+
+    fn nonce(&self, nonce: &str) {
+        P::nonce(self, nonce);
+    }
+}
+
+/// What a [`DpopProver`] signs over: the request as it is sent.
+#[derive(Debug, Clone, Copy)]
+pub struct DpopProofRequest<'a> {
+    method: &'a Method,
+    uri: &'a http::Uri,
+    access_token: &'a SecretString,
+}
+
+impl<'a> DpopProofRequest<'a> {
+    /// The HTTP method, the proof's `htm`.
+    #[must_use]
+    pub fn method(&self) -> &'a Method {
+        self.method
+    }
+
+    /// The full request URI; the proof's `htu` is this without its query and
+    /// fragment (RFC 9449 §4.2).
+    #[must_use]
+    pub fn uri(&self) -> &'a http::Uri {
+        self.uri
+    }
+
+    /// The access token whose hash is the proof's `ath` (RFC 9449 §4.2).
+    #[must_use]
+    pub fn access_token(&self) -> &'a SecretString {
+        self.access_token
+    }
+}
+
+/// Whether an answer is a `use_dpop_nonce` challenge: a `401` whose `DPoP`
+/// challenge names that error (RFC 9449 §9), or a `400` whose JSON body does
+/// (§8).
+fn is_nonce_challenge(status: StatusCode, headers: &HeaderMap, body: &[u8]) -> bool {
+    if status == StatusCode::UNAUTHORIZED {
+        return headers.get_all(WWW_AUTHENTICATE).iter().any(|value| {
+            // NOTE: RFC 9110 §5.5 admits opaque octets; a challenge that is
+            // not text is legitimately not a DPoP challenge.
+            value.to_str().is_ok_and(|text| {
+                text.split_once(' ').is_some_and(|(scheme, params)| {
+                    scheme.eq_ignore_ascii_case("DPoP") && params.contains("use_dpop_nonce")
+                })
+            })
+        });
+    }
+    status == StatusCode::BAD_REQUEST
+        && serde_json::from_slice::<OAuthErrorBody>(body)
+            .is_ok_and(|parsed| parsed.error == "use_dpop_nonce")
+}
+
+/// The `error` member of an OAuth 2.0 error response (RFC 6749 §5.2), the
+/// shape RFC 9449 §8 answers a missing nonce with; other members are ignored.
+#[derive(serde::Deserialize)]
+struct OAuthErrorBody {
+    error: String,
 }
 
 /// Per-call options: a deadline and extra request headers.
@@ -516,6 +648,7 @@ pub struct Client<T> {
     transport: T,
     base: url::Url,
     credentials: Option<Arc<dyn CredentialsProvider>>,
+    dpop: Option<Arc<dyn DpopProver>>,
     retry: RetryPolicy,
 }
 
@@ -532,6 +665,7 @@ impl<T: Transport> Client<T> {
             transport,
             base,
             credentials: None,
+            dpop: None,
             retry: RetryPolicy::default(),
         })
     }
@@ -554,6 +688,18 @@ impl<T: Transport> Client<T> {
         provider: impl CredentialsProvider + 'static,
     ) -> Self {
         self.credentials = Some(Arc::new(provider));
+        self
+    }
+
+    /// This client asking `prover` for the `DPoP` proof of every request sent
+    /// under [`Credentials::Dpop`], and answering a `use_dpop_nonce`
+    /// challenge with one re-send carrying a proof over the supplied nonce
+    /// (RFC 9449 §8 and §9).
+    ///
+    /// Under other credentials the prover is never asked.
+    #[must_use]
+    pub fn with_dpop_prover(mut self, prover: impl DpopProver + 'static) -> Self {
+        self.dpop = Some(Arc::new(prover));
         self
     }
 
@@ -629,14 +775,16 @@ impl<T: Transport> Client<T> {
     /// Sends `request` once under the base URL and returns whatever the
     /// service answered, for an intermediary passing a request through.
     ///
-    /// Nothing is classified and nothing is retried: a `401`, `403` or `5xx`
+    /// Nothing is classified and nothing is retried, except the one re-send
+    /// that answers a DPoP `use_dpop_nonce` challenge: a `401`, `403` or `5xx`
     /// is an [`Answer`] like any other, and the status, every header (`ETag`,
     /// `Location`) and the body bytes are as received. A `3xx` is returned,
     /// never followed: [`ReqwestTransport`] is always built with redirects off,
     /// and a caller's own [`Transport`] must not follow them either. The request goes out as
     /// built — path, query ([`Request::raw_query`]), headers and body
     /// ([`Request::raw_body`]) unchanged — except that the client's credentials,
-    /// when configured, set `Authorization`, and `Accept` defaults to
+    /// when configured, set `Authorization` (and `DPoP`, under a
+    /// [`DpopProver`]), and `Accept` defaults to
     /// `application/json` when absent. Stripping hop-by-hop fields (RFC 9110
     /// §7.6.1) is the caller's.
     ///
@@ -679,7 +827,8 @@ impl<T: Transport> Client<T> {
     }
 
     /// One send of `request`: resolve the credential, build, hand the engine
-    /// the time left, and read the answer whole, unclassified.
+    /// the time left, and read the answer whole, unclassified; under DPoP, a
+    /// `use_dpop_nonce` challenge is answered with one re-send.
     async fn send_once(&self, request: &Request) -> Result<Answer, ClientError> {
         request.remaining()?;
         let credentials =
@@ -693,20 +842,58 @@ impl<T: Transport> Client<T> {
                 })?),
                 None => None,
             };
-        let mut built = self.build(request, credentials.as_ref())?;
-        if let Some(left) = request.remaining()? {
-            built.extensions_mut().insert(RequestTimeout(left));
-        }
-        let response =
-            self.transport
-                .send(built)
-                .await
-                .map_err(|source| ClientError::Transport {
-                    method: request.method.clone(),
-                    path: request.path.clone(),
-                    source,
-                })?;
-        let (parts, body) = response.into_parts();
+        let prover = match (&credentials, self.dpop.as_ref()) {
+            (Some(Credentials::Dpop(token)), Some(prover)) => Some((prover, token)),
+            _ => None,
+        };
+        let mut nonce_resend = prover.is_some();
+        let (parts, body) = loop {
+            let mut built = self.build(request, credentials.as_ref())?;
+            if let Some((prover, token)) = prover {
+                let proof = prover
+                    .proof(&DpopProofRequest {
+                        method: built.method(),
+                        uri: built.uri(),
+                        access_token: token,
+                    })
+                    .await
+                    .map_err(|source| ClientError::DpopProof {
+                        method: request.method.clone(),
+                        path: request.path.clone(),
+                        source,
+                    })?;
+                let mut value =
+                    HeaderValue::from_str(&proof).map_err(|source| ClientError::HeaderValue {
+                        header: DPOP.to_string(),
+                        source,
+                    })?;
+                value.set_sensitive(true);
+                built.headers_mut().insert(DPOP, value);
+            }
+            if let Some(left) = request.remaining()? {
+                built.extensions_mut().insert(RequestTimeout(left));
+            }
+            let response =
+                self.transport
+                    .send(built)
+                    .await
+                    .map_err(|source| ClientError::Transport {
+                        method: request.method.clone(),
+                        path: request.path.clone(),
+                        source,
+                    })?;
+            let (parts, body) = response.into_parts();
+            if let Some((prover, _)) = prover
+                && let Some(nonce) = header_text(&parts.headers, DPOP_NONCE.as_str())
+            {
+                prover.nonce(&nonce);
+                if nonce_resend && is_nonce_challenge(parts.status, &parts.headers, &body) {
+                    nonce_resend = false;
+                    continue;
+                }
+            }
+            break (parts, body);
+        };
         if parts.status == StatusCode::UNAUTHORIZED
             && let Some(provider) = self.credentials.as_ref()
         {
@@ -1188,6 +1375,17 @@ pub enum ClientError {
         /// The operation path.
         path: String,
     },
+    /// The DPoP prover produced no proof for the request; nothing was sent.
+    #[error("no DPoP proof could be made for {method} {path}")]
+    DpopProof {
+        /// The HTTP method.
+        method: Method,
+        /// The operation path.
+        path: String,
+        /// What the prover reported.
+        #[source]
+        source: CredentialsError,
+    },
     /// The credentials provider produced no credential for the request.
     #[error("no credential could be obtained for {method} {path}")]
     Credentials {
@@ -1420,6 +1618,19 @@ mod tests {
         // A colon in the password is legal: only the first colon separates.
         let colon = Credentials::basic("alice", "a:b").header_value()?;
         assert_eq!(colon.to_str()?, "Basic YWxpY2U6YTpi");
+        // RFC 9449 §7.1: a DPoP-bound token travels under the `DPoP` scheme.
+        let dpop =
+            Credentials::dpop("Kz~8mXK1EalYznwH-LC-1fBAo.4Ljp~zsPE_NeO.gxU").header_value()?;
+        assert_eq!(
+            dpop.to_str()?,
+            "DPoP Kz~8mXK1EalYznwH-LC-1fBAo.4Ljp~zsPE_NeO.gxU"
+        );
+        assert!(dpop.is_sensitive());
+        assert!(matches!(
+            Credentials::dpop("not a token").header_value(),
+            Err(super::InvalidCredentials::NotToken68)
+        ));
+        assert!(!format!("{:?}", Credentials::dpop("secret-dpop")).contains("secret"));
         Ok(())
     }
 

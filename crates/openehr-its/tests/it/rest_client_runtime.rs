@@ -27,7 +27,8 @@ use std::time::{Duration, Instant};
 use http::{HeaderValue, Method, StatusCode};
 use openehr_its::rest::client::{
     CallOptions, Client, ClientError, Credentials, CredentialsError, CredentialsProvider,
-    InvalidCredentials, Request, ReqwestTransport, RetryPolicy, TransportError,
+    DpopProofRequest, DpopProver, InvalidCredentials, Request, ReqwestTransport, RetryPolicy,
+    TransportError,
 };
 use openehr_its::rest::generated::ehr;
 use wiremock::matchers::{body_bytes, header, method, path};
@@ -95,7 +96,10 @@ async fn forward_passes_bytes_through_unchanged() -> TestResult {
         Some("\"8849182c::cdr.example.org::1\"")
     );
     assert_eq!(answer.body(), answered.as_slice());
-    let received = server.received_requests().await.unwrap_or_default();
+    let received = server
+        .received_requests()
+        .await
+        .ok_or("request recording is off")?;
     let query = received
         .first()
         .and_then(|r| r.url.query().map(str::to_owned));
@@ -440,7 +444,10 @@ async fn option_headers_reach_the_service_and_replace_generated_ones() -> TestRe
         outcome,
         ehr::client::EhrGetByIdOutcome::NotFound { .. }
     ));
-    let received = server.received_requests().await.unwrap_or_default();
+    let received = server
+        .received_requests()
+        .await
+        .ok_or("request recording is off")?;
     let accepts: Vec<_> = received
         .first()
         .map(|r| r.headers.get_all("accept").iter().cloned().collect())
@@ -569,5 +576,159 @@ fn a_request_deadline_only_shrinks() {
 fn an_authorization_option_is_hidden_from_debug() -> TestResult {
     let options = CallOptions::default().with_header("Authorization", "Bearer secret-token")?;
     assert!(!format!("{options:?}").contains("secret-token"));
+    Ok(())
+}
+
+// ── DPoP (RFC 9449) ─────────────────────────────────────────────────────────
+
+/// A prover that signs nothing: its proof names the method, the URI and the
+/// nonce it was last given, so a mock can match on what it saw. The nonce is
+/// tagged so the proof never ends in a space, which the receiving server trims.
+#[derive(Debug, Default)]
+struct EchoProver {
+    nonce: std::sync::Mutex<Option<String>>,
+    proofs: AtomicUsize,
+}
+
+#[async_trait::async_trait]
+impl DpopProver for EchoProver {
+    async fn proof(&self, request: &DpopProofRequest<'_>) -> Result<String, CredentialsError> {
+        use secrecy::ExposeSecret as _;
+        self.proofs.fetch_add(1, Ordering::SeqCst);
+        let nonce = self
+            .nonce
+            .lock()
+            .map_err(|poisoned| CredentialsError::new(poisoned.to_string()))?
+            .clone()
+            .unwrap_or_default();
+        Ok(format!(
+            "{} {} {} nonce={nonce}",
+            request.method(),
+            request.uri(),
+            request.access_token().expose_secret()
+        ))
+    }
+
+    fn nonce(&self, nonce: &str) {
+        if let Ok(mut held) = self.nonce.lock() {
+            *held = Some(nonce.to_owned());
+        }
+    }
+}
+
+/// A `Credentials::Dpop` is sent under the `DPoP` scheme (RFC 9449 §7.1), and the
+/// prover signs over the final method and URL, query included.
+#[tokio::test]
+async fn a_dpop_credential_sends_the_dpop_scheme_and_a_proof_over_the_final_url() -> TestResult {
+    let server = MockServer::start().await;
+    let url = format!("{}/ehr/{EHR_ID}?version_at_time=now", server.uri());
+    Mock::given(method("GET"))
+        .and(path(format!("/ehr/{EHR_ID}")))
+        .and(header("authorization", "DPoP tok"))
+        .and(header("dpop", format!("GET {url} tok nonce=").as_str()))
+        .respond_with(ResponseTemplate::new(204))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let prover = std::sync::Arc::new(EchoProver::default());
+    let client = client_for(&server)?
+        .with_credentials(Credentials::dpop("tok"))
+        .with_dpop_prover(std::sync::Arc::clone(&prover));
+    let mut request = Request::new(Method::GET, format!("/ehr/{EHR_ID}"));
+    request.query("version_at_time", "now");
+    let answer = client.forward(request).await?;
+    assert_eq!(answer.status(), StatusCode::NO_CONTENT);
+    assert_eq!(prover.proofs.load(Ordering::SeqCst), 1);
+    Ok(())
+}
+
+/// A `401` `use_dpop_nonce` challenge (RFC 9449 §9) is answered with exactly
+/// one re-send whose proof carries the supplied nonce.
+#[tokio::test]
+async fn a_dpop_nonce_challenge_is_answered_with_one_resend() -> TestResult {
+    let server = MockServer::start().await;
+    let url = format!("{}/ehr/{EHR_ID}", server.uri());
+    Mock::given(method("GET"))
+        .and(header("dpop", format!("GET {url} tok nonce=").as_str()))
+        .respond_with(
+            ResponseTemplate::new(401)
+                .insert_header("www-authenticate", r#"DPoP error="use_dpop_nonce""#)
+                .insert_header("dpop-nonce", "n1"),
+        )
+        .expect(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(header("dpop", format!("GET {url} tok nonce=n1").as_str()))
+        .respond_with(ResponseTemplate::new(404))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let prover = std::sync::Arc::new(EchoProver::default());
+    let client = client_for(&server)?
+        .with_credentials(Credentials::dpop("tok"))
+        .with_dpop_prover(std::sync::Arc::clone(&prover));
+    let outcome = ehr::client::EhrClient::new(&client)
+        .ehr_get_by_id(&get_ehr(None))
+        .await?;
+    assert!(matches!(
+        outcome,
+        ehr::client::EhrGetByIdOutcome::NotFound { .. }
+    ));
+    assert_eq!(prover.proofs.load(Ordering::SeqCst), 2);
+    Ok(())
+}
+
+/// A second `use_dpop_nonce` challenge is not answered again: the caller sees
+/// the `401`.
+#[tokio::test]
+async fn a_repeated_dpop_nonce_challenge_is_returned() -> TestResult {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .respond_with(
+            ResponseTemplate::new(401)
+                .insert_header("www-authenticate", r#"DPoP error="use_dpop_nonce""#)
+                .insert_header("dpop-nonce", "again"),
+        )
+        .expect(2)
+        .mount(&server)
+        .await;
+    let prover = std::sync::Arc::new(EchoProver::default());
+    let client = client_for(&server)?
+        .with_credentials(Credentials::dpop("tok"))
+        .with_dpop_prover(std::sync::Arc::clone(&prover));
+    let answer = client
+        .forward(Request::new(Method::GET, format!("/ehr/{EHR_ID}")))
+        .await?;
+    assert_eq!(answer.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(prover.proofs.load(Ordering::SeqCst), 2);
+    Ok(())
+}
+
+/// Under Bearer credentials the prover is never asked and no `DPoP` header is
+/// sent.
+#[tokio::test]
+async fn a_bearer_credential_never_asks_the_prover() -> TestResult {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(header("authorization", "Bearer tok"))
+        .respond_with(ResponseTemplate::new(204))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let prover = std::sync::Arc::new(EchoProver::default());
+    let client = client_for(&server)?
+        .with_credentials(Credentials::bearer("tok"))
+        .with_dpop_prover(std::sync::Arc::clone(&prover));
+    let answer = client
+        .forward(Request::new(Method::GET, format!("/ehr/{EHR_ID}")))
+        .await?;
+    assert_eq!(answer.status(), StatusCode::NO_CONTENT);
+    let received = server
+        .received_requests()
+        .await
+        .ok_or("request recording is off")?;
+    assert!(received.iter().all(|r| !r.headers.contains_key("dpop")));
+    assert_eq!(prover.proofs.load(Ordering::SeqCst), 0);
     Ok(())
 }
