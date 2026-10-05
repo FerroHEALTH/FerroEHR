@@ -135,8 +135,8 @@ daily report:
   percentile comes from summed histograms.
 - **`aql`:** AQL execution over the window. `executions` counts the queries
   that reached execution, `slow` the executions that took longer than
-  [`slow_aql_ms`](installation/config-server.md#usage_report) (1000 ms by
-  default), and `p95_ms` and `histogram` are as above.
+  [`slow_aql_ms`](installation/config-server.md#usage_report) (its default
+  is in the configuration reference), and `p95_ms` and `histogram` are as above.
 
 ## What a report never contains
 
