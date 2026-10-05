@@ -2405,9 +2405,10 @@ jobs:
   # pin bump is re-proven by a full `scripts/conformance.sh` run against the
   # committed baseline, and this job is the failing check behind that promise
   # (a rule without one is a wish — reliability.md). A PR that changes
-  # VEREDICTUM_VERSION passes when the `artifacts/`, `specs/` and `schemas/`
-  # git trees are identical at the old and new tag (read from the GitHub API,
-  # failing closed), and otherwise must refresh docs/conformance/ferroehr/ (the
+  # VEREDICTUM_VERSION passes when the `artifacts/`, `specs/`, `schemas/` and
+  # runner (`app/veredictum/src/`) git trees are all identical at the old and
+  # new tag (read from the GitHub API, failing closed), and otherwise must
+  # refresh docs/conformance/ferroehr/ (the
   # run's committed record) or carry the `no-conformance-run` label as an
   # explicit, visible deferral. scripts/checks/veredictum-pin.sh holds the logic;
   # its --self-test drives it against a stub gh first.

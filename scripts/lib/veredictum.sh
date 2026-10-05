@@ -35,11 +35,13 @@
 
 # The pin. Bumping it is a deliberate change: the catalogue, the oracle and the
 # verdict pipeline all move together, so a bump is re-proven by a full
-# `scripts/conformance.sh` run against the committed baseline. Machine-enforced
-# by the `veredictum-pin` CI job (scripts/checks/veredictum-pin.sh, #2867): the
+# `scripts/conformance.sh` run against the committed baseline, unless the
+# catalogue (`artifacts/`), `specs/`, `schemas/` and runner
+# (`app/veredictum/src/`) trees are all unchanged between the old and the new
+# tag. Machine-enforced by the `veredictum-pin` CI job
+# (scripts/checks/veredictum-pin.sh, #2867, #3593): outside that exception the
 # bumping PR refreshes docs/conformance/ferroehr/ or carries the
-# `no-conformance-run` deferral label, unless the `artifacts/`, `specs/` and
-# `schemas/` trees are identical at the old and the new tag (#3593).
+# `no-conformance-run` deferral label.
 VEREDICTUM_VERSION="0.1.5"
 VEREDICTUM_REPO="https://github.com/rubentalstra/Veredictum"
 

@@ -3,16 +3,22 @@
 # SPDX-License-Identifier: BUSL-1.1
 #
 # scripts/checks/veredictum-pin.sh — a Veredictum pin bump carries its
-# acceptance run, unless the bump moves no catalogue content (#2867, #3593).
+# acceptance run, unless the bump moves neither the catalogue nor the runner
+# (#2867, #3593).
 #
 # scripts/lib/veredictum.sh pins the conformance instrument. A PR that changes
 # VEREDICTUM_VERSION between <base> and <head> passes when ONE of these holds:
 #
-#   1. the `artifacts/`, `specs/` and `schemas/` git trees are identical at the
-#      old and the new tag, read from the GitHub API for the repository each
-#      side's VEREDICTUM_REPO names (never a local Veredictum checkout). Equal
-#      tree SHAs mean byte-identical catalogue, spec oracle and schema bundles,
-#      so the committed baseline already describes the new pin;
+#   1. the catalogue (`artifacts/`), the spec oracle (`specs/`), the schema
+#      bundles (`schemas/`) and the runner source (`app/veredictum/src/`) git
+#      trees are all identical at the old and the new tag, read from the GitHub
+#      API for the repository each side's VEREDICTUM_REPO names (never a local
+#      Veredictum checkout). Equal tree SHAs mean byte-identical content, so the
+#      committed baseline already describes the new pin. The runner tree is the
+#      smallest one holding every source file of the `veredictum` binary: the
+#      published crate's `include` list is `src/**` plus its manifest, and the
+#      manifest (like Cargo.lock) carries the release version, so it differs
+#      at every tag and is not compared;
 #   2. the PR commits something under docs/conformance/ferroehr/ (the refreshed
 #      record of a full `bash scripts/conformance.sh` run);
 #   3. the PR carries the `no-conformance-run` label (--no-conformance-run).
@@ -25,14 +31,15 @@
 #        scripts/checks/veredictum-pin.sh --self-test
 #   <base>/<head> are commits of this repository; GH_TOKEN authorises `gh api`.
 #   --self-test drives the guard over a throwaway git repository against a stub
-#   gh: unchanged trees pass, each changed tree fails without record or label,
-#   a changed tree passes with the label or the record, an API failure and a
-#   missing directory fail closed, and an unchanged pin never calls gh.
+#   gh: unchanged trees pass, each of the four changed trees fails without
+#   record or label, a changed tree passes with the label or the record, an API
+#   failure and a missing directory fail closed, and an unchanged pin never
+#   calls gh.
 # Caller: the `veredictum-pin` job in ci.yml.
 
 set -euo pipefail
 
-readonly TREES=(artifacts specs schemas)
+readonly TREES=(artifacts specs schemas app/veredictum/src)
 
 self_test() {
   command -v jq >/dev/null 2>&1 || { echo "veredictum-pin: jq is not installed" >&2; exit 1; }
@@ -48,8 +55,10 @@ self_test() {
   cp "$here/scripts/checks/veredictum-pin.sh" "$fixture/scripts/checks/"
   cp "$here/scripts/lib/guard-args.sh" "$fixture/scripts/lib/"
 
-  # The stub answers `gh api repos/<slug>/git/trees/refs/tags/<tag>`: v1.0.0 is
-  # the old tag, v1.0.1 the new one, and GH_STUB_MODE picks what moved.
+  # The stub answers `gh api repos/<slug>/git/trees/refs/tags/<tag>` (the root
+  # tree) and `gh api repos/<slug>/contents/app/veredictum?ref=refs/tags/<tag>`
+  # (the runner's parent): v1.0.0 is the old tag, v1.0.1 the new one, and
+  # GH_STUB_MODE picks what moved.
   cat > "$stub/gh" <<'STUB'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -62,20 +71,33 @@ fi
 artifacts=1111111111111111111111111111111111111111
 specs=2222222222222222222222222222222222222222
 schemas=3333333333333333333333333333333333333333
-case "${2:-}" in
-  */refs/tags/v1.0.0) ;;
-  */refs/tags/v1.0.1)
-    case "$GH_STUB_MODE" in
-      artifacts) artifacts=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ;;
-      specs) specs=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb ;;
-      schemas) schemas=cccccccccccccccccccccccccccccccccccccccc ;;
-      missing) schemas="" ;;
-      same) ;;
-      *) echo "stub gh: unknown GH_STUB_MODE $GH_STUB_MODE" >&2; exit 2 ;;
-    esac
-    ;;
+runner=4444444444444444444444444444444444444444
+endpoint="${2:-}"
+case "$endpoint" in
+  */git/trees/refs/tags/v1.0.[01]) kind=root ;;
+  */contents/app/veredictum"?ref=refs/tags/v1.0."[01]) kind=runner ;;
   *) echo "gh: Not Found (HTTP 404)" >&2; exit 1 ;;
 esac
+if [ "${endpoint##*/tags/}" = v1.0.1 ]; then
+  case "$GH_STUB_MODE" in
+    artifacts) artifacts=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ;;
+    specs) specs=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb ;;
+    schemas) schemas=cccccccccccccccccccccccccccccccccccccccc ;;
+    runner) runner=dddddddddddddddddddddddddddddddddddddddd ;;
+    missing) schemas="" ;;
+    runner-missing) runner="" ;;
+    same) ;;
+    *) echo "stub gh: unknown GH_STUB_MODE $GH_STUB_MODE" >&2; exit 2 ;;
+  esac
+fi
+if [ "$kind" = runner ]; then
+  entries='{"name":"Cargo.toml","path":"app/veredictum/Cargo.toml","type":"file","sha":"8888888888888888888888888888888888888888"}'
+  if [ -n "$runner" ]; then
+    entries="$entries,{\"name\":\"src\",\"path\":\"app/veredictum/src\",\"type\":\"dir\",\"sha\":\"$runner\"}"
+  fi
+  printf '[%s]\n' "$entries"
+  exit 0
+fi
 entries='{"path":"app","type":"tree","sha":"9999999999999999999999999999999999999999"}'
 entries="$entries,{\"path\":\"artifacts\",\"type\":\"tree\",\"sha\":\"$artifacts\"}"
 entries="$entries,{\"path\":\"specs\",\"type\":\"tree\",\"sha\":\"$specs\"}"
@@ -135,16 +157,19 @@ STUB
   }
 
   expect "unchanged trees pass without record or label" 0 same \
-    "artifacts  1111111111111111111111111111111111111111" "$base" "$bumped"
-  if ! grep -qx "api repos/Example-Org/Instrument/git/trees/refs/tags/v1.0.0" "$log" ||
-    ! grep -qx "api repos/Example-Org/Instrument/git/trees/refs/tags/v1.0.1" "$log"; then
-    echo "::error::--self-test: the guard did not read both tags from the VEREDICTUM_REPO repository:" >&2
-    cat "$log" >&2
-    failed=1
-  fi
-  local tree
-  for tree in "${TREES[@]}"; do
-    expect "a changed ${tree} tree fails without record or label" 1 "$tree" \
+    "app/veredictum/src  4444444444444444444444444444444444444444" "$base" "$bumped"
+  local call
+  for call in "git/trees/refs/tags/v1.0.0" "git/trees/refs/tags/v1.0.1" \
+    "contents/app/veredictum?ref=refs/tags/v1.0.0" "contents/app/veredictum?ref=refs/tags/v1.0.1"; do
+    if ! grep -qxF "api repos/Example-Org/Instrument/${call}" "$log"; then
+      echo "::error::--self-test: the guard did not read ${call} from the VEREDICTUM_REPO repository:" >&2
+      cat "$log" >&2
+      failed=1
+    fi
+  done
+  local mode
+  for mode in artifacts specs schemas runner; do
+    expect "a changed ${mode} tree fails without record or label" 1 "$mode" \
       "commits nothing under docs/conformance/ferroehr/" "$base" "$bumped"
   done
   expect "a changed artifacts tree passes with the label" 0 artifacts \
@@ -154,6 +179,8 @@ STUB
   expect "an API failure fails closed" 1 fail \
     "commits nothing under docs/conformance/ferroehr/" "$base" "$bumped"
   expect "a directory missing at one tag fails closed" 1 missing \
+    "commits nothing under docs/conformance/ferroehr/" "$base" "$bumped"
+  expect "a runner tree missing at one tag fails closed" 1 runner-missing \
     "commits nothing under docs/conformance/ferroehr/" "$base" "$bumped"
   expect "an unchanged pin passes" 0 fail "unchanged" "$base" "$same_pin"
   if [[ -s "$log" ]]; then
@@ -201,10 +228,11 @@ if [[ "$old_version" == "$new_version" ]]; then
   exit 0
 fi
 
-# tree_shas REPO VERSION: one `<dir> <sha>` line per directory in TREES, read
-# from the tag's root tree; fails on anything that is not a complete answer.
+# tree_shas REPO VERSION: one `<path> <sha>` line per path in TREES, read from
+# the tag's root tree or, for a nested path, its parent's contents listing;
+# fails on anything that is not a complete answer.
 tree_shas() {
-  local repo=$1 version=$2 slug json dir sha
+  local repo=$1 version=$2 slug root json path parent sha
   slug="${repo#https://github.com/}"
   slug="${slug%/}"
   slug="${slug%.git}"
@@ -212,18 +240,28 @@ tree_shas() {
     echo "::warning::cannot read the Veredictum trees for version '${version}' from '${repo}' — not a github.com repository URL and a version." >&2
     return 1
   fi
-  if ! json=$(gh api "repos/${slug}/git/trees/refs/tags/v${version}"); then
+  if ! root=$(gh api "repos/${slug}/git/trees/refs/tags/v${version}"); then
     echo "::warning::the GitHub API did not answer for ${slug} tag v${version}." >&2
     return 1
   fi
-  for dir in "${TREES[@]}"; do
-    sha=$(jq -r --arg p "$dir" '[.tree[]? | select(.path == $p and .type == "tree") | .sha] | first // empty' \
-      <<< "$json") || sha=""
-    if [[ ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
-      echo "::warning::${slug} tag v${version} has no '${dir}' tree." >&2
+  for path in "${TREES[@]}"; do
+    parent="${path%/*}"
+    if [[ "$parent" == "$path" ]]; then
+      json=$root
+    elif ! json=$(gh api "repos/${slug}/contents/${parent}?ref=refs/tags/v${version}"); then
+      echo "::warning::the GitHub API did not answer for ${slug} ${parent}/ at tag v${version}." >&2
       return 1
     fi
-    printf '%s %s\n' "$dir" "$sha"
+    # A root tree answers {"tree": [...]} with type "tree"; a contents listing
+    # answers [...] with type "dir". Both carry the full path.
+    sha=$(jq -r --arg p "$path" '[(if type == "array" then . else .tree end)[]?
+      | select(.path == $p and (.type == "tree" or .type == "dir")) | .sha] | first // empty' \
+      <<< "$json") || sha=""
+    if [[ ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+      echo "::warning::${slug} tag v${version} has no '${path}' tree." >&2
+      return 1
+    fi
+    printf '%s %s\n' "$path" "$sha"
   done
 }
 
@@ -232,21 +270,21 @@ unchanged=false
 if old_trees=$(tree_shas "$(pin_value "$base" VEREDICTUM_REPO)" "$old_version") &&
   new_trees=$(tree_shas "$(pin_value "$head" VEREDICTUM_REPO)" "$new_version"); then
   unchanged=true
-  for dir in "${TREES[@]}"; do
-    old_sha=$(sed -n "s/^${dir} //p" <<< "$old_trees")
-    new_sha=$(sed -n "s/^${dir} //p" <<< "$new_trees")
+  for path in "${TREES[@]}"; do
+    old_sha=$(awk -v p="$path" '$1 == p { print $2 }' <<< "$old_trees")
+    new_sha=$(awk -v p="$path" '$1 == p { print $2 }' <<< "$new_trees")
     if [[ "$old_sha" == "$new_sha" ]]; then
       verdict=equal
     else
       verdict=changed
       unchanged=false
     fi
-    printf '  %-9s  %s  %s  %s\n' "$dir" "$old_sha" "$new_sha" "$verdict"
+    printf '  %-18s  %s  %s  %s\n' "$path" "$old_sha" "$new_sha" "$verdict"
   done
 fi
 
 if [[ "$unchanged" == true ]]; then
-  echo "the artifacts, specs and schemas trees are identical at both tags — the committed baseline already covers this pin, no record or label needed — OK."
+  echo "the catalogue, specs, schemas and runner trees are identical at both tags — the committed baseline already covers this pin, no record or label needed — OK."
   exit 0
 fi
 if git diff --name-only "$base" "$head" | grep -q '^docs/conformance/ferroehr/'; then
@@ -257,5 +295,5 @@ if [[ "$has_label" == true ]]; then
   echo "no-conformance-run label set — the deferral is recorded on the PR — OK."
   exit 0
 fi
-echo "::error::This PR bumps VEREDICTUM_VERSION (${old_version:-<absent>} → ${new_version:-<absent>}), the artifacts, specs and schemas trees are not proven identical at both tags, and it commits nothing under docs/conformance/ferroehr/ — re-prove the pin with a full 'bash scripts/conformance.sh' acceptance run whose refreshed record lands in the same PR (scripts/lib/veredictum.sh), or apply the 'no-conformance-run' label to defer the run deliberately." >&2
+echo "::error::This PR bumps VEREDICTUM_VERSION (${old_version:-<absent>} → ${new_version:-<absent>}), the catalogue, specs, schemas and runner trees are not proven identical at both tags, and it commits nothing under docs/conformance/ferroehr/ — re-prove the pin with a full 'bash scripts/conformance.sh' acceptance run whose refreshed record lands in the same PR (scripts/lib/veredictum.sh), or apply the 'no-conformance-run' label to defer the run deliberately." >&2
 exit 1
