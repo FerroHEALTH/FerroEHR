@@ -194,7 +194,7 @@ Apache License 2.0 ([`LICENSE-APACHE-2.0`](LICENSE-APACHE-2.0), SPDX
 codecs and contract derive from the official openEHR machine-readable
 specification artifacts (the ITS XSD, OpenAPI and BMM files), which openEHR
 publishes under Apache-2.0, and the package embeds the official ITS-JSON RM
-schema attributed above. Every file names Vernum Projecten B.V. and the openEHR
+schema attributed above. Every file names Cadasto B.V. and the openEHR
 Foundation as copyright holders.
 
 Version history: up to 0.0.59 the crate was published under Apache-2.0;

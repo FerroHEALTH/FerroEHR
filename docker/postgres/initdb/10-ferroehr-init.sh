@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-FileCopyrightText: Vernum Projecten B.V.
+# SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # Preconfigure the ferroehr database. Runs once, as the bootstrap superuser
 # (POSTGRES_USER), on first initialisation of an empty data directory.

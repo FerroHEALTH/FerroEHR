@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-FileCopyrightText: Vernum Projecten B.V.
+# SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # Regenerate every codegen output and fail if any drifted from the vendored
 # specs (BMM → spec crates; the ITS XML/REST surfaces).

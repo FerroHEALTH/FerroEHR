@@ -1,6 +1,6 @@
 [package]
 name = "openehr-lang"
-version = "0.0.84"
+version = "0.0.85"
 description = "openEHR LANG BMM/P_BMM object model, generated from BMM: generations v1_0 (LANG 1.0.0) and v1_1 (LANG 1.1.0, current; the stable BMM v2.x unit beside the paused BMM3 unit), plus hand-written ODIN/BEL/EL readers"
 edition.workspace = true
 rust-version.workspace = true
@@ -13,7 +13,7 @@ categories = ["parser-implementations", "data-structures"]
 include = ["src/**", "README.md", "LICENSE-APACHE-2.0"]
 
 [dependencies]
-openehr-base = { path = "../openehr-base", version = "0.0.84" }
+openehr-base = { path = "../openehr-base", version = "0.0.85" }
 # Canonical-JSON (de)serialization is EMITTED manual `serde` impls on the
 # generated types (`openehr-codegen -- emit-json`, into `src/json_serde.rs`) —
 # never a derive. `serde_json` also carries the untyped `Value` fields the

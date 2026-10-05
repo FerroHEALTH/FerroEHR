@@ -1,6 +1,6 @@
 # Conformance Statement (SDoC)
 
-Product: FerroEHR 4.3.3 — Vernum Projecten B.V. (urn:rubentalstra:ferroehr)
+Product: FerroEHR 4.3.3 — Cadasto B.V. (urn:rubentalstra:ferroehr)
 Schedule release: cnf-2.0-w2
 
 ## Declared spec versions
@@ -104,4 +104,4 @@ Beside the openEHR resources of ITS-REST 1.1.0, this product serves the route fa
 
 We declare conformance of FerroEHR to the openEHR CNF 2.0 platform test schedule under the declared capabilities, options and technology profile; every claim derives from the committed machine-verified results.
 
-Signed: Ruben Talstra, for Vernum Projecten B.V. (Owner) — 2026-09-16
+Signed: Ruben Talstra, for Cadasto B.V. (Owner) — 2026-10-05

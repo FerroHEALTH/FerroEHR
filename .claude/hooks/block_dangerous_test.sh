@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-FileCopyrightText: Vernum Projecten B.V.
+# SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # Proves block_dangerous.sh in both directions (#3359): a scratch repository on
 # a named branch stands in for the project, each shape is fed as the tool-call

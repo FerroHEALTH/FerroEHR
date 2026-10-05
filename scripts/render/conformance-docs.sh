@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-FileCopyrightText: Vernum Projecten B.V.
+# SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # Regenerate the DERIVED party documents (verdicts.json, the three
 # CONFORMANCE_*.md renders, the shields.io badges) FROM the committed inputs —

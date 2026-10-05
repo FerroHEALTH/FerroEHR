@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-FileCopyrightText: Vernum Projecten B.V.
+# SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # scripts/checks/tracker-status.sh — a book page never says "planned" about a
 # closed issue, and never "shipped" about an open one (#3289).

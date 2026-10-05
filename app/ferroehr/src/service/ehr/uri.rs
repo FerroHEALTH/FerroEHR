@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Vernum Projecten B.V.
+// SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Local resolution of `ehr:` URIs (`DV_EHR_URI` / `LOCATABLE_REF`) to stored

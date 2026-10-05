@@ -1,5 +1,5 @@
 // @generated-from-template templates/openehr-rm/support/measurement/measurement_service_impl.rs — DO NOT EDIT; edit the source and re-run `openehr-codegen -- emit`.
-// SPDX-FileCopyrightText: Vernum Projecten B.V.
+// SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 //! Why the `MEASUREMENT_SERVICE` spec functions are not realized on the value

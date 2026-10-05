@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# SPDX-FileCopyrightText: Vernum Projecten B.V.
+# SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # One copyright holder, stated identically everywhere it is stated.
 #
 # `LICENSE` once said one holder while `REUSE.toml`, the codegen header constant
 # and 2470 file headers said "FerroEHR contributors" (#2325). The Business
-# Source License names Vernum Projecten B.V. as the Licensor and copyright
-# holder (#3435), so every source states that. Asserting two holders means a
+# Source License names Cadasto B.V. as the Licensor and copyright
+# holder (#3435, #3567), so every source states that. Asserting two holders means a
 # downstream redistributor reading a file
 # header and a lawyer reading LICENSE come away with different answers about who
 # holds the copyright — the exact ambiguity per-file licensing exists to remove.
@@ -33,7 +33,7 @@ guard_no_args "$@"
 
 cd "$(dirname "$0")/../.."
 
-readonly HOLDER='Vernum Projecten B.V.'
+readonly HOLDER='Cadasto B.V.'
 
 fail=0
 check() {

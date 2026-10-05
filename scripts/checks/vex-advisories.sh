@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-FileCopyrightText: Vernum Projecten B.V.
+# SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # The VEX drift gate: the published OpenVEX document must be exactly what the
 # generator produces from `deny.toml` + `security/vex/rust-advisories.toml`.

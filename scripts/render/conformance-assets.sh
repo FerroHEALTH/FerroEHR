@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-FileCopyrightText: Vernum Projecten B.V.
+# SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # Regenerate the published conformance visuals (the capability heat grid +
 # the per-chapter outcome bars) FROM the committed party artifacts — the

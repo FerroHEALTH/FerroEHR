@@ -2,7 +2,7 @@
 
 The ITS wire layer, with a strict generated/hand-written split. Know which
 part you are touching before editing anything. Licence `Apache-2.0` (holders
-Vernum Projecten B.V. and openEHR Foundation): the hand-written runtimes, entry
+Cadasto B.V. and openEHR Foundation): the hand-written runtimes, entry
 points and wire-validation dispatcher are here because the generated code
 cannot ship without them. The hand-written Simplified Formats, RM-instance
 validation and SMART scope grammar are `openehr-sdt`, which builds on this

@@ -5,7 +5,7 @@
 | Field | Value |
 | --- | --- |
 | Solution | ferroehr 4.3.0 |
-| Vendor | Vernum Projecten B.V. |
+| Vendor | Cadasto B.V. |
 | Runner | veredictum 0.1.5 |
 | Infrastructure | ixit.json#/environment |
 

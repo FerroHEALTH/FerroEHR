@@ -420,9 +420,9 @@ chapters, the Clippy book, and the Cargo/rustdoc books.)
   use is free for Non-Commercial Purposes only (research, teaching, personal
   use, non-profit or public bodies outside the course of a business), and any
   other production use, hosting for third parties, or distribution for a fee
-  needs a commercial licence from the Licensor (Vernum Projecten B.V., which is
+  needs a commercial licence from the Licensor (Cadasto B.V., which is
   also the sole copyright holder every SPDX header names — owner ruling
-  2026-09-16, issue #3435; Ruben Talstra stays the maintainer credit the
+  2026-09-16, issue #3435, and 2026-10-05, issue #3567; Ruben Talstra stays the maintainer credit the
   banner, `MAINTAINERS.md` and the OCI `authors` label carry), and each version
   becomes Apache License 2.0 four years after publication (`LICENSE` carries
   the parameters; releases up to v4.0.17 and crate versions up to 0.0.56 stay

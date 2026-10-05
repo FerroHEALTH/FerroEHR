@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Vernum Projecten B.V.
+// SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
 //! openEHR ADL 2.4.0 — the hand-written ADL2 engine: ADL2/cADL/ODIN source

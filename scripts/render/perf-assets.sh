@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-FileCopyrightText: Vernum Projecten B.V.
+# SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # Render the published performance SVG assets FROM the committed measurement
 # records (docs/conformance/<sut>/results.json measurements block, plus the

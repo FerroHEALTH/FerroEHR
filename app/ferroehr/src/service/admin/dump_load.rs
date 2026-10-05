@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Vernum Projecten B.V.
+// SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Admin dump/load (SM `I_ADMIN_DUMP_LOAD.export_ehrs` / `load_ehrs`).

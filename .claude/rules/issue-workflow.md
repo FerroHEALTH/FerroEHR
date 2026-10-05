@@ -7,9 +7,8 @@ are `issue-relationships.md`; the public board is `project-board.md`.
 
 ## Type, priority and effort are GitHub's own fields, never labels
 
-Owner decision 2026-10-02 (#3524), the model FerroFED adopted the same day and
-VernumBOEK has used since 2026-09-19. The FerroHEALTH organisation defines all
-three:
+Owner decision 2026-10-02 (#3524), the model FerroFED adopted the same day.
+The FerroHEALTH organisation defines all three:
 
 | Fact | Where it lives | Values | Command |
 |---|---|---|---|

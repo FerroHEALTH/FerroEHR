@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-FileCopyrightText: Vernum Projecten B.V.
+# SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # Generate the committed example skeletons for the CKM journey template
 # pack: upload every vendored OPT to a running ferroehr SUT, fetch its

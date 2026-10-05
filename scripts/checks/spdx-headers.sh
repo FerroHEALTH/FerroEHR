@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-FileCopyrightText: Vernum Projecten B.V.
+# SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # Every first-party Rust source file states its licensing INSIDE itself.
 #
@@ -44,7 +44,7 @@ cd "$(dirname "$0")/../.."
 # specification's own remedy for a file that quotes the syntax it checks. This
 # file's licensing comes from REUSE.toml, like every other script here.
 # REUSE-IgnoreStart
-readonly PROJECT_COPYRIGHT='// SPDX-FileCopyrightText: Vernum Projecten B.V.'
+readonly PROJECT_COPYRIGHT='// SPDX-FileCopyrightText: Cadasto B.V.'
 readonly OPENEHR_COPYRIGHT='// SPDX-FileCopyrightText: openEHR Foundation'
 readonly BUSL_HEADER="$PROJECT_COPYRIGHT
 // SPDX-License-Identifier: BUSL-1.1"

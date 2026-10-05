@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-FileCopyrightText: Vernum Projecten B.V.
+# SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # Vendors the Dutch acts the compliance pages cite into docs/law/nl/, one
 # directory per act, in the format wetten.overheid.nl serves, plus the records

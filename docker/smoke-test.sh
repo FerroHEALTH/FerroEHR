@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-FileCopyrightText: Vernum Projecten B.V.
+# SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # End-to-end smoke test for the two container images (amd64), run against the
 # TRUE end-user artifact: the standalone docker-compose.yml, pinned with an
