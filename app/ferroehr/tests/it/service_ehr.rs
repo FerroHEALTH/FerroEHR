@@ -772,7 +772,7 @@ async fn contribution_commits_a_composition_atomically() {
         "versions": [{
             "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
             "data": composition("Via contribution"),
-            "commit_audit": { "change_type": change_type("249", "creation") }
+            "commit_audit": { "change_type": change_type("249", "creation"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "Dr. Contribution" } }
         }]
     });
     let contribution = svc
@@ -820,7 +820,7 @@ async fn contribution_preserves_the_client_change_type_and_rejects_invalid_combo
                 "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
                     "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
                     "data": composition("v1"),
-                    "commit_audit": { "change_type": change_type("249", "creation") }
+                    "commit_audit": { "change_type": change_type("249", "creation"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }
                 }]
             }),
         )
@@ -844,7 +844,7 @@ async fn contribution_preserves_the_client_change_type_and_rejects_invalid_combo
                     "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
                     "data": composition("v2 corrected"),
                     "preceding_version_uid": ovid_v1,
-                    "commit_audit": { "change_type": change_type("250", "amendment") }
+                    "commit_audit": { "change_type": change_type("250", "amendment"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }
                 }]
             }),
         )
@@ -885,7 +885,7 @@ async fn contribution_preserves_the_client_change_type_and_rejects_invalid_combo
                     "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
                     "data": composition("v3"),
                     "preceding_version_uid": ovid_v2,
-                    "commit_audit": { "change_type": change_type("249", "creation") }
+                    "commit_audit": { "change_type": change_type("249", "creation"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }
                 }]
             }),
         )
@@ -913,7 +913,7 @@ async fn contribution_preserves_the_client_change_type_and_rejects_invalid_combo
                     "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
                     "data": composition("v3"),
                     "preceding_version_uid": ovid_v2,
-                    "commit_audit": { "change_type": change_type("999", "bogus") }
+                    "commit_audit": { "change_type": change_type("999", "bogus"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }
                 }]
             }),
         )
@@ -972,7 +972,7 @@ async fn contribution_rejects_an_invalid_composition() {
         "versions": [{
             "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
             "data": composition_with_bad_category(),
-            "commit_audit": { "change_type": change_type("249", "creation") }
+            "commit_audit": { "change_type": change_type("249", "creation"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "Dr. Contribution" } }
         }]
     });
     let res = svc.create_ehr_contribution(ehr_uuid, body).await;
@@ -1853,7 +1853,7 @@ async fn ehr_folders_indexes_multiple_hierarchies_in_rank_order() {
                 "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
                     "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
                     "data": secondary,
-                    "commit_audit": { "change_type": change_type("249", "creation") }
+                    "commit_audit": { "change_type": change_type("249", "creation"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }
                 }]
             }),
         )
@@ -1900,7 +1900,7 @@ async fn ehr_folders_indexes_multiple_hierarchies_in_rank_order() {
                     "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
                     "data": secondary_v2,
                     "preceding_version_uid": f2_ovid_v1,
-                    "commit_audit": { "change_type": change_type("251", "modification") }
+                    "commit_audit": { "change_type": change_type("251", "modification"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }
                 }]
             }),
         )
@@ -1968,7 +1968,7 @@ async fn logical_delete_of_a_secondary_hierarchy_drops_it_from_folders() {
                 "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
                     "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
                     "data": folder("primary"),
-                    "commit_audit": { "change_type": change_type("249", "creation") }
+                    "commit_audit": { "change_type": change_type("249", "creation"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }
                 }]
             }),
         )
@@ -1988,7 +1988,7 @@ async fn logical_delete_of_a_secondary_hierarchy_drops_it_from_folders() {
                 "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
                     "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
                     "data": folder("secondary"),
-                    "commit_audit": { "change_type": change_type("249", "creation") }
+                    "commit_audit": { "change_type": change_type("249", "creation"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }
                 }]
             }),
         )
@@ -2013,7 +2013,7 @@ async fn logical_delete_of_a_secondary_hierarchy_drops_it_from_folders() {
             "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
                 "lifecycle_state": { "terminology_id": "openehr", "code_string": "523" },
                 "preceding_version_uid": f2_ovid,
-                "commit_audit": { "change_type": change_type("523", "deleted") }
+                "commit_audit": { "change_type": change_type("523", "deleted"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }
             }]
         }),
     )
