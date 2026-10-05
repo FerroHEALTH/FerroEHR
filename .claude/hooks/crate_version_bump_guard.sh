@@ -37,10 +37,18 @@ base="$(git merge-base HEAD origin/main 2>/dev/null || true)"
 
 changed="$(git diff --name-only "$base" HEAD 2>/dev/null || true)"
 packaged_change=0
-if printf '%s\n' "$changed" |
-  grep -qE '^crates/openehr-[a-z]+/(src/|assets/|schemas/json/|README\.md|LICENSE-|Cargo\.toml)'; then
-  packaged_change=1
-fi
+# The packaged-path scope is shared with the CI twin, so the two cannot drift.
+classify="$(dirname "${BASH_SOURCE[0]}")/../../scripts/checks/crate-packaged-paths.sh"
+verdict=0
+printf '%s\n' "$changed" | bash "$classify" || verdict=$?
+case "$verdict" in
+0) packaged_change=1 ;;
+1) ;;
+*)
+  echo "BLOCKED: $classify failed (exit $verdict), so the packaged-content scope could not be judged." >&2
+  exit 2
+  ;;
+esac
 
 # A ROOT [workspace.dependencies] version change alters the PACKAGED manifest
 # of every crates/* member that consumes the entry with `workspace = true` —
@@ -64,7 +72,7 @@ fi
 old_ver="$(git show "$base:crates/openehr-base/Cargo.toml" 2>/dev/null | grep -m1 '^version = ' || true)"
 new_ver="$(grep -m1 '^version = ' crates/openehr-base/Cargo.toml 2>/dev/null || true)"
 if [ -n "$old_ver" ] && [ "$old_ver" = "$new_ver" ]; then
-  echo "BLOCKED: the outgoing commits change packaged content of the published crates/* members without bumping the lockstep 0.0.x crate version (crates-publishing rule; published versions are immutable). Bump all eight 'version' fields + the internal version requirements in this branch — or, if the diff provably does not alter packaged bytes, re-run with FERROEHR_SKIP_CRATE_BUMP_GUARD=1 and apply the 'no-crate-bump' label to the PR." >&2
+  echo "BLOCKED: the outgoing commits change packaged content of the published crates/* members without bumping the lockstep 0.0.x crate version (crates-publishing rule; published versions are immutable). Bump all nine 'version' fields + the internal version requirements in this branch — or, if the diff provably does not alter packaged bytes, re-run with FERROEHR_SKIP_CRATE_BUMP_GUARD=1 and apply the 'no-crate-bump' label to the PR." >&2
   exit 2
 fi
 

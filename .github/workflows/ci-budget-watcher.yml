@@ -9,18 +9,19 @@
 # cliff someone walks off later — and the way that is noticed today is a person
 # waiting on a pull request and saying so, which is not a mechanism.
 #
-# This is the mechanism. It reads the recent SUCCESSFUL main runs of the lanes
-# that carry a shard count, takes the median wall clock of each, and when one
-# crosses its budget it files or updates ONE tracking issue naming the lane, the
-# figure and the constant to raise. The run stays GREEN: a lane that got slower
-# is actionable, not broken. It goes RED only when the PROBE fails — the API
-# unreachable, or an answer jq cannot read.
+# This is the mechanism. scripts/watch/ci-budget.sh reads the recent SUCCESSFUL
+# main runs, takes per lane the median JOB time of its slowest job, and when one
+# crosses its budget this files or updates ONE tracking issue naming the lane,
+# the figure and the remedy. It measures job time, not the run's wall clock,
+# because the wall clock also counts the time jobs wait for a runner (up to 49
+# minutes per job on main in #3490), which no shard count can shorten. The run
+# stays GREEN: a lane that got slower is actionable, not broken. It goes RED
+# only when the PROBE fails — the API unreachable, or an answer jq cannot read.
 #
 # The budgets are deliberately loose. They are not a target to optimise toward;
-# they are the line past which someone should look. Measured on main when this
-# was written: CI a 688 s median, Sonar 1120 s before #3131 sharded its coverage
-# and roughly half that after. A 900 s line leaves both real headroom and still
-# catches a lane that has doubled.
+# they are the line past which someone should look. Measured on main for #3490:
+# test shards a 414 s median, ui-e2e shards 303 s, coverage shards 533 s. A 900 s
+# line leaves real headroom and still catches a lane that has doubled.
 name: CI budget watcher
 
 on:
@@ -43,6 +44,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+      actions: read # list main's runs and their jobs
       issues: write # file/update the one tracking issue below
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -54,32 +56,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          # Lane, workflow file, budget in seconds, and the constant to raise.
-          LANES: |
-            CI ci.yml 900 TEST_SHARDS/UI_E2E_SHARDS in .github/workflows/ci.yml
-            SonarQube Cloud sonar.yml 900 COVERAGE_SHARDS in .github/workflows/sonar.yml
         run: |
           set -euo pipefail
-          : > details.md
-          over=0
-          while read -r lane file budget constant; do
-            [ -n "$lane" ] || continue
-            # The five most recent successful main runs, oldest ignored: the
-            # median is the figure, so one cold-cache outlier cannot raise an
-            # alarm and one warm run cannot silence it.
-            runs=$(gh api "repos/$REPO/actions/workflows/$file/runs?branch=main&status=success&per_page=5" \
-                     --jq '[.workflow_runs[] | ((.updated_at|fromdate) - (.run_started_at|fromdate))] | sort | .[length/2|floor]' 2>/dev/null || echo "")
-            if [ -z "$runs" ] || [ "$runs" = "null" ]; then
-              echo "::error::could not read recent $lane runs from $file" >&2
-              exit 1
-            fi
-            echo "$lane: median ${runs}s (budget ${budget}s)"
-            if [ "$runs" -gt "$budget" ]; then
-              over=1
-              printf -- '- **%s** — median of the last successful main runs: **%ss**, budget %ss. Raise %s.\n' \
-                "$lane" "$runs" "$budget" "$constant" >> details.md
-            fi
-          done <<< "$LANES"
+          bash scripts/watch/ci-budget.sh --repo "$REPO" --out details.md
+          if [ -s details.md ]; then over=1; else over=0; fi
           echo "over=$over" >> "$GITHUB_OUTPUT"
 
       - name: Compose the issue body
@@ -87,12 +67,13 @@ jobs:
         run: |
           set -euo pipefail
           {
-            echo 'The weekly budget watcher found a sharded lane past its budget on main.'
+            echo 'The weekly budget watcher found a CI lane past its budget on main.'
             echo
             cat details.md
             echo
-            echo 'Each lane above carries its shard count as ONE constant, so raising it is a'
-            echo 'single line: the matrix, the job name and the partition divisor all follow it.'
+            echo 'The figure is job time, not the run wall clock, so runner queueing is not in'
+            echo 'it. A sharded lane carries its shard count as ONE constant, so raising it is'
+            echo 'a single line: the matrix, the job name and the partition divisor all follow it.'
             echo
             echo 'Raising the count is not automatically the answer. Check what actually grew: a'
             echo 'lane can cross its budget because the suite grew, because one test got slow'

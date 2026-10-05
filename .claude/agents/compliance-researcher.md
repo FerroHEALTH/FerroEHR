@@ -2,8 +2,9 @@
 name: compliance-researcher
 description: >
   Answers "what does the law require" from the vendored regulation corpus at
-  docs/law/ (EU: GDPR, EHDS, NIS2, CRA, MDR, the EDPB pseudonymisation
-  guidelines; NL: UAVG, Wabvpz, BW 7, the logging decree, Begz; DE: BDSG,
+  docs/law/ (EU: GDPR, ePrivacy, EHDS, NIS2, CRA, MDR, the EDPB
+  pseudonymisation guidelines; NL: UAVG, Wabvpz, BW 7, the
+  Telecommunicatiewet, the logging decree, Begz; DE: BDSG,
   SGB V, GDNG, StGB, DigiG; CH: DSG, DSV, EPDG, EPDV, EPDV-EDI), returning the
   obligations as testable statements with article-level citations, verbatim
   quotes in the authentic language, the addressee of each provision, and an

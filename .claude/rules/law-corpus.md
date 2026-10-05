@@ -110,7 +110,7 @@ Therefore, on every page and in every issue:
 
 ## Layering by jurisdiction
 
-The EU layer (GDPR, EHDS, the EDPB guidelines, NIS2, CRA, MDR) applies to
+The EU layer (GDPR, ePrivacy, EHDS, the EDPB guidelines, NIS2, CRA, MDR) applies to
 every EU deployment and is written once. Each country is one section on top
 of it, in the shape of the Dutch one, read only by a deployment in that
 country: the national acts as a four-column table, the national standards

@@ -349,7 +349,7 @@ SPDX-License-Identifier = "BUSL-1.1"
 
 # ── The vendored regulation corpus ──────────────────────────────────────────
 # docs/law/ carries the legal texts the compliance documentation cites, fetched
-# verbatim by scripts/vendor/law-eu.sh and scripts/vendor/law-nl.sh. Each act
+# verbatim by scripts/vendor/law-{eu,nl,de,ch}.sh. Each act
 # directory's PROVENANCE.md names the identifier, the consolidation date, the
 # source and the licence; the terms themselves are quoted in LICENSES/. These
 # are the publisher's bytes, so `override`: no in-file marking could correct
@@ -363,14 +363,19 @@ precedence = "override"
 SPDX-FileCopyrightText = "European Union"
 SPDX-License-Identifier = "LicenseRef-EUR-Lex-Reuse"
 
-# Two of those acts are CONSOLIDATED texts, and consolidation is the EU's own
-# editorial work: the same legal notice licenses "the editorial content of this
-# website, the summaries of EU legislation and the consolidated texts" under
-# CC BY 4.0. Both sets of obligations are named rather than one being picked.
+# Three of those acts are pinned at a CONSOLIDATED text, and consolidation is
+# the EU's own editorial work: the same legal notice licenses "the editorial
+# content of this website, the summaries of EU legislation and the consolidated
+# texts" under CC BY 4.0. Both sets of obligations are named rather than one
+# being picked. Only the consolidation itself (`text.html`) is named: the OJ
+# documents vendored beside it in the GDPR and ePrivacy directories (the
+# recitals, a corrigendum, an amending directive) are not consolidated texts
+# and stay under the block above alone.
 [[annotations]]
 path = [
-  "docs/law/eu/gdpr/**",
-  "docs/law/eu/mdr/**",
+  "docs/law/eu/gdpr/text.html",
+  "docs/law/eu/mdr/text.html",
+  "docs/law/eu/eprivacy/text.html",
 ]
 precedence = "override"
 SPDX-FileCopyrightText = "European Union"

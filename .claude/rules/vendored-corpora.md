@@ -137,5 +137,7 @@ Vendoring is half a change. The standing owner rule (`.claude/rules/testing.md`
   so an NL re-run always changes the digests even when no act changed a word; a
   re-pin diff there is not evidence of an upstream change by itself.
 - Only the OJ text has legal effect; a consolidation is vendored when EUR-Lex
-  publishes one that folds in an amendment (GDPR, MDR), and the OJ text
-  otherwise (EHDS, NIS2, CRA). Each `PROVENANCE.md` records which and why.
+  publishes one that folds in an amendment (GDPR, MDR, ePrivacy), and the OJ
+  text otherwise (EHDS, NIS2, CRA). Where recitals or an amending act must be
+  citable, the OJ text is vendored beside the consolidation (`oj.html`, e.g.
+  the GDPR recitals, 2009/136/EC). Each `PROVENANCE.md` records which and why.
