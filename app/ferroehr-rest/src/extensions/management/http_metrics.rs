@@ -16,7 +16,9 @@
 //! - [`http_metrics`] — records the HTTP metric family over the `metrics`
 //!   facade: request duration by `(http_route, http_request_method,
 //!   status_class)`, an active-requests gauge, and request/response body sizes,
-//!   all keyed by the route *template* only.
+//!   all keyed by the route *template* only. The same template, duration and
+//!   status feed the usage report's window
+//!   ([`ferroehr::usage_report::window::record_request`]).
 //!
 //! **PHI rule:** every label value here is a closed set — route
 //! templates, method, status class. No ids ever become a label.
@@ -117,7 +119,9 @@ pub async fn http_metrics(req: Request, next: Next) -> Response {
 
     let resp = next.run(req).await;
 
-    let elapsed = started.elapsed().as_secs_f64();
+    let elapsed = started.elapsed();
+    ferroehr::usage_report::window::record_request(&route, elapsed, resp.status());
+    let elapsed = elapsed.as_secs_f64();
     ferroehr::telemetry::metrics::metrics()
         .http_active_requests
         .add(-1, &route_kv);

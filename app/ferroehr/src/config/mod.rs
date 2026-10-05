@@ -109,6 +109,8 @@ pub struct FerroEhrConfig {
     pub demographic: crate::service::demographic::identifier::config::DemographicConfig,
     /// `[cohort]` — the cross-domain cohort-query allow-list and limits.
     pub cohort: crate::service::linkage::cohort::config::CohortConfig,
+    /// `[usage_report]` — the installation report to `FerroPULSE` (on by default).
+    pub usage_report: crate::usage_report::config::UsageReportConfig,
 }
 
 /// The annotated default template `ferroehr config default` prints — a
@@ -132,6 +134,7 @@ impl FerroEhrConfig {
         self.validate_audit(&mut errors);
         self.validate_cohort(&mut errors);
         self.validate_deployment(&mut errors);
+        errors.extend(self.usage_report.errors());
         errors.extend(multimedia_endpoint_errors(&self.multimedia));
         // management.port must differ from the server.bind port.
         if let Some(port) = self.management.port
@@ -1632,6 +1635,50 @@ mod tests {
         );
         c.validate()
             .expect("a well-formed privacy section validates");
+    }
+
+    /// The `[usage_report]` section maps from the environment, the switch
+    /// turns it off, and a plain-HTTP collector off loopback is refused.
+    #[test]
+    fn the_usage_report_section_maps_from_the_environment() {
+        let c = assemble_ok(
+            None,
+            &env(&[
+                ("FERROEHR__USAGE_REPORT__ENABLED", "false"),
+                (
+                    "FERROEHR__USAGE_REPORT__ENDPOINT",
+                    "https://collector.example/v1/report",
+                ),
+                ("FERROEHR__USAGE_REPORT__SLOW_AQL_MS", "250"),
+                ("FERROEHR__USAGE_REPORT__DEPLOYMENT", "compose"),
+            ]),
+            &[],
+        );
+        assert!(!c.usage_report.enabled);
+        assert_eq!(
+            c.usage_report.endpoint,
+            "https://collector.example/v1/report"
+        );
+        assert_eq!(c.usage_report.slow_aql_ms, 250);
+        assert_eq!(
+            c.usage_report.deployment,
+            crate::usage_report::config::Deployment::Compose
+        );
+        c.validate()
+            .expect("a well-formed usage report section validates");
+
+        let plain = assemble_ok(
+            None,
+            &env(&[(
+                "FERROEHR__USAGE_REPORT__ENDPOINT",
+                "http://collector.example/v1/report",
+            )]),
+            &[],
+        );
+        let refused = plain
+            .validate()
+            .expect_err("plain http off loopback is refused");
+        assert!(refused.to_string().contains("usage_report.endpoint"));
     }
 
     /// The national-identifier protection section maps from the environment,

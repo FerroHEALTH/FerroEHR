@@ -1,0 +1,45 @@
+{
+  "window_24h": {
+    "requests_bucket": "1k-10k",
+    "routes": {
+      "composition": null,
+      "query": {
+        "p50_ms": 30,
+        "p95_ms": 310,
+        "p99_ms": 900,
+        "errors_5xx": 2,
+        "histogram": [
+          0,
+          5,
+          40,
+          200,
+          500,
+          300,
+          120,
+          30,
+          4,
+          1,
+          0
+        ]
+      }
+    },
+    "aql": {
+      "executions": 1200,
+      "slow": 3,
+      "p95_ms": 310.0,
+      "histogram": [
+        0,
+        5,
+        40,
+        200,
+        500,
+        300,
+        120,
+        30,
+        4,
+        1,
+        0
+      ]
+    }
+  }
+}

@@ -49,5 +49,6 @@ pub mod storage;
 pub mod system_log;
 pub mod telemetry;
 pub mod templates;
+pub mod usage_report;
 pub mod validation;
 pub mod versioning;

@@ -285,6 +285,7 @@ rather than inherit from a quickstart. See
 | `[server]`, `[server.limits]`, `[server.rate_limit]`, `[server.connection]`, `[server.tls]`, `[server.identity]` | The HTTP listener, request limits, rate limiting, connection bounds, TLS, the deployment's own identity | [Server, database & telemetry](config-server.md) |
 | `[db]` | PostgreSQL connection, pool, migrations | [Server, database & telemetry](config-server.md) |
 | `[log]`, `[telemetry]` | Log rendering and OpenTelemetry export | [Server, database & telemetry](config-server.md) |
+| `[usage_report]` | The daily installation report to FerroPULSE, on by default; what it sends is on the [Usage report](../usage-report.md) page | [Server, database & telemetry](config-server.md#usage_report) |
 | `[auth]`, `[authz]` | Authentication (Basic, OAuth2/OIDC) and RBAC/ABAC | [Authentication & access](config-auth.md) |
 | `[admin]`, `[management]` | The ADMIN API group and the ops-introspection surface | [Authentication & access](config-auth.md) |
 | `[smart]` | SMART App Launch discovery and scope enforcement | [Authentication & access](config-auth.md) |

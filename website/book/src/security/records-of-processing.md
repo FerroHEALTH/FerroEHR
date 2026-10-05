@@ -32,6 +32,15 @@ The identity fields Art. 30(1)(a) asks for are yours in every case:
 | Data protection officer | *yours* |
 | Processors engaged | *yours*: the PostgreSQL operator, and any object store, message broker, terminology server or identity provider the deployment is configured against |
 
+> [!NOTE]
+> One transmission is on by default and is not a processor relationship: the
+> [usage report](../usage-report.md) to FerroPULSE. It carries no patient data
+> and no staff identities. Cadasto B.V. receives it as controller for its own
+> purposes, and its collector stores the IP address each report comes from.
+> Where that makes the report personal data (an instance run by one person
+> from their own connection, for example), list Cadasto B.V. as a recipient in
+> your record, or switch the report off.
+
 ## 1. Storing the clinical record
 
 | Art. 30 field | What the software does |

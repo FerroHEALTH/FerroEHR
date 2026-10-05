@@ -24,9 +24,14 @@ work that stays with the deploying organisation.
 the true one.
 
 > [!NOTE]
-> The FerroEHR project is not your processor. It publishes software; it
-> operates nothing on your behalf and holds none of your data. Where a row says
-> "the processor", it means whoever runs the deployment, which may be you.
+> The FerroEHR project is not your processor. It publishes software and
+> operates nothing on your behalf. The one thing a deployment sends out by
+> default is the [usage report](../usage-report.md): a random instance id, the
+> version, the licence grant type and coarse performance figures, with no
+> patient data. Cadasto B.V. receives it as controller for its own purposes,
+> and its collector also stores the IP address each report comes from. Where a
+> row says "the processor", it means whoever runs the deployment, which may be
+> you.
 
 ## GDPR
 

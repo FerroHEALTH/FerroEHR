@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ferropulse.eu/schemas/report-envelope.v1.json",
+  "title": "FerroPULSE report envelope v1",
+  "description": "One report from one product instance: a start event at each process start, or the daily report with the product's metrics. Contract: docs/report-v1.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "event",
+    "product",
+    "instance_id",
+    "version",
+    "git_sha",
+    "spec_profile",
+    "licence",
+    "deployment",
+    "uptime_s",
+    "db_ok",
+    "migrations_ok",
+    "postgres_major",
+    "cpu_bucket",
+    "memory_bucket"
+  ],
+  "properties": {
+    "schema": { "type": "integer", "const": 1 },
+    "event": { "enum": ["start", "daily"] },
+    "first_start": {
+      "description": "start only: true when this start created the instance_id.",
+      "type": "boolean"
+    },
+    "product": { "enum": ["ferroehr"] },
+    "instance_id": {
+      "description": "A UUID, random per installation, in the hyphenated form.",
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "version": {
+      "description": "SemVer 2.0.0; major, minor and patch have at most 9 digits.",
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})(-(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\\+[0-9a-zA-Z-]+(\\.[0-9a-zA-Z-]+)*)?$"
+    },
+    "git_sha": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" },
+    "spec_profile": {
+      "description": "The product's specification profile name, e.g. stable.",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,31}$"
+    },
+    "licence": { "enum": ["non-commercial", "commercial"] },
+    "deployment": { "enum": ["helm", "compose", "binary", "unknown"] },
+    "uptime_s": {
+      "description": "Seconds, at most ten years.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 315576000
+    },
+    "db_ok": { "type": "boolean" },
+    "migrations_ok": { "type": "boolean" },
+    "postgres_major": { "type": "integer", "minimum": 13, "maximum": 99 },
+    "cpu_bucket": { "enum": ["1-2", "3-4", "5-8", "9-16", "17+"] },
+    "memory_bucket": {
+      "description": "GiB.",
+      "enum": ["<4", "4-8", "8-16", "16-32", "32+"]
+    },
+    "metrics": {
+      "description": "daily only: the product metrics. FerroEHR is the only product with a metrics schema.",
+      "$ref": "ferroehr-metrics.v1.json"
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "event": { "const": "start" } }, "required": ["event"] },
+      "then": { "required": ["first_start"], "properties": { "metrics": false } }
+    },
+    {
+      "if": { "properties": { "event": { "const": "daily" } }, "required": ["event"] },
+      "then": { "required": ["metrics"], "properties": { "first_start": false } }
+    }
+  ]
+}

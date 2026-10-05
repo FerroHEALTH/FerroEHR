@@ -2,7 +2,7 @@
 
 Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1). A single static binary deployed with a hardened-by-default security posture: runs as a non-root, read-only-rootfs workload whose NetworkPolicy admits its serving port only, and that connects to an EXTERNAL PostgreSQL 18 as an unprivileged app role, with schema preparation on its own credential.
 
-![Version: 10.1.7](https://img.shields.io/badge/Version-10.1.7-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 4.3.3](https://img.shields.io/badge/AppVersion-4.3.3-informational?style=flat-square)
+![Version: 10.2.0](https://img.shields.io/badge/Version-10.2.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 4.3.3](https://img.shields.io/badge/AppVersion-4.3.3-informational?style=flat-square)
 
 FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0 at the
 API, AQL 1.1 as the query language, PostgreSQL 18-native storage, shipped as a
@@ -33,7 +33,7 @@ to add; `helm repo add` does not apply to this chart:
 
 ```console
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 10.1.7 \
+  --version 10.2.0 \
   --namespace ferroehr --create-namespace \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=4.3.3
@@ -47,7 +47,7 @@ They are independent SemVer lines and they move independently:
 
 | What | Set with | This release |
 |---|---|---|
-| the **chart** (templates, defaults, this document) | `--version` | `10.1.7` |
+| the **chart** (templates, defaults, this document) | `--version` | `10.2.0` |
 | the **server image** | `image.tag` | `4.3.3` |
 
 `appVersion` is the image the chart defaults to; pinning `image.tag` explicitly
@@ -59,7 +59,7 @@ The chart carries two keyless Sigstore artifacts, and they answer different
 questions. A **cosign signature:** who signed this:
 
 ```console
-cosign verify ghcr.io/ferrohealth/charts/ferroehr:10.1.7 \
+cosign verify ghcr.io/ferrohealth/charts/ferroehr:10.2.0 \
   --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/publish-chart\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -67,7 +67,7 @@ cosign verify ghcr.io/ferrohealth/charts/ferroehr:10.1.7 \
 A **SLSA build provenance attestation:** what source it was built from, and how:
 
 ```console
-gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:10.1.7 \
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:10.2.0 \
   -R FerroHEALTH/FerroEHR
 gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:4.3.3 \
   -R FerroHEALTH/FerroEHR
@@ -401,6 +401,7 @@ Kubernetes: `>=1.36.0-0`
 | terminology.wireCdr | bool | `true` | Point the CDR's `config.terminology.external` at the rendered Service. The chart injects `enabled`, `fail_on_error` and the `default` provider, so the Service address and the workload answering it are one decision. Set it to false to run FerroTERM beside a CDR you wire yourself. While it is true the render refuses every values file that contradicts the injection: `config.terminology.external.providers.default`, an `external.enabled: false`, an `external.fail_on_error` disagreeing with `failOnError` below, and a provider of your own with no `external.routes` entry naming it (an unrouted terminology falls back to `default`, which the injection has taken). |
 | tolerations | list | `[]` | Tolerations for tainted nodes. Empty = none. |
 | topologySpreadConstraints | list | `[]` | Spread replicas across nodes. Empty does NOT mean "no spreading": it means the chart's own default constraint applies — one soft `maxSkew: 1` over `kubernetes.io/hostname`, so two replicas prefer two nodes and a node failure does not take the whole CDR with it. It is `ScheduleAnyway`, not `DoNotSchedule`, so a single-node or capacity-constrained cluster still schedules rather than leaving a pod Pending forever.  A non-empty list REPLACES that default entirely — give the full constraint, including its own `labelSelector`. Add a `topology.kubernetes.io/zone` constraint here if your cluster spans zones; the chart does not assume one (https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/). |
+| usageReport.enabled | bool | `true` | Send the usage report (on by default). false sends nothing. |
 | viewer.affinity | object | `{}` | Affinity. |
 | viewer.auth.oidc.clientId | string | `""` | OAuth2 client id. |
 | viewer.auth.oidc.enabled | bool | `false` | Authenticate viewer users through OIDC. Off means the viewer's own session auth is whatever its defaults provide — acceptable for a private cluster, not for anything reachable by a person who should not see PHI. |

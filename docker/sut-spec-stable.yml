@@ -54,6 +54,9 @@ services:
       FERROEHR__SIGNING__ENABLED: ${FERROEHR__SIGNING__ENABLED:-true}
       FERROEHR__LOG__FORMAT: ${FERROEHR__LOG__FORMAT:-pretty}
       FERROEHR__LOG__FILTER: ${FERROEHR__LOG__FILTER:-info}
+      # As the primary SUT: the harness reports nothing to FerroPULSE by default.
+      FERROEHR__USAGE_REPORT__ENABLED: ${FERROEHR__USAGE_REPORT__ENABLED:-false}
+      FERROEHR__USAGE_REPORT__DEPLOYMENT: compose
       # The SMART resource-server posture of the primary (docker/sut-smart.yml)
       # — same trust, same scope discipline, so the ixit's bearer_mint
       # principals reach this deployment with the same tokens.

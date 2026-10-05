@@ -95,4 +95,5 @@ mod terminology_fhir;
 mod terminology_mtls;
 mod terminology_multi_provider;
 mod typed_body;
+mod usage_report;
 mod validation_opt;
