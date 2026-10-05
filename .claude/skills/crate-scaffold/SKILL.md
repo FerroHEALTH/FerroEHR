@@ -53,7 +53,7 @@ the current three-directory workspace).
    or tracker issue. No `mod` declarations, no placeholder types — an empty
    crate compiles as an empty crate.
 4. **Create the crate's `CLAUDE.md`** (the layered-memory convention, root
-   `CLAUDE.md` §Layered memory): ~20–35 lines — role, discipline
+   `CLAUDE.md` §Repo map): ~20–35 lines — role, discipline
    (generated-vs-hand-written if relevant), never-do rules, gates. Model it
    on the sibling crates' files.
 5. **Verify:** `cargo metadata --no-deps` parses and

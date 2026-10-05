@@ -1,3 +1,7 @@
+---
+paths: ["crates/**", "app/**", "tools/**", "fuzz/**", "Cargo.toml", "clippy.toml", "deny.toml", ".github/workflows/**", "scripts/checks/**"]
+---
+
 # Reliability & safety hard rules (clinical-grade Rust)
 
 This system is a clinical data repository: silent wrong answers are worse
