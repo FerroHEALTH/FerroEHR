@@ -344,8 +344,7 @@ async fn attestation_error_cases() {
 
 /// A `666|attestation|` member states its `lifecycle_state` like every other
 /// member (#3590). SM `master03-common_package.adoc` §Version Update Semantics:
-/// "The `lifecycle_state` must be supplied in all cases", and ITS-REST
-/// `schemas/ehr/UpdateVersion.yaml` lists it under `required`. A member without
+/// "The `lifecycle_state` must be supplied in all cases". A member without
 /// one is the 400; a stated code outside the openEHR `version_lifecycle_state`
 /// group is the 422 every member's out-of-group state gets; the twin stating
 /// `532|complete|` commits the attestation.
@@ -505,6 +504,138 @@ async fn attestation_without_committer_is_refused() {
         err.message
             .starts_with("versions[0]: UPDATE_ATTESTATION.committer is required"),
         "got {err:?}"
+    );
+}
+
+/// A committer that does not decode as a canonical `PARTY_PROXY` (a bare
+/// string, an empty object) does not match the `UPartyProxy` schema
+/// `schemas/common/UpdateAudit.yaml` types it with, so it is the "syntactically
+/// invalid … content" of `responses/400_CONTRIBUTION.yaml` on the CONTRIBUTION
+/// audit and on a member `commit_audit` alike (#3550). A decodable committer
+/// that breaks its own RM invariants stays the 422.
+#[tokio::test]
+async fn non_canonical_committer_is_refused_with_400() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr_id = create_ehr(&svc).await;
+    let ehr_uuid: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
+
+    let body = |audit_committer: Value, member_committer: Value| {
+        json!({
+            "versions": [{
+                "commit_audit": {
+                    "change_type": change_type("249", "creation"),
+                    "committer": member_committer
+                },
+                "lifecycle_state": change_type("532", "complete"),
+                "data": composition("committer shape")
+            }],
+            "audit": {
+                "change_type": change_type("249", "creation"),
+                "committer": audit_committer
+            }
+        })
+    };
+
+    for bad in [json!("Dr Jones"), json!({})] {
+        let err = svc
+            .create_ehr_contribution(ehr_uuid, body(bad.clone(), committer("author")))
+            .await
+            .expect_err("a non-canonical CONTRIBUTION committer is refused");
+        assert_eq!(
+            err.status,
+            CallStatusType::PreconditionViolation,
+            "{bad}: got {err:?}"
+        );
+        assert!(
+            err.message
+                .starts_with("CONTRIBUTION.audit.committer is not a canonical PARTY_PROXY"),
+            "{bad}: got {err:?}"
+        );
+
+        let err = svc
+            .create_ehr_contribution(ehr_uuid, body(committer("author"), bad.clone()))
+            .await
+            .expect_err("a non-canonical member committer is refused");
+        assert_eq!(
+            err.status,
+            CallStatusType::PreconditionViolation,
+            "{bad}: got {err:?}"
+        );
+        assert!(
+            err.message
+                .starts_with("versions[0]: commit_audit.committer is not a canonical PARTY_PROXY"),
+            "{bad}: got {err:?}"
+        );
+    }
+
+    // The decodable twin: a PARTY_IDENTIFIED with no identity at all breaks
+    // `Basic_validity` (RM common `party_identified.adoc` §Invariants), the
+    // semantic 422.
+    let err = svc
+        .create_ehr_contribution(
+            ehr_uuid,
+            body(committer("author"), json!({ "_type": "PARTY_IDENTIFIED" })),
+        )
+        .await
+        .expect_err("an identity-less member committer is refused");
+    assert_eq!(err.status, CallStatusType::ContentInvalid, "got {err:?}");
+}
+
+/// A `666|attestation|` member whose `UPDATE_ATTESTATION` payload fails its
+/// own decoding is refused naming that member's index, like every other
+/// member refusal. The payload's coded `reason` is outside the openEHR
+/// `attestation reason` group (RM common `attestation.adoc` §Invariants,
+/// `Reason_valid`), the semantic 422, attributed to `versions[1]`.
+#[tokio::test]
+async fn attestation_member_refusal_names_its_index() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr_id = create_ehr(&svc).await;
+    let ehr_uuid: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
+    let ovid = svc
+        .create_composition(ehr_uuid, uv(&composition("attested"), "249", None))
+        .await
+        .expect("composition_create")
+        .version_uid();
+
+    let err = svc
+        .create_ehr_contribution(
+            ehr_uuid,
+            json!({
+                "versions": [
+                    {
+                        "commit_audit": {
+                            "change_type": change_type("249", "creation"),
+                            "committer": committer("author")
+                        },
+                        "lifecycle_state": change_type("532", "complete"),
+                        "data": composition("first member")
+                    },
+                    {
+                        "preceding_version_uid": { "value": ovid },
+                        "lifecycle_state": change_type("532", "complete"),
+                        "commit_audit": {
+                            "change_type": change_type("666", "attestation"),
+                            "committer": committer("senior reviewer"),
+                            "reason": change_type("999", "nonsense"),
+                            "is_pending": false
+                        }
+                    }
+                ],
+                "audit": {
+                    "change_type": change_type("251", "modification"),
+                    "committer": committer("author")
+                }
+            }),
+        )
+        .await
+        .expect_err("an attestation member with an out-of-group reason is refused");
+    assert_eq!(err.status, CallStatusType::ContentInvalid, "got {err:?}");
+    assert!(
+        err.message
+            .contains("versions[1]/ATTESTATION.reason.defining_code"),
+        "the refusal names the member index, got {err:?}"
     );
 }
 
@@ -1099,9 +1230,10 @@ async fn member_commit_audit_keeps_its_committer_and_shares_the_commit_instant()
 /// `schemas/common/UpdateAudit.yaml` `required: [change_type, committer]` types
 /// every `versions[i].commit_audit` (`schemas/ehr/UpdateVersion.yaml`), SM
 /// `openehr_platform/master03-common_package.adoc` §Version Update Semantics
-/// names only `time_committed` and `system_id` as server-generated, and
-/// `operations/contribution_create.yaml` declares no 422. A `null` committer is
-/// the same absence; the twin stating one commits.
+/// names only `time_committed` and `system_id` as server-generated, so the
+/// body is the "syntactically invalid … content" of
+/// `responses/400_CONTRIBUTION.yaml`. A `null` committer is the same absence;
+/// the twin stating one commits.
 #[tokio::test]
 async fn member_commit_audit_without_committer_is_refused() {
     let db = testkit::db().await.expect("testkit database");
@@ -2162,9 +2294,12 @@ async fn an_undeclared_contribution_member_key_is_refused_with_its_path() {
 /// [change_type, committer]`). The ITS-REST docs text is silent on the
 /// contribution BODY — its "None of these headers are mandatory" sentence
 /// governs the direct routes' header merge — so the released OAS grounds the
-/// requirement. master06 §Contributions calls the aggregate value approximate
-/// and "not expected to be used as a computable value", which is precisely why
-/// the server must not invent one under the client's name.
+/// requirement, and a body missing a schema-required member is the
+/// "syntactically invalid … content" of `responses/400_CONTRIBUTION.yaml`: each
+/// refusal below is the 400 (#3550). master06 §Contributions calls the
+/// aggregate value approximate and "not expected to be used as a computable
+/// value", which is precisely why the server must not invent one under the
+/// client's name.
 #[tokio::test]
 async fn contribution_audit_change_type_is_required_not_derived() {
     let db = testkit::db().await.expect("testkit database");
@@ -2196,8 +2331,8 @@ async fn contribution_audit_change_type_is_required_not_derived() {
         .expect_err("a CONTRIBUTION audit without a change type must be refused");
     assert_eq!(
         err.status,
-        CallStatusType::ContentInvalid,
-        "the refusal is the 422 content-invalid row, got {err:?}"
+        CallStatusType::PreconditionViolation,
+        "the refusal is the 400 row, got {err:?}"
     );
     assert!(
         err.message.contains("CONTRIBUTION.audit.change_type"),
@@ -2208,8 +2343,7 @@ async fn contribution_audit_change_type_is_required_not_derived() {
     // member): an audit naming a change type but NO committer is refused; the
     // server never invents the committing identity. The refusal is the 400
     // (#3550): a body missing a schema-required member is syntactically
-    // invalid content (`responses/400_CONTRIBUTION.yaml`), and
-    // `operations/contribution_create.yaml` declares no 422.
+    // invalid content (`responses/400_CONTRIBUTION.yaml`).
     let err = svc
         .create_ehr_contribution(
             ehr_uuid,
@@ -2230,13 +2364,21 @@ async fn contribution_audit_change_type_is_required_not_derived() {
         "the refusal names the missing attribute, got {err:?}"
     );
 
-    // …and an entirely absent audit is the same refusal (the change type is
-    // absent either way).
+    // …and an entirely absent audit is the same 400, `NewContribution.yaml`
+    // listing `audit` under `required`.
     let err = svc
         .create_ehr_contribution(ehr_uuid, json!({ "versions": [member()] }))
         .await
         .expect_err("a CONTRIBUTION with no audit at all must be refused");
-    assert_eq!(err.status, CallStatusType::ContentInvalid, "got {err:?}");
+    assert_eq!(
+        err.status,
+        CallStatusType::PreconditionViolation,
+        "got {err:?}"
+    );
+    assert!(
+        err.message.starts_with("CONTRIBUTION.audit is required"),
+        "the refusal names the missing audit, got {err:?}"
+    );
 
     // The valid twin: the client states its own change type and the commit
     // succeeds, storing that code verbatim.

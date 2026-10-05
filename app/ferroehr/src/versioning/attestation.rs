@@ -387,11 +387,10 @@ impl AttestationInput {
     /// over `UpdateAudit.yaml`; the server never supplies one.
     ///
     /// # Errors
-    /// [`ServiceError::BadRequest`] when `committer` is absent (the
-    /// [`required_committer`] refusal); the [`AttestationParts::decode`]
-    /// rejections; [`ServiceError::Unprocessable`] when `committer` is not a
-    /// canonical `PARTY_PROXY` or `description` is neither a string nor a
-    /// canonical `DV_TEXT`.
+    /// [`ServiceError::BadRequest`] when `committer` is absent or is not a
+    /// canonical `PARTY_PROXY` (the [`required_committer`] refusals); the
+    /// [`AttestationParts::decode`] rejections; [`ServiceError::Unprocessable`]
+    /// when `description` is neither a string nor a canonical `DV_TEXT`.
     pub(crate) fn decode(partial: &Value) -> Result<Self, ServiceError> {
         let committer = required_committer(Some(partial), "UPDATE_ATTESTATION")?;
         // description: the inherited AUDIT_DETAILS.description (0..1). Both

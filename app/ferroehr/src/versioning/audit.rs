@@ -457,14 +457,17 @@ pub(crate) fn party_proxy(committer: &Value) -> Result<PartyProxy, ServiceError>
 /// `UML/classes/update_audit.adoc` types it 1..1, and SM
 /// `openehr_platform/master03-common_package.adoc` §Version Update Semantics
 /// names only `time_committed` and `system_id` as server-generated. A missing
-/// one (absent or `null`) is therefore a body that does not match its schema,
-/// the "syntactically invalid content" of `responses/400_CONTRIBUTION.yaml`.
-/// `owner` names the audit in the refusal (`CONTRIBUTION.audit`,
-/// `commit_audit`, `UPDATE_ATTESTATION`).
+/// one (absent or `null`), or one that does not decode as the canonical
+/// `PARTY_PROXY` its `UPartyProxy.yaml` schema describes (a string, an empty
+/// object), is therefore a body that does not match its schema, the
+/// "syntactically invalid … content" of `responses/400_CONTRIBUTION.yaml`. A
+/// decoded committer that breaks its own RM invariants is the semantic `422`
+/// of [`validate_commit_audit`]. `owner` names the audit in the refusal
+/// (`CONTRIBUTION.audit`, `commit_audit`, `UPDATE_ATTESTATION`).
 ///
 /// # Errors
-/// [`ServiceError::BadRequest`] when `committer` is absent or `null`;
-/// [`ServiceError::Unprocessable`] when it is not a canonical `PARTY_PROXY`.
+/// [`ServiceError::BadRequest`] when `committer` is absent, `null`, or not a
+/// canonical `PARTY_PROXY`.
 pub(crate) fn required_committer(
     audit: Option<&Value>,
     owner: &str,
@@ -473,7 +476,17 @@ pub(crate) fn required_committer(
         .and_then(|a| a.get("committer"))
         .filter(|c| !c.is_null())
     {
-        Some(supplied) => party_proxy(supplied),
+        Some(supplied) => {
+            openehr_its::json::from_canonical_value::<PartyProxy>(supplied).map_err(|e| {
+                ServiceError::bad_request(
+                    format!(
+                        "{owner}.committer is not a canonical PARTY_PROXY ({e}): UPDATE_AUDIT \
+                         types it UPartyProxy (ITS-REST schemas/common/UpdateAudit.yaml)"
+                    ),
+                    e,
+                )
+            })
+        }
         None => Err(ServiceError::precondition(format!(
             "{owner}.committer is required: UPDATE_AUDIT requires committer (ITS-REST \
              schemas/common/UpdateAudit.yaml; SM update_audit.adoc committer 1..1), and \
@@ -783,6 +796,39 @@ mod tests {
                 other => panic!("{bad}: expected Unprocessable, got {other:?}"),
             }
         }
+    }
+
+    /// A client-supplied committer that does not decode as a canonical
+    /// `PARTY_PROXY` does not match its `UPartyProxy` schema
+    /// (`schemas/common/UpdateAudit.yaml`), so [`required_committer`] refuses it
+    /// with the 400 of `responses/400_CONTRIBUTION.yaml` ("syntactically invalid
+    /// … content"); a decoded committer breaking its own invariants stays the
+    /// 422 [`commit_audit_rejects_committer_without_identity`] pins.
+    #[test]
+    fn required_committer_refuses_a_non_canonical_committer_as_400() {
+        for bad in [
+            json!("Dr Jones"),
+            json!({}),
+            json!(42),
+            json!({ "_type": "PARTY_RELATED", "name": "Mum" }),
+        ] {
+            let audit = json!({ "committer": bad });
+            match required_committer(Some(&audit), "commit_audit") {
+                Err(ServiceError::BadRequest(e)) => assert!(
+                    e.message
+                        .starts_with("commit_audit.committer is not a canonical PARTY_PROXY"),
+                    "{bad}: {e:?}"
+                ),
+                other => panic!("{bad}: expected the 400 refusal, got {other:?}"),
+            }
+        }
+        // The decodable twin: an identity-less PARTY_IDENTIFIED decodes here
+        // and is left to the invariant check.
+        let decodable = json!({ "committer": { "_type": "PARTY_IDENTIFIED" } });
+        assert!(
+            required_committer(Some(&decodable), "commit_audit").is_ok(),
+            "a canonical PARTY_PROXY decodes"
+        );
     }
 
     #[test]

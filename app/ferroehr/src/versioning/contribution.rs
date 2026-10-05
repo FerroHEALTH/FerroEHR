@@ -418,8 +418,10 @@ fn domain_pool(cx: &impl CommitEnv, party_only: bool) -> &sqlx::PgPool {
 /// rejections per version; [`ServiceError::Unprocessable`] for a malformed
 /// CONTRIBUTION `uid`, an empty `versions` list, a scope-mismatched kind, or a
 /// failed content/audit validation; [`ServiceError::BadRequest`] when the
-/// CONTRIBUTION `audit`, a member `commit_audit` or an attestation states no
-/// `committer`, when a member states no `lifecycle_state`, or when a
+/// CONTRIBUTION `audit` or its `change_type` is absent, when that audit, a
+/// member `commit_audit` or an attestation states no `committer` or one that
+/// is not a canonical `PARTY_PROXY`, when a member states no
+/// `lifecycle_state`, or when a
 /// body-referenced modification target does not exist (the `400_CONTRIBUTION`
 /// scope); [`ServiceError::Conflict`] for a duplicate EHR singleton/directory;
 /// plus the commit-engine placement/storage/signing errors.
@@ -668,35 +670,43 @@ fn parse_supplied_uid(body: &Value) -> Result<Option<Uuid>, ServiceError> {
 
 /// Parses the CONTRIBUTION's own audit and validates it as an RM instance.
 ///
-/// Its change type and committer are the client's account of the change set
-/// and both are required: RM common `audit_details.adoc` §Attributes types each
-/// 1..1 on the mandatory `CONTRIBUTION.audit`, and the released commit schema
-/// requires both (`schemas/common/UpdateAudit.yaml` `required: [change_type,
-/// committer]`). An absent change type is refused rather than derived, master06
-/// §Contributions calling the aggregate "approximate, and not expected to be
-/// used as a computable value". An omitted `system_id` is the server's own
-/// (`UpdateAudit.yaml`: "when omitted the server sets its own value"), and every
-/// member audit that omits one takes this value (RM common master06 §Committal
-/// and Audits). `time_committed` is never read from the body: the commit sets
-/// it once for the whole set.
+/// The audit, its change type and its committer are the client's account of
+/// the change set and all three are required: the released commit schema lists
+/// `audit` under `required` (`schemas/ehr/NewContribution.yaml`) and types it
+/// `UPDATE_AUDIT` (`schemas/common/UpdateAudit.yaml` `required: [change_type,
+/// committer]`), so a body missing any of them is the "syntactically invalid
+/// … content" of `responses/400_CONTRIBUTION.yaml`. An absent change type is
+/// refused rather than derived, master06 §Contributions calling the aggregate
+/// "approximate, and not expected to be used as a computable value". An
+/// omitted `system_id` is the server's own (`UpdateAudit.yaml`: "when omitted
+/// the server sets its own value"), and every member audit that omits one
+/// takes this value (RM common master06 §Committal and Audits).
+/// `time_committed` is never read from the body: the commit sets it once for
+/// the whole set.
 ///
 /// # Errors
-/// [`ServiceError::BadRequest`] when the committer is absent;
-/// [`ServiceError::Unprocessable`] when the change type is absent, is not a
-/// code of the openEHR `audit_change_type` group, the committer is not a valid
-/// `PARTY_PROXY`, or the audit fails its RM invariants.
+/// [`ServiceError::BadRequest`] when the audit, its change type or its
+/// committer is absent, or the committer is not a canonical `PARTY_PROXY`;
+/// [`ServiceError::Unprocessable`] when the change type is not a code of the
+/// openEHR `audit_change_type` group or the audit fails its RM invariants.
 fn parse_contribution_audit(cx: &impl CommitEnv, body: &Value) -> Result<AuditInput, ServiceError> {
-    let audit = body.get("audit");
+    let Some(audit) = body.get("audit").filter(|a| !a.is_null()) else {
+        return Err(ServiceError::precondition(
+            "CONTRIBUTION.audit is required: the released commit schema lists it under \
+             required (ITS-REST schemas/ehr/NewContribution.yaml), so a body without one \
+             is syntactically invalid content (responses/400_CONTRIBUTION.yaml)"
+                .to_owned(),
+        ));
+    };
     let token = audit
-        .and_then(|a| a.get("change_type"))
+        .get("change_type")
         .and_then(coded_value)
         .ok_or_else(|| {
-            ServiceError::content_invalid(
-                Violation::new(
-                    "is required on a CONTRIBUTION audit — the change set's own change \
-                     type is the client's account of it and is never derived by the server",
-                )
-                .with_path("CONTRIBUTION.audit.change_type"),
+            ServiceError::precondition(
+                "CONTRIBUTION.audit.change_type is required: UPDATE_AUDIT lists it under \
+                 required (ITS-REST schemas/common/UpdateAudit.yaml), and the server never \
+                 derives the change set's own change type on the client's behalf"
+                    .to_owned(),
             )
         })?;
     let code = change_type_code(&token).ok_or_else(|| {
@@ -709,7 +719,7 @@ fn parse_contribution_audit(cx: &impl CommitEnv, body: &Value) -> Result<AuditIn
         )
     })?;
     let audit = parse_audit(
-        audit,
+        Some(audit),
         code,
         &cx.effective_system_id(),
         true,
@@ -729,10 +739,11 @@ fn parse_contribution_audit(cx: &impl CommitEnv, body: &Value) -> Result<AuditIn
 ///
 /// # Errors
 /// [`ServiceError::Unprocessable`] for a member-borne version identity, an
-/// unclassifiable change type, an unparsable preceding target, an invalid
-/// audit, or (on a `666|attestation|` member) a `lifecycle_state` outside the
-/// openEHR `version_lifecycle_state` group; [`ServiceError::precondition`] for a
-/// `commit_audit` without `committer`, a member carrying
+/// unclassifiable change type, an unparsable preceding target, an audit
+/// failing its RM invariants, or (on a `666|attestation|` member) a
+/// `lifecycle_state` outside the openEHR `version_lifecycle_state` group;
+/// [`ServiceError::precondition`] for a `commit_audit` whose `committer` is
+/// absent or not a canonical `PARTY_PROXY`, a member carrying
 /// `other_input_version_uids` (not a member of `UPDATE_VERSION` on this wire;
 /// merge provenance is produce-only) or a member omitting the required
 /// `lifecycle_state`, the `666|attestation|` member included (SM master03
@@ -787,12 +798,13 @@ fn plan_version(
             "versions[{index}]: lifecycle_state is required on every CONTRIBUTION \
              version, an attestation (666) member included (SM master03 §Version \
              Update Semantics: \"The lifecycle_state must be supplied in all \
-             cases\"; ITS-REST UpdateVersion.yaml lists it under required)"
+             cases\")"
         )));
     }
     if action == Action::Attest {
-        // An attestation commits no version, so no later commit step checks the
-        // stated state against the `version_lifecycle_state` group.
+        // NOTE: no openEHR spec governs the meaning of lifecycle_state on a member
+        // that creates no version (SM master03 §Version Update Semantics), so a 666
+        // member's state is checked against its group here and never stored.
         resolve_lifecycle(lifecycle_state.clone()).map_err(|e| e.for_version_member(index))?;
     }
     if action == Action::Delete {
@@ -877,9 +889,12 @@ fn require_kind(
 /// instead of committing a new one (master06 §Contributions).
 ///
 /// # Errors
-/// [`ServiceError::precondition`] for a missing target, [`ServiceError::Unprocessable`]
-/// for a scope-mismatched kind, a missing `commit_audit` (the
-/// `UPDATE_ATTESTATION` payload), or an undecodable attestation.
+/// [`ServiceError::precondition`] for a missing target;
+/// [`ServiceError::Unprocessable`] for a scope-mismatched kind; the
+/// [`crate::versioning::attestation::AttestationInput::decode`] refusals of the
+/// `UPDATE_ATTESTATION` payload, each naming the member index;
+/// [`ServiceError::Internal`] when the plan entry lost its parsed target or its
+/// `commit_audit`, both of which [`plan_version`] already required.
 fn plan_attestation(
     kinds: &std::collections::HashMap<VoId, Kind>,
     v: PlannedVersion,
@@ -892,17 +907,20 @@ fn plan_attestation(
     };
     let kind = require_kind(kinds, vo_id).map_err(|e| e.for_version_member(v.index))?;
     check_kind_scope(kind, party_only).map_err(|e| e.for_version_member(v.index))?;
-    let partial = v.commit_audit.ok_or_else(|| {
-        ServiceError::content_invalid(
-            Violation::new("is required on a 666 attestation version (the UPDATE_ATTESTATION)")
-                .with_path("commit_audit"),
-        )
-    })?;
+    // `plan_version` refuses a member whose `commit_audit` states no committer,
+    // an absent `commit_audit` included, so a missing payload here is a lost
+    // invariant rather than a client error.
+    let Some(partial) = v.commit_audit else {
+        return Err(ServiceError::exception(
+            "attest plan entry lost its UPDATE_ATTESTATION commit_audit".to_owned(),
+        ));
+    };
     Ok(PendingAttest {
         vo_id,
         kind,
         expected,
-        partial: crate::versioning::attestation::AttestationInput::decode(&partial)?,
+        partial: crate::versioning::attestation::AttestationInput::decode(&partial)
+            .map_err(|e| e.for_version_member(v.index))?,
     })
 }
 
@@ -1267,9 +1285,9 @@ fn accompanying(
 /// ([`crate::versioning::attestation::complete_attestation`]) owns it.
 ///
 /// # Errors
-/// [`ServiceError::BadRequest`] when `committer` is absent;
-/// [`ServiceError::Unprocessable`] when the committer is not a canonical
-/// `PARTY_PROXY`, when the `_type` names neither `AUDIT_DETAILS` nor its
+/// [`ServiceError::BadRequest`] when `committer` is absent or is not a
+/// canonical `PARTY_PROXY`; [`ServiceError::Unprocessable`] when the `_type`
+/// names neither `AUDIT_DETAILS` nor its
 /// `ATTESTATION` subtype, when `description` is neither a string nor a
 /// canonical `DV_TEXT`, or when the `ATTESTATION`-declared attributes fail
 /// their RM invariants
@@ -1281,9 +1299,9 @@ fn parse_audit(
     attestable: bool,
     owner: &str,
 ) -> Result<AuditInput, ServiceError> {
-    // NOTE: RM common master06 §Committal and Audits + SM `update_version.adoc`
-    // (`audit` 1..1 per version): a member's own required committer is stored as
-    // stated, never replaced by the CONTRIBUTION audit's.
+    // NOTE: SM `update_version.adoc` `audit` 1..1 + `update_audit.adoc` `committer`
+    // 1..1; no openEHR spec governs a member committer that differs from the
+    // CONTRIBUTION's, so the one each audit states is stored as stated.
     let committer = required_committer(audit, owner)?;
     // Both released spellings of `description` are accepted: the ITS-REST
     // `UDvText` object (`schemas/data_types/UDvText.yaml`) and the SM
