@@ -1,3 +1,7 @@
+---
+paths: ["scripts/gh/**"]
+---
+
 # Issue relationships (GitHub native sub-issues + dependencies)
 
 The tracker is GitHub Issues (`CLAUDE.md` §Issue workflow). GitHub exposes four

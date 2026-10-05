@@ -15,6 +15,10 @@ Turns an open tracker issue into an actionable plan — the planning step of
 the issue workflow (`CLAUDE.md`). Does not do the work itself; that is a
 separate step the caller takes after seeing the plan.
 
+First Read `.claude/rules/issue-workflow.md`, `.claude/rules/issue-relationships.md`
+and `.claude/rules/project-board.md`: they are path-scoped to `scripts/gh/**`,
+so they are not in context until read.
+
 ## Steps
 
 1. **Read the tracker**: `gh issue list --state open` (the SessionStart dump

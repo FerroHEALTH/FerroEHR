@@ -1,3 +1,7 @@
+---
+paths: ["scripts/gh/**", ".github/ISSUE_TEMPLATE/**"]
+---
+
 # Issue fields: type, priority, effort and labels
 
 The tracker is GitHub Issues (`CLAUDE.md` §Issue workflow is the loop). This
@@ -98,3 +102,61 @@ were left as they were (owner decision), so they carry no type or priority.
 - GraphQL mutations — https://docs.github.com/en/graphql/reference/mutations
 - REST issues (`type` on create/update) — https://docs.github.com/en/rest/issues/issues
 - Issue forms (`type:` key) — https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-issue-forms
+
+## Upstream reports, spec-version triage, CI labels and milestones
+
+the **type** is the native issue type (`Bug`↔fix, `Feature`↔feat, `Task`,
+which carries exactly ONE work-kind label —
+`documentation`/`chore`/`refactor`/`perf`/`test`/`ci` — naming its commit
+type), the **priority** is the organisation's `Priority` issue field
+(`Urgent` drop everything / `High` current focus / `Medium` normal / `Low`
+backlog) and the **effort** its `Effort` field (`Low` one sitting / `Medium`
+one PR across crates or with a fixture / `High` more than one PR or a held
+design; it never reorders the worklist). All three are set with
+`scripts/gh/fields.sh`; the `bug`/`enhancement`/`P0`–`P3` labels are retired
+and `scripts/gh/labels.sh` deletes them. **Domain/area** labels:
+`spec:RM…CNF`, `spec-update`, `spec-impact:*` (triage adds exactly one),
+`viewer` (the FerroEHR Viewer, its own OCI image), and `upstream-report`
+(dark red — an OUTBOUND report of a defect/contradiction/silence in the
+released openEHR specs; owner ruling 2026-08-01, replacing the deleted
+`docs/conformance/upstream-reports.md` ledger). An `upstream-report` issue IS
+the report: it opens with a plain summary, then `## What the released spec
+says` (citations), `## What this implementation does`, `## Resolution sought
+upstream` — never ticket-draft framing. Unverified reports sit in the
+verification milestone with an acceptance checklist; **verification is
+TERMINAL (owner ruling 2026-08-21, the full lifecycle in
+`.claude/rules/cnf-triage.md`)**: a report re-verified first-hand as genuine
+gains `upstream-confirmed` (amber; NOT `blocked-upstream`, which keeps its
+narrower meaning: resolved in Jira, normative text not yet published) and —
+once its divergence is fully adjudicated in-repo — CLOSES as the standing
+outbound record (the closed issue stays the register's `upstream_issue`
+target; a confirmed report stays open only while something in-repo is blocked
+on it via a native edge); a refuted one is closed and its `ambiguities.yaml`
+entry removed or re-grounded (case made gating). The register (Veredictum's
+`artifacts/registers/ambiguities.yaml`) stays the machine layer and points at
+the issue (`upstream_issue`), never the other way only. **Spec-version
+triage** (on `spec-update` issues): `spec-version:current` = fix inside a
+pinned line, act immediately; `spec-version:next` = lands in a different
+upstream release, collected under an on-demand `upstream:<comp>-<ver>` label
+(adoption per the `docs/VERSIONS.md` §Spec version policy). **PR-flow
+labels** (CI escape hatches, on PRs not issues): `no-changelog`
+(changelog-guard; genuinely invisible changes only), `no-ui-visual-change`
+(ui-screenshot-guard; viewer source change with zero visual effect — see
+`.claude/rules/leptos-ui.md` §10), `no-crate-bump` (crate-version-guard; a
+`crates/*` diff that provably does not alter packaged bytes — see
+`.claude/rules/crates-publishing.md`), and `no-conformance-run`
+(veredictum-pin-guard; a `VEREDICTUM_VERSION` bump whose acceptance run is
+deliberately deferred — #2867). These guards read labels from the PR event
+payload; `ci.yml` listens for the `labeled`/`unlabeled` types (#2777), so
+applying a label raises a fresh run with the current label set by itself — a
+RE-RUN of the failed job still re-uses its stale payload, so let the new run
+report instead. A label referenced by CI must exist in the repo (`gh label
+create`) — a missing label fails silently at apply time, not in the workflow.
+**Milestones = releases** (vX.Y.Z): a milestone is a delivery promise — a
+`blocked-upstream` issue carries NO milestone (it cannot promise; the
+watcher's auto-unblock note says to assign one at pickup); a release is cut
+when its milestone reaches zero open issues (procedure in
+`.claude/rules/changelog.md` — changelog rename, version bumps + goldens,
+release PR, tag on the merge commit, close the milestone, ensure the next one
+exists). Issues + git survive `/clear` and `/compact`; the built-in todo tool
+is session-scoped, so the tracker is the durable layer.

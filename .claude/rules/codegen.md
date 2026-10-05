@@ -78,3 +78,33 @@ A hand edit is silently overwritten on the next `emit` and fails the CI
   `openehr-its` runtime (`xml/runtime.rs`, `rest/runtime.rs`), `openehr-sdt`
   (Simplified Formats + RM-instance validation), `openehr-query` (AQL parser). These follow
   `rust-style.md`.
+
+## Generation modules
+
+**Generation modules (owner design 2026-08-05, #1936/#1941):** every
+generated BMM crate carries its generations as version-named top modules
+(`openehr_base::v1_2`/`v1_3`, `openehr_rm::v1_1`/`v1_2` — the released
+generations emitted beside the development pins, #1942 —,
+`openehr_lang::v1_0`/`v1_1` — the released 1.0.0 generation (emitted
+faithfully from the released BMM, defects verbatim, #1946) beside the
+development generation whose SPECIFICATION UNITS `bmm`+`bmm3` sit side by
+side, prelude = the stable units —, `openehr_am::v1_4`/`v2_4`,
+`openehr_term::v3_1`), driven by the codegen composition table
+(`tools/openehr-codegen/src/plan/composition.rs` — the single authority for
+which generations exist and their paired dependency generations), each crate
+with an emitted `Generation` enum as the ONLY pin authority (derived
+`Default` — the `#[default]` variant IS the current generation —, per-variant
+`const fn spec_version()`/`as_str()`, `FromStr`/`Display` on the module
+token; no version constants exist in the generated crates). The crate prelude
+re-exports the CURRENT generation only; older generations are reached by full
+module path; generated cross-crate references bind the PAIRED dependency
+generation by full defining-module path (never a prelude). Hand-written
+`*_impl.rs` siblings live inside their generation module — and a sibling that
+is IDENTICAL across generations modulo generation paths is a generation-twin
+TEMPLATE (`tools/openehr-codegen/templates/<crate>/…`, #1964): one
+hand-written source, per-generation copies stamped by `emit` under
+`@generated-from-template` (per-generation overrides at
+`templates/<crate>/overrides/<module>/…` carry their adjudication; the
+`hand_written_twins_are_templates` invariant refuses new unconverted twins);
+cross-generation runtime
+(`openehr_base::{serde_support,containers,validate}`) stays top-level.

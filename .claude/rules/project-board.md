@@ -1,3 +1,7 @@
+---
+paths: ["scripts/gh/**"]
+---
+
 # The public roadmap board (GitHub Project v2)
 
 The tracker is GitHub Issues (`CLAUDE.md` §Issue workflow); milestones are the

@@ -16,6 +16,10 @@ The closing step of the issue workflow (`CLAUDE.md`). Only run this once
 the issue's work is actually finished — this skill verifies and records, it
 does not decide the work is done on your behalf.
 
+First Read `.claude/rules/issue-workflow.md`, `.claude/rules/issue-relationships.md`,
+`.claude/rules/project-board.md` and `.claude/rules/changelog.md`: they are
+path-scoped, so they are not in context until read.
+
 ## Steps
 
 1. **Identify the issue being closed** (the user names it, or it is the

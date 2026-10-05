@@ -1,75 +1,76 @@
 # Memory index
 
-- [Licence is BUSL 1.1](license-busl.md) — application+tooling are Business Source License 1.1 since 2026-09-03 (non-commercial production only), the eight openehr-* crates stay Apache-2.0, holder Cadasto B.V. since 2026-10-05 (#3567, Vernum Projecten B.V. before it, #3435; Ruben Talstra = maintainer credit only), and Cadasto handles the commercial licence and business questions at info@cadasto.com (#3572), source-available never "open source"; grant text is owner legal text; stale-MIT guard in licensing-declarations.sh
-- [Sibling products](sibling-products.md) — ferroehr / FerroTERM (was notio) / FerroBRIDGE / FerroCKM (BUSL, the CKM; shares the app layer) (Apache-2.0, the FHIR (FHIRconnect) + OMOP (OMOCL) bridge; FerroEHR #2646 + #2652 moved there); never edit a sibling from here
-- [Owner work style](owner-work-style.md) — defer nothing; no quick fixes (proper rewrites welcome); orchestrator codes context-heavy work itself; big-bang rewrites converge once at the end (no intermediate stubs); specs re-read first-hand; never copy a number forward; rerun `scripts/conformance.sh` after runner/validation merges
-- [Autonomous phase flow](autonomous-phase-flow.md) — standing: PR+merge each phase, checkout main, start the next without asking; never branch while finished work sits unmerged
-- [Merge on local gates](merge-on-local-gates.md) — local gates green (fmt+clippy+nextest+CNF validate) → merge the PR immediately; CI is a post-merge backstop
-- [Tick the PR licensing box](tick-pr-licensing-box.md) — every PR body I open carries the ticked contribution-licensing line; leaving it turns the PR red on a formality
-- [Max 2 concurrent workers](max-two-concurrent-workers.md) — implementation subagents run in pairs, never wider
-- [One worker per phase, hard fences](one-worker-per-phase-hard-fences.md) — within a refactor phase run ONE worker with explicit file fences; reverts are orchestrator-only; back up before any reset
-- [Concurrent sessions share this tree](concurrent-sessions-shared-tree.md) — explicit-pathspec commits, scoped gates, worktree-isolate parallel agents; ONE `./target` for everything incl. the IDE; `cargo clean` above ~30 GB
-- [Session workflow gotchas](session-workflow-gotchas.md) — a conflicting PR runs no CI (check mergeable + pending after every push); background-task ~30min kill (nohup+caffeinate+Monitor), attribution/vendored-spec hook traps, guard labels need a fresh PR event, conformance.sh EXIT trap wipes the seed, heredocs for `gh` bodies, nextest container-group filters, cold image build (post crate-bump) needs CARGO_BUILD_JOBS=1; idle workers with detached runs need an orchestrator Monitor + SendMessage wake; SNOMED/Snowstorm probe never runs locally (owner hold #2236); mutation-proof exits asserted UNPIPED; context-size via fresh buildx builder; failed release legs: read the log first — rerun for transient infra (draft+idempotent uploads), fix-forward + dispatch recovery for broken code
-- [En-route findings always filed](en-route-findings-always-filed.md) — out-of-scope discoveries become tracker issues AND tractable ones are fixed in the same branch; in an audit program, self-filed issues (verification findings, guard gaps) are fixed before the next chapter starts — filing is never permission to move on
-- [Foundation-first sequencing](foundation-first-sequencing.md) — a systemic defect class gets a full-repo sweep phase before the next audit unit (blocked-by edge + P1); generated types construct through validated `new() -> Result`, containers carry their spec bounds
-- [Spec-chapter audit programs](spec-chapter-audit-programs.md) — milestone=component, issue=chapter, sub-issue per §X.Y section, whole-codebase `/spec-audit`, fix-first cadence; small wire cases find escape classes
-- [Component fixes ride the current patch](component-fixes-ride-current-patch.md) — open program milestone → the fix goes there; closed program → it joins the CURRENT patch milestone and ships that cycle
-- [Console wire spec-check](console-wire-spec-check.md) — every console feature claims the server wire is spec-right; verify each consumed endpoint against the vendored docs text at integration; fix divergences in the CDR (+ a CNF case), never in the UI
-- [Admin UI deprioritized](admin-ui-deprioritized.md) — server first; compose SUT stacks with explicit service names (`up -d --wait ferroehr`), never bare `up`
-- [Served OpenAPI is native](served-openapi-is-native.md) — `ferroehr-rest` serves ONLY its own utoipa-generated document; the vendored ITS-REST OAS is codegen input and a subordinate wire source, never imported/served; update `#[utoipa::path]` with any wire change
-- [Comments: less is more](comments-less-is-more.md) — RFC 505/1574 style with hard budgets: NOTE = citation + one sentence, TODO(#NNNN), essays live on the issue/PR
-- [CNF design record is permanent](cnf-strategy-doc-kept-permanently.md) — the CNF 2.0 design record lives permanently in Veredictum as its root `ARCHITECTURE.md` (§8.14 perf-class + journey model); read it there before performance work
-- [Measurement environment discipline](measurement-environment-discipline.md) — idle box (load < 2, no OneDrive/ESET/IDE churn; the 2026-09-16 record was taken at load 50+ and is void) + envelope-matched compose limits for measured runs; compare buffer counts before wall-clock; lane renames update the ixit containers blocks
-- [Verified commits hard rule](verified-commits-hard-rule.md) — every commit signed incl. CI: workflows create commits ONLY via the Git Data API, never local `git commit` + push
-- [Commit-subject attribution tokens](commit-subject-attribution-tokens.md) — the commit-msg hook deletes lines containing attribution literals; keep them out of commit/PR text
-- [Official CLI/tooling first](official-cli-tooling-first.md) — use the official CLI for tool-managed artifacts (sqlx-cli etc.); never hand-name or hand-roll
-- [Verify crate versions from live sources](verify-crate-versions-live.md) — never pin from training data; check crates.io/docs.rs first
-- [SVG text: keep owner wording](svg-text-owner-wording.md) — never reword/rewrap approved chart text off px estimates; adjust geometry, wording is fixed
-- [Published crates cite specs only](published-crates-cite-specs-only.md) — openehr-* sources never reference AMB ids or instrument paths; adjudications state decision + released ground in place
-- [BMM v3 on hold](bmm3-on-hold.md) — record #1920; v3-only issues get on-hold + blocked-by #1920, never the worklist; tracker-state only, landed code stays
-- [Multi-gen refactor: no legacy carried](multi-generation-refactor-no-legacy.md) — residue found under #1936 is removed or filed as a sub-issue of #1936, never kept
-- [No worktrees — one checkout](no-worktrees-single-checkout.md) — every change in the main tree on the current branch; one worker at a time with explicit fences, never `isolation: worktree`
-- [K8s testing uses a compose postgres](k8s-testing-uses-compose-postgres.md) — database runs in docker compose on the host and the chart points at it; never deploy postgres into the test cluster
-- [This is a rewrite, not inherited code](rewrite-not-inherited-code.md) — existing code is never assumed correct; read the ancestor spec + existing code before implementing; breaking changes preferred over preserving bad code; distrust instruments too
-- [One Closes keyword per issue; current milestone always](pr-closes-one-keyword-per-issue.md) — "Closes #1, #2, #3" closes only #1, verify after merge; every en-route issue goes in the CURRENT milestone, never the next
-- [Migrations are append-only](migrations-are-append-only.md) — shipped = present at the latest release tag (owner 2026-09-15): never edit a released migration (sqlx checksums lock installations out), unreleased files are fixed in place, guarded by migration-immutability.sh
-- [Rewrite fn docs on update](rewrite-fn-docs-on-update.md) — always fully rewrite a touched function's doc comment; include the /// block in old_string so docs never orphan
-- [UNLOGGED node rejected](unlogged-node-rejected.md) — owner ruling 2026-08-25: node stays LOGGED; never re-propose reduced-durability storage tiers (measured record on #2698)
-- [Public comments: one and short](public-comments-one-and-short.md) — external-facing threads get exactly ONE short plain comment; edit it rather than adding another
-- [No AI tells in prose](no-ai-tells-in-prose.md) — HARD RULE, strict since 2026-09-15: a fixed banned list of AI words, transitions, hedges, buzzwords and closing formulas, no flattery or padding, no claiming something was done that was not; applies to Discourse replies, issue comments, PR bodies and pages
-- [Gate parity + caller sweeps](gate-parity-and-caller-sweeps.md) — local gate lines must mirror CI flags verbatim (the rustdoc --document-private-items escape); tightening a shared check obligates sweeping ALL its workflow callers (the #2806 chart-leg break)
-- [Veredictum: other session](veredictum-other-session.md) — never touch the Veredictum checkout/tracker/dispatches from here AND never read the local ~/.cache/ferroehr-veredictum cache; every read from the official remote repo at the pinned tag; FerroEHR-side pin/integration stays fair game
-- [Sandbox runs on Hetzner; DSN in the box .env](sandbox-dsn-is-neon-injected.md) — deploy/hosted is the posture; standalone Neon DIRECT endpoint; DSN only in the box .env + the sandbox-reseed secret; hosted env = SSH only; posture travels in the ferroehr image; never dial the -pooler host from the CDR
-- [History rewrite 2026-08-31](history-rewrite-2026-08-31.md) — main starts at one EHRbase import root and is disjoint from every tag up to v4.0.13; affects the v4.0.14 cut (describe, changelog compare link, generated notes); backup dropped, only the tags hold the old lineage
-- [No lint suppressions in source](no-lint-suppressions-in-source.md) — fix the finding, never `#[expect]`/`#[allow]` in production code; suppressions are test-only, the one exception being a lint firing wholly inside a third-party macro expansion
-- [Main ruleset review lifted](main-ruleset-review-lifted.md) — approvals 0 on main PERMANENTLY (owner 2026-09-12): Claude reviews every PR in-session, then `gh pr merge --auto`; never `--admin`; milestones from v4.3.0 worked like v4.2.0
-- [Slim feature lanes: gate helpers](slim-feature-lanes-gate-helpers.md) — a helper used only from a feature-gated rest module needs the same cfg; run the three --no-default-features clippy combos before pushing rest/server changes
-- [Never soft-reset onto a moved base](never-soft-reset-onto-moved-base.md) — squash only after merging main (a soft reset onto a moved base reverts what main gained); check `git diff --stat HEAD origin/main` before pushing; zsh path lists as arrays
-- [expect_used in tests/it helpers](expect-used-in-integration-test-helpers.md) — a new tests/it file needs the file-level `#![expect(clippy::expect_used)]`; clippy.toml's allow-*-in-tests covers only #[test] fns
-- [Book numbers are generated includes](book-numbers-are-generated-includes.md) — a measured number on the site comes from a scripts/render generator over a committed record into website/book/generated + {{#include}}; the stale-numbers gate refuses hand-typed ms/s figures
-- [Licence stamp follows the FerroLICENCE design](licence-stamp-follows-ferrolicence-design.md) — the stamp copy must equal design.md §7 (raw-material HMAC key, `ferroehr/unlicensed/v1`); verify changes with `ferrolicence attest` over minted ids; KATs pin the design
-- [Compliance corpus direction](compliance-corpus-direction.md) — owner aim: first source-available CDR checkable against vendored EU/NL/DE/CH regulation texts (#3290); a separate compliance-researcher agent, never merged with cnf-triage/spec-researcher; never claim "compliant"
-- [Next milestone in a fresh session](next-milestone-in-fresh-session.md) — after a release cut stop and let the owner open the next milestone in a clean session; OVERRIDDEN once (2026-09-14): continue straight into v4.3.1 (the greenfield storage rewrite) after the v4.3.0 cut
-- [Sandbox VETDF: resolved at 231/91](sandbox-vetdf-remaining-two.md) — v4.2.5 sandbox seeds fully beside FerroTERM; the two LOINC-side refusals are 2013 CKM source defects kept verbatim and pinned; re-adjudicate the pin whenever a served edition changes
-- [Law corpus publisher facts](law-corpus-publisher-facts.md) — GII builddate pin (no dated URL), recht.bund.de BGBl PDF, Fedlex filestore + SPARQL consolidations, English non-binding; scope-before-substance traps
-- [No stress test in v4.3.0](no-stress-test-v430.md) — owner ruling 2026-09-13: no stress/perf measurement this cycle; #3098 (LTO) moved to v4.3.1 rather than landing unmeasured
-- [Research reports go to files](research-reports-go-to-files.md) — every research deliverable is written to a file at once (agent writes it + repo appendix); transcripts are not durable; the PG18/prior-art reports for #3337 were lost once and re-run
-- [Boot refusals vs chart postures](boot-refusals-vs-chart-postures.md) — check a new config-combination refusal against deploy/helm/ci/*-values.yaml first; the chart-boot job crash-loops on a refused shipped posture (the #3360 tenancy+eventing case became a warning)
-- [New issues go to the next patch milestone](new-issues-go-to-next-patch-milestone.md) — owner 2026-09-14: issues filed in a cycle go to the current or next patch milestone (v4.3.1), never v5.x, even for breaking reworks
-- [Storage rewrite is greenfield](storage-rewrite-is-greenfield.md) — owner 2026-09-14 on #3337: no production installations, so each domain gets a new set of natural one-concern migration files (never one squashed baseline) replacing the old set outright, old databases are refused at boot, no copy tool; immutability set aside for that one PR
-- [Rewrite needs baseline and harness](rewrite-needs-baseline-and-harness.md) — owner 2026-09-14: a performance rewrite ships its measurement program (harness, committed pre-rewrite baseline that BLOCKS the rewrite, plan-shape tests, after comparison, dispatch lane); file them with the design decomposition
-- [Platform shape: single tenant, FerroBRIDGE](platform-shape-single-tenant-ferrobridge.md) — owner drawing 2026-09-14: one instance per tenant (no tenancy in the rewrite, #3378), secondary use via FerroBRIDGE over batch AQL (no research domain, #3379), RLS not kept as defence in depth; seams FerroPIX/SMART/SYS/FED in v4.3.2 (#3377); FHIR overlap #3386 open
-- [API commits are unsigned](api-commits-are-unsigned.md) — never commit via the GitHub API with the user's token (vigilant mode flags it); stage in the scratchpad and commit locally signed when the checkout frees
-- [Release PR: chart bump + third-party images](release-pr-chart-and-third-party-images.md) — bump `Chart.yaml` `version` on every release; a chart-leg refusal on a sibling image tag (ferroterm) is a lane bug, publish-chart.yml dispatch is the recovery lane
-- [No CNF perf runs during the rewrite](no-cnf-perf-runs-during-rewrite.md) — owner 2026-09-15/16: no hour-long perf or stress session in v4.3.1 at all; the wire before/after against the 4.3.0 image is #3452 in v4.3.2; the harness comparison (#3350) is the only measurement this cycle
-- [Rewrite breaks everything; shipped = released](rewrite-breaks-everything-shipped-means-released.md) — owner 2026-09-15: only breaking changes in the rewrite; files on main but not at the latest release tag are editable; no shims, placeholder roles or rename migrations
-- [Design record updated in the same turn](design-record-updated-in-the-same-turn.md) — owner 2026-09-15: every design-changing decision updates the plan, the parent's design comment (edit in place) and the affected issues in the same turn; a stale record is legacy
-- [OPT 1.4 format is the XSD](opt14-format-is-the-xsd.md) — the ITS-XML schema is the only definition of OPT 1.4 XML; schema beats the AOM abstract model for document validity (ordinal symbol value, #3395/#3401); other implementations' leniency is never an argument
-- [Many issues per PR](many-issues-per-pr.md) — owner 2026-09-16: batch six to ten related issues per PR, one Closes line each; one issue per PR is too slow
-- [v5 withdrawn; rewrites are v4.3.1/v4.3.2](v5-withdrawn-rewrites-are-v431-v432.md) — owner 2026-09-16: no v5.x milestone for rework; open design decisions are decided and recorded in-session, not deferred
-- [Update-branch is unsigned](update-branch-is-unsigned.md) — never `gh pr update-branch` or the web button: API merge commits are unsigned and the main ruleset blocks them; rebase locally and force-with-lease
-- [History rewrite 2026-09-16](history-rewrite-2026-09-16.md) — main rewritten to drop the #2708 contributor commit, 371 commits re-signed, tags v4.0.14..v4.3.0 off-lineage until the v4.3.1 cut; never resolve "latest release" by ancestry; owner pushes with --force-with-lease
-- [Release cut 2026-09-16 lessons](release-cut-2026-09-16-lessons.md) — scripted signed tag after raising the gpg cache, crates-io approval via pending_deployments, the sandbox leg fails across a storage-generation boundary (nightly reseed recovers; the classifier refuses dispatching the wipe)
-- [New crate first publish is standalone](new-crate-first-publish-standalone.md) — a new openehr-* crate publishes alone via a local dirty manifest against the published siblings (never committed), then the lockstep steps once more; openehr-sdt 0.0.68 → set at 0.0.69 (2026-09-24)
-- [Repo moved to FerroHEALTH](repo-moved-to-ferrohealth.md) — 2026-10-01 transfer (#3516): ghcr.io/ferrohealth lowercase literal, /orgs/ package API, board orgs/FerroHEALTH/projects/2, ≤ v4.3.1 signed as rubentalstra/FerroEHR, v4.3.2 the first release under FerroHEALTH
-- [Native issue types and fields](native-issue-types-and-priority.md) — since 2026-10-02 type/priority/effort are the native issue type + org Priority/Effort fields via scripts/gh/fields.sh (file with `fields.sh new`); bug/enhancement/P0-P3 deleted; only open issues migrated; read issues with --json, never --comments
+- [Licence is BUSL 1.1](license-busl.md) — app+tooling BUSL-1.1, six openehr-* crates Apache-2.0; holder Cadasto B.V.; never call it "open source"
+- [Sibling products](sibling-products.md) — FerroTERM / FerroBRIDGE / FerroCKM are separate repos; never edit a sibling from here
+- [Owner work style](owner-work-style.md) — defer nothing, proper rewrites over quick fixes, specs re-read first-hand, never copy a number forward
+- [Autonomous phase flow](autonomous-phase-flow.md) — PR+merge each phase, checkout main, start the next without asking
+- [Merge on local gates](merge-on-local-gates.md) — local gates green → merge immediately; CI is a post-merge backstop
+- [Tick the PR licensing box](tick-pr-licensing-box.md) — every PR body carries the ticked contribution-licensing line
+- [Max 2 concurrent workers](max-two-concurrent-workers.md) — implementation subagents run in pairs at most
+- [One worker per phase, hard fences](one-worker-per-phase-hard-fences.md) — one worker per refactor phase with file fences; reverts orchestrator-only
+- [Concurrent sessions share this tree](concurrent-sessions-shared-tree.md) — explicit-pathspec commits, scoped gates, one `./target`, `cargo clean` above ~30 GB
+- [Session workflow gotchas](session-workflow-gotchas.md) — CI/PR/background-task/release-leg traps; read before pushing or running long jobs
+- [En-route findings always filed](en-route-findings-always-filed.md) — file out-of-scope findings and fix tractable ones in the same branch
+- [Foundation-first sequencing](foundation-first-sequencing.md) — a systemic defect class gets a full-repo sweep before the next audit unit
+- [Spec-chapter audit programs](spec-chapter-audit-programs.md) — milestone=component, issue=chapter, sub-issue per section, fix-first
+- [Component fixes ride the current patch](component-fixes-ride-current-patch.md) — closed program → the fix joins the current patch milestone
+- [Console wire spec-check](console-wire-spec-check.md) — verify each endpoint the viewer consumes against the docs text; fix the CDR, not the UI
+- [Admin UI deprioritized](admin-ui-deprioritized.md) — server first; compose with explicit service names, never bare `up`
+- [Served OpenAPI is native](served-openapi-is-native.md) — serve only the utoipa document; vendored OAS is codegen input only
+- [Comments: less is more](comments-less-is-more.md) — RFC 505/1574 budgets; essays live on the issue/PR
+- [CNF design record is permanent](cnf-strategy-doc-kept-permanently.md) — Veredictum `ARCHITECTURE.md`; read it before performance work
+- [Measurement environment discipline](measurement-environment-discipline.md) — idle box, envelope-matched compose limits for measured runs
+- [Verified commits hard rule](verified-commits-hard-rule.md) — every commit signed; CI commits only via the Git Data API
+- [Commit-subject attribution tokens](commit-subject-attribution-tokens.md) — the commit-msg hook deletes lines with attribution literals
+- [Official CLI/tooling first](official-cli-tooling-first.md) — official CLIs for tool-managed artifacts (sqlx-cli …)
+- [Verify crate versions from live sources](verify-crate-versions-live.md) — check crates.io/docs.rs before pinning
+- [SVG text: keep owner wording](svg-text-owner-wording.md) — adjust geometry, never approved chart wording
+- [Published crates cite specs only](published-crates-cite-specs-only.md) — openehr-* sources never reference AMB ids or instrument paths
+- [BMM v3 on hold](bmm3-on-hold.md) — v3-only issues get on-hold + blocked-by #1920
+- [Multi-gen refactor: no legacy carried](multi-generation-refactor-no-legacy.md) — #1936 residue removed or filed under #1936
+- [No worktrees — one checkout](no-worktrees-single-checkout.md) — all changes in the main tree; never `isolation: worktree`
+- [K8s testing uses a compose postgres](k8s-testing-uses-compose-postgres.md) — never deploy postgres into the test cluster
+- [This is a rewrite, not inherited code](rewrite-not-inherited-code.md) — existing code never assumed correct; breaking changes over bad code
+- [One Closes keyword per issue; current milestone always](pr-closes-one-keyword-per-issue.md) — "Closes #1, #2" closes only #1
+- [Migrations are append-only](migrations-are-append-only.md) — never edit a migration present at the latest release tag
+- [Rewrite fn docs on update](rewrite-fn-docs-on-update.md) — fully rewrite a touched fn's doc comment; include `///` in old_string
+- [UNLOGGED node rejected](unlogged-node-rejected.md) — never re-propose reduced-durability storage tiers
+- [Public comments: one and short](public-comments-one-and-short.md) — one short comment on external threads; edit, don't add
+- [No AI tells in prose](no-ai-tells-in-prose.md) — HARD RULE: the banned word/hedge/flattery list applies to all human-read prose
+- [Gate parity + caller sweeps](gate-parity-and-caller-sweeps.md) — local gates mirror CI flags verbatim; sweep every caller of a tightened check
+- [Veredictum: other session](veredictum-other-session.md) — never touch the Veredictum checkout or local cache; read the remote at the pinned tag
+- [Sandbox runs on Hetzner; DSN in the box .env](sandbox-dsn-is-neon-injected.md) — Neon direct endpoint, never the -pooler host
+- [History rewrite 2026-08-31](history-rewrite-2026-08-31.md) — main disjoint from tags ≤ v4.0.13
+- [No lint suppressions in source](no-lint-suppressions-in-source.md) — fix findings; `#[expect]`/`#[allow]` only in tests or third-party macro expansions
+- [Main ruleset review lifted](main-ruleset-review-lifted.md) — review in-session, then `gh pr merge --auto`; never `--admin`
+- [Slim feature lanes: gate helpers](slim-feature-lanes-gate-helpers.md) — run the three `--no-default-features` clippy combos before rest/server pushes
+- [Never soft-reset onto a moved base](never-soft-reset-onto-moved-base.md) — merge main before squashing; check `git diff --stat HEAD origin/main`
+- [expect_used in tests/it helpers](expect-used-in-integration-test-helpers.md) — new tests/it files need file-level `#![expect(clippy::expect_used)]`
+- [Book numbers are generated includes](book-numbers-are-generated-includes.md) — measured numbers on the site come from scripts/render generators
+- [Licence stamp follows the FerroLICENCE design](licence-stamp-follows-ferrolicence-design.md) — stamp copy equals design.md §7; KATs pin it
+- [Compliance corpus direction](compliance-corpus-direction.md) — CDR checkable against vendored EU/NL/DE/CH law; never claim "compliant"
+- [Next milestone in a fresh session](next-milestone-in-fresh-session.md) — after a release cut, stop for a clean session (overridden once)
+- [Sandbox VETDF: resolved at 231/91](sandbox-vetdf-remaining-two.md) — two LOINC-side refusals are pinned source defects
+- [Law corpus publisher facts](law-corpus-publisher-facts.md) — GII, BGBl, Fedlex fetching traps
+- [No stress test in v4.3.0](no-stress-test-v430.md) — #3098 (LTO) moved rather than landing unmeasured
+- [Research reports go to files](research-reports-go-to-files.md) — write research deliverables to a file at once
+- [Boot refusals vs chart postures](boot-refusals-vs-chart-postures.md) — check new refusals against deploy/helm/ci/*-values.yaml
+- [New issues go to the next patch milestone](new-issues-go-to-next-patch-milestone.md) — current or next patch milestone, never v5.x
+- [Storage rewrite is greenfield](storage-rewrite-is-greenfield.md) — #3337: new one-concern migration sets, old databases refused at boot
+- [Rewrite needs baseline and harness](rewrite-needs-baseline-and-harness.md) — a perf rewrite ships its measurement program first
+- [Platform shape: single tenant, FerroBRIDGE](platform-shape-single-tenant-ferrobridge.md) — one instance per tenant; secondary use via FerroBRIDGE
+- [API commits are unsigned](api-commits-are-unsigned.md) — never commit via the GitHub API with the user's token
+- [Release PR: chart bump + third-party images](release-pr-chart-and-third-party-images.md) — bump `Chart.yaml` version every release
+- [No CNF perf runs during the rewrite](no-cnf-perf-runs-during-rewrite.md) — wire before/after is #3452; #3350 is the only measurement
+- [Rewrite breaks everything; shipped = released](rewrite-breaks-everything-shipped-means-released.md) — no shims; unreleased files are editable
+- [Design record updated in the same turn](design-record-updated-in-the-same-turn.md) — plan, design comment and issues updated together
+- [OPT 1.4 format is the XSD](opt14-format-is-the-xsd.md) — the ITS-XML schema defines OPT 1.4 validity
+- [Many issues per PR](many-issues-per-pr.md) — batch six to ten related issues per PR, one Closes line each
+- [v5 withdrawn; rewrites are v4.3.1/v4.3.2](v5-withdrawn-rewrites-are-v431-v432.md) — decide open design questions in-session
+- [Update-branch is unsigned](update-branch-is-unsigned.md) — never `gh pr update-branch`; rebase locally, force-with-lease
+- [History rewrite 2026-09-16](history-rewrite-2026-09-16.md) — never resolve "latest release" by ancestry
+- [Release cut 2026-09-16 lessons](release-cut-2026-09-16-lessons.md) — signed tag, crates-io approval, sandbox leg across storage generations
+- [New crate first publish is standalone](new-crate-first-publish-standalone.md) — first publish alone from a local dirty manifest
+- [Repo moved to FerroHEALTH](repo-moved-to-ferrohealth.md) — ghcr.io/ferrohealth, board orgs/FerroHEALTH/projects/2
+- [Native issue types and fields](native-issue-types-and-priority.md) — type/priority/effort via scripts/gh/fields.sh; read issues with `--json`
+- [Caching must stay replica-safe](caching-replica-safe-only.md) — no cache that blocks multiple replicas; signature verification stays strict per read

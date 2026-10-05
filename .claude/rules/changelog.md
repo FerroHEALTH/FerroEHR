@@ -1,3 +1,7 @@
+---
+paths: ["CHANGELOG.md", "Cargo.toml", "CITATION.cff", ".zenodo.json", "docker-compose.yml", "deploy/helm/**", ".github/workflows/release*.yml", ".github/workflows/*chart*.yml", ".github/workflows/publish-crates.yml", "scripts/release/**"]
+---
+
 # Changelog discipline (Keep a Changelog 1.1.0)
 
 `CHANGELOG.md` at the repo root is the hand-curated release record
