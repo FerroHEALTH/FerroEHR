@@ -152,6 +152,7 @@ impl FerroEhrService {
             system_id: self.effective_system_id(),
             ehr_ids,
             subject_scope: request.subject_scope.clone(),
+            ehr_access: request.ehr_access.clone(),
             limit,
             offset,
             // The stored specialisation graph an archetype predicate widens a

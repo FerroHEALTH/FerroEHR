@@ -25,8 +25,8 @@
 use std::sync::Arc;
 
 use crate::ids::EhrId;
-use crate::service::ehr::access_types::EhrAccessSettings;
-use crate::service::error::ServiceError;
+use crate::service::ehr::access_types::{EhrAccessIndex, EhrAccessSettings};
+use crate::service::error::{ServiceError, internal_fault};
 use crate::service::status::SmError;
 use moka::future::Cache;
 use openehr_rm::prelude::{DvText, DvTextData, EhrAccess};
@@ -165,6 +165,43 @@ impl FerroEhrService {
             .await
             .map_err(|e| (*e).clone())
     }
+
+    /// Every EHR whose current `EHR_ACCESS` carries settings this server
+    /// understands, with those settings: the input of the per-EHR decision a
+    /// query applies to every EHR it could reach, where the path routes decide
+    /// one EHR at a time ([`Self::current_ehr_access_settings`]). An EHR absent
+    /// from the list has no settings and falls to the server-wide default.
+    ///
+    /// Cached as one entry, dropped on every `EHR_ACCESS` commit like the
+    /// per-EHR entries, and expired after a few seconds so a commit on another
+    /// replica, or one racing a load, cannot leave a stale grant in force. No openEHR spec governs this index — our own design.
+    ///
+    /// # Errors
+    /// [`SmError`] when the storage read fails or a stored body is not JSON.
+    pub async fn ehr_access_settings_index(&self) -> Result<EhrAccessIndex, SmError> {
+        let svc = self.clone();
+        self.ehr_access
+            .index_or_load(async move { svc.load_ehr_access_index().await })
+            .await
+            .map_err(|e| (*e).clone())
+    }
+
+    /// The cache-miss path of [`Self::ehr_access_settings_index`].
+    async fn load_ehr_access_index(&self) -> Result<Vec<(EhrId, EhrAccessSettings)>, SmError> {
+        let bodies =
+            crate::storage::version_repo::meta::ehr_access_bodies_with_settings(&self.pool)
+                .await
+                .map_err(ServiceError::from)?;
+        let mut index = Vec::with_capacity(bodies.len());
+        for (ehr_id, body) in bodies {
+            let value: Value = serde_json::from_str(&body)
+                .map_err(|e| internal_fault("read a stored EHR_ACCESS body", &e))?;
+            if let Some(settings) = EhrAccessSettings::from_ehr_access(&value) {
+                index.push((ehr_id, settings));
+            }
+        }
+        Ok(index)
+    }
 }
 
 /// Builds the `EHR_ACCESS` committed with every new EHR (RM ehr master04 §EHR
@@ -201,6 +238,9 @@ pub(in crate::service) fn initial_ehr_access() -> Value {
     openehr_its::json::to_canonical_value(&access)
 }
 
+/// How long the settings index may be served before it is read again.
+const INDEX_TTL: std::time::Duration = std::time::Duration::from_secs(5);
+
 /// A shared, cloneable per-EHR cache of the current `EHR_ACCESS` scheme
 /// settings.
 ///
@@ -217,6 +257,7 @@ pub(in crate::service) fn initial_ehr_access() -> Value {
 #[derive(Debug, Clone)]
 pub(in crate::service) struct EhrAccessCache {
     inner: Cache<EhrId, Arc<Option<EhrAccessSettings>>>,
+    index: Cache<(), EhrAccessIndex>,
 }
 
 impl EhrAccessCache {
@@ -224,6 +265,13 @@ impl EhrAccessCache {
     fn new(capacity: u64) -> Self {
         Self {
             inner: Cache::builder().max_capacity(capacity).build(),
+            // Invalidation cannot cancel a load already in flight, and
+            // another replica's commit never reaches this one, so the index also
+            // expires on a short timer to bound how long a stale grant survives.
+            index: Cache::builder()
+                .max_capacity(1)
+                .time_to_live(INDEX_TTL)
+                .build(),
         }
     }
 
@@ -269,6 +317,25 @@ impl EhrAccessCache {
     /// a pre-warmed default-open negative entry alike).
     pub(in crate::service) async fn invalidate(&self, ehr_id: EhrId) {
         self.inner.invalidate(&ehr_id).await;
+        self.index.invalidate(&()).await;
+    }
+
+    /// The cached settings index, or load it via `init` (run at most once
+    /// under contention) and cache the result.
+    ///
+    /// # Errors
+    /// Propagates the `init` error (shared across concurrent callers as an
+    /// `Arc<SmError>`).
+    pub(in crate::service) async fn index_or_load<Fut>(
+        &self,
+        init: Fut,
+    ) -> Result<EhrAccessIndex, Arc<SmError>>
+    where
+        Fut: Future<Output = Result<Vec<(EhrId, EhrAccessSettings)>, SmError>>,
+    {
+        self.index
+            .try_get_with((), async move { init.await.map(Arc::new) })
+            .await
     }
 }
 

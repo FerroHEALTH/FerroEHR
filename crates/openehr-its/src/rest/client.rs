@@ -54,6 +54,14 @@ pub struct RequestTimeout(pub Duration);
 /// and, under [`Credentials::Dpop`] with a [`DpopProver`], once more to the
 /// same URL to answer a `use_dpop_nonce` challenge (RFC 9449 §8 and §9).
 ///
+/// The client checks the call's deadline before every send it hands an
+/// engine. A deadline that passed before the first send is
+/// [`ClientError::DeadlineElapsed`] with `sent: false`, and nothing reached
+/// the engine; one that passed before a retry or the nonce re-send carries
+/// `sent: true`, because an earlier send went out. An engine timeout inside
+/// [`Transport::send`] is a [`TransportError::Timeout`], which the client
+/// returns as [`ClientError::Transport`].
+///
 /// An engine that wraps another may add request headers. A DPoP client
 /// without a [`DpopProver`] adds its `DPoP` proof this way: the request it
 /// receives carries the final method and URI, and `Authorization: DPoP
@@ -447,6 +455,12 @@ const DPOP_NONCE: HeaderName = HeaderName::from_static("dpop-nonce");
 /// prover owns the key pair and the claims: `htm` from the method, `htu` from
 /// the URI without its query and fragment (§4.2), `ath` from the access token,
 /// a fresh `jti` and `iat`, and the latest nonce it was given.
+///
+/// When the call's deadline passes before the first send, the call fails with
+/// [`ClientError::DeadlineElapsed`] and `sent: false`. When it passes after a
+/// `use_dpop_nonce` challenge and before the re-send (the prover's second
+/// proof included), the call fails with the same variant and `sent: true`:
+/// the service received the first send and may have acted on it.
 #[async_trait::async_trait]
 pub trait DpopProver: Send + Sync + fmt::Debug {
     /// The compact-serialized proof JWT for one request.
@@ -743,13 +757,15 @@ impl<T: Transport> Client<T> {
     /// [`ClientError::ServiceFailure`] for the general statuses the ITS-REST
     /// overview documents for every operation, [`ClientError::Transport`] when
     /// no attempt completed, [`ClientError::DeadlineElapsed`] when the
-    /// deadline passed before an attempt, and [`ClientError::Credentials`]
+    /// deadline passed before an attempt (its `sent` says whether an earlier
+    /// attempt or a DPoP nonce re-send's first send went out), and
+    /// [`ClientError::Credentials`]
     /// when the provider produced no credential. Every other status is the
     /// caller's to match.
     pub async fn execute(&self, request: Request) -> Result<Answer, ClientError> {
         use backon::Retryable as _;
         if !is_idempotent(&request.method) || self.retry.max_attempts <= 1 {
-            return self.attempt(&request).await;
+            return self.attempt(&request, false).await;
         }
         let retries = self.retry.max_attempts.saturating_sub(1);
         let backoff = backon::ExponentialBuilder::new()
@@ -757,19 +773,23 @@ impl<T: Transport> Client<T> {
             .with_max_delay(self.retry.max_backoff)
             .with_max_times(retries);
         let deadline = request.deadline;
-        (|| self.attempt(&request))
-            .retry(backoff)
-            .when(ClientError::is_retryable)
-            .adjust(move |_, delay| {
-                delay.filter(|delay| {
-                    deadline.is_none_or(|deadline| {
-                        Instant::now()
-                            .checked_add(*delay)
-                            .is_some_and(|wake| wake < deadline)
-                    })
+        let sent = std::sync::atomic::AtomicBool::new(false);
+        (|| {
+            let earlier = sent.swap(true, std::sync::atomic::Ordering::Relaxed);
+            self.attempt(&request, earlier)
+        })
+        .retry(backoff)
+        .when(ClientError::is_retryable)
+        .adjust(move |_, delay| {
+            delay.filter(|delay| {
+                deadline.is_none_or(|deadline| {
+                    Instant::now()
+                        .checked_add(*delay)
+                        .is_some_and(|wake| wake < deadline)
                 })
             })
-            .await
+        })
+        .await
     }
 
     /// Sends `request` once under the base URL and returns whatever the
@@ -790,16 +810,19 @@ impl<T: Transport> Client<T> {
     ///
     /// # Errors
     /// Returns [`ClientError::Transport`] when the request did not complete,
-    /// [`ClientError::DeadlineElapsed`] when its deadline has passed,
+    /// [`ClientError::DeadlineElapsed`] when its deadline has passed — with
+    /// `sent: false` before anything went out, and `sent: true` when it passed
+    /// before the re-send that answers a DPoP nonce challenge —,
     /// [`ClientError::Credentials`] when the provider produced no credential,
     /// and [`ClientError::Build`] when the parts do not form a request.
     pub async fn forward(&self, request: Request) -> Result<Answer, ClientError> {
-        self.send_once(&request).await
+        self.send_once(&request, false).await
     }
 
-    /// One attempt: send it, classify the general statuses.
-    async fn attempt(&self, request: &Request) -> Result<Answer, ClientError> {
-        let answer = self.send_once(request).await?;
+    /// One attempt: send it, classify the general statuses; `sent` says
+    /// whether an earlier attempt of the same call went out.
+    async fn attempt(&self, request: &Request, sent: bool) -> Result<Answer, ClientError> {
+        let answer = self.send_once(request, sent).await?;
         if answer.status == StatusCode::UNAUTHORIZED {
             return Err(ClientError::Unauthorized {
                 method: answer.method,
@@ -829,8 +852,8 @@ impl<T: Transport> Client<T> {
     /// One send of `request`: resolve the credential, build, hand the engine
     /// the time left, and read the answer whole, unclassified; under DPoP, a
     /// `use_dpop_nonce` challenge is answered with one re-send.
-    async fn send_once(&self, request: &Request) -> Result<Answer, ClientError> {
-        request.remaining()?;
+    async fn send_once(&self, request: &Request, mut sent: bool) -> Result<Answer, ClientError> {
+        request.remaining(sent)?;
         let credentials =
             match self.credentials.as_ref() {
                 Some(provider) => Some(provider.credentials().await.map_err(|source| {
@@ -870,7 +893,7 @@ impl<T: Transport> Client<T> {
                 value.set_sensitive(true);
                 built.headers_mut().insert(DPOP, value);
             }
-            if let Some(left) = request.remaining()? {
+            if let Some(left) = request.remaining(sent)? {
                 built.extensions_mut().insert(RequestTimeout(left));
             }
             let response =
@@ -882,6 +905,7 @@ impl<T: Transport> Client<T> {
                         path: request.path.clone(),
                         source,
                     })?;
+            sent = true;
             let (parts, body) = response.into_parts();
             if let Some((prover, _)) = prover
                 && let Some(nonce) = header_text(&parts.headers, DPOP_NONCE.as_str())
@@ -1111,8 +1135,9 @@ impl Request {
         }
     }
 
-    /// The time left before the deadline, or `None` without one.
-    fn remaining(&self) -> Result<Option<Duration>, ClientError> {
+    /// The time left before the deadline, or `None` without one; `sent` says
+    /// whether an earlier send of the same call went out.
+    fn remaining(&self, sent: bool) -> Result<Option<Duration>, ClientError> {
         let Some(deadline) = self.deadline else {
             return Ok(None);
         };
@@ -1121,6 +1146,7 @@ impl Request {
             return Err(ClientError::DeadlineElapsed {
                 method: self.method.clone(),
                 path: self.path.clone(),
+                sent,
             });
         }
         Ok(Some(left))
@@ -1368,12 +1394,22 @@ pub enum ClientError {
         base: url::Url,
     },
     /// The call's deadline passed before an attempt could start.
-    #[error("the deadline of {method} {path} passed before the request was sent")]
+    ///
+    /// `sent` tells the two cases apart: `false` when nothing of the call left
+    /// the process, `true` when an earlier send went out first — a retried
+    /// attempt, or the re-send answering a DPoP `use_dpop_nonce` challenge —,
+    /// so the service may have received, and acted on, the request.
+    #[error(
+        "the deadline of {method} {path} passed before the request was sent (an earlier send went out: {sent})"
+    )]
     DeadlineElapsed {
         /// The HTTP method.
         method: Method,
         /// The operation path.
         path: String,
+        /// Whether an earlier send of this call went out before the deadline
+        /// passed.
+        sent: bool,
     },
     /// The DPoP prover produced no proof for the request; nothing was sent.
     #[error("no DPoP proof could be made for {method} {path}")]

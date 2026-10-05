@@ -413,3 +413,159 @@ async fn gate_keeper_ignores_non_ehr_access_contributions() {
         "a COMPOSITION contribution is not gate-kept"
     );
 }
+
+// ── AQL ───────────────────────────────────────────────────────────────────────
+
+/// A second EHR with the default-open `EHR_ACCESS`, so a population query has a
+/// readable EHR beside the withheld one.
+const OPEN_EHR_ID: &str = "7c1b9d3e-2a45-4f6b-9c8d-0e1f2a3b4c5d";
+const STORED_NAME: &str = "org.example.test::ehr_access_population";
+
+/// The router over [`EHR_ID`] (restricted to `user:bob`) and [`OPEN_EHR_ID`]
+/// (default-open), with Basic auth on.
+async fn query_app() -> (testkit::TestDb, Router) {
+    let (pg, pool) = common::migrated_pool().await;
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let ehr_id: ferroehr::ids::EhrId = EHR_ID.parse().expect("valid ehr uuid");
+    let open_id: ferroehr::ids::EhrId = OPEN_EHR_ID.parse().expect("valid ehr uuid");
+    svc.create_ehr_with_id(ehr_id, None)
+        .await
+        .expect("create ehr");
+    svc.create_ehr_with_id(open_id, None)
+        .await
+        .expect("create open ehr");
+    seed_scheme(
+        &svc,
+        ehr_id,
+        &json!({
+            "_type": "FERROEHR_ACCESS_CONTROL_V1",
+            "default_access": "restricted",
+            "access_list": [ { "principal": "user:bob", "access": "full" } ]
+        }),
+    )
+    .await;
+    let app = ferroehr_rest::build_full(
+        rest_config(true),
+        Arc::new(svc),
+        None,
+        Observability::default(),
+    )
+    .expect("build app");
+    (pg, app)
+}
+
+/// The `ehr_id` values of a `RESULT_SET`'s first column, sorted.
+async fn ehr_ids_of(app: &Router, request: Request<Body>) -> Vec<String> {
+    let (code, body) = common::send_body(app, request).await;
+    assert_eq!(code, StatusCode::OK, "{body}");
+    let result: Value = serde_json::from_str(&body).expect("RESULT_SET json");
+    let mut ids: Vec<String> = result["rows"]
+        .as_array()
+        .expect("rows")
+        .iter()
+        .map(|row| row[0].as_str().expect("ehr_id text").to_owned())
+        .collect();
+    ids.sort();
+    ids
+}
+
+fn aql(q: &str, user: &str) -> Request<Body> {
+    req(
+        "POST",
+        "/query/aql",
+        Some(&basic(user)),
+        &json!({ "q": q }).to_string(),
+    )
+}
+
+/// An EHR the caller may not read contributes no rows to any AQL form — scoped
+/// by the `WHERE` clause, by the `EHR` predicate, by the `ehr_id` parameter, or
+/// not at all — while the listed principal is served on every one (RM ehr
+/// `ehr_access.adoc` §`EHR_ACCESS` Class).
+#[tokio::test]
+async fn aql_withholds_an_ehr_the_caller_may_not_read() {
+    let (_pg, app) = query_app().await;
+
+    let control = status(
+        &app,
+        req("GET", &format!("/ehr/{EHR_ID}"), Some(&basic("carol")), ""),
+    )
+    .await;
+    assert_eq!(
+        control,
+        StatusCode::FORBIDDEN,
+        "the path gate refuses carol"
+    );
+
+    let by_where = format!("SELECT e/ehr_id/value FROM EHR e WHERE e/ehr_id/value = '{EHR_ID}'");
+    let by_predicate = format!("SELECT e/ehr_id/value FROM EHR e[ehr_id/value = '{EHR_ID}']");
+    let population = "SELECT e/ehr_id/value FROM EHR e";
+    let by_parameter = req(
+        "POST",
+        &format!("/query/aql?ehr_id={EHR_ID}"),
+        Some(&basic("carol")),
+        &json!({ "q": population }).to_string(),
+    );
+
+    assert!(ehr_ids_of(&app, aql(&by_where, "carol")).await.is_empty());
+    assert!(
+        ehr_ids_of(&app, aql(&by_predicate, "carol"))
+            .await
+            .is_empty()
+    );
+    assert!(ehr_ids_of(&app, by_parameter).await.is_empty());
+    assert_eq!(
+        ehr_ids_of(&app, aql(population, "carol")).await,
+        vec![OPEN_EHR_ID.to_owned()],
+        "the population query serves the readable EHR only"
+    );
+
+    assert_eq!(
+        ehr_ids_of(&app, aql(&by_where, "bob")).await,
+        vec![EHR_ID.to_owned()]
+    );
+    assert_eq!(
+        ehr_ids_of(&app, aql(&by_predicate, "bob")).await,
+        vec![EHR_ID.to_owned()]
+    );
+    let mut both = vec![EHR_ID.to_owned(), OPEN_EHR_ID.to_owned()];
+    both.sort();
+    assert_eq!(ehr_ids_of(&app, aql(population, "bob")).await, both);
+}
+
+/// The stored-query run path holds the same decision.
+#[tokio::test]
+async fn a_stored_query_withholds_an_ehr_the_caller_may_not_read() {
+    let (_pg, app) = query_app().await;
+    let mut store = req(
+        "PUT",
+        &format!("/definition/query/{STORED_NAME}"),
+        Some(&basic("bob")),
+        "SELECT e/ehr_id/value FROM EHR e",
+    );
+    store.headers_mut().insert(
+        http::header::CONTENT_TYPE,
+        http::HeaderValue::from_static("text/plain"),
+    );
+    assert_eq!(
+        status(&app, store).await,
+        StatusCode::OK,
+        "stored-query PUT"
+    );
+
+    let run = |user: &str| {
+        req(
+            "POST",
+            &format!("/query/{STORED_NAME}"),
+            Some(&basic(user)),
+            "{}",
+        )
+    };
+    assert_eq!(
+        ehr_ids_of(&app, run("carol")).await,
+        vec![OPEN_EHR_ID.to_owned()]
+    );
+    let mut both = vec![EHR_ID.to_owned(), OPEN_EHR_ID.to_owned()];
+    both.sort();
+    assert_eq!(ehr_ids_of(&app, run("bob")).await, both);
+}

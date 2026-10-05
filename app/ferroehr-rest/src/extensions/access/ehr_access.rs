@@ -22,9 +22,11 @@
 //! `master04-ehr_package.adoc` §EHR Access). The concrete scheme evaluated,
 //! `ferroehr.access_control.v1`, is our own design.
 //!
-//! Privacy-level filtering of AQL result ROWS is out of scope: query execution
-//! carries no principal context, so the gate cannot see individual rows. The
-//! per-EHR gate does apply wherever a query binds an `ehr_id`.
+//! The per-EHR gate also holds for AQL (`query_scope`): every EHR the caller
+//! may not read is withheld from the query's sources, whether the query names
+//! the EHR in its `WHERE` clause, an `EHR` predicate, the `ehr_id` parameter,
+//! or not at all. Privacy-level filtering of individual Composition rows is out
+//! of scope for queries.
 
 #![allow(
     clippy::disallowed_types,
@@ -34,7 +36,9 @@
 )]
 
 use axum::response::{IntoResponse, Response};
+use ferroehr::aql::sql::EhrAccessScope;
 use ferroehr::config::authz::EhrAccessDefault;
+use ferroehr::ids::EhrId;
 use ferroehr::service::ehr::access_types::{AccessLevel, principal_matches};
 use ferroehr::service::ehr::access_types::{DefaultAccess, EhrAccessSettings};
 use openehr_its::rest::runtime::ApiError;
@@ -227,7 +231,7 @@ pub(crate) async fn enforce(
 
     let settings = match state
         .backend()
-        .current_ehr_access_settings(ferroehr::ids::EhrId(ehr_id))
+        .current_ehr_access_settings(EhrId(ehr_id))
         .await
     {
         Ok(s) => s,
@@ -269,6 +273,57 @@ pub(crate) async fn enforce(
     }
 
     Ok(())
+}
+
+/// The per-EHR decision for an AQL execution: the EHRs the authenticated caller
+/// may read, by the same [`EhrAccessGate::ehr_gate`] the path routes apply.
+///
+/// An EHR with no settings follows the server-wide default, so the scope lists
+/// the settings-bearing EHRs only: the ones withheld when setting-less EHRs are
+/// readable, or the ones permitted when they are not. `Err(response)` is a
+/// fail-closed `500` when the settings cannot be read.
+pub(crate) async fn query_scope(state: &AppState) -> Result<EhrAccessScope, Box<Response>> {
+    let principal = current_principal();
+    let subject = principal.as_ref().map(|p| p.subject.as_str());
+    let roles = principal.as_ref().map_or(&[][..], |p| p.roles.as_slice());
+    let index = state
+        .backend()
+        .ehr_access_settings_index()
+        .await
+        .map_err(|e| {
+            Box::new(server_error(
+                principal.as_ref(),
+                &format!("EHR_ACCESS settings unavailable: {e}"),
+            ))
+        })?;
+    let authz = state.authz();
+    let rbac = authz.as_deref().and_then(AuthzHandle::rbac_rules);
+    let server_default = rbac.map_or(EhrAccessDefault::Open, |r| r.ehr_access_default);
+    let admin_role = rbac.map_or("ADMIN", |r| r.admin_role.as_str());
+    let readable = |settings: Option<&EhrAccessSettings>| {
+        EhrAccessGate::ehr_gate(settings, subject, roles, server_default, admin_role).is_ok()
+    };
+    let scope = if readable(None) {
+        let withheld: Vec<EhrId> = index
+            .iter()
+            .filter(|(_, settings)| !readable(Some(settings)))
+            .map(|(ehr_id, _)| *ehr_id)
+            .collect();
+        if withheld.is_empty() {
+            EhrAccessScope::Unrestricted
+        } else {
+            EhrAccessScope::Excluding(withheld)
+        }
+    } else {
+        EhrAccessScope::Only(
+            index
+                .iter()
+                .filter(|(_, settings)| readable(Some(settings)))
+                .map(|(ehr_id, _)| *ehr_id)
+                .collect(),
+        )
+    };
+    Ok(scope)
 }
 
 /// A `403` carrying the principal (so the ATNA audit layer records the deny —

@@ -582,6 +582,7 @@ fn aql_sql(aql: &str, ehr_ids: Vec<EhrId>) -> ferroehr::aql::sql::PreparedQuery 
         system_id: "plan.shapes.test".to_owned(),
         ehr_ids,
         subject_scope: None,
+        ehr_access: ferroehr::aql::sql::EhrAccessScope::Unrestricted,
         limit: None,
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),

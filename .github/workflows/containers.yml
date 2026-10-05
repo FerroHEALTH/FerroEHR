@@ -287,8 +287,8 @@ jobs:
         org.opencontainers.image.source=https://github.com/FerroHEALTH/FerroEHR
         org.opencontainers.image.url=https://ferroehr.eu/
         org.opencontainers.image.documentation=https://ferroehr.eu/docs/latest/
-        org.opencontainers.image.vendor=FerroEHR
-        org.opencontainers.image.authors=Ruben Talstra <https://github.com/rubentalstra>
+        org.opencontainers.image.vendor=FerroHEALTH
+        org.opencontainers.image.authors=FerroHEALTH <https://github.com/FerroHEALTH>
         org.opencontainers.image.licenses=BUSL-1.1
         org.opencontainers.image.base.name=gcr.io/distroless/cc-debian13:nonroot
         org.opencontainers.image.base.digest=sha256:e792ab3d241a468a4fd7519ddbbebe66b49b5f365771716ea688ad40b6c6f1c2
@@ -426,8 +426,8 @@ jobs:
         org.opencontainers.image.source=https://github.com/FerroHEALTH/FerroEHR
         org.opencontainers.image.url=https://ferroehr.eu/
         org.opencontainers.image.documentation=https://ferroehr.eu/docs/latest/
-        org.opencontainers.image.vendor=FerroEHR
-        org.opencontainers.image.authors=Ruben Talstra <https://github.com/rubentalstra>
+        org.opencontainers.image.vendor=FerroHEALTH
+        org.opencontainers.image.authors=FerroHEALTH <https://github.com/FerroHEALTH>
         org.opencontainers.image.licenses=BUSL-1.1
         org.opencontainers.image.base.name=gcr.io/distroless/cc-debian13:nonroot
         org.opencontainers.image.base.digest=sha256:e792ab3d241a468a4fd7519ddbbebe66b49b5f365771716ea688ad40b6c6f1c2
@@ -462,8 +462,8 @@ jobs:
         org.opencontainers.image.source=https://github.com/FerroHEALTH/FerroEHR
         org.opencontainers.image.url=https://ferroehr.eu/
         org.opencontainers.image.documentation=https://ferroehr.eu/docs/latest/
-        org.opencontainers.image.vendor=FerroEHR
-        org.opencontainers.image.authors=Ruben Talstra <https://github.com/rubentalstra>
+        org.opencontainers.image.vendor=FerroHEALTH
+        org.opencontainers.image.authors=FerroHEALTH <https://github.com/FerroHEALTH>
         org.opencontainers.image.licenses=BUSL-1.1 AND PostgreSQL
         org.opencontainers.image.base.name=postgres:18.6
         org.opencontainers.image.base.digest=sha256:5a5a84b19854a9ffaa54082c166ff4ec27473a361e496e5ea167f298f2da9722

@@ -28,7 +28,7 @@ use crate::db::iden::{CommitAudit, Ehr, Node, VersionRow, VoHead};
 
 use super::expr::{cast, col, hot, hot_unaliased, type_cond};
 use super::value::version_field_expr;
-use super::{Builder, VoGroup};
+use super::{Builder, EhrAccessScope, VoGroup};
 
 /// The correlation anchor for an `OR` / `NOT CONTAINS` `EXISTS` subquery.
 enum ExistsAnchor {
@@ -1017,6 +1017,31 @@ impl Builder<'_> {
                 self.q.and_where(
                     col(&alias, Ehr::Id).eq(Expr::from(PgFunc::any(Expr::val(ids.clone())))),
                 );
+            }
+        }
+        // The per-EHR access decision binds every VO root and EHR source the
+        // same way the explicit scope does, so no query shape reaches a
+        // withheld EHR (RM ehr `ehr_access.adoc` §`EHR_ACCESS` Class).
+        let access = match &self.ctx.ehr_access {
+            EhrAccessScope::Unrestricted => None,
+            EhrAccessScope::Excluding(ids) => Some((false, ids)),
+            EhrAccessScope::Only(ids) => Some((true, ids)),
+        };
+        if let Some((only, ids)) = access {
+            let ids: Vec<Uuid> = ids.iter().map(|id| id.0).collect();
+            let targets = self
+                .group_roots
+                .iter()
+                .map(|root| col(root, Node::EhrId))
+                .chain(self.ehr_alias.values().map(|alias| col(alias, Ehr::Id)))
+                .collect::<Vec<_>>();
+            for target in targets {
+                let condition = if only {
+                    target.eq(Expr::from(PgFunc::any(Expr::val(ids.clone()))))
+                } else {
+                    target.ne(Expr::from(PgFunc::all(Expr::val(ids.clone()))))
+                };
+                self.q.and_where(condition);
             }
         }
         // NOTE: the ABAC patient scope restricts every VO root to the caller's
