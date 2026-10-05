@@ -172,8 +172,9 @@ impl FerroEhrService {
     /// one EHR at a time ([`Self::current_ehr_access_settings`]). An EHR absent
     /// from the list has no settings and falls to the server-wide default.
     ///
-    /// Cached as one entry and dropped on every `EHR_ACCESS` commit, like the
-    /// per-EHR entries. No openEHR spec governs this index — our own design.
+    /// Cached as one entry, dropped on every `EHR_ACCESS` commit like the
+    /// per-EHR entries, and expired after a few seconds so a commit on another
+    /// replica, or one racing a load, cannot leave a stale grant in force. No openEHR spec governs this index — our own design.
     ///
     /// # Errors
     /// [`SmError`] when the storage read fails or a stored body is not JSON.
@@ -237,6 +238,9 @@ pub(in crate::service) fn initial_ehr_access() -> Value {
     openehr_its::json::to_canonical_value(&access)
 }
 
+/// How long the settings index may be served before it is read again.
+const INDEX_TTL: std::time::Duration = std::time::Duration::from_secs(5);
+
 /// A shared, cloneable per-EHR cache of the current `EHR_ACCESS` scheme
 /// settings.
 ///
@@ -261,7 +265,13 @@ impl EhrAccessCache {
     fn new(capacity: u64) -> Self {
         Self {
             inner: Cache::builder().max_capacity(capacity).build(),
-            index: Cache::builder().max_capacity(1).build(),
+            // Invalidation cannot cancel a load already in flight, and
+            // another replica's commit never reaches this one, so the index also
+            // expires on a short timer to bound how long a stale grant survives.
+            index: Cache::builder()
+                .max_capacity(1)
+                .time_to_live(INDEX_TTL)
+                .build(),
         }
     }
 
