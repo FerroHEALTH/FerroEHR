@@ -9,7 +9,7 @@ Owner decision 2026-10-02 (#3524, mirroring FerroHEALTH/FerroFED#154): an issue'
 
 Migration 2026-10-02: `scripts/gh/migrate-fields.sh` moved the 42 OPEN issues only (owner: "migrate only the open one"); closed issues were left without type or priority. Then `scripts/gh/labels.sh` deleted `bug`, `enhancement`, `P0`–`P3` (owner: "we delete the labels").
 
-**Why:** native fields sort and filter on the platform, and FerroFED/VernumBOEK already run this model.
+**Why:** native fields sort and filter on the platform, and FerroFED already runs this model.
 
 **How to apply:**
 - File every issue with `scripts/gh/fields.sh new <type> <priority> <effort> --title … --body-file … --milestone …`, never bare `gh issue create`.
