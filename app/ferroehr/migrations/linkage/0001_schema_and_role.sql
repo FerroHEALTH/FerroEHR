@@ -1,4 +1,4 @@
--- SPDX-FileCopyrightText: Cadasto B.V.
+-- SPDX-FileCopyrightText: Vernum Projecten B.V.
 -- SPDX-License-Identifier: BUSL-1.1
 
 -- linkage: the schema that holds the map between the two pseudonymisation

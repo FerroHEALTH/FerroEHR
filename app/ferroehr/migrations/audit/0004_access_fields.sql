@@ -1,4 +1,4 @@
--- SPDX-FileCopyrightText: Cadasto B.V.
+-- SPDX-FileCopyrightText: Vernum Projecten B.V.
 -- SPDX-License-Identifier: BUSL-1.1
 
 -- audit: the access-event fields, beside the ATNA record's own.

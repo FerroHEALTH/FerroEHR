@@ -1,4 +1,4 @@
--- SPDX-FileCopyrightText: Cadasto B.V.
+-- SPDX-FileCopyrightText: Vernum Projecten B.V.
 -- SPDX-License-Identifier: BUSL-1.1
 
 -- audit: the schema of the local IHE ATNA Audit Record Repository.
