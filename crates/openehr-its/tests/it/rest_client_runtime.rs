@@ -729,6 +729,87 @@ async fn a_deadline_passed_before_the_nonce_resend_reports_a_sent_request() -> T
     Ok(())
 }
 
+/// A prover that fails from its `fail_from`-th proof on (counting from zero).
+#[derive(Debug)]
+struct FailingProver {
+    fail_from: usize,
+    proofs: AtomicUsize,
+}
+
+#[async_trait::async_trait]
+impl DpopProver for FailingProver {
+    async fn proof(&self, _request: &DpopProofRequest<'_>) -> Result<String, CredentialsError> {
+        if self.proofs.fetch_add(1, Ordering::SeqCst) >= self.fail_from {
+            return Err(CredentialsError::new("the signing key is unavailable"));
+        }
+        Ok("proof".to_owned())
+    }
+
+    fn nonce(&self, _nonce: &str) {}
+}
+
+/// A client whose prover fails from its `fail_from`-th proof on, against a
+/// service that answers every request with a `use_dpop_nonce` challenge.
+async fn failing_prover_call(
+    fail_from: usize,
+) -> Result<(MockServer, ClientError), Box<dyn Error>> {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .respond_with(
+            ResponseTemplate::new(401)
+                .insert_header("www-authenticate", r#"DPoP error="use_dpop_nonce""#)
+                .insert_header("dpop-nonce", "n1"),
+        )
+        .mount(&server)
+        .await;
+    let prover = std::sync::Arc::new(FailingProver {
+        fail_from,
+        proofs: AtomicUsize::new(0),
+    });
+    let client = client_for(&server)?
+        .with_credentials(Credentials::dpop("tok"))
+        .with_dpop_prover(prover);
+    let error = client
+        .forward(Request::new(Method::GET, format!("/ehr/{EHR_ID}")))
+        .await
+        .err()
+        .ok_or("the call should fail on the proof")?;
+    Ok((server, error))
+}
+
+/// A proof that fails on the first attempt reports that nothing was sent.
+#[tokio::test]
+async fn a_first_proof_failure_reports_nothing_sent() -> TestResult {
+    let (server, error) = failing_prover_call(0).await?;
+    assert!(
+        matches!(error, ClientError::DpopProof { sent: false, .. }),
+        "{error:?}"
+    );
+    let received = server
+        .received_requests()
+        .await
+        .ok_or("request recording is off")?;
+    assert!(received.is_empty());
+    Ok(())
+}
+
+/// A proof that fails on the nonce re-send reports that the first send went
+/// out.
+#[tokio::test]
+async fn a_resend_proof_failure_reports_a_sent_request() -> TestResult {
+    let (server, error) = failing_prover_call(1).await?;
+    assert!(
+        matches!(error, ClientError::DpopProof { sent: true, .. }),
+        "{error:?}"
+    );
+    let received = server
+        .received_requests()
+        .await
+        .ok_or("request recording is off")?;
+    assert_eq!(received.len(), 1);
+    Ok(())
+}
+
 /// A second `use_dpop_nonce` challenge is not answered again: the caller sees
 /// the `401`.
 #[tokio::test]
