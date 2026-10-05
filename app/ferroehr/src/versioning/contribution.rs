@@ -1362,7 +1362,7 @@ fn coded_value(dv: &Value) -> Option<String> {
     dv.get("defining_code")
         .and_then(|c| c.get("code_string"))
         .and_then(Value::as_str)
-        // TODO(#1727): adjudicate whether the SM spelling stays accepted on the
+        // TODO(#3595): adjudicate whether the SM spelling stays accepted on the
         // CONTRIBUTION wire now that the direct routes are typed.
         // NOTE: the two released sources spell this attribute differently —
         // ITS-REST `UpdateAudit.yaml` `$ref`s `DvCodedText`, SM

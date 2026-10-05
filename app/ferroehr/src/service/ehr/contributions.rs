@@ -54,7 +54,7 @@ impl FerroEhrService {
         ehr_id: EhrId,
         body: Value,
     ) -> Result<ServiceResponse, SmError> {
-        // TODO(#3550): decode the body through the generated `NewContribution`;
+        // TODO(#3595): decode the body through the generated `NewContribution`;
         // the raw read still accepts the SM `Terminology_code` and plain-string
         // spellings, an omitted member `change_type` and an `ATTESTATION` member
         // `_type`, all of which the generated envelope refuses.
