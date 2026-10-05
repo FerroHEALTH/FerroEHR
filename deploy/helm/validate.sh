@@ -44,8 +44,9 @@
 #
 # Usage:
 #   deploy/helm/validate.sh            # validate (fails on lint/render/golden drift)
-#   deploy/helm/validate.sh --update   # regenerate the golden renders and the
-#                                     # published chart-version pins, then validate
+#   deploy/helm/validate.sh --update   # regenerate the golden renders, the chart
+#                                     # README and the published chart-version
+#                                     # pins, then validate
 #
 # No cluster and no network are required for steps 1–4.
 # The CI gate is the `helm-golden` job in .github/workflows/ci.yml.
@@ -191,6 +192,27 @@ assert_security() {
 mkdir -p "$GOLDEN_DIR"
 FAIL=0
 
+# ── A refusal probe must carry a value no release can equal ──────────────────
+# A version-shaped probe value is one a later bump can make the ACCEPTED value:
+# `terminology.image.tag=0.1.4` stopped proving its refusal the day FerroTERM
+# 0.1.4 became the chart's pin (#3476). So every probe value is a sentinel or
+# malformed by construction, and this check refuses any `key=value` word whose
+# value parses as a version, which keeps the class from coming back.
+release_shaped_probe() {
+  local -a words
+  local word hit=0
+  read -r -a words <<<"$1"
+  for word in "${words[@]}"; do
+    [[ "$word" == *=* ]] || continue
+    if [[ "${word#*=}" =~ ^v?[0-9]+(\.[0-9]+)+([-+].*)?$ ]]; then
+      red "  VERSION-SHAPED probe value: ${word} — a release can equal it, and then"
+      red "  the probe renders instead of refusing. Use a value no release can carry."
+      hit=1
+    fi
+  done
+  return "$hit"
+}
+
 # ── Secret-leak gate: no credential may reach the ConfigMap ───────────────────
 # Two halves, because there are two ways to get this wrong. (1) Every secret the
 # chart CARRIES is set to a unique sentinel, which must appear in a Secret and in
@@ -229,7 +251,8 @@ secret_leak_gate() {
   fi
 
   # ROUTED secrets: the chart carries each through a `secrets:` key, so a value
-  # under `config:` is an operator mistake and must be refused BY NAME.
+  # under `config:` is an operator mistake and must be refused BY NAME. The
+  # value is the SENTINEL_PROBE literal, which no release can carry.
   local -a routed_paths=(
     "db.url"
     "events.url"
@@ -469,6 +492,10 @@ network_policy_gate
 # fails as well, because a probe that can never fire is a gate reporting a
 # property nothing has.
 #
+# Every probe value is one no release can equal (release_shaped_probe above):
+# secrets are SENTINEL_PROBE, hosts are under the reserved example.com, and the
+# FerroTERM tag is not a version at all, so no future pin can make it accepted.
+#
 # <template>|<substring unique to that fail's message>|<values file>|<--set probe>|<what the refusal must name, `;`-separated>
 refusal_registry_gate() {
   bold "── template refusals: every \`fail\` is probed ────────────"
@@ -487,7 +514,7 @@ refusal_registry_gate() {
     "_helpers.tpl|which inject enabled=true|${base}|--set terminology.enabled=true --set config.terminology.external.enabled=false|config.terminology.external.enabled;terminology.wireCdr"
     "_helpers.tpl|contradicts terminology.failOnError|${base}|--set terminology.enabled=true --set config.terminology.external.fail_on_error=true|config.terminology.external.fail_on_error;terminology.failOnError"
     "_helpers.tpl|while config.terminology.external.routes is empty|${base}|--set terminology.enabled=true --set config.terminology.external.providers.tx.type=fhir --set config.terminology.external.providers.tx.url=https://tx.example.com/fhir|config.terminology.external.routes;terminology.wireCdr"
-    "_helpers.tpl|while terminology.image.digest is non-empty|${base}|--set terminology.enabled=true --set terminology.image.tag=0.0.0-probe|terminology.image.tag;terminology.image.digest"
+    "_helpers.tpl|while terminology.image.digest is non-empty|${base}|--set terminology.enabled=true --set terminology.image.tag=never-a-release|terminology.image.tag;terminology.image.digest"
     "_helpers.tpl|the chart injects both|${base}|--set config.usage_report.enabled=false|config.usage_report.enabled;usageReport.enabled"
     "_helpers.tpl|the chart injects both|${base}|--set-string config.usage_report.deployment=compose|config.usage_report.deployment;usageReport.enabled"
     "networkpolicy.yaml|networkPolicy.ingressAllowAll=false with an empty|${base}|--set networkPolicy.ingressAllowAll=false|networkPolicy.ingressFrom;hardening-network-policy.md"
@@ -515,6 +542,7 @@ refusal_registry_gate() {
     values="$(cut -d'|' -f3 <<<"$record")"
     probe="$(cut -d'|' -f4 <<<"$record")"
     wants="$(cut -d'|' -f5 <<<"$record")"
+    release_shaped_probe "$probe" || refused=1
     # shellcheck disable=SC2086  # the probe is a deliberate multi-word --set list
     if out="$(helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "$values" $probe 2>&1)"; then
       red "  NOT REFUSED: ${probe} rendered instead of failing"
@@ -616,6 +644,9 @@ schema_gate() {
     FAIL=1
   fi
 
+  # Each value is malformed by construction (a typo'd key, a wrong type, a
+  # non-hex digest, an out-of-range port), never a version a release could ship.
+  #
   # <helm --set argument>|<the refusal must name this>
   local -a refusals=(
     "autoscalng.enabled=true|additional properties 'autoscalng' not allowed"
@@ -646,6 +677,7 @@ schema_gate() {
   for case in "${refusals[@]}"; do
     probe="${case%%|*}"
     want="${case##*|}"
+    release_shaped_probe "$probe" || refused=1
     if out="$(helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" \
               -f "${CI_DIR}/default-values.yaml" --set "$probe" 2>&1)"; then
       red "  NOT REFUSED: --set ${probe} rendered instead of failing schema validation"
@@ -869,7 +901,8 @@ echo "  annotations are the decided set, and the listing icon is present"
 # the values table is the chart's published reference (it is the front page on a
 # registry and on Artifact Hub), and a table that disagrees with values.yaml is
 # worse than no table. Skipped with a note when helm-docs is absent, so the rest
-# of this script still runs locally.
+# of this script still runs locally. Under --update the regenerated README is
+# kept, like the goldens; without it the drift is reported and undone.
 echo
 if command -v helm-docs >/dev/null 2>&1; then
   README="${CHART_DIR}/README.md"
@@ -879,6 +912,8 @@ if command -v helm-docs >/dev/null 2>&1; then
       >/dev/null 2>&1
     if diff -u "$before" "$README" > /tmp/readme.diff 2>&1; then
       green "chart README matches values.yaml"
+    elif [[ "$UPDATE" -eq 1 ]]; then
+      green "chart README regenerated: ${README}"
     else
       red "chart README DRIFT — README.md is generated; regenerate it with:"
       red "  helm-docs --chart-search-root ${CHART_DIR} --template-files README.md.gotmpl"
