@@ -68,6 +68,19 @@ workflow refuses a tag that has no matching section here.
   `use_dpop_nonce` challenge failed, after the service had received the first
   request.
 
+### Fixed
+
+- **The terminology overlay switches on the `/terminology/*` API it describes**
+  (#3476). `docker-compose.terminology.yml` said the CDR's `/terminology/*`
+  routes answer from FerroTERM, but it left `[terminology] api_enabled` at its
+  `false` default, so every route answered `404`. The overlay now sets
+  `FERROEHR__TERMINOLOGY__API_ENABLED=true`; a term, subsumption or value-set
+  call for a terminology the bundled openEHR terminology does not carry is
+  answered by FerroTERM.
+- **`deploy/helm/validate.sh --update` regenerates the chart README** (#3476).
+  It used to restore the stale README and then fail on it, so the drift it
+  reported could only be fixed by running `helm-docs` by hand.
+
 ## [4.3.3] - 2026-10-05
 
 ### Added
