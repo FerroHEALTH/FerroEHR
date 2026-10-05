@@ -165,8 +165,8 @@ pub(crate) struct ImportContainer {
 
 /// Replay a set of received `ORIGINAL_VERSION`s into an EHR as
 /// `IMPORTED_VERSION`s under **one** local import CONTRIBUTION (master06
-/// §Copying, §Committal). The `import_audit` records the local act of committal
-/// (`249|creation|`, master06 §Contributions "import of item"). Returns the
+/// §Copying, §Committal and Audits). The `import_audit` records the local act
+/// of committal (`249|creation|`, master06 §Contributions "import of item"). Returns the
 /// local import contribution id.
 ///
 /// # Errors

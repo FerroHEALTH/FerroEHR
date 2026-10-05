@@ -556,7 +556,8 @@ async fn signing_disabled_folds_commit_and_preserves_master06_semantics() {
     assert_eq!(v1, "1", "first version is trunk 1");
 
     // The served ORIGINAL_VERSION round-trips: uid stable, no signature, and the
-    // server-computed commit instant present (master06 §Committal m3).
+    // server-computed commit instant present (master06 §Committal and
+    // Audits).
     let ov1 = svc
         .composition_version_envelope(ehr_uuid, ovid_v1.parse().expect("ovid"))
         .await

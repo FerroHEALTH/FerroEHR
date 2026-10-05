@@ -8,8 +8,8 @@
 //! Spec: SM `docs/specs/openehr/SM/docs/UML/classes/i_ehr_extract_service.adoc`;
 //! RM EHR Extract IM master05 (`X_VERSIONED_*`) + RM common
 //! `docs/specs/openehr/RM/docs/common/master06-change_control_package.adoc`
-//! §Copying (`IMPORTED_VERSION` semantics, Cases 1/2/3) + §Committal. The
-//! acceptance properties:
+//! §Copying (`IMPORTED_VERSION` semantics, Cases 1/2/3) + §Committal and
+//! Audits. The acceptance properties:
 //!
 //! 1. **Whole-EHR clone** (`import_ehr`) replays a whole-EHR export into an
 //!    empty target, reusing the source EHR id when none is given (master06

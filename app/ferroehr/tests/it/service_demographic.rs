@@ -387,8 +387,8 @@ async fn person_lifecycle_end_to_end() {
 /// built **from the commit result** (never a post-commit re-read). It must be
 /// byte-identical to a fresh read — the served body is
 /// `inject_uid(reassemble(decompose(body)))` and the node codec round-trips
-/// losslessly (RM common master06 §Committal: the written version identity +
-/// content). Mirrors the EHR/DIRECTORY `write_responses_match_a_fresh_read`
+/// losslessly (RM common master06 §Committal and Audits: the written version
+/// identity + content). Mirrors the EHR/DIRECTORY `write_responses_match_a_fresh_read`
 /// gate; covers PERSON and the ORGANISATION sibling (same path, keyed by
 /// `PartyKind`).
 #[tokio::test]

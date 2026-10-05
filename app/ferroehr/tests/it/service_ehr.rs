@@ -2318,7 +2318,7 @@ async fn directory_versioned_and_has_version() {
 ///   byte-identical to a fresh `ehr_summary` read (`ehr_object`) for a new EHR.
 /// - Fix D: the DIRECTORY create/update response `OBJECT_VERSION_ID`
 ///   (`committed_response`) MUST equal the `uid` a fresh read injects (RM common
-///   master06 §Committal: the written version identity).
+///   master06 §Committal and Audits: the written version identity).
 /// - Item 34: the `EHR_STATUS` update response `OBJECT_VERSION_ID`
 ///   (`committed_response`, replacing the discarded post-commit reassembly) MUST
 ///   equal a fresh read's `uid`, and the mutation MUST persist (the folded

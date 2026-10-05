@@ -11,7 +11,7 @@
 //!
 //! No openEHR spec governs the SQL — our own design. The version identity these
 //! reads serve is RM common master06 §Version Identification and the commit
-//! instant is §Committal.
+//! instant is §Committal and Audits.
 //!
 //! NOTE: no openEHR spec governs storage tiering — our own design; `version`
 //! is partitioned by tier, so a lookup that names no tier reads both partitions
@@ -469,7 +469,8 @@ pub async fn ehr_access_bodies_with_settings(
 /// **without** node reassembly or the attestation read the
 /// full [`crate::storage::version_repo::read::read_current`] pays. `None` when the
 /// object has no current trunk version. The version identity is RM common
-/// master06 §Version Identification; the commit instant is master06 §Committal.
+/// master06 §Version Identification; the commit instant is master06 §Committal
+/// and Audits.
 #[derive(Debug, Clone)]
 pub struct CurrentMeta {
     /// The versioned object's id.
@@ -535,7 +536,7 @@ pub async fn current_version_meta_by_kind(
 /// reassembly), returning `None` when the object is not the EHR's (a foreign or
 /// unknown id). The lean `ETag`/`If-Match` read for an EHR-owned object; the
 /// version identity is RM common master06 §Version Identification, the commit
-/// instant §Committal.
+/// instant §Committal and Audits.
 ///
 /// # Errors
 /// Returns [`StorageError::Database`] on a driver failure.
@@ -628,7 +629,8 @@ pub async fn current_demographic_meta(
 /// - the `VERSION_TREE_ID` column ints + the stored per-version
 ///   `creating_system_id` + the audit `time_committed` — the full
 ///   `OBJECT_VERSION_ID` + commit instant the `ETag`/`If-Match` compare needs
-///   (RM common master06 §Version Identification / §Committal);
+///   (RM common master06 §Version Identification / §Committal and
+///   Audits);
 /// - the EHR's promoted `is_modifiable` flag (the content-write guard, RM ehr
 ///   master04 §EHR Active Status) via the `ehr` join;
 /// - the stored `archetype_details.template_id.value` as ONE text scalar off

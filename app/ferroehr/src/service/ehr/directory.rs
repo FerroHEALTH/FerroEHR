@@ -111,8 +111,8 @@ impl FerroEhrService {
         tx.commit().await?;
 
         // The write response is metadata-only: `Committed` already carries the
-        // version identity and commit instant (RM common master06 §Committal),
-        // so a representation response re-reads at the protocol layer instead.
+        // version identity and commit instant (RM common master06 §Committal and
+        // Audits), so a representation response re-reads at the protocol layer instead.
         Ok(self.committed_response(ehr_id, &committed))
     }
 
