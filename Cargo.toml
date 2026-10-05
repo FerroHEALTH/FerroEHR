@@ -452,13 +452,24 @@ debug = "line-tables-only"
 # default units anyway.
 lto = "thin"
 
-# The binary the ui-e2e battery and chart-boot run on a pull request: the release
-# profile without LTO. Thin LTO spent about 13 of the job's 25 minutes on the
-# final link, which sccache cannot cache (#3490). The battery asserts
-# behaviour, and ui-e2e-published.yml drives the LTO-built release image.
+# The binary the ui-e2e battery and chart-boot run on a pull request (#3490).
+# Every ui-e2e shard waits for it, and its first-party chain (openehr-* ->
+# ferroehr -> ferroehr-rest -> ferroehr-server) changes with every commit, so
+# no cache shortens it: at opt-level 3 that chain alone took about 18 minutes
+# even at a 96% sccache hit rate. Workspace crates build at opt-level 1 while
+# dependencies keep 3 and stay cacheable; LTO is "off", because `false` still
+# runs thin local LTO (Cargo book, profiles §lto); the job strips the binary,
+# so it carries no debuginfo. overflow-checks and panic = "unwind" are
+# inherited from release. The battery asserts behaviour, and
+# ui-e2e-published.yml drives the LTO-built release image.
 [profile.e2e]
 inherits = "release"
-lto = false
+opt-level = 1
+debug = false
+lto = "off"
+
+[profile.e2e.package."*"]
+opt-level = 3
 
 # WASM bundle profile for the viewer (Leptos book `deployment/binary_size`):
 # size-optimized client bundle, wired via the crate's `lib-profile-release`.

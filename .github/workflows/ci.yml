@@ -99,8 +99,8 @@ env:
   # runs on all three.
   #
   # Cache policy (the ruff/polars `save-if` idiom): only main writes the
-  # per-job rust-cache entries; PR branches restore main's warm cache and
-  # never publish their own. PR-branch caches are read by nothing else (GHA
+  # per-job rust-cache entries and the sccache entries; PR branches restore
+  # main's warm cache and never publish their own. PR-branch caches are read by nothing else (GHA
   # cache scoping), so letting every PR save would only thrash the shared
   # 10 GB repo quota and evict the caches that matter — including the ui-e2e
   # exact-key binary caches below.
@@ -1887,6 +1887,11 @@ jobs:
         if: steps.binary-cache.outputs.cache-hit != 'true'
         env:
           SCCACHE_GHA_ENABLED: "true"
+          # Only main writes (the cache policy above, #3490): a pull-request
+          # entry is readable by that pull request alone, and its writes evicted
+          # main's from the full 10 GB quota (github.com/mozilla/sccache,
+          # docs/Configuration.md, SCCACHE_GHA_RW_MODE).
+          SCCACHE_GHA_RW_MODE: ${{ github.ref == 'refs/heads/main' && 'READ_WRITE' || 'READ_ONLY' }}
           RUSTC_WRAPPER: sccache
           # "Incrementally compiled crates cannot be cached"
           # (github.com/mozilla/sccache#known-caveats).
@@ -1977,6 +1982,11 @@ jobs:
         if: steps.viewer-cache.outputs.cache-hit != 'true'
         env:
           SCCACHE_GHA_ENABLED: "true"
+          # Only main writes (the cache policy above, #3490): a pull-request
+          # entry is readable by that pull request alone, and its writes evicted
+          # main's from the full 10 GB quota (github.com/mozilla/sccache,
+          # docs/Configuration.md, SCCACHE_GHA_RW_MODE).
+          SCCACHE_GHA_RW_MODE: ${{ github.ref == 'refs/heads/main' && 'READ_WRITE' || 'READ_ONLY' }}
           RUSTC_WRAPPER: sccache
           # "Incrementally compiled crates cannot be cached"
           # (github.com/mozilla/sccache#known-caveats).
