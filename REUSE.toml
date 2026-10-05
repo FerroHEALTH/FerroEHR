@@ -234,6 +234,18 @@ precedence = "override"
 SPDX-FileCopyrightText = ["openEHR Foundation", "the EHRbase contributors", "Cadasto B.V."]
 SPDX-License-Identifier = "Apache-2.0"
 
+# FerroPULSE's report v1 schemas are not clinical-model material either, so the
+# broad glob above would state the wrong licence over them. They come from
+# Cadasto B.V.'s private FerroPULSE repository, whose manifest declares
+# LicenseRef-Proprietary; Cadasto B.V. holds this repository too, and the copy
+# here is declared under this repository's licence. The subtree's PROVENANCE.md
+# records the pin.
+[[annotations]]
+path = "corpus/ferropulse/**"
+precedence = "override"
+SPDX-FileCopyrightText = "Cadasto B.V."
+SPDX-License-Identifier = "BUSL-1.1"
+
 # The ADL2 regression library inside the openehr-adl corpus is the same
 # upstream repository as the tree above but a different subtree, and it was
 # measured separately (#3150): of 302 archetypes, 111 state a licence and 191

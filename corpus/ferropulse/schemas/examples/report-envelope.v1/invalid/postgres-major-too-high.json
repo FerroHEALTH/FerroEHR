@@ -1,0 +1,80 @@
+{
+  "schema": 1,
+  "event": "daily",
+  "product": "ferroehr",
+  "instance_id": "5f0c6b2e-3d4a-4c8b-9e1f-2a3b4c5d6e7f",
+  "version": "4.3.4",
+  "git_sha": "1a2b3c4d",
+  "spec_profile": "stable",
+  "licence": "non-commercial",
+  "deployment": "helm",
+  "uptime_s": 86400,
+  "db_ok": true,
+  "migrations_ok": true,
+  "postgres_major": 100,
+  "cpu_bucket": "3-4",
+  "memory_bucket": "8-16",
+  "metrics": {
+    "window_24h": {
+      "requests_bucket": "1k-10k",
+      "routes": {
+        "composition": {
+          "p50_ms": 12.5,
+          "p95_ms": 80.1,
+          "p99_ms": 240.0,
+          "errors_5xx": 0,
+          "histogram": [
+            10,
+            40,
+            120,
+            300,
+            90,
+            30,
+            8,
+            2,
+            0,
+            0,
+            0
+          ]
+        },
+        "query": {
+          "p50_ms": 30,
+          "p95_ms": 310,
+          "p99_ms": 900,
+          "errors_5xx": 2,
+          "histogram": [
+            0,
+            5,
+            40,
+            200,
+            500,
+            300,
+            120,
+            30,
+            4,
+            1,
+            0
+          ]
+        }
+      },
+      "aql": {
+        "executions": 1200,
+        "slow": 3,
+        "p95_ms": 310.0,
+        "histogram": [
+          0,
+          5,
+          40,
+          200,
+          500,
+          300,
+          120,
+          30,
+          4,
+          1,
+          0
+        ]
+      }
+    }
+  }
+}

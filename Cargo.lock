@@ -2692,6 +2692,7 @@ dependencies = [
  "insta",
  "jiff",
  "jiff-sqlx",
+ "jsonschema",
  "lapin",
  "moka",
  "oauth2",

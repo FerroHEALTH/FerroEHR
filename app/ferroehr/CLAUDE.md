@@ -5,7 +5,10 @@ The application core (five app crates, zero re-exports). Top-level modules
 engine), `versioning` (change control + VERSION `signature` signing),
 `validation`, `templates`, `db` (sqlx pools + migrations), `config` (the full
 `ferroehr.toml` tree), `telemetry`, `system_log` (IHE ATNA), `privacy`,
-`licence`, `ids`, `extensions`, `banner`. Hand-written idiomatic Rust of our own design on the
+`licence`, `ids`, `extensions`, `banner`, `usage_report` (the outbound
+installation report to FerroPULSE: typed payload, cross-replica claims on the
+clinical pool, the in-process latency window fed by `ferroehr-rest`'s HTTP
+metrics layer and AQL execution). Hand-written idiomatic Rust of our own design on the
 generated `openehr-*` crates. The binary lives in `app/ferroehr-server`; the REST
 adapter (`ferroehr-rest`) depends on this crate and calls the concrete
 `FerroEhrService` directly. **Zero re-exports: every import names its defining

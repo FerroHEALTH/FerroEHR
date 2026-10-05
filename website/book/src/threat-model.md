@@ -219,7 +219,10 @@ never consent, and a broken control never looks like a policy outcome.
 from the specification's meta-model rather than hand-written) and terminology
 bindings. Canonical JSON is read by a **strict** reader that refuses undeclared
 and duplicate keys. Outbound terminology, object-store and broker calls go only
-to operator-configured endpoints.
+to operator-configured endpoints. The one outbound call that is on by default is
+the [usage report](usage-report.md) to `report.ferropulse.eu`, which
+`[usage_report] enabled = false` switches off; it sends a fixed set of fields
+and reads nothing from the answer beyond its status code.
 
 **Residual risk.**
 

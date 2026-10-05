@@ -24,6 +24,7 @@ commit the result.
 | Dutch acts and decrees (+ the NEN 75xx records, text absent by copyright) | `scripts/vendor/law-nl.sh` | `docs/law/nl/` |
 | German federal law (gesetze-im-internet XML, pinned by builddate; the DigiG as its BGBl. PDF) | `scripts/vendor/law-de.sh` | `docs/law/de/` |
 | Swiss federal law (Fedlex filestore HTML, German + non-binding English where published at the same consolidation) | `scripts/vendor/law-ch.sh` | `docs/law/ch/` |
+| FerroPULSE report v1 JSON Schemas + examples (the usage report contract) | `scripts/vendor/ferropulse-schemas.sh` | `corpus/ferropulse/` |
 
 ## The openEHR CKM REST API — facts, verified 2026-08-01
 

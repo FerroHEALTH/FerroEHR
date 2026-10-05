@@ -1,0 +1,10 @@
+{
+  "window_24h": {
+    "requests_bucket": "0",
+    "routes": {},
+    "aql": {
+      "executions": 0, "slow": 0, "p95_ms": 0,
+      "histogram": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    }
+  }
+}

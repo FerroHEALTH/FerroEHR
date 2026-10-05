@@ -1,9 +1,10 @@
 # Server, database & telemetry
 
 The listener and REST surface (`[server]` and its sub-tables), the PostgreSQL
-connection (`[db]`), and the two observability sections (`[log]`,
-`[telemetry]`). Precedence, the environment-name grammar, and file discovery
-are on the [Configuration reference](configuration.md) index.
+connection (`[db]`), the two observability sections (`[log]`,
+`[telemetry]`), and the usage report (`[usage_report]`). Precedence, the
+environment-name grammar, and file discovery are on the
+[Configuration reference](configuration.md) index.
 
 <!-- toc -->
 
@@ -436,3 +437,30 @@ metrics_push = false
 The scrape endpoint itself is not opened here; it is
 [`management.endpoints.prometheus`](config-auth.md#management), which is `off`
 until you name a level.
+
+## `[usage_report]`
+
+The daily installation report to FerroPULSE, the collector Cadasto B.V. runs.
+It is **on by default**, and every boot logs one line saying whether it is on.
+What a report carries, when it is sent, the network it needs and the privacy
+notice are on the [Usage report](../usage-report.md) page.
+
+```toml
+[usage_report]
+enabled = true
+endpoint = "https://report.ferropulse.eu/v1/report"
+slow_aql_ms = 1000
+deployment = "unknown"
+```
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool | `true` | Send the report. `false` sends nothing and writes nothing to the database for it. Environment: `FERROEHR__USAGE_REPORT__ENABLED`. |
+| `endpoint` | string | `https://report.ferropulse.eu/v1/report` | Where reports go. Must be an absolute `https` URL without credentials; plain `http` is accepted for a loopback host only. Environment: `FERROEHR__USAGE_REPORT__ENDPOINT`. |
+| `slow_aql_ms` | int | `1000` | Execution time in milliseconds above which an AQL query counts as slow in the daily report. At least `1`. Environment: `FERROEHR__USAGE_REPORT__SLOW_AQL_MS`. |
+| `deployment` | enum{helm,compose,binary,unknown} | `unknown` | How the instance was deployed, as the report states it. The Helm chart sets it to `helm`. Environment: `FERROEHR__USAGE_REPORT__DEPLOYMENT`. |
+
+Under the Helm chart, set the switch with `usageReport.enabled`. The chart
+writes `enabled` and `deployment = "helm"` into the rendered file itself and
+refuses to render if either is also set under `config.usage_report`;
+`endpoint` and `slow_aql_ms` pass through `config.usage_report` unchanged.

@@ -652,3 +652,21 @@ schemes = ["nl-bsn"]
 # The root key: 64 hex characters (32 bytes). Prefer `key_file`.
 #? key = "…64 hex characters…"
 #? key_file = "/run/secrets/ferroehr-identifier-key"
+
+# ── [usage_report] — the installation report to FerroPULSE ────────────────────
+# ON by default. At each process start and once a day the instance sends one
+# small JSON report to FerroPULSE, the Cadasto-operated collector (EU): a random
+# instance id, the version and commit, the licence grant type, the deployment
+# kind, uptime, database and migration state, coarse CPU/memory buckets and, in
+# the daily report, latency histograms per route-template group and for AQL.
+# Never patient data, request paths, AQL text, licence ids or host names; the
+# collector stores the source IP address and the country derived from it. One
+# report per instance however many replicas run. Every boot logs one line
+# saying whether it is on. Notice: https://ferroehr.eu/docs/latest/usage-report.html
+[usage_report]
+enabled = true          # false (FERROEHR__USAGE_REPORT__ENABLED=false) sends nothing
+endpoint = "https://report.ferropulse.eu/v1/report"   # https only (http to a loopback host)
+slow_aql_ms = 1000      # AQL executions above this count as slow in the report
+# How the instance was deployed (helm | compose | binary | unknown). The Helm
+# chart and the compose files set it; leave it unset elsewhere.
+deployment = "unknown"

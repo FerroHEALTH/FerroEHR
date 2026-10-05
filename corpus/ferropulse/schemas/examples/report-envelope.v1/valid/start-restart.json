@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "event": "start",
+  "product": "ferroehr",
+  "instance_id": "5F0C6B2E-3D4A-4C8B-9E1F-2A3B4C5D6E7F",
+  "version": "4.3.4",
+  "git_sha": "1a2b3c4d",
+  "spec_profile": "stable",
+  "licence": "non-commercial",
+  "deployment": "helm",
+  "uptime_s": 86400,
+  "db_ok": false,
+  "migrations_ok": false,
+  "postgres_major": 99,
+  "cpu_bucket": "3-4",
+  "memory_bucket": "8-16",
+  "first_start": false
+}

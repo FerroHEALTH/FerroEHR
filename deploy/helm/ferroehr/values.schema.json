@@ -1367,6 +1367,17 @@
           "minimum": 0
         }
       }
+    },
+    "usageReport": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The usage report to FerroPULSE. The chart injects usage_report.enabled and usage_report.deployment (helm) into the rendered ferroehr.toml.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Send the usage report (on by default); false sends nothing."
+        }
+      }
     }
   },
   "definitions": {

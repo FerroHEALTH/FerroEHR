@@ -144,6 +144,11 @@ services:
       # Measurement parity (logging equal and minimal on both SUTs):
       # measured comparison runs set warn on BOTH SUTs; default stays info.
       FERROEHR__LOG__FILTER: ${FERROEHR__LOG__FILTER:-info}
+      # The conformance SUT reports nothing to FerroPULSE by default: a test
+      # harness is not an installation, and outbound traffic would sit inside
+      # the measured window.
+      FERROEHR__USAGE_REPORT__ENABLED: ${FERROEHR__USAGE_REPORT__ENABLED:-false}
+      FERROEHR__USAGE_REPORT__DEPLOYMENT: compose
     volumes:
       # Auto-discovered at config search-order position 4 (no pointer needed).
       - ./docker/ferroehr.dev.toml:/etc/ferroehr/ferroehr.toml:ro

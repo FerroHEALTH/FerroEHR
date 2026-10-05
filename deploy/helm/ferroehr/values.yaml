@@ -505,6 +505,25 @@ secrets:
   multimediaSecretAccessKey: ""
 
 # ─────────────────────────────────────────────────────────────────────────────
+# The usage report to FerroPULSE, the Cadasto-operated collector (EU). At each
+# pod start and once a day per release (not per replica) the server sends a
+# small JSON report: a random instance id, version, licence grant type, the
+# deployment kind (`helm`, which the chart sets), uptime, coarse CPU/memory
+# buckets and latency histograms per route-template group. No patient data,
+# request paths, AQL text, licence ids or host names; the collector stores the
+# source IP address and its country. Every boot logs one line saying whether it
+# is on. Notice: https://ferroehr.eu/docs/latest/usage-report.html
+# The chart injects usage_report.enabled and usage_report.deployment into the
+# rendered ferroehr.toml, so set the switch here, never under config:. The
+# endpoint and slow_aql_ms stay ordinary config.usage_report keys. A pod that
+# reports needs egress to report.ferropulse.eu:443 when networkPolicy.egress is
+# on; without it the report fails quietly and nothing else is affected.
+# ─────────────────────────────────────────────────────────────────────────────
+usageReport:
+  # -- Send the usage report (on by default). false sends nothing.
+  enabled: true
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Prometheus scraping. Whichever mechanism you use, the endpoint itself must be
 # opened with config.management.endpoints.prometheus (requires
 # config.management.enabled) — the chart only arranges DISCOVERY.

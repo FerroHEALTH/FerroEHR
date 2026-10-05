@@ -15,6 +15,35 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+### Added
+
+- **A usage report to FerroPULSE, on by default** (#3578). At each process
+  start and once a day, an instance sends one small JSON report to
+  `https://report.ferropulse.eu/v1/report`, the collector Cadasto B.V. runs in
+  the EU. It carries a random instance id (created once and stored in the
+  database, so every replica shares it), the version and commit, the
+  specification profile, the licence grant type (`non-commercial` or
+  `commercial`, never the licence id), the deployment kind (`helm`, `compose`,
+  `binary` or `unknown`), uptime, whether the database answers and carries
+  its migrations, the PostgreSQL major version, coarse CPU and memory
+  buckets, and in the daily report a bucketed request count with latency
+  histograms, percentiles and 5xx counts per route-template group and for AQL
+  execution. It never carries patient data, request paths, AQL text, licence
+  ids or host names. FerroPULSE stores the source IP address of each report
+  and the country derived from it. Several replicas send one daily report
+  between them, and a restart loop sends at most one start report per ten
+  minutes. A slow or unreachable collector affects neither boot nor
+  readiness; a failed send is logged once at DEBUG and not retried. Every boot
+  logs one INFO line saying whether the report is on. Switch it off with
+  `[usage_report] enabled = false`, `FERROEHR__USAGE_REPORT__ENABLED=false`,
+  or the chart value `usageReport.enabled=false`. The new `[usage_report]`
+  section also takes `endpoint` and `slow_aql_ms` (default 1000), and
+  `ferroehr usage-report --print [--event start|daily]` prints the exact JSON
+  the instance would send without sending it. The Helm chart (10.2.0) and the
+  compose files set the deployment kind; the conformance compose files switch
+  the report off. A new clinical migration adds the `usage_report_instance`
+  and `usage_report_window` tables.
+
 ### Changed
 
 - **Commercial licensing goes to Cadasto B.V.** (#3572). Cadasto B.V., the

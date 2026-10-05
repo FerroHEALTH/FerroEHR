@@ -379,6 +379,19 @@ secret VALUE refused outright.
 {{- $_ := set $external "enabled" true -}}
 {{- $_ := set $external "fail_on_error" $.Values.terminology.failOnError -}}
 {{- end -}}
+{{- /* The usage report: the switch is the top-level usageReport.enabled value,
+       and the deployment kind the report states is always `helm` under this
+       chart. Both keys are injected, so an operator who also wrote either under
+       config.usage_report is refused, for the reason the terminology injection
+       above gives: an injection that overwrites cannot be told apart from one
+       that agrees. The endpoint and slow_aql_ms pass through config untouched. */ -}}
+{{- if not (hasKey $rendered "usage_report") -}}{{- $_ := set $rendered "usage_report" (dict) -}}{{- end -}}
+{{- $usageReport := get $rendered "usage_report" -}}
+{{- if or (hasKey $usageReport "enabled") (hasKey $usageReport "deployment") -}}
+{{- fail "config.usage_report.enabled or config.usage_report.deployment is set, and the chart injects both: the usage report switch is usageReport.enabled, and the deployment it states is always helm under this chart. Drop the config.usage_report key and set usageReport.enabled instead." -}}
+{{- end -}}
+{{- $_ := set $usageReport "enabled" $.Values.usageReport.enabled -}}
+{{- $_ := set $usageReport "deployment" "helm" -}}
 {{- toToml $rendered -}}
 {{- end }}
 
