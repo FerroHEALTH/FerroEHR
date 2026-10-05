@@ -78,6 +78,7 @@ LEGAL_SOURCES=(
   "GDPR|EU|https://eur-lex.europa.eu/eli/reg/2016/679/oj"
   "EHDS|EU|https://eur-lex.europa.eu/eli/reg/2025/327/oj"
   "EDPB 01/2025|EU|https://www.edpb.europa.eu/our-work-tools/documents/public-consultations/2025/guidelines-012025-pseudonymisation_en"
+  "EDPB 2/2023|EU|https://www.edpb.europa.eu/documents/guideline/guidelines-22023-on-technical-scope-of-art-53-of-eprivacy-directive_en"
   "UAVG|NL|https://wetten.overheid.nl/BWBR0040940"
   "Wabvpz|NL|https://wetten.overheid.nl/BWBR0023864"
   "NEN 7510|NL|https://www.nen.nl/nen-7510-1-2024-nl-331311"
