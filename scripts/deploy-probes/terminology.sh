@@ -189,6 +189,10 @@ TERM_FT_OVERLAY="docker-compose.terminology.yml"
 TERM_FT_TEMPLATE="corpus/templates/dt_coded_text_binding_sct.opt"
 TERM_FT_MEMBER="corpus/fixtures/composition/terminology_binding_sct_member.json"
 TERM_FT_NON_MEMBER="corpus/fixtures/composition/terminology_binding_sct_non_member.json"
+# The shaped seed's code system and value set, by canonical URL: neither is in
+# the bundled openEHR terminology, so only FerroTERM can answer for them.
+TERM_FT_SYSTEM="http://cnf.example.test/fhir/CodeSystem/sct-shaped"
+TERM_FT_VALUE_SET="http://cnf.example.test/fhir/ValueSet/sct-shaped-disorders"
 
 # The overlay stack: base file + overlay, the s3 profile the other families
 # assume, and ferroterm explicitly. `--wait` returns once FerroTERM's own
@@ -221,6 +225,18 @@ term_ft_template() {
   case "$code" in 201|204|409) return 0 ;; *) return 1 ;; esac
 }
 
+# The CDR's own /terminology/* membership test for one candidate code, as
+# "<status> <body>". Both canonical URLs travel as single path segments, so
+# their slashes are percent-encoded.
+term_ft_api_validate() {
+  local system value_set
+  system="$(jq -rn --arg s "$TERM_FT_SYSTEM" '$s | @uri')"
+  value_set="$(jq -rn --arg s "$TERM_FT_VALUE_SET" '$s | @uri')"
+  curl -s -u "$BASIC" -w ' %{http_code}' \
+    "$API/terminology/${system}/value_set/${value_set}/validate?candidate_code=$1" \
+    | awk '{ status = $NF; $NF = ""; sub(/ $/, ""); print status " " $0 }'
+}
+
 probes_terminology_ferroterm() {
   bold "terminology — FerroTERM beside the CDR over the shaped seed (the overlay)"
 
@@ -237,6 +253,8 @@ probes_terminology_ferroterm() {
     "with external terminology off the member composition commits"
   assert_eq "201" "$(term_ft_commit_code "$TERM_FT_NON_MEMBER")" \
     "with external terminology off nothing checks membership, so the non-member commits too"
+  assert_eq "404" "$(term_ft_api_validate 1000002 | cut -d' ' -f1)" \
+    "without the overlay the /terminology/* extension API is off, as the base config ships it"
   probe_done
 
   probe "P-FT-UP" "working" "compose" "#3304" \
@@ -262,6 +280,19 @@ probes_terminology_ferroterm() {
     "1000002 is in sct-shaped-disorders, so the commit is accepted"
   assert_eq "422" "$(term_ft_commit_code "$TERM_FT_NON_MEMBER")" \
     "1000003 is in the code system but not in the value set, so the binding refuses it"
+  probe_done
+
+  probe "P-FT-API" "working" "compose" "#3476" \
+    "with the overlay on, the CDR's /terminology/* routes answer membership from FerroTERM, as the overlay header says"
+  local member non_member
+  member="$(term_ft_api_validate 1000002)"
+  non_member="$(term_ft_api_validate 1000003)"
+  assert_not_contains "$member" "terminology API is disabled" \
+    "the overlay switches the extension API on; a 404 here means its header claims a route it never enabled"
+  assert_eq '200 {"valid":true}' "$member" \
+    "1000002 is in sct-shaped-disorders, and only FerroTERM holds that value set"
+  assert_eq '200 {"valid":false}' "$non_member" \
+    "1000003 is not, so the answer differs and cannot come from a constant"
   probe_done
 
   probe "P-FT-DOWN-OPEN" "broken" "server" "#3304" \

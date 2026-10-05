@@ -277,9 +277,11 @@ FHIR terminology server: R4, R4B and R5 endpoints over a precomputed index, no
 JVM, no database, one distroless image. The overlay
 `docker-compose.terminology.yml` starts it beside the CDR and switches the CDR's
 external terminology on, so archetype value-set bindings resolve at commit and
-AQL `TERMINOLOGY()` expands through it (the `/terminology/*` extension routes
-answer from it too once `[terminology] api_enabled = true`, which is off by
-default):
+AQL `TERMINOLOGY()` expands through it. It also switches on the read-only
+`/terminology/*` extension API (`FERROEHR__TERMINOLOGY__API_ENABLED`, off by
+default): a term, subsumption or value-set call there for a terminology the
+bundled openEHR terminology does not carry is answered by FerroTERM, while
+listing and describing terminologies stays with the bundle:
 
 ```shell
 docker compose -f docker-compose.yml -f docker-compose.terminology.yml up

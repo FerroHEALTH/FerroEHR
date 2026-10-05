@@ -10,8 +10,12 @@
 # It starts FerroTERM (https://github.com/FerroHEALTH/FerroTERM, the Ferro
 # family's FHIR terminology server: R4 /r4, R4B /r4b, R5 /r5, no JVM, no
 # database) beside the CDR and switches the CDR's external terminology on, so
-# archetype value-set bindings resolve against it at commit, AQL TERMINOLOGY()
-# expands through it, and the CDR's /terminology/* routes answer from it.
+# archetype value-set bindings resolve against it at commit and AQL
+# TERMINOLOGY() expands through it. It also switches on the CDR's read-only
+# /terminology/* extension API (off by default): a term, subsumption or
+# value-set call there for a terminology the bundled openEHR terminology does
+# not carry is answered by FerroTERM, while listing and describing
+# terminologies stays the bundle's.
 # An overlay rather than a profile, for the same reason as the Keycloak and
 # observability overlays: enabling it must MUTATE the ferroehr service's
 # environment, which a profile cannot express
@@ -138,6 +142,9 @@ services:
   ferroehr:
     environment:
       FERROEHR__TERMINOLOGY__EXTERNAL__ENABLED: "true"
+      # The /terminology/* extension API the header describes; without it every
+      # route answers 404 "terminology API is disabled".
+      FERROEHR__TERMINOLOGY__API_ENABLED: "true"
       FERROEHR__TERMINOLOGY__EXTERNAL__FAIL_ON_ERROR: ${FERROEHR__TERMINOLOGY__EXTERNAL__FAIL_ON_ERROR:-false}
     depends_on:
       # The CDR starts once FerroTERM reports healthy, so the first binding a
