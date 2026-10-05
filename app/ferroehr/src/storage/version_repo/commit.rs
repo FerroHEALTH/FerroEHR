@@ -78,7 +78,7 @@ pub async fn advisory_lock(tx: &mut PgConnection, vo_id: VoId) -> Result<(), Sto
 /// Inserts a `commit_audit` row, returning its id and the server-computed
 /// timestamp.
 ///
-/// The `time_committed` (master06 §Committal m3) is captured via `RETURNING` so
+/// The `time_committed` (master06 §Committal and Audits) is captured via `RETURNING` so
 /// the commit path can build the exact `ORIGINAL_VERSION` it will later serve —
 /// the signed bytes must match the read-time canonical form.
 ///
@@ -140,7 +140,7 @@ pub async fn insert_contribution(
 /// time_committed)`.
 ///
 /// The `contribution` references the just-inserted `audit`; `time_committed`
-/// is the server-computed commit instant (master06 §Committal m3) the
+/// is the server-computed commit instant (master06 §Committal and Audits) the
 /// version's `commit_audit` is signed against. A client-supplied CONTRIBUTION
 /// uid is honoured (`supplied`); a duplicate id is a
 /// [`StorageError::ContributionUidInUse`] conflict, never an overwrite
@@ -206,7 +206,7 @@ pub async fn write_contribution(
 ///
 /// `time_committed` is the caller's pre-read commit instant, a database `now()`
 /// fetched earlier on this request and so still server-assigned (master06
-/// §Committal m3). Binding it makes the stored audit time, the version row's
+/// §Committal and Audits). Binding it makes the stored audit time, the version row's
 /// own `committed_at` and the instant the `VERSION.signature` was computed over
 /// one value by construction.
 ///
@@ -353,7 +353,7 @@ impl HeadUpsert<'_> {
 /// The single audit row serves both the CONTRIBUTION and the version's
 /// `commit_audit` (a direct write is one CONTRIBUTION of one change —
 /// master06 §Committal and Audits). `time_committed` is the server-computed
-/// commit instant (master06 §Committal m3).
+/// commit instant (master06 §Committal and Audits).
 ///
 /// The externalized multimedia URIs the node rows reference are indexed in the
 /// same transaction ([`crate::storage::blob_ref::record`]), which issues no

@@ -287,15 +287,22 @@ the contribution id in `ETag`, or **400**/**404**/**409**/**422** on invalid
 input, unknown EHR, a uid conflict, or a change set that is well-formed but
 cannot be followed.
 
-Four things about the payload are worth calling out:
+Five things about the payload are worth calling out:
 
 - **The shared `audit` must carry its own `change_type` and `committer`.** They
   are your account of the change set as a whole and are never derived or
-  invented by the server; omitting either is a **422**. The server fills in
-  `time_committed`, and `system_id` when you do not supply one.
+  invented by the server. Omitting the `committer` is a **400**; omitting the
+  `change_type` is a **422**. The server fills in `time_committed`, and
+  `system_id` when you do not supply one.
+- **Every `commit_audit` names its own `committer`**, an attestation included.
+  The server never copies the shared audit's committer into a version that
+  leaves it out: that version is refused with a **400** naming its index. A
+  version's committer is stored as you send it, even when it differs from the
+  shared audit's. A version that omits `system_id` gets the shared audit's, and
+  every audit in the contribution carries the same `time_committed`.
 - **`lifecycle_state` is required on every version** and is not defaulted.
-  Omitting it is a **400**. The one exception is an attestation entry (see
-  below), which commits no new version and therefore has no lifecycle state.
+  Omitting it is a **400**, on an attestation entry (see below) as well, even
+  though an attestation commits no new version.
 - **A version entry carries exactly the six declared members**
   (`preceding_version_uid`, `signature`, `lifecycle_state`, `attestations`,
   `data`, `commit_audit`) plus an optional `_type` self-tag. Anything else is

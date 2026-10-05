@@ -6142,7 +6142,12 @@ pub(crate) async fn versioned_party_version_get_by_id(
                                       A supplied `audit.system_id` that does not \
                                       validate is this branch too — the operation \
                                       says \"when provided, it will be \
-                                      validated\".",
+                                      validated\". So is an `audit` or member \
+                                      `commit_audit` that states no `committer`, \
+                                      which `UpdateAudit.yaml` lists under \
+                                      `required`, and a member that states no \
+                                      `lifecycle_state` (SM master03 §Version \
+                                      Update Semantics).",
          body = serde_json::Value),
         (status = 406, description = "The `Accept` header cannot be satisfied: the \
                                       `201` body is served as canonical JSON only, \

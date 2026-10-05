@@ -113,10 +113,13 @@ async fn accompanying_attestation_then_standalone_666_attestation() {
     // The inherited change_type is the 666|attestation| code.
     assert_eq!(att["change_type"]["defining_code"]["code_string"], "666");
 
-    // (2) A later 666-only CONTRIBUTION attesting that same version.
+    // (2) A later 666-only CONTRIBUTION attesting that same version. Its
+    // member states a lifecycle_state like every other member (SM master03
+    // §Version Update Semantics: "must be supplied in all cases").
     let attest_contribution = json!({
         "versions": [{
             "preceding_version_uid": { "value": ovid_v1.clone() },
+            "lifecycle_state": change_type("532", "complete"),
             "commit_audit": {
                 "change_type": change_type("666", "attestation"),
                 "committer": committer("senior reviewer"),
@@ -208,6 +211,7 @@ async fn attestation_error_cases() {
     // 666 without preceding_version_uid → 400 (cannot name its target).
     let err = attempt(json!({
         "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
+            "lifecycle_state": change_type("532", "complete"),
             "commit_audit": {
                 "change_type": change_type("666", "attestation"),
                 "committer": committer("x"),
@@ -233,6 +237,7 @@ async fn attestation_error_cases() {
     let err = attempt(json!({
         "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
             "preceding_version_uid": { "value": ovid_v1.clone() },
+            "lifecycle_state": change_type("532", "complete"),
             "commit_audit": {
                 "change_type": change_type("666", "attestation"),
                 "committer": committer("x"),
@@ -259,6 +264,7 @@ async fn attestation_error_cases() {
     let err = attempt(json!({
         "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
             "preceding_version_uid": { "value": ovid_v1.clone() },
+            "lifecycle_state": change_type("532", "complete"),
             "commit_audit": {
                 "change_type": change_type("666", "attestation"),
                 "committer": committer("x"),
@@ -283,6 +289,7 @@ async fn attestation_error_cases() {
     let err = attempt(json!({
         "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
             "preceding_version_uid": { "value": ovid_v1.clone() },
+            "lifecycle_state": change_type("532", "complete"),
             "commit_audit": {
                 "change_type": change_type("666", "attestation"),
                 "committer": committer("x"),
@@ -312,6 +319,7 @@ async fn attestation_error_cases() {
     let err = attempt(json!({
         "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
             "preceding_version_uid": { "value": ghost },
+            "lifecycle_state": change_type("532", "complete"),
             "commit_audit": {
                 "change_type": change_type("666", "attestation"),
                 "committer": committer("x"),
@@ -330,6 +338,172 @@ async fn attestation_error_cases() {
                 ..
             }
         ),
+        "got {err:?}"
+    );
+}
+
+/// A `666|attestation|` member states its `lifecycle_state` like every other
+/// member (#3590). SM `master03-common_package.adoc` §Version Update Semantics:
+/// "The `lifecycle_state` must be supplied in all cases", and ITS-REST
+/// `schemas/ehr/UpdateVersion.yaml` lists it under `required`. A member without
+/// one is the 400; a stated code outside the openEHR `version_lifecycle_state`
+/// group is the 422 every member's out-of-group state gets; the twin stating
+/// `532|complete|` commits the attestation.
+#[tokio::test]
+async fn attestation_member_without_lifecycle_state_is_refused() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr_id = create_ehr(&svc).await;
+    let ehr_uuid: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
+    let ovid = svc
+        .create_composition(ehr_uuid, uv(&composition("attested"), "249", None))
+        .await
+        .expect("composition_create")
+        .version_uid();
+
+    let attest = |lifecycle_state: Option<Value>| {
+        let mut member = json!({
+            "preceding_version_uid": { "value": ovid.clone() },
+            "commit_audit": {
+                "change_type": change_type("666", "attestation"),
+                "committer": committer("senior reviewer"),
+                "reason": { "_type": "DV_TEXT", "value": "authorised" },
+                "is_pending": false
+            }
+        });
+        if let Some(state) = lifecycle_state {
+            member["lifecycle_state"] = state;
+        }
+        json!({
+            "versions": [member],
+            "audit": {
+                "change_type": change_type("666", "attestation"),
+                "committer": committer("senior reviewer")
+            }
+        })
+    };
+
+    let err = svc
+        .create_ehr_contribution(ehr_uuid, attest(None))
+        .await
+        .expect_err("an attestation member without lifecycle_state is refused");
+    assert_eq!(
+        err.status,
+        CallStatusType::PreconditionViolation,
+        "the refusal is the 400, got {err:?}"
+    );
+    assert!(
+        err.message
+            .starts_with("versions[0]: lifecycle_state is required"),
+        "the refusal names the member and the attribute, got {err:?}"
+    );
+
+    let err = svc
+        .create_ehr_contribution(ehr_uuid, attest(Some(change_type("999", "nonsense"))))
+        .await
+        .expect_err("an out-of-group lifecycle_state is refused");
+    assert_eq!(err.status, CallStatusType::ContentInvalid, "got {err:?}");
+    assert!(
+        err.message.contains("versions[0]/lifecycle_state")
+            && err.message.contains("version_lifecycle_state"),
+        "got {err:?}"
+    );
+
+    let created = svc
+        .create_ehr_contribution(ehr_uuid, attest(Some(change_type("532", "complete"))))
+        .await
+        .expect("the attestation member stating its lifecycle_state commits");
+    assert_eq!(
+        created.body["versions"][0]["id"]["value"].as_str(),
+        Some(ovid.as_str()),
+        "the attested version is listed"
+    );
+}
+
+/// Every attestation states its own `committer` (#3550): ITS-REST
+/// `schemas/common/UpdateAttestation.yaml` inherits `required: [change_type,
+/// committer]` from `UpdateAudit.yaml` through `allOf`. Neither the
+/// `666|attestation|` member's `commit_audit` nor an attestation committed with
+/// a new version (`UPDATE_VERSION.attestations`) takes the CONTRIBUTION audit's
+/// committer; each refusal is the 400 naming the member.
+#[tokio::test]
+async fn attestation_without_committer_is_refused() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr_id = create_ehr(&svc).await;
+    let ehr_uuid: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
+    let ovid = svc
+        .create_composition(ehr_uuid, uv(&composition("attested"), "249", None))
+        .await
+        .expect("composition_create")
+        .version_uid();
+    let audit = json!({
+        "change_type": change_type("251", "modification"),
+        "committer": committer("contribution committer")
+    });
+
+    // The 666 member's own audit without a committer.
+    let err = svc
+        .create_ehr_contribution(
+            ehr_uuid,
+            json!({
+                "versions": [{
+                    "preceding_version_uid": { "value": ovid.clone() },
+                    "lifecycle_state": change_type("532", "complete"),
+                    "commit_audit": {
+                        "change_type": change_type("666", "attestation"),
+                        "reason": { "_type": "DV_TEXT", "value": "authorised" },
+                        "is_pending": false
+                    }
+                }],
+                "audit": audit.clone()
+            }),
+        )
+        .await
+        .expect_err("a 666 member without a committer is refused");
+    assert_eq!(
+        err.status,
+        CallStatusType::PreconditionViolation,
+        "got {err:?}"
+    );
+    assert!(
+        err.message
+            .starts_with("versions[0]: commit_audit.committer is required"),
+        "got {err:?}"
+    );
+
+    // An attestation committed with a new version, without a committer.
+    let mut unattributed = attestation("witnessed", false);
+    unattributed
+        .as_object_mut()
+        .expect("the fixture is an object")
+        .remove("committer");
+    let err = svc
+        .create_ehr_contribution(
+            ehr_uuid,
+            json!({
+                "versions": [{
+                    "commit_audit": {
+                        "change_type": change_type("249", "creation"),
+                        "committer": committer("author")
+                    },
+                    "lifecycle_state": change_type("532", "complete"),
+                    "data": composition("with an unattributed attestation"),
+                    "attestations": [unattributed]
+                }],
+                "audit": audit
+            }),
+        )
+        .await
+        .expect_err("an accompanying attestation without a committer is refused");
+    assert_eq!(
+        err.status,
+        CallStatusType::PreconditionViolation,
+        "got {err:?}"
+    );
+    assert!(
+        err.message
+            .starts_with("versions[0]: UPDATE_ATTESTATION.committer is required"),
         "got {err:?}"
     );
 }
@@ -776,30 +950,71 @@ async fn contribution_honors_the_five_lifecycle_states() {
     );
 }
 
+/// Each member's `commit_audit` is the member's own (#3550): it keeps the
+/// `committer` it states, takes the CONTRIBUTION audit's `system_id` when it
+/// states none, and carries the one `time_committed` the server sets for the
+/// whole set.
+///
+/// RM common `master06-change_control_package.adoc` §Committal and Audits: the
+/// CONTRIBUTION audit's `system_id`/`committer`/`time_committed` "should be
+/// copied" into each version's `commit_audit`, and `time_committed` "should
+/// therefore be computed on the server". SM `UML/classes/update_version.adoc`
+/// gives every member its own mandatory audit, whose `committer` is 1..1
+/// (`update_audit.adoc`), so a stated member committer is kept. ITS-REST
+/// `schemas/common/UpdateAudit.yaml`: an omitted `system_id` is the server's,
+/// which is also what the CONTRIBUTION audit carries when it states none.
 #[tokio::test]
-async fn version_commit_audit_defaults_from_the_contribution_audit() {
-    // m4 (RM common master06 §"Committal"): the CONTRIBUTION audit's
-    // system_id/committer "should be copied into the corresponding attributes
-    // of the commit_audit of each VERSION" when the version item omits them; a
-    // version item that supplies its own values keeps them verbatim.
+async fn member_commit_audit_keeps_its_committer_and_shares_the_commit_instant() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
     let ehr_id = create_ehr(&svc).await;
+    let ehr_uuid: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
+
+    // The served commit_audits of every version a CONTRIBUTION lists, as
+    // (system_id, committer name, time_committed).
+    let audits_of = |contribution: Value| {
+        let svc = svc.clone();
+        let ehr_id = ehr_id.clone();
+        async move {
+            let mut seen: Vec<(String, String, String)> = Vec::new();
+            for v in contribution["versions"].as_array().expect("versions") {
+                let ovid = v["id"]["value"].as_str().expect("ovid").to_owned();
+                let ov = read_version(&svc, &ehr_id, vo_of(&ovid), &ovid).await;
+                let audit = &ov["commit_audit"];
+                seen.push((
+                    audit["system_id"].as_str().expect("system_id").to_owned(),
+                    audit["committer"]["name"]
+                        .as_str()
+                        .expect("committer name")
+                        .to_owned(),
+                    audit["time_committed"]["value"]
+                        .as_str()
+                        .expect("time_committed")
+                        .to_owned(),
+                ));
+            }
+            seen.sort();
+            seen
+        }
+    };
 
     let created = svc
         .create_ehr_contribution(
-            ehr_id.parse().expect("ehr uuid"),
+            ehr_uuid,
             json!({
                 "versions": [
-                    // (A) commit_audit omits committer + system_id → inherit them.
+                    // (A) states its committer, omits system_id.
                     {
-                        "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
-                        "commit_audit": { "change_type": change_type("249", "creation") },
-                        "data": composition("inherits contribution audit")
+                        "lifecycle_state": change_type("532", "complete"),
+                        "commit_audit": {
+                            "change_type": change_type("249", "creation"),
+                            "committer": committer("version-A author")
+                        },
+                        "data": composition("takes the contribution system_id")
                     },
-                    // (B) commit_audit supplies distinct committer + system_id → keep.
+                    // (B) states a committer and a system_id of its own.
                     {
-                        "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
+                        "lifecycle_state": change_type("532", "complete"),
                         "commit_audit": {
                             "change_type": change_type("249", "creation"),
                             "committer": committer("version-B author"),
@@ -808,7 +1023,8 @@ async fn version_commit_audit_defaults_from_the_contribution_audit() {
                         "data": composition("keeps its own audit")
                     }
                 ],
-                "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, 
+                "audit": {
+                    "change_type": change_type("249", "creation"),
                     "committer": committer("contribution committer"),
                     "system_id": "contribution.system"
                 }
@@ -816,36 +1032,136 @@ async fn version_commit_audit_defaults_from_the_contribution_audit() {
         )
         .await
         .expect("two-creation contribution → 201");
+    let instant = created.body["audit"]["time_committed"]["value"]
+        .as_str()
+        .expect("the CONTRIBUTION audit's time_committed")
+        .to_owned();
+    assert_eq!(
+        audits_of(created.body).await,
+        vec![
+            (
+                "contribution.system".to_owned(),
+                "version-A author".to_owned(),
+                instant.clone()
+            ),
+            (
+                "version-b.system".to_owned(),
+                "version-B author".to_owned(),
+                instant
+            ),
+        ],
+        "each member keeps its committer, A takes the contribution system_id, \
+         and every audit carries the one commit instant"
+    );
 
-    // Collect each created version's commit_audit (system_id + committer name).
-    let mut seen: Vec<(String, String)> = Vec::new();
-    for v in created.body["versions"].as_array().expect("versions") {
-        let ovid = v["id"]["value"].as_str().expect("ovid").to_owned();
-        let vo = vo_of(&ovid);
-        let ov = read_version(&svc, &ehr_id, vo, &ovid).await;
-        let sys = ov["commit_audit"]["system_id"]
-            .as_str()
-            .expect("system_id")
-            .to_owned();
-        let who = ov["commit_audit"]["committer"]["name"]
-            .as_str()
-            .expect("committer name")
-            .to_owned();
-        seen.push((sys, who));
+    // No system_id anywhere: the CONTRIBUTION audit and the member both carry
+    // the server's own.
+    let created = svc
+        .create_ehr_contribution(
+            ehr_uuid,
+            json!({
+                "versions": [{
+                    "lifecycle_state": change_type("532", "complete"),
+                    "commit_audit": {
+                        "change_type": change_type("249", "creation"),
+                        "committer": committer("version author")
+                    },
+                    "data": composition("server system_id")
+                }],
+                "audit": {
+                    "change_type": change_type("249", "creation"),
+                    "committer": committer("contribution committer")
+                }
+            }),
+        )
+        .await
+        .expect("a contribution without any system_id → 201");
+    assert_eq!(
+        created.body["audit"]["system_id"].as_str(),
+        Some(ferroehr::service::DEFAULT_SYSTEM_ID)
+    );
+    let instant = created.body["audit"]["time_committed"]["value"]
+        .as_str()
+        .expect("the CONTRIBUTION audit's time_committed")
+        .to_owned();
+    assert_eq!(
+        audits_of(created.body).await,
+        vec![(
+            ferroehr::service::DEFAULT_SYSTEM_ID.to_owned(),
+            "version author".to_owned(),
+            instant
+        )]
+    );
+}
+
+/// A member `commit_audit` without `committer` is refused with the 400 (#3550),
+/// never filled from the CONTRIBUTION audit: ITS-REST
+/// `schemas/common/UpdateAudit.yaml` `required: [change_type, committer]` types
+/// every `versions[i].commit_audit` (`schemas/ehr/UpdateVersion.yaml`), SM
+/// `openehr_platform/master03-common_package.adoc` §Version Update Semantics
+/// names only `time_committed` and `system_id` as server-generated, and
+/// `operations/contribution_create.yaml` declares no 422. A `null` committer is
+/// the same absence; the twin stating one commits.
+#[tokio::test]
+async fn member_commit_audit_without_committer_is_refused() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr_id = create_ehr(&svc).await;
+    let ehr_uuid: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
+
+    let body = |commit_audit: Value| {
+        json!({
+            "versions": [
+                {
+                    "lifecycle_state": change_type("532", "complete"),
+                    "commit_audit": {
+                        "change_type": change_type("249", "creation"),
+                        "committer": committer("first author")
+                    },
+                    "data": composition("first member")
+                },
+                {
+                    "lifecycle_state": change_type("532", "complete"),
+                    "commit_audit": commit_audit,
+                    "data": composition("second member")
+                }
+            ],
+            "audit": {
+                "change_type": change_type("249", "creation"),
+                "committer": committer("contribution committer")
+            }
+        })
+    };
+
+    for commit_audit in [
+        json!({ "change_type": change_type("249", "creation") }),
+        json!({ "change_type": change_type("249", "creation"), "committer": null }),
+    ] {
+        let err = svc
+            .create_ehr_contribution(ehr_uuid, body(commit_audit.clone()))
+            .await
+            .expect_err("a member commit_audit without a committer is refused");
+        assert_eq!(
+            err.status,
+            CallStatusType::PreconditionViolation,
+            "{commit_audit}: the refusal is the 400, got {err:?}"
+        );
+        assert!(
+            err.message
+                .starts_with("versions[1]: commit_audit.committer is required"),
+            "{commit_audit}: the refusal names the member, got {err:?}"
+        );
     }
-    seen.sort();
 
-    assert!(
-        seen.contains(&(
-            "contribution.system".to_owned(),
-            "contribution committer".to_owned()
-        )),
-        "version A must inherit the contribution audit, got {seen:?}"
-    );
-    assert!(
-        seen.contains(&("version-b.system".to_owned(), "version-B author".to_owned())),
-        "version B must keep its own committer/system_id, got {seen:?}"
-    );
+    svc.create_ehr_contribution(
+        ehr_uuid,
+        body(json!({
+            "change_type": change_type("249", "creation"),
+            "committer": committer("second author")
+        })),
+    )
+    .await
+    .expect("the twin stating its committer commits");
 }
 
 /// `get_contribution_resolved` (ITS-REST `Prefer: resolve_refs`): the
@@ -918,7 +1234,8 @@ async fn contribution_supplied_uid() {
             "data": composition("obs"),
             "lifecycle_state": { "code_string": "532", "terminology_id": { "value": "openehr" } },
             "commit_audit": { "change_type": { "value": "creation",
-                "defining_code": { "code_string": "249", "terminology_id": { "value": "openehr" } } } }
+                "defining_code": { "code_string": "249", "terminology_id": { "value": "openehr" } } },
+                "committer": { "_type": "PARTY_IDENTIFIED", "name": "T" } }
         }],
         "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": { "_type": "PARTY_IDENTIFIED", "name": "T" } }
     });
@@ -1889,7 +2206,10 @@ async fn contribution_audit_change_type_is_required_not_derived() {
 
     // The committer sibling (#1817 — the same UpdateAudit.yaml `required`
     // member): an audit naming a change type but NO committer is refused; the
-    // server never invents the committing identity.
+    // server never invents the committing identity. The refusal is the 400
+    // (#3550): a body missing a schema-required member is syntactically
+    // invalid content (`responses/400_CONTRIBUTION.yaml`), and
+    // `operations/contribution_create.yaml` declares no 422.
     let err = svc
         .create_ehr_contribution(
             ehr_uuid,
@@ -1902,8 +2222,8 @@ async fn contribution_audit_change_type_is_required_not_derived() {
         .expect_err("a CONTRIBUTION audit without a committer must be refused");
     assert_eq!(
         err.status,
-        CallStatusType::ContentInvalid,
-        "the refusal is the 422 content-invalid row, got {err:?}"
+        CallStatusType::PreconditionViolation,
+        "the refusal is the 400 row, got {err:?}"
     );
     assert!(
         err.message.contains("CONTRIBUTION.audit.committer"),

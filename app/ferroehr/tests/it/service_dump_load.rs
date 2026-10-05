@@ -1029,6 +1029,7 @@ fn later_attest_contribution(ovid: &str) -> Value {
     json!({
         "versions": [{
             "preceding_version_uid": { "value": ovid },
+            "lifecycle_state": change_type("532", "complete"),
             "commit_audit": {
                 "change_type": change_type("666", "attestation"),
                 "committer": committer("senior reviewer"),

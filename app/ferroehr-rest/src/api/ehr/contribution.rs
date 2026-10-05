@@ -63,9 +63,9 @@ pub(super) async fn run(
             )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             // TODO(#3550): commit through the typed `NewContribution`; the raw
-            // body stays while a member's `commit_audit` may inherit `committer`
-            // from the CONTRIBUTION audit (RM common master06 §Committal), which
-            // the generated `UpdateAudit` requires.
+            // body stays while the service still accepts member spellings the
+            // generated envelope refuses (the SM `Terminology_code` form, an
+            // omitted member `change_type`, an `ATTESTATION` member `_type`).
             // NOTE: a CONTRIBUTION commit is a wrapper DTO, not a single
             // canonical RM value with a defined canonical-XML shape — so it is
             // accepted as JSON only.

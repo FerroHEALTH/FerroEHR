@@ -369,7 +369,8 @@ async fn relationship_via_demographic_contribution() {
                         "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
                         "code_string": "249"
                     }
-                }
+                },
+                "committer": { "_type": "PARTY_IDENTIFIED", "name": "tester" }
             },
             "data": relationship("colleague-of", "p1", "p2")
         }],

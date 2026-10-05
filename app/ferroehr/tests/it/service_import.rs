@@ -1188,6 +1188,15 @@ async fn attesting_an_imported_version_is_refused() {
     let attest_contribution = json!({
         "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
             "preceding_version_uid": { "value": imported_uid },
+            "lifecycle_state": {
+                "_type": "DV_CODED_TEXT",
+                "value": "complete",
+                "defining_code": {
+                    "_type": "CODE_PHRASE",
+                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+                    "code_string": "532"
+                }
+            },
             "commit_audit": {
                 "change_type": {
                     "_type": "DV_CODED_TEXT",

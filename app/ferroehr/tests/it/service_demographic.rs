@@ -507,6 +507,51 @@ async fn role_create_and_get() {
     assert_eq!(got.body["performer"]["type"], "PERSON");
 }
 
+/// The demographic CONTRIBUTION shares the commit audit rule of the EHR one
+/// (#3550): `schemas/demographic/UpdateVersion.yaml` references the same
+/// `schemas/common/UpdateAudit.yaml`, whose `required` lists `committer`, so a
+/// member `commit_audit` without one is the 400 and is never filled from the
+/// CONTRIBUTION audit.
+#[tokio::test]
+async fn demographic_contribution_member_without_committer_is_refused() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let coded = |code: &str, value: &str| {
+        json!({
+            "_type": "DV_CODED_TEXT", "value": value,
+            "defining_code": {
+                "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+                "code_string": code
+            }
+        })
+    };
+    let err = svc
+        .demographic_contribution_create(json!({
+            "versions": [{
+                "lifecycle_state": coded("532", "complete"),
+                "commit_audit": { "change_type": coded("249", "creation") },
+                "data": person("Unattributed")
+            }],
+            "audit": {
+                "change_type": coded("249", "creation"),
+                "committer": { "_type": "PARTY_IDENTIFIED", "name": "tester" }
+            }
+        }))
+        .await
+        .expect_err("a demographic member without a committer is refused");
+    assert_eq!(
+        err.status,
+        CallStatusType::PreconditionViolation,
+        "got {err:?}"
+    );
+    assert!(
+        err.message
+            .starts_with("versions[0]: commit_audit.committer is required"),
+        "got {err:?}"
+    );
+}
+
 #[tokio::test]
 async fn demographic_contribution_multi_version() {
     let db = testkit::db().await.expect("testkit database");
@@ -527,7 +572,8 @@ async fn demographic_contribution_multi_version() {
                             "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
                             "code_string": "249"
                         }
-                    }
+                    },
+                    "committer": { "_type": "PARTY_IDENTIFIED", "name": "tester" }
                 },
                 "data": person("Alice")
             },
@@ -543,7 +589,8 @@ async fn demographic_contribution_multi_version() {
                             "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
                             "code_string": "249"
                         }
-                    }
+                    },
+                    "committer": { "_type": "PARTY_IDENTIFIED", "name": "tester" }
                 },
                 "data": role("Nurse")
             }

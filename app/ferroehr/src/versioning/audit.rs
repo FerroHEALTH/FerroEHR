@@ -205,8 +205,8 @@ impl AuditInput {
     /// envelope, merged with the server rules (ITS-REST overview
     /// §"openehr-version and openehr-audit-details": `change_type` is the
     /// FIRST attribute the clients "MAY supply values for", and "whatever is
-    /// provided it MUST be merged"; RM common master06 §Committal m4
-    /// defaults):
+    /// provided it MUST be merged"; RM common master06 §Committal and Audits
+    /// for the audit attributes):
     ///
     /// - `change_type` — the caller's when supplied, honoured verbatim after
     ///   [`merged_change_type`] validates it against the `audit_change_type`
@@ -447,6 +447,39 @@ pub(crate) fn party_proxy(committer: &Value) -> Result<PartyProxy, ServiceError>
                 .with_decode_failure(&e),
         )
     })
+}
+
+/// Reads the `committer` a client-supplied commit audit states, which every
+/// commit audit must state.
+///
+/// ITS-REST `specifications/schemas/common/UpdateAudit.yaml` lists `committer`
+/// under `required` (inherited by `UpdateAttestation.yaml` through `allOf`), SM
+/// `UML/classes/update_audit.adoc` types it 1..1, and SM
+/// `openehr_platform/master03-common_package.adoc` §Version Update Semantics
+/// names only `time_committed` and `system_id` as server-generated. A missing
+/// one (absent or `null`) is therefore a body that does not match its schema,
+/// the "syntactically invalid content" of `responses/400_CONTRIBUTION.yaml`.
+/// `owner` names the audit in the refusal (`CONTRIBUTION.audit`,
+/// `commit_audit`, `UPDATE_ATTESTATION`).
+///
+/// # Errors
+/// [`ServiceError::BadRequest`] when `committer` is absent or `null`;
+/// [`ServiceError::Unprocessable`] when it is not a canonical `PARTY_PROXY`.
+pub(crate) fn required_committer(
+    audit: Option<&Value>,
+    owner: &str,
+) -> Result<PartyProxy, ServiceError> {
+    match audit
+        .and_then(|a| a.get("committer"))
+        .filter(|c| !c.is_null())
+    {
+        Some(supplied) => party_proxy(supplied),
+        None => Err(ServiceError::precondition(format!(
+            "{owner}.committer is required: UPDATE_AUDIT requires committer (ITS-REST \
+             schemas/common/UpdateAudit.yaml; SM update_audit.adoc committer 1..1), and \
+             the server never supplies it on the client's behalf"
+        ))),
+    }
 }
 
 /// Validate a client-supplied commit `AUDIT_DETAILS`' non-terminology RM

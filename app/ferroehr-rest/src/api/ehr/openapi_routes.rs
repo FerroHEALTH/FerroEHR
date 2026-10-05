@@ -5268,13 +5268,17 @@ pub(crate) async fn directory_get_by_version_id(
                        \"Clients SHOULD send `_type: \"UPDATE_AUDIT\"`; for \
                        interoperability servers SHOULD additionally accept \
                        `_type: \"AUDIT_DETAILS\"` or an omitted `_type`\", \
-                       and all three are accepted here. The CONTRIBUTION \
-                       audit's `system_id`/`committer` are copied down into \
-                       every member that omits them (RM common master06 \
-                       §\"Committal and Audits\": those attributes \"should be \
-                       copied into the corresponding attributes of the \
-                       `commit_audit` of each VERSION included in the \
-                       CONTRIBUTION\"), and the envelope `change_type` is the \
+                       and all three are accepted here. Every audit states its \
+                       own `committer` (`UpdateAudit.yaml` lists it under \
+                       `required`) and a member keeps the one it states; the \
+                       CONTRIBUTION audit's `system_id` is copied into every \
+                       member that omits one, and one server-set \
+                       `time_committed` is stamped on every audit of the set \
+                       (RM common master06 §\"Committal and Audits\": those \
+                       attributes \"should be copied into the corresponding \
+                       attributes of the `commit_audit` of each VERSION \
+                       included in the CONTRIBUTION\"). The envelope \
+                       `change_type` is the \
                        aggregate of the members' — \"This may sometimes be \
                        approximate, and is not expected to be used as a \
                        computable value\" (master06 §Contributions), so it is \
@@ -5421,7 +5425,15 @@ pub(crate) async fn directory_get_by_version_id(
                                       `523`/`666`) on a member with NO \
                                       `preceding_version_uid` — the released \
                                       first-version-of-a-MODIFICATION trigger \
-                                      itself; or a member names a \
+                                      itself; the `audit`, a member \
+                                      `commit_audit` or an attestation states \
+                                      no `committer` (`UpdateAudit.yaml` lists \
+                                      it under `required`, inherited by \
+                                      `UpdateAttestation.yaml`); a member, an \
+                                      attestation (`666`) member included, \
+                                      states no `lifecycle_state` (SM master03 \
+                                      §\"Version Update Semantics\": \"must be \
+                                      supplied in all cases\"); or a member names a \
                                       `preceding_version_uid` whose \
                                       VERSIONED_OBJECT does not exist (the \
                                       modification matches no stored object — a \
@@ -5550,8 +5562,7 @@ pub(crate) async fn directory_get_by_version_id(
                                       modification member (a `523`/`666` \
                                       member with no `preceding_version_uid` \
                                       is the released first-version `400`); a \
-                                      `666` \
-                                      member with no `commit_audit`; a member \
+                                      member \
                                       whose object kind is out of the \
                                       contribution's scope (a demographic PARTY \
                                       in an EHR CONTRIBUTION); a `commit_audit` \
@@ -5566,7 +5577,8 @@ pub(crate) async fn directory_get_by_version_id(
                                       validate it, relaxed for a \
                                       `553|incomplete|` lifecycle (master06 \
                                       §\"Incomplete Content\"). A member that \
-                                      OMITS the required `lifecycle_state`, or \
+                                      OMITS the required `lifecycle_state` or a \
+                                      `committer`, or \
                                       that carries `other_input_version_uids` \
                                       (a property the released `UPDATE_VERSION` \
                                       does not declare — merge provenance is \
