@@ -1,5 +1,7 @@
 # Product telemetry ("alive" report to a Cadasto-operated collector): what the vendored corpus says
 
+> Superseded in part (2026-10-05): the GDPR recitals (`docs/law/eu/gdpr/oj.html`), the ePrivacy Directive (`docs/law/eu/eprivacy/`) and the Telecommunicatiewet (`docs/law/nl/telecommunicatiewet/`) are now vendored (#3580, #3581). Where this report says they are absent, the #3580 adjudication on the issue is the current reading.
+
 Read 2026-10-05, first-hand, from `docs/law/` at the pins in `docs/law/README.md`. No legal advice: this reports what the text says, who it binds and what software would have to be able to do. The word "compliant" is not used.
 
 Proposal under review: each self-hosted FerroEHR instance periodically sends, by default (opt-out), a random instance id, the product version, the licence grant in force (embedded non-commercial grant, or an installed commercial grant whose licence id names the licensee organisation), uptime, and aggregated performance data (latency histograms per endpoint, slow-query statistics, PostgreSQL version, CPU/memory class, coarse data-volume buckets) to a collector Cadasto B.V. (NL) runs on Hetzner (EU), shown in Grafana. No patient data, query literals or identifiers. A boot log line says telemetry is on and how to switch it off.

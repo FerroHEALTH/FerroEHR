@@ -66,7 +66,7 @@ pub struct RbacConfig {
     /// (`FERROEHR__AUTHZ__RBAC__SUBJECT_AUDIT_ROLE`, default unset).
     ///
     /// A portal that shows a person who accessed their record (GDPR Art. 15
-    /// with Recital 63, EHDS Art. 9, for Dutch deployments Wabvpz Art. 15e)
+    /// with Recital 63, `docs/law/eu/gdpr/oj.html`, EHDS Art. 9, for Dutch deployments Wabvpz Art. 15e)
     /// needs the ITI-81 retrieval for that person and nobody else. A caller
     /// holding this role may call `GET /fhir/r4/AuditEvent` only with the
     /// `patient` parameter, the subject's opaque pseudonym; without it the call

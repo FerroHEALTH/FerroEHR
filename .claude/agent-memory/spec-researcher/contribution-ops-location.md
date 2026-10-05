@@ -86,3 +86,17 @@ one_commit / multi-version decision tables + 4 SM-operation case families
 the JSON fixtures under `_resources/test_data_sets/contributions/` are the
 LEGACY `_type: ORIGINAL_VERSION` + full AUDIT_DETAILS shape and several are
 structurally corrupt (a whole CONTRIBUTION nested inside `versions[0].data`).
+
+## committer on commit_audit (adjudicated for #3550, 2026-10-05)
+- Required on BOTH `audit` and every `versions[i].commit_audit`: OAS
+  `UpdateAudit.yaml` L12-14 + contribution_create desc L9-10 (server-assigned =
+  ONLY time_committed + optional system_id) + SM master03 L23 (same two) + SM
+  update_audit/update_version 1..1 + Amendment_record L22-28 SPECITS-95 (made
+  system_id optional, left committer required = intent evidence).
+- RM master06 §Committal and Audits L88 copy rule is a persisted-object
+  lowercase "should" (RM declares no BCP14; master01-preface §Conformance L43-45
+  defers wire conformance to ITSs) — NOT a wire relaxation; no RM/OAS conflict.
+- Real silence: member committer != audit.committer (overwrite/keep/refuse) —
+  nowhere specified. Header path (Requests_and_responses L81/L93) server-default
+  committer is NOT transferable to the CONTRIBUTION body.
+- CNF: master08 never mentions committer; all 47 CNF contribution JSONs carry it.
