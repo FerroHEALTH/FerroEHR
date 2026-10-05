@@ -73,7 +73,7 @@ services:
     volumes:
       # docs.docker.com/reference/compose-file/services/#volumes, type image.
       - type: image
-        source: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:4.3.2}
+        source: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:4.3.3}
         target: /image
         read_only: true
       - type: volume
