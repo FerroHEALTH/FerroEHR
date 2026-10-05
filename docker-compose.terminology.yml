@@ -52,8 +52,8 @@
 #
 # Posture: the CDR keeps its shipped fail-OPEN default (a binding the server
 # cannot resolve is accepted); FERROEHR__TERMINOLOGY__EXTERNAL__FAIL_ON_ERROR=true
-# turns an unreachable server into a 422 refusal. Register AMB-172 records that
-# no released openEHR text decides between the two.
+# turns an unreachable server into a 422 refusal. No openEHR spec governs the
+# choice between the two: our own design.
 
 services:
   ferroterm:

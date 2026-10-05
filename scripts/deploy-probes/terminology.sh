@@ -308,7 +308,7 @@ probes_terminology_ferroterm() {
   assert_not_contains "$(dc -f docker-compose.yml -f "$TERM_FT_OVERLAY" ps -a --format '{{.Service}} {{.State}}')" "ferroterm running" \
     "the terminology server must be down for this state to mean anything"
   assert_eq "201" "$(term_ft_commit_code "$TERM_FT_MEMBER")" \
-    "fail-open accepts a binding the server cannot resolve (register AMB-172)"
+    "fail-open accepts a binding the server cannot resolve"
   probe_done
 
   probe "P-FT-DOWN-CLOSED" "broken" "server" "#3304" \
