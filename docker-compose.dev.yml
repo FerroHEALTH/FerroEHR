@@ -63,6 +63,9 @@ services:
       # knob (the pull-only quickstart carries no such env: its pinned released
       # images may predate the key, whose strict sweep would refuse it at boot).
       FERROEHR__SPEC_PROFILE: ${FERROEHR__SPEC_PROFILE:-development}
+      # A source build in development (and the ui-e2e lane) sends no usage report.
+      FERROEHR__USAGE_REPORT__ENABLED: ${FERROEHR__USAGE_REPORT__ENABLED:-false}
+      FERROEHR__USAGE_REPORT__DEPLOYMENT: compose
 
   ferroehr-viewer:
     image: ${FERROEHR_VIEWER_IMAGE:-ghcr.io/ferrohealth/ferroehr-viewer:local}

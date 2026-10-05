@@ -28,8 +28,9 @@ collector and dashboard live in their own repository (FerroPULSE).
 The client relies on these collector properties, and the book page states them:
 
 - `POST /v1/report`, HTTPS only, body at most 64 KiB, answers `204`.
-- No source IP stored, in the collector or the proxy in front of it; the
-  country is derived at ingress and the IP discarded.
+- The source IP (IPv4 or IPv6) and the country derived from it are stored
+  with each report (owner decision 2026-10-05), under the retention period
+  and erasure by instance id.
 - A fixed retention period, published on the book page.
 - Erasure of every stored report for an instance id on request.
 - The dashboard sits behind access control, never public.

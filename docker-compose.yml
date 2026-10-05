@@ -372,12 +372,6 @@ services:
       # Measurement parity (logging equal and minimal on both SUTs):
       # measured comparison runs set warn on BOTH SUTs; default stays info.
       FERROEHR__LOG__FILTER: ${FERROEHR__LOG__FILTER:-info}
-      # The usage report to FerroPULSE: on by default, and every boot logs one
-      # line saying so (https://ferroehr.eu/docs/latest/usage-report.html).
-      # Export FERROEHR__USAGE_REPORT__ENABLED=false in your shell to switch it
-      # off. The deployment kind is what the report states about this file.
-      FERROEHR__USAGE_REPORT__ENABLED: ${FERROEHR__USAGE_REPORT__ENABLED:-true}
-      FERROEHR__USAGE_REPORT__DEPLOYMENT: compose
       # Multimedia (the `s3` profile), passed through from YOUR shell. These are
       # declared with no value on purpose: "If the value is not resolved, the
       # variable is unset and is removed from the service container environment"
