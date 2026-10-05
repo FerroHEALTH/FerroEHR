@@ -164,6 +164,11 @@ STUB
   said "a token that may not read the types" "$work/out" "https://github.com/Example-Org/Example/issues/4242"
   said "the labels it was given" "$created" "--label ci"
 
+  run "an @path issue number" 1 show @/etc/hosts
+  said "an @path issue number" "$work/err" "not an issue number"
+  run "an @path issue number to set" 1 type @/etc/hosts bug
+  said "an @path issue number to set" "$work/err" "not an issue number"
+
   create=fail
   run "a refused gh issue create" 1 new bug high low --title t --body b
   said "a refused gh issue create" "$work/err" "gh issue create failed"
@@ -195,8 +200,15 @@ titled() {
   printf '%s%s' "$(printf '%s' "${1:0:1}" | tr '[:lower:]' '[:upper:]')" "${1:1}"
 }
 
+# An issue number is digits only: gh reads a -F value that starts with @ as a
+# file and would send its contents to GitHub.
+need_number() {
+  [[ "$1" =~ ^[0-9]+$ ]] || die "not an issue number: '$1'"
+}
+
 issue_id() {
   local id
+  need_number "$1"
   id="$(gh api graphql -f query='query($o:String!,$n:String!,$i:Int!){ repository(owner:$o,name:$n){ issue(number:$i){ id } } }' \
     -f o="$OWNER" -f n="$NAME" -F i="$1" --jq '.data.repository.issue.id' 2>/dev/null)" ||
     die "could not resolve issue #$1"
@@ -250,6 +262,7 @@ set_field() {
 
 show() {
   local n="$1"
+  need_number "$n"
   gh api graphql -f query='query($o:String!,$n:String!,$i:Int!){ repository(owner:$o,name:$n){ issue(number:$i){ number title issueType{ name } issueFieldValues(first:10){ nodes{ ... on IssueFieldSingleSelectValue{ field{ ... on IssueFieldSingleSelect{ name } } value } } } labels(first:20){ nodes{ name } } milestone{ title } } } }' \
     -f o="$OWNER" -f n="$NAME" -F i="$n" \
     --jq '.data.repository.issue | "#\(.number)  \(.title)\n  type:      \(.issueType.name // "none")\n  priority:  \([.issueFieldValues.nodes[] | select(.field.name=="Priority") | .value] | first // "none")\n  effort:    \([.issueFieldValues.nodes[] | select(.field.name=="Effort") | .value] | first // "none")\n  labels:    \([.labels.nodes[].name] | join(", "))\n  milestone: \(.milestone.title // "none")"' ||
