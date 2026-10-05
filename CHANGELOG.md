@@ -15,6 +15,14 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+### Changed
+
+- **`ClientError::DpopProof` says whether a send went out** (#3565). Its new
+  `sent` field is `false` when the first proof failed and nothing was sent,
+  and `true` when the proof for a retry or for the re-send answering a DPoP
+  `use_dpop_nonce` challenge failed, after the service had received the first
+  request.
+
 ## [4.3.3] - 2026-10-05
 
 ### Added

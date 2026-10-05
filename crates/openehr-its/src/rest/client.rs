@@ -460,14 +460,18 @@ const DPOP_NONCE: HeaderName = HeaderName::from_static("dpop-nonce");
 /// [`ClientError::DeadlineElapsed`] and `sent: false`. When it passes after a
 /// `use_dpop_nonce` challenge and before the re-send (the prover's second
 /// proof included), the call fails with the same variant and `sent: true`:
-/// the service received the first send and may have acted on it.
+/// the service received the first send and may have acted on it. A prover
+/// failure is reported the same way: [`ClientError::DpopProof`] carries
+/// `sent: false` when the first proof failed and `sent: true` when the proof
+/// for a retry or the nonce re-send did.
 #[async_trait::async_trait]
 pub trait DpopProver: Send + Sync + fmt::Debug {
     /// The compact-serialized proof JWT for one request.
     ///
     /// # Errors
     /// Returns a [`CredentialsError`] when no proof can be made; the call then
-    /// fails with [`ClientError::DpopProof`] before anything is sent.
+    /// fails with [`ClientError::DpopProof`] before this send goes out, its
+    /// `sent` saying whether an earlier send of the call did.
     async fn proof(&self, request: &DpopProofRequest<'_>) -> Result<String, CredentialsError>;
 
     /// Records the nonce the service supplied in a `DPoP-Nonce` header, which
@@ -883,6 +887,7 @@ impl<T: Transport> Client<T> {
                     .map_err(|source| ClientError::DpopProof {
                         method: request.method.clone(),
                         path: request.path.clone(),
+                        sent,
                         source,
                     })?;
                 let mut value =
@@ -1411,13 +1416,22 @@ pub enum ClientError {
         /// passed.
         sent: bool,
     },
-    /// The DPoP prover produced no proof for the request; nothing was sent.
-    #[error("no DPoP proof could be made for {method} {path}")]
+    /// The DPoP prover produced no proof for the request, so this send did not
+    /// go out.
+    ///
+    /// `sent` tells the two cases apart: `false` when the first proof failed
+    /// and nothing of the call left the process, `true` when the proof for a
+    /// retried attempt or for the re-send answering a DPoP `use_dpop_nonce`
+    /// challenge failed, after the service had received an earlier send.
+    #[error("no DPoP proof could be made for {method} {path} (an earlier send went out: {sent})")]
     DpopProof {
         /// The HTTP method.
         method: Method,
         /// The operation path.
         path: String,
+        /// Whether an earlier send of this call went out before the proof
+        /// failed.
+        sent: bool,
         /// What the prover reported.
         #[source]
         source: CredentialsError,
