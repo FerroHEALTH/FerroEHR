@@ -41,8 +41,11 @@ few bits derived from the licence id in place of random bits, so a record
 states which grant it was written under, and nothing else.
 
 Each version becomes Apache License 2.0 four years after that version is
-published. A commercial licence starts with a short conversation with the
-maintainer named in
+published. A commercial licence is arranged with Cadasto B.V., the Licensor,
+which handles the business side of FerroEHR: write to
+[info@cadasto.com](mailto:info@cadasto.com) or use
+<https://www.cadasto.com/contact/>. Technical questions go to the maintainer
+named in
 [`MAINTAINERS.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/MAINTAINERS.md).
 
 The nine `openehr-*` crates on crates.io are a separate question. The five
@@ -92,10 +95,13 @@ in production. Two uses need one in every case, whoever you are:
   own or as a component of another product.
 
 Companies and care providers building on FerroEHR are wanted here, and the
-commercial licence is the normal path for them. It starts with a short
-conversation with the maintainer named in
-[`MAINTAINERS.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/MAINTAINERS.md):
-Ruben Talstra, `@rubentalstra` on GitHub.
+commercial licence is the normal path for them. The Licensor arranges it and
+handles every other business or licensing question: write to
+[info@cadasto.com](mailto:info@cadasto.com) or use
+<https://www.cadasto.com/contact/>. The maintainer named in
+[`MAINTAINERS.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/MAINTAINERS.md),
+Ruben Talstra (`@rubentalstra` on GitHub), handles the technical side: code,
+review, releases, issues and security reports.
 
 **The Change Date.** Each version becomes available under the Apache License
 2.0, its Change License, four years after that version is published.

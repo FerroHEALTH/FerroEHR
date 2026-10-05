@@ -64,7 +64,7 @@ check "tools/openehr-codegen/src/render/spdx.rs" \
 
 # The prose sources: a file states the holder by name, a fixed number of times.
 # Prose carries no field to parse, so the assertion is the COUNT — rewrite one
-# of the licensing page's two statements and the count drops to one.
+# of the licensing page's three statements and the count drops to two.
 check_count() {
   local what="$1" file="$2" want="$3" got
   if [[ ! -f "$file" ]]; then
@@ -79,8 +79,9 @@ check_count() {
   fi
 }
 
-# The published licensing page names the Licensor and then states the holder.
-check_count "website/book/src/licensing.md" website/book/src/licensing.md 2
+# The published licensing page names the Licensor as the commercial contact,
+# then names the Licensor and states the holder.
+check_count "website/book/src/licensing.md" website/book/src/licensing.md 3
 
 # The three hand-written engine crates carry the BUSL paragraph by hand, and a
 # crate README ships inside the published package.

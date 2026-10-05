@@ -19,3 +19,5 @@ On 2026-09-04 the owner extended BUSL-1.1 to the three hand-written spec engines
 **Update 2026-09-16 (owner, P0, #3435):** the Licensor and copyright holder becomes **Vernum Projecten B.V.**; Ruben Talstra stays the maintainer credit only; the MIT-published versions keep their published holder line; terms unchanged.
 
 **Update 2026-10-05 (owner, #3567):** the Licensor and copyright holder becomes **Cadasto B.V.**, replacing Vernum Projecten B.V. everywhere in one PR; the terms do not change, and the conformance statement is re-signed "for Cadasto B.V." with the date of the change.
+
+**Update 2026-10-05 (owner, #3572):** Cadasto B.V. also runs the business side: the commercial licence and every other business or licensing question go to info@cadasto.com or https://www.cadasto.com/contact/. The BUSL `LICENSE` copies, the README, the book, the landing page, `MAINTAINERS.md`, `GOVERNANCE.md` and `SUPPORT.md` say so. Ruben Talstra stays the maintainer for the technical side only (code, review, releases, issues, security reports); `CODEOWNERS`, `SECURITY.md`, the chart maintainers and the signing key stay his. Never send a licensing question to the maintainer.

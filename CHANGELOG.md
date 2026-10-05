@@ -17,6 +17,16 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **Commercial licensing goes to Cadasto B.V.** (#3572). Cadasto B.V., the
+  Licensor, handles the commercial licence and every other business or
+  licensing question, at [info@cadasto.com](mailto:info@cadasto.com) or
+  <https://www.cadasto.com/contact/>. The BUSL `LICENSE` copies name that
+  contact for alternative licensing arrangements in place of the maintainer,
+  and the README, the book, the landing page, the BUSL crate READMEs,
+  `MAINTAINERS.md`, `GOVERNANCE.md` and `SUPPORT.md` say the same. The
+  maintainer keeps the technical side. The licence terms do not change. The
+  `openehr-*` crates step to 0.0.86 in lockstep, because three packaged
+  `LICENSE` files change.
 - **The Licensor and copyright holder is Cadasto B.V.** (#3567). Every
   holder statement moves from Vernum Projecten B.V. to Cadasto B.V.: `LICENSE`
   and the crate licence files, `REUSE.toml`, every `SPDX-FileCopyrightText`
