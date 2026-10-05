@@ -80,6 +80,12 @@ pub struct SqlCtx {
     /// caller may not see are never fetched — independent of what the query
     /// projects.
     pub subject_scope: Option<String>,
+    /// The per-EHR access decision the caller's principal is held to
+    /// (`EHR_ACCESS`, RM ehr `ehr_access.adoc`: "All access decisions to data
+    /// in the EHR must be made in accordance with the policies and rules in
+    /// this object"): every VO root and EHR source is restricted by it, so an
+    /// EHR the principal may not read contributes no rows.
+    pub ehr_access: EhrAccessScope,
     /// The effective row limit (AQL `LIMIT`/`TOP` or REST `fetch`, pre-composed).
     pub limit: Option<i64>,
     /// The effective row offset (AQL `OFFSET` or REST `offset`, pre-composed).
@@ -93,6 +99,24 @@ pub struct SqlCtx {
     /// `archetype_lineage` read); an empty index leaves the predicate at exact
     /// + ADL 1.4 concept-prefix matching.
     pub archetype_lineage: Arc<ArchetypeLineage>,
+}
+
+/// Which EHRs a query may read rows from under the caller's per-EHR access
+/// decision.
+///
+/// The REST adapter derives it from the `EHR_ACCESS` settings and the
+/// authenticated principal; the SQL generator applies it to every EHR-anchored
+/// source. No openEHR spec governs how the decision reaches a query — our own
+/// design.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub enum EhrAccessScope {
+    /// Every EHR is readable.
+    #[default]
+    Unrestricted,
+    /// Every EHR except these is readable.
+    Excluding(Vec<EhrId>),
+    /// Only these EHRs are readable; an empty list reads none.
+    Only(Vec<EhrId>),
 }
 
 /// How one `RESULT_SET` cell is read back from the query rows.

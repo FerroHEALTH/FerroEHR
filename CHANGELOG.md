@@ -31,6 +31,14 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **`ClientError::DeadlineElapsed` says whether a send went out** (#3560).
+  Its new `sent` field is `false` when the deadline passed before anything was
+  sent, and `true` when it passed before a retry or the re-send answering a
+  DPoP `use_dpop_nonce` challenge, after the service had received the request.
+- **The container images name FerroHEALTH as vendor and author** (#3561).
+  `org.opencontainers.image.vendor` is `FerroHEALTH` and
+  `org.opencontainers.image.authors` is
+  `FerroHEALTH <https://github.com/FerroHEALTH>` on every image.
 - **`openehr-its` types the `Prefer`-dependent response bodies** (#3548). A
   response the OAS declares as `oneOf` a resource and `Identifier` (the
   `201` and `200` answers of every create and update: EHR, `EHR_STATUS`,
@@ -161,6 +169,12 @@ workflow refuses a tag that has no matching section here.
 
 ### Fixed
 
+- **AQL honours the per-EHR `EHR_ACCESS` decision** (#3562). A query could
+  return rows from an EHR whose path routes refused the caller: the gate ran
+  only on routes carrying an `ehr_id` in the path. Ad-hoc, stored and cohort
+  queries now withhold every EHR the caller may not read, whether the query
+  scopes it by the `WHERE` clause, an `EHR` predicate, the `ehr_id` parameter,
+  or not at all.
 - **A `+` in a query string is a literal plus** (#3545). The CDR decoded
   query strings as HTML forms do, where `+` means a space, so an unencoded
   offset such as `version_at_time=2024-01-01T00:00:00+01:00` lost its sign.

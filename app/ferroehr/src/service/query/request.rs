@@ -52,6 +52,10 @@ pub struct AqlQueryRequest {
     /// own access-control extension): when set, the engine pre-filters every
     /// VO root to EHRs whose subject equals it.
     pub subject_scope: Option<String>,
+    /// The caller's per-EHR access decision (`EHR_ACCESS`): the EHRs the query
+    /// may read rows from, applied to every EHR-anchored source whatever the
+    /// query scopes or projects.
+    pub ehr_access: crate::aql::sql::EhrAccessScope,
     /// Whether the executor should collect the touched EHR-id / template-id
     /// sets for the ABAC query post-check (our own extension).
     pub collect_attributes: bool,

@@ -621,6 +621,7 @@ fn the_two_statements_never_cross_the_boundary() {
         system_id: "sys.example.com".to_owned(),
         ehr_ids: ehr_ids.clone(),
         subject_scope: None,
+        ehr_access: ferroehr::aql::sql::EhrAccessScope::Unrestricted,
         limit: None,
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),

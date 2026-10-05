@@ -230,9 +230,11 @@ server default**, in both directions:
 
 The scheme is a FerroEHR extension: openEHR mandates the `EHR_ACCESS`
 object and its change control but publishes no concrete access-control
-scheme. Query (AQL) results are not filtered by privacy level, because query
-execution carries no per-row principal context; the per-EHR gate still applies
-to every query route that binds an `ehr_id`.
+scheme. The per-EHR decision also holds for AQL, ad-hoc and stored queries
+alike: an EHR the caller may not read contributes no rows, whether the query
+names it in its `WHERE` clause, in an `EHR` predicate, through the `ehr_id`
+parameter, or not at all, as in a population query. Query results are not
+filtered by privacy level.
 
 ### RBAC (role-based, coarse)
 

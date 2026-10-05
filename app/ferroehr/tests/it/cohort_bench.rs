@@ -365,6 +365,7 @@ async fn explain_clinical(pool: &sqlx::PgPool, ehr_ids: &[EhrId]) -> Value {
         system_id: "bench.example.com".to_owned(),
         ehr_ids: ehr_ids.to_vec(),
         subject_scope: None,
+        ehr_access: ferroehr::aql::sql::EhrAccessScope::Unrestricted,
         limit: None,
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),

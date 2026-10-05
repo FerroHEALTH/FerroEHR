@@ -509,14 +509,17 @@ async fn an_elapsed_deadline_fails_before_sending() -> TestResult {
         .ehr_get_by_id(&get_ehr(None))
         .await;
     assert!(
-        matches!(result, Err(ClientError::DeadlineElapsed { .. })),
+        matches!(
+            result,
+            Err(ClientError::DeadlineElapsed { sent: false, .. })
+        ),
         "{result:?}"
     );
     let mut request = Request::new(Method::GET, format!("/ehr/{EHR_ID}"));
     request.set_deadline(Instant::now());
     assert!(matches!(
         client.forward(request).await,
-        Err(ClientError::DeadlineElapsed { .. })
+        Err(ClientError::DeadlineElapsed { sent: false, .. })
     ));
     Ok(())
 }
@@ -675,6 +678,53 @@ async fn a_dpop_nonce_challenge_is_answered_with_one_resend() -> TestResult {
         outcome,
         ehr::client::EhrGetByIdOutcome::NotFound { .. }
     ));
+    assert_eq!(prover.proofs.load(Ordering::SeqCst), 2);
+    Ok(())
+}
+
+/// A prover whose second proof outlasts the call's deadline.
+#[derive(Debug, Default)]
+struct SlowResendProver {
+    proofs: AtomicUsize,
+}
+
+#[async_trait::async_trait]
+impl DpopProver for SlowResendProver {
+    async fn proof(&self, _request: &DpopProofRequest<'_>) -> Result<String, CredentialsError> {
+        if self.proofs.fetch_add(1, Ordering::SeqCst) > 0 {
+            tokio::time::sleep(Duration::from_millis(400)).await;
+        }
+        Ok("proof".to_owned())
+    }
+
+    fn nonce(&self, _nonce: &str) {}
+}
+
+/// A deadline that passes before the nonce re-send reports that the first
+/// send went out, unlike one that passed before any send.
+#[tokio::test]
+async fn a_deadline_passed_before_the_nonce_resend_reports_a_sent_request() -> TestResult {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .respond_with(
+            ResponseTemplate::new(401)
+                .insert_header("www-authenticate", r#"DPoP error="use_dpop_nonce""#)
+                .insert_header("dpop-nonce", "n1"),
+        )
+        .expect(1)
+        .mount(&server)
+        .await;
+    let prover = std::sync::Arc::new(SlowResendProver::default());
+    let client = client_for(&server)?
+        .with_credentials(Credentials::dpop("tok"))
+        .with_dpop_prover(std::sync::Arc::clone(&prover));
+    let mut request = Request::new(Method::GET, format!("/ehr/{EHR_ID}"));
+    request.set_deadline(Instant::now() + Duration::from_millis(200));
+    let result = client.forward(request).await;
+    assert!(
+        matches!(result, Err(ClientError::DeadlineElapsed { sent: true, .. })),
+        "{result:?}"
+    );
     assert_eq!(prover.proofs.load(Ordering::SeqCst), 2);
     Ok(())
 }

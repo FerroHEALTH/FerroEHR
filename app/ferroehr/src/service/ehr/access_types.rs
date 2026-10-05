@@ -138,6 +138,11 @@ pub struct CompositionOverride {
     pub level: i64,
 }
 
+/// The EHRs whose `EHR_ACCESS` carries settings this server understands, with
+/// those settings, shared from the service's cache
+/// ([`crate::service::FerroEhrService::ehr_access_settings_index`]).
+pub type EhrAccessIndex = std::sync::Arc<Vec<(crate::ids::EhrId, EhrAccessSettings)>>;
+
 /// Parsed `EHR_ACCESS.settings` for the `ferroehr.access_control.v1` scheme.
 ///
 /// No openEHR spec governs the concrete scheme — our own design; it realizes the `master07` policy
