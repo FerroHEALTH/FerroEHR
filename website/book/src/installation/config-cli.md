@@ -62,6 +62,20 @@ the container `HEALTHCHECK` and the Kubernetes exec-probe fallback.
 |---|---|---|---|
 | `FERROEHR_HEALTHCHECK_URL` | URL | derived: `http://127.0.0.1:<server.bind port><REST root>/status` (`http://127.0.0.1:8080/ferroehr/rest/status` with the defaults) | The URL the subcommand probes; also settable as `--url`. Not part of `ferroehr.toml`. Unset, the subcommand loads the same configuration as the server (file, environment, `--set`) and follows `server.bind` and `server.base_path`, so a shortened base path moves the probe with it. |
 
+### `ferroehr usage-report --print`
+
+```text
+ferroehr usage-report --print                  # the start report
+ferroehr usage-report --print --event daily    # the daily report, with its metrics
+```
+
+Prints the exact JSON body of the [usage report](../usage-report.md) this
+instance would send now, on one line to stdout, and sends nothing. It loads the
+same configuration as the server and connects to the database to read the
+instance id and the shared metrics window, writing nothing. Notes go to stderr:
+a sample id when the database holds none yet, and a line saying so when the
+report is off. `--print` is required; printing is the only action.
+
 ## Zero-config boot and the production checklist
 
 With no file and no environment, the effective configuration is: listener
@@ -69,7 +83,9 @@ With no file and no environment, the effective configuration is: listener
 built-in development DSN with migrations applied at boot; RBAC on; signing on in
 `digest` mode with read-time verification strict; the audit trail on with only
 the local store; rate limiting on; logs in `auto` format at `info`; **and every
-integration off**.
+integration off**. The one outbound connection on by default is the
+[usage report](../usage-report.md), which `usage_report.enabled = false`
+switches off.
 
 One thing that configuration does *not* do is serve requests.
 `auth.enabled` defaults to `true`, and **authentication enabled with no

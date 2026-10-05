@@ -834,6 +834,17 @@ query written against the served metric names) reaches Grafana three ways:
 > `networkPolicy.egress.rules` (port 4317). An OTLP exporter that cannot reach
 > its collector fails **silently**: no traces, no error.
 
+### The usage report
+
+Apart from your own telemetry, the server sends one report of its own: the
+[usage report](usage-report.md) to FerroPULSE, the collector Cadasto B.V.
+runs. It is on by default and goes out at each start and once a day, with the
+version, the licence grant type and coarse latency figures, and no patient
+data. `ferroehr usage-report --print` shows the exact JSON, and
+`usageReport.enabled=false` (Helm) or `FERROEHR__USAGE_REPORT__ENABLED=false`
+switches it off. With the chart's egress policy on, it needs a rule for
+`report.ferropulse.eu` on port 443; without one it fails quietly.
+
 ## The admin and messaging APIs
 
 Two operator-facing HTTP surfaces have a page of their own, because each route
@@ -990,6 +1001,8 @@ control) which appears only while the CDR serves `/management/info`. See
 
 - [Admin & messaging APIs](operations-admin-apis.md) — the operator-facing
   HTTP surfaces, route by route.
+- [Usage report](usage-report.md) — what the daily report to FerroPULSE
+  carries, and how to switch it off.
 - [Configuration reference](installation/configuration.md) — every setting,
   with the server, database and telemetry keys on
   [their own page](installation/config-server.md).

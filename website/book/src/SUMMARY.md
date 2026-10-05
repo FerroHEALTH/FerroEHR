@@ -62,6 +62,7 @@
   - [Dark mode](viewer/dark-mode.md)
 - [Operations](operations.md)
   - [Admin & messaging APIs](operations-admin-apis.md)
+  - [Usage report](usage-report.md)
 - [Conformance](conformance.md)
 - [Performance](performance.md)
 - [Benchmarks](benchmarks.md)
