@@ -30,11 +30,15 @@
 # reachability by one media type would destroy published attestations and
 # signatures for releases that are immutable by policy, and the failure would be
 # silent until a consumer's `gh attestation verify` returned a 404. The report
-# lists the exact `gh api -X DELETE` command for each orphan instead.
+# lists the exact `gh api -X DELETE` command for each orphan instead, and
+# scripts/watch/ghcr-prune-orphans.sh (dry run unless `--apply`) is the reviewed
+# way to run them, reading this script's `--tsv` list.
 #
 # Usage:
 #   scripts/watch/ghcr-orphans.sh                 # report to stdout
 #   scripts/watch/ghcr-orphans.sh --out report.md # also write the markdown body
+#   scripts/watch/ghcr-orphans.sh --tsv orphans.tsv  # also write the orphan list:
+#       package, digest, version id, created_at (tab-separated, one per line)
 #   scripts/watch/ghcr-orphans.sh --owner X --package Y   # narrow the sweep
 #
 # Requires: gh (authenticated, `read:packages`), jq, curl.
@@ -49,12 +53,14 @@ set -euo pipefail
 OWNER="FerroHEALTH"
 PACKAGES=(ferroehr ferroehr-viewer ferroehr-postgres)
 OUT=""
+TSV=""
 
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
     --owner) OWNER="$2"; shift 2 ;;
     --package) PACKAGES=("$2"); shift 2 ;;
     --out) OUT="$2"; shift 2 ;;
+    --tsv) TSV="$2"; shift 2 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
@@ -113,9 +119,10 @@ for pkg in "${PACKAGES[@]}"; do
   repo="${OWNER}/${pkg}"
   echo "== ${repo}" >&2
 
-  # `name` is the manifest digest, `id` is what the delete endpoint takes.
+  # `name` is the manifest digest, `id` is what the delete endpoint takes, and
+  # `created_at` lets the prune keep a manifest a release may still be tagging.
   if ! gh api "/orgs/${OWNER}/packages/container/${pkg}/versions?per_page=100" --paginate \
-      --jq '.[] | [.name, (.id|tostring), ((.metadata.container.tags // []) | join(","))] | @tsv' \
+      --jq '.[] | [.name, (.id|tostring), ((.metadata.container.tags // []) | join(",")), .created_at] | @tsv' \
       > "$WORK/${pkg}.versions"; then
     echo "::error::could not list versions of ${repo} — the probe could not answer" >&2
     failures=$((failures + 1))
@@ -139,7 +146,7 @@ for pkg in "${PACKAGES[@]}"; do
   : > "$WORK/${pkg}.by-referrer"
   : > "$WORK/${pkg}.nested"
   probe_ok=1
-  while IFS=$'\t' read -r digest _id tags; do
+  while IFS=$'\t' read -r digest _id tags _created; do
     [[ -n "$digest" ]] || continue
     case "$tags" in sha256-*) sink="$WORK/${pkg}.by-referrer" ;; *) sink="$WORK/${pkg}.by-index" ;; esac
     if ! manifest="$(fetch_manifest "$repo" "$digest" "$token")"; then
@@ -216,9 +223,12 @@ for pkg in "${PACKAGES[@]}"; do
       while IFS= read -r d; do
         [[ -n "$d" ]] || continue
         id=$(awk -F'\t' -v d="$d" '$1==d{print $2; exit}' "$WORK/${pkg}.untagged")
-        printf '# %s\n' "$d"
-        printf 'gh api -X DELETE /user/packages/container/%s/versions/%s\n' "$pkg" "$id"
-        printf '%s\t%s\t%s\n' "$pkg" "$d" "$id" >> "$WORK/orphans.tsv"
+        created=$(awk -F'\t' -v d="$d" '$1==d{print $4; exit}' "$WORK/${pkg}.untagged")
+        printf '# %s (created %s)\n' "$d" "$created"
+        # The packages are the organisation's, so `/user/packages` would name
+        # the caller's own namespace instead.
+        printf 'gh api -X DELETE /orgs/%s/packages/container/%s/versions/%s\n' "$OWNER" "$pkg" "$id"
+        printf '%s\t%s\t%s\t%s\n' "$pkg" "$d" "$id" "$created" >> "$WORK/orphans.tsv"
       done < "$WORK/${pkg}.orphans.d"
       printf '```\n\n'
     } >> "$WORK/report.md"
@@ -250,12 +260,18 @@ fi
     printf 'published signatures and attestations for releases this project publishes\n'
     printf 'as immutable, and the damage is invisible until a consumer verifies. Check\n'
     printf 'a couple of digests by hand (`docker buildx imagetools inspect\n'
-    printf '%s/<pkg>@<digest>`) before running anything above.\n' "ghcr.io/${OWNER}"
+    printf '%s/<pkg>@<digest>`) before running anything above. The reviewed way to\n' "ghcr.io/${OWNER}"
+    printf 'run them is `bash scripts/watch/ghcr-prune-orphans.sh`: it recomputes this\n'
+    printf 'list, prints what it would delete, keeps anything younger than a week, and\n'
+    printf 'deletes only with `--apply`.\n'
   fi
 } > "$WORK/body.md"
 
 cat "$WORK/body.md"
 if [[ -n "$OUT" ]]; then
   cp "$WORK/body.md" "$OUT"
+fi
+if [[ -n "$TSV" ]]; then
+  cp "$WORK/orphans.tsv" "$TSV"
 fi
 printf 'orphans=%s\n' "$total_orphans" >&2

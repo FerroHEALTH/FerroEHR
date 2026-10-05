@@ -560,6 +560,8 @@ jobs:
         run: bash .claude/hooks/block_dangerous_test.sh
       - name: The crate-version hook refuses a packaged change without a bump
         run: bash .claude/hooks/crate_version_bump_guard_test.sh
+      - name: The GHCR prune deletes nothing on a dry run and keeps young and retagged manifests
+        run: bash scripts/watch/ghcr-prune-orphans.sh --self-test
 
   # The tracker helpers set the native issue type and the Priority and Effort
   # fields, and declare the label taxonomy (.claude/rules/issue-workflow.md).
