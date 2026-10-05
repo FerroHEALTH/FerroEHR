@@ -27,6 +27,10 @@ feature is held back for a paid tier. Answers come when the maintainer is at a
 keyboard
 ([MAINTAINERS.md](MAINTAINERS.md) is honest about how many keyboards that is).
 
+A commercial licence or any other business question goes to Cadasto B.V., the
+Licensor: write to [info@cadasto.com](mailto:info@cadasto.com) or use
+<https://www.cadasto.com/contact/>.
+
 ## I found a defect
 
 **[Open an issue](https://github.com/FerroHEALTH/FerroEHR/issues/new/choose)**

@@ -10,15 +10,21 @@ invites a reviewer to rely on a control that is not there.
 ## Current structure: benevolent dictator, one maintainer
 
 FerroEHR has a single maintainer ([MAINTAINERS.md](MAINTAINERS.md)) who holds
-final say on every decision: what gets built, what gets merged, what gets
-released, and what the project refuses to do. There is no steering committee,
-no technical oversight body, no foundation, and no vote.
+final say on every technical decision: what gets built, what gets merged, what
+gets released, and what the project refuses to do. There is no steering
+committee, no technical oversight body, no foundation, and no vote.
 
 This is the standard structure for a project of this age and size, and it has
 the standard trade-off: decisions are fast and coherent, and the project's
 resilience is one person's. The second half of that sentence is treated as a
 finding rather than a footnote; see
 [MAINTAINERS.md § If the maintainer is unavailable](MAINTAINERS.md#if-the-maintainer-is-unavailable).
+
+[Cadasto B.V.](https://www.cadasto.com) is the Licensor and copyright holder,
+and it handles the business side, the commercial licence included: write to
+[info@cadasto.com](mailto:info@cadasto.com) or use
+<https://www.cadasto.com/contact/>. The technical decisions this document
+describes stay with the maintainer.
 
 ## Where decisions are recorded
 
@@ -131,6 +137,5 @@ occupies. Enforcement is the maintainer's, at the contact address given there.
 
 Governance changes are pull requests against this file, like anything else, and
 they take effect when they merge. If the structure described here stops being
-true (a second maintainer joins, a legal entity forms, a decision body is
-created), this file changes in the same pull request that makes it true, not
-afterwards.
+true (a second maintainer joins, a decision body is created), this file
+changes in the same pull request that makes it true, not afterwards.

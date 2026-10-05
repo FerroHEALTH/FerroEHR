@@ -17,10 +17,17 @@ to grow into.
 **The bus factor of this project is one.** There is exactly one person with
 write access to the repository (`GET /repos/FerroHEALTH/FerroEHR/collaborators`
 returns one login), one person who can publish a release, and one person who
-can accept a pull request. No second maintainer exists, no organisation stands
-behind the project, and no legal entity is a party to it.
+can accept a pull request. No second maintainer exists.
 
-Everything else in this file follows from that sentence, and no wording
+[Cadasto B.V.](https://www.cadasto.com) is the Licensor and copyright holder,
+and it handles the business side of the project, the commercial licence
+included: write to [info@cadasto.com](mailto:info@cadasto.com) or use
+<https://www.cadasto.com/contact/>. The maintainer handles the technical side:
+code, review, releases, issues and security reports. Nothing in this file
+assigns Cadasto B.V. a publishing identity, repository access or a duty to
+continue the work.
+
+Everything else in this file follows from the bus factor of one, and no wording
 elsewhere in the repository should be read as softening it. The path out is in
 [GOVERNANCE.md](GOVERNANCE.md): becoming a maintainer is a defined route,
 and it is open.
@@ -47,8 +54,8 @@ publishing identity terminates at one person's GitHub account or one person's
 hardware. Trusted Publishing removes the *stored secret* risk (there is no
 crates.io token to leak), but it does not distribute the *authority*, which
 is still one account's. That is the residual risk, and it is stated rather than
-mitigated because no mitigation is currently available to a one-person project
-without a legal entity behind it.
+mitigated because no mitigation is currently available while one person holds
+every technical role.
 
 ## If the maintainer is unavailable
 

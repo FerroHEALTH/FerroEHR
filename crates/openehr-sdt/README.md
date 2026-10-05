@@ -104,8 +104,9 @@ Business Source License 1.1 ([`LICENSE`](LICENSE), SPDX `BUSL-1.1`), the
 licence of the FerroEHR application: all non-production use is free, production
 use is free for Non-Commercial Purposes, and any other production use, hosting
 for third parties or distribution for a fee needs a commercial licence from the
-Licensor, Cadasto B.V. Each version becomes Apache License 2.0 four
-years after it is published. The crate is hand-written; the openEHR
+Licensor, Cadasto B.V.: write to [info@cadasto.com](mailto:info@cadasto.com)
+or use <https://www.cadasto.com/contact/>. Each version becomes Apache License
+2.0 four years after it is published. The crate is hand-written; the openEHR
 specification text it implements is the authority but is not embedded in the
 package. The crate was first published at 0.0.68, built against the 0.0.67 siblings;
 from 0.0.69 it moves in lockstep with them. Its code was published as

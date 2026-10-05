@@ -649,10 +649,12 @@ even for an organisation the rows above would otherwise leave free.
 
 **Each version becomes Apache License 2.0 four years after that version is
 published.** Companies and care providers building on FerroEHR are wanted
-here, and the commercial licence is the normal path for them. It starts with
-a short conversation with the maintainer named in
-[MAINTAINERS.md](MAINTAINERS.md). The licence you receive is a signed token
-file: point `[licence] file` (or `FERROEHR__LICENCE__FILE`) at it and
+here, and the commercial licence is the normal path for them. It is arranged
+with Cadasto B.V., the Licensor, which handles the business side of FerroEHR:
+write to [info@cadasto.com](mailto:info@cadasto.com) or use
+<https://www.cadasto.com/contact/>. Technical questions go to the maintainer
+named in [MAINTAINERS.md](MAINTAINERS.md). The licence you receive is a signed
+token file: point `[licence] file` (or `FERROEHR__LICENCE__FILE`) at it and
 `GET /ferroehr/rest/status` reports the grant in force. Without one the server
 runs identically under the embedded non-commercial grant, and says so there.
 

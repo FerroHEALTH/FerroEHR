@@ -103,10 +103,13 @@ patients. Companies and care providers running FerroEHR are wanted here, and
 the commercial licence is the normal path for them, on terms meant to make
 those deployments and products possible on a sustainable footing. It is also
 how the shared, conformant foundation gets maintained by the people who build
-on it instead of every vendor rebuilding one in private. It starts with a
-conversation with the maintainer named in
-[`MAINTAINERS.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/MAINTAINERS.md),
-and that conversation is usually short. Talk to us early.
+on it instead of every vendor rebuilding one in private. A commercial licence
+is arranged with Cadasto B.V., the Licensor, which handles the business side
+of FerroEHR: write to [info@cadasto.com](mailto:info@cadasto.com) or use
+<https://www.cadasto.com/contact/>. Technical questions go to the maintainer
+named in
+[`MAINTAINERS.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/MAINTAINERS.md).
+Talk to us early.
 
 ## What we ask in return
 
