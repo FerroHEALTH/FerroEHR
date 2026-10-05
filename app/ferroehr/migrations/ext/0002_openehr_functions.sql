@@ -1,4 +1,4 @@
--- SPDX-FileCopyrightText: Vernum Projecten B.V.
+-- SPDX-FileCopyrightText: Cadasto B.V.
 -- SPDX-License-Identifier: BUSL-1.1
 
 -- ext: the openEHR value helpers the AQL emitter and the node decomposer call.

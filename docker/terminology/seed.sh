@@ -1,5 +1,5 @@
 #!/bin/sh
-# SPDX-FileCopyrightText: Vernum Projecten B.V.
+# SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # Seed the composed FHIR R4 terminology server with the CNF test terminologies.
 #

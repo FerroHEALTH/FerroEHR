@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-FileCopyrightText: Vernum Projecten B.V.
+# SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # Vendor the official openEHR ADL 2 archetype libraries — the ADL 2.4 half of
 # the two-dialect archetype corpus.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-FileCopyrightText: Vernum Projecten B.V.
+# SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # Vendor the real-world openEHR canonical-JSON corpus that grounds the
 # `openehr-its` fidelity gates (read -> re-serialize -> equality +

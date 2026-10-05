@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-FileCopyrightText: Vernum Projecten B.V.
+# SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # Error-body hygiene guard (OWASP REST Security Cheat Sheet, issue #2021):
 # "Do not pass technical details (e.g. call stacks or other internal hints) to

@@ -42,7 +42,7 @@ version = 1
 [[annotations]]
 path = "**"
 precedence = "closest"
-SPDX-FileCopyrightText = "Vernum Projecten B.V."
+SPDX-FileCopyrightText = "Cadasto B.V."
 SPDX-License-Identifier = "BUSL-1.1"
 
 # ── The five generated model crates: Apache-2.0 ────────────────────────────
@@ -62,7 +62,7 @@ path = [
   "crates/openehr-its/**",
 ]
 precedence = "closest"
-SPDX-FileCopyrightText = ["Vernum Projecten B.V.", "openEHR Foundation"]
+SPDX-FileCopyrightText = ["Cadasto B.V.", "openEHR Foundation"]
 SPDX-License-Identifier = "Apache-2.0"
 
 # ── The three hand-written spec engines: BUSL-1.1 ──────────────────────────
@@ -80,7 +80,7 @@ path = [
   "crates/openehr-sdt/**",
 ]
 precedence = "closest"
-SPDX-FileCopyrightText = "Vernum Projecten B.V."
+SPDX-FileCopyrightText = "Cadasto B.V."
 SPDX-License-Identifier = "BUSL-1.1"
 
 # ── openEHR machine-readable artifacts — Apache-2.0 ─────────────────────────
@@ -158,7 +158,7 @@ SPDX-License-Identifier = "Apache-2.0"
 [[annotations]]
 path = "crates/openehr-sdt/tests/fixtures/named_event/**"
 precedence = "override"
-SPDX-FileCopyrightText = ["openEHR Foundation", "Vernum Projecten B.V."]
+SPDX-FileCopyrightText = ["openEHR Foundation", "Cadasto B.V."]
 SPDX-License-Identifier = "CC-BY-SA-3.0"
 
 # Three BMM reference models inside that set are offered by their authors under
@@ -231,7 +231,7 @@ SPDX-License-Identifier = "LicenseRef-openEHR-unstated"
 [[annotations]]
 path = "corpus/fixtures/service/**"
 precedence = "override"
-SPDX-FileCopyrightText = ["openEHR Foundation", "the EHRbase contributors", "Vernum Projecten B.V."]
+SPDX-FileCopyrightText = ["openEHR Foundation", "the EHRbase contributors", "Cadasto B.V."]
 SPDX-License-Identifier = "Apache-2.0"
 
 # The ADL2 regression library inside the openehr-adl corpus is the same
@@ -278,7 +278,7 @@ SPDX-License-Identifier = "MPL-1.1"
 [[annotations]]
 path = "fuzz/regressions/**"
 precedence = "override"
-SPDX-FileCopyrightText = "Vernum Projecten B.V."
+SPDX-FileCopyrightText = "Cadasto B.V."
 SPDX-License-Identifier = "BUSL-1.1"
 
 # ── Self-hosted KaTeX assets — MIT ──────────────────────────────────────────
@@ -332,7 +332,7 @@ path = [
   "corpus/templates/ckm/full/PROVENANCE.md",
 ]
 precedence = "override"
-SPDX-FileCopyrightText = "Vernum Projecten B.V."
+SPDX-FileCopyrightText = "Cadasto B.V."
 SPDX-License-Identifier = "BUSL-1.1"
 
 # ── The vendored regulation corpus ──────────────────────────────────────────
@@ -420,5 +420,5 @@ path = [
   "docs/law/**/SHA256SUMS",
 ]
 precedence = "override"
-SPDX-FileCopyrightText = "Vernum Projecten B.V."
+SPDX-FileCopyrightText = "Cadasto B.V."
 SPDX-License-Identifier = "BUSL-1.1"

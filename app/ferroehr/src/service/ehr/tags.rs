@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Vernum Projecten B.V.
+// SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
 //! `ITEM_TAG` CRUD on the `item_tag` table — a RELEASED ITS-REST 1.1.0 surface

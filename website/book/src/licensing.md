@@ -59,8 +59,8 @@ Everything written for this project (the server and application crates, the
 code generator and tooling, the viewer, and the three hand-written
 specification engines `openehr-query`, `openehr-adl` and `openehr-sdt`) is licensed under the
 [Business Source License 1.1](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSE),
-SPDX identifier `BUSL-1.1`. The Licensor is Vernum Projecten B.V. The copyright
-holder is stated as *Vernum Projecten B.V.*, identically in `LICENSE`, in
+SPDX identifier `BUSL-1.1`. The Licensor is Cadasto B.V. The copyright
+holder is stated as *Cadasto B.V.*, identically in `LICENSE`, in
 `REUSE.toml`, and in every first-party file header; a CI gate compares those
 sources with this page and with the `README.md` of each hand-written engine
 crate, so they cannot drift apart. Ruben Talstra remains the maintainer, which

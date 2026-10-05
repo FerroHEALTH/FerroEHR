@@ -36,7 +36,7 @@ carries a `licence` or `copyright` field in its `description` block. The templat
 metadata (Ocean Informatics, Ripple, IDCR, COLNEC and others) without stating
 terms, so the tree licence is the upstream repository's and the copyright
 holders named in `REUSE.toml` are the openEHR Foundation, the EHRbase
-contributors and Vernum Projecten B.V. for the two files written here.
+contributors and Cadasto B.V. for the two files written here.
 
 ## Maintenance
 

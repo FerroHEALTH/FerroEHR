@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-FileCopyrightText: Vernum Projecten B.V.
+# SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # Render the cohort-query benchmark table for the book FROM the committed
 # record, docs/benchmarks/cohort/record.json (#3159).

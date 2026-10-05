@@ -1,4 +1,4 @@
--- SPDX-FileCopyrightText: Vernum Projecten B.V.
+-- SPDX-FileCopyrightText: Cadasto B.V.
 -- SPDX-License-Identifier: BUSL-1.1
 
 -- Change control: the commit audit, the CONTRIBUTION envelope, the append-only

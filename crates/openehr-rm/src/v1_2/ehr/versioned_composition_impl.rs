@@ -1,5 +1,5 @@
 // @generated-from-template templates/openehr-rm/ehr/versioned_composition_impl.rs — DO NOT EDIT; edit the source and re-run `openehr-codegen -- emit`.
-// SPDX-FileCopyrightText: Vernum Projecten B.V.
+// SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 //! Where the `VERSIONED_COMPOSITION` spec function is realized — and why it is

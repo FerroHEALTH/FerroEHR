@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-FileCopyrightText: Vernum Projecten B.V.
+# SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # openEHR RELEASE watcher (tracker issue #179) — the companion of
 # scripts/watch/spec-update.sh: that one tracks individual completed spec

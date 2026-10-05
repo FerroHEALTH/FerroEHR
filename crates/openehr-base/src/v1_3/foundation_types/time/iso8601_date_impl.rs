@@ -1,5 +1,5 @@
 // @generated-from-template templates/openehr-base/foundation_types/time/iso8601_date_impl.rs — DO NOT EDIT; edit the source and re-run `openehr-codegen -- emit`.
-// SPDX-FileCopyrightText: Vernum Projecten B.V.
+// SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 //! Hand-written `Iso8601_date` spec behaviour.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-FileCopyrightText: Vernum Projecten B.V.
+# SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # Default-value style guard (owner directive 2026-08-06; the shape of RFC 3681,
 # https://rust-lang.github.io/rfcs/3681-default-field-values.html).

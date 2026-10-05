@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-FileCopyrightText: Vernum Projecten B.V.
+# SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # Assemble the full Pages site tree into ./_site, exactly as CI does — so
 # "works on my machine" == the deployed layout (URL scheme, frozen versions,

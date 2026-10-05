@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-FileCopyrightText: Vernum Projecten B.V.
+# SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # Populate fuzz/seeds/<target>/ from the corpora committed in this repository,
 # as SYMLINKS — the archetype and template packs are ~100 MB, are

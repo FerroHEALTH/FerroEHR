@@ -1,5 +1,5 @@
 // @generated-from-template templates/openehr-rm/overrides/v1_1/demographic/party_impl.rs (per-generation override) — DO NOT EDIT; edit the source and re-run `openehr-codegen -- emit`.
-// SPDX-FileCopyrightText: Vernum Projecten B.V.
+// SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 //! Hand-written RM spec functions for `PARTY`.

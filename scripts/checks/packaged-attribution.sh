@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-FileCopyrightText: Vernum Projecten B.V.
+# SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # A crate that PACKAGES third-party bytes carries that material's attribution
 # INSIDE the package, pinned to the revision the repository records.

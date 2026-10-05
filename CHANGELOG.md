@@ -17,6 +17,12 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **The Licensor and copyright holder is Cadasto B.V.** (#3567). Every
+  holder statement moves from Vernum Projecten B.V. to Cadasto B.V.: `LICENSE`
+  and the crate licence files, `REUSE.toml`, every `SPDX-FileCopyrightText`
+  header, the licensing chapter of the book, the landing page footer and the
+  conformance statement, whose signatory is now "Ruben Talstra, for Cadasto
+  B.V." with the date of the change. The licence terms do not change.
 - **`ClientError::DpopProof` says whether a send went out** (#3565). Its new
   `sent` field is `false` when the first proof failed and nothing was sent,
   and `true` when the proof for a retry or for the re-send answering a DPoP

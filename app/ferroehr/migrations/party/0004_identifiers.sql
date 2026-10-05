@@ -1,4 +1,4 @@
--- SPDX-FileCopyrightText: Vernum Projecten B.V.
+-- SPDX-FileCopyrightText: Cadasto B.V.
 -- SPDX-License-Identifier: BUSL-1.1
 
 -- party: protected national identifiers — the value leaves the versioned body

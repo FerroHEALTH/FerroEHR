@@ -3,7 +3,7 @@
 Three hand-written ITS-REST surfaces over the `openehr-its` wire layer. Nothing
 here is generated: the specifications are prose sub-specifications of ITS-REST
 with no machine-readable model, and the BMM has no simplified-format model.
-Licence `BUSL-1.1` (single holder Vernum Projecten B.V.); `openehr-its` below
+Licence `BUSL-1.1` (single holder Cadasto B.V.); `openehr-its` below
 it is Apache-2.0. Dependency arrow: `openehr-sdt → openehr-its`, never the
 reverse, zero re-exports.
 
