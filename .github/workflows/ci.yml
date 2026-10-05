@@ -2401,13 +2401,16 @@ jobs:
       - name: The committed chart release facts are coherent
         run: bash scripts/checks/chart-appversion.sh
 
-  # Veredictum-pin guard (#2867): scripts/lib/veredictum.sh promises every pin
-  # bump is re-proven by a full `scripts/conformance.sh` run against the
+  # Veredictum-pin guard (#2867, #3593): scripts/lib/veredictum.sh promises every
+  # pin bump is re-proven by a full `scripts/conformance.sh` run against the
   # committed baseline, and this job is the failing check behind that promise
   # (a rule without one is a wish — reliability.md). A PR that changes
-  # VEREDICTUM_VERSION must also refresh docs/conformance/ferroehr/ (the run's
-  # committed record), or carry the `no-conformance-run` label as an explicit,
-  # visible deferral.
+  # VEREDICTUM_VERSION passes when the `artifacts/`, `specs/` and `schemas/`
+  # git trees are identical at the old and new tag (read from the GitHub API,
+  # failing closed), and otherwise must refresh docs/conformance/ferroehr/ (the
+  # run's committed record) or carry the `no-conformance-run` label as an
+  # explicit, visible deferral. scripts/checks/veredictum-pin.sh holds the logic;
+  # its --self-test drives it against a stub gh first.
   #
   # PULL-REQUEST ONLY, deliberately (the crate-version pattern, #2777): it
   # compares the pull request's base and head trees and reads a pull-request
@@ -2424,28 +2427,21 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - name: A pin bump carries its acceptance run
+      - name: The pin guard passes and fails its stub-gh cases
+        run: bash scripts/checks/veredictum-pin.sh --self-test
+      - name: A pin bump carries its acceptance run or moves no catalogue content
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
           HAS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'no-conformance-run') }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          label=()
           if [ "$HAS_LABEL" = "true" ]; then
-            echo "no-conformance-run label set — the deferral is recorded on the PR, guard skipped."
-            exit 0
+            label=(--no-conformance-run)
           fi
-          old=$(git show "$BASE:scripts/lib/veredictum.sh" 2>/dev/null | grep -m1 '^VEREDICTUM_VERSION=' || true)
-          new=$(git show "$HEAD:scripts/lib/veredictum.sh" 2>/dev/null | grep -m1 '^VEREDICTUM_VERSION=' || true)
-          if [ "$old" = "$new" ]; then
-            echo "VEREDICTUM_VERSION unchanged — guard not required."
-            exit 0
-          fi
-          if ! git diff --name-only "$BASE" "$HEAD" | grep -q '^docs/conformance/ferroehr/'; then
-            echo "::error::This PR bumps VEREDICTUM_VERSION ($old → $new) but commits nothing under docs/conformance/ferroehr/ — a pin bump is re-proven by a full 'bash scripts/conformance.sh' acceptance run whose refreshed record lands in the same PR (scripts/lib/veredictum.sh). To defer the run deliberately, apply the 'no-conformance-run' label." >&2
-            exit 1
-          fi
-          echo "pin bump carries a refreshed docs/conformance/ferroehr/ record — OK."
+          bash scripts/checks/veredictum-pin.sh "${label[@]}" "$BASE" "$HEAD"
 
   # Every per-instance ixit parameter the PINNED instrument defines is declared
   # on every instance of our party set, or its absence is adjudicated in the
