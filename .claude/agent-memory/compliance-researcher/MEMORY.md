@@ -1,0 +1,2 @@
+- [Corpus coverage gaps](corpus-coverage-gaps.md) — GDPR has no recitals; ePrivacy/Tw/NEN text/transpositions absent; CRA lacks EHDS Art. 104 amendments
+- [Corpus navigation](corpus-navigation.md) — topic-to-article map across EU/NL/DE/CH acts plus HTML/XML extraction traps
