@@ -248,7 +248,8 @@ names the outbound connection, what it carries, and how to switch it off.
 
 Cadasto B.V., the Netherlands. Write to
 [info@cadasto.com](mailto:info@cadasto.com) or use
-<https://www.cadasto.com/contact/>.
+<https://www.cadasto.com/contact/>. Cadasto has not appointed a data
+protection officer.
 
 ### Purposes and lawful basis
 
@@ -286,11 +287,12 @@ which is lost when it restarts.
 
 ### Recipients and location
 
-Hetzner hosts the collector in its cloud and processes the reports as
-Cadasto's processor (Art. 28 GDPR). The collector runs in a Hetzner data centre
-in the EU, in Germany or Finland. The FerroPULSE dashboard that shows the
-reports sits behind a login with no public or anonymous access; only
-individually listed members of the FerroHEALTH organisation can sign in.
+Hetzner Online GmbH (Gunzenhausen, Germany) hosts the collector in its cloud
+and processes the reports as Cadasto's processor, under a data processing
+agreement Cadasto has signed (Art. 28 GDPR). The collector runs in Hetzner's
+data centre in Falkenstein, Germany. The FerroPULSE dashboard that shows the
+reports sits behind a GitHub login with no public or anonymous access; only
+members of the FerroHEALTH organisation can sign in.
 
 ### Retention
 
@@ -333,9 +335,9 @@ your habitual residence, place of work or place of the alleged infringement
 
 Under the Swiss Federal Act on Data Protection
 ([DSG](https://www.fedlex.admin.ch/eli/cc/2022/491/de) Art. 19 Abs. 4), these
-are the states your report's data are disclosed to: **Germany or Finland**,
-where the Hetzner data centre runs the collector, and **the Netherlands**,
-where Cadasto B.V. is established. All three are listed in Annex 1 of the
+are the states your report's data are disclosed to: **Germany**, where the
+Hetzner data centre in Falkenstein runs the collector, and **the Netherlands**,
+where Cadasto B.V. is established. Both are listed in Annex 1 of the
 Swiss Data Protection Ordinance
 ([DSV](https://www.fedlex.admin.ch/eli/cc/2022/568/de)) as states whose
 legislation provides adequate protection (DSG Art. 16 Abs. 1).
