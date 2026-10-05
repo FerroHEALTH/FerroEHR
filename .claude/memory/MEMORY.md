@@ -74,3 +74,6 @@
 - [Repo moved to FerroHEALTH](repo-moved-to-ferrohealth.md) — ghcr.io/ferrohealth, board orgs/FerroHEALTH/projects/2
 - [Native issue types and fields](native-issue-types-and-priority.md) — type/priority/effort via scripts/gh/fields.sh; read issues with `--json`
 - [Caching must stay replica-safe](caching-replica-safe-only.md) — no cache that blocks multiple replicas; signature verification stays strict per read
+- [FerroPULSE usage report](ferropulse-usage-report.md) — daily default-on report from every Ferro product to FerroPULSE; FerroEHR side #3577
+- [Respond in English](respond-in-english.md) — always reply in English, even to Dutch messages
+- [Refs PR can close an issue](refs-pr-can-close-issue.md) — check closingIssuesReferences before merging a plan-only PR
