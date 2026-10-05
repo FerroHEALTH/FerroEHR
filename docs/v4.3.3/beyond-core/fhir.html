@@ -1,0 +1,684 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>FHIR connectors - FerroEHR Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        <!-- Content-Security-Policy as a <meta> element, because GitHub Pages serves
+             static files and cannot set response headers. A meta CSP is genuinely
+             weaker than the header: `frame-ancestors`, `report-uri` and `sandbox` are
+             IGNORED in meta form (w3c CSP3 §3.3), and it applies only after the parser
+             reaches it. It still stops an injected external script or an exfiltrating
+             `connect-src`, which is the realistic risk for a docs site, so it is worth
+             having while being honest that the site cannot carry the full header set —
+             documented on the security page. `unsafe-inline` is required: mdBook emits
+             inline theme/sidebar scripts and inline styles of its own. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <!-- Self-hosted KaTeX stylesheet (fonts under katex/fonts/) — the site
+             serves no external requests, so mdbook-katex runs with no-css = true
+             and the vendored sheet is linked here. Version 0.16.4, matching the
+             KaTeX the katex-rs renderer inside mdbook-katex bundles (its
+             KATEX-VERSION file); provenance in website/book/KATEX-PROVENANCE.md. -->
+        <link rel="stylesheet" href="../katex/katex.min.css">
+
+        <meta name="description" content="User documentation for FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../css/chrome-d279d366.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/custom-79743c4e.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "rust";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "../searchindex-08cf6b59.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-96c4774d.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">FerroEHR Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/src/beyond-core/fhir.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="fhir-connectors"><a class="header" href="#fhir-connectors">FHIR connectors</a></h1>
+<p>Many systems around a CDR speak FHIR. FerroEHR ships a set of
+<a href="https://hl7.org/fhir/R4/">FHIR R4</a> connectors so it can take FHIR resources in,
+hand openEHR data back out as FHIR,
+and emit FHIR resources to downstream systems, all driven by mappings you
+control. It is not a full FHIR server; it is a focused, mapping-driven bridge
+between the FHIR and openEHR worlds.</p>
+<p>There are <strong>two independent switches</strong>, an inbound/read-façade one and an
+outbound-emission one, because the two have very different data-exposure
+characteristics. All FHIR routes are relative to the API base path
+(<code>/ferroehr/rest/openehr/v1</code>) and speak <code>application/fhir+json</code>; every response
+on this surface (success or failure) is a FHIR resource, so an error arrives as
+an <code>OperationOutcome</code> rather than the openEHR error body.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p><strong>R4, and what that means if you run R4B.</strong> The connector’s routes are
+<code>/fhir/r4/…</code>, and the resources it exchanges (<code>Bundle</code>, <code>OperationOutcome</code>,
+<code>AuditEvent</code>) are identical in R4 and R4B, so an R4B client can use this
+surface unchanged: HL7 states that “implementers that do not use the specific
+portions where changes have been made can continue to use either R4 or R4B
+without any functional difference”
+(<a href="https://hl7.org/fhir/R4B/r4b-explanation.html">what R4B changed</a>). Which
+resource types you may actually exchange is set by your mappings, not by the
+release. One neighbouring subsystem is deliberately different: the
+<a href="terminology.html">external terminology servers</a> FerroEHR <em>calls out to</em> are
+R4B, because there the release belongs to the server you point it at.</p>
+</blockquote>
+<ul>
+<li><a href="#inbound-ingestion">Inbound ingestion</a></li>
+<li><a href="#validating-without-committing-validate">Validating without committing (<code>$validate</code>)</a></li>
+<li><a href="#read-façade">Read façade</a></li>
+<li><a href="#the-ehds-priority-categories-and-what-round-trips">The EHDS priority categories, and what round-trips</a>
+<ul>
+<li><a href="#the-decision-on-profile-mappings-wait-for-the-implementing-acts">The decision on profile mappings: wait for the implementing acts</a></li>
+<li><a href="#the-two-categories-with-no-committed-template">The two categories with no committed template</a></li>
+</ul>
+</li>
+<li><a href="#outbound-emission">Outbound emission</a></li>
+<li><a href="#mappings-are-data-you-manage">Mappings are data you manage</a></li>
+<li><a href="#the-one-route-here-that-is-not-the-connector">The one route here that is not the connector</a></li>
+<li><a href="#enabling-the-connectors">Enabling the connectors</a>
+<ul>
+<li><a href="#on-kubernetes">On Kubernetes</a></li>
+</ul>
+</li>
+</ul>
+<h2 id="inbound-ingestion"><a class="header" href="#inbound-ingestion">Inbound ingestion</a></h2>
+<p><code>POST /fhir/r4/{resource_type}</code> takes a FHIR resource and stores it as a
+validated openEHR composition. The connector resolves the mapping for the
+resource type (and its <code>meta.profile</code>, when the resource declares one), resolves
+or creates the EHR from the resource’s subject, builds a composition from the
+mapping, stamps it with a <code>FEEDER_AUDIT</code> recording the FHIR origin, and commits it
+through the <em>normal</em> validated write path.</p>
+<p>Outcomes worth designing against:</p>
+<ul>
+<li>A successful ingest is <code>201</code>, with <code>ETag</code> and <code>Location</code> headers pointing at the
+openEHR composition that was created.</li>
+<li>A mapped composition that fails validation is <code>422</code>, and nothing is stored.</li>
+<li>A resource type outside the connector’s starter set (<code>Patient</code>,
+<code>Observation</code>, <code>Condition</code>, <code>DocumentReference</code>) is <code>501</code>, refused before the
+backend is touched.</li>
+<li>A type inside the starter set with <strong>no enabled mapping</strong> stored for it is
+<code>404</code>. This is the common first-run surprise: the connector is on, but nothing
+is mapped yet.</li>
+</ul>
+<p>Provenance is not optional: the composition the CDR stores carries a
+<code>FEEDER_AUDIT</code> naming the FHIR origin and the source resource’s own id, so an
+ingested record is always distinguishable from one authored in openEHR.</p>
+<h2 id="validating-without-committing-validate"><a class="header" href="#validating-without-committing-validate">Validating without committing (<code>$validate</code>)</a></h2>
+<p><code>POST /fhir/r4/{resource_type}/$validate</code> is the ingest door’s dry twin,
+following FHIR R4’s own
+<a href="https://hl7.org/fhir/R4/resource-operation-validate.html">validation operation</a>
+convention. It runs the whole ingest pipeline (mapping resolution, the FLAT
+build, the <code>FEEDER_AUDIT</code> stamp, and the <em>same validation the real commit
+runs</em>) and <strong>commits nothing</strong>: no composition, no version, and no EHR is
+created (the target EHR is resolved and reported, never touched).</p>
+<p>The response is a FHIR <code>OperationOutcome</code>, and a completed validation is
+<code>200</code> whichever way the verdict falls:</p>
+<ul>
+<li><strong>Valid</strong>: <code>information</code> issues, the verdict naming the resolved template,
+plus the EHR disposition (<code>would commit into existing EHR &lt;id&gt;</code>, or
+<code>would create a new EHR for subject '&lt;id&gt;'</code>).</li>
+<li><strong>Invalid</strong>: an <code>error</code> issue carrying the openEHR validator’s rejection
+<strong>verbatim</strong> (the exact text the real ingest would refuse with as a <code>422</code>)
+plus the same disposition issue.</li>
+</ul>
+<p>Operation-level failures mirror the ingest door: no enabled mapping is <code>404</code>,
+a type outside the starter set is <code>501</code>, a malformed body is <code>400</code>, and the
+disabled connector is <code>404</code>. This is what makes mapping development safe:
+iterate on a mapping with <code>$validate</code> against real sample resources, and only
+switch to the real <code>POST</code> once the outcome reads valid.</p>
+<pre><code class="language-bash">curl -s -X POST "$CDR/fhir/r4/Observation/\$validate" \
+  -H 'Content-Type: application/json' \
+  --data-binary @observation.json | jq '.issue[].diagnostics'
+</code></pre>
+<h2 id="read-façade"><a class="header" href="#read-façade">Read façade</a></h2>
+<p><code>GET /fhir/r4/{resource_type}?patient=&lt;subject&gt;</code> returns openEHR data
+reverse-mapped into a FHIR <code>searchset</code> Bundle. Each entry is produced from a
+stored composition by running the mapping in reverse.</p>
+<p>The <code>patient</code> parameter is <strong>mandatory</strong>; a missing or blank one is a <code>400</code>. This
+is a targeted façade, not a general FHIR search engine: there is no free-text
+search, no chained parameter, and no <code>_include</code>. An optional <code>_count</code> caps the
+entries returned per mapping.</p>
+<h2 id="the-ehds-priority-categories-and-what-round-trips"><a class="header" href="#the-ehds-priority-categories-and-what-round-trips">The EHDS priority categories, and what round-trips</a></h2>
+<!-- BEGIN generated: ehds-priority-categories -->
+<p>The six priority categories of personal electronic health data are Annex I of
+the EHDS regulation, and Annex II 2.1 to 2.3 require an EHR system to provide
+and receive them in the European electronic health record exchange format.
+That format is set by implementing acts under Article 36 which have not been
+adopted, so this table is not a conformance claim against it. What it says is
+narrower and checkable: which category has a committed template whose example
+composition round-trips through this façade today.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Annex I</th><th>Category</th><th>Committed template</th><th>A profile mapping would target</th><th>Transform proven</th></tr>
+</thead>
+<tbody>
+<tr><td>1</td><td>Patient summaries</td><td><code>corpus/templates/ckm/international-patient-summary.opt</code></td><td>Bundle (IPS-shaped) over Patient, Condition, AllergyIntolerance, MedicationStatement</td><td>Yes</td></tr>
+<tr><td>2</td><td>Electronic prescriptions</td><td><code>corpus/templates/ckm/eprescription-fhir.opt</code></td><td>MedicationRequest</td><td>Yes</td></tr>
+<tr><td>3</td><td>Electronic dispensations</td><td>—</td><td>MedicationDispense</td><td><strong>No committed template</strong></td></tr>
+<tr><td>4</td><td>Medical imaging studies and related imaging reports</td><td><code>corpus/templates/ckm/ccta-report.opt</code></td><td>DiagnosticReport (+ ImagingStudy for the study itself)</td><td>Yes</td></tr>
+<tr><td>5</td><td>Medical test results, including laboratory and other diagnostic results</td><td><code>corpus/templates/ckm/generic-lab-test-result.opt</code></td><td>DiagnosticReport + Observation</td><td>Yes</td></tr>
+<tr><td>6</td><td>Discharge reports</td><td>—</td><td>Composition (discharge summary) + Encounter</td><td><strong>No committed template</strong></td></tr>
+</tbody>
+</table>
+</div>
+<p>“Transform proven” means exactly what the test asserts, and no more
+(<code>app/ferroehr/tests/it/fhir_priority_categories.rs</code>): the category’s
+committed operational template builds a Web Template, its committed example
+composition flattens against that template to a non-empty map, and a mapping
+entry over a leaf taken from that map drives the reverse transform to a FHIR
+resource carrying the composition’s own value. The leaf is derived from the
+map rather than written into the test, so a corpus refresh moves it and the
+case still holds.</p>
+<p>Three things it deliberately does <strong>not</strong> establish, each of which a reader
+could otherwise assume:</p>
+<ul>
+<li><strong>No profile mapping ships.</strong> The rightmost column says what a mapping for
+that category <em>would</em> target, not what exists. The test maps its leaf onto
+<code>Observation.note.text</code>, a free-text element: it proves the machinery
+carries real clinical content, not that an IPS-shaped <code>Bundle</code> or a
+<code>MedicationRequest</code> has been authored and reviewed. Mappings are data a
+deployment registers, as the section above describes.</li>
+<li><strong>It exercises the transform, not the endpoint.</strong> The test calls the
+reverse transform directly, so routing, authorization and the stored-mapping
+lookup are covered by other tests rather than by this table.</li>
+<li><strong>It is not conformance to the exchange format</strong>, which does not exist yet.</li>
+</ul>
+<p>The connector this table measures is planned to leave: FerroBRIDGE
+(<a href="https://github.com/rubentalstra/FerroBRIDGE">https://github.com/rubentalstra/FerroBRIDGE</a>) is the FHIRconnect and OMOP
+bridge, and <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3080">#3080</a>
+retires the in-tree connector once it ships. The EHDS readiness question does
+NOT leave with it — it is asked of the EHR system — so this table moves to the
+compliance chapter at that point rather than being deleted with the page it
+currently sits on.</p>
+<p>Two of the example compositions this rests on — the patient summary and the
+imaging report — were patched by hand rather than regenerated against a
+running server, which their pack’s provenance records and
+<a href="https://github.com/FerroHEALTH/FerroEHR/issues/1724">#1724</a> tracks. They are
+real CKM templates either way; the caveat belongs beside a claim that leans on
+them.</p>
+<!-- END generated: ehds-priority-categories -->
+<h3 id="the-decision-on-profile-mappings-wait-for-the-implementing-acts"><a class="header" href="#the-decision-on-profile-mappings-wait-for-the-implementing-acts">The decision on profile mappings: wait for the implementing acts</a></h3>
+<p>No profile mapping ships for any priority category, and none will be authored
+here. That is a recorded decision
+(<a href="https://github.com/FerroHEALTH/FerroEHR/issues/3206">#3206</a>), not an
+omission, and it rests on two things being unfixed at once.</p>
+<p>The target format is unfixed. Annex II 2.1 to 2.3 require the categories in
+the European electronic health record exchange format, and that format’s
+content is set by implementing acts under
+<a href="https://eur-lex.europa.eu/eli/reg/2025/327/oj">Article 36</a> which have not
+been adopted. An IPS-shaped <code>Bundle</code>, a <code>MedicationRequest</code> or a
+<code>DiagnosticReport</code> authored today would be authored against a guess at what
+those acts require.</p>
+<p>The place is unfixed too, and settled the other way. Mappings belong to
+<a href="https://github.com/rubentalstra/FerroBRIDGE">FerroBRIDGE</a>, which is the
+FHIRconnect and OMOP bridge, and
+<a href="https://github.com/FerroHEALTH/FerroEHR/issues/3080">#3080</a> retires the
+in-tree connector once it ships its first round trip. A mapping written here
+would be written against <code>ehr.fhir_mapping</code> rows and the FHIRPath-lite dialect
+this façade reads, both of which leave with the connector.</p>
+<p><strong>What reopens the question.</strong> The Article 36 implementing acts being adopted
+reopens it, because the target stops being a guess. FerroBRIDGE shipping its
+first round trip settles where the work lands. Either event is a reason to
+revisit #3206; neither has happened.</p>
+<p>What stays in FerroEHR regardless is the readiness statement: which categories
+are carried, by what, and where the gaps are. That is the table above and the
+<a href="../compliance/ehds-readiness.html">EHDS readiness</a> page.</p>
+<h3 id="the-two-categories-with-no-committed-template"><a class="header" href="#the-two-categories-with-no-committed-template">The two categories with no committed template</a></h3>
+<p>Electronic dispensations (Annex I 3) and discharge reports (Annex I 6) have no
+template in the curated CKM pack, so nothing demonstrates them end to end.
+That is an adjudicated boundary rather than a backlog item. A CDR stores
+whatever an operational template defines, so this is a corpus gap and not a
+storage one. The pack is vendored verbatim from the openEHR
+<a href="https://ckm.openehr.org/ckm/">CKM</a>, every file being CKM’s own export with
+its provenance recorded, so filling the two rows would mean authoring a
+template here and putting it in a pack whose value is that nothing in it was
+authored here. A deployment holding dispensations or discharge summaries
+uploads its own operational template, and the façade maps it like any other.</p>
+<h2 id="outbound-emission"><a class="header" href="#outbound-emission">Outbound emission</a></h2>
+<p>Outbound emission publishes the mapped FHIR resource for every relevant commit,
+but the target is an <strong>AMQP broker (RabbitMQ), not an HTTP FHIR server</strong>. A
+background task drains the same commit outbox used by
+<a href="amqp.html">change events</a>, reverse-maps each committed <strong>composition</strong> through
+every enabled mapping bound to its template, and publishes each resulting
+resource to a topic exchange (default <code>ferroehr.fhir</code>) with a routing key of
+<code>&lt;resource_type&gt;.&lt;template_id&gt;</code>, both segments sanitised the way the change-event
+keys are. Delivery is at-least-once.</p>
+<p>Only composition versions produce messages: an <code>EHR_STATUS</code> or a <code>FOLDER</code> carries
+no mappable template. A row that fails to reverse-map <em>deterministically</em> (a
+defective stored mapping or template) is retried a few times and then parked:
+logged at error level, naming the row, and skipped, so one bad commit cannot
+head-of-line-block every later one. Broker and database failures are treated as
+transient and never park a row.</p>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p>Outbound FHIR messages carry <strong>PHI</strong>: the payload <em>is</em> the mapped clinical FHIR
+resource, unlike the PHI-free <a href="amqp.html">change-event</a> envelopes. That is exactly
+why they are a separate switch on a separate exchange (<code>ferroehr.fhir</code>, not
+<code>ferroehr.events</code>): broker access control can then isolate the PHI-bearing
+stream. Enable it only against a TLS, access-controlled broker, and treat every
+consumer as a PHI processor.</p>
+</blockquote>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>The change-event publisher has a health indicator; the outbound emitter does
+not have one of its own today, so treat its broker as something to monitor at
+the broker rather than through the CDR’s readiness surface. See
+<a href="../operations.html">Operations</a>.</p>
+</blockquote>
+<h2 id="mappings-are-data-you-manage"><a class="header" href="#mappings-are-data-you-manage">Mappings are data you manage</a></h2>
+<p>There are no bundled mapping files. Each mapping is a stored definition managed
+through an admin API (classed under admin authorization):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Method</th><th>Path</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>GET</code></td><td><code>/admin/fhir_mapping</code></td><td>list mappings</td></tr>
+<tr><td><code>POST</code></td><td><code>/admin/fhir_mapping</code></td><td>create a mapping (<code>201</code>)</td></tr>
+<tr><td><code>GET</code></td><td><code>/admin/fhir_mapping/{mapping_id}</code></td><td>get a mapping</td></tr>
+<tr><td><code>PUT</code></td><td><code>/admin/fhir_mapping/{mapping_id}</code></td><td>update a mapping</td></tr>
+<tr><td><code>DELETE</code></td><td><code>/admin/fhir_mapping/{mapping_id}</code></td><td>delete a mapping (<code>204</code>)</td></tr>
+</tbody>
+</table>
+</div>
+<p>A mapping definition binds <strong>one FHIR resource type</strong> (optionally scoped to a
+<code>meta.profile</code> URL) to <strong>one openEHR template</strong>, and lists field bindings, each
+mapping an openEHR FLAT path to a FHIR path, or to a constant, shaped by a
+transform.</p>
+<p><strong>Resolution is two-step and deterministic.</strong> An incoming resource resolves by
+its type plus the <em>first</em> entry of <code>meta.profile</code> (only <code>meta.profile[0]</code> is
+consulted): an enabled mapping whose <code>profile_url</code> <strong>exactly matches</strong> that URL
+wins; otherwise the type’s enabled mapping with <strong>no <code>profile_url</code></strong> (the
+type default) applies. A resource declaring no profile matches only the type
+default. When neither exists, the ingest (and <code>$validate</code>) answer <code>404</code>.</p>
+<p>The stored definition is the deployable artifact: the CDR stores it verbatim
+and interprets it at ingest time, so a mapping deploys, updates, and rolls
+back without a server release. Its shape (this is the whole contract, with no
+openEHR specification governs FHIR interop; the wire vocabulary follows
+<a href="https://hl7.org/fhir/R4/">HL7 FHIR R4</a>):</p>
+<pre><code class="language-json">{
+  "resource_type": "Observation",
+  "profile_url": "http://hl7.org/fhir/StructureDefinition/bp",
+  "template_id": "blood_pressure.en.v1",
+  "subject": {
+    "reference_path": "subject.reference",
+    "namespace": "fhir",
+    "strip_prefix": "Patient/"
+  },
+  "context": {
+    "ctx/language": "en",
+    "ctx/territory": "US",
+    "ctx/composer_name": "fhir-connector"
+  },
+  "entries": [
+    { "openehr_path": "blood_pressure/blood_pressure:0/systolic",
+      "fhir_path": "component.where(code.coding[0].code = '8480-6').valueQuantity.value",
+      "transform": { "kind": "quantity",
+        "unit_path": "component.where(code.coding[0].code = '8480-6').valueQuantity.unit" },
+      "required": true },
+    { "openehr_path": "blood_pressure/blood_pressure:0/diastolic",
+      "fhir_path": "component.where(code.coding[0].code = '8462-4').valueQuantity.value",
+      "transform": { "kind": "quantity",
+        "unit_path": "component.where(code.coding[0].code = '8462-4').valueQuantity.unit" },
+      "required": true }
+  ]
+}
+</code></pre>
+<p>The example binds the HL7 FHIR R4 core
+<a href="https://hl7.org/fhir/R4/bp.html">blood-pressure profile</a> (systolic LOINC
+<code>8480-6</code>, diastolic <code>8462-4</code>, each a <code>component</code> of one <code>Observation</code>) to a
+blood-pressure template’s two quantity leaves. <code>subject</code> names where the
+patient identity lives in the resource and how it becomes the EHR subject
+(<code>Patient/p-42</code> → subject id <code>p-42</code> in namespace <code>fhir</code>); <code>context</code> supplies
+the FLAT <code>ctx/</code> defaults every built composition carries (an omitted
+<code>ctx/time</code> defaults to the ingestion instant). The transforms:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Transform</th><th>What it writes</th></tr>
+</thead>
+<tbody>
+<tr><td>plain text</td><td>the bare FLAT leaf</td></tr>
+<tr><td>date</td><td>an ISO 8601 date or date-time leaf</td></tr>
+<tr><td>quantity</td><td>the magnitude and unit leaves, the unit read from the resource or fixed</td></tr>
+<tr><td>coded</td><td>the code, the resolved openEHR terminology id, and optionally the display text</td></tr>
+</tbody>
+</table>
+</div>
+<p>A coded transform carries its own FHIR-code-system-to-openEHR-terminology map,
+with <code>*</code> as the fallback for any unmatched system. An entry can be marked
+required, which turns an absent source value into an error instead of a skipped
+field.</p>
+<p>A coded transform can also declare <code>translate</code>, asking for <strong>cross-terminology
+code translation</strong> at ingest time:</p>
+<pre><code class="language-json">{ "openehr_path": "…/problem",
+  "fhir_path": "code.coding[0].code",
+  "transform": { "kind": "coded",
+    "system_path": "code.coding[0].system",
+    "translate": { "target_system": "http://snomed.info/sct",
+                   "concept_map": "http://example.org/ConceptMap/my-map" } },
+  "code_map": { "http://snomed.info/sct": "SNOMED-CT" } }
+</code></pre>
+<p>The server resolves each such code through a configured FHIR terminology
+server’s <code>ConceptMap/$translate</code> (routed by the openEHR terminology the
+<code>code_map</code> binds the target system to; <code>concept_map</code> optionally pins one map).
+Only a <strong>strictly equivalent</strong> match is taken; a <code>wider</code>, <code>narrower</code>, or
+<code>relatedto</code> mapping is treated as no translation, because writing a
+non-equivalent code would silently change clinical meaning. When no
+translation exists, a required entry refuses the ingest and an optional one
+writes nothing, and the untranslated source code is never passed through under
+the target terminology. A mapping that declares <code>translate</code> on a deployment
+with no terminology server configured is refused as a server configuration
+error rather than silently skipped.</p>
+<p>The FHIR-path support is a deliberate subset of
+<a href="https://hl7.org/fhirpath/">FHIRPath</a>: object-field navigation, zero-based
+array indexing, <code>first()</code>, and single-condition <code>where(path = literal)</code>
+filters, for example <code>code.coding[0].code</code>,
+<code>code.coding.where(system = 'http://loinc.org').code</code>, and
+<code>component.where(code.coding[0].code = '8480-6').valueQuantity.value</code>, not
+the full FHIRPath language (no other functions, unions, or arithmetic).
+FHIRPath’s <code>where()</code> filters a collection; because a FLAT leaf holds a single
+value, this subset takes the first matching element. The mapping
+is symmetric (the same definition drives inbound ingest, the read façade, and
+outbound emission) so a field you can ingest is a field you can serve back
+(a translated entry serves back the stored, translated coding).</p>
+<p>Each mapping also carries an <code>enabled</code> flag (default on). Only enabled mappings
+resolve, for ingest, for the façade, and for outbound emission, which makes
+disabling one a reversible way to take a resource type out of service.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>The template a mapping references must already be ingested (see
+<a href="../templates-validation.html">Templates &amp; validation</a>); creating a mapping
+against an unknown template is a <code>400</code>. A mapping’s name is immutable once set,
+because it is its deployable identity, and a duplicate name is a <code>409</code>.</p>
+</blockquote>
+<h2 id="the-one-route-here-that-is-not-the-connector"><a class="header" href="#the-one-route-here-that-is-not-the-connector">The one route here that is not the connector</a></h2>
+<p><code>GET /fhir/r4/AuditEvent</code> sits under the same path prefix but is <strong>not</strong> part of
+the FHIR connector: it is the audit trail’s own retrieval surface, returning
+stored audit records as FHIR <code>AuditEvent</code> resources. It is gated by the local
+audit record repository rather than by the connector switch. The unscoped
+retrieval is admin-only; a caller holding the configured
+<code>authz.rbac.subject_audit_role</code> reads it scoped to one subject, with the
+<code>patient</code> parameter required. See <a href="../audit.html">Audit trail (IHE ATNA)</a>.</p>
+<h2 id="enabling-the-connectors"><a class="header" href="#enabling-the-connectors">Enabling the connectors</a></h2>
+<p>Both switches are off by default. The inbound/read-façade switch lives under
+<code>[fhir]</code> and the outbound emitter under <code>[fhir.outbound]</code>; the full table with
+every default is on
+<a href="../installation/config-integrations.html#fhir">Integrations</a>. The essentials:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Environment variable</th><th>Default</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>FERROEHR__FHIR__API_ENABLED</code></td><td><code>false</code></td><td>mount inbound ingest, the read façade, and the mapping API</td></tr>
+<tr><td><code>FERROEHR__FHIR__OUTBOUND__ENABLED</code></td><td><code>false</code></td><td>run the outbound emitter (carries PHI)</td></tr>
+<tr><td><code>FERROEHR__FHIR__OUTBOUND__URL</code></td><td>a local development broker</td><td>outbound broker URL</td></tr>
+<tr><td><code>FERROEHR__FHIR__OUTBOUND__URL_FILE</code></td><td>unset</td><td>read the broker URL from a mounted file instead</td></tr>
+<tr><td><code>FERROEHR__FHIR__OUTBOUND__EXCHANGE</code></td><td><code>ferroehr.fhir</code></td><td>outbound topic exchange, kept distinct from the event stream</td></tr>
+<tr><td><code>FERROEHR__FHIR__OUTBOUND__TLS</code></td><td><code>false</code></td><td>upgrade an <code>amqp://</code> URL to <code>amqps://</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>Batch size, poll interval, and publish retries are tunable as well.</p>
+<p>When the inbound switch is off, <code>/fhir/r4/*</code> and <code>/admin/fhir_mapping</code> answer
+<code>404</code> without touching the backend. When the outbound switch is off, no emitter
+task runs. With authentication on, an unauthenticated request to a disabled group
+is answered <code>401</code> first: the group gate sits behind authentication.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>The connectors are also a <strong>cargo feature</strong> (<code>fhir</code>), on in the published images
+and any default build, and enabling it also enables <code>events</code> because the
+emitter drains the commit outbox. A slim <code>--no-default-features</code> build contains
+none of their code and <strong>refuses to boot</strong> when <code>fhir.outbound.enabled</code>, a
+configured external FHIR terminology provider, or a FHIR <code>AuditEvent</code> audit sink
+asks for it. <code>fhir.api_enabled</code> is the exception: those routes are simply not
+compiled in, so the setting has no effect rather than failing loudly. See
+<a href="../installation/from-source.html#build-features">From source → Build features</a>.</p>
+</blockquote>
+<h3 id="on-kubernetes"><a class="header" href="#on-kubernetes">On Kubernetes</a></h3>
+<p>Both switches are reachable through the chart’s <code>config</code> passthrough
+(<a href="../installation/kubernetes.html#any-server-setting-is-reachable">Any server setting is reachable</a>).
+The outbound broker URL carries credentials, so it goes through
+<code>secrets.fhirOutboundUrl</code>, which the chart mounts as a file:</p>
+<pre><code class="language-yaml"># values.yaml
+config:
+  fhir:
+    api_enabled: true          # the read façade + mapping API
+    outbound:
+      enabled: true            # the emitter; carries PHI
+      exchange: ferroehr.fhir
+      tls: true
+secrets:
+  fhirOutboundUrl: "amqps://user:pass@broker.example:5671/%2f"
+</code></pre>
+<p><strong>Before you enable outbound:</strong> a reachable broker, an egress rule that admits it
+if the chart’s default-deny egress policy is on, and a deliberate decision: it
+carries PHI off this system. <strong>To turn either off</strong>, set its switch to <code>false</code> and
+upgrade: the inbound routes go back to answering <code>404</code>, and no emitter task runs.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../beyond-core/amqp.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../beyond-core/s3-multimedia.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../beyond-core/amqp.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../beyond-core/s3-multimedia.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../theme/mermaid-eefea253.min.js"></script>
+        <script src="../theme/mermaid-init-ccf746f1.js"></script>
+        <script src="../theme/version-picker-dddf05c1.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

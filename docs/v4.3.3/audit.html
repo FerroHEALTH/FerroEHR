@@ -1,0 +1,702 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Audit trail (IHE ATNA) - FerroEHR Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        <!-- Content-Security-Policy as a <meta> element, because GitHub Pages serves
+             static files and cannot set response headers. A meta CSP is genuinely
+             weaker than the header: `frame-ancestors`, `report-uri` and `sandbox` are
+             IGNORED in meta form (w3c CSP3 §3.3), and it applies only after the parser
+             reaches it. It still stops an injected external script or an exfiltrating
+             `connect-src`, which is the realistic risk for a docs site, so it is worth
+             having while being honest that the site cannot carry the full header set —
+             documented on the security page. `unsafe-inline` is required: mdBook emits
+             inline theme/sidebar scripts and inline styles of its own. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <!-- Self-hosted KaTeX stylesheet (fonts under katex/fonts/) — the site
+             serves no external requests, so mdbook-katex runs with no-css = true
+             and the vendored sheet is linked here. Version 0.16.4, matching the
+             KaTeX the katex-rs renderer inside mdbook-katex bundles (its
+             KATEX-VERSION file); provenance in website/book/KATEX-PROVENANCE.md. -->
+        <link rel="stylesheet" href="katex/katex.min.css">
+
+        <meta name="description" content="User documentation for FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-e96d0476.css">
+        <link rel="stylesheet" href="css/chrome-d279d366.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom-79743c4e.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "rust";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "searchindex-08cf6b59.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-96c4774d.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">FerroEHR Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/src/audit.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="audit-trail-ihe-atna"><a class="header" href="#audit-trail-ihe-atna">Audit trail (IHE ATNA)</a></h1>
+<p>FerroEHR keeps a full security audit trail of API access (<em>who</em> did <em>what</em>
+to <em>which</em> resource, with <em>what outcome</em>, from <em>where</em>, and <em>when</em>) following
+the IHE <strong>ATNA</strong> (Audit Trail and Node Authentication) profile, the standard
+openEHR itself points at (the platform Service Model names the System Log
+component “IHE ATNA-compliant system log”). It is <strong>on by default</strong>: every
+deployment records a queryable audit trail with zero external dependencies.</p>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p>Two postures are legitimate to run and wrong to run silently, so the server
+says them at <code>warn</code> on boot (structured field <code>posture = "audit"</code>), in the
+<code>audit_sender</code> readiness indicator and on <code>/management/info</code>: <strong>auditing
+off</strong> (<code>[audit] enabled = false</code>) writes no access log and leaves the EHDS
+logging component off, and the shipped default <strong><code>fail_mode = "open"</code></strong>
+drops a record the audit queue cannot take while the request succeeds, so
+an access under load can go unrecorded. A deployment that must never serve
+an unrecorded access sets <code>fail_mode = "closed"</code>, which answers <code>503</code> and
+<code>Retry-After</code> instead. A deployment declaring
+<a href="installation/configuration.html#deployment_profile"><code>deployment_profile = "production"</code></a>
+refuses to start with auditing off.</p>
+</blockquote>
+<ul>
+<li><a href="#the-record-in-both-official-formats">The record, in both official formats</a></li>
+<li><a href="#reads-are-logged-too-per-record">Reads are logged too, per record</a>
+<ul>
+<li><a href="#nen-7513-content-field-by-field">NEN 7513 content, field by field</a></li>
+</ul>
+</li>
+<li><a href="#the-ehds-logging-elements-mapped">The EHDS logging elements, mapped</a>
+<ul>
+<li><a href="#retention-and-who-chooses-it">Retention, and who chooses it</a></li>
+<li><a href="#getting-the-log-out">Getting the log out</a></li>
+</ul>
+</li>
+<li><a href="#sinks">Sinks</a></li>
+<li><a href="#tamper-evidence">Tamper evidence</a></li>
+<li><a href="#retrieving-audit-records-iti-81">Retrieving audit records (ITI-81)</a></li>
+<li><a href="#node-authentication-iti-19-mutual-tls">Node authentication (ITI-19, mutual TLS)</a></li>
+<li><a href="#configuration-summary">Configuration summary</a></li>
+</ul>
+<p>The trail is orthogonal to openEHR’s own <code>CONTRIBUTION</code>/<code>AUDIT_DETAILS</code>
+change-control audit (which the server always writes in the same transaction
+as every version change): openEHR audit records what a version says about its
+own authorship; ATNA records security surveillance of <em>access</em>, including
+reads and rejected attempts.</p>
+<h2 id="the-record-in-both-official-formats"><a class="header" href="#the-record-in-both-official-formats">The record, in both official formats</a></h2>
+<p>Every audited operation produces one record, rendered in the two formats the
+IHE standards define:</p>
+<ul>
+<li><strong>FHIR R4 <code>AuditEvent</code></strong> following the IHE <strong>BALP</strong> (Basic Audit Log
+Patterns) content profiles: the modern RESTful-ATNA form and the canonical
+stored form. Patient-centric operations carry the resolved EHR subject as
+the patient entity (<code>PatientRead</code>/<code>PatientCreate</code>/… profile claims); query
+executions carry the search expression; Bearer-authenticated requests
+record the token’s <code>jti</code> (and never the token itself) per
+<code>OAUTHaccessTokenUse.Minimal</code>.</li>
+<li><strong>DICOM Audit Message</strong> (DICOM PS3.15 §A.5 XML): the classic ATNA form,
+shipped over syslog per IHE ITI-20 when the syslog sink is enabled.
+Dedicated DICOM event ids are used throughout: Patient Record (110110),
+Query (110112), Export/Import (110106/110107, the EHR-Extract directions),
+User Authentication (110114, with the Login <code>EventTypeCode</code> 110122).</li>
+</ul>
+<p>Every server operation is audited (an unrecognised extension operation fails
+<em>closed</em> to a generic audited class, so nothing is silently unaudited) and
+access refusals are always recorded: a <code>401</code>, a <code>403</code>, and the <code>400</code> a
+malformed <code>Authorization</code> header earns. A refusal is attributed to the caller
+<strong>only when one actually authenticated</strong>; an unattributable denial is recorded
+as unattributed rather than under a fabricated subject, so no audit record
+ever names an identity that did not authenticate.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p><strong>Successful-login records are suppressed by default</strong>
+(<code>[audit] suppress_login_events = true</code>). Set it to <code>false</code> to record them.
+Even then, a login record marks a genuine authentication <em>event</em>, not every
+authenticated request: it is emitted when credentials were actually
+verified: a Basic verified-credential-cache miss. A cache hit continues an
+established session, and a Bearer request authenticated out of band at your
+identity provider, so neither mints a per-request login record. Rejections
+are recorded regardless of this switch.</p>
+</blockquote>
+<h2 id="reads-are-logged-too-per-record"><a class="header" href="#reads-are-logged-too-per-record">Reads are logged too, per record</a></h2>
+<p>A write leaves its own trail in openEHR’s contribution and audit chain. A read
+leaves nothing behind unless the server records it, and reads are what the
+access-logging rules are about: <a href="https://www.nen.nl">NEN 7513</a> requires per-access
+logging of who consulted which record and on whose authority, the
+<a href="https://wetten.overheid.nl/BWBR0023864">Wabvpz</a> gives the patient the right to
+know who consulted their record, and
+<a href="https://eur-lex.europa.eu/eli/reg/2025/327/oj">EHDS Art. 9</a> requires logging of
+access to electronic health data for primary use. No openEHR specification
+governs the read side, so this is FerroEHR’s own extension.</p>
+<p>Every retrieval in the EHR, Query and Demographic APIs produces a record, and a
+test walks the generated route tables to prove it: a newly generated <code>GET</code> that
+emits nothing fails the build.</p>
+<p>Each record additionally carries:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Field</th><th>What it holds</th></tr>
+</thead>
+<tbody>
+<tr><td><code>domain</code></td><td>The pseudonymisation domain read: <code>ehr</code>, <code>demographic</code>, <code>linkage</code>, or <code>system</code> for an operation that touches no domain.</td></tr>
+<tr><td><code>organisation</code></td><td>The organisation the caller acted for, read from the access token’s <code>[authz.abac] organization_claim</code> — the same claim the ABAC layer decides on, so no second setting can name a different one. The recording does not depend on that layer being switched on. A Basic-authenticated caller and an unconfigured claim both leave it empty.</td></tr>
+<tr><td><code>purpose</code></td><td>The purpose of use the caller declared in the <code>x-purpose-of-use</code> header, when the deployment accepts it.</td></tr>
+<tr><td><code>legal_basis</code></td><td>The basis the deployment processes under, from <code>[audit] legal_basis</code>.</td></tr>
+<tr><td><code>result_count</code></td><td>How many records the operation served.</td></tr>
+<tr><td><code>request_id</code></td><td>The <code>x-request-id</code> correlation id the response carried.</td></tr>
+</tbody>
+</table>
+</div>
+<p>A query is the case a single record cannot describe. One AQL statement is one
+operation but potentially many disclosures, so it produces its own execute
+record <strong>plus one access record per EHR it served</strong>, each carrying that EHR’s
+served-row count. The served set is read off the rows the caller actually
+received rather than the rows the statement matched: a legal record of access
+must not name an EHR whose content was never disclosed. Two query shapes carry
+no per-EHR breakdown, because the shape makes it underivable —
+<code>SELECT DISTINCT</code>, where an extra column changes which rows are distinct, and
+an aggregate projection, where a per-row EHR is not valid SQL. Those record the
+statement and its row count.</p>
+<h3 id="nen-7513-content-field-by-field"><a class="header" href="#nen-7513-content-field-by-field">NEN 7513 content, field by field</a></h3>
+<p>NEN 7513 §5 lists what a logged event has to contain. This is where each item
+lives in the record:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>NEN 7513 asks for</th><th>FerroEHR records it as</th></tr>
+</thead>
+<tbody>
+<tr><td>The identity of the person who accessed the record</td><td><code>principal</code> — the authenticated Basic username or OAuth <code>sub</code>; an unattributable denial is recorded as unattributed, never under a fabricated identity</td></tr>
+<tr><td>The identity of the patient whose record was accessed</td><td><code>patient_id</code> — the resolved EHR subject, which under the pseudonymisation boundary is an opaque pseudonym</td></tr>
+<tr><td>Which record, or which part of it</td><td><code>resource_class</code> + <code>resource_id</code>: the version uid, party uid or EHR id the operation touched</td></tr>
+<tr><td>The date and time</td><td><code>recorded_at</code>, the event time; <code>stored_at</code> is when the row was persisted</td></tr>
+<tr><td>The kind of action</td><td><code>action</code> (DICOM <code>C</code>/<code>R</code>/<code>U</code>/<code>D</code>/<code>E</code>) plus <code>operation</code>, the ITS-REST operation id</td></tr>
+<tr><td>Whether it succeeded</td><td><code>outcome</code>, the DICOM outcome indicator (0 success, 4 minor, 8 serious, 12 major)</td></tr>
+<tr><td>Under which role or authority</td><td><code>roles</code> — the roles the caller held at access time (the RFC 9068 §2.2.3.1 claim carriers for a bearer, the user definition for Basic), rendered as FHIR <code>agent.role</code> on the requestor and as a <code>RoleIDCode</code> per role on the DICOM source participant</td></tr>
+<tr><td>On whose authority, and why</td><td><code>purpose</code> and <code>legal_basis</code></td></tr>
+<tr><td>Which system, and from where</td><td><code>AuditSourceID</code> and the source participant’s network address (<code>client_ip</code>)</td></tr>
+</tbody>
+</table>
+</div>
+<p>Two of these are the deployment’s to supply. <code>purpose</code> is only as meaningful as
+the vocabulary you agree with your callers: set <code>[audit] purpose_codes</code> to that
+vocabulary and a code outside it is recorded as absent rather than as free text
+that reads at review time like an established purpose. <code>legal_basis</code> is a
+deployment-level fact and is recorded on every access once you set it.</p>
+<p>Mapping the recorded fields onto your own retention schedule and review process
+stays yours: the software records the events and serves them back, and no
+supplier document discharges the obligation to review them.</p>
+<h2 id="the-ehds-logging-elements-mapped"><a class="header" href="#the-ehds-logging-elements-mapped">The EHDS logging elements, mapped</a></h2>
+<p>Annex II 3.2 of <a href="https://eur-lex.europa.eu/eli/reg/2025/327/oj">Regulation (EU) 2025/327</a>
+lists five things the European logging software component must record “on every
+access event or group of events”. This is where each one lands, or does not.
+The elements were read from the published text on 2026-09-10; the regulation is
+the authority and the wording below is a paraphrase.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Annex II 3.2</th><th>Access-event field</th><th>DICOM PS3.15</th><th>FHIR <code>AuditEvent</code></th><th>State</th></tr>
+</thead>
+<tbody>
+<tr><td>(a) the healthcare provider or other individuals having accessed</td><td><code>organisation</code></td><td>— (no such attribute)</td><td>a second <code>agent</code> with <code>who</code> referencing <code>Organization/…</code></td><td>Recorded</td></tr>
+<tr><td>(b) the specific natural person or persons having accessed</td><td><code>principal</code> (+ <code>token_id</code>, <code>client_ip</code>)</td><td><code>ActiveParticipant/@UserID</code></td><td><code>agent.who</code></td><td>Recorded</td></tr>
+<tr><td>(c) the categories of data accessed</td><td><code>resource_class</code> + <code>domain</code> (+ <code>result_count</code>)</td><td><code>ParticipantObjectIdentification</code> type and role codes</td><td><code>entity.type</code> / <code>entity.role</code></td><td>Partial</td></tr>
+<tr><td>(d) the time and date of access</td><td><code>recorded_at</code></td><td><code>EventIdentification/@EventDateTime</code></td><td><code>recorded</code></td><td>Recorded</td></tr>
+<tr><td>(e) the origin or origins of data</td><td><code>origins</code> + <code>origin_count</code> (the <code>FEEDER_AUDIT</code> originating systems of the served version bodies, or the server that created them, derived at commit onto <code>version.origins</code>)</td><td>— (no such element)</td><td>one <code>entity</code> per origin, named “origin of the served data”</td><td>Recorded</td></tr>
+</tbody>
+</table>
+</div>
+<p>Read (a) beside (b): they are both about the accessing side, and the pair
+distinguishes the <strong>organisation</strong> on whose behalf the access happened from the
+<strong>natural person</strong> who made it. The principal answers (b); the <code>organisation</code>
+column answers (a), resolved from the same access-token claim the ABAC layer
+reads (<code>[authz.abac] organization_claim</code>) rather than from a second setting
+that could name a different claim. Sharing the setting is not sharing the
+switch: the organisation is recorded whether or not the ABAC gate is enabled,
+because the trail describes a caller rather than deciding anything about them.
+The FHIR rendering carries it as a second <code>agent</code> referencing an
+<code>Organization</code>, with no participation code, because <code>AuditEvent.agent.type</code> is
+optional and inventing a code would be worse than omitting one. The DICOM
+rendering carries nothing: PS3.15 §A.5 defines no organisation attribute on
+<code>ActiveParticipant</code>, and <code>AuditEnterpriseSiteID</code> is the reporting node’s own
+site rather than the caller’s organisation. Where no claim is configured or the
+caller authenticated with Basic, the field stays empty rather than being
+guessed.</p>
+<p>Element (c) is partial for a vocabulary reason rather than a plumbing one. The
+record says what kind of object was read and which pseudonymisation domain it
+came from, so “was this clinical content or an identity” is answerable per
+event. What it does not say is which <strong>Annex I priority category</strong> the data
+falls in; openEHR resource classes are a different vocabulary, and the mapping
+between them is not one this project should invent.</p>
+<p>Element (e) asks where the DATA came from, which is not where the request came
+from. openEHR models that provenance as <code>FEEDER_AUDIT</code> on the content itself,
+so every committed version records the distinct set of
+<code>FEEDER_AUDIT.originating_system_audit.system_id</code> values found in its body, or
+this server’s own system id when it carries none. A composition, status or
+folder read then records the origins of the version it served, and an AQL
+execution the union over the version rows its result page came from. The record
+carries the true distinct count beside a set capped at 32, so a page drawing on
+more origins than that says how many rather than looking complete. A version
+committed before the column existed is assessed when it is read.</p>
+<p>One further element, adjacent to the five: <strong>the declared purpose of use
+reaches one export of the two</strong>, and only one of them could carry it. It is
+stored on the record, served by ITI-81, and rendered as
+<a href="https://hl7.org/fhir/R4/auditevent.html"><code>agent.purposeOfUse</code></a> on the
+requesting person’s agent in the FHIR export. The coding carries the code
+alone, with no system: the vocabulary is the one you agree with your callers
+in <code>[audit] purpose_codes</code>, which has no published code system URI, and
+attributing the code to a system it does not come from would misdescribe it.
+The
+<a href="https://dicom.nema.org/medical/dicom/current/output/chtml/part15/sect_A.5.html">DICOM Audit Message schema</a>
+of PS3.15 §A.5 defines no purpose element at all — <code>EventIdentification</code>,
+<code>ActiveParticipant</code>, <code>AuditSourceIdentification</code> and
+<code>ParticipantObjectIdentification</code>, and none of them carries one — so on that
+side it is a limit of the format, not something this code withholds.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>Every row of this table is asserted by a test
+(<code>app/ferroehr/tests/it/audit_ehds_mapping.rs</code>), <strong>including the gaps</strong>: the
+tests that record an absence fail the day the field arrives, so the table and
+the code cannot drift apart in either direction.</p>
+</blockquote>
+<p>The common specifications the regulation’s Article 36 provides for have not
+been adopted. When they are, this mapping is re-verified against them rather
+than assumed to still hold; see the
+<a href="compliance/ehds-readiness.html">EHDS readiness page</a>.</p>
+<h3 id="retention-and-who-chooses-it"><a class="header" href="#retention-and-who-chooses-it">Retention, and who chooses it</a></h3>
+<p><code>[audit.store] retention_days</code> decides how long the repository keeps a record:
+<code>0</code>, the default, keeps them forever, and any other value reaps hourly
+everything older. <strong>The default is deliberate.</strong> An access log is the evidence
+a data subject’s right of access is served from, and a repository that silently
+forgets is worse than one that grows — so the software keeps everything until
+an operator says otherwise, rather than choosing a horizon on their behalf.</p>
+<p>Choosing that horizon is the deployment’s, and it is a legal question rather
+than a technical one: EHDS sets no retention period for the access log, while
+national law does — NEN 7513 is the Dutch reference for this log and the
+Wabvpz for how long it must survive. The setting is per node, and one node
+serves one organisation, so two organisations needing different horizons run
+two instances.</p>
+<p><strong>A floor is enforced where a jurisdiction sets one.</strong> The jurisdictions a
+deployment answers to are the ones its <code>[privacy.identifier_scan]</code> rules name,
+and where one publishes a minimum retention for the access log the server
+refuses to boot with a shorter <code>retention_days</code>, naming the configured value
+and the floor. <code>0</code> always passes. The floors registered:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Jurisdiction</th><th>Floor</th><th>Source</th></tr>
+</thead>
+<tbody>
+<tr><td>NL</td><td>five years from the moment the entry is written (<code>1830</code> days, the most five calendar years can span)</td><td><a href="https://wetten.overheid.nl/BWBR0042391">Besluit vaststelling bewaartermijn logging</a> (Stcrt. 2019, 38007), under Art. 5 of the <a href="https://wetten.overheid.nl/BWBR0040238">Besluit elektronische gegevensverwerking door zorgaanbieders</a>, which binds the period to NEN 7513</td></tr>
+<tr><td>CH</td><td>one year, and kept apart from the processing system (<code>366</code> days, the most one calendar year can span)</td><td><a href="https://www.fedlex.admin.ch/eli/cc/2022/568/de">Datenschutzverordnung (DSV) Art. 4 Abs. 5</a>, as amended on 1 December 2025, for the logs of a large-scale automated processing of sensitive personal data; the separate storage is the deployment’s, through the <a href="#getting-the-log-out">forwarding sinks</a></td></tr>
+</tbody>
+</table>
+</div>
+<p>The other shipped jurisdictions (DE, FI, GB, NO, SE) have no floor registered: an
+unknown requirement is never guessed at, and a deployment there sets its own.
+The effective retention is on the boot line beside the audit-enabled facts and
+on <code>GET /management/info</code> under <code>audit</code>.</p>
+<h3 id="getting-the-log-out"><a class="header" href="#getting-the-log-out">Getting the log out</a></h3>
+<p>Two routes, and they answer different questions.</p>
+<ul>
+<li><strong>ITI-81 retrieval</strong> — the <a href="#retrieving-audit-records-iti-81">audit search</a>
+serves the records back as FHIR <code>AuditEvent</code> resources, filtered by patient,
+agent, date and outcome. This is the operator’s route and the one a patient
+portal would build on: everything Annex II 3.2 records is reachable through
+it, including the purpose and the organisation, which the syslog feed’s
+DICOM form cannot carry.</li>
+<li><strong>The BALP feed</strong> — records fan out to syslog and to a FHIR feed as they are
+written, for a SIEM or a central Audit Record Repository.</li>
+</ul>
+<p>There is no patient-facing route in the product: a portal that shows a person
+who accessed their record builds on ITI-81 and authenticates the person itself.
+What the product gives that portal is a grant of its own size:
+<code>authz.rbac.subject_audit_role</code> reads the log for one subject at a time, with
+the <code>patient</code> parameter required, so the portal never holds an admin credential
+over every patient’s log (GDPR Art. 15 with Recital 63, EHDS Art. 9, for Dutch
+deployments Wabvpz Art. 15e). The portal’s build is the deployment’s, and the
+<a href="compliance/shared-responsibility.html">shared-responsibility page</a> says so.</p>
+<h2 id="sinks"><a class="header" href="#sinks">Sinks</a></h2>
+<p>Records fan out to independently configured sinks (<code>[audit]</code> in
+<code>ferroehr.toml</code>; see the
+<a href="installation/config-audit.html#audit">configuration reference</a>):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Sink</th><th>Default</th><th>What it does</th></tr>
+</thead>
+<tbody>
+<tr><td><code>[audit.store]</code></td><td><strong>on</strong></td><td>The local <strong>Audit Record Repository</strong>: records persist in the dedicated <code>audit</code> PostgreSQL schema (append-only and tamper-evident, strictly outside the EHR content), served back via the ITI-81 search below. <code>retention_days</code> prunes old records hourly (<code>0</code> = keep forever).</td></tr>
+<tr><td><code>[audit.syslog]</code></td><td>off</td><td>The classic ATNA feed: DICOM PS3.15 XML over syslog (RFC 5424; UDP or TLS transport) to an external ARR, per IHE ITI-20.</td></tr>
+<tr><td><code>[audit.fhir_feed]</code></td><td>off</td><td>The RESTful-ATNA feed (ITI-20 <strong>ATX: FHIR Feed</strong>): each FHIR <code>AuditEvent</code> is <code>POST</code>ed to an external FHIR ARR. With the local store on, delivery is <strong>outbox-driven</strong>: an ARR outage loses nothing, pending records ship on recovery.</td></tr>
+</tbody>
+</table>
+</div>
+<p>Emission never blocks the request path: a record is handed to a bounded queue
+(<code>queue_capacity</code>) and written by a background drain.</p>
+<p>The local store is the durability anchor. Under <code>fail_mode = "closed"</code>, an
+operation whose audit record cannot be recorded answers
+<code>503 Service Unavailable</code>: the deployment demanded an audit trail it cannot
+currently deliver, so no un-audited PHI access happens, and the same holds for
+the domain-level records the linkage, subject and identifier resolutions and
+the EHR-Extract transfers write. <code>open</code>, the default, drops-and-meters instead,
+and every loss path is metered (the <code>atna_audit_*</code> counters in
+<a href="operations.html">Operations</a>); the server announces that default at boot and on
+the readiness indicator as a stated caution, because a metered loss is still a
+loss. Login and rejection records never gate a response in either mode.</p>
+<h2 id="tamper-evidence"><a class="header" href="#tamper-evidence">Tamper evidence</a></h2>
+<p>An audit trail that anything with the application’s database password can
+quietly rewrite is a log, not an accountability record. The local store is
+therefore tamper-<strong>evident</strong>: every record is linked into a SHA-256 hash chain
+maintained inside PostgreSQL, so each record commits to its predecessor and to
+its own content. The chain is built by the database itself, not by the server,
+which means it covers every writer: the per-event insert, the batched drain,
+and any statement typed by hand.</p>
+<p>Three controls sit on top of it, and they are separate on purpose:</p>
+<ul>
+<li>
+<p><strong>The table refuses the ordinary rewrite paths outright.</strong> The only permitted
+change to a stored record is the per-sink forwarding stamp; an <code>UPDATE</code> of any
+other column, a <code>DELETE</code>, and a <code>TRUNCATE</code> are refused by the database.
+Retention pruning goes through the one sanctioned deletion path, which records
+<em>which</em> records it removed and what the surviving chain must link back to, so
+reaping does not look like tampering, and tampering does not look like
+reaping.</p>
+</li>
+<li>
+<p><strong>The privileges are narrow.</strong> The runtime role may record an event, stamp it
+forwarded, and read the trail back. It holds nothing that can rewrite a
+record, remove one, or alter the chain’s own bookkeeping. That posture is only
+fully in force with <code>db.migrate = "verify"</code>; see
+<a href="operations.html#database-roles-and-least-privilege">Operations</a>, because a
+self-migrating server owns the schema and can therefore turn the enforcement
+off.</p>
+</li>
+<li>
+<p><strong>Verification is a query you can run yourself.</strong> It recomputes every digest,
+re-walks every link, and checks both ends of the chain:</p>
+<pre><code class="language-sql">SELECT * FROM audit.verify_audit_chain();
+</code></pre>
+<p>An empty result means the trail is intact. Any row names one record (its
+chain position, its id, when it was recorded) and what is wrong with it:
+content modified after it was written, records deleted with no retention
+record for the removal, or records removed from the end of the chain where no
+successor would have noticed. Run it on a schedule and alert on any output.</p>
+</li>
+</ul>
+<blockquote class="blockquote-tag blockquote-tag-important">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v9.5A1.75 1.75 0 0 1 14.25 13H8.06l-2.573 2.573A1.458 1.458 0 0 1 3 14.543V13H1.75A1.75 1.75 0 0 1 0 11.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h6.5a.25.25 0 0 0 .25-.25v-9.5a.25.25 0 0 0-.25-.25Zm7 2.25v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 9a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Important</p>
+<p>This is <strong>detection, not prevention</strong>, and the boundary is worth stating
+plainly. The chain is unkeyed, so a party with unrestricted write access to
+the <code>audit</code> schema (the database owner, or a superuser) can delete a record
+and recompute every hash after it. What closes that case is keeping the trail
+somewhere that party does not control. Enable
+<code>[audit.syslog]</code> or <code>[audit.fhir_feed]</code> so records leave the box as they are
+written, and give the server an app-role-only DSN so it is not that party.</p>
+</blockquote>
+<h2 id="retrieving-audit-records-iti-81"><a class="header" href="#retrieving-audit-records-iti-81">Retrieving audit records (ITI-81)</a></h2>
+<p>The RESTful-ATNA <strong>ITI-81 Retrieve ATNA Audit Event</strong> transaction is served
+at the FHIR façade:</p>
+<pre><code class="language-text">GET /ferroehr/rest/openehr/v1/fhir/r4/AuditEvent
+</code></pre>
+<p>It returns a FHIR <code>searchset</code> Bundle of the stored <code>AuditEvent</code> documents,
+newest first, with the full match <code>total</code>. Supported search parameters:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>date</code></td><td>event-time bound, <code>ge</code>/<code>le</code>-prefixed RFC 3339 instants, repeatable</td></tr>
+<tr><td><code>patient</code></td><td>the recorded patient (EHR subject) id</td></tr>
+<tr><td><code>agent</code></td><td>the authenticated principal</td></tr>
+<tr><td><code>entity</code></td><td>the touched resource id</td></tr>
+<tr><td><code>outcome</code></td><td>the outcome indicator: <code>0</code>, <code>4</code>, <code>8</code> or <code>12</code></td></tr>
+<tr><td><code>action</code></td><td>the action code: <code>C</code>, <code>R</code>, <code>U</code>, <code>D</code> or <code>E</code></td></tr>
+<tr><td><code>_count</code> / <code>_offset</code></td><td>paging; page size defaults to 50, capped at 1000</td></tr>
+</tbody>
+</table>
+</div>
+<p>Other FHIR search parameters are ignored (lenient search); a malformed value on
+a supported one is a <code>400</code> carrying a FHIR <code>OperationOutcome</code>. Under RBAC the
+unscoped retrieval is <strong>admin-only</strong>; a caller holding the configured
+<code>authz.rbac.subject_audit_role</code> reads it <strong>scoped to one subject</strong>, <code>patient</code>
+required, and is refused with a <code>403</code> that names the parameter when it omits
+it. Reading a subject’s log is itself recorded as an access naming that
+subject and the record count served. The surface answers <code>404</code> when the local
+store is disabled.</p>
+<pre><code class="language-bash"># Who accessed patient-42's data this month?
+curl -u admin:pw \
+  "https://cdr.example.org/ferroehr/rest/openehr/v1/fhir/r4/AuditEvent?patient=patient-42&amp;date=ge2026-07-01T00:00:00Z"
+</code></pre>
+<p>This is also the openEHR “record demerging” instrument: when data lands in
+the wrong EHR, the patient-filtered audit search shows exactly who read it.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>Audit records are themselves sensitive (they name patients, subjects and
+actions) so this endpoint is a PHI-disclosure surface and is authorized like
+any other.</p>
+</blockquote>
+<h2 id="node-authentication-iti-19-mutual-tls"><a class="header" href="#node-authentication-iti-19-mutual-tls">Node authentication (ITI-19, mutual TLS)</a></h2>
+<p>ATNA’s second half is node authentication. <code>[server.tls]</code> terminates TLS
+natively and can demand a verified client certificate:</p>
+<pre><code class="language-toml">[server.tls]
+enabled = true
+cert_file = "/etc/ferroehr/server.pem"
+key_file = "/etc/ferroehr/server.key"
+min_version = "1.3"               # 1.3 (default) | 1.2
+client_auth = "required"          # off | optional | required
+client_ca_file = "/etc/ferroehr/client-ca.pem"
+</code></pre>
+<p>The protocol floor is <strong>TLS 1.3 only</strong> by default, following the OWASP
+Transport Layer Security cheat sheet. Setting <code>min_version = "1.2"</code> enables
+1.2 <em>alongside</em> 1.3, never instead of it, for a client that genuinely cannot
+do 1.3, such as an older integration engine or a pinned Java runtime. TLS 1.1
+and 1.0 are not selectable at all.</p>
+<p>With <code>client_auth = "required"</code>, only clients presenting a certificate
+chaining to your explicit trust anchor complete the handshake: the IHE
+mutually-authenticated-node posture. Deployments terminating TLS at an
+ingress keep <code>[server.tls]</code> off and enforce mTLS there instead.</p>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p>The separate-port management listener (<code>management.port</code>) stays <strong>plain HTTP</strong>
+even with <code>[server.tls]</code> enabled, and it binds all interfaces. Treat it as an
+internal surface and keep it off any publicly routed port.</p>
+</blockquote>
+<p>Complete the posture with time synchronisation (IHE Consistent Time): run
+NTP/chrony on every node so audit timestamps align across systems.</p>
+<h2 id="configuration-summary"><a class="header" href="#configuration-summary">Configuration summary</a></h2>
+<p>Auditing defaults to on with the local store only; see the
+<a href="installation/config-audit.html#audit">configuration reference</a> for every
+<code>[audit]</code> key and its <code>FERROEHR__AUDIT__*</code> environment form. The syslog sink’s
+own keys are <code>host</code> / <code>port</code> / <code>transport</code> / <code>tls_ca_file</code> /
+<code>tls_identity_cert_file</code> / <code>tls_identity_key_file</code> under <code>[audit.syslog]</code>; the
+switches shared by every sink stay directly under <code>[audit]</code>.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>There are no alternative spellings for any of these: an unrecognized
+<code>FERROEHR_*</code> variable or an unknown TOML key is a <strong>boot error</strong> naming the
+spelling it should have had, never a silently ignored setting. Validate a
+deployment’s configuration up front with <code>ferroehr config check</code>.</p>
+</blockquote>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="smart-app-launch.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="signing/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="smart-app-launch.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="signing/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-09f2665d.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="theme/mermaid-eefea253.min.js"></script>
+        <script src="theme/mermaid-init-ccf746f1.js"></script>
+        <script src="theme/version-picker-dddf05c1.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

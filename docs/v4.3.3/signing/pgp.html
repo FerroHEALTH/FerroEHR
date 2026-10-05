@@ -1,0 +1,450 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>PGP signing - FerroEHR Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        <!-- Content-Security-Policy as a <meta> element, because GitHub Pages serves
+             static files and cannot set response headers. A meta CSP is genuinely
+             weaker than the header: `frame-ancestors`, `report-uri` and `sandbox` are
+             IGNORED in meta form (w3c CSP3 §3.3), and it applies only after the parser
+             reaches it. It still stops an injected external script or an exfiltrating
+             `connect-src`, which is the realistic risk for a docs site, so it is worth
+             having while being honest that the site cannot carry the full header set —
+             documented on the security page. `unsafe-inline` is required: mdBook emits
+             inline theme/sidebar scripts and inline styles of its own. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <!-- Self-hosted KaTeX stylesheet (fonts under katex/fonts/) — the site
+             serves no external requests, so mdbook-katex runs with no-css = true
+             and the vendored sheet is linked here. Version 0.16.4, matching the
+             KaTeX the katex-rs renderer inside mdbook-katex bundles (its
+             KATEX-VERSION file); provenance in website/book/KATEX-PROVENANCE.md. -->
+        <link rel="stylesheet" href="../katex/katex.min.css">
+
+        <meta name="description" content="User documentation for FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../css/chrome-d279d366.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/custom-79743c4e.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "rust";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "../searchindex-08cf6b59.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-96c4774d.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">FerroEHR Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/src/signing/pgp.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="pgp-signing"><a class="header" href="#pgp-signing">PGP signing</a></h1>
+<p><code>pgp</code> mode replaces the stored SHA-256 digest with an OpenPGP
+(<a href="https://www.rfc-editor.org/rfc/rfc4880">RFC 4880</a>) detached signature made
+with a key the server holds. openEHR names that format directly: the
+signature “is generated according to the openPGP standard”, and where a
+digest only detects tampering, a signature “authenticates the user as the
+author of the content to readers of the content” and “acts as a
+non-repudiation measure, since the signature is stored permanently with the
+data” (<a href="https://specifications.openehr.org/releases/RM/Release-1.1.0/common.html#_digital_signature">RM Common IM, Change Control §Digital
+Signature</a>).</p>
+<p>Read <a href="digest.html">Digest signing</a> first: what gets signed, when, and
+how the canonical form is built are identical in both modes. This page
+covers what changes.</p>
+<ul>
+<li><a href="#what-differs-from-digest-mode">What differs from digest mode</a></li>
+<li><a href="#configuring-the-key">Configuring the key</a>
+<ul>
+<li><a href="#retired-keys-and-rotation">Retired keys and rotation</a></li>
+</ul>
+</li>
+<li><a href="#server-generated-versus-client-supplied-signatures">Server-generated versus client-supplied signatures</a></li>
+<li><a href="#imported-versions-carry-two-signatures">Imported versions carry two signatures</a></li>
+<li><a href="#read-time-verification">Read-time verification</a></li>
+</ul>
+<h2 id="what-differs-from-digest-mode"><a class="header" href="#what-differs-from-digest-mode">What differs from digest mode</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th><code>digest</code></th><th><code>pgp</code></th></tr>
+</thead>
+<tbody>
+<tr><td>Stored value</td><td><code>sha256:</code> + base64(SHA-256(canonical form))</td><td>ASCII-armored RFC 4880 detached signature</td></tr>
+<tr><td>Key material</td><td>none</td><td>an armored secret key the server loads at boot</td></tr>
+<tr><td>Hash</td><td>SHA-256</td><td>SHA-256, inside the OpenPGP signature</td></tr>
+<tr><td>Proves</td><td>the version was not altered after committal</td><td>that, plus which key signed it</td></tr>
+<tr><td>Boot behaviour</td><td>nothing to validate</td><td>refuses to start without a usable key</td></tr>
+<tr><td>Verification at read</td><td>recompute and compare</td><td>verify against the configured certificate</td></tr>
+</tbody>
+</table>
+</div>
+<p>The bytes being signed do not change. The server assembles the version
+envelope, drops the <code>signature</code> attribute, reduces it to its RFC 8785
+canonical form, and hands that string to the signer. Only the last step
+differs.</p>
+<h2 id="configuring-the-key"><a class="header" href="#configuring-the-key">Configuring the key</a></h2>
+<p><code>pgp</code> mode needs a <code>key_path</code> pointing at an armored secret key, and the
+passphrase that unlocks it if it has one:</p>
+<pre><code class="language-toml">[signing]
+enabled = true
+mode = "pgp"
+key_path = "/etc/ferroehr/signing.asc"
+key_passphrase_file = "/run/secrets/pgp-pass"
+retired_key_paths = ["/etc/ferroehr/signing-2025.pub.asc"]
+</code></pre>
+<p>The same settings as environment variables:</p>
+<pre><code class="language-shell">FERROEHR__SIGNING__MODE=pgp
+FERROEHR__SIGNING__KEY_PATH=/etc/ferroehr/signing.asc
+FERROEHR__SIGNING__KEY_PASSPHRASE_FILE=/run/secrets/pgp-pass
+FERROEHR__SIGNING__RETIRED_KEY_PATHS=/etc/ferroehr/signing-2025.pub.asc
+</code></pre>
+<p>Prefer <code>key_passphrase_file</code> over the inline <code>key_passphrase</code>: it is the
+shape Docker Secrets and Kubernetes Secrets deliver, and the passphrase then
+never appears in the environment. Setting both of the pair is a boot error.
+The full key table, the Kubernetes <code>config.files</code> mount, and the rotation
+walkthrough are in the
+<a href="../installation/config-auth.html#signing">configuration reference</a>.</p>
+<p><strong>Boot is fail-closed.</strong> The server loads the key, then signs a fixed test
+string with it. A missing <code>key_path</code>, an unparseable file, a wrong
+passphrase, or a certificate with no usable signing component all stop
+startup with an error rather than leaving a running server that cannot sign.</p>
+<p><strong>The signing component is chosen by capability.</strong> If the certificate
+carries a subkey flagged for data signing
+(<a href="https://www.rfc-editor.org/rfc/rfc9580#section-5.2.3.29">RFC 9580 §5.2.3.29</a>,
+key flag <code>0x02</code>), the server signs with that subkey; otherwise it signs with
+the primary key. Position in the file decides nothing, so an encryption
+subkey is never used to sign.</p>
+<p><strong>An RSA signing key is accepted with a warning.</strong> Every commit would then
+perform an RSA private-key operation, the operation the Marvin timing
+sidechannel (RUSTSEC-2023-0071 / CVE-2023-49092) concerns, and the
+underlying <code>rsa</code> crate has no fixed release. The server warns at boot and
+keeps working, because a repository whose history is RSA-signed still needs
+that key to verify it. Ed25519 or ECDSA keeps that code off the signing
+path.</p>
+<h3 id="retired-keys-and-rotation"><a class="header" href="#retired-keys-and-rotation">Retired keys and rotation</a></h3>
+<p>A stored <code>VERSION.signature</code> records no key identifier, and it is an
+immutable committed fact that cannot be re-issued. Rotating a key therefore
+has to keep the old one verifiable. Two mechanisms do that:</p>
+<ul>
+<li><strong>A new signing subkey on the same certificate.</strong> The server picks the
+signing-capable subkey, the certificate retains the previous one, and
+verification tries the primary key and every subkey. Nothing else changes.</li>
+<li><strong><code>retired_key_paths</code>.</strong> A replaced certificate’s <strong>public</strong> half is
+listed there and consulted during verification. A public key verifies and
+can never sign again, so a retired entry cannot become an active signer.</li>
+</ul>
+<h2 id="server-generated-versus-client-supplied-signatures"><a class="header" href="#server-generated-versus-client-supplied-signatures">Server-generated versus client-supplied signatures</a></h2>
+<p>A <code>VERSION.signature</code> in this repository is one of two things, and the
+distinction is recorded on the row rather than guessed from the value.</p>
+<p><strong>Server-generated</strong> is the ordinary case. The direct write routes
+(<code>POST</code>/<code>PUT</code>/<code>DELETE</code> on a composition, the EHR status, the directory, a
+demographic party) carry no signature field at all, so every version they
+commit is signed by this server when signing is enabled.</p>
+<p><strong>Client-supplied</strong> reaches the server through one route: an
+<code>UPDATE_VERSION.signature</code> inside a CONTRIBUTION commit. When a member
+carries one, the server stores it verbatim and does not sign that version
+itself, whatever <code>signing.mode</code> says. openEHR models the signature as a
+fact created by the committer and carried with the data, potentially in
+another agreed serialization, so the server has nothing to recompute it
+against. Such a signature is never re-verified at read, and no
+<code>verify_on_read</code> setting changes that.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>A client-supplied value is stored as sent, so an opaque or invalid one is
+served back unchanged rather than refused. It is a claim by the committer,
+and this server neither vouches for it nor mistakes it for its own. Only
+signatures the server generated are covered by read-time verification.</p>
+</blockquote>
+<h2 id="imported-versions-carry-two-signatures"><a class="header" href="#imported-versions-carry-two-signatures">Imported versions carry two signatures</a></h2>
+<p>An EHR Extract import wraps each received <code>ORIGINAL_VERSION</code> in an
+<code>IMPORTED_VERSION</code>, and openEHR is explicit about what happens to signatures
+there. The wrapped original “is never modified”, and the wrapper is signed
+like any other version: “all attributes of the object are serialised and
+then used to generate a signature. The result will be that the
+<code>IMPORTED_VERSION</code> instance will carry its own signature which signifies the
+act of importing and making available locally an <code>ORIGINAL_VERSION</code> from
+another system.”</p>
+<p>FerroEHR implements exactly that:</p>
+<ul>
+<li><strong>The wrapper is signed by this server</strong>, over the whole
+<code>IMPORTED_VERSION</code> including the wrapped <code>item</code>, using the configured mode.
+An import is a local act of committal, so it is signed like one.</li>
+<li><strong>The wrapped original’s signature rides inside <code>item</code> untouched.</strong> It
+belongs to the source system’s key, which this server does not hold, so it
+is served verbatim and never verified.</li>
+</ul>
+<p>Reading such a version verifies the wrapper and leaves the wrapped
+signature alone. Reading the same version as an <code>ORIGINAL_VERSION</code> (the form
+an EHR Extract export carries) reproduces the received original with its
+foreign signature and verifies nothing, which is what makes a re-export a
+faithful copy.</p>
+<h2 id="read-time-verification"><a class="header" href="#read-time-verification">Read-time verification</a></h2>
+<p>The stored signature’s own format decides how it is checked, which is why a
+mode change does not strand history. The full path:</p>
+<pre class="mermaid">flowchart TD
+    R["read a VERSION resource"] --&gt; A["rebuild the envelope from the stored row&lt;br/&gt;(a deleted version carries no data attribute)"]
+    A --&gt; B{"signature_client_supplied?"}
+    B --&gt;|yes| S["serve"]
+    B --&gt;|no| C{"verify_on_read"}
+    C --&gt;|off| S
+    C --&gt;|"warn / strict"| D{"a stored signature?"}
+    D --&gt;|no| S
+    D --&gt;|yes| E["recompute the canonical form&lt;br/&gt;drop signature, RFC 8785 (JCS)"]
+    E --&gt; F{"stored value's format"}
+    F --&gt;|"sha256: prefix"| G["recompute the digest and compare"]
+    F --&gt;|"PGP armor"| H{"a PGP key configured?"}
+    F --&gt;|"anything else"| I["client_foreign: serve"]
+    H --&gt;|"yes (pgp mode)"| J["verify against the certificate,&lt;br/&gt;its subkeys and the retired ones"]
+    H --&gt;|"no (digest mode)"| I3{"does the armor parse?"}
+    I3 --&gt;|yes| I
+    I3 --&gt;|"no: pgp_invalid"| L
+    G --&gt; K{"verdict"}
+    J --&gt; K
+    K --&gt;|"match"| S
+    K --&gt;|"failure"| L{"verify_on_read"}
+    L --&gt;|warn| M["log + version_signature_invalid_total,&lt;br/&gt;then serve"]
+    L --&gt;|strict| N["500 integrity failure"]
+    S --&gt; T["append attestations added after committal"]
+    M --&gt; T
+    I --&gt; T
+</pre>
+
+<p>The server reaches one of five verdicts: <code>digest_match</code>, <code>digest_mismatch</code>,
+<code>pgp_valid</code>, <code>pgp_invalid</code>, <code>client_foreign</code>. Two of them are failures,
+<code>digest_mismatch</code> and <code>pgp_invalid</code>, and those are the ones counted, under
+the <code>verdict</code> label on <code>version_signature_invalid_total</code>.</p>
+<p>Three parts of the path are worth stating in prose:</p>
+<ul>
+<li><strong>Attestations added after committal are appended after verification.</strong>
+openEHR allows an attestation “at any time after committal”, so such an
+attestation post-dates the signature and cannot be inside it. The server
+verifies the at-committal form and then extends the served list.</li>
+<li><strong>A version with no stored signature is served normally.</strong> Versions
+committed while signing was disabled carry none, and their absence is not
+a failure.</li>
+<li><strong><code>strict</code> is the default while signing is enabled.</strong> A mismatch is a
+<code>500</code> rather than a served record that is provably altered. <code>warn</code>
+downgrades that to a logged and metered event, which is a deliberate
+reduction in an integrity guarantee rather than a setting to leave on.</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../signing/digest.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../viewer/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../signing/digest.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../viewer/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../theme/mermaid-eefea253.min.js"></script>
+        <script src="../theme/mermaid-init-ccf746f1.js"></script>
+        <script src="../theme/version-picker-dddf05c1.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

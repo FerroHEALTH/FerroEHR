@@ -1,0 +1,1241 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Operations - FerroEHR Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        <!-- Content-Security-Policy as a <meta> element, because GitHub Pages serves
+             static files and cannot set response headers. A meta CSP is genuinely
+             weaker than the header: `frame-ancestors`, `report-uri` and `sandbox` are
+             IGNORED in meta form (w3c CSP3 §3.3), and it applies only after the parser
+             reaches it. It still stops an injected external script or an exfiltrating
+             `connect-src`, which is the realistic risk for a docs site, so it is worth
+             having while being honest that the site cannot carry the full header set —
+             documented on the security page. `unsafe-inline` is required: mdBook emits
+             inline theme/sidebar scripts and inline styles of its own. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <!-- Self-hosted KaTeX stylesheet (fonts under katex/fonts/) — the site
+             serves no external requests, so mdbook-katex runs with no-css = true
+             and the vendored sheet is linked here. Version 0.16.4, matching the
+             KaTeX the katex-rs renderer inside mdbook-katex bundles (its
+             KATEX-VERSION file); provenance in website/book/KATEX-PROVENANCE.md. -->
+        <link rel="stylesheet" href="katex/katex.min.css">
+
+        <meta name="description" content="User documentation for FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-e96d0476.css">
+        <link rel="stylesheet" href="css/chrome-d279d366.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom-79743c4e.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "rust";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "searchindex-08cf6b59.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-96c4774d.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">FerroEHR Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/src/operations.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="operations"><a class="header" href="#operations">Operations</a></h1>
+<p>Running a clinical data repository in production means more than starting the
+binary: the database must be backed up and least-privileged, traffic must be
+encrypted, upgrades must be safe while the service stays up, and you need to
+see what the system is doing. This chapter is a production checklist (database
+roles, TLS, backup and point-in-time recovery, upgrades and migrations,
+observability, the health probes, and the management surface) drawn from how
+the container image and Helm chart are built to run. The
+operator-facing HTTP surfaces have their own page:
+<a href="operations-admin-apis.html">Admin &amp; messaging APIs</a>.</p>
+<ul>
+<li><a href="#database-roles-and-least-privilege">Database roles and least privilege</a>
+<ul>
+<li><a href="#turning-the-schema-split-into-a-role-split">Turning the schema split into a role split</a></li>
+<li><a href="#which-credential-prepares-the-schema">Which credential prepares the schema</a></li>
+<li><a href="#which-of-these-postures-is-exercised-and-which-is-not">Which of these postures is exercised, and which is not</a></li>
+</ul>
+</li>
+<li><a href="#applying-migrations">Applying migrations</a>
+<ul>
+<li><a href="#recovering-a-partially-wiped-database">Recovering a partially wiped database</a></li>
+</ul>
+</li>
+<li><a href="#tls-and-database-security">TLS and database security</a></li>
+<li><a href="#backup-and-point-in-time-recovery">Backup and point-in-time recovery</a>
+<ul>
+<li><a href="#dump-each-domain-separately">Dump each domain separately</a></li>
+<li><a href="#restoring">Restoring</a></li>
+</ul>
+</li>
+<li><a href="#rotating-the-national-identifier-key">Rotating the national-identifier key</a></li>
+<li><a href="#the-container-image-and-pod-hardening">The container image and pod hardening</a>
+<ul>
+<li><a href="#what-the-host-owes-and-we-cannot-enforce">What the host owes, and we cannot enforce</a></li>
+</ul>
+</li>
+<li><a href="#upgrades">Upgrades</a>
+<ul>
+<li><a href="#how-long-the-version-you-pinned-is-supported">How long the version you pinned is supported</a></li>
+</ul>
+</li>
+<li><a href="#observability">Observability</a></li>
+<li><a href="#the-admin-and-messaging-apis">The admin and messaging APIs</a></li>
+<li><a href="#health-probes">Health probes</a>
+<ul>
+<li><a href="#choosing-a-health-endpoint">Choosing a health endpoint</a></li>
+</ul>
+</li>
+<li><a href="#the-management-surface">The management surface</a>
+<ul>
+<li><a href="#profiling-the-on-demand-cpu-flamegraph">Profiling: the on-demand CPU flamegraph</a></li>
+</ul>
+</li>
+<li><a href="#next">Next</a></li>
+</ul>
+<h2 id="database-roles-and-least-privilege"><a class="header" href="#database-roles-and-least-privilege">Database roles and least privilege</a></h2>
+<p>FerroEHR connects to an <strong>external</strong> PostgreSQL 18: a managed service or an
+operator-run cluster, never a chart-side sidecar, because a database holding
+PHI must be independently backed up and recoverable. The server carries only a
+connection string, ideally sourced from a secret.</p>
+<p>The database never runs as a superuser at runtime. Two roles cover
+provisioning and migration:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Role</th><th>Purpose</th><th>Used by</th></tr>
+</thead>
+<tbody>
+<tr><td>owner</td><td>owns the database</td><td>provisioning only</td></tr>
+<tr><td><code>ferroehr_migrator</code></td><td>runs the schema migrations; owns the helper functions</td><td>the migration step</td></tr>
+</tbody>
+</table>
+</div>
+<p>and five cover serving, split by <strong>pseudonymisation domain</strong> — the clinical
+record, the identity of its subject, and the map between the two:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Role</th><th>Reads and writes</th><th>Barred from</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ferroehr_clinical</code></td><td><code>clinical</code>, archival tier included</td><td><code>party</code>, <code>linkage</code></td></tr>
+<tr><td><code>ferroehr_party</code></td><td><code>party</code>, archival tier included</td><td><code>clinical</code>, <code>linkage</code></td></tr>
+<tr><td><code>ferroehr_clinical_reader</code></td><td>read-only over <code>clinical</code></td><td><code>party</code>, <code>linkage</code></td></tr>
+<tr><td><code>ferroehr_party_reader</code></td><td>read-only over <code>party</code></td><td><code>clinical</code>, <code>linkage</code></td></tr>
+<tr><td><code>ferroehr_linkage</code></td><td><code>linkage</code> (the party-to-EHR map)</td><td><code>clinical</code>, <code>party</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>The migrations create these roles idempotently, apply the per-schema grants,
+<strong>and revoke every other domain explicitly in both directions</strong>, and revoke the
+ability to create objects in the public schema. All five are <code>NOINHERIT</code> and
+none is a member of another, so a boundary cannot be crossed by picking up a
+membership. GDPR Art. 4(5) defines pseudonymisation as processing where
+attribution to a person needs additional information “kept separately and
+subject to technical and organisational measures”, and Art. 32(1)(a) names it a
+security measure for health data
+(<a href="https://eur-lex.europa.eu/eli/reg/2016/679/oj">https://eur-lex.europa.eu/eli/reg/2016/679/oj</a>); EDPB Guidelines 01/2025
+require that separation to hold against internal actors, operators with
+database access included.</p>
+<p>Each serving role holds <code>SELECT</code>/<code>INSERT</code>/<code>UPDATE</code>/<code>DELETE</code> on its own domain’s
+tables and <code>EXECUTE</code> on the <code>ext</code> helper functions, and nothing else: it is not
+a superuser, does not bypass row-level security, and cannot create, alter or
+drop a table, index, schema or role. On the audit trail it is narrower still:
+it may record an event and stamp it forwarded, and it holds no privilege that
+can rewrite or remove one (see <a href="audit.html">Audit</a>).</p>
+<h3 id="turning-the-schema-split-into-a-role-split"><a class="header" href="#turning-the-schema-split-into-a-role-split">Turning the schema split into a role split</a></h3>
+<p>The <strong>schema</strong> separation is unconditional: the server always reads and writes
+parties in <code>party</code>, whatever it authenticates as, and each of the four pools
+carries only its own schema on its <code>search_path</code>. The <strong>role</strong> separation is a
+deployment choice, and it is one configuration table per domain:</p>
+<pre><code class="language-toml">[storage.party]
+url = "postgres://ferroehr_party:***@pg:5432/ferroehr"
+
+[storage.linkage]
+url = "postgres://ferroehr_linkage:***@pg:5432/ferroehr"
+</code></pre>
+<p>(or <code>url_file</code>, for a mounted secret). With a domain’s <code>url</code> set the server
+opens that pool on that credential, and a flaw that reaches one of them reaches
+one domain. Left unset, the domain uses <code>[db].url</code> and the separation is
+schema-only. <code>linkage</code> holds which party is the subject of which EHR — the one
+map that re-joins the other two — so <code>ferroehr_linkage</code> is barred from both of
+them and both of them from it. Set every domain and no credential the server
+uses can perform that join in SQL; the crossing happens in the application, over
+two connections, and is recorded as an access event (see <a href="security.html#resolving-across-the-boundary">Security → Resolving
+across the boundary</a>).</p>
+<p>A DSN that names another host moves the domain to a <strong>database or cluster of its
+own</strong>, which is the separation a schema cannot make: a base backup, WAL
+archiving and physical replication carry every schema of a database together
+(<a href="https://www.postgresql.org/docs/18/backup-dump.html">PostgreSQL 18, Backup and
+Restore</a>). One constraint:
+the <code>linkage</code> migration set revokes a function the <code>party</code> set creates, so those
+two are prepared in the same database, and a layout that splits them is refused
+at boot with the remedy rather than failing partway through a migration.</p>
+<p>Two boot checks make the posture honest. Two domains configured on <strong>different</strong>
+DSNs that authenticate as the <strong>same</strong> database role are refused — a separation
+that exists only in the configuration reads as one that holds, which is worse
+than none. And a domain role that does not exist is a warning under
+<code>deployment_profile = "sandbox"</code> and a refusal under <code>production</code>: absent roles
+mean absent grants, and the boundary check would otherwise pass by having
+nothing to measure.</p>
+<h3 id="which-credential-prepares-the-schema"><a class="header" href="#which-credential-prepares-the-schema">Which credential prepares the schema</a></h3>
+<p><strong>None of the domain credentials.</strong> Preparing a database spans every schema in
+it at once: the DDL of each resident migration set under <code>db.migrate = "apply"</code>,
+and their <code>_sqlx_migrations</code> bookkeeping tables under <code>"verify"</code> — a read, but a
+read across the whole database. Each runtime role holds exactly one domain, so
+none can do it, and <code>verify</code> is not the exception: a role that is a member of
+<code>ferroehr_clinical</code> and nothing else is refused on the very first set: it
+cannot read the <code>ext</code>, <code>party</code>, <code>linkage</code> or <code>audit</code> bookkeeping.</p>
+<p>So the credential that prepares the schema is named separately, and the server
+uses it for that one boot step:</p>
+<pre><code class="language-toml">[db]
+url = "postgres://ferroehr_clinical:***@pg:5432/ferroehr"
+migrate_url = "postgres://ferroehr_migrator:***@pg:5432/ferroehr"
+
+[storage.party]
+url = "postgres://ferroehr_party:***@pg:5432/ferroehr"
+
+[storage.linkage]
+url = "postgres://ferroehr_linkage:***@pg:5432/ferroehr"
+</code></pre>
+<p><code>migrate_url</code> prepares every domain that reaches the same DATABASE it does,
+which is all of them in the posture above: three credentials, one database. A
+domain whose DSN reaches a DIFFERENT database is prepared on its own DSN
+instead, because <code>migrate_url</code> names one database and a relocated domain is not
+in it. Which case a domain is in is read from the server itself
+(<code>pg_control_system()</code> and <code>current_database()</code>), never from the DSN text — two
+DSNs that differ only in their credential reach the same database.</p>
+<p>(or <code>migrate_url_file</code>, for a mounted secret). The connection is opened for
+preparation and closed again: no pool is held on it, and no request is ever
+served through it. Left unset it falls back to <code>url</code>, which is exactly what a
+single-credential deployment has always run — its behaviour is unchanged by
+this key existing.</p>
+<p>A credential that cannot read a set is told which schema and which role, so
+the fix is visible from the message:</p>
+<pre><code class="language-text">database role `app_ehr` cannot read the migration state of schema
+`ext`: … point `[db] migrate_url` (or `migrate_url_file`) at the credential
+that prepares the schema — unset, it falls back to `[db] url`
+</code></pre>
+<p>Either way the server <strong>refuses to boot</strong> when the grants themselves are wrong:
+a self-check enumerates every table, view, sequence and function in each
+domain and fails, naming the role and the object, if either runtime role can
+read across the boundary. <code>ferroehr db verify</code> runs the same check. When the
+five roles do not exist at all (the development, compose and test-harness case,
+where the migrator holds no <code>CREATEROLE</code>) the check warns rather than inventing
+a failure — under <code>deployment_profile = "production"</code> it refuses, because absent
+roles mean absent grants and there is then nothing to measure.</p>
+<p>On Kubernetes the same choice is chart values, mounted as files the same way
+the clinical DSN is, so no credential enters the pod’s environment:</p>
+<pre><code class="language-yaml">database:
+  existingSecret: ferroehr-db                 # postgres://ferroehr_clinical:…
+  party:
+    existingSecret: ferroehr-db-party         # postgres://ferroehr_party:…
+  linkage:
+    existingSecret: ferroehr-db-linkage       # postgres://ferroehr_linkage:…
+  audit:
+    existingSecret: ferroehr-db-audit         # the audit repository's own DSN
+  migrateExistingSecret: ferroehr-db-migrator # postgres://ferroehr_migrator:…
+</code></pre>
+<p>Leave a domain’s block unset and that pool uses the shared DSN, which is the
+schema-only posture.</p>
+<p>Provisioning the five roles is yours in both cases. The migrations create them
+only when the migrator holds <code>CREATEROLE</code> and skip them with a <code>NOTICE</code>
+otherwise, so on a managed database — where the migrator usually does not —
+create them before the first deploy:</p>
+<pre><code class="language-sql">CREATE ROLE ferroehr_clinical NOLOGIN NOINHERIT;
+CREATE ROLE ferroehr_party NOLOGIN NOINHERIT;
+CREATE ROLE ferroehr_clinical_reader NOLOGIN NOINHERIT;
+CREATE ROLE ferroehr_party_reader NOLOGIN NOINHERIT;
+CREATE ROLE ferroehr_linkage NOLOGIN NOINHERIT;
+</code></pre>
+<p>then give each login role membership of exactly one of them. <code>ferroehr db verify</code> tells you whether the boundary holds afterwards.</p>
+<p>The local Audit Record Repository is written on its own pool
+(<code>[storage.audit]</code>), and the <code>audit</code> schema is granted to <code>ferroehr_clinical</code>
+(record an event, stamp it forwarded, run the retention reaper, verify the
+chain) and to <code>ferroehr_clinical_reader</code> (read it and verify the chain). A
+clinical login role that is a member of <code>ferroehr_clinical</code> alone writes its own
+access log; no extra membership is needed. The audit trail is not a
+pseudonymisation domain, so this grant adds no reach into <code>party</code> or <code>linkage</code>.</p>
+<p>The compose stacks create all five and grant the clinical and party domains to
+the single dev login role, which owns the database. That
+demonstrates the schema separation and exercises the boot self-check; it is
+deliberately <strong>not</strong> the credential separation, because one container with one
+DSN cannot show that half honestly.</p>
+<h3 id="which-of-these-postures-is-exercised-and-which-is-not"><a class="header" href="#which-of-these-postures-is-exercised-and-which-is-not">Which of these postures is exercised, and which is not</a></h3>
+<p>A recommendation nothing runs is a guess. This is what the suites cover.</p>
+<p>Exercised against a real PostgreSQL 18:</p>
+<ul>
+<li>Two runtime credentials serving both domains through the assembled router,
+each of the server’s own pools refused every relation of the other domain
+(<code>app/ferroehr-rest/tests/it/credential_separation.rs</code>), and the single-DSN
+fallback still serving both.</li>
+<li>Three runtime credentials across the whole identity-to-party-to-EHR
+crossing, with the linkage credential refused the identifier map
+(<code>app/ferroehr/tests/it/pseudonymisation_boundary.rs</code>).</li>
+<li>All five domain roles refused every relation in the domains they do not own,
+enumerated from <code>information_schema</code> rather than from a written list (same
+file).</li>
+<li>The boot sequence on separated credentials with <code>[db] migrate_url</code>, under
+both <code>verify</code> and <code>apply</code>, and the single-DSN fallback under both
+(<code>app/ferroehr/tests/it/schema_preparation_credential.rs</code>).</li>
+<li>The compose stack’s grant boundary read back from the running database by
+<code>scripts/deploy-probe.sh</code>, which also records that the stack is
+single-credential by design.</li>
+</ul>
+<p>Not exercised by anything, and stated rather than left to inference:</p>
+<ul>
+<li><strong>A separated <code>migrate_url</code> alongside the linkage credential in one boot.</strong>
+The preparation tests configure the clinical and party DSNs.</li>
+<li><strong>A domain actually relocated to another database</strong>, as opposed to a second
+credential on the same one. The layout, the per-database preparation and the
+refusals are covered in process; no suite runs two PostgreSQL databases.</li>
+<li><strong>A real deployment on separated DSNs</strong>: a container booting with the DSN
+files mounted, and the chart wiring them through
+<code>database.party.existingSecret</code>, <code>database.linkage.existingSecret</code> and
+<code>database.migrateExistingSecret</code>. What is covered is the in-process half.</li>
+<li><strong>Role provisioning on a managed database</strong> where the migrator holds no
+<code>CREATEROLE</code> and the roles are created by the manual step above.</li>
+</ul>
+<p>Which posture you actually get depends on <code>db.migrate</code>, because the server’s
+embedded migrations are DDL: a self-migrating deployment necessarily runs as a
+role that can execute DDL. The single-container quickstart takes that path: its
+DSN authenticates as a non-superuser role that owns the database and is a member
+of <code>ferroehr_migrator</code>, <code>ferroehr_clinical</code>, <code>ferroehr_party</code> and
+<code>ferroehr_linkage</code>.</p>
+<h2 id="applying-migrations"><a class="header" href="#applying-migrations">Applying migrations</a></h2>
+<p><code>db.migrate</code> decides who runs the schema:</p>
+<ul>
+<li><strong><code>apply</code></strong> (the default): the server applies its embedded migrations at
+boot. This is what makes a fresh checkout and an empty database work with no
+configuration at all, and it is the right choice for development and for
+small single-tenant deployments. The runtime DSN must be a member of
+<code>ferroehr_migrator</code>, so the serving process holds DDL rights for its whole
+life. Least isolation.</li>
+<li><strong><code>verify</code>:</strong> the server issues <strong>no DDL at all</strong>. At boot it checks that the
+database carries exactly this build’s migrations and refuses to start
+otherwise, naming the schema and what is wrong with it. The pools can then
+hold no schema rights at all, which is the least-privilege production
+posture: an application-level SQL flaw can reach rows, never the schema. The
+check itself still reads every schema’s bookkeeping, so it runs on
+<code>db.migrate_url</code> — see <a href="#which-credential-prepares-the-schema">which credential prepares the
+schema</a>, and set that key whenever
+<code>db.url</code> is a role that holds one domain.</li>
+</ul>
+<p>Migrations are <strong>append-only</strong>, so upgrading an existing database in place is
+the supported path and always has been the one your data takes. A released
+migration is never edited: sqlx records a checksum of each applied file and
+refuses a database whose recorded checksum no longer matches, so a corrected
+schema arrives as a new migration rather than as a change to an old one. A CI
+guard fails any pull request that modifies, renames or deletes a migration the
+base branch already carries.</p>
+<p>With <code>verify</code>, something else has to run the migrations first. Use the binary’s
+own subcommand under the migrator DSN: a CI/CD stage, a one-shot job, or the
+Helm chart’s <code>migrations.job.enabled</code> pre-install/pre-upgrade hook Job, which
+Helm waits on so a failed migration fails the release (it takes its own
+<code>migrations.job.existingSecret</code> holding the migrator DSN, deliberately a
+different credential from the runtime one, and rendering fails without it):</p>
+<pre><code class="language-shell">FERROEHR__DB__URL='postgres://ferroehr_migrator:***@pg:5432/ferroehr' \
+  ferroehr db migrate     # applies; exits when done
+FERROEHR__DB__URL='postgres://ferroehr_clinical:***@pg:5432/ferroehr' \
+FERROEHR__DB__MIGRATE_URL='postgres://ferroehr_migrator:***@pg:5432/ferroehr' \
+  ferroehr db verify      # read-only check; exit 0 iff the schema is current
+</code></pre>
+<p><code>db verify</code> splits the same way the boot sequence does, and for the same
+reason: the schema state is read on <code>migrate_url</code>, while the pseudonymisation
+boundary is measured on the runtime DSNs — asking the migrator credential
+whether it can reach every domain would answer yes by design and tell you
+nothing about the roles that serve requests.</p>
+<p>Gate the rollout on the migration step so two server versions never race the
+schema. Note the difference in failure shape: a <code>verify</code> server refuses to boot
+against an unmigrated database (loud, immediate), while an <code>apply</code> server that
+loses its schema later stays up and reports readiness <code>DOWN</code>, the warning
+below.</p>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p><strong>Migration is a boot step, and nothing re-runs it.</strong> A running instance whose
+database is replaced, wiped, or reachable-but-empty does not migrate. It reports</p>
+<pre><code class="language-json">{"status":"DOWN","components":{"db":{"status":"UP"},
+ "migrations":{"status":"DOWN","detail":"core schema tables missing (migrations not applied)"}}}
+</code></pre>
+<p>on <code>/health/readiness</code> (<code>503</code>), leaves the load balancer’s rotation, and keeps
+passing liveness (correctly, since the process is healthy) so nothing restarts
+it. Under Kubernetes that is a Deployment sitting at <code>0/N</code> ready with no error
+after the first one.</p>
+<p>The readiness check re-tests the schema on <strong>every probe</strong>, so recovery does not
+require a restart <em>of that instance</em>: it goes back to <code>UP</code> within one probe
+interval of the schema existing, whoever created it. What needs a restart is the
+case where the only thing that would migrate is the instance itself: then
+<code>kubectl rollout restart deploy/ferroehr</code> (or a migration job) is the remedy.</p>
+<p>For the out-of-band flow this means: the migration step must <strong>complete before</strong>
+the first instance starts, or that instance sits unready until the schema
+appears, harmless but confusing, and it delays the rollout rather than failing
+it. Gate the rollout on the migration job.</p>
+</blockquote>
+<h3 id="recovering-a-partially-wiped-database"><a class="header" href="#recovering-a-partially-wiped-database">Recovering a partially wiped database</a></h3>
+<p>A wipe that removes <em>some</em> of the server’s schemas is not a fresh start, and the
+server refuses to migrate over one rather than doing something plausible with it.</p>
+<p>The server owns five schemas: <code>ext</code>, <code>clinical</code>, <code>party</code>, <code>linkage</code> and <code>audit</code>.
+A fresh start drops all five. Each domain’s cold archival tier is a <strong>partition</strong>
+of the relation it archives, inside that domain’s own schema, so a
+<code>DROP SCHEMA clinical CASCADE</code> takes the archived rows with the live ones. There
+is no separate mirror schema left to survive a wipe of the tier it mirrors.</p>
+<p>Dropping the clinical schemas (<code>clinical</code>, <code>ext</code>, <code>audit</code>) while <code>party</code> and
+<code>linkage</code> survive is a supported reset: the clinical migration set rebuilds its
+schema on the next boot.</p>
+<p>A database written by a release before the storage rewrite is refused outright:</p>
+<pre><code class="language-text">this database predates the storage rewrite: schema `ehr` carries its own
+migration bookkeeping, which only a release before the rewrite wrote.
+</code></pre>
+<p>The new migration sets replace the old ones rather than upgrading them, so there
+is no in-place path. Dump anything worth keeping, recreate the database, and
+start the server against it.</p>
+<blockquote class="blockquote-tag blockquote-tag-tip">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M8 1.5c-2.363 0-4 1.69-4 3.75 0 .984.424 1.625.984 2.304l.214.253c.223.264.47.556.673.848.284.411.537.896.621 1.49a.75.75 0 0 1-1.484.211c-.04-.282-.163-.547-.37-.847a8.456 8.456 0 0 0-.542-.68c-.084-.1-.173-.205-.268-.32C3.201 7.75 2.5 6.766 2.5 5.25 2.5 2.31 4.863 0 8 0s5.5 2.31 5.5 5.25c0 1.516-.701 2.5-1.328 3.259-.095.115-.184.22-.268.319-.207.245-.383.453-.541.681-.208.3-.33.565-.37.847a.751.751 0 0 1-1.485-.212c.084-.593.337-1.078.621-1.489.203-.292.45-.584.673-.848.075-.088.147-.173.213-.253.561-.679.985-1.32.985-2.304 0-2.06-1.637-3.75-4-3.75ZM5.75 12h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1 0-1.5ZM6 15.25a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Z"></path></svg>Tip</p>
+<p>When you wipe a FerroEHR database deliberately, drop the <strong>database</strong>, not a
+schema. <code>DROP DATABASE</code> cannot leave half a repository behind, and it is the
+only wipe with no partial-state failure mode.</p>
+</blockquote>
+<h2 id="tls-and-database-security"><a class="header" href="#tls-and-database-security">TLS and database security</a></h2>
+<p>These are database-side settings that belong to whoever provisions PostgreSQL;
+the deployment references them but cannot enforce them:</p>
+<ul>
+<li><strong>TLS in transit.</strong> Require <code>hostssl</code> on the server and put
+<code>?sslmode=verify-full</code> in the DSN so the client verifies the server
+certificate.</li>
+<li><strong>pgaudit.</strong> Run pgaudit as the database-layer complement to the openEHR
+audit and the ATNA trail (for example <code>pgaudit.log = 'ddl, role, connection'</code> globally plus object-level audit on the PHI tables) and ship
+the audit log to an immutable store with long (roughly six-year) retention.</li>
+<li><strong>Encryption at rest.</strong> Encrypt at the volume or disk layer. Do not encrypt
+the stored clinical JSON with pgcrypto: it would break AQL’s ability to
+query inside the data.</li>
+</ul>
+<h2 id="backup-and-point-in-time-recovery"><a class="header" href="#backup-and-point-in-time-recovery">Backup and point-in-time recovery</a></h2>
+<p>Enable WAL archiving and point-in-time recovery from day one (pgBackRest or a
+managed PITR), because a CDR’s data is not reconstructible. Clinical and audit
+tables are never <code>UNLOGGED</code>. Test your restore, not just your backup.</p>
+<h3 id="dump-each-domain-separately"><a class="header" href="#dump-each-domain-separately">Dump each domain separately</a></h3>
+<p>A logical backup is where the three pseudonymisation domains are easiest to
+re-join by accident. One <code>pg_dump</code> of the whole database produces a single file
+holding the pseudonymised clinical record, the identities of its subjects and
+the map between them, and whoever can read that file can re-identify every
+record in it — which is the separation the schema split and the database roles
+exist to maintain. <strong>Three domains, three dumps</strong>, into targets with different
+access control.</p>
+<p><strong>How many dumps, by DSN layout.</strong> The number of dumps follows the domains, not
+the databases: co-located, the four domains share one database and are dumped
+<code>--schema</code> by <code>--schema</code> as below; relocated, each database is dumped for the
+domains that live in it. What never changes is that the clinical record, the
+identities and the map land in three different artefacts with three different
+audiences. <code>ferroehr config check</code> prints the resolved layout, which is the
+list a backup runbook is written from. The audit repository travels with the
+clinical dump while it shares that database (<code>--schema=audit</code> below) and needs a
+dump of its own once <code>[storage.audit]</code> names another one. On Kubernetes that
+fourth dump is not yours to schedule: the chart renders a <code>backup.audit</code>
+CronJob as soon as <code>database.audit</code> carries a Secret of its own, and drops
+<code>--schema=audit</code> from the clinical job in the same render.</p>
+<pre><code class="language-bash"># The clinical domain
+pg_dump --dbname="$CLINICAL_DSN" --format=custom --no-owner \
+  --schema=clinical --schema=ext --schema=audit \
+  --file=/backups/clinical/clinical-$(date -u +%Y%m%dT%H%M%SZ).dump
+
+# The identities, into a different directory, owned by a different group
+pg_dump --dbname="$PARTY_DSN" --format=custom --no-owner \
+  --schema=party \
+  --file=/backups/party/party-$(date -u +%Y%m%dT%H%M%SZ).dump
+
+# The party-to-EHR map, into a third directory with the narrowest audience
+pg_dump --dbname="$LINKAGE_DSN" --format=custom --no-owner \
+  --schema=linkage --extension=btree_gist \
+  --file=/backups/linkage/linkage-$(date -u +%Y%m%dT%H%M%SZ).dump
+
+# The audit trail, ONLY when [storage.audit] names a database of its own —
+# co-located it is in the clinical dump above, and dumping it twice is a second
+# copy of who read what
+pg_dump --dbname="$AUDIT_DSN" --format=custom --no-owner \
+  --schema=audit \
+  --file=/backups/audit/audit-$(date -u +%Y%m%dT%H%M%SZ).dump
+</code></pre>
+<blockquote class="blockquote-tag blockquote-tag-important">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v9.5A1.75 1.75 0 0 1 14.25 13H8.06l-2.573 2.573A1.458 1.458 0 0 1 3 14.543V13H1.75A1.75 1.75 0 0 1 0 11.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h6.5a.25.25 0 0 0 .25-.25v-9.5a.25.25 0 0 0-.25-.25Zm7 2.25v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 9a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Important</p>
+<p><code>--extension=btree_gist</code> on the linkage dump is load-bearing. A <code>--schema</code>
+dump carries no extension — <em>“pg_dump makes no attempt to dump any other
+database objects that the selected schema(s) might depend upon”</em> — and
+<code>linkage.subject_ehr</code>’s temporal <code>UNIQUE … WITHOUT OVERLAPS</code> is a GiST
+index over that extension’s operator classes. Without the flag the restore
+reports <em>“data type uuid has no default operator class for access method
+gist”</em>, <code>pg_restore</code> ignores the error by default, and the table comes back
+with its rows and without the key that admits one open mapping per party.</p>
+</blockquote>
+<p>The third dump is a separate artefact for the same reason the first two are,
+and it is the one that matters most. <code>linkage.subject_ehr</code> says which party is
+the subject of which EHR: it is the additional information that turns a
+pseudonymised record back into a person (GDPR Art. 4(5)), so a file carrying it
+beside either side of that map rebuilds the join the split exists to withhold.
+Folding it into the party dump would put the identities and the map in one
+holder’s hands — the artefact this whole section is written to prevent.</p>
+<p>All three examples ship. In Compose they are the opt-in <code>backup</code> profile:</p>
+<pre><code class="language-bash">docker compose --profile backup run --rm ferroehr-backup-clinical
+docker compose --profile backup run --rm ferroehr-backup-party
+docker compose --profile backup run --rm ferroehr-backup-linkage
+</code></pre>
+<p>Set <code>FERROEHR_BACKUP_CLINICAL_DIR</code>, <code>FERROEHR_BACKUP_PARTY_DIR</code> and
+<code>FERROEHR_BACKUP_LINKAGE_DIR</code> to the three targets; they default to
+<code>./backups/clinical</code>, <code>./backups/party</code> and <code>./backups/linkage</code>.
+Run it as yourself — <code>FERROEHR_BACKUP_USER="$(id -u):$(id -g)"</code> — and the dump
+lands owned by you. Left unset, the job runs as root inside the container and
+keeps one capability, <code>DAC_OVERRIDE</code>, because that is what writing a directory
+it does not own actually requires: the container drops every other capability,
+and without this one uid 0 is just another user against your directory’s
+permission bits. Everything else stays off — no privilege escalation, read-only
+root filesystem.
+Under Kubernetes the chart renders one <code>CronJob</code> per domain — see the chart’s
+<code>backup</code> values.</p>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p><strong>A backup credential is not the application role.</strong> Each domain’s runtime
+role is revoked from the other domains, which is the pseudonymisation
+boundary doing its job — so a dump taken through one of them is silently
+partial rather than refused. Give each backup job its own role, read-only on
+its own domain and nothing else.</p>
+</blockquote>
+<p>Two further properties are yours to arrange, because no configuration file can
+enforce them: the three targets carry <strong>different</strong> access control, and the
+credential each job uses reaches <strong>one</strong> domain. Give the demographic job the demographic
+DSN once you run two (<a href="installation/kubernetes.html">Deploying</a>); with a single
+credential you have separated the artefacts but not the authority to produce
+them.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>Point-in-time recovery stays instance-wide. All three domains live in one
+cluster, so a WAL archive covers them together and a recovery target restores
+them together. The separation this section is about is the logical dump.</p>
+</blockquote>
+<h3 id="restoring"><a class="header" href="#restoring">Restoring</a></h3>
+<p>A restore is not finished when <code>pg_restore</code> exits. The grants are the
+boundary — a database whose roles came back wrong is a database where the
+clinical role can read the identities — so re-apply the role grants before the
+server starts, then let the server check them:</p>
+<pre><code class="language-bash">createdb ferroehr_restored
+pg_restore --dbname=ferroehr_restored --no-owner clinical-….dump
+pg_restore --dbname=ferroehr_restored --no-owner demographic-….dump
+pg_restore --dbname=ferroehr_restored --no-owner linkage-….dump
+# then, before anything serves traffic:
+ferroehr db verify
+</code></pre>
+<p>Restore the clinical dump first. It is the one carrying the <code>ext</code> schema, whose
+helper functions the other domains’ relations depend on.</p>
+<p><code>ferroehr db verify</code> issues no DDL. It checks that the database carries exactly
+this build’s migrations, <strong>all five sets</strong>, so a restore that skipped a domain
+is refused by name, and that no runtime role can read across the domain
+boundary, exiting non-zero when either is untrue. It is the same check the
+server runs at boot, which is why a server pointed at a badly restored database
+refuses to start rather than serving from it.</p>
+<p>What it does <strong>not</strong> read is a constraint. <code>pg_restore</code> ignores a failed
+statement unless you pass <code>--exit-on-error</code>, so a table can come back with its
+rows and without a key while every check above stays green. Read the restore’s
+own output, and confirm the map kept its temporal key:</p>
+<pre><code class="language-bash">psql -d ferroehr_restored -c \
+  "SELECT conname, pg_get_constraintdef(oid) FROM pg_constraint
+     WHERE conrelid = 'linkage.subject_ehr'::regclass AND contype = 'u'"
+# expect: uq_subject_ehr_party | UNIQUE (party_id, sys_period WITHOUT OVERLAPS)
+</code></pre>
+<p>Restoring only one domain is a supported outcome, not a mistake: a demographic
+dump restored on its own gives a database with identities and no clinical
+record, which is what a rehearsal of the identity domain’s recovery looks like.
+Such a database is not one the server will serve from — <code>ferroehr db verify</code>
+refuses it for the domains that are missing, which is the correct answer for a
+rehearsal target.</p>
+<h2 id="rotating-the-national-identifier-key"><a class="header" href="#rotating-the-national-identifier-key">Rotating the national-identifier key</a></h2>
+<p>Only relevant when <code>[demographic.identifier_protection]</code> is on. With it on, a
+national identifier of a configured scheme never sits in the versioned body:
+the value lives in <code>party.national_identifier</code>, sealed with AES-256-GCM under a
+key derived per domain from your root key, with an HMAC-SHA-256 digest beside it
+so an identifier can be looked up without decrypting anything.</p>
+<p><strong>The root key is load-bearing.</strong> Lose it and the sealed identifiers cannot be
+read back by anything, including you. Hold it the way you hold the database
+credentials: in your secret manager, injected as <code>key_file</code>, never in the TOML
+you commit.</p>
+<p>Rotation re-encrypts; it is not an edit. Both keys have to be present while it
+runs, because every row is opened under the old key and sealed under the new
+one, and the lookup digest changes with the key too — so the rotation rewrites
+the digest column and every stored reference keeps pointing at the same row.</p>
+<p>The procedure:</p>
+<ol>
+<li>Generate the new key: <code>openssl rand -hex 32</code>, or any source of 32 random
+bytes rendered as hex.</li>
+<li>Take a backup and verify it restores. A rotation rewrites every row in the
+table; a half-finished one you cannot roll back is the failure mode here.</li>
+<li>Stop writes to the demographic domain, or accept that identifiers written
+during the rotation are sealed under whichever key that write saw. A short
+maintenance window is simpler than reasoning about the alternative.</li>
+<li>Run the rotation under the migrator role, which is the only identity with
+rights on the whole table.</li>
+<li>Swap <code>key_file</code> to the new key and restart. Verify by resolving one known
+identifier and reading one party back.</li>
+<li>Destroy the old key once step 5 is verified, not before.</li>
+</ol>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p>There is no automated rotation command yet. Until there is, the rotation is a
+scripted job you run against the demographic database with both keys
+available, and this page is the procedure it has to follow. Treat the absence
+of a command as a reason to rehearse the rotation on a copy first.</p>
+</blockquote>
+<p>The subkeys are derived from the root key rather than stored, so rotating the
+root rotates all of them together. The pseudonymisation domain is part of that
+derivation: a subkey derived for the clinical domain opens nothing in the party
+one, so the per-schema backups above are separate artefacts under separate keys
+even where one root key is configured.</p>
+<h2 id="the-container-image-and-pod-hardening"><a class="header" href="#the-container-image-and-pod-hardening">The container image and pod hardening</a></h2>
+<p>The published image is distroless and non-root (shell-less, with no package
+manager) and is multi-architecture (amd64 and arm64) on GHCR. It is not a
+static binary: the server links glibc and <code>libgcc_s</code> dynamically, which is why
+the base image is the <code>cc</code> distroless variant rather than the smaller one, and
+why the runtime needs no OpenSSL, no JVM and nothing else from a package
+manager.</p>
+<p>Under Kubernetes the pod runs the Kubernetes <code>restricted</code> profile: non-root
+uid/gid 65532, read-only root filesystem with one writable <code>/tmp</code>, no
+privilege escalation, an empty capability bounding set, <code>RuntimeDefault</code>
+seccomp, and no service-account token (the workload never calls the Kubernetes
+API). The chart’s own gates assert that per container on every render, and the
+posture read back from a running container, plus the two things the chart
+cannot do for you (applying the namespace enforcement label, and narrowing the
+NetworkPolicy’s ingress sources: the shipped policy narrows the <em>ports</em> and,
+until you set <code>networkPolicy.ingressFrom</code>, admits every source on them; set
+<code>networkPolicy.ingressAllowAll: false</code>, and <code>viewer.networkPolicy.ingressAllowAll</code>
+for the viewer, to have that state refused at render instead), are covered in
+<a href="installation/hardening-workload.html">Installation → The workload: security context &amp; admission</a>
+and <a href="installation/hardening-network-policy.html#ingress-ports-are-narrowed-sources-are-yours">Namespaces, network &amp; policy →
+Ingress</a>.</p>
+<p>The Compose path carries a comparable floor, and one guard keeps it:
+<code>scripts/checks/compose-hardening.sh</code> runs over every committed compose
+artifact and fails on a service definition without <code>cap_drop: [ALL]</code> and
+<code>no-new-privileges:true</code>, on any <code>privileged: true</code>, on a <code>seccomp=unconfined</code>
+or <code>apparmor=unconfined</code> override, on a mounted Docker daemon socket, and on a
+published port that names no host address. The compose files go further than
+the guard checks (capabilities are added back one at a time only where an
+entrypoint provably needs them, file-descriptor limits are bounded, ports
+default to the loopback interface, and most services run a read-only root
+filesystem) but those extras are conventions, not enforced properties, so
+check them when you adapt a file.</p>
+<p>Two services in the quickstart file deliberately do not run read-only, and each
+says why in place. The S3 gateway writes its volume store; the server cannot,
+because Compose refuses an inline <code>config</code> in a read-only service and that
+inline config is what makes the file standalone. A deployment that mounts its
+configuration from a file instead can add <code>read_only: true</code> and a tmpfs at
+<code>/tmp</code>.</p>
+<h3 id="what-the-host-owes-and-we-cannot-enforce"><a class="header" href="#what-the-host-owes-and-we-cannot-enforce">What the host owes, and we cannot enforce</a></h3>
+<p>Four controls belong to whoever runs the daemon. They are stated here because a
+container hardening story that ignores them is misleading: the strongest pod
+security context in the world sits on top of these.</p>
+<p><strong>Keep the host kernel and Docker Engine current.</strong> A container is a kernel
+namespace, not a virtual machine: a kernel privilege-escalation bug is a container
+escape, and every runtime hardening above assumes the kernel enforcing it is
+patched. Track your distribution’s kernel updates and the Docker Engine release
+notes with the same urgency you would give a public-facing service.</p>
+<p><strong>Prefer rootless mode.</strong> Running the daemon as a non-root user means a container
+escape lands as an unprivileged user rather than as root on the host
+(<a href="https://docs.docker.com/engine/security/rootless/">https://docs.docker.com/engine/security/rootless/</a>). The images here need no
+privileged operation, no host networking, and no daemon socket, so nothing in this
+deployment prevents rootless: the constraints are usually the host’s (cgroup v2,
+<code>newuidmap</code>/<code>newgidmap</code>, and no privileged ports below 1024, which is why the
+server binds 8080 rather than 80).</p>
+<p><strong>Set the daemon log level to <code>info</code> (the default) and keep it.</strong> Docker’s <code>debug</code>
+level records request payloads and can put secret material into daemon logs, which
+are typically world-readable to anyone with host log access and are shipped
+wholesale to log aggregators.</p>
+<p><strong>Control who can pull and push your images.</strong> GHCR access is the deployment’s
+authorization boundary for what runs in production: whoever can push a tag your
+manifests reference can run their code with your database credentials. Restrict
+push rights, prefer digest pins over mutable tags for anything you deploy (the
+compose files pin the third-party images by digest for exactly this reason), and
+verify the published attestations before rollout; the verification command is in
+<a href="installation/kubernetes.html">Installation → Kubernetes &amp; Helm</a>.</p>
+<p>None of these four is something this project can assert on your behalf, which is
+why they are written as your checklist rather than as our claim.</p>
+<h2 id="upgrades"><a class="header" href="#upgrades">Upgrades</a></h2>
+<ul>
+<li>
+<p><strong>Upgrade in place; the migrations are append-only.</strong> A released migration
+is never edited again, so a database created by an earlier release takes the
+new release’s migrations on top of the ones it already carries. The server
+records the checksum of every applied migration and refuses to start against
+a database whose recorded checksums differ from the files it carries
+(<code>migration 1 was previously applied but has been modified</code>), which is why
+editing one would lock every existing installation out of its own database
+rather than revise its history. A correction ships as a new migration, and a
+CI guard fails any pull request that modifies, renames or deletes one the
+base branch already has. A rolling upgrade must still stay compatible with
+the <em>previous</em> schema for the window in which both versions run: additive
+changes first, destructive changes a release later.</p>
+<p>Releases up to and including 4.0.18 predate this policy and did edit
+migration files in place. A database created by one of those and never
+upgraded since is recreated rather than migrated.</p>
+</li>
+<li>
+<p><strong>Sweep for stale decomposition after a release that changes how content is
+decomposed.</strong> The version body is unaffected and every read serves it
+correctly; what is stale is the decomposed index over it, which a
+row-level query predicate depends on. <code>POST {base}/admin/integrity/verify</code>
+reports each such version as <code>stale_decomposition</code> and
+<code>POST {base}/admin/integrity/rebuild-nodes</code>, run once unscoped, rewrites the
+rows from the stored document. The changelog names the affected object type
+at each release that needs it; 4.2.0 is one, for demographic parties. Both
+routes are on
+<a href="operations-admin-apis.html#storage-integrity">Admin &amp; messaging APIs</a>.</p>
+</li>
+<li>
+<p><strong>Bound the DDL yourself.</strong> Every pooled connection carries the
+<code>db.statement_timeout_ms</code> value (60 seconds by default), and the migration
+step runs on that pool, so a runaway statement is cut off, but there is <strong>no
+<code>lock_timeout</code></strong>, so a migration that waits behind a long transaction waits
+as long as that transaction lasts. On a busy table use
+<code>CREATE INDEX CONCURRENTLY</code>, add constraints <code>NOT VALID</code> and <code>VALIDATE</code>
+later, and set <code>lock_timeout</code> in the migration session (or on the migrator
+role) if you need the wait bounded.</p>
+</li>
+<li>
+<p><strong>Pin the image.</strong> Deploy an immutable tag or, better, a <code>@sha256</code> digest,
+never <code>latest</code>; roll back by re-pinning the prior digest, since the schema’s
+backward compatibility makes that safe.</p>
+</li>
+<li>
+<p><strong>Stay available.</strong> Keep at least two replicas (or autoscaling) and a pod
+disruption budget so node drains and upgrades never fully interrupt the
+API. The default 30-second termination grace period covers the server’s
+short shutdown drain of the audit and event outboxes.</p>
+</li>
+</ul>
+<h3 id="how-long-the-version-you-pinned-is-supported"><a class="header" href="#how-long-the-version-you-pinned-is-supported">How long the version you pinned is supported</a></h3>
+<p>Plan the upgrade cadence around this, because it is short and it is deliberate:</p>
+<ul>
+<li><strong>Only the most recent release receives security fixes.</strong> There are no
+maintenance branches, no long-term-support line, and no backports. A version
+stops receiving fixes the moment a newer release exists.</li>
+<li><strong>A fix normally arrives as the next patch</strong> on the current minor, so taking
+it does not oblige you to take new behaviour, but that is the usual case,
+not a promise. Where a fix is only correct alongside a behavioural change,
+the release carrying it carries the change, and the changelog entry says so.</li>
+<li><strong>A published release is never repaired in place.</strong> Release immutability
+means the assets and the tag of a published release cannot be modified at
+all, so the remedy for any defect is a new version.</li>
+<li><strong>The Helm chart and the published crates follow their own version lines</strong>,
+each supported at its newest published version only. A chart-only fix ships
+as a new chart version between server releases.</li>
+</ul>
+<p>The consequence for change control: budget for taking every release, or budget
+for maintaining a fork. There is no third option, and the full policy (with
+the reasoning and what to do if you need something stronger) is
+<a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions">SECURITY.md</a>.</p>
+<h2 id="observability"><a class="header" href="#observability">Observability</a></h2>
+<p><code>tracing</code> is the single instrumentation API. From it, three signal families
+fan out, and <strong>identified data never enters any of them</strong>: telemetry uses
+only closed-set labels and opaque request/trace ids, so correlation to a
+patient is possible only through the <a href="audit.html">audit trail</a>.</p>
+<ul>
+<li>
+<p><strong>Logs</strong> go to stdout (JSON when not attached to a terminal, pretty on a
+TTY) each line stamped with the trace and span id. Shipping and rotation
+are the platform’s job. <code>FERROEHR__LOG__FORMAT</code> (<code>auto</code>/<code>json</code>/<code>pretty</code>) and
+<code>FERROEHR__LOG__FILTER</code> (or <code>RUST_LOG</code>, default <code>info,ferroehr=info</code>) control
+them, and the level can be changed at runtime through the <code>loggers</code> endpoint
+below. On boot the server prints a one-time ASCII banner (version, maintainer,
+project URL, and spec pins) to stdout ahead of the logs; it is suppressed
+under <code>FERROEHR__LOG__FORMAT=json</code> so machine log consumers see only structured
+lines.</p>
+</li>
+<li>
+<p><strong>Traces</strong> export to any OpenTelemetry collector (Tempo, Jaeger, and so on)
+over OTLP, but only when you configure an endpoint; with none set, the
+tracing layer is not installed at all (zero overhead). Root spans are named
+by route template, never by a path containing ids.</p>
+</li>
+<li>
+<p><strong>Metrics</strong> come from <strong>one</strong> OpenTelemetry meter provider with up to two
+readers: a Prometheus reader behind <code>/management/prometheus</code>, and (when
+<code>telemetry.metrics_push</code> is on) a periodic OTLP reader. Every instrument
+reaches both by construction, so a family can never exist on the scrape
+surface and be missing from the push. The catalogue covers HTTP request
+duration, active requests and body sizes; authentication failures and
+authorization decisions (Cedar and remote-PDP); database pool state,
+acquire latency and transaction counts; AQL query counts, latency and plan-
+cache events; compositions committed (by openEHR audit change type);
+validation failures and version-signature faults; WebTemplate cache events;
+events published; the whole ATNA audit pipeline; Tokio runtime gauges;
+process start time; and the <code>ferroehr_build_info</code> identity.</p>
+<p>Instrument names carry <strong>no</strong> <code>_total</code> suffix and no unit suffix: units are
+declared on the instrument and the Prometheus exporter derives
+<code>_total</code>/<code>_seconds</code>/<code>_bytes</code> itself. Read the exposition to learn the exact
+rendered names rather than assuming either spelling.</p>
+</li>
+</ul>
+<p>The telemetry environment variables:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Environment variable</th><th>Default</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>FERROEHR__TELEMETRY__OTLP_ENDPOINT</code></td><td>unset (layer not installed)</td><td>OTLP collector endpoint</td></tr>
+<tr><td><code>FERROEHR__TELEMETRY__SERVICE_NAME</code></td><td><code>ferroehr</code></td><td>reported service name</td></tr>
+<tr><td><code>FERROEHR__TELEMETRY__ENVIRONMENT</code></td><td><code>dev</code></td><td>reported deployment environment</td></tr>
+<tr><td><code>FERROEHR__TELEMETRY__TRACES_SAMPLE_RATIO</code></td><td><code>1.0</code></td><td>head sampling ratio (start at <code>0.1</code> in production)</td></tr>
+<tr><td><code>FERROEHR__TELEMETRY__METRICS_PUSH</code></td><td><code>false</code></td><td>add the periodic OTLP metrics reader beside the Prometheus one</td></tr>
+<tr><td><code>FERROEHR__TELEMETRY__FLAME_FILE</code></td><td>unset (layer not installed)</td><td>write folded span-timing samples to this file for offline rendering, diagnostic sessions only</td></tr>
+</tbody>
+</table>
+</div>
+<p>Neither reader is reachable until you say so: the Prometheus surface needs
+<code>management.enabled</code> plus an access level on the <code>prometheus</code> endpoint (see
+<a href="#the-management-surface">the management surface</a>), and the OTLP reader needs
+both <code>otlp_endpoint</code> and <code>metrics_push</code>. A server with neither still records
+every instrument; nothing exports it.</p>
+<blockquote class="blockquote-tag blockquote-tag-tip">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M8 1.5c-2.363 0-4 1.69-4 3.75 0 .984.424 1.625.984 2.304l.214.253c.223.264.47.556.673.848.284.411.537.896.621 1.49a.75.75 0 0 1-1.484.211c-.04-.282-.163-.547-.37-.847a8.456 8.456 0 0 0-.542-.68c-.084-.1-.173-.205-.268-.32C3.201 7.75 2.5 6.766 2.5 5.25 2.5 2.31 4.863 0 8 0s5.5 2.31 5.5 5.25c0 1.516-.701 2.5-1.328 3.259-.095.115-.184.22-.268.319-.207.245-.383.453-.541.681-.208.3-.33.565-.37.847a.751.751 0 0 1-1.485-.212c.084-.593.337-1.078.621-1.489.203-.292.45-.584.673-.848.075-.088.147-.173.213-.253.561-.679.985-1.32.985-2.304 0-2.06-1.637-3.75-4-3.75ZM5.75 12h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1 0-1.5ZM6 15.25a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Z"></path></svg>Tip</p>
+<p>A single-container dev stack (<code>grafana/otel-lgtm</code>, bundling an OTLP
+collector, Prometheus, Tempo, Grafana, and Loki) ships as a Compose overlay,
+together with a provisioned Grafana dashboard (request rate/errors/duration,
+database pool, AQL latency, validation failures, audit health) and a starter
+alert pack; point the server at it with the two OTLP variables above.</p>
+</blockquote>
+<p><strong>On Kubernetes</strong>, the same keys arrive through the chart’s <code>config</code>
+passthrough, and the metrics half has a second switch that is easy to miss:</p>
+<pre><code class="language-yaml"># values.yaml
+config:
+  telemetry:
+    otlp_endpoint: http://otel-collector.observability:4317
+    environment: production
+    traces_sample_ratio: 0.1
+    metrics_push: true
+  management:
+    enabled: true
+    endpoints:
+      prometheus: admin_only   # the scrape endpoint is off until you name it
+metrics:
+  enabled: true                # adds the prometheus.io/* pod annotations
+  serviceMonitor:
+    enabled: false             # or true, with the Prometheus Operator CRDs installed
+</code></pre>
+<p><code>metrics.enabled</code> only adds the scrape <strong>annotations</strong>; the endpoint itself is
+opened by <code>config.management.endpoints.prometheus</code>. Both are needed for an
+annotation-discovering Prometheus, and neither is needed if you push over OTLP
+instead. <strong>To turn telemetry off</strong>, drop <code>otlp_endpoint</code>; the tracing layer is
+not installed at all when it is unset.</p>
+<p><strong>The default dashboard.</strong> The “FerroEHR — service overview” Grafana
+dashboard (request rate/errors/latency, AQL rate and phase latency,
+plan-cache hit ratio, database pool, Tokio runtime, audit throughput — every
+query written against the served metric names) reaches Grafana three ways:</p>
+<ul>
+<li><strong>Compose</strong>: the observability overlay provisions it automatically;
+nothing to do.</li>
+<li><strong>Kubernetes</strong>: set <code>metrics.grafanaDashboard.enabled: true</code> and the chart
+ships it as a ConfigMap labelled <code>grafana_dashboard: "1"</code>, which the
+Grafana Helm chart’s dashboard sidecar (kube-prometheus-stack includes it)
+discovers and imports. The sidecar watches its own release namespace by
+default — install FerroEHR there, or widen the sidecar’s
+<code>searchNamespace</code>. <code>metrics.grafanaDashboard.folder</code> sets the
+<code>grafana_folder</code> annotation for sidecars with folder routing configured.</li>
+<li><strong>Anywhere else</strong>: import
+<code>deploy/helm/ferroehr/files/dashboards/ferroehr-overview.json</code> by hand
+(Grafana → Dashboards → Import).</li>
+</ul>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p>With the chart’s default-deny egress policy on, add the collector to
+<code>networkPolicy.egress.rules</code> (port 4317). An OTLP exporter that cannot reach
+its collector fails <strong>silently</strong>: no traces, no error.</p>
+</blockquote>
+<h2 id="the-admin-and-messaging-apis"><a class="header" href="#the-admin-and-messaging-apis">The admin and messaging APIs</a></h2>
+<p>Two operator-facing HTTP surfaces have a page of their own, because each route
+carries its own switch, authorization class and status-code contract:</p>
+<ul>
+<li><strong>The admin API</strong> (<code>{base}/admin/…</code>, off by default): physical deletion, the
+activity report, archiving to the cold tier, and whole-repository dump and
+load.</li>
+<li><strong>The messaging API</strong> (<code>{base}/message/…</code>, always mounted): EHR Extract
+export and import, and Template Data Document import.</li>
+</ul>
+<p>The full reference is <a href="operations-admin-apis.html">Admin &amp; messaging APIs</a>.</p>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p>Enabling the admin API puts irreversible, whole-repository operations on the
+wire: <code>DELETE {base}/admin/ehr/all</code> with no parameter empties the
+repository. Keep it off unless a workflow needs it, turn RBAC on, and gate
+the admin role tightly.</p>
+</blockquote>
+<h2 id="health-probes"><a class="header" href="#health-probes">Health probes</a></h2>
+<p>The health endpoints are <strong>always served, on the main API port, without
+authentication</strong>. There is nothing to enable and nothing to remember: they are
+mounted outside the API’s authentication and overload-shedding layers, so an
+orchestrator can probe a server whose management surface, admin API, and every
+optional integration are switched off, and a saturated server still answers
+its own probes.</p>
+<h3 id="choosing-a-health-endpoint"><a class="header" href="#choosing-a-health-endpoint">Choosing a health endpoint</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Endpoint</th><th>Contract</th><th>Use it for</th></tr>
+</thead>
+<tbody>
+<tr><td><code>GET /health</code></td><td>constant <code>200 OK</code> (plain text <code>OK</code>), touches nothing</td><td>load balancers, <code>docker</code> <code>HEALTHCHECK</code>, anything that must never be auth-gated</td></tr>
+<tr><td><code>GET /health/liveness</code></td><td>identical to <code>/health</code>, the same constant answer under the orchestrator-conventional path</td><td>Kubernetes <code>livenessProbe</code> and <code>startupProbe</code></td></tr>
+<tr><td><code>GET /health/readiness</code></td><td><code>200</code> when the aggregate is up or degraded, <code>503</code> when a <strong>required</strong> component is down; JSON body with every indicator, each bounded to one second</td><td>Kubernetes <code>readinessProbe</code>, ops dashboards</td></tr>
+<tr><td><code>GET /ferroehr/rest/status</code></td><td>product status document: <code>status</code>, <code>server_version</code>, <code>openehr_rest_api_version</code>, <code>timestamp</code>, <code>licence</code> (the grant in force: <code>state</code>, <code>use</code>, <code>licensee</code>, <code>not_after</code>, <code>configured_token</code>) and <code>deployment</code> (the declared profile, the separations still open and the ones accepted by name)</td><td>version/identity checks; the URL the container’s <code>ferroehr healthcheck</code> subcommand probes</td></tr>
+<tr><td><code>GET /management/*</code></td><td>ops introspection; see below</td><td>operators, off by default, enable deliberately</td></tr>
+</tbody>
+</table>
+</div>
+<p>Every management request is itself recorded in the audit trail as a
+system-domain access under its own operation id (<code>management_info</code>,
+<code>management_env</code>, <code>management_loggers_set</code>, …), so a runtime filter change or a
+configuration read is never an unrecorded administrative act.</p>
+<p>There is exactly one health surface: the <code>/health</code> family above. <code>/health</code> and
+<code>/health/liveness</code> are two conventional names for the same constant answer (a
+load balancer wants the bare path, an orchestrator wants the <code>liveness</code>/
+<code>readiness</code> pair); <code>/ferroehr/rest/status</code> is a different contract, and no health
+endpoint exists under the REST root.</p>
+<p>Not every indicator blocks readiness, and the distinction is deliberate:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Indicator</th><th>Checks</th><th>Blocks readiness</th></tr>
+</thead>
+<tbody>
+<tr><td><code>db</code></td><td>a pooled connection answers</td><td>yes</td></tr>
+<tr><td><code>migrations</code></td><td>this build’s schema is present, re-tested on every probe</td><td>yes</td></tr>
+<tr><td><code>audit_sender</code></td><td>the audit posture: <code>DEGRADED</code> with the consequence stated when auditing is off (no access log, no EHDS logging component); <code>UP</code> with <code>fail_mode</code>, the local store and its retention in the detail, and a stated caution under <code>fail_mode = "open"</code></td><td>no: reports <code>DEGRADED</code>, never <code>503</code></td></tr>
+<tr><td><code>events</code></td><td>the event publisher’s broker delivery (present only when eventing is enabled)</td><td>no: reports <code>DEGRADED</code>, never <code>503</code>, since the outbox buffers while the broker is down</td></tr>
+<tr><td><code>fhir_outbound</code></td><td>the FHIR outbound emitter’s broker delivery (present only when the emitter is enabled)</td><td>no: reports <code>DEGRADED</code>, never <code>503</code>, since unemitted rows are retained and re-emitted</td></tr>
+</tbody>
+</table>
+</div>
+<p>An instance whose event broker is unreachable therefore keeps taking traffic
+and says so in the body; an instance that cannot reach its database, or whose
+database lost the schema, leaves rotation. The <code>detail</code> strings are written to
+carry no connection information (no DSN host, database name or role) because
+this surface is unauthenticated by design.</p>
+<blockquote class="blockquote-tag blockquote-tag-important">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v9.5A1.75 1.75 0 0 1 14.25 13H8.06l-2.573 2.573A1.458 1.458 0 0 1 3 14.543V13H1.75A1.75 1.75 0 0 1 0 11.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h6.5a.25.25 0 0 0 .25-.25v-9.5a.25.25 0 0 0-.25-.25Zm7 2.25v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 9a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Important</p>
+<p>Liveness and readiness are deliberately different: liveness never touches a
+dependency, so a database outage takes the instance out of rotation
+(readiness <code>503</code>) instead of getting the container killed and restarted in a
+loop. Wire <code>livenessProbe</code> and <code>startupProbe</code> to <code>/health/liveness</code> and
+<code>readinessProbe</code> to <code>/health/readiness</code>. The Helm chart does exactly this out
+of the box, and only the timings are tunable (<code>probes.liveness</code>,
+<code>probes.readiness</code>, <code>probes.startup</code>); there is deliberately no option to
+point the probes at the container’s <code>ferroehr healthcheck</code> subcommand
+instead, because that subcommand probes the status document rather than a
+health endpoint, which would leave readiness never touching the database.</p>
+</blockquote>
+<h2 id="the-management-surface"><a class="header" href="#the-management-surface">The management surface</a></h2>
+<p>The management surface is <strong>ops introspection only</strong>: build info, Prometheus,
+the metric views, the effective configuration, and runtime log control. It is
+<strong>off by default</strong> on the bare binary, and each endpoint is independently
+opt-in with an access level (<code>admin_only</code>, <code>private</code>, or <code>public</code>). It can be
+bound to its own internal port so it never appears on the public API listener.
+Keeping it off costs you nothing operationally: the health probes above do not
+depend on it.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Environment variable</th><th>Default</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>FERROEHR__MANAGEMENT__ENABLED</code></td><td><code>false</code></td><td>enable the management surface</td></tr>
+<tr><td><code>FERROEHR__MANAGEMENT__BASE_PATH</code></td><td><code>/management</code></td><td>base path for the surface</td></tr>
+<tr><td><code>FERROEHR__MANAGEMENT__PORT</code></td><td>unset (main listener)</td><td>serve management on its own port</td></tr>
+<tr><td><code>FERROEHR__MANAGEMENT__ENDPOINTS__&lt;NAME&gt;</code></td><td><code>off</code></td><td>the access level for ONE endpoint: <code>off</code>, <code>private</code>, <code>admin_only</code> or <code>public</code>. There is no global default beside it: an endpoint you do not name is not mounted and answers <code>404</code>.</td></tr>
+</tbody>
+</table>
+</div>
+<p>The ops endpoints:</p>
+<p>Every one of them ships <code>off</code>: nothing is mounted until you name the endpoint
+and the level it should answer at. The right-hand column is the level to choose,
+not a default you already have.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Endpoint</th><th>Endpoint name to set</th><th>Purpose</th><th>Level to give it</th></tr>
+</thead>
+<tbody>
+<tr><td><code>GET /management/info</code></td><td><code>info</code></td><td>product name and version, build SHA, build date, <code>rustc</code>, the active <code>spec_profile</code>, the openEHR specification versions that profile selects, the PostgreSQL target, and the <code>audit</code> posture (<code>enabled</code>, <code>fail_mode</code>, <code>local_store</code>, <code>retention_days</code>)</td><td><code>admin_only</code></td></tr>
+<tr><td><code>GET /management/prometheus</code></td><td><code>prometheus</code></td><td>Prometheus text exposition</td><td><code>admin_only</code>, or <code>public</code> only when the port is not reachable outside the cluster; a <code>public</code> endpoint is served OUTSIDE authentication</td></tr>
+<tr><td><code>GET /management/metrics</code></td><td><code>metrics</code></td><td>JSON list of the registered metric names</td><td><code>admin_only</code></td></tr>
+<tr><td><code>GET /management/metrics/{name}</code></td><td><code>metrics</code></td><td>the current value(s) of one metric; <code>404</code> for a name that is not registered</td><td><code>admin_only</code></td></tr>
+<tr><td><code>GET /management/env</code></td><td><code>env</code></td><td>effective configuration, with secrets redacted</td><td><code>admin_only</code></td></tr>
+<tr><td><code>GET</code>/<code>POST</code>/<code>DELETE</code> <code>/management/loggers</code></td><td><code>loggers</code></td><td>read and change the log level at runtime</td><td><code>admin_only</code></td></tr>
+<tr><td><code>GET /management/flamegraph</code></td><td><code>flamegraph</code></td><td>on-demand CPU flamegraph of the running server</td><td><code>admin_only</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>Paths above show the default <code>management.base_path</code>; change it and every path
+moves with it. The <code>metrics</code> name covers both metric routes, and the
+<code>prometheus</code>, <code>metrics</code> and <code>loggers</code> routes additionally need their backing
+machinery present; without it they are simply not mounted, which is the same
+<code>404</code> as leaving them <code>off</code>.</p>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p><code>/management/env</code> and <code>/management/loggers</code> expose and change server
+internals; keep them <code>admin_only</code>, and prefer binding the surface to an
+internal-only port.</p>
+</blockquote>
+<h3 id="profiling-the-on-demand-cpu-flamegraph"><a class="header" href="#profiling-the-on-demand-cpu-flamegraph">Profiling: the on-demand CPU flamegraph</a></h3>
+<p>When the server is measurably slow, the metrics tell you <em>how slow</em>;
+<code>/management/flamegraph</code> tells you <strong>where the time goes</strong>. The endpoint samples the
+whole process with an in-process sampling profiler (the
+<a href="https://docs.rs/pprof/latest/pprof/"><code>pprof</code></a> crate) for a bounded window and
+answers with a rendered flamegraph SVG; open it in a browser and read the wide
+frames.</p>
+<pre><code class="language-bash"># sample 10 s at 99 Hz (the defaults) and open the result
+curl -u admin:… -o flamegraph.svg \
+  "http://cdr.internal:9100/management/flamegraph?seconds=10&amp;frequency=99"
+</code></pre>
+<ul>
+<li><code>seconds</code> (default 10) and <code>frequency</code> (default 99 Hz) are capped by
+<code>management.profiling.max_seconds</code> and <code>max_frequency</code> (30 and 999 out of the
+box); a request beyond a cap is refused with <code>400</code>, never silently clamped.</li>
+<li><strong>One sample window at a time</strong>: a second request while one runs answers
+<code>409</code>; retry when the window completes.</li>
+<li>Sampling is low-overhead but not free; profile under the real load you are
+diagnosing, and keep the endpoint <code>admin_only</code> on an internal port like the
+rest of the surface.</li>
+<li>Best results come from the container images and release builds, which keep
+line tables (<code>debug = "line-tables-only"</code>) so frames resolve to <code>file:line</code>.</li>
+</ul>
+<p>With the surface enabled, the viewer grows an <strong>Operations</strong> screen over
+it (dependency health, build provenance, the metric registry, and runtime log
+control) which appears only while the CDR serves <code>/management/info</code>. See
+<a href="viewer/operations.html">Viewer → Operations panel</a>.</p>
+<h2 id="next"><a class="header" href="#next">Next</a></h2>
+<ul>
+<li><a href="operations-admin-apis.html">Admin &amp; messaging APIs</a> — the operator-facing
+HTTP surfaces, route by route.</li>
+<li><a href="installation/configuration.html">Configuration reference</a> — every setting,
+with the server, database and telemetry keys on
+<a href="installation/config-server.html">their own page</a>.</li>
+<li>The API reference at <code>/ferroehr/rest/swagger-ui</code> on your own deployment, or
+<a href="https://sandbox.ferroehr.eu/ferroehr/rest/swagger-ui">https://sandbox.ferroehr.eu/ferroehr/rest/swagger-ui</a> on the hosted
+sandbox — the document the server itself generates.</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="viewer/dark-mode.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="operations-admin-apis.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="viewer/dark-mode.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="operations-admin-apis.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-09f2665d.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="theme/mermaid-eefea253.min.js"></script>
+        <script src="theme/mermaid-init-ccf746f1.js"></script>
+        <script src="theme/version-picker-dddf05c1.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

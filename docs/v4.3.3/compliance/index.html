@@ -1,0 +1,657 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Compliance overview - FerroEHR Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        <!-- Content-Security-Policy as a <meta> element, because GitHub Pages serves
+             static files and cannot set response headers. A meta CSP is genuinely
+             weaker than the header: `frame-ancestors`, `report-uri` and `sandbox` are
+             IGNORED in meta form (w3c CSP3 §3.3), and it applies only after the parser
+             reaches it. It still stops an injected external script or an exfiltrating
+             `connect-src`, which is the realistic risk for a docs site, so it is worth
+             having while being honest that the site cannot carry the full header set —
+             documented on the security page. `unsafe-inline` is required: mdBook emits
+             inline theme/sidebar scripts and inline styles of its own. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <!-- Self-hosted KaTeX stylesheet (fonts under katex/fonts/) — the site
+             serves no external requests, so mdbook-katex runs with no-css = true
+             and the vendored sheet is linked here. Version 0.16.4, matching the
+             KaTeX the katex-rs renderer inside mdbook-katex bundles (its
+             KATEX-VERSION file); provenance in website/book/KATEX-PROVENANCE.md. -->
+        <link rel="stylesheet" href="../katex/katex.min.css">
+
+        <meta name="description" content="User documentation for FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../css/chrome-d279d366.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/custom-79743c4e.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "rust";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "../searchindex-08cf6b59.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-96c4774d.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">FerroEHR Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/src/compliance/index.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="compliance-overview"><a class="header" href="#compliance-overview">Compliance overview</a></h1>
+<p>FerroEHR is software. It is not a controller, not a processor and not a
+certified organisation, so nothing on this page says that a deployment
+complies with anything. What this page does say is which technical controls
+the product ships today, which are planned and tracked in public, and which
+obligations stay with the organisation that runs it.</p>
+<p>The page is written for three readers. A privacy officer wants the legal
+sources and the split of duties. A hospital CISO wants the controls and their
+status. A developer wants to know where the boundary between clinical and
+identifying data runs. Each of those three readings takes about ten minutes.</p>
+<p>It is also written in two layers, because openEHR is not a national standard
+and FerroEHR is published for every country that runs it. The GDPR, the EDPB
+guidelines and the EHDS apply to every EU deployment and come first. After
+them come the national sections, one per jurisdiction, each on top of that
+same EU layer. The Netherlands is filled in first because that is where the
+project’s own deployments are, not because it is the default; the
+<a href="#national-law">national law</a> section says how to add another.</p>
+<ul>
+<li><a href="#what-ferroehr-claims-and-what-it-does-not">What FerroEHR claims, and what it does not</a></li>
+<li><a href="#the-pseudonymisation-boundary">The pseudonymisation boundary</a>
+<ul>
+<li><a href="#what-ships-today">What ships today</a></li>
+<li><a href="#what-is-planned">What is planned</a></li>
+<li><a href="#the-deployment-profile">The deployment profile</a></li>
+</ul>
+</li>
+<li><a href="#gdpr">GDPR</a></li>
+<li><a href="#edpb-guidelines-012025-on-pseudonymisation">EDPB Guidelines 01/2025 on pseudonymisation</a></li>
+<li><a href="#ehds">EHDS</a></li>
+<li><a href="#national-law">National law</a>
+<ul>
+<li><a href="#the-netherlands-uavg-and-wabvpz">The Netherlands: UAVG and Wabvpz</a></li>
+<li><a href="#the-netherlands-nen-7510-nen-7512-and-nen-7513">The Netherlands: NEN 7510, NEN 7512 and NEN 7513</a></li>
+<li><a href="#germany-bdsg-sgb-v-gdng-and--203-stgb">Germany: BDSG, SGB V, GDNG and § 203 StGB</a></li>
+<li><a href="#switzerland-dsg-dsv-epdg-and-its-ordinances">Switzerland: DSG, DSV, EPDG and its ordinances</a></li>
+</ul>
+</li>
+<li><a href="#where-to-go-next">Where to go next</a></li>
+</ul>
+<h2 id="what-ferroehr-claims-and-what-it-does-not"><a class="header" href="#what-ferroehr-claims-and-what-it-does-not">What FerroEHR claims, and what it does not</a></h2>
+<p>FerroEHR aims to be the first openly developed, source-available openEHR CDR
+with a published, tracker-backed EU compliance posture, and an EHDS conformity
+self-assessment is on its roadmap.</p>
+<p>It holds no certification, no declaration of conformity and no third-party
+assessment. No page on this site will tell you that FerroEHR is “GDPR
+compliant”, “NEN 7510 certified” or “EHDS conformant”, because none of those
+statements would be true of a piece of software on its own.</p>
+<p>What the project does instead is publish the record. A shipped control has a
+feature page in this book and an issue in the tracker that delivered it. A
+planned control has an open issue and appears here as planned, with its
+number. The <a href="control-matrix.html">control matrix</a> is generated from the tracker,
+so a control cannot sit on this site as “planned” after it has shipped, or as
+“shipped” before it has.</p>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p>The legal texts linked here change, and some of them are not yet in force.
+The EHDS obligations phase in over several years on the dates its own final
+provisions carry, and NEN republishes its standards on its own cycle
+(NEN 7510 was reissued in December 2024). Check each publisher directly
+before you rely on a statement here: <a href="https://eur-lex.europa.eu/">EUR-Lex</a>
+for EU law, <a href="https://wetten.overheid.nl/">wetten.overheid.nl</a> for Dutch law,
+<a href="https://www.gesetze-im-internet.de/">gesetze-im-internet.de</a> and
+<a href="https://www.recht.bund.de/">recht.bund.de</a> for German federal law,
+<a href="https://www.fedlex.admin.ch/">Fedlex</a> for Swiss federal law,
+the <a href="https://www.edpb.europa.eu/">EDPB</a> for guidelines, and
+<a href="https://www.nen.nl/zorg-welzijn/ict-in-de-zorg/informatiebeveiliging-in-de-zorg">NEN</a>
+for the 7510 family. This page is a summary for evaluators and deployers,
+not legal advice.</p>
+<p>The exact texts these pages were written against are vendored in the
+repository under
+<a href="https://github.com/FerroHEALTH/FerroEHR/tree/main/docs/law"><code>docs/law/</code></a>, each
+at a named consolidation with its digest and licence, and that directory’s
+README maps every act to the pages citing it. A statement here resolves to
+those bytes, and a publisher’s later amendment is a re-pin there, not a
+silent change of meaning.</p>
+</blockquote>
+<h2 id="the-pseudonymisation-boundary"><a class="header" href="#the-pseudonymisation-boundary">The pseudonymisation boundary</a></h2>
+<p>A clinical record is identifying as soon as the record and the person can be
+put back together by whoever holds the database. Separating the two, and
+controlling who may rejoin them, is what
+<a href="https://eur-lex.europa.eu/eli/reg/2016/679/oj">GDPR Art. 4(5)</a> calls
+pseudonymisation, and it is the control the
+<a href="https://www.edpb.europa.eu/our-work-tools/documents/public-consultations/2025/guidelines-012025-pseudonymisation_en">EDPB Guidelines 01/2025</a>
+expect a supplier to describe rather than assert.</p>
+<p>openEHR anticipated this. The Reference Model’s
+<a href="https://specifications.openehr.org/releases/RM/Release-1.1.0/common.html#_party_self_and_referring_to_the_patient_from_the_ehr">PARTY_SELF and Referring to the Patient from the EHR</a>
+section names three schemes for pointing at the record subject, and calls the
+one that never sets <code>external_ref</code> anywhere in the EHR “the most secure
+approach”, because the link between record and patient is then held outside
+the EHR. The second scheme sets it once, in
+<a href="https://specifications.openehr.org/releases/RM/Release-1.1.0/ehr.html#_ehr_status_class"><code>EHR_STATUS.subject</code></a>,
+whose own class description says the association “may be done elsewhere for
+security reasons”. The reference itself is a
+<a href="https://specifications.openehr.org/releases/BASE/Release-1.2.0/base_types.html#_party_ref_class"><code>PARTY_REF</code></a>,
+described by the specification as an “identifier for parties in a demographic
+or identity service”, so it carries a namespace, a party type and an id and no
+demographic content of its own. The specification leaves the choice of scheme
+to the implementation. Where the schemas, the database roles and the resolve
+path live is FerroEHR’s own design, and no openEHR spec governs it.</p>
+<h3 id="what-ships-today"><a class="header" href="#what-ships-today">What ships today</a></h3>
+<p>Clinical content and demographic parties live in separate PostgreSQL schemas,
+<code>ehr</code> and <code>demographic</code>, each with its own archival tier and its own runtime
+database roles. <code>ferroehr_clinical</code> and <code>ferroehr_party</code>, and a read-only twin
+of each, are <code>NOINHERIT</code>, hold explicit grants on one domain only, and carry an
+explicit revoke on the other and on <code>linkage</code>. The server refuses to start if that does not
+hold: a self-check enumerates every table, view, sequence and function in each
+domain and names the role and the object it can reach. The database refuses the
+mix as well, in both directions, so a code path that missed the split fails as
+a write error rather than leaking quietly.</p>
+<p>The separation of schemas is unconditional. Pointing the demographic and
+linkage pools at their own DSNs (<code>[storage.party] url</code> and
+<code>[storage.linkage] url</code>) makes it a separation of credentials too, which is what
+stops one leaked connection string from reaching more than one domain.</p>
+<p>The controls that apply across both domains are the same: role- and
+attribute-based authorization, per-EHR access settings, the
+domain-separated database roles, and the audit trail. Both sides carry openEHR’s own provenance,
+because every write commits a contribution and its audit in the same
+transaction, which is the versioning discipline the
+<a href="https://specifications.openehr.org/releases/RM/Release-1.1.0/common.html#_change_control_package">Change Control Package</a>
+defines.</p>
+<p>The map that rejoins the two is separated as well. <code>linkage</code> is a third schema
+under a fifth role, barred from both domains it joins and both of them from it,
+holding identifiers and a validity period and no attribute. The one crossing
+runs in the application over two pools and writes an access record. On the
+clinical side the subject reference is an opaque pseudonym once
+<code>[privacy] subject_namespaces</code> is declared, enforced by the write path and by a
+database trigger, and the identifier scanner refuses a national identifier
+anywhere in a clinical body.</p>
+<pre class="mermaid">flowchart LR
+    client["API client"] --&gt; server["FerroEHR server"]
+    server --&gt;|ferroehr_clinical| ehr[("clinical schema:&lt;br/&gt;versions and nodes")]
+    server --&gt;|ferroehr_party| demo[("party schema:&lt;br/&gt;parties and sealed identifiers")]
+    server --&gt;|ferroehr_linkage| link[("linkage schema:&lt;br/&gt;party to EHR resolve map")]
+    server --&gt;|audit writer| audit[("audit schema:&lt;br/&gt;ATNA record repository")]
+</pre>
+
+<h3 id="what-is-planned"><a class="header" href="#what-is-planned">What is planned</a></h3>
+<p>One piece of the programme (<a href="https://github.com/FerroHEALTH/FerroEHR/issues/3152">#3152</a> closed with v4.2.0) is still open,
+and it is about reading across the boundary for secondary use rather than
+holding the boundary.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Planned control</th><th>Issue</th></tr>
+</thead>
+<tbody>
+<tr><td>A secondary-use read model as a separate pseudonymisation domain, fed from the outbox, under project-level pseudonyms</td><td><a href="https://github.com/FerroHEALTH/FerroEHR/issues/3160">#3160</a></td></tr>
+</tbody>
+</table>
+</div>
+<p>Cross-domain cohort queries shipped with v4.2.0 (<a href="https://github.com/FerroHEALTH/FerroEHR/issues/3159">#3159</a>): a cohort
+question that spans both domains is answered through
+<a href="../querying-aql.html#cohort-queries-across-the-pseudonymisation-boundary"><code>POST /query/cohort</code></a>,
+each step on its own credential with identifiers only crossing between them,
+and a result set serving fewer distinct EHRs than the configured threshold is
+withheld and marked suppressed. Until the read model lands, secondary use runs
+on the primary store under those controls; size your access control, purpose
+limitation and risk assessment on that. The <a href="../threat-model.html">threat model</a>
+states the residual risk at each boundary, and the <a href="../security/dpia.html">DPIA page</a>
+carries the risk register and the shipped controls by issue number.</p>
+<h3 id="the-deployment-profile"><a class="header" href="#the-deployment-profile">The deployment profile</a></h3>
+<p>A deployment declares what it may hold with the top-level <code>deployment_profile</code>
+key (<a href="../installation/configuration.html#deployment_profile">configuration</a>).
+<code>production</code> refuses to start while a separation is missing and not accepted
+by name: separated credentials, separated clusters, a declared pseudonym
+namespace, an audit trail with a durable sink, schema preparation on its own
+credential. <code>sandbox</code>, the default, must not hold real personal data and says
+so on the banner, in the log and on <code>GET /rest/status</code>. The profile is
+FerroEHR’s own posture. GDPR Art. 4(5) asks that the additional information be
+“kept separately and … subject to technical and organisational measures”, not
+that it sit on a separate server, so one cluster with separated schemas and
+roles is a defensible reading; two clusters close the bridges no grant can,
+the superuser, an instance-wide point-in-time recovery, a single compromise,
+and the profile exists so that choice is made deliberately.</p>
+<h2 id="gdpr"><a class="header" href="#gdpr">GDPR</a></h2>
+<p><a href="https://eur-lex.europa.eu/eli/reg/2016/679/oj">Regulation (EU) 2016/679</a>
+places its duties on the controller and the processor. A CDR can only supply
+the technical measures those duties are met with. These are the articles a
+repository actually touches.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>What the article asks for</th><th>What FerroEHR ships</th><th>Tracker</th><th>What the deploying organisation must do</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Art. 4(5)</strong> pseudonymisation: identifying data kept separately, under technical measures</td><td>Clinical, demographic and linkage data in three schemas under non-overlapping <code>NOINHERIT</code> roles, enforced by grants, by a boot-time self-check in both directions and by a check on every table; separated credentials and clusters are asserted by the <code>production</code> <a href="../installation/configuration.html#deployment_profile">deployment profile</a></td><td>shipped, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3153">#3153</a>, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3158">#3158</a>, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3226">#3226</a></td><td>Run the production profile with the separations it asserts, and hold any additional information the CDR never sees to the same standard</td></tr>
+<tr><td><strong>Art. 5(1)(f)</strong> integrity and confidentiality</td><td>TLS 1.3 with optional mutual authentication, <a href="../security.html">authentication and authorization</a>, per-version digest <a href="../signing/index.html">signing</a>, a tamper-evident audit chain</td><td>shipped</td><td>Terminate TLS correctly, run the identity provider, hold the keys</td></tr>
+<tr><td><strong>Art. 5(1)(e)</strong> storage limitation: data kept in identifying form no longer than the purposes need</td><td>A <a href="retention.html#the-retention-register">retention register</a> of the period per content category and jurisdiction with the citation it rests on, a per-EHR anchor, and a view of what has run out. The repository deletes no clinical content on a timer: an openEHR record is indelible, so the register produces a list</td><td>shipped, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3346">#3346</a></td><td>Choose the periods, which follow from the law you run under and not from the software, and decide record by record what to do with the list</td></tr>
+<tr><td><strong>Art. 5(2)</strong> accountability: being able to demonstrate compliance</td><td>An audit trail of every access, <a href="../audit.html#retrieving-audit-records-iti-81">retrievable over ITI-81</a>, plus openEHR’s own contribution and audit chain on every write</td><td>shipped</td><td>Keep the records, define retention, be able to produce them</td></tr>
+<tr><td><strong>Art. 9</strong> special categories of data</td><td>Object-level <a href="../security.html#per-ehr-access-control-ehr_access"><code>EHR_ACCESS</code></a> settings, RBAC, ABAC, and the domain-separated database roles</td><td>shipped</td><td>Establish the Art. 9(2) condition and the national derogation that permits the processing</td></tr>
+<tr><td><strong>Art. 12(3)</strong> action on a rights request within one month, by electronic means where the request came electronically</td><td>Every right in the rows below is served by an API call, so the record is read, exported, corrected or deleted in the run that answers the request</td><td>shipped</td><td>Start the clock at receipt, verify the requester’s identity, and use the two-month extension only with the reasons 12(3) asks for</td></tr>
+<tr><td><strong>Art. 15(1)</strong> and <strong>15(3)</strong> access, and a copy of the data undergoing processing</td><td>The full record over the REST API in canonical openEHR JSON or XML, and <a href="../beyond-core/messaging.html#exporting-an-ehr">EHR Extract export</a> for a whole record; the recipients 15(1)(c) asks about come from the <a href="../audit.html#retrieving-audit-records-iti-81">per-patient trail search</a></td><td>shipped</td><td>Supply what the software cannot know: the purposes of 15(1)(a) and the storage period of 15(1)(d) are your configuration and your retention schedule. Authenticate the requester and build the patient-facing route</td></tr>
+<tr><td><strong>Art. 16</strong> rectification, and completion by a supplementary statement</td><td>A correction commits a new version while the prior one stays in the append-only history, which is the supplementary statement the article allows for incomplete data</td><td>shipped</td><td>Decide what is inaccurate or incomplete, and reconcile the correction with the record-keeping duty your national law imposes</td></tr>
+<tr><td><strong>Art. 17(1)</strong> erasure, subject to the grounds in <strong>17(3)(b) to (d)</strong></td><td><code>DELETE {base}/admin/ehr/{ehr_id}</code> (<a href="../operations-admin-apis.html#physical-deletion">physical deletion</a>) removes, in one transaction, the EHR and everything it owns over both storage tiers: compositions, <code>EHR_STATUS</code>, item tags, folder memberships, contributions, every historical version, the restriction and retention marks and the pending change events. The cross-reference row naming the subject is erased in the linkage domain, the externalized multimedia blobs no surviving version references are deleted from the object store, and an erasure tombstone on the change-event stream tells each consumer to delete what it derived (Art. 19). What stays is the audit trail naming the <code>ehr_id</code>, because Art. 17(3)(b) withholds erasure where processing is necessary for compliance with a legal obligation and the access-logging periods are that obligation</td><td>shipped, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3347">#3347</a></td><td>Decide whether a 17(3) ground refuses the request, a legal obligation, public health, or research under Art. 89(1), and record that decision. Backups, replicas and copies outside the CDR are reached by your own rotation, not by the call</td></tr>
+<tr><td><strong>Art. 18</strong> restriction of processing, which Art. 4(3) defines as marking stored data to limit its future processing</td><td>A <a href="retention.html#restriction-of-processing">restriction register</a> at two grains, a whole EHR or one versioned object in it: a marked object stays in storage and every path that would process it stops, the point read, the versioned read and the revision history with <strong>403</strong>, AQL at every scope, the EHR Extract, the event stream and any write. The register keeps the request and stamps it lifted, so the sequence 18(3) turns on survives. On a write the restriction is the last gate: content validation answers <strong>422</strong> and the preconditions outside the commit transaction answer <strong>409</strong>, because the mark is read inside that transaction so a concurrent lift is serialised with the write, so a refusal status names the gate that stopped the write rather than the state of the mark</td><td>shipped, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3324">#3324</a></td><td>Record the 18(1) ground on the request, hold the restriction in the systems around the CDR, and tell the subject before you lift it (18(3))</td></tr>
+<tr><td><strong>Art. 19</strong> communicating a rectification, erasure or restriction to each recipient, and naming those recipients to the subject on request</td><td>Every read and export is an access record naming the agent, the patient, the action, the outcome and the time, so the recipient list is answerable from the <a href="../audit.html#retrieving-audit-records-iti-81">trail</a></td><td>shipped</td><td>Send the communications. The trail records who received data; it notifies nobody. How far back the recipient list reaches is your <code>retention_days</code>: the regulation sets no retention period for an access log</td></tr>
+<tr><td><strong>Art. 20(1) and (2)</strong> portability in a structured, commonly used and machine-readable format, and direct transmission where technically feasible</td><td>Canonical openEHR JSON and XML, the <a href="../using-the-api/content-negotiation.html#simplified-formats-flat-and-structured">simplified FLAT and STRUCTURED formats</a>, and the <a href="../beyond-core/messaging.html#exporting-an-ehr">EHR Extract</a>, which another openEHR system imports directly</td><td>shipped</td><td>Check the trigger before answering: 20(1)(a) reaches processing based on consent or on a contract, and 20(3) excludes processing for a task carried out in the public interest, which is the basis much care runs on</td></tr>
+<tr><td><strong>Art. 21(1)</strong> objection, and <strong>21(6)</strong> objection to research processing under Art. 89(1)</td><td>A <a href="retention.html#objection-to-research-processing">research objection</a> per EHR: while it stands, the record leaves every full-population query, every export and the event stream, the three surfaces a secondary-use consumer reads the repository through, while a query naming the <code>ehr_id</code> and a read for care are untouched. The public-interest override 21(6) admits is recorded beside it and says on whose authority</td><td>shipped, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3325">#3325</a></td><td>Weigh the compelling legitimate grounds 21(1) asks for, record the outcome, and carry the objection into the systems outside the CDR</td></tr>
+<tr><td><strong>Art. 25</strong> data protection by design and by default</td><td>Deny-by-default authorization, an <code>EHR_ACCESS</code> default that can be set to restricted, audit on by default. The two defaults that favour compatibility, the <code>open</code> per-EHR access default and the <code>open</code> audit fail mode, stop a <code>production</code> deployment booting: each is a named gap (<code>open_ehr_access_default</code>, <code>audit_fails_open</code>) that the deployment either closes or accepts by name in <code>deployment_accepts</code>, which is then stated on every boot and on <code>/rest/status</code></td><td>shipped, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3323">#3323</a></td><td>Choose the restrictive settings, or record the decision to keep a compatibility default and carry it in <code>deployment_accepts</code></td></tr>
+<tr><td><strong>Art. 28(3)(e) to (h)</strong> what a processor’s contract must let it do: assist with the rights, assist with Arts. 32 to 36, delete or return the data at the end of service, and make audit information available</td><td>For a vendor operating a deployment: the rights operations in the rows above for (e), the trail and the controls documented in this book for (f), <a href="../beyond-core/messaging.html#exporting-an-ehr">EHR Extract export</a> beside admin <a href="../operations-admin-apis.html#physical-deletion">physical deletion</a> for (g), and <code>GET {base}/admin/config</code> with the trail as the evidence (h) asks for</td><td>shipped</td><td>Conclude the contract Art. 28(3) requires with whoever operates the deployment; no software supplies it. The FerroEHR project operates nothing and is not your processor</td></tr>
+<tr><td><strong>Art. 30</strong> records of processing activities, and <strong>30(1)(f)</strong> the envisaged time limits for erasure of the different categories of data</td><td>The effective configuration as a redacted JSON tree at <code>GET {base}/admin/config</code>, this book as a description of what the software does, and the <a href="retention.html#the-retention-register">retention register</a> as the machine-readable answer to the time limits per category 30(1)(f) asks for</td><td>shipped, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3346">#3346</a></td><td>Write and maintain the record itself; the software cannot know your purposes or recipients</td></tr>
+<tr><td><strong>Art. 32</strong> security of processing</td><td>The controls listed in <a href="../security.html">Security</a> and the residual risk in the <a href="../threat-model.html">threat model</a></td><td>shipped</td><td>Assess whether they are appropriate to your risk, and supply everything below the application</td></tr>
+<tr><td><strong>Art. 33(3)(a)</strong> the categories and approximate number of subjects and of records a breach touched, and <strong>Art. 34(3)(a)</strong> the measures that remove the duty to tell patients</td><td>The trail records reads, writes and refusals per patient and per agent, so whose records an incident reached, and how many, is countable from it</td><td>shipped</td><td>Assess and notify inside the deadlines. 34(3)(a) lifts the duty to inform patients only where the protection measures “were applied to the personal data affected”, so check what was in fact protected: the application seals national identifiers in the demographic domain and nothing else, and encryption of clinical content at rest belongs to the database and the disk. The regulation’s text says nothing about encryption at rest, so the measure and its strength are your choice to make and to defend</td></tr>
+<tr><td><strong>Art. 35</strong> data protection impact assessment</td><td>A <a href="../security/dpia.html">DPIA page</a> with the processing description, the data categories per schema, the roles, the retention including the Dutch access-log floor, a risk register and the shipped controls by issue, beside <a href="../security/records-of-processing.html">records of processing</a> pre-filled with what the software does and a <a href="../security/go-live-checklist.html">go-live checklist</a></td><td>shipped, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3161">#3161</a></td><td>Run the DPIA; it is the controller’s, and no supplier document replaces it</td></tr>
+<tr><td><strong>Art. 89(1)</strong> research safeguards: where the purpose can be met by processing that no longer identifies anyone, it must be met that way</td><td><a href="../querying-aql.html#cohort-queries-across-the-pseudonymisation-boundary">Cohort queries across the pseudonymisation boundary</a> answer a research question as an aggregate, withheld when fewer distinct EHRs than the configured threshold match</td><td>shipped, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3159">#3159</a>; the secondary-use read model as its own pseudonymisation domain is planned, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3160">#3160</a></td><td>Decide whether the purpose can be met without identification and take that route where it can. Until the read model lands, secondary use runs on the primary store</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="edpb-guidelines-012025-on-pseudonymisation"><a class="header" href="#edpb-guidelines-012025-on-pseudonymisation">EDPB Guidelines 01/2025 on pseudonymisation</a></h2>
+<p>The <a href="https://www.edpb.europa.eu/our-work-tools/documents/public-consultations/2025/guidelines-012025-pseudonymisation_en">EDPB guidelines</a>
+ask for something more specific than “we pseudonymise”: a named
+pseudonymisation domain, a stated attacker, and additional information kept
+where that attacker cannot reach it.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>What the guidelines ask for</th><th>What FerroEHR ships</th><th>Tracker</th><th>What the deploying organisation must do</th></tr>
+</thead>
+<tbody>
+<tr><td>A pseudonymisation domain stated explicitly</td><td>The clinical and demographic domains are separate schemas with their own roles, and the server refuses to boot if a role reaches across</td><td>shipped, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3153">#3153</a></td><td>State the domain for your deployment, including the parts outside FerroEHR</td></tr>
+<tr><td>The additional information held separately from the pseudonymised data</td><td>The party-to-EHR map lives in its own <code>linkage</code> schema under its own <code>NOINHERIT</code> role, revoked from both domains it joins and reached by no other pool; it is temporal, so a merge or split closes a row rather than deleting it, and it is backed up under its own key and its own job</td><td>shipped, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3158">#3158</a>, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3157">#3157</a></td><td>Hold any mapping outside the CDR to the same standard, and give the linkage backup the narrowest audience</td></tr>
+<tr><td>A written attacker model, including the insider holding a credential</td><td>The <a href="../threat-model.html">threat model</a> names actors, boundaries and the risk surviving each control</td><td>shipped</td><td>Extend it with the actors your environment adds: operators, backups, the network</td></tr>
+<tr><td>Resolution of a pseudonym recorded and controlled</td><td>Every resolution, merge and split is a linkage-domain access record, refused when it cannot be recorded under <code>fail_mode = "closed"</code>; a cohort query names its cohort by a digest of its predicates and never by their values</td><td>shipped, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3155">#3155</a>, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3235">#3235</a>, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3159">#3159</a></td><td>Restrict who may resolve, and review the trail</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="ehds"><a class="header" href="#ehds">EHDS</a></h2>
+<p><a href="https://eur-lex.europa.eu/eli/reg/2025/327/oj">Regulation (EU) 2025/327</a>
+splits into chapters that reach a CDR differently. Chapter III is the one that
+speaks to an EHR system as a product, and its obligations apply from a date in
+the regulation’s own final provisions rather than today.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Chapter</th><th>What FerroEHR ships</th><th>Tracker</th><th>What the deploying organisation must do</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Chapter II</strong>, primary use, including the patient’s access to their data and to a record of who accessed it</td><td>An <a href="../audit.html">access trail</a> of every read, write and refusal, searchable by patient and by agent</td><td>shipped</td><td>Build the patient-facing access route; the CDR exposes the trail to an admin caller, not to the patient</td></tr>
+<tr><td><strong>Chapter III</strong>, EHR systems: a European interoperability software component and a European logging software component, with published technical documentation</td><td>The <a href="ehds-readiness.html">EHDS readiness page</a> maps every Annex II requirement to a status with its evidence, the <a href="technical-documentation.html">technical documentation</a> page maps the Annex II documentation items, and the access trail records the logging component’s elements (<a href="../audit.html#the-ehds-logging-elements-mapped">audit</a>)</td><td>readiness shipped, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3168">#3168</a>, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3169">#3169</a>, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3170">#3170</a>, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3171">#3171</a>; the exchange format itself is an open question until the Article 36 implementing acts fix it</td><td>Follow the implementing acts; the conformity assessment and the EU declaration are the manufacturer’s, and who that is for a source-available CDR is stated on the readiness page</td></tr>
+<tr><td><strong>Chapter IV</strong>, secondary use</td><td><a href="../querying-aql.html">AQL</a> over the stored record, a <a href="../beyond-core/amqp.html">change-event outbox</a>, and <a href="../querying-aql.html#cohort-queries-across-the-pseudonymisation-boundary">cohort queries across the pseudonymisation boundary</a> with small-cell suppression</td><td>shipped, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3159">#3159</a>; a separate pseudonymisation domain for secondary use is planned, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3160">#3160</a></td><td>Deal with the health data access body; a CDR is not a data-holder’s permit process</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="national-law"><a class="header" href="#national-law">National law</a></h2>
+<p>Everything above this line applies to every EU deployment. Everything below it
+is one country’s law on top of it, and a deployment reads only its own
+section plus the EU layer.</p>
+<p>Three jurisdictions are filled in today: the Netherlands, Germany and
+Switzerland, each vendored under <code>docs/law/</code> and read against the text. The
+product side of the split is plural too: the write-path
+<a href="../installation/config-privacy.html">identifier scanner</a> ships a named rule per
+national identifier — Finland, the United Kingdom, the Netherlands, Norway and
+Sweden — each transcribing the checksum its own issuing register publishes,
+and a deployment selects the ones its content can carry. Denmark and Belgium
+are named there too, with the reason each is deliberately absent.</p>
+<p><strong>Adding a jurisdiction</strong> takes three things, and none of them is a change to
+how the scanner works: the national acts that sit on top of the GDPR, as a
+section in the shape of the Dutch one below (provision, what the product
+ships, tracker status, what the organisation must do); the national security
+and logging standards, in the shape of the NEN section; and, where the country
+issues a personal identifier with a published algorithm, a rule in
+<code>app/ferroehr/src/privacy/detect.rs</code> citing the register that defines it. Open
+a <a href="https://github.com/FerroHEALTH/FerroEHR/issues/new?template=04-regulation.yml">regulation request</a>
+with the official source and the provisions that reach a repository, and the
+project vendors the text and records a status per provision, the way the acts
+below are handled. A checksum transcribed from a secondary source is refused,
+because a rule that guesses tells an operator their data was scanned when it
+was not.</p>
+<h3 id="the-netherlands-uavg-and-wabvpz"><a class="header" href="#the-netherlands-uavg-and-wabvpz">The Netherlands: UAVG and Wabvpz</a></h3>
+<p>Two Dutch acts sit on top of the GDPR for a care provider. The
+<a href="https://wetten.overheid.nl/BWBR0040940">UAVG</a> is the national implementation
+act; the <a href="https://wetten.overheid.nl/BWBR0023864">Wabvpz</a> governs the
+burgerservicenummer in care and the patient’s electronic access to their
+record.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Provision</th><th>What FerroEHR ships</th><th>Tracker</th><th>What the deploying organisation must do</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>UAVG Art. 30</strong>, exceptions for health data</td><td>Access control at the record and the attribute level, and an audit trail of who used it</td><td>shipped</td><td>Establish that your processing falls inside the exception, per role and per purpose</td></tr>
+<tr><td><strong>UAVG Art. 46</strong>, processing a national identification number</td><td>A national identifier is sealed at rest in the demographic domain under authenticated encryption with the instance’s identifier-protection key, looked up through a keyed digest, resolved only through a <code>SECURITY DEFINER</code> function on the demographic role, and every resolution, hit or miss, is a recorded linkage access that never carries the value</td><td>shipped, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3155">#3155</a></td><td>Hold the statutory authorisation before a BSN enters the store, and restrict who may resolve</td></tr>
+<tr><td><strong>Wabvpz Art. 4 to 9</strong>, use and verification of the BSN by care providers</td><td>Nothing specific: FerroEHR performs no BSN verification and consults no index</td><td>not planned</td><td>Verify identity and the BSN in your own systems before data reaches the CDR</td></tr>
+<tr><td><strong>Wabvpz Art. 15d</strong>, electronic access and copy for the patient</td><td>The full record over the openEHR REST API, and <a href="../beyond-core/messaging.html">EHR Extract export</a> for a whole record</td><td>shipped</td><td>Build the patient-facing route and authenticate the patient</td></tr>
+<tr><td><strong>Wabvpz Art. 15e</strong>, a record of who made data available and who consulted it</td><td>The ATNA trail records reads, writes and refusals with the agent, the patient, the action and the outcome, and answers a per-patient search</td><td>shipped</td><td>Turn the trail into something a patient can read, and set retention</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="the-netherlands-nen-7510-nen-7512-and-nen-7513"><a class="header" href="#the-netherlands-nen-7510-nen-7512-and-nen-7513">The Netherlands: NEN 7510, NEN 7512 and NEN 7513</a></h3>
+<p>The <a href="https://www.nen.nl/zorg-welzijn/ict-in-de-zorg/informatiebeveiliging-in-de-zorg">NEN 7510 family</a>
+governs information security in Dutch healthcare. NEN 7510 is a
+management-system standard, which no product can be certified against.
+NEN 7512 governs what exchanging parties promise each other. NEN 7513 is the
+one that states requirements a piece of software meets directly.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Standard</th><th>What FerroEHR ships</th><th>Tracker</th><th>What the deploying organisation must do</th></tr>
+</thead>
+<tbody>
+<tr><td><strong><a href="https://www.nen.nl/nen-7510-1-2024-nl-331311">NEN 7510-1</a></strong> and <strong><a href="https://www.nen.nl/nen-7510-2-2024-nl-331314">7510-2</a></strong>, the management system and its controls</td><td>Technical controls an ISMS can point at, documented per control with their residual risk</td><td>shipped</td><td>Run the ISMS and hold the <a href="https://www.nen.nl/certificatie-en-keurmerken-nen-7510">certification</a>; a product cannot be certified against a management-system standard</td></tr>
+<tr><td><strong><a href="https://www.nen.nl/nen-7512-2022-nl-297137">NEN 7512</a></strong>, the trust basis for data exchange</td><td>Mutually authenticated TLS (<a href="../audit.html#node-authentication-iti-19-mutual-tls">IHE ITI-19</a>), OAuth2 and OIDC with an <a href="../identity-providers.html">enterprise identity provider</a>, signed and verifiable <a href="../verifying-releases.html">releases</a></td><td>shipped</td><td>Agree the trust basis with each counterparty and operate the certificate estate</td></tr>
+<tr><td><strong><a href="https://www.nen.nl/nen-7513-2018-nl-245399">NEN 7513</a></strong>, logging actions on electronic patient records</td><td>An IHE ATNA trail that records every operation including refusals, in FHIR <code>AuditEvent</code> and DICOM PS3.15 form, hash-chained in the database and retrievable per patient</td><td>shipped</td><td>Map the recorded fields onto the standard’s own list, set retention, and review the trail</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="germany-bdsg-sgb-v-gdng-and--203-stgb"><a class="header" href="#germany-bdsg-sgb-v-gdng-and--203-stgb">Germany: BDSG, SGB V, GDNG and § 203 StGB</a></h3>
+<p>Four federal acts sit on top of the GDPR for a German care provider. The
+<a href="https://www.gesetze-im-internet.de/bdsg_2018/">BDSG</a> carries the national
+health-data ground and the research derogation; <a href="https://www.gesetze-im-internet.de/sgb_5/">SGB V</a>
+§§ 341 to 355 define the elektronische Patientenakte (ePA) and §§ 360 to 363
+the telematics infrastructure, as rewritten by the
+<a href="https://www.recht.bund.de/bgbl/1/2024/101/VO.html">Digital-Gesetz</a>; the
+<a href="https://www.gesetze-im-internet.de/gdng/">GDNG</a> governs secondary use; and
+<a href="https://www.gesetze-im-internet.de/stgb/__203.html">§ 203 StGB</a> is the
+professional secrecy every access by a non-clinician is measured against.
+State law (the Landeskrankenhausgesetze and the state data protection acts) is
+not covered here; a hospital reads its own state’s law beside this section.</p>
+<p>FerroEHR is not an ePA, holds no telematics-infrastructure component, and
+performs no electronic health professional card (HBA) or institution card
+(SMC-B) authentication. Where a provision below binds the ePA operator, the
+health insurer or gematik, the row says so.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Provision</th><th>What FerroEHR ships</th><th>Tracker</th><th>What the deploying organisation must do</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>BDSG § 22 Abs. 1 Nr. 1 lit. b and Abs. 2</strong>, the health-care ground for special categories and the measures named for it: traceability of who entered, changed or removed data, access restriction inside the controller and its processors, pseudonymisation, encryption</td><td>An append-only version history where every write commits a contribution and its audit in one transaction, an <a href="../audit.html">access trail</a> of every read, write and refusal, deny-by-default <a href="../security.html#authorization">authorization</a> with read-only roles, the three-schema <a href="#the-pseudonymisation-boundary">pseudonymisation boundary</a>, TLS 1.3 and national identifiers sealed at rest</td><td>shipped, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3153">#3153</a>, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3155">#3155</a></td><td>Establish that the processing is by, or under the responsibility of, persons bound by professional secrecy, as lit. b requires; the Abs. 2 list is a menu of measures the law names, and the duty is to choose appropriate and specific ones</td></tr>
+<tr><td><strong>BDSG § 27 Abs. 3</strong>, research: identifying characteristics stored separately and rejoined only as the research purpose requires, anonymised as soon as possible</td><td>Clinical, demographic and linkage data in separate schemas under separate roles; <a href="../querying-aql.html#cohort-queries-across-the-pseudonymisation-boundary">cohort queries</a> that cross the boundary on identifiers only, with small-cell suppression</td><td>shipped, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3158">#3158</a>, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3159">#3159</a>; a separate secondary-use domain under project-level pseudonyms is planned, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3160">#3160</a></td><td>Decide when the research purpose no longer needs the link and anonymise; hold the balancing test Abs. 1 asks for</td></tr>
+<tr><td><strong>BDSG § 35 Abs. 2 and 3</strong>, restriction of processing in place of erasure where erasure would harm the subject or a retention period bars it</td><td>The same <a href="retention.html#restriction-of-processing">restriction register</a> the GDPR Art. 18 row above describes, at whole-EHR or single-object grain, with <code>national</code> as the ground a member-state rule like this one is recorded under</td><td>shipped, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3324">#3324</a></td><td>Decide per request whether Art. 17 or the restriction applies, record which of Abs. 2 or Abs. 3 it rests on, and notify the subject of a restriction</td></tr>
+<tr><td><strong>SGB V § 339 Abs. 3 and 5, § 352, § 361</strong>, access to the ePA and to prescriptions only with a professional credential, a verifiable log of who accessed which data and who authorised a delegated access, and a closed per-role matrix of read and write scopes</td><td>Role- and attribute-based authorization over the roles the identity provider asserts, and an access trail naming the agent, its roles, the patient, the action and the outcome, refusals included</td><td>shipped</td><td>Bind the identity provider to the HBA and SMC-B credentials; these sections bind access to the ePA itself, which the CDR is not, and the CDR encodes the § 352 matrix only as far as the roles reach it</td></tr>
+<tr><td><strong>SGB V §§ 346 to 348</strong>, the duty to write treatment data into the patient’s ePA, conditioned on the provider’s system holding it in semantically and syntactically interoperable form, with discharge letters, laboratory and imaging reports named outright</td><td>Every record is structured against an openEHR template and served over the <a href="../getting-started.html">REST API</a> and as an <a href="../beyond-core/messaging.html#exporting-an-ehr">EHR Extract</a>, so a hospital’s data meets the condition that triggers the duty</td><td>shipped</td><td>Run the transport into the ePA: the connector, the telematics infrastructure and the information objects § 355 prescribes are outside the CDR</td></tr>
+<tr><td><strong>SGB V § 347 Abs. 1, 4 and 6, § 348 Abs. 3 to 6, § 353 Abs. 3 and 5</strong>, every objection, consent and refusal ground recorded verifiably in the treatment documentation; genetic results only by the responsible physician on explicit consent</td><td>A consent, objection or refusal recorded as a composition is versioned, attributed and audited like every other entry; FerroEHR ships no dedicated consent register and no per-category export gate</td><td>shipped, as versioned content</td><td>Model the consent and objection records in your templates, and gate the ePA transfer on them in the transport</td></tr>
+<tr><td><strong>SGB V § 309</strong>, the telematics-infrastructure access log: attempted accesses as well as successful ones, who accessed which data, three years’ retention and deletion on expiry, person-identifiable from 2030</td><td>The trail records attempts and refusals with the agent and the object touched; <code>[audit.store] retention_days</code> and the <a href="../audit.html#retention-and-who-chooses-it">retention reaper</a> implement the period, and <code>[audit.store] sgb_v_309_controller</code> turns Abs. 3 into a <a href="retention.html#the-audit-trail-and-the-access-log-ceiling">boot-checked ceiling</a> that refuses any horizon above the three-year period, keep-forever included</td><td>shipped, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3346">#3346</a></td><td>This section binds the controllers of TI applications under § 307; a CDR outside the TI is not one. Set the declaration only if you are one, set the retention you owe, and review the trail</td></tr>
+<tr><td><strong>SGB V § 355</strong>, interoperability of ePA content: international standards, the BfArM terminologies, a versioned terminology server</td><td>openEHR archetypes and templates as the content model, terminology bindings resolved at commit time against any FHIR R4B terminology server through <a href="../installation/config-integrations.html"><code>[terminology.external]</code></a>, which is the interface gematik’s terminology server exposes</td><td>shipped</td><td>Point the terminology route at the server gematik runs and adopt the information objects the KBV publishes; the text names no serialization, and neither does this page</td></tr>
+<tr><td><strong>SGB V § 360 Abs. 16</strong>, electronic prescription transport outside the telematics infrastructure is prohibited</td><td>Nothing, and nothing planned: the CDR carries no prescription transport</td><td>not planned</td><td>Run prescriptions through the TI</td></tr>
+<tr><td><strong>GDNG § 6</strong>, a provider’s own patient data reprocessed for quality assurance, research and statistics: pseudonymised, anonymised as soon as possible, under a rights-and-roles concept with logging, deleted after thirty years at the latest, and disclosable to the subject by kind, scope and concrete purpose</td><td>Per-domain roles that keep a research credential off the identifying data, <a href="../querying-aql.html#cohort-queries-across-the-pseudonymisation-boundary">cohort queries</a> named by a digest of their predicates and withheld under a small-cell threshold, an access record per query carrying the deployment’s declared <code>purpose</code> and <code>legal_basis</code>, and the <a href="retention.html#the-retention-register">retention register</a> as where the thirty-year limit for the repository’s own copies is written down and read back</td><td>shipped, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3159">#3159</a>, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3346">#3346</a>; the rebuildable read model under project-level pseudonyms is planned, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3160">#3160</a></td><td>Write the rights-and-roles concept, publish the purposes, run the thirty-year clock against the register, and answer subjects’ requests from the trail</td></tr>
+<tr><td><strong>SGB V § 290</strong>, the Krankenversichertennummer every insured person’s record carries</td><td>The <a href="../installation/config-privacy.html">identifier scanner</a>’s <code>de-kvnr</code> rule refuses the number’s unchangeable part in clinical content, transcribed from the GKV-Spitzenverband’s Richtlinie; no access-log retention floor is registered for Germany, because the BDSG sets none for a hospital and SGB V § 309 binds the telematics-infrastructure controllers</td><td>shipped, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3318">#3318</a></td><td>Keep the number out of the clinical record as the scanner asks, and hold it sealed in the demographic domain</td></tr>
+<tr><td><strong>§ 203 StGB Abs. 3 and 4</strong>, disclosure to persons who keep the systems running is lawful only as far as their work requires it, and the professional is liable for not binding them to secrecy</td><td>Operations reach the CDR through separate <a href="../security.html#operational-surfaces-what-is-reachable-and-by-whom">surfaces</a> (management, admin, clinical), every admin read of clinical content is an access record naming the caller, the database roles hold one domain each, and secrets are mounted rather than baked</td><td>shipped</td><td>Bind every operator and subcontractor to secrecy in writing, and give support a route that needs no standing read of clinical content</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="switzerland-dsg-dsv-epdg-and-its-ordinances"><a class="header" href="#switzerland-dsg-dsv-epdg-and-its-ordinances">Switzerland: DSG, DSV, EPDG and its ordinances</a></h3>
+<p>Switzerland is not an EU member state, so a Swiss deployment processes under
+the <a href="https://www.fedlex.admin.ch/eli/cc/2022/491/de">Datenschutzgesetz (DSG)</a>
+and its ordinance, the <a href="https://www.fedlex.admin.ch/eli/cc/2022/568/de">DSV</a>,
+in force since 1 September 2023, and the GDPR does not apply to it. The
+<a href="https://www.fedlex.admin.ch/eli/cc/2017/203/de">EPDG</a> with the
+<a href="https://www.fedlex.admin.ch/eli/cc/2017/204/de">EPDV</a> and the
+<a href="https://www.fedlex.admin.ch/eli/cc/2017/205/de">EPDV-EDI</a> govern the
+elektronisches Patientendossier (EPD), a retrieval layer run by certified
+communities over records that stay where they are. Cantonal health and data
+protection law is not covered here. The German text is the authentic one;
+Fedlex’s English translations of the DSG and DSV are vendored beside it and
+bind nobody.</p>
+<p>FerroEHR is not an EPD community and holds no certification. Where a provision
+binds a community or the identity issuers, the row says so.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Provision</th><th>What FerroEHR ships</th><th>Tracker</th><th>What the deploying organisation must do</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>DSG Art. 7</strong>, data protection by design and by default: processing arranged from the planning stage so the Art. 6 principles hold, and defaults that limit processing to the minimum</td><td>Deny-by-default <a href="../security.html#authorization">authorization</a>, tenancy that fails closed, audit on by default, and a <code>production</code> <a href="../installation/configuration.html#deployment_profile">deployment profile</a> that refuses to start while a separation is missing</td><td>shipped</td><td>Choose the restrictive settings. Two defaults favour compatibility instead: the per-EHR access default is <code>open</code>, and the audit fail mode is <code>open</code></td></tr>
+<tr><td><strong>DSG Art. 8 and DSV Art. 2 and 3</strong>, the minimum security measures: need-to-know access control, storage and transport control, restoration, malfunction reporting, system security, entry control, disclosure control, breach detection</td><td>Role- and attribute-based <a href="../security.html#authorization">authorization</a> and per-EHR <code>EHR_ACCESS</code>; one database role per domain; TLS 1.3 with optional mutual authentication; health and readiness endpoints; a locked, advisory-gated dependency set and <a href="../verifying-releases.html">signed releases</a>; every write attributed and versioned; an <a href="../audit.html">access trail</a> naming who read what, refusals included</td><td>shipped</td><td>Run the backup and restore path, patch on the release cadence, and detect breaches from the trail and the metrics; the DSV names the controls, the deployment supplies everything below the application</td></tr>
+<tr><td><strong>DSV Art. 4 Abs. 1, 4 and 5</strong>, logging for large-scale processing of sensitive data: storing, changing, disclosing, deleting, destroying and reading, each entry with the actor, the kind, the date, the time and the recipient, kept at least one year separately from the processing system and readable only by the oversight roles</td><td>The trail records every operation including reads and refusals with the agent, the patient, the action, the outcome and the time, in a dedicated <code>audit</code> schema retrievable by an admin caller only, with <a href="../audit.html#getting-the-log-out">forwarding sinks</a> (syslog, IHE ITI-20) that put a copy outside the system; <code>[audit.store] retention_days</code> sets the period. The separation Abs. 5 asks for is the deployment’s DSN choice, and the server reports on it: the audit pool’s own cluster is read at boot like every other domain’s, so an audit database sharing a cluster with a pseudonymisation domain is a <code>shared_cluster</code> gap on <code>/rest/status</code> rather than an invisible co-location</td><td>shipped for the trail and the posture reading; the separation itself is the deployment’s, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3398">#3398</a></td><td>Forward the trail to a repository outside the CDR, set the retention at a year or more, and restrict who may read it; the one-year floor is enforced at boot once a Swiss identifier rule is active, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3319">#3319</a></td></tr>
+<tr><td><strong>DSG Art. 12 and DSV Art. 24</strong>, the register of processing activities, from which large-scale processing of sensitive data has no small-organisation exemption</td><td>The effective configuration as a redacted JSON tree at <code>GET {base}/admin/config</code>, <a href="../security/records-of-processing.html">records of processing</a> pre-filled with what the software does, and the retention and security-measure inputs Art. 12 Abs. 2 lit. e and f ask for</td><td>shipped</td><td>Write and maintain the register; the software cannot know your purposes or recipients</td></tr>
+<tr><td><strong>DSG Art. 22 Abs. 2 lit. a</strong>, a data protection impact assessment before large-scale processing of sensitive data</td><td>The <a href="../security/dpia.html">DPIA page</a> with the processing description, the data categories per schema, the roles, the retention, a risk register and the shipped controls by issue</td><td>shipped, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3161">#3161</a></td><td>Run the assessment; it is the controller’s. Art. 22 Abs. 5 lets a private controller skip it for a system certified under Art. 13, and FerroEHR holds no such certification</td></tr>
+<tr><td><strong>DSG Art. 24</strong>, notifying the EDÖB of a breach as soon as possible, with its kind, consequences and measures</td><td>The evidence a notification is written from: the trail with refusals attributed to the caller, the hash chain that shows tampering, the boot-time domain self-check</td><td>shipped</td><td>Detect, assess and notify; nothing in the software sends a notification</td></tr>
+<tr><td><strong>DSG Art. 25 Abs. 2, 3 and 7, DSV Art. 16 and 18</strong>, the right of access within 30 days: the data themselves, the purpose, the retention, the provenance and the recipients, in an understandable form, health data deliverable through a designated health professional</td><td>The full record over the openEHR REST API and as an <a href="../beyond-core/messaging.html#exporting-an-ehr">EHR Extract</a>, a <a href="../audit.html#retrieving-audit-records-iti-81">per-patient search of the trail</a> that answers who received the data, and the <a href="retention.html#the-retention-register">retention register</a>, which is where the Abs. 2 lit. d answer, the retention period or the criteria that fix it, is read from rather than recalled</td><td>shipped, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3346">#3346</a></td><td>Identify the requester (DSV Art. 16 Abs. 5), render the answer in an understandable form, route it to the patient or the designated professional, and meet the 30 days</td></tr>
+<tr><td><strong>DSG Art. 28 and DSV Art. 21</strong>, data portability in a common electronic format that another controller can reuse</td><td>Canonical openEHR JSON and XML, the simplified FLAT and STRUCTURED formats, and the EHR Extract, all published open formats</td><td>shipped</td><td>Decide which data are subject-provided or observed and which are derived (DSV Art. 20 Abs. 2), and export accordingly</td></tr>
+<tr><td><strong>DSG Art. 6 Abs. 4 and Art. 31 Abs. 2 lit. e</strong>, destruction or anonymisation once the purpose lapses, and research on the condition that data are anonymised as soon as the purpose allows, with measures against identifiability meanwhile</td><td>Clinical, demographic and linkage data in separate schemas under separate roles, <a href="../querying-aql.html#cohort-queries-across-the-pseudonymisation-boundary">cohort queries</a> with small-cell suppression, admin deletion and archival of a record, and the <a href="retention.html#the-retention-register">retention register</a> that says when a purpose has lapsed and lists what is due</td><td>shipped, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3158">#3158</a>, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3159">#3159</a>, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3346">#3346</a>; a separate secondary-use domain under project-level pseudonyms is planned, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3160">#3160</a></td><td>Set the retention the cantonal health law requires, decide when anonymisation is possible, and hold the research ground</td></tr>
+<tr><td><strong>EPDG Art. 9 and 10, EPDV Art. 1 to 4, 10 and 12, EPDV-EDI Anhang 5</strong>, the EPD: three confidentiality levels and grantable access rights, emergency access with notification of the patient, every processing logged and the logs kept ten years, EPD data stored separately and encrypted, data stores in Switzerland, and the IHE profiles a community speaks (ATNA with Record Audit Event ITI-20 and Authenticate Node ITI-19, CH:ATC with Retrieve ATNA Audit Event ITI-81, IUA, XUA, XDS, MHD)</td><td>What a community integration consumes: <a href="../audit.html">IHE ATNA</a> audit events over ITI-20 with <a href="../audit.html#node-authentication-iti-19-mutual-tls">ITI-19 mutual TLS</a> and ITI-81 retrieval, the record in published formats, a self-hosted deployment with no dependency outside the operator’s control, and the <a href="retention.html">retention register</a> for Art. 10’s twenty-year destruction, with the per-object hold Abs. 2 lit. b asks for</td><td>shipped, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3346">#3346</a>; FerroEHR has no emergency-access mode and encrypts national identifiers only, so encryption at rest is the database’s and the disk’s</td><td>These provisions bind the certified community, which the CDR is not. Feed the EPD through a community’s access point, place the data stores in Switzerland, and carry the confidentiality level on each document you contribute</td></tr>
+<tr><td><strong>EPDV Art. 5 and 7, EPDV-EDI Anhang 1, AHVV Art. 133</strong>, the patient identification number (eighteen digits with a published check digit, entered manually only under a check-digit control, never a source of inference about the patient) and the AHV number it is issued from</td><td>The <a href="../installation/config-privacy.html">identifier scanner</a>’s <code>ch-epd-pid</code> and <code>ch-ahvn13</code> rules refuse either number in clinical content, transcribed from the ordinance’s annex and the BSV’s Wegleitung; the access-log retention floor of DSV Art. 4 Abs. 5 is enforced once a Swiss rule is active</td><td>shipped, <a href="https://github.com/FerroHEALTH/FerroEHR/issues/3319">#3319</a></td><td>Treat the number as opaque, and keep the AHV number out of clinical content</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="where-to-go-next"><a class="header" href="#where-to-go-next">Where to go next</a></h2>
+<ul>
+<li><strong><a href="control-matrix.html">Control matrix</a>:</strong> the machine-generated status of every
+declared control, straight from the tracker.</li>
+<li><strong><a href="shared-responsibility.html">Shared responsibility</a>:</strong> which obligation is
+the software’s and which is yours, obligation by obligation.</li>
+<li><strong><a href="../security.html">Security</a>:</strong> how each control is
+configured.</li>
+<li><strong><a href="../threat-model.html">Threat model</a>:</strong> what survives each control.</li>
+<li><strong><a href="../audit.html">Audit trail</a>:</strong> what is recorded, in which formats, and how
+to read it back.</li>
+<li><strong><a href="../security/dpia.html">Data protection impact assessment</a>:</strong> the technical
+description, the risk register, and the shipped controls by issue number.</li>
+<li><strong><a href="../security/records-of-processing.html">Records of processing</a>:</strong> an
+Art. 30 template pre-filled with what the software does.</li>
+<li><strong><a href="../security/go-live-checklist.html">Go-live checklist</a>:</strong> what to verify
+before a deployment holds real patient data.</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../licensing.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../compliance/shared-responsibility.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../licensing.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../compliance/shared-responsibility.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../theme/mermaid-eefea253.min.js"></script>
+        <script src="../theme/mermaid-init-ccf746f1.js"></script>
+        <script src="../theme/version-picker-dddf05c1.js"></script>
+
+
+
+    </div>
+    </body>
+</html>
