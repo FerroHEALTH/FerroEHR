@@ -337,7 +337,7 @@ SPDX-License-Identifier = "BUSL-1.1"
 
 # ── The vendored regulation corpus ──────────────────────────────────────────
 # docs/law/ carries the legal texts the compliance documentation cites, fetched
-# verbatim by scripts/vendor/law-eu.sh and scripts/vendor/law-nl.sh. Each act
+# verbatim by scripts/vendor/law-{eu,nl,de,ch}.sh. Each act
 # directory's PROVENANCE.md names the identifier, the consolidation date, the
 # source and the licence; the terms themselves are quoted in LICENSES/. These
 # are the publisher's bytes, so `override`: no in-file marking could correct
