@@ -385,7 +385,10 @@ SPDX-License-Identifier = "LicenseRef-EUR-Lex-Reuse AND CC-BY-4.0"
 # copyright page: reuse for any purpose, on condition that the source is
 # acknowledged and the meaning is not distorted.
 [[annotations]]
-path = "docs/law/eu/edpb-guidelines-01-2025-pseudonymisation/**"
+path = [
+  "docs/law/eu/edpb-guidelines-01-2025-pseudonymisation/**",
+  "docs/law/eu/edpb-guidelines-02-2023-eprivacy-5-3/**",
+]
 precedence = "override"
 SPDX-FileCopyrightText = "European Data Protection Board"
 SPDX-License-Identifier = "LicenseRef-EDPB-Reuse"

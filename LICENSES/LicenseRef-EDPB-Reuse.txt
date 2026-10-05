@@ -1,8 +1,9 @@
 EDPB reuse terms
 ================
 
-This identifier covers the European Data Protection Board document vendored at
-`docs/law/eu/edpb-guidelines-01-2025-pseudonymisation/`, fetched by
+This identifier covers the European Data Protection Board documents vendored
+at `docs/law/eu/edpb-guidelines-01-2025-pseudonymisation/` and
+`docs/law/eu/edpb-guidelines-02-2023-eprivacy-5-3/`, fetched by
 `scripts/vendor/law-eu.sh`. It is not an SPDX-listed licence. It is the reuse
 policy the EDPB states for its own material, recorded in machine-readable form
 so that a glob elsewhere in REUSE.toml cannot assert the wrong terms over it.
@@ -11,7 +12,10 @@ What the publisher states
 -------------------------
 
 Quoted verbatim from the EDPB copyright page,
-https://www.edpb.europa.eu/copyright_en, read 2026-09-12:
+https://www.edpb.europa.eu/copyright_en, read 2026-09-12 and read again
+2026-10-05, when the page carried the same words. The site has no separate
+legal notice (https://www.edpb.europa.eu/legal-notice_en answered 404 on
+2026-10-05):
 
   The content of this website includes text data and multimedia items such as
   texts, drawings, graphics, logos, icons, images, audio and video material,
@@ -62,14 +66,14 @@ https://www.edpb.europa.eu/copyright_en, read 2026-09-12:
 How it applies to this repository
 ---------------------------------
 
-The vendored file is the published PDF, reproduced byte for byte. The three
+Each vendored file is the published PDF, reproduced byte for byte. The three
 conditions are met and stay met by construction:
 
-  * the source is acknowledged in that directory's `PROVENANCE.md` and in the
+  * the source is acknowledged in each directory's `PROVENANCE.md` and in the
     index at `docs/law/README.md`;
-  * the meaning is not distorted, because the document is not converted,
-    extracted from or paraphrased anywhere in this repository, and its SHA-256
+  * the meaning is not distorted, because no document is converted,
+    extracted from or paraphrased anywhere in this repository, and each SHA-256
     is recorded so that stays checkable;
   * no liability is imputed to the EDPB by anything here.
 
-The record also states what the document is: guidelines, which bind nobody.
+Each record also states what the document is: guidelines, which bind nobody.

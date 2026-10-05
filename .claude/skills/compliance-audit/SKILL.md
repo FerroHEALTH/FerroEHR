@@ -3,7 +3,7 @@ name: compliance-audit
 description: >
   Audits FerroEHR against one regulation, article by article, from the
   vendored text at docs/law/ (the GDPR, the ePrivacy Directive, EHDS, NIS2,
-  CRA, MDR, the EDPB pseudonymisation guidelines, the UAVG, Wabvpz, BW 7,
+  CRA, MDR, the EDPB guidelines (pseudonymisation, ePrivacy Art. 5(3)), the UAVG, Wabvpz, BW 7,
   the Telecommunicatiewet, the Dutch logging decree, Begz, the BDSG, SGB V, GDNG, StGB, the Swiss DSG, DSV, EPDG, EPDV,
   EPDV-EDI): builds the checklist from the text first, walks it against the
   code, the configuration and the book, classifies every article, files one
