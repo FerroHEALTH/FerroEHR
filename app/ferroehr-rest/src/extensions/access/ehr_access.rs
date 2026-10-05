@@ -22,7 +22,7 @@
 //! `master04-ehr_package.adoc` §EHR Access). The concrete scheme evaluated,
 //! `ferroehr.access_control.v1`, is our own design.
 //!
-//! The per-EHR gate also holds for AQL ([`query_scope`]): every EHR the caller
+//! The per-EHR gate also holds for AQL (`query_scope`): every EHR the caller
 //! may not read is withheld from the query's sources, whether the query names
 //! the EHR in its `WHERE` clause, an `EHR` predicate, the `ehr_id` parameter,
 //! or not at all. Privacy-level filtering of individual Composition rows is out
