@@ -34,6 +34,7 @@ use ferroehr::system_log::config::AuditPosture;
 use ferroehr::system_log::sender::{AuditHandle, AuditSender, SubjectResolver};
 use ferroehr::telemetry::build_info::BuildInfo;
 use ferroehr::telemetry::health::{HealthIndicator, HealthRegistry};
+use ferroehr::usage_report::reporter::{EventKind, Identity, NOTICE_URL, UsageReporter};
 use ferroehr::versioning::signature::signer::Signer;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authz::{
@@ -90,6 +91,17 @@ pub enum Command {
         #[command(subcommand)]
         cmd: DbCmd,
     },
+    /// The usage report to `FerroPULSE`: print the report this instance would
+    /// send, without sending it.
+    UsageReport {
+        /// Print the report as the exact JSON body a send would carry, then
+        /// exit. Required: printing is the only action.
+        #[arg(long, required = true)]
+        print: bool,
+        /// Which report to print.
+        #[arg(long, value_enum, default_value_t = ReportEvent::Start)]
+        event: ReportEvent,
+    },
 }
 
 /// `ferroehr db …` subcommands.
@@ -105,6 +117,15 @@ pub enum DbCmd {
     /// Verify, without issuing any DDL, that the database carries exactly this
     /// build's migrations; exit 0 when it does, 1 otherwise.
     Verify,
+}
+
+/// The report `ferroehr usage-report --print` renders.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
+pub enum ReportEvent {
+    /// The report sent at each process start.
+    Start,
+    /// The report sent once a day, with the metrics window.
+    Daily,
 }
 
 /// `ferroehr config …` subcommands.
@@ -144,6 +165,9 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
         }
         Some(Command::Config { cmd }) => run_config(&cmd, cli.config.as_deref(), &cli.set),
         Some(Command::Db { cmd }) => run_db(&cmd, cli.config.as_deref(), &cli.set).await,
+        Some(Command::UsageReport { print: _, event }) => {
+            run_usage_report(event, cli.config.as_deref(), &cli.set).await
+        }
         None => serve(cli.config.as_deref(), &cli.set).await,
     }
 }
@@ -177,6 +201,87 @@ async fn run_db(
     };
     telemetry.shutdown().await;
     outcome
+}
+
+/// `ferroehr usage-report --print`: assembles the report this instance would
+/// send and prints its exact JSON body to stdout, sending nothing.
+///
+/// Telemetry is not initialised, so stdout carries the JSON alone; the notes
+/// an operator needs go to stderr. The database is read, never written: a
+/// start report on a database with no stored instance id shows a sample id.
+#[expect(
+    clippy::print_stdout,
+    clippy::print_stderr,
+    reason = "the usage-report --print subcommand's PURPOSE is console output \
+              (.claude/rules/reliability.md §tools)"
+)]
+async fn run_usage_report(
+    event: ReportEvent,
+    config_path: Option<&Path>,
+    overrides: &[(String, String)],
+) -> anyhow::Result<()> {
+    let config =
+        ferroehr::config::load(config_path, overrides).map_err(|e| anyhow::anyhow!("{e}"))?;
+    config.validate().map_err(|e| anyhow::anyhow!("{e}"))?;
+    let licence = load_licence(&config)?;
+    let identity = Identity::new(
+        &BuildInfo::for_profile(config.spec_profile),
+        &licence,
+        config.usage_report.deployment,
+    );
+    let pools = db::connect_domains(&config.db, &config.storage)
+        .await
+        .context("connecting to PostgreSQL")?;
+    let kind = match event {
+        ReportEvent::Start => EventKind::Start,
+        ReportEvent::Daily => EventKind::Daily,
+    };
+    let outcome = async {
+        let reporter = UsageReporter::new(
+            config.usage_report.clone(),
+            pools.clinical.clone(),
+            identity,
+            std::time::Instant::now(),
+        )
+        .context("building the usage report client")?;
+        reporter
+            .preview(kind)
+            .await
+            .context("assembling the usage report")
+    }
+    .await;
+    pools.close().await;
+    let preview = outcome?;
+    println!("{}", serde_json::to_string(&preview.report)?);
+    if !preview.instance_stored {
+        eprintln!(
+            "note: the database holds no instance id yet; the id above is a sample, and the \
+             first start creates the real one"
+        );
+    }
+    if !config.usage_report.enabled {
+        eprintln!(
+            "note: the usage report is OFF (usage_report.enabled = false); this instance sends \
+             nothing"
+        );
+    }
+    eprintln!("details: {NOTICE_URL}");
+    Ok(())
+}
+
+/// The licence in force: the configured token, else the one the build embeds.
+///
+/// # Errors
+/// The embedded licence anchors do not parse.
+fn load_licence(
+    config: &ferroehr::config::FerroEhrConfig,
+) -> anyhow::Result<ferroehr::licence::state::LicenceState> {
+    let anchors = ferroehr::licence::anchors().context("parsing the embedded licence anchors")?;
+    Ok(ferroehr::licence::state::LicenceState::load_now(
+        &config.licence,
+        ferroehr::licence::EMBEDDED_TOKEN,
+        &anchors,
+    ))
 }
 
 /// `ferroehr db verify`: the recorded schema state, then the pseudonymisation
@@ -389,12 +494,7 @@ fn assemble_service(
     // The licence in force: the configured token, else the one the build
     // embeds. Never a boot failure; the outcome is logged once, served on
     // GET /rest/status, and selects the identifier stamp key.
-    let anchors = ferroehr::licence::anchors().context("parsing the embedded licence anchors")?;
-    let licence = ferroehr::licence::state::LicenceState::load_now(
-        &config.licence,
-        ferroehr::licence::EMBEDDED_TOKEN,
-        &anchors,
-    );
+    let licence = load_licence(config)?;
     tracing::info!(licence = %licence, "licence");
 
     let mut service = FerroEhrService::new(pools)
@@ -832,6 +932,7 @@ fn attach_multimedia(
               would obscure the order that makes it correct"
 )]
 async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> anyhow::Result<()> {
+    let started = std::time::Instant::now();
     // One load + one aggregated validate (all errors at once), then distribute.
     let config =
         ferroehr::config::load(config_path, overrides).map_err(|e| anyhow::anyhow!("{e}"))?;
@@ -949,6 +1050,19 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         deployment,
     )?);
 
+    // Outbound only and detached: neither boot, health nor readiness waits on
+    // it, and a slow or unreachable collector reaches none of them.
+    let usage_report = ferroehr::usage_report::reporter::start(
+        &config.usage_report,
+        &pool,
+        Identity::new(
+            &build_info,
+            service.licence(),
+            config.usage_report.deployment,
+        ),
+        started,
+    );
+
     // Off by default (it carries PHI) and gated on the `fhir` feature, which
     // itself implies `events` for the broker transport.
     #[cfg(feature = "fhir")]
@@ -1030,6 +1144,9 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     #[cfg(feature = "fhir")]
     if let Some(handle) = fhir_outbound_handle {
         handle.shutdown(AUDIT_DRAIN_TIMEOUT).await;
+    }
+    if let Some(handle) = usage_report {
+        handle.abort();
     }
     telemetry.shutdown().await;
     Ok(())

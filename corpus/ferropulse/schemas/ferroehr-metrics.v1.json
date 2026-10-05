@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ferropulse.eu/schemas/ferroehr-metrics.v1.json",
+  "title": "FerroEHR metrics v1",
+  "description": "The metrics object of a FerroEHR daily report. Contract: docs/report-v1.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["window_24h"],
+  "properties": {
+    "window_24h": { "$ref": "#/$defs/window" }
+  },
+  "$defs": {
+    "count": {
+      "description": "A count over the 24 h window.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000000
+    },
+    "ms": { "type": "number", "minimum": 0, "maximum": 600000 },
+    "histogram": {
+      "description": "Request count per latency bucket, upper bounds in ms: 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, +Inf.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/count" },
+      "minItems": 11,
+      "maxItems": 11
+    },
+    "route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["p50_ms", "p95_ms", "p99_ms", "errors_5xx", "histogram"],
+      "properties": {
+        "p50_ms": { "$ref": "#/$defs/ms" },
+        "p95_ms": { "$ref": "#/$defs/ms" },
+        "p99_ms": { "$ref": "#/$defs/ms" },
+        "errors_5xx": { "$ref": "#/$defs/count" },
+        "histogram": { "$ref": "#/$defs/histogram" }
+      }
+    },
+    "aql": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["executions", "slow", "p95_ms", "histogram"],
+      "properties": {
+        "executions": { "$ref": "#/$defs/count" },
+        "slow": { "$ref": "#/$defs/count" },
+        "p95_ms": { "$ref": "#/$defs/ms" },
+        "histogram": { "$ref": "#/$defs/histogram" }
+      }
+    },
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requests_bucket", "routes", "aql"],
+      "properties": {
+        "requests_bucket": { "enum": ["0", "1-100", "100-1k", "1k-10k", "10k-100k", "100k+"] },
+        "routes": {
+          "description": "One entry per route-template group with requests in the window.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "ehr": { "$ref": "#/$defs/route" },
+            "composition": { "$ref": "#/$defs/route" },
+            "contribution": { "$ref": "#/$defs/route" },
+            "query": { "$ref": "#/$defs/route" },
+            "definition": { "$ref": "#/$defs/route" },
+            "directory": { "$ref": "#/$defs/route" },
+            "admin": { "$ref": "#/$defs/route" },
+            "other": { "$ref": "#/$defs/route" }
+          }
+        },
+        "aql": { "$ref": "#/$defs/aql" }
+      }
+    }
+  }
+}

@@ -488,6 +488,8 @@ refusal_registry_gate() {
     "_helpers.tpl|contradicts terminology.failOnError|${base}|--set terminology.enabled=true --set config.terminology.external.fail_on_error=true|config.terminology.external.fail_on_error;terminology.failOnError"
     "_helpers.tpl|while config.terminology.external.routes is empty|${base}|--set terminology.enabled=true --set config.terminology.external.providers.tx.type=fhir --set config.terminology.external.providers.tx.url=https://tx.example.com/fhir|config.terminology.external.routes;terminology.wireCdr"
     "_helpers.tpl|while terminology.image.digest is non-empty|${base}|--set terminology.enabled=true --set terminology.image.tag=0.0.0-probe|terminology.image.tag;terminology.image.digest"
+    "_helpers.tpl|the chart injects both|${base}|--set config.usage_report.enabled=false|config.usage_report.enabled;usageReport.enabled"
+    "_helpers.tpl|the chart injects both|${base}|--set-string config.usage_report.deployment=compose|config.usage_report.deployment;usageReport.enabled"
     "networkpolicy.yaml|networkPolicy.ingressAllowAll=false with an empty|${base}|--set networkPolicy.ingressAllowAll=false|networkPolicy.ingressFrom;hardening-network-policy.md"
     "networkpolicy.yaml|with no destination for the database|${base}|--set networkPolicy.egress.enabled=true|networkPolicy.egress.database.to;hardening-network-policy.md"
     "viewer.yaml|viewer.networkPolicy.ingressAllowAll=false with an empty|${viewer}|--set viewer.networkPolicy.ingressAllowAll=false|viewer.networkPolicy.ingressFrom;hardening-network-policy.md"

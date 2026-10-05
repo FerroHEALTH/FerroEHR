@@ -168,6 +168,32 @@ fn healthcheck_url_is_optional_with_a_derived_default() -> Result<(), clap::Erro
     Ok(())
 }
 
+/// `usage-report --print` parses with the start report as the default event,
+/// takes `--event daily`, and refuses to run without `--print`, its only
+/// action.
+#[test]
+fn usage_report_print_parses_and_requires_print() -> Result<(), clap::Error> {
+    let start = Cli::try_parse_from(["ferroehr", "usage-report", "--print"])?;
+    assert!(
+        format!("{start:?}").contains("UsageReport { print: true, event: Start }"),
+        "not the start report: {start:?}"
+    );
+    let daily = Cli::try_parse_from(["ferroehr", "usage-report", "--print", "--event", "daily"])?;
+    assert!(
+        format!("{daily:?}").contains("event: Daily"),
+        "not the daily report: {daily:?}"
+    );
+    assert!(
+        Cli::try_parse_from(["ferroehr", "usage-report"]).is_err(),
+        "`usage-report` without --print must not parse"
+    );
+    assert!(
+        Cli::try_parse_from(["ferroehr", "usage-report", "--print", "--event", "weekly"]).is_err(),
+        "an unknown event must not parse"
+    );
+    Ok(())
+}
+
 /// An unknown subcommand is rejected rather than silently falling through to
 /// the serve path.
 #[test]
