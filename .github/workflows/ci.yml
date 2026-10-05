@@ -558,6 +558,8 @@ jobs:
         run: bash scripts/checks/shellcheck-lane.sh
       - name: The dangerous-command hook refuses and allows the shapes it documents
         run: bash .claude/hooks/block_dangerous_test.sh
+      - name: The crate-version hook refuses a packaged change without a bump
+        run: bash .claude/hooks/crate_version_bump_guard_test.sh
 
   # The tracker helpers set the native issue type and the Priority and Effort
   # fields, and declare the label taxonomy (.claude/rules/issue-workflow.md).
@@ -2228,11 +2230,19 @@ jobs:
           if [ "$HAS_LABEL" = "true" ]; then
             echo "no-crate-bump label set — guard skipped."; exit 0
           fi
+          bash scripts/checks/crate-packaged-paths.sh --self-test
           changed=$(git diff --name-only "$BASE" "$HEAD")
           packaged=0
-          if echo "$changed" | grep -qE '^crates/openehr-[a-z]+/(src/|assets/|schemas/json/|README\.md|LICENSE-|Cargo\.toml)'; then
-            packaged=1
-          fi
+          # The packaged-path scope is the script the local hook also calls,
+          # so the two guards cannot drift (#3573: the bare LICENSE of the
+          # BUSL crates passed both inline copies).
+          verdict=0
+          echo "$changed" | bash scripts/checks/crate-packaged-paths.sh || verdict=$?
+          case "$verdict" in
+            0) packaged=1 ;;
+            1) ;;
+            *) echo "::error::scripts/checks/crate-packaged-paths.sh failed (exit $verdict)." >&2; exit 1 ;;
+          esac
           # A ROOT [workspace.dependencies] version change alters the PACKAGED
           # manifest of every crates/* member consuming the entry with
           # `workspace = true` (cargo package renders the concrete
