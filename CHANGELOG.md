@@ -67,6 +67,38 @@ workflow refuses a tag that has no matching section here.
   and `true` when the proof for a retry or for the re-send answering a DPoP
   `use_dpop_nonce` challenge failed, after the service had received the first
   request.
+- **A CONTRIBUTION version no longer borrows the change set's committer**
+  (#3550). A `versions[i].commit_audit`, or an attestation, that names no
+  `committer` used to be committed under the CONTRIBUTION `audit.committer`.
+  ITS-REST `UpdateAudit.yaml` requires `committer` on every commit audit, so
+  such a version is now refused with `400`. A CONTRIBUTION without an `audit`,
+  or whose `audit` has no `committer` or no `change_type`, is a `400` too (it
+  was a `422`), and so is a committer that is not a `PARTY_PROXY` object at
+  all; a `PARTY_PROXY` that breaks its own invariants stays a `422`. A version
+  that names its own committer keeps it. The server still fills one
+  `time_committed` for every audit in the set, and copies the CONTRIBUTION
+  audit's `system_id` into a version that omits one. This applies to the EHR
+  and the demographic CONTRIBUTION alike. Migration: send `committer` on every
+  audit and attestation, and `change_type` on the CONTRIBUTION `audit`.
+- **An attestation member of a CONTRIBUTION must state its `lifecycle_state`**
+  (#3590). A `666|attestation|` member without one was accepted, although SM
+  master03 §Version Update Semantics says the lifecycle state "must be supplied
+  in all cases". It is now refused with `400` like every other member, and a
+  stated code outside the openEHR `version_lifecycle_state` group is a `422`.
+  Migration: send `lifecycle_state` on every `666|attestation|` member.
+
+### Fixed
+
+- **The terminology overlay switches on the `/terminology/*` API it describes**
+  (#3476). `docker-compose.terminology.yml` said the CDR's `/terminology/*`
+  routes answer from FerroTERM, but it left `[terminology] api_enabled` at its
+  `false` default, so every route answered `404`. The overlay now sets
+  `FERROEHR__TERMINOLOGY__API_ENABLED=true`; a term, subsumption or value-set
+  call for a terminology the bundled openEHR terminology does not carry is
+  answered by FerroTERM.
+- **`deploy/helm/validate.sh --update` regenerates the chart README** (#3476).
+  It used to restore the stale README and then fail on it, so the drift it
+  reported could only be fixed by running `helm-docs` by hand.
 
 ## [4.3.3] - 2026-10-05
 

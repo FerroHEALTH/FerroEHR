@@ -44,7 +44,7 @@ use crate::service::status::CallStatusType;
 use crate::versioning::Kind;
 use crate::versioning::audit::{
     change_type, change_type_rubric, decode_description, dv_date_time, dv_text, openehr_coded_text,
-    party_proxy,
+    required_committer,
 };
 use crate::versioning::change::Committed;
 use crate::versioning::object_version_id::TreeId;
@@ -164,12 +164,11 @@ pub(crate) async fn attest(
 pub(crate) fn complete_accompanying(
     partials: &[AttestationInput],
     system_id: &str,
-    committer_fallback: &PartyProxy,
     now: jiff::Timestamp,
 ) -> Vec<Attestation> {
     partials
         .iter()
-        .map(|partial| complete_attestation(partial, system_id, committer_fallback, now))
+        .map(|partial| complete_attestation(partial, system_id, now))
         .collect()
 }
 
@@ -358,10 +357,11 @@ impl AttestationParts {
 
 /// The COMPLETE client-supplied half of an `ATTESTATION`: the
 /// `ATTESTATION`-declared attributes ([`AttestationParts`]) plus the two
-/// inherited `AUDIT_DETAILS` attributes a client may state — `committer`
-/// (0..1 here; the CONTRIBUTION's committer stands in when absent, master06
-/// §Committal) and `description` (0..1). The rest of `AUDIT_DETAILS` —
-/// `system_id`, `time_committed`, `change_type` — is the server's.
+/// inherited `AUDIT_DETAILS` attributes a client states — `committer` (1..1,
+/// required by ITS-REST `schemas/common/UpdateAttestation.yaml` through its
+/// `allOf` over `UpdateAudit.yaml`) and `description` (0..1). The rest of
+/// `AUDIT_DETAILS` — `system_id`, `time_committed`, `change_type` — is the
+/// server's.
 ///
 /// This is the carrier the two arrival routes converge on
 /// ([`Self::decode`] for a CONTRIBUTION-body attestation, [`Self::from_update`]
@@ -371,23 +371,28 @@ impl AttestationParts {
 pub(crate) struct AttestationInput {
     /// The `ATTESTATION`-declared attributes.
     pub(crate) parts: AttestationParts,
-    /// The inherited `AUDIT_DETAILS.committer`, when the client stated one.
-    pub(crate) committer: Option<PartyProxy>,
+    /// The inherited `AUDIT_DETAILS.committer` the client stated.
+    pub(crate) committer: PartyProxy,
     /// The inherited `AUDIT_DETAILS.description` (0..1).
     pub(crate) description: Option<DvText>,
 }
 
 impl AttestationInput {
-    /// Decode a CONTRIBUTION-body attestation payload — a wire
-    /// `UPDATE_ATTESTATION` or an RM `ATTESTATION` used as a version's
+    /// Decodes a CONTRIBUTION-body attestation payload: a wire
+    /// `UPDATE_ATTESTATION`, or an RM `ATTESTATION` used as a version's
     /// `commit_audit`.
     ///
+    /// The payload states its own `committer`, which ITS-REST
+    /// `schemas/common/UpdateAttestation.yaml` requires through its `allOf`
+    /// over `UpdateAudit.yaml`; the server never supplies one.
+    ///
     /// # Errors
-    /// The [`AttestationParts::decode`] rejections, and
-    /// [`ServiceError::Unprocessable`] when `committer` is not a canonical
-    /// `PARTY_PROXY` or `description` is neither a string nor a canonical
-    /// `DV_TEXT`.
+    /// [`ServiceError::BadRequest`] when `committer` is absent or is not a
+    /// canonical `PARTY_PROXY` (the [`required_committer`] refusals); the
+    /// [`AttestationParts::decode`] rejections; [`ServiceError::Unprocessable`]
+    /// when `description` is neither a string nor a canonical `DV_TEXT`.
     pub(crate) fn decode(partial: &Value) -> Result<Self, ServiceError> {
+        let committer = required_committer(Some(partial), "UPDATE_ATTESTATION")?;
         // description: the inherited AUDIT_DETAILS.description (0..1). Both
         // released spellings are read — the ITS-REST `UDvText` object and the SM
         // `String [0..1]` (`update_audit.adoc`) — and the object is decoded
@@ -403,7 +408,7 @@ impl AttestationInput {
             .transpose()?;
         Ok(Self {
             parts: AttestationParts::decode(partial)?,
-            committer: partial.get("committer").map(party_proxy).transpose()?,
+            committer,
             description,
         })
     }
@@ -435,7 +440,7 @@ impl AttestationInput {
                 reason: update.reason.clone(),
                 is_pending: update.is_pending,
             },
-            committer: Some(update.committer.clone()),
+            committer: update.committer.clone(),
             // The inherited `UPDATE_AUDIT.description`, kept WHOLE: the wire
             // types it `DV_TEXT` (`schemas/common/UpdateAudit.yaml`), whose
             // `DV_CODED_TEXT` subtype substitutes for it, and reducing it to a
@@ -446,14 +451,14 @@ impl AttestationInput {
     }
 }
 
-/// Complete a client-supplied attestation into a full RM `ATTESTATION` (RM
-/// common master04 §Attestation; ITS-REST `UpdateAttestation`). The server
+/// Completes a client-supplied attestation into a full RM `ATTESTATION`.
+///
+/// RM common master04 §Attestation; ITS-REST `UpdateAttestation`. The server
 /// supplies the inherited `AUDIT_DETAILS` fields it owns — `system_id`,
 /// `time_committed`, and the `666|attestation|` `change_type` — exactly as
-/// `UPDATE_AUDIT` → `AUDIT_DETAILS` (master06 §Version Update Semantics), then
-/// adds the `ATTESTATION`-specific attributes. `committer` comes from the
-/// partial when it stated one, else the CONTRIBUTION's committer (master06
-/// §Committal).
+/// `UPDATE_AUDIT` → `AUDIT_DETAILS` (SM master03 §Version Update Semantics),
+/// then adds the `ATTESTATION`-specific attributes. `committer` is the one the
+/// partial stated.
 ///
 /// Infallible: every client-supplied attribute was decoded into its RM type
 /// when the [`AttestationInput`] was built, so completion has nothing left to
@@ -462,7 +467,6 @@ impl AttestationInput {
 pub(crate) fn complete_attestation(
     partial: &AttestationInput,
     system_id: &str,
-    committer_fallback: &PartyProxy,
     now: jiff::Timestamp,
 ) -> Attestation {
     Attestation {
@@ -473,10 +477,7 @@ pub(crate) fn complete_attestation(
             change_type_rubric(change_type::ATTESTATION),
         ),
         description: partial.description.clone(),
-        committer: partial
-            .committer
-            .clone()
-            .unwrap_or_else(|| committer_fallback.clone()),
+        committer: partial.committer.clone(),
         attested_view: partial.parts.attested_view.clone(),
         proof: partial.parts.proof.clone(),
         items: openehr_base::containers::present_nonempty(partial.parts.items.clone()),
@@ -552,13 +553,6 @@ mod tests {
 
     use super::*;
 
-    /// A committer the fallback path can use — `PARTY_IDENTIFIED` with a name
-    /// satisfies `Basic_validity` + `Name_valid`.
-    fn committer() -> PartyProxy {
-        party_proxy(&json!({ "_type": "PARTY_IDENTIFIED", "name": "Dr Jones" }))
-            .expect("the fixture is a canonical PARTY_PROXY")
-    }
-
     fn now() -> jiff::Timestamp {
         "2026-07-07T10:11:12Z"
             .parse()
@@ -568,11 +562,55 @@ mod tests {
     /// Decode a CONTRIBUTION-body attestation payload and complete it, as the
     /// `666|attestation|` route does, returning the canonical form the store
     /// and the wire carry.
+    ///
+    /// The fixture states the committer every `UPDATE_ATTESTATION` requires
+    /// (`PARTY_IDENTIFIED` with a name satisfies `Basic_validity` +
+    /// `Name_valid`), so each test exercises only the attribute it names;
+    /// [`missing_committer_is_refused`] pins the refusal of a partial without
+    /// one.
     fn complete(partial: &Value) -> Result<Value, ServiceError> {
-        let input = AttestationInput::decode(partial)?;
+        let mut stated = partial.clone();
+        stated
+            .as_object_mut()
+            .expect("the fixture is an object")
+            .insert(
+                "committer".to_owned(),
+                json!({ "_type": "PARTY_IDENTIFIED", "name": "Dr Jones" }),
+            );
+        let input = AttestationInput::decode(&stated)?;
         Ok(openehr_its::json::to_canonical_value(
-            &complete_attestation(&input, "ferroehr.local", &committer(), now()),
+            &complete_attestation(&input, "ferroehr.local", now()),
         ))
+    }
+
+    /// An `UPDATE_ATTESTATION` without a `committer` is refused as the
+    /// schema-invalid body it is (400), never completed with a committer the
+    /// client did not state: ITS-REST `schemas/common/UpdateAttestation.yaml`
+    /// inherits `required: [change_type, committer]` from `UpdateAudit.yaml`
+    /// through `allOf`. A `null` committer is the same absence.
+    #[test]
+    fn missing_committer_is_refused() {
+        let base = json!({
+            "reason": { "_type": "DV_TEXT", "value": "witness" },
+            "is_pending": false
+        });
+        let mut null_committer = base.clone();
+        null_committer
+            .as_object_mut()
+            .expect("built as an object above")
+            .insert("committer".to_owned(), Value::Null);
+        for partial in [base, null_committer] {
+            match AttestationInput::decode(&partial) {
+                Err(ServiceError::BadRequest(e)) => {
+                    assert!(
+                        e.message
+                            .contains("UPDATE_ATTESTATION.committer is required"),
+                        "{e:?}"
+                    );
+                }
+                other => panic!("expected the 400 refusal, got {other:?}"),
+            }
+        }
     }
 
     /// The completed `ATTESTATION` is the canonical serialization of the
@@ -897,8 +935,8 @@ mod tests {
     }
 
     /// A native partial completes into the same `ATTESTATION` shape the body
-    /// route produces: the partial's own committer wins over the fallback, and
-    /// the SM `String` description denotes a plain `DV_TEXT`.
+    /// route produces: the committer is the one the partial stated, and the
+    /// description object is kept whole.
     #[test]
     fn native_partial_completes_into_an_attestation() {
         // `description` is an OBJECT on the typed wire: ITS-REST
@@ -917,15 +955,13 @@ mod tests {
         let att = openehr_its::json::to_canonical_value(&complete_attestation(
             &input,
             "ferroehr.local",
-            &party_proxy(&json!({ "_type": "PARTY_SELF" }))
-                .expect("the fixture is a canonical PARTY_PROXY"),
             now(),
         ));
         assert_eq!(
             att.get("description"),
             Some(&json!({ "_type": "DV_TEXT", "value": "countersigned" }))
         );
-        // The partial stated a committer, so the fallback is not used.
+        // The committer the partial stated.
         assert_eq!(
             att.pointer("/committer/_type").and_then(Value::as_str),
             Some("PARTY_IDENTIFIED")

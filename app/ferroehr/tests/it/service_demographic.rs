@@ -387,8 +387,8 @@ async fn person_lifecycle_end_to_end() {
 /// built **from the commit result** (never a post-commit re-read). It must be
 /// byte-identical to a fresh read — the served body is
 /// `inject_uid(reassemble(decompose(body)))` and the node codec round-trips
-/// losslessly (RM common master06 §Committal: the written version identity +
-/// content). Mirrors the EHR/DIRECTORY `write_responses_match_a_fresh_read`
+/// losslessly (RM common master06 §Committal and Audits: the written version
+/// identity + content). Mirrors the EHR/DIRECTORY `write_responses_match_a_fresh_read`
 /// gate; covers PERSON and the ORGANISATION sibling (same path, keyed by
 /// `PartyKind`).
 #[tokio::test]
@@ -507,6 +507,51 @@ async fn role_create_and_get() {
     assert_eq!(got.body["performer"]["type"], "PERSON");
 }
 
+/// The demographic CONTRIBUTION shares the commit audit rule of the EHR one
+/// (#3550): `schemas/demographic/UpdateVersion.yaml` references the same
+/// `schemas/common/UpdateAudit.yaml`, whose `required` lists `committer`, so a
+/// member `commit_audit` without one is the 400 and is never filled from the
+/// CONTRIBUTION audit.
+#[tokio::test]
+async fn demographic_contribution_member_without_committer_is_refused() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let coded = |code: &str, value: &str| {
+        json!({
+            "_type": "DV_CODED_TEXT", "value": value,
+            "defining_code": {
+                "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+                "code_string": code
+            }
+        })
+    };
+    let err = svc
+        .demographic_contribution_create(json!({
+            "versions": [{
+                "lifecycle_state": coded("532", "complete"),
+                "commit_audit": { "change_type": coded("249", "creation") },
+                "data": person("Unattributed")
+            }],
+            "audit": {
+                "change_type": coded("249", "creation"),
+                "committer": { "_type": "PARTY_IDENTIFIED", "name": "tester" }
+            }
+        }))
+        .await
+        .expect_err("a demographic member without a committer is refused");
+    assert_eq!(
+        err.status,
+        CallStatusType::PreconditionViolation,
+        "got {err:?}"
+    );
+    assert!(
+        err.message
+            .starts_with("versions[0]: commit_audit.committer is required"),
+        "got {err:?}"
+    );
+}
+
 #[tokio::test]
 async fn demographic_contribution_multi_version() {
     let db = testkit::db().await.expect("testkit database");
@@ -527,7 +572,8 @@ async fn demographic_contribution_multi_version() {
                             "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
                             "code_string": "249"
                         }
-                    }
+                    },
+                    "committer": { "_type": "PARTY_IDENTIFIED", "name": "tester" }
                 },
                 "data": person("Alice")
             },
@@ -543,7 +589,8 @@ async fn demographic_contribution_multi_version() {
                             "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
                             "code_string": "249"
                         }
-                    }
+                    },
+                    "committer": { "_type": "PARTY_IDENTIFIED", "name": "tester" }
                 },
                 "data": role("Nurse")
             }

@@ -556,7 +556,8 @@ async fn signing_disabled_folds_commit_and_preserves_master06_semantics() {
     assert_eq!(v1, "1", "first version is trunk 1");
 
     // The served ORIGINAL_VERSION round-trips: uid stable, no signature, and the
-    // server-computed commit instant present (master06 §Committal m3).
+    // server-computed commit instant present (master06 §Committal and
+    // Audits).
     let ov1 = svc
         .composition_version_envelope(ehr_uuid, ovid_v1.parse().expect("ovid"))
         .await
@@ -791,6 +792,7 @@ async fn after_committal_attestation_is_outside_the_signed_form() {
         json!({
             "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
                 "preceding_version_uid": { "value": ovid.clone() },
+                "lifecycle_state": change_type("532", "complete"),
                 "commit_audit": {
                     "change_type": change_type("666", "attestation"),
                     "committer": { "_type": "PARTY_IDENTIFIED", "name": "senior reviewer" },

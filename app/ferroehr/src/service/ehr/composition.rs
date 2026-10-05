@@ -590,7 +590,7 @@ impl FerroEhrService {
     ) -> Result<Option<ResourceMeta>, ServiceError> {
         // The `ETag`/`If-Match` compare needs only the full `OBJECT_VERSION_ID`
         // + commit instant (RM common master06 §Version Identification /
-        // §Committal), never the document reassembly `read_current` pays.
+        // §Committal and Audits), never the document reassembly `read_current` pays.
         let Some(m) = crate::storage::version_repo::meta::current_version_meta_scoped(
             &self.pool, vo_id, ehr_id,
         )

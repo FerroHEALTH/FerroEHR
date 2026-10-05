@@ -8,8 +8,8 @@
 //! Spec: SM `docs/specs/openehr/SM/docs/UML/classes/i_ehr_extract_service.adoc`;
 //! RM EHR Extract IM master05 (`X_VERSIONED_*`) + RM common
 //! `docs/specs/openehr/RM/docs/common/master06-change_control_package.adoc`
-//! §Copying (`IMPORTED_VERSION` semantics, Cases 1/2/3) + §Committal. The
-//! acceptance properties:
+//! §Copying (`IMPORTED_VERSION` semantics, Cases 1/2/3) + §Committal and
+//! Audits. The acceptance properties:
 //!
 //! 1. **Whole-EHR clone** (`import_ehr`) replays a whole-EHR export into an
 //!    empty target, reusing the source EHR id when none is given (master06
@@ -1188,6 +1188,15 @@ async fn attesting_an_imported_version_is_refused() {
     let attest_contribution = json!({
         "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
             "preceding_version_uid": { "value": imported_uid },
+            "lifecycle_state": {
+                "_type": "DV_CODED_TEXT",
+                "value": "complete",
+                "defining_code": {
+                    "_type": "CODE_PHRASE",
+                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+                    "code_string": "532"
+                }
+            },
             "commit_audit": {
                 "change_type": {
                     "_type": "DV_CODED_TEXT",

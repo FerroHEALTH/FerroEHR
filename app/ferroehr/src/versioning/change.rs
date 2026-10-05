@@ -65,7 +65,7 @@ pub struct Committed {
     /// otherwise).
     pub template_id: Option<String>,
     /// The server-computed commit instant (the audit `time_committed`,
-    /// master06 §Committal) — the write response's `Last-Modified`, carried
+    /// master06 §Committal and Audits) — the write response's `Last-Modified`, carried
     /// here so the service layer never re-reads the row it just wrote.
     pub time_committed: jiff::Timestamp,
 }
@@ -408,7 +408,8 @@ async fn next_version(
 enum ContributionCtx {
     /// A standalone single-object write (create/update/delete): the CONTRIBUTION
     /// is created in the same commit, sharing the version's `commit_audit` (a
-    /// direct write is one CONTRIBUTION of one change — master06 §Committal).
+    /// direct write is one CONTRIBUTION of one change — master06 §Committal and
+    /// Audits).
     New,
     /// A change within a multi-change CONTRIBUTION already opened by
     /// [`commit_contribution`]; the version's own `commit_audit` is written here,
@@ -557,10 +558,6 @@ struct CommitScope<'a> {
     audit: &'a AuditInput,
     /// System id, signer, multimedia engine and outbox switch for the write.
     ctx: &'a SigningCtx<'a>,
-    /// The committer a version item that omits its own inherits — the
-    /// CONTRIBUTION audit's committer on the set path, the version's own
-    /// committer on a single-object write (master06 §Committal, m4).
-    committer_fallback: &'a openehr_rm::prelude::PartyProxy,
     /// The transaction timestamp already read by the caller (the CONTRIBUTION
     /// path reads `now()` once for the whole set); `None` makes this change
     /// read its own.
@@ -663,7 +660,6 @@ async fn apply_change(
         contribution,
         audit,
         ctx,
-        committer_fallback,
         known_now,
         preplaced,
     } = scope;
@@ -819,7 +815,7 @@ async fn apply_change(
             }
         }
     };
-    commit_resolved(tx, ctx, audit, contribution, committer_fallback, resolved).await
+    commit_resolved(tx, ctx, audit, contribution, resolved).await
 }
 
 /// Commit a [`ResolvedWrite`] — compute the `VERSION.signature`, then write the
@@ -847,7 +843,6 @@ async fn commit_resolved(
     ctx: &SigningCtx<'_>,
     audit: &AuditInput,
     contribution: ContributionCtx,
-    committer_fallback: &openehr_rm::prelude::PartyProxy,
     r: ResolvedWrite,
 ) -> Result<(Committed, Uuid), ServiceError> {
     let audit_row = audit.row();
@@ -864,15 +859,11 @@ async fn commit_resolved(
     // master06 §Digital Signature signs "the entire Version object" — and
     // reused verbatim for the insert, so signed bytes and stored bytes are the
     // same bytes.
-    let at_committal_attestations: Vec<Value> = attestation::complete_accompanying(
-        &r.attestations,
-        &ctx.system_id,
-        committer_fallback,
-        r.time_committed,
-    )
-    .iter()
-    .map(openehr_its::json::to_canonical_value)
-    .collect();
+    let at_committal_attestations: Vec<Value> =
+        attestation::complete_accompanying(&r.attestations, &ctx.system_id, r.time_committed)
+            .iter()
+            .map(openehr_its::json::to_canonical_value)
+            .collect();
 
     let (signature, signature_client_supplied) =
         body_and_signature(ctx, audit, contribution_id, &r, &at_committal_attestations)?;
@@ -1147,7 +1138,6 @@ pub(crate) async fn create(
             contribution: ContributionCtx::New,
             audit,
             ctx,
-            committer_fallback: &audit.committer,
             known_now,
             preplaced: None,
         },
@@ -1196,7 +1186,6 @@ pub(crate) async fn update(
             contribution: ContributionCtx::New,
             audit,
             ctx,
-            committer_fallback: &audit.committer,
             known_now: None,
             preplaced: None,
         },
@@ -1253,7 +1242,6 @@ pub(crate) async fn update_with_placement(
             contribution: ContributionCtx::New,
             audit,
             ctx,
-            committer_fallback: &audit.committer,
             known_now: None,
             preplaced: Some(placement),
         },
@@ -1306,7 +1294,6 @@ pub(crate) async fn delete(
             contribution: ContributionCtx::New,
             audit,
             ctx,
-            committer_fallback: &audit.committer,
             known_now: None,
             preplaced: None,
         },
@@ -1329,10 +1316,10 @@ pub(crate) async fn delete(
 /// `ATTESTATION`s attached to **existing** versions, committed in the
 /// same transaction but adding no new version.
 ///
-/// Per master06 §Committal (m4) a version item that omits `committer` or
-/// `system_id` inherits it from the CONTRIBUTION audit, which the callers
-/// building each version `AuditInput` realize; the attestation committer
-/// defaults to the CONTRIBUTION committer here.
+/// Every audit of the set is stamped with the one commit instant this
+/// function reads (RM common master06 §Committal and Audits: `time_committed`
+/// "computed on the server"); each version and attestation keeps the
+/// committer its own audit states.
 ///
 /// # Errors
 /// The per-change [`apply_change`] errors; the attestation-completion
@@ -1359,7 +1346,6 @@ pub(crate) async fn commit_contribution(
             Some(uid),
         )
         .await?;
-    let committer_fallback = &contribution_audit.committer;
     let mut committed = Vec::with_capacity(changes.len() + attests.len());
     for (version_audit, change) in changes {
         // Each change writes its own `commit_audit` + `version` under the
@@ -1373,7 +1359,6 @@ pub(crate) async fn commit_contribution(
                 contribution: ContributionCtx::Existing(contribution_id),
                 audit: &version_audit,
                 ctx,
-                committer_fallback,
                 known_now: Some(contribution_time),
                 preplaced: None,
             },
@@ -1386,12 +1371,8 @@ pub(crate) async fn commit_contribution(
     // completed with the contribution's commit-act time.
     for item in attests {
         ensure_not_restricted_tx(tx, ehr_id, Some(item.vo_id)).await?;
-        let full = attestation::complete_attestation(
-            &item.partial,
-            &ctx.system_id,
-            committer_fallback,
-            contribution_time,
-        );
+        let full =
+            attestation::complete_attestation(&item.partial, &ctx.system_id, contribution_time);
         committed.push(
             attestation::attest(
                 tx,

@@ -143,8 +143,8 @@ pub(super) fn version_response(
 /// The create/update representation built **from the commit result**, never a
 /// post-commit re-read: the served body is the just-written `canonical` with
 /// the `uid` injected, and the identity + commit instant come straight from
-/// [`Committed`] (RM common master06 §Committal — the written version
-/// identity). Byte-identical to a fresh read: the served form is
+/// [`Committed`] (RM common master06 §Committal and Audits — the
+/// written version identity). Byte-identical to a fresh read: the served form is
 /// `inject_uid(reassemble(decompose(canonical)))`, and the node codec
 /// round-trips `canonical` losslessly (pinned by a test). The caller passes
 /// the pre-write `canonical`; the multimedia-externalization fallback (where

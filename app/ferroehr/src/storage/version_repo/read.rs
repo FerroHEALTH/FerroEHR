@@ -77,7 +77,7 @@ pub struct StoredVersion {
     /// The canonical fragment of the `ATTESTATION`-declared attributes when the
     /// commit audit is an `ATTESTATION` (RM common master06 §Attestation).
     pub audit_attestation: Option<Value>,
-    /// Server-computed commit time (master06 §Committal).
+    /// Server-computed commit time (master06 §Committal and Audits).
     pub time_committed: jiff::Timestamp,
     /// The OPT `template_id` a COMPOSITION was committed against (else `None`).
     pub template_id: Option<String>,

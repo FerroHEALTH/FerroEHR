@@ -42,16 +42,9 @@ impl FerroEhrService {
     /// atomically and return the stored `CONTRIBUTION` with its resource
     /// metadata (the `contribution_uid` for the `201` `ETag`/`Location`).
     ///
-    /// NOTE: the SM native `commit_contribution` is a typed subset of the wire
-    /// CONTRIBUTION, `UPDATE_VERSION` mandating `data`, `lifecycle_state` and a
-    /// committer (SM `update_version.adoc`), so it cannot represent an
-    /// attestation-only (`666`) member, a delete (`523`) member, or a member
-    /// inheriting `committer` or `system_id` from the CONTRIBUTION audit (RM
-    /// common master06 §Committal m4); this raw-body seam carries the
-    /// full-fidelity commit.
-    ///
-    /// All RM `change_control` semantics stay in
-    /// `crate::versioning::contribution::commit_version_set`.
+    /// The body is the raw wire CONTRIBUTION, read member by member in
+    /// `crate::versioning::contribution::commit_version_set`, where all RM
+    /// `change_control` semantics stay.
     ///
     /// # Errors
     /// [`SmError`] if the CONTRIBUTION fails classification, content
@@ -61,6 +54,10 @@ impl FerroEhrService {
         ehr_id: EhrId,
         body: Value,
     ) -> Result<ServiceResponse, SmError> {
+        // TODO(#3595): decode the body through the generated `NewContribution`;
+        // the raw read still accepts the SM `Terminology_code` and plain-string
+        // spellings, an omitted member `change_type` and an `ATTESTATION` member
+        // `_type`, all of which the generated envelope refuses.
         let committed = commit_version_set(self, Some(ehr_id), &body, false).await?;
         let body = self.ehr_contribution(ehr_id, committed.id, false).await?;
         let meta = ResourceMeta::new(ehr_id.to_string(), committed.id.to_string())
@@ -283,8 +280,8 @@ impl FerroEhrService {
             // `return=minimal`: the response is headers-only, so commit and
             // return just the contribution uid (the `201` `ETag`/`Location`) —
             // the post-commit composite re-read the representation path pays is
-            // pure waste here (RM common master06 §Committal — the commit
-            // itself yields the new CONTRIBUTION id).
+            // pure waste here (RM common master06 §Committal and Audits — the
+            // commit itself yields the new CONTRIBUTION id).
             let committed =
                 commit_version_set(self, Some(an_ehr_id), &a_contribution, false).await?;
             let meta = ResourceMeta::new(an_ehr_id.to_string(), committed.id.to_string())

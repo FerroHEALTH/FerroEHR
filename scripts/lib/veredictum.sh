@@ -42,7 +42,7 @@
 # (scripts/checks/veredictum-pin.sh, #2867, #3593): outside that exception the
 # bumping PR refreshes docs/conformance/ferroehr/ or carries the
 # `no-conformance-run` deferral label.
-VEREDICTUM_VERSION="0.1.5"
+VEREDICTUM_VERSION="0.1.6"
 VEREDICTUM_REPO="https://github.com/rubentalstra/Veredictum"
 
 veredictum_cache_root() {

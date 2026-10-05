@@ -14,7 +14,7 @@
 //! Version Tree', §Copying), with `AUDIT_DETAILS` and `ATTESTATION` in master04.
 //! Every write runs inside a caller-owned `sqlx` transaction so a version, its
 //! nodes, contribution, audit and outbox row commit atomically (master06
-//! §Committal: "similar to nested transactions").
+//! §Committal and Audits: "similar to nested transactions").
 //!
 //! One file per concern; consumers import each item from its defining
 //! submodule (no re-exports):

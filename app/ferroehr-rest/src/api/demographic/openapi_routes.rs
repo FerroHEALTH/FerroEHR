@@ -6139,10 +6139,30 @@ pub(crate) async fn versioned_party_version_get_by_id(
                                       match the operation - i.e. first version of \
                                       a MODIFICATION)\" (ITS-REST \
                                       `specifications/responses/400_CONTRIBUTION.yaml`). \
-                                      A supplied `audit.system_id` that does not \
-                                      validate is this branch too — the operation \
-                                      says \"when provided, it will be \
-                                      validated\".",
+                                      Here that is: the envelope is not parseable \
+                                      JSON; the envelope `audit` or its \
+                                      `change_type` is absent \
+                                      (`NewContribution.yaml` and \
+                                      `UpdateAudit.yaml` list both under \
+                                      `required`); the `audit`, a member \
+                                      `commit_audit` or an attestation states no \
+                                      `committer`, or one that does not decode as \
+                                      a canonical `PARTY_PROXY` \
+                                      (`UpdateAudit.yaml` lists it under \
+                                      `required` and types it `UPartyProxy`); a \
+                                      member, an attestation (`666`) member \
+                                      included, states no `lifecycle_state` (SM \
+                                      master03 §\"Version Update Semantics\": \
+                                      \"must be supplied in all cases\"); a \
+                                      non-creation change type on a member with \
+                                      no `preceding_version_uid` (the released \
+                                      first-version-of-a-MODIFICATION trigger); \
+                                      a member carrying a property \
+                                      `UpdateVersion.yaml` does not declare \
+                                      (`other_input_version_uids` and `item` \
+                                      included); or a member names a \
+                                      `preceding_version_uid` whose \
+                                      VERSIONED_OBJECT does not exist.",
          body = serde_json::Value),
         (status = 406, description = "The `Accept` header cannot be satisfied: the \
                                       `201` body is served as canonical JSON only, \
@@ -6173,6 +6193,49 @@ pub(crate) async fn versioned_party_version_get_by_id(
                                       `Content-Type` declares nothing to refuse. \
                                       The released operation does not enumerate \
                                       `415`; the MUST is cross-cutting.",
+         body = serde_json::Value),
+        (status = 422, description = "The CONTRIBUTION was well-formed but \
+                                      cannot be followed \
+                                      (`Requests_and_responses.md` §\"HTTP \
+                                      status codes\", the `422` row: \"The \
+                                      request was well-formed but was unable to \
+                                      be followed due to semantic errors\"). The \
+                                      released operation enumerates no `422`; \
+                                      the same section permits it (\"Additional \
+                                      status codes MAY be used as long as they \
+                                      do not conflict with the predefined \
+                                      codes\"), and every trigger below is OUR \
+                                      OWN assignment, shared with the EHR-scoped \
+                                      commit: an empty `versions: []`; a \
+                                      malformed envelope `uid` (not a \
+                                      HIER_OBJECT_ID UUID); a `change_type` — on \
+                                      a member or on the envelope — that is not \
+                                      a code of the openEHR `audit_change_type` \
+                                      group (`AUDIT_DETAILS.Change_type_valid`); \
+                                      a `249|creation|` member carrying a \
+                                      `preceding_version_uid`; `data` on a \
+                                      `523|deleted|` or `666|attestation|` \
+                                      member, or missing `data` on a creation or \
+                                      modification member; a member whose \
+                                      object kind is out of the contribution's \
+                                      scope (an EHR-scoped COMPOSITION, \
+                                      EHR_STATUS, EHR_ACCESS or FOLDER in a \
+                                      demographic CONTRIBUTION); a \
+                                      `commit_audit` failing the AUDIT_DETAILS \
+                                      invariants (empty `system_id`, a \
+                                      committer that decodes but breaks its own \
+                                      PARTY_PROXY invariants); a \
+                                      `lifecycle_state` outside the openEHR \
+                                      `version_lifecycle_state` group, a \
+                                      `666|attestation|` member's included (it \
+                                      is checked against the group although an \
+                                      attestation stores no lifecycle state); an \
+                                      `UPDATE_ATTESTATION` failing its \
+                                      `ATTESTATION` attributes (`reason`, \
+                                      `is_pending`, `items`); and any member \
+                                      failing RM-invariant or archetype \
+                                      validation, exactly as the direct party \
+                                      routes would validate it.",
          body = serde_json::Value)
     )
 )]

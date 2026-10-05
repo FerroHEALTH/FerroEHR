@@ -117,8 +117,8 @@ impl FerroEhrService {
     /// `OBJECT_VERSION_ID` (or bare version) the client believes is current. The
     /// result is the commit's own
     /// [`Committed`](crate::versioning::change::Committed), the written version
-    /// identity and commit instant (RM common master06 §Committal). The write
-    /// path never re-reads the row it just wrote; a `Prefer:
+    /// identity and commit instant (RM common master06 §Committal and Audits).
+    /// The write path never re-reads the row it just wrote; a `Prefer:
     /// return=representation` body is read back at the protocol layer.
     async fn commit_status(
         &self,
@@ -454,8 +454,8 @@ impl FerroEhrService {
     /// [`ServiceError::Conflict`] (→ 409). A status without an `external_ref`
     /// (e.g. anonymous `PARTY_SELF`) clears the columns and never conflicts.
     ///
-    /// This is the EHR-owned commit hook (RM common master06 §Committal),
-    /// called inside the commit transaction of the EHR-create and
+    /// This is the EHR-owned commit hook (RM common master06 §Committal
+    /// and Audits), called inside the commit transaction of the EHR-create and
     /// `EHR_STATUS`-update paths and, for the CONTRIBUTION path, through the
     /// [`crate::versioning::CommitEnv::post_status_commit`] hook. The `UPDATE`
     /// stays inline here because it maps the subject-uniqueness constraint
