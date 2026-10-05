@@ -39,11 +39,12 @@ record names both, and the exact manifestation the CELEX resolved to.
 
 | Act | Identifier | Consolidation vendored | Read it at | Licence | Cited by |
 |---|---|---|---|---|---|
-| [Regulation (EU) 2016/679, General Data Protection Regulation](eu/gdpr/) | CELEX `02016R0679-20160504`, ELI `reg/2016/679` | 2016-05-04 | [EUR-Lex](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:02016R0679-20160504) | `LicenseRef-EUR-Lex-Reuse AND CC-BY-4.0` | `compliance/index.md`, `compliance/control-matrix.md`, `compliance/shared-responsibility.md`, `security.md`, `security/dpia.md`, `security/records-of-processing.md`, `audit.md`, `operations.md`, `concepts/storage.md`, `installation/config-privacy.md`, `installation/config-auth.md`, `installation/config-audit.md`, `installation/configuration.md`, `contributing.md` |
+| [Regulation (EU) 2016/679, General Data Protection Regulation](eu/gdpr/) | CELEX `02016R0679-20160504`, ELI `reg/2016/679`; beside it the OJ text `32016R0679` (`oj.html`, the recitals) and the 2018 corrigendum `32016R0679R(02)` | 2016-05-04 (articles); the OJ text of 4.5.2016 for the recitals | [EUR-Lex](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:02016R0679-20160504) | `LicenseRef-EUR-Lex-Reuse AND CC-BY-4.0` (the consolidation); `LicenseRef-EUR-Lex-Reuse` (the OJ texts) | `compliance/index.md`, `compliance/control-matrix.md`, `compliance/shared-responsibility.md`, `security.md`, `security/dpia.md`, `security/records-of-processing.md`, `audit.md`, `operations.md`, `concepts/storage.md`, `installation/config-privacy.md`, `installation/config-auth.md`, `installation/config-audit.md`, `installation/configuration.md`, `contributing.md` |
 | [Regulation (EU) 2025/327, European Health Data Space](eu/ehds/) | CELEX `32025R0327`, ELI `reg/2025/327` | none, the OJ text | [EUR-Lex](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32025R0327) | `LicenseRef-EUR-Lex-Reuse` | `compliance/ehds-readiness.md`, `compliance/technical-documentation.md`, `compliance/index.md`, `compliance/control-matrix.md`, `compliance/shared-responsibility.md`, `audit.md`, `security/dpia.md`, `security/records-of-processing.md`, `beyond-core/fhir.md`, `comparison.md`, `why-ferroehr.md`, `operations.md`, `installation/config-audit.md`, `installation/config-auth.md`, `installation/configuration.md` |
 | [Directive (EU) 2022/2555, NIS2](eu/nis2/) | CELEX `32022L2555`, ELI `dir/2022/2555` | none, the OJ text | [EUR-Lex](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32022L2555) | `LicenseRef-EUR-Lex-Reuse` | no page yet; vendored for the cybersecurity obligations a deployment answers to |
-| [Regulation (EU) 2024/2847, Cyber Resilience Act](eu/cra/) | CELEX `32024R2847`, ELI `reg/2024/2847` | none, the OJ text | [EUR-Lex](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32024R2847) | `LicenseRef-EUR-Lex-Reuse` | `compliance/ehds-readiness.md`, `compliance/technical-documentation.md` (as the regulation EHDS amends and cross-references) |
+| [Regulation (EU) 2024/2847, Cyber Resilience Act](eu/cra/) | CELEX `32024R2847`, ELI `reg/2024/2847` | none, the OJ text | [EUR-Lex](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32024R2847) | `LicenseRef-EUR-Lex-Reuse` | `compliance/ehds-readiness.md`, `compliance/technical-documentation.md` (as the regulation EHDS amends and cross-references); EHDS Art. 104 amends Art. 13(4), 31(3) and inserts 32(5a) from 26 March 2027, which this text does not carry (its record says so) |
 | [Regulation (EU) 2017/745, Medical Device Regulation](eu/mdr/) | CELEX `02017R0745-20260719`, ELI `reg/2017/745` | 2026-07-19 | [EUR-Lex](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:02017R0745-20260719) | `LicenseRef-EUR-Lex-Reuse AND CC-BY-4.0` | `compliance/ehds-readiness.md` (the Article 27 interoperability question, left open) |
+| [Directive 2002/58/EC, ePrivacy Directive](eu/eprivacy/) | CELEX `02002L0058-20091219`, ELI `dir/2002/58`; beside it the OJ texts of `32002L0058` and of the amending Directive `32009L0136`, for the recitals | 2009-12-19, Art. 5(3) as amended by Directive 2009/136/EC | [EUR-Lex](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:02002L0058-20091219) | `LicenseRef-EUR-Lex-Reuse AND CC-BY-4.0` (the consolidation); `LicenseRef-EUR-Lex-Reuse` (the OJ texts) | no page yet; vendored for the usage report's default (#3580) |
 | [EDPB Guidelines 01/2025 on pseudonymisation](eu/edpb-guidelines-01-2025-pseudonymisation/) | EDPB Guidelines 01/2025, version 1.0 | adopted 2025-01-16 | [EDPB](https://www.edpb.europa.eu/our-work-tools/documents/public-consultations/2025/guidelines-012025-pseudonymisation_en) | `LicenseRef-EDPB-Reuse` | `compliance/index.md`, `compliance/control-matrix.md`, `security.md`, `security/dpia.md`, `operations.md` |
 
 Guidelines are not law. The EDPB document is here because the pseudonymisation
@@ -59,10 +60,11 @@ nobody.
 | [Burgerlijk Wetboek Boek 7, geneeskundige behandelingsovereenkomst (Wgbo)](nl/bw7-geneeskundige-behandelingsovereenkomst/) | BWB `BWBR0005290`, Art. 7:446-468 | 2026-07-01 | [wetten.overheid.nl](https://wetten.overheid.nl/BWBR0005290/2026-07-01) | `LicenseRef-Auteurswet-Art11-Public-Domain` | `compliance/shared-responsibility.md` |
 | [Besluit vaststelling bewaartermijn logging](nl/besluit-bewaartermijn-logging/) | BWB `BWBR0042391` | 2019-09-01 | [wetten.overheid.nl](https://wetten.overheid.nl/BWBR0042391/2019-09-01) | `LicenseRef-Auteurswet-Art11-Public-Domain` | `audit.md`, `security/dpia.md`, `security/go-live-checklist.md` |
 | [Besluit elektronische gegevensverwerking door zorgaanbieders (Begz)](nl/begz/) | BWB `BWBR0040238` | 2020-10-01 | [wetten.overheid.nl](https://wetten.overheid.nl/BWBR0040238/2020-10-01) | `LicenseRef-Auteurswet-Art11-Public-Domain` | `audit.md` |
+| [Telecommunicatiewet](nl/telecommunicatiewet/), Art. 11.7a | BWB `BWBR0009950` | 2026-08-15 | [wetten.overheid.nl](https://wetten.overheid.nl/BWBR0009950/2026-08-15) | `LicenseRef-Auteurswet-Art11-Public-Domain` | no page yet; vendored for the usage report's default (#3580) |
 
-The whole of Boek 7 is vendored rather than the cited articles alone: the
-publisher serves the book as one document, and cutting Art. 446-468 out of it
-would be an edit.
+The whole of Boek 7 and the whole Telecommunicatiewet are vendored rather than
+the cited articles alone: the publisher serves each as one document, and
+cutting Art. 446-468 or Art. 11.7a out of it would be an edit.
 
 ## Germany
 
@@ -134,7 +136,7 @@ The declarations live in `REUSE.toml` and the full terms in `LICENSES/`:
 | Identifier | Covers |
 |---|---|
 | `LicenseRef-EUR-Lex-Reuse` | The EU acts. The Commission's reuse policy, Decision 2011/833/EU, quoted from the EUR-Lex legal notice |
-| `CC-BY-4.0` | The consolidated EU texts, which are additionally the EU's own editorial content |
+| `CC-BY-4.0` | The consolidated EU texts (each `text.html` pinned at a consolidation), which are additionally the EU's own editorial content |
 | `LicenseRef-EDPB-Reuse` | The EDPB guidelines, under the EDPB's own copyright page |
 | `LicenseRef-Auteurswet-Art11-Public-Domain` | The Dutch acts, in which no copyright subsists |
 | `LicenseRef-UrhG-Para5-Amtliche-Werke` | The German federal acts, which enjoy no copyright protection (§ 5 Abs. 1 UrhG) |

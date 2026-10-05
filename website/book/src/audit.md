@@ -256,7 +256,9 @@ who accessed their record builds on ITI-81 and authenticates the person itself.
 What the product gives that portal is a grant of its own size:
 `authz.rbac.subject_audit_role` reads the log for one subject at a time, with
 the `patient` parameter required, so the portal never holds an admin credential
-over every patient's log (GDPR Art. 15 with Recital 63, EHDS Art. 9, for Dutch
+over every patient's log ([GDPR](https://eur-lex.europa.eu/eli/reg/2016/679/oj)
+Art. 15 with Recital 63, under which the controller "should be able to provide
+remote access to a secure system" where possible; EHDS Art. 9; for Dutch
 deployments Wabvpz Art. 15e). The portal's build is the deployment's, and the
 [shared-responsibility page](compliance/shared-responsibility.md) says so.
 

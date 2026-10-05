@@ -12,6 +12,12 @@
 *.json text
 *.xml  text
 
+# Vendored legal texts are checked byte for byte against their SHA256SUMS
+# (scripts/checks/law-corpus.sh); end-of-line normalisation would change the
+# bytes the digest records. The ePrivacy consolidation is served with CRLF.
+docs/law/**/*.html -text
+docs/law/**/*.xml  -text
+
 # Binary assets
 *.png  binary
 *.gif  binary

@@ -351,14 +351,19 @@ precedence = "override"
 SPDX-FileCopyrightText = "European Union"
 SPDX-License-Identifier = "LicenseRef-EUR-Lex-Reuse"
 
-# Two of those acts are CONSOLIDATED texts, and consolidation is the EU's own
-# editorial work: the same legal notice licenses "the editorial content of this
-# website, the summaries of EU legislation and the consolidated texts" under
-# CC BY 4.0. Both sets of obligations are named rather than one being picked.
+# Three of those acts are pinned at a CONSOLIDATED text, and consolidation is
+# the EU's own editorial work: the same legal notice licenses "the editorial
+# content of this website, the summaries of EU legislation and the consolidated
+# texts" under CC BY 4.0. Both sets of obligations are named rather than one
+# being picked. Only the consolidation itself (`text.html`) is named: the OJ
+# documents vendored beside it in the GDPR and ePrivacy directories (the
+# recitals, a corrigendum, an amending directive) are not consolidated texts
+# and stay under the block above alone.
 [[annotations]]
 path = [
-  "docs/law/eu/gdpr/**",
-  "docs/law/eu/mdr/**",
+  "docs/law/eu/gdpr/text.html",
+  "docs/law/eu/mdr/text.html",
+  "docs/law/eu/eprivacy/text.html",
 ]
 precedence = "override"
 SPDX-FileCopyrightText = "European Union"

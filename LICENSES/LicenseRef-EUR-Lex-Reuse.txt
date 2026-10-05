@@ -13,7 +13,7 @@ What the publisher states
 
 Quoted verbatim from the EUR-Lex legal notice, section "Copyright notice",
 https://eur-lex.europa.eu/content/legal-notice/legal-notice.html, read
-2026-09-12:
+2026-09-12 and re-read unchanged 2026-10-05:
 
   © European Union, 1998-2026
 
@@ -60,11 +60,15 @@ The source is acknowledged in each act's `PROVENANCE.md` and in the index at
 `docs/law/README.md`, and no change has been made to any of them: they are the
 publisher's own bytes, with a SHA-256 recorded so that stays checkable.
 
-Two of the vendored acts are CONSOLIDATED texts (the GDPR and the MDR).
-Consolidation is the EU's own editorial work, which the notice above licenses
-under CC BY 4.0, so those two directories are declared in REUSE.toml as this
-identifier AND `CC-BY-4.0`, naming both sets of obligations rather than picking
-one. The full CC BY 4.0 text is at `LICENSES/CC-BY-4.0.txt`.
+Three of the vendored acts are pinned at a CONSOLIDATED text (the GDPR, the
+MDR and the ePrivacy Directive). Consolidation is the EU's own editorial work,
+which the notice above licenses under CC BY 4.0, so each of those three
+`text.html` files is declared in REUSE.toml as this identifier AND
+`CC-BY-4.0`, naming both sets of obligations rather than picking one. The OJ
+documents vendored beside them (the GDPR as published with its recitals and
+its 2018 corrigendum; the ePrivacy Directive as published and Directive
+2009/136/EC) are not consolidated texts and carry this identifier alone. The
+full CC BY 4.0 text is at `LICENSES/CC-BY-4.0.txt`.
 
 Nothing in this repository claims any right in these documents. No EU logo is
 reproduced, and the EUR-Lex metadata that would be CC0 is not vendored.

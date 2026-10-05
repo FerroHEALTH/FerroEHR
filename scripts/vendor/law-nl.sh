@@ -37,7 +37,12 @@
 # follow every citation.
 #
 # Idempotent: each act directory is wiped and re-fetched, each NEN record is
-# rewritten from this script.
+# rewritten from this script. With no argument every directory is written; with
+# arguments, only the named ones. Because of the consultation stamp above, a
+# full re-run changes the digest of every act, so adding one act names it:
+#
+#   scripts/vendor/law-nl.sh                       # every act and record
+#   scripts/vendor/law-nl.sh telecommunicatiewet   # that act only
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -60,7 +65,36 @@ ACTS=(
   "bw7-geneeskundige-behandelingsovereenkomst|BWBR0005290|2026-07-01|4000000|Burgerlijk Wetboek Boek 7 (Bijzondere overeenkomsten)"
   "besluit-bewaartermijn-logging|BWBR0042391|2019-09-01|20000|Besluit vaststelling bewaartermijn logging"
   "begz|BWBR0040238|2020-10-01|50000|Besluit elektronische gegevensverwerking door zorgaanbieders (Begz)"
+  "telecommunicatiewet|BWBR0009950|2026-08-15|2000000|Telecommunicatiewet"
 )
+
+NEN_RECORDS=(nen-7510 nen-7512 nen-7513)
+
+# The directories named on the command line, each checked against the tables
+# so a typo stops the run instead of writing nothing.
+ONLY=("$@")
+for want in "${ONLY[@]+"${ONLY[@]}"}"; do
+  known=0
+  for entry in "${ACTS[@]}"; do
+    [[ "${entry%%|*}" == "$want" ]] && known=1
+  done
+  for nen in "${NEN_RECORDS[@]}"; do
+    [[ "$nen" == "$want" ]] && known=1
+  done
+  if [[ "$known" -eq 0 ]]; then
+    echo "ERROR: '$want' is not a directory this script writes" >&2
+    exit 1
+  fi
+done
+
+selected() {
+  local want
+  [[ ${#ONLY[@]} -eq 0 ]] && return 0
+  for want in "${ONLY[@]}"; do
+    [[ "$want" == "$1" ]] && return 0
+  done
+  return 1
+}
 
 # Why each act is here, and which part of it the pages cite.
 act_reason() {
@@ -70,6 +104,7 @@ act_reason() {
   bw7-geneeskundige-behandelingsovereenkomst) printf '%s' "The medical treatment contract (Wgbo), **Art. 7:446 to 7:468** — the retention obligation, the right of access and the duty of confidentiality the clinical record is kept under. The whole book is vendored, because the publisher serves it as one document and cutting the cited articles out of it would be an edit." ;;
   besluit-bewaartermijn-logging) printf '%s' "The decree that fixes the five-year minimum retention for the access log, and the source the audit retention floor for the NL jurisdiction is set from." ;;
   begz) printf '%s' "The decree on electronic processing by care providers: Art. 5 requires the logging and delegates its retention period, which is what the decree above then fixes." ;;
+  telecommunicatiewet) printf '%s' "The Dutch electronic-communications act, vendored for **Art. 11.7a**, the rule on storing information in, or gaining access to information in, a user's terminal equipment (\"randapparatuur\"), which the usage report's default is read against (#3580). The whole act is vendored, because the publisher serves it as one document and cutting the article out of it would be an edit." ;;
   *) printf '%s' "" ;;
   esac
 }
@@ -119,6 +154,7 @@ mkdir -p "$DEST"
 
 for entry in "${ACTS[@]}"; do
   IFS='|' read -r dir bwb consolidated floor title <<<"$entry"
+  selected "$dir" || continue
   url="https://wetten.overheid.nl/$bwb/$consolidated"
   out="$DEST/$dir"
   echo "==> nl/$dir ($bwb @ $consolidated)"
@@ -185,8 +221,9 @@ nen_record() {
   mkdir -p "$DEST/$dir"
 }
 
-nen_record nen-7510
-cat >"$DEST/nen-7510/PROVENANCE.md" <<EOF
+if selected nen-7510; then
+  nen_record nen-7510
+  cat >"$DEST/nen-7510/PROVENANCE.md" <<EOF
 # NEN 7510-1:2024 and NEN 7510-2:2024 — not vendored
 
 **Nothing but this record is in this directory, and nothing else may be.**
@@ -227,9 +264,11 @@ copy.
 Do not add files to this directory. Re-run \`scripts/vendor/law-nl.sh\` to
 rewrite this record.
 EOF
+fi
 
-nen_record nen-7512
-cat >"$DEST/nen-7512/PROVENANCE.md" <<EOF
+if selected nen-7512; then
+  nen_record nen-7512
+  cat >"$DEST/nen-7512/PROVENANCE.md" <<EOF
 # NEN 7512:2022 — not vendored
 
 **Nothing but this record is in this directory, and nothing else may be.**
@@ -262,9 +301,11 @@ who holds it.
 Do not add files to this directory. Re-run \`scripts/vendor/law-nl.sh\` to
 rewrite this record.
 EOF
+fi
 
-nen_record nen-7513
-cat >"$DEST/nen-7513/PROVENANCE.md" <<EOF
+if selected nen-7513; then
+  nen_record nen-7513
+  cat >"$DEST/nen-7513/PROVENANCE.md" <<EOF
 # NEN 7513:2018 — not vendored
 
 **Nothing but this record is in this directory, and nothing else may be.**
@@ -305,5 +346,6 @@ checkable only against the standard, by someone who holds it.
 Do not add files to this directory. Re-run \`scripts/vendor/law-nl.sh\` to
 rewrite this record.
 EOF
+fi
 
 echo "Done. Vendored into $DEST"
