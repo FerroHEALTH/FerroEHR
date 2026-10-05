@@ -46,10 +46,13 @@ record names both, and the exact manifestation the CELEX resolved to.
 | [Regulation (EU) 2017/745, Medical Device Regulation](eu/mdr/) | CELEX `02017R0745-20260719`, ELI `reg/2017/745` | 2026-07-19 | [EUR-Lex](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:02017R0745-20260719) | `LicenseRef-EUR-Lex-Reuse AND CC-BY-4.0` | `compliance/ehds-readiness.md` (the Article 27 interoperability question, left open) |
 | [Directive 2002/58/EC, ePrivacy Directive](eu/eprivacy/) | CELEX `02002L0058-20091219`, ELI `dir/2002/58`; beside it the OJ texts of `32002L0058` and of the amending Directive `32009L0136`, for the recitals | 2009-12-19, Art. 5(3) as amended by Directive 2009/136/EC | [EUR-Lex](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:02002L0058-20091219) | `LicenseRef-EUR-Lex-Reuse AND CC-BY-4.0` (the consolidation); `LicenseRef-EUR-Lex-Reuse` (the OJ texts) | no page yet; vendored for the usage report's default (#3580) |
 | [EDPB Guidelines 01/2025 on pseudonymisation](eu/edpb-guidelines-01-2025-pseudonymisation/) | EDPB Guidelines 01/2025, version 1.0 | adopted 2025-01-16 | [EDPB](https://www.edpb.europa.eu/our-work-tools/documents/public-consultations/2025/guidelines-012025-pseudonymisation_en) | `LicenseRef-EDPB-Reuse` | `compliance/index.md`, `compliance/control-matrix.md`, `security.md`, `security/dpia.md`, `operations.md` |
+| [EDPB Guidelines 2/2023 on Technical Scope of Art. 5(3) of ePrivacy Directive](eu/edpb-guidelines-02-2023-eprivacy-5-3/) | EDPB Guidelines 2/2023, version 2.0 | adopted 2024-10-07, after public consultation (version 1.0 of 2023-11-14 not vendored) | [EDPB](https://www.edpb.europa.eu/documents/guideline/guidelines-22023-on-technical-scope-of-art-53-of-eprivacy-directive_en) | `LicenseRef-EDPB-Reuse` | no page yet; vendored for the usage report's default (#3580), paragraphs 18 and 33 |
 
-Guidelines are not law. The EDPB document is here because the pseudonymisation
-boundary is designed against it, and its record says plainly that it binds
-nobody.
+Guidelines are not law. The EDPB documents are here because the
+pseudonymisation boundary is designed against 01/2025 and the usage report's
+default is read against 2/2023, and each record says plainly that it binds
+nobody. The EDPB publishes its guidelines as PDF only, so each is vendored as
+`guidelines.pdf`, pinned by its SHA-256 in the vendor script.
 
 ## The Netherlands
 

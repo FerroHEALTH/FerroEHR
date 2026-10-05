@@ -98,17 +98,28 @@ EXTRAS=(
   "eprivacy|amending-directive-2009-136.html|32009L0136|application/xhtml+xml|190000|2002/58/EC"
 )
 
-EDPB_NAME="edpb-guidelines-01-2025-pseudonymisation"
+# directory | PDF URL | document page | adoption (the record's cell) | byte floor | SHA-256 pin | title
+#
+# EDPB guidelines, one PDF each. The EDPB has no dated or versioned URI scheme
+# a pin could name: a version is a new upload under a new file name, and the
+# site can replace the bytes behind an existing name. The pin is therefore the
+# digest of the PDF read when the version was set, and a fetch answering other
+# bytes stops the run; moving it means reading the new PDF, checking its
+# version history page, and changing the digest, title and adoption cell here.
+# The byte floor follows the rule of the ACTS table above.
+EDPB_DOCS=(
+  "edpb-guidelines-01-2025-pseudonymisation|https://www.edpb.europa.eu/system/files/2025-01/edpb_guidelines_202501_pseudonymisation_en.pdf|https://www.edpb.europa.eu/our-work-tools/documents/public-consultations/2025/guidelines-012025-pseudonymisation_en|16 January 2025 (version 1.0, for public consultation)|300000|db1b9931b3403fab8bab846cb5868df776c415589ad925477117bc6b062bd085|Guidelines 01/2025 on pseudonymisation"
+  "edpb-guidelines-02-2023-eprivacy-5-3|https://www.edpb.europa.eu/system/files/documents/2024-10/edpb_guidelines_202302_technical_scope_art_53_eprivacydirective_v2_en_0.pdf|https://www.edpb.europa.eu/documents/guideline/guidelines-22023-on-technical-scope-of-art-53-of-eprivacy-directive_en|7 October 2024 (version 2.0, after public consultation)|270000|dbc1d37783e35ae8668925f92a590ae282eec24c98381a5a8f91b5c2048b5b03|Guidelines 2/2023 on Technical Scope of Art. 5(3) of ePrivacy Directive"
+)
 
 # The directories named on the command line, each checked against the tables
 # so a typo stops the run instead of vendoring nothing.
 ONLY=("$@")
 for want in "${ONLY[@]+"${ONLY[@]}"}"; do
   known=0
-  for entry in "${ACTS[@]}"; do
+  for entry in "${ACTS[@]}" "${EDPB_DOCS[@]}"; do
     [[ "${entry%%|*}" == "$want" ]] && known=1
   done
-  [[ "$want" == "$EDPB_NAME" ]] && known=1
   if [[ "$known" -eq 0 ]]; then
     echo "ERROR: '$want' is not a directory this script vendors" >&2
     exit 1
@@ -438,36 +449,100 @@ done
 # rather than converted — a conversion would be this repository's rendering of
 # somebody else's document, and the clause numbering a citation resolves
 # against would then be ours.
-if ! selected "$EDPB_NAME"; then
-  echo "Done. Vendored into $DEST"
-  exit 0
-fi
-EDPB_DIR="$DEST/$EDPB_NAME"
-EDPB_URL="https://www.edpb.europa.eu/system/files/2025-01/edpb_guidelines_202501_pseudonymisation_en.pdf"
-EDPB_PAGE="https://www.edpb.europa.eu/our-work-tools/documents/public-consultations/2025/guidelines-012025-pseudonymisation_en"
-echo "==> eu/$EDPB_NAME"
-rm -rf "$EDPB_DIR"
-mkdir -p "$EDPB_DIR"
-edpb_bytes="$(fetch "$EDPB_URL" "$EDPB_DIR/guidelines.pdf" 300000 "" "")"
-if [[ "$(head -c 5 "$EDPB_DIR/guidelines.pdf")" != "%PDF-" ]]; then
-  echo "ERROR: $EDPB_URL did not answer with a PDF" >&2
-  exit 1
-fi
-edpb_digest="$(sha256_of "$EDPB_DIR/guidelines.pdf")"
-cat >"$EDPB_DIR/PROVENANCE.md" <<EOF
-# EDPB Guidelines 01/2025 on pseudonymisation
 
+# Why each document is here, written into its PROVENANCE.md above the line
+# every EDPB record carries: guidelines bind nobody.
+edpb_reason() {
+  case "$1" in
+  edpb-guidelines-01-2025-pseudonymisation)
+    cat <<'EOF'
 The supervisory authorities' own reading of what pseudonymisation is under
 GDPR Art. 4(5) and what it does to the risk analysis under Art. 32 — the
 document the pseudonymisation boundary in this software is designed against.
+EOF
+    ;;
+  edpb-guidelines-02-2023-eprivacy-5-3)
+    cat <<'EOF'
+The supervisory authorities' reading of which technical operations Article
+5(3) of Directive 2002/58/EC reaches; the Directive itself is vendored at
+`docs/law/eu/eprivacy/`. The usage report's default is read against it
+(#3580): paragraph 18 on terminal equipment that serves the legitimate
+interests of legal persons, paragraph 33 on software that proactively calls
+an API endpoint.
+EOF
+    ;;
+  *) ;;
+  esac
+}
+
+# A section only some records need, written from the PDF and its document
+# page as read on the date the pin was set.
+edpb_note() {
+  case "$1" in
+  edpb-guidelines-02-2023-eprivacy-5-3)
+    cat <<'EOF'
+## Version
+
+The version history on page 2 of the PDF lists two versions: 1.0, adopted 14
+November 2023 for public consultation, and 2.0, adopted 7 October 2024 after
+it. Version 2.0 is vendored; its cover reads "Version 2.0" and "Adopted on 7
+October 2024". The document page shows the date 16 October 2024 and the label
+"Final version", and links version 1.0 as the first version "drafted before
+public consultation". Version 1.0 is not vendored.
+
+The document page also offers version 2.0 in 22 other languages, whose file
+paths are dated 2025-02. Only the English PDF is vendored.
+
+## Citing it
+
+The guidelines number their paragraphs from 1 to 63 through the whole
+document, footnotes separately. A citation names the paragraph:
+`docs/law/eu/edpb-guidelines-02-2023-eprivacy-5-3/guidelines.pdf para. 33`.
+EOF
+    ;;
+  *) ;;
+  esac
+}
+
+for entry in "${EDPB_DOCS[@]}"; do
+  IFS='|' read -r dir url page adopted floor pin title <<<"$entry"
+  selected "$dir" || continue
+  out="$DEST/$dir"
+  echo "==> eu/$dir"
+
+  # Fetched beside the tree and checked before the old directory is touched,
+  # so a refused fetch leaves the vendored record as it was.
+  staging="$(mktemp -d)"
+  bytes="$(fetch "$url" "$staging/guidelines.pdf" "$floor" "" "")"
+  if [[ "$(head -c 5 "$staging/guidelines.pdf")" != "%PDF-" ]]; then
+    echo "ERROR: $url did not answer with a PDF" >&2
+    exit 1
+  fi
+  digest="$(sha256_of "$staging/guidelines.pdf")"
+  if [[ "$digest" != "$pin" ]]; then
+    echo "ERROR: $url answered SHA-256 $digest, not the pinned $pin. The EDPB replaced the file; read the new PDF and its version history before moving the pin" >&2
+    exit 1
+  fi
+  rm -rf "$out"
+  mkdir -p "$out"
+  mv "$staging/guidelines.pdf" "$out/guidelines.pdf"
+  rmdir "$staging"
+
+  note_block="$(edpb_note "$dir")"
+  [[ -z "$note_block" ]] || note_block=$'\n'"$note_block"$'\n'
+
+  cat >"$out/PROVENANCE.md" <<EOF
+# EDPB $title
+
+$(edpb_reason "$dir")
 Guidelines are not law: they bind nobody, and this record says so rather than
 letting a vendored PDF read like an act.
 
 | | |
 |---|---|
-| Adopted | 16 January 2025 (version 1.0, for public consultation) |
-| Document page | $EDPB_PAGE |
-| Source | $EDPB_URL |
+| Adopted | $adopted |
+| Document page | $page |
+| Source | $url |
 | Fetched | $FETCHED (UTC) |
 | Vendored by | \`scripts/vendor/law-eu.sh\` |
 
@@ -475,14 +550,14 @@ letting a vendored PDF read like an act.
 
 | file | bytes | SHA-256 |
 |---|---|---|
-| \`guidelines.pdf\` | $edpb_bytes | \`$edpb_digest\` |
+| \`guidelines.pdf\` | $bytes | \`$digest\` |
 
 **No text format is published.** The EDPB serves this document as PDF and
 offers no HTML, XML or plain-text edition of it, so the PDF is vendored as
 published. It is not converted: a converted copy would be this repository's
 rendering, and a paragraph number cited against it would resolve to our
 pagination rather than the EDPB's.
-
+${note_block}
 ## Licence
 
 Reuse of EDPB material is authorised for commercial and non-commercial
@@ -491,12 +566,13 @@ do not distort the meaning, and the EDPB carries no liability for the reuse.
 The page is quoted verbatim in
 \`LICENSES/LicenseRef-EDPB-Reuse.txt\` and declared for this directory in
 \`REUSE.toml\`. Source acknowledged: European Data Protection Board,
-Guidelines 01/2025 on pseudonymisation, $EDPB_PAGE.
+$title, $page.
 
 Do not hand-edit anything in this directory. Re-run
 \`scripts/vendor/law-eu.sh\` instead.
 EOF
-write_sha256sums "$EDPB_DIR"
-echo "    guidelines.pdf: $edpb_bytes bytes"
+  write_sha256sums "$out"
+  echo "    guidelines.pdf: $bytes bytes"
+done
 
 echo "Done. Vendored into $DEST"
