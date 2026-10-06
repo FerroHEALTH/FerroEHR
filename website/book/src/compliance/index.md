@@ -69,7 +69,7 @@ put back together by whoever holds the database. Separating the two, and
 controlling who may rejoin them, is what
 [GDPR Art. 4(5)](https://eur-lex.europa.eu/eli/reg/2016/679/oj) calls
 pseudonymisation, and it is the control the
-[EDPB Guidelines 01/2025](https://www.edpb.europa.eu/our-work-tools/documents/public-consultations/2025/guidelines-012025-pseudonymisation_en)
+[EDPB Guidelines 01/2025](https://www.edpb.europa.eu/public-consultations/guidelines-012025-on-pseudonymisation_en)
 expect a supplier to describe rather than assert.
 
 openEHR anticipated this. The Reference Model's
@@ -200,7 +200,7 @@ repository actually touches.
 
 ## EDPB Guidelines 01/2025 on pseudonymisation
 
-The [EDPB guidelines](https://www.edpb.europa.eu/our-work-tools/documents/public-consultations/2025/guidelines-012025-pseudonymisation_en)
+The [EDPB guidelines](https://www.edpb.europa.eu/public-consultations/guidelines-012025-on-pseudonymisation_en)
 ask for something more specific than "we pseudonymise": a named
 pseudonymisation domain, a stated attacker, and additional information kept
 where that attacker cannot reach it.

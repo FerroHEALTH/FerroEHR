@@ -73,11 +73,13 @@ FETCH_LIMIT=10000
 # the NL, EU and INT ones re-checked 2026-09-09). The EPDV entry was added and
 # checked 200 on 2026-09-16; its URL is the "whatever is current" form
 # `docs/law/ch/epdv/PROVENANCE.md` records beside the consolidation the corpus
-# vendors, the same shape the EPDG entry above carries.
+# vendors, the same shape the EPDG entry above carries. The EDPB 01/2025 URL
+# moved to the EDPB's public-consultations page (the old one redirects there)
+# and was checked 200 on 2026-10-06 (#3597).
 LEGAL_SOURCES=(
   "GDPR|EU|https://eur-lex.europa.eu/eli/reg/2016/679/oj"
   "EHDS|EU|https://eur-lex.europa.eu/eli/reg/2025/327/oj"
-  "EDPB 01/2025|EU|https://www.edpb.europa.eu/our-work-tools/documents/public-consultations/2025/guidelines-012025-pseudonymisation_en"
+  "EDPB 01/2025|EU|https://www.edpb.europa.eu/public-consultations/guidelines-012025-on-pseudonymisation_en"
   "EDPB 2/2023|EU|https://www.edpb.europa.eu/documents/guideline/guidelines-22023-on-technical-scope-of-art-53-of-eprivacy-directive_en"
   "UAVG|NL|https://wetten.overheid.nl/BWBR0040940"
   "Wabvpz|NL|https://wetten.overheid.nl/BWBR0023864"
