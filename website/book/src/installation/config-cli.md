@@ -17,7 +17,14 @@ Two flags are global: they apply to the server and to every subcommand:
 | `--config <path>` | The configuration file to load, overriding the search order. Fatal if missing or unreadable. |
 | `--set <key>=<value>` | A dotted-path override, repeatable, highest precedence of all layers (e.g. `--set db.max_connections=40`). |
 
-With no subcommand, the binary boots the server.
+With no subcommand, the binary boots the server. `ferroehr --version` prints
+the version and the manufacturer of the release:
+
+```text
+ferroehr <version>
+Manufactured by Cadasto B.V., Comeniusstraat 2d, 1817 MS Alkmaar, The Netherlands, info@cadasto.com
+https://www.cadasto.com/contact/
+```
 
 ### `ferroehr config …`
 
@@ -75,6 +82,40 @@ same configuration as the server and connects to the database to read the
 instance id and the shared metrics window, writing nothing. Notes go to stderr:
 a sample id when the database holds none yet, and a line saying so when the
 report is off. `--print` is required; printing is the only action.
+
+### `ferroehr report`
+
+```text
+ferroehr report                              # writes ferroehr-report-<UTC time>.json here
+ferroehr report --output /tmp/report.json    # writes to the path you name
+ferroehr report --output -                   # writes the JSON to stdout
+```
+
+Writes one JSON document naming what this deployment runs. Attach it to a
+complaint, a non-conformity finding or a serious-incident report: it is the
+"which FerroEHR does this deployment run" answer those start from. It loads the
+same configuration as the server and must pass the same validation. It reads
+the databases and writes nothing to them.
+
+| Part | What it holds |
+|---|---|
+| `manifest` | every part below with its status (`included`, `partial` or `unavailable`) and, for the last two, the reason |
+| `build` | version, commit, build date, `rustc`, the active `spec_profile` and the specification versions it selects, the PostgreSQL target, the audit posture, and the manufacturer |
+| `image` | named in the manifest only: a running binary cannot read the digest of the image it was started from, so attach `docker inspect --format '{{index .RepoDigests 0}}' <image>` or the pod's `status.containerStatuses[].imageID` |
+| `target` | the CPU architecture and operating system the binary was built for, and whether it is a debug build |
+| `features` | the optional integrations compiled in (`events`, `fhir`, `multimedia`) |
+| `openehr_crates` | each `openehr-*` crate the binary links, with its version |
+| `licence` | the licence summary `GET /ferroehr/rest/status` serves (state, use, licensee, last valid day, what the configured token contributed); never the token |
+| `deployment` | the deployment profile, the open gaps and the accepted ones, measured over the databases, or from the configuration alone when they do not answer |
+| `schema` | for each database, the highest migration version applied and the highest this build embeds, per schema |
+| `configuration` | the effective configuration as `config check` prints it |
+
+Nothing in it identifies a person: it reads no clinical, demographic or audit
+table. Every secret in the configuration shows `***`, every URL shows `***` in
+place of its user name and password, and a database error quoted as a reason
+has each configured database user name and password masked too. A database
+that does not answer within 15 seconds leaves the `schema` part out and names
+it `unavailable` with `unreachable: …` as the reason.
 
 ## Zero-config boot and the production checklist
 

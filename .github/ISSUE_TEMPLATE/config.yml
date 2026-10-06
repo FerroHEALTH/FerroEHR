@@ -18,3 +18,10 @@ contact_links:
   - name: API reference (live sandbox)
     url: https://sandbox.ferroehr.eu/ferroehr/rest/swagger-ui
     about: The OpenAPI document the current release serves, on the hosted sandbox (credentials ferroehr / ferroehr).
+  - name: Make a complaint, or report harm
+    url: https://ferroehr.eu/docs/latest/compliance/post-market.html
+    about: >-
+      FerroEHR's manufacturer, Cadasto B.V., takes complaints at info@cadasto.com
+      (subject "FerroEHR complaint"). Anything that harmed a person, or could
+      have, goes there with "FerroEHR incident" in the subject. Never include
+      patient data.

@@ -1,7 +1,7 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://ferroehr.eu/vex/rust-dependency-advisories",
-  "author": "FerroEHR project",
+  "author": "Cadasto B.V.",
   "role": "vendor",
   "statements": [
     {
@@ -133,7 +133,7 @@
       }
     }
   ],
-  "timestamp": "2026-09-10T00:00:00Z",
+  "timestamp": "2026-10-06T00:00:00Z",
   "tooling": "scripts/security/vex-generate.sh from security/vex/rust-advisories.toml + deny.toml",
-  "version": 4
+  "version": 5
 }

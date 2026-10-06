@@ -113,6 +113,7 @@ authority; nothing on this page restates it.
 |---|---|---|
 | GDPR | EU | [https://eur-lex.europa.eu/eli/reg/2016/679/oj](https://eur-lex.europa.eu/eli/reg/2016/679/oj) |
 | EHDS | EU | [https://eur-lex.europa.eu/eli/reg/2025/327/oj](https://eur-lex.europa.eu/eli/reg/2025/327/oj) |
+| CRA | EU | [https://eur-lex.europa.eu/eli/reg/2024/2847/oj](https://eur-lex.europa.eu/eli/reg/2024/2847/oj) |
 | EDPB 01/2025 | EU | [https://www.edpb.europa.eu/public-consultations/guidelines-012025-on-pseudonymisation_en](https://www.edpb.europa.eu/public-consultations/guidelines-012025-on-pseudonymisation_en) |
 | EDPB 2/2023 | EU | [https://www.edpb.europa.eu/documents/guideline/guidelines-22023-on-technical-scope-of-art-53-of-eprivacy-directive_en](https://www.edpb.europa.eu/documents/guideline/guidelines-22023-on-technical-scope-of-art-53-of-eprivacy-directive_en) |
 | UAVG | NL | [https://wetten.overheid.nl/BWBR0040940](https://wetten.overheid.nl/BWBR0040940) |

@@ -3,7 +3,10 @@ name: law-lookup
 description: >
   Finds and reads the authoritative text of a regulation provision (an
   article, section or paragraph of the GDPR, the ePrivacy Directive, EHDS,
-  NIS2, CRA, MDR, the EDPB guidelines (pseudonymisation, ePrivacy Art. 5(3)), the UAVG, Wabvpz,
+  the EHDS implementing acts 2026/2083 and 2026/2099, Recommendation 2019/243,
+  NIS2 with its corrigendum, CRA, the CRA implementing act 2025/2392, the
+  CRA delegated acts 2026/881 and 2025/1535, Regulation 2019/1020,
+  Regulation 765/2008, MDR, the EDPB guidelines (pseudonymisation, ePrivacy Art. 5(3)), the UAVG, Wabvpz,
   BW 7, the Telecommunicatiewet, the Dutch logging decree, Begz, the BDSG, SGB V, GDNG, StGB, DigiG, the Swiss DSG, DSV, EPDG,
   EPDV or EPDV-EDI) in the vendored corpus at docs/law/. Use before writing
   or reviewing any compliance claim, provenance record or privacy-boundary

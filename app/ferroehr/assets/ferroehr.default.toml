@@ -126,7 +126,7 @@ http2_keep_alive_timeout_secs = 10   # PING response deadline before the connect
 #? [server.identity]
 #? solution = "FerroEHR"
 #? solution_version = "<build version>"
-#? vendor = "FerroEHR project"
+#? vendor = "Cadasto B.V."
 #? restapi_specs_version = "<tested contract identity>"
 #? conformance_profile = "<last ECC verdict>"
 

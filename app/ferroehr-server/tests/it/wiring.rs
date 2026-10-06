@@ -22,6 +22,7 @@
               failing fixture must panic at the fixture (the Rust Book ch11)"
 )]
 
+use assert_fs::prelude::{FileWriteStr as _, PathChild as _};
 use clap::Parser as _;
 
 use ferroehr_server::{Cli, run};
@@ -202,6 +203,92 @@ fn unknown_subcommand_is_rejected() {
         Cli::try_parse_from(["ferroehr", "migrate"]).is_err(),
         "an unknown subcommand must not parse"
     );
+}
+
+/// `ferroehr --version` names the manufacturer after the version: the name,
+/// the postal address, the single point of contact and the website
+/// (Regulation (EU) 2025/327, `docs/law/eu/ehds/text.html` Art. 30(1)(g)).
+#[test]
+fn version_names_the_manufacturer() {
+    let shown = Cli::try_parse_from(["ferroehr", "--version"])
+        .expect_err("--version stops the parse to print")
+        .to_string();
+    assert_eq!(
+        shown,
+        format!(
+            "ferroehr {}\nManufactured by Cadasto B.V., Comeniusstraat 2d, 1817 MS Alkmaar, The \
+             Netherlands, info@cadasto.com\nhttps://www.cadasto.com/contact/\n",
+            env!("CARGO_PKG_VERSION")
+        )
+    );
+}
+
+/// `report` parses with and without a destination.
+#[test]
+fn report_parses_with_an_optional_output() -> Result<(), clap::Error> {
+    let default = Cli::try_parse_from(["ferroehr", "report"])?;
+    assert!(
+        format!("{default:?}").contains("Report { output: None }"),
+        "{default:?}"
+    );
+    let named = Cli::try_parse_from(["ferroehr", "report", "--output", "-"])?;
+    assert!(
+        format!("{named:?}").contains(r#"output: Some("-")"#),
+        "{named:?}"
+    );
+    Ok(())
+}
+
+/// `ferroehr report` writes its file through the real dispatch against a
+/// database nothing answers on: the file names the unreachable database in its
+/// manifest, and no credential of the configuration reaches it.
+#[tokio::test]
+async fn run_report_writes_a_redacted_file_naming_an_unreachable_database() -> anyhow::Result<()> {
+    const DB_PW: &str = "DB_PW_SENTINEL_31c7";
+    const MIGRATE_PW: &str = "MIGRATE_PW_SENTINEL_84ad";
+    const EVENTS_PW: &str = "EVENTS_PW_SENTINEL_5e02";
+    let dir = assert_fs::TempDir::new()?;
+    let config = dir.child("ferroehr.toml");
+    config.write_str(&format!(
+        "[db]\n\
+         url = \"postgres://reportuser:{DB_PW}@127.0.0.1:1/ferroehr\"\n\
+         migrate_url = \"postgres://migrator:{MIGRATE_PW}@127.0.0.1:1/ferroehr\"\n\
+         [events]\n\
+         url = \"amqp://mq:{EVENTS_PW}@broker:5672/vh\"\n"
+    ))?;
+    let output = dir.child("report.json");
+    let config_path = config.path().to_string_lossy().into_owned();
+    let output_path = output.path().to_string_lossy().into_owned();
+    run(Cli::try_parse_from([
+        "ferroehr",
+        "--config",
+        &config_path,
+        "report",
+        "--output",
+        &output_path,
+    ])?)
+    .await?;
+
+    let written = std::fs::read_to_string(output.path())?;
+    for leak in [
+        DB_PW,
+        MIGRATE_PW,
+        EVENTS_PW,
+        "reportuser",
+        "migrator:",
+        "mq:",
+    ] {
+        assert!(!written.contains(leak), "{leak} leaked:\n{written}");
+    }
+    assert!(
+        written.contains(
+            "\"part\": \"schema\",\n      \"status\": \"unavailable\",\n      \"reason\": \
+             \"unreachable: "
+        ),
+        "{written}"
+    );
+    assert!(written.contains("\"name\": \"Cadasto B.V.\""), "{written}");
+    Ok(())
 }
 
 /// `ferroehr config default` runs end to end through the real dispatch: it only

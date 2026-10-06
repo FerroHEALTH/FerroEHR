@@ -60,6 +60,10 @@ pub mod fhir;
 pub mod format;
 pub mod highlight;
 pub mod management;
+// NOTE: no openEHR spec governs this — our own design; the viewer links no
+// application crate, so it compiles the manufacturer's one source file itself.
+#[path = "../../ferroehr/src/manufacturer.rs"]
+pub mod manufacturer;
 pub mod pages;
 pub mod queries_api;
 pub mod query_namespace;

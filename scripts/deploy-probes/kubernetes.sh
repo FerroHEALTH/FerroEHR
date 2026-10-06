@@ -180,13 +180,14 @@ k8s_namespace() {
     >/dev/null 2>&1
 }
 
-# Install with the chart's OWN defaults plus the two things no default can carry
-# — where the database is and which image is under probe. Deliberately nothing
-# else: an overlay tuned until it works is exactly what this instrument exists
-# to stop being the only evidence.
+# Install with the chart's OWN defaults plus the things no default can carry —
+# where the database is, which image is under probe, and that a probe instance
+# sends no usage report. Deliberately nothing else: an overlay tuned until it
+# works is exactly what this instrument exists to stop being the only evidence.
 k8s_install() {
   helm upgrade --install "$K8S_RELEASE" deploy/helm/ferroehr -n "$K8S_NS" \
     -f "$K8S_AUTH_VALUES" \
+    --set usageReport.enabled=false \
     --set database.existingSecret=ferroehr-db \
     --set image.repository="$PROBE_K8S_IMAGE_REPO" \
     --set image.tag="$PROBE_K8S_IMAGE_TAG" \

@@ -18,17 +18,17 @@
 use std::io::IsTerminal as _;
 use std::path::Path;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 use std::time::Duration;
 
 use anyhow::Context as _;
 use clap::{Parser, Subcommand};
-use ferroehr::config::deployment::{
-    ClusterIdentities, DatabaseFacts, DeploymentPosture, DeploymentProfile,
-};
+use ferroehr::config::deployment::{DatabaseFacts, DeploymentPosture, DeploymentProfile};
 use ferroehr::config::management::EndpointLevels;
 use ferroehr::config::management::ManagementConfig;
 use ferroehr::db::domain::{Domain, DomainPools};
+use ferroehr::manufacturer::MANUFACTURER;
+use ferroehr::report::Report;
 use ferroehr::system_log::config::AuditConfig;
 use ferroehr::system_log::config::AuditPosture;
 use ferroehr::system_log::sender::{AuditHandle, AuditSender, SubjectResolver};
@@ -52,9 +52,20 @@ use ferroehr::telemetry::{self, indicators};
 /// How long to wait for the audit queue to flush on shutdown.
 const AUDIT_DRAIN_TIMEOUT: Duration = Duration::from_secs(5);
 
+/// What `ferroehr --version` prints after the binary's name: the version, then
+/// the manufacturer with its postal address, single point of contact and
+/// website (Regulation (EU) 2025/327, `docs/law/eu/ehds/text.html`
+/// Art. 30(1)(g)).
+static VERSION_TEXT: LazyLock<String> =
+    LazyLock::new(|| MANUFACTURER.version_text(env!("CARGO_PKG_VERSION")));
+
 /// `FerroEHR` server command-line interface.
 #[derive(Debug, Parser)]
-#[command(name = "ferroehr", version, about = "openEHR-conformant CDR server")]
+#[command(
+    name = "ferroehr",
+    version = VERSION_TEXT.as_str(),
+    about = "openEHR-conformant CDR server"
+)]
 pub struct Cli {
     /// Path to the config file (overrides the search order: `FERROEHR_CONFIG`,
     /// `./ferroehr.toml`, `/etc/ferroehr/ferroehr.toml`).
@@ -101,6 +112,15 @@ pub enum Command {
         /// Which report to print.
         #[arg(long, value_enum, default_value_t = ReportEvent::Start)]
         event: ReportEvent,
+    },
+    /// Write a redacted report of what this deployment runs (build, features,
+    /// specification pins, migration level, posture, licence, manufacturer and
+    /// configuration), the file a complaint or an incident report attaches.
+    Report {
+        /// Where to write the report; `-` writes it to stdout. Unset, it is
+        /// `ferroehr-report-<UTC time>.json` in the working directory.
+        #[arg(long)]
+        output: Option<PathBuf>,
     },
 }
 
@@ -168,8 +188,49 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
         Some(Command::UsageReport { print: _, event }) => {
             run_usage_report(event, cli.config.as_deref(), &cli.set).await
         }
+        Some(Command::Report { output }) => {
+            run_report(output.as_deref(), cli.config.as_deref(), &cli.set).await
+        }
         None => serve(cli.config.as_deref(), &cli.set).await,
     }
+}
+
+/// `ferroehr report`: assembles the deployment report and writes it to
+/// `output`, to stdout for `-`, or to `ferroehr-report-<UTC time>.json` in the
+/// working directory, then names the file on stderr.
+///
+/// Telemetry is not initialised, so stdout carries the report alone when it is
+/// the destination. The databases are read, never written.
+///
+/// # Errors
+/// The configuration does not load or validate, or the report cannot be
+/// serialized or written.
+#[expect(
+    clippy::print_stdout,
+    clippy::print_stderr,
+    reason = "the report subcommand's PURPOSE is console output \
+              (.claude/rules/reliability.md §tools)"
+)]
+async fn run_report(
+    output: Option<&Path>,
+    config_path: Option<&Path>,
+    overrides: &[(String, String)],
+) -> anyhow::Result<()> {
+    let config =
+        ferroehr::config::load(config_path, overrides).map_err(|e| anyhow::anyhow!("{e}"))?;
+    config.validate().map_err(|e| anyhow::anyhow!("{e}"))?;
+    let report = Report::gather(&config).await;
+    let written = serde_json::to_string_pretty(&report).context("serializing the report")?;
+    if output == Some(Path::new("-")) {
+        println!("{written}");
+        return Ok(());
+    }
+    let path = output.map_or_else(|| PathBuf::from(report.file_name()), Path::to_path_buf);
+    tokio::fs::write(&path, format!("{written}\n"))
+        .await
+        .with_context(|| format!("writing the report to {}", path.display()))?;
+    eprintln!("report written to {}", path.display());
+    Ok(())
 }
 
 /// `ferroehr db migrate` / `ferroehr db verify` — the out-of-band schema step.
@@ -624,37 +685,12 @@ async fn evaluate_deployment(
     config: &ferroehr::config::FerroEhrConfig,
     pools: &DomainPools,
 ) -> anyhow::Result<DeploymentPosture> {
-    let clusters = ClusterIdentities {
-        clinical: Some(
-            db::cluster_identity(&pools.clinical)
-                .await
-                .context("reading the clinical pool's cluster identity")?,
-        ),
-        party: Some(
-            db::cluster_identity(&pools.party)
-                .await
-                .context("reading the party pool's cluster identity")?,
-        ),
-        linkage: Some(
-            db::cluster_identity(&pools.linkage)
-                .await
-                .context("reading the linkage pool's cluster identity")?,
-        ),
-        audit: Some(
-            db::cluster_identity(&pools.audit)
-                .await
-                .context("reading the audit pool's cluster identity")?,
-        ),
-    };
-    let databases = DatabaseFacts {
-        clusters,
-        prepared_on_runtime_credential: db::domains_prepared_on_a_runtime_credential(
-            &config.db,
-            &config.storage,
-        )
+    let databases = db::database_facts(&config.db, &config.storage, pools)
         .await
-        .context("resolving which databases schema preparation reaches on a runtime credential")?,
-    };
+        .context(
+            "reading each pool's cluster identity and which databases schema preparation \
+             reaches on a runtime credential",
+        )?;
     let posture = DeploymentPosture::evaluate(config, &databases);
     if !posture.permits_boot() {
         anyhow::bail!("{}", posture.refusal_message());

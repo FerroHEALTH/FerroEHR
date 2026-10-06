@@ -6,7 +6,8 @@
 //! No openEHR spec governs this endpoint — it is our own operational surface
 //! (management/ is pure ops — spec-silent by design, a settled adjudication).
 //! It reports the git commit, build timestamp, `rustc` version, the pinned
-//! openEHR specification versions, and the `PostgreSQL` target. The same
+//! openEHR specification versions, the `PostgreSQL` target, and the
+//! manufacturer ([`crate::manufacturer::MANUFACTURER`]). The same
 //! [`BuildInfo`] feeds the `ferroehr_build_info` gauge and the `OTel` resource
 //! attributes in the binary, so the build facts are captured once.
 //!
@@ -39,6 +40,10 @@ pub struct BuildInfo {
     pub spec: SpecVersions,
     /// The `PostgreSQL` version target.
     pub postgres_target: &'static str,
+    /// The manufacturer of this release, as Regulation (EU) 2025/327
+    /// (`docs/law/eu/ehds/text.html` Art. 30(1)(g)) asks the EHR system to name
+    /// it.
+    pub manufacturer: crate::manufacturer::Manufacturer,
     /// The audit posture the server runs under (#3238): absent only where no
     /// configuration was resolved (the compile-time default).
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -92,6 +97,7 @@ impl BuildInfo {
                 term: provenance::TERM,
             },
             postgres_target: provenance::PG_TARGET,
+            manufacturer: crate::manufacturer::MANUFACTURER,
             audit: None,
         }
     }
@@ -146,6 +152,7 @@ mod tests {
             )
         );
         assert_eq!(info.postgres_target, "18.6+");
+        assert_eq!(info.manufacturer, crate::manufacturer::MANUFACTURER);
         // build_date parses to a real timestamp (not the "unknown" fallback) in
         // a normal build where build.rs ran.
         assert!(!info.build_date.is_empty());

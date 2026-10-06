@@ -373,6 +373,8 @@ services:
       # measured comparison runs set warn on BOTH SUTs; default stays info.
       FERROEHR__LOG__FILTER: ${FERROEHR__LOG__FILTER:-info}
       # The usage report (on by default): https://ferroehr.eu/docs/latest/usage-report.html
+      # FERROEHR__USAGE_REPORT__ENABLED=false in your shell sends nothing.
+      FERROEHR__USAGE_REPORT__ENABLED: ${FERROEHR__USAGE_REPORT__ENABLED:-true}
       FERROEHR__USAGE_REPORT__DEPLOYMENT: compose
       # Multimedia (the `s3` profile), passed through from YOUR shell. These are
       # declared with no value on purpose: "If the value is not resolved, the

@@ -78,3 +78,4 @@
 - [Respond in English](respond-in-english.md) — always reply in English, even to Dutch messages
 - [Refs PR can close an issue](refs-pr-can-close-issue.md) — check closingIssuesReferences before merging a plan-only PR
 - [Usage report stays default-on (accepted risk)](usage-report-default-on-accepted-risk.md) — owner chose on-by-default over the #3580 opt-in reading; do not re-propose
+- [EHDS/CRA manufacturer posture](ehds-cra-manufacturer-posture.md) — Cadasto B.V. manufacturer per release (A73 adopted); FerroEHR+FerroBRIDGE one EHR system; v4.3.5 = readiness

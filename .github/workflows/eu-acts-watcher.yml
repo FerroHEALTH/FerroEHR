@@ -1,0 +1,53 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+
+# EUR-Lex watcher: files one issue per act Cellar relates to Regulation (EU)
+# 2025/327 (EHDS) or Regulation (EU) 2024/2847 (CRA) that
+# scripts/watch/eu-acts-known.tsv does not list. The probe and the issue body
+# live in scripts/watch/eu-acts.sh, which files through the watcher family's
+# engine (.github/actions/file-watcher-issue/file-issue.sh).
+#
+# RUN COLOUR (the family's rule): Cellar not answering, or answering in a
+# shape the probe cannot trust, is a RED run. A new act files an issue and the
+# run stays GREEN.
+#
+# NOTE: GitHub disables scheduled workflows after 60 days without repository
+# activity; re-enable from the Actions tab if that happens.
+name: EUR-Lex watcher
+
+on:
+  schedule:
+    # Mondays 10:29 UTC, in a slot of its own (read the estate's slots with
+    # `grep -rE '^ +- cron:' .github/workflows/`).
+    - cron: "29 10 * * 1"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Report new acts without creating issues"
+        type: boolean
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: eu-acts-watcher
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write # file one issue per new act
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: The probe catches a new act and an unreachable source
+        run: bash scripts/watch/eu-acts.sh --self-test
+      - name: Query Cellar, file one issue per new act
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ inputs.dry_run == true && '1' || '0' }}
+        run: bash scripts/watch/eu-acts.sh

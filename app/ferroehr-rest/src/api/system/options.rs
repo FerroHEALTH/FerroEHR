@@ -94,7 +94,7 @@ use ferroehr::config::server::SystemOptionsConfig;
     example = json!({
         "solution": "FerroEHR",
         "solution_version": "3.11.0",
-        "vendor": "FerroEHR project",
+        "vendor": "Cadasto B.V.",
         "restapi_specs_version": "1.1.0",
         "conformance_profile": "STANDARD",
         "endpoints": ["/ehr", "/demographic", "/definition", "/query"]
@@ -253,7 +253,7 @@ where
             example = json!({
                 "solution": "FerroEHR",
                 "solution_version": "3.11.0",
-                "vendor": "FerroEHR project",
+                "vendor": "Cadasto B.V.",
                 "restapi_specs_version": "1.1.0",
                 "conformance_profile": "STANDARD",
                 "endpoints": ["/ehr", "/demographic", "/definition", "/query"]
@@ -401,6 +401,17 @@ mod tests {
         assert_eq!(v["solution"], "MySolution");
         assert_eq!(v["vendor"], "MyOrg");
         assert_ne!(v["solution"], v["vendor"]);
+    }
+
+    /// The default `vendor` is the manufacturer of this release, read from the
+    /// one constant (ITS-REST `specifications/schemas/others/Options.yaml`
+    /// `vendor`; Regulation (EU) 2025/327, `docs/law/eu/ehds/text.html`
+    /// Art. 30(1)(g)).
+    #[tokio::test]
+    async fn the_default_vendor_is_the_manufacturer() {
+        let v = body_json(manifest().respond(&HeaderMap::new())).await;
+        assert_eq!(v["vendor"], "Cadasto B.V.");
+        assert_eq!(v["vendor"], ferroehr::manufacturer::MANUFACTURER.name);
     }
 
     #[tokio::test]

@@ -193,6 +193,8 @@ compose_down() {
 }
 
 if [[ -z "${CONF_NO_COMPOSE:-}" ]] && [[ "$SUT" != "byo" ]]; then
+  # A conformance SUT sends no usage report, whatever the caller's shell holds.
+  export FERROEHR__USAGE_REPORT__ENABLED=false
   trap compose_down EXIT
   echo "==> Composing $SUT on fresh volumes (the exclusive-server ground)"
   if [[ "$SUT" = "ehrbase" ]]; then

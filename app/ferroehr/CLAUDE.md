@@ -5,7 +5,10 @@ The application core (five app crates, zero re-exports). Top-level modules
 engine), `versioning` (change control + VERSION `signature` signing),
 `validation`, `templates`, `db` (sqlx pools + migrations), `config` (the full
 `ferroehr.toml` tree), `telemetry`, `system_log` (IHE ATNA), `privacy`,
-`licence`, `ids`, `extensions`, `banner`, `usage_report` (the outbound
+`licence`, `ids`, `extensions`, `banner`, `manufacturer` (the one source of
+the manufacturer every surface names; the viewer compiles this file through
+`#[path]`, so it stays dependency-free but for `serde`), `report` (the
+redacted deployment report `ferroehr report` writes), `usage_report` (the outbound
 installation report to FerroPULSE: typed payload, cross-replica claims on the
 clinical pool, the in-process latency window fed by `ferroehr-rest`'s HTTP
 metrics layer and AQL execution). Hand-written idiomatic Rust of our own design on the

@@ -582,6 +582,26 @@ async fn the_system_screen_renders_its_cards_and_the_openapi_family_picker() {
     assert!(html.contains("Open audit browser"), "{html}");
 }
 
+/// The `/system` screen's manufacturer card names the manufacturer, its postal
+/// address, its single point of contact and its website, in the server pass
+/// (Regulation (EU) 2025/327, `docs/law/eu/ehds/text.html` Art. 30(1)(g)).
+#[tokio::test]
+async fn the_system_screen_names_the_manufacturer() {
+    let html = render_page("/system", &[], || {
+        view! { <ferroehr_viewer::pages::system::SystemPage /> }.into_any()
+    });
+    assert!(html.contains(">Manufacturer</h2>"), "{html}");
+    assert!(html.contains("id=\"manufacturer\""), "{html}");
+    for fact in [
+        "Cadasto B.V.",
+        "Comeniusstraat 2d, 1817 MS Alkmaar, The Netherlands",
+        "href=\"mailto:info@cadasto.com\"",
+        "href=\"https://www.cadasto.com/contact/\"",
+    ] {
+        assert!(html.contains(fact), "{fact} missing: {html}");
+    }
+}
+
 // ---------------------------------------------------------- subscriptions
 
 #[tokio::test]

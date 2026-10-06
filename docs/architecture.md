@@ -406,6 +406,69 @@ The service layer realizes the openEHR **SM Platform Service Model**
 | `ferroehr-viewer` | The Leptos SSR viewer: its own binary and OCI image, consuming the CDR strictly over ITS-REST | application |
 | `testkit` | Shared test-database harness: one PG18 server + template-database cloning (`tools/*`) | tooling |
 
+## Regulatory position (EHDS and CRA)
+
+Two owner decisions of 2026-10-06 (#3606) settle who carries the
+manufacturer's duties and what the EHR system consists of. Every compliance
+page, release procedure and EHDS or CRA issue follows them. The texts are the
+vendored acts in `docs/law/eu/` (`ehds/` is Regulation (EU) 2025/327, `cra/` is
+Regulation (EU) 2024/2847).
+
+**Cadasto B.V. is the manufacturer of each tagged release.** Each tagged
+release (the binaries, the OCI images, the Helm chart and the source archive)
+is one product Cadasto B.V. places on the market. This is the reading FerroFED
+recorded as its decision A73 (FerroHEALTH/FerroFED#654), adopted here for the
+same licence and the same holder:
+
+- BUSL-1.1 is not a free and open-source licence under CRA Art 3(48): it does
+  not grant every right to use, modify and redistribute. Neither the CRA's
+  free and open-source software provisions nor the open-source software steward
+  regime (Art 24) applies.
+- CRA Art 14 reporting of actively exploited vulnerabilities and severe
+  incidents applies now: Art 71(2) applies Art 14 from 11 September 2026, and
+  Art 69(3) extends it to products placed on the market before 11 December
+  2027. The procedure is #3609.
+- From 11 December 2027 one technical documentation set, one EU declaration of
+  conformity and one CE marking cover both acts, through CRA Art 32(5a) as EHDS
+  Art 104 inserts it. The documentation is #3616.
+- EHDS Art 35 (identifying the economic operators supplied, for 10 years) is met
+  by a register of every operator supplied under a contract. The public
+  release is not gated behind it.
+- A deployment of an unmodified release puts that product into service; it does
+  not make the deploying organisation the manufacturer. The readiness pages no
+  longer say otherwise.
+
+**The EHR system is FerroEHR and FerroBRIDGE together.** EHDS Art 25(1) asks an
+EHR system to include both harmonised software components:
+
+| Component | Shipped by | Where |
+|---|---|---|
+| European logging software component (Annex II 3) | FerroEHR | `ferroehr::system_log` (the access-event model, the audit store, the DICOM and FHIR renderings, the sinks), `ferroehr-rest::system_log` (the middleware that records every API access and classifies it), the ITI-81 `GET /fhir/r4/AuditEvent` retrieval in `ferroehr-rest::extensions::fhir`, and the retention register in `ferroehr::storage::marks` |
+| European interoperability software component (Annex II 2.1 to 2.3) | FerroBRIDGE | the openEHR-to-exchange-format mappings (#3206); FerroEHR's in-tree FHIR connector is retired (#3080), and the AuditEvent route above is not part of that retirement |
+
+The two components are independent of each other (Art 2(2)(n) and (o), Art
+30(1)(b)) because they are separate products that meet only over ITS-REST. The
+technical documentation and the declaration of conformity name the pair;
+FerroBRIDGE declares the interoperability component's requirements and
+FerroEHR the logging component's and the system-level ones (Annex II 1). A
+change to a module in the logging row above is a change to a harmonised
+component under Art 30(2) and updates the technical documentation in the same
+release.
+
+**Points for counsel.** These are questions, and nothing in this repository
+answers them:
+
+1. Whether CRA Art 13(10), which lets a manufacturer patch only the latest
+   version when earlier versions' users get it free of charge, holds for
+   commercial licensees under BUSL-1.1 (the support period, #3610).
+2. The scope of the EHDS Art 35 register: whether a download under the public
+   licence supplies an economic operator.
+3. Whether a deployment that modifies the source and puts the result into
+   service becomes a manufacturer itself (CRA Art 21 and Art 22, EHDS Art 34).
+4. Whether FerroEHR is an important product with digital elements under CRA
+   Annex III and Implementing Regulation (EU) 2025/2392, which decides the
+   conformity-assessment route (#3611).
+
 ## Build state
 
 The openEHR-conformant CDR is shipped: the generated spec/ITS foundation plus

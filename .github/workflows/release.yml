@@ -179,6 +179,19 @@ jobs:
             echo "::error::The [$VERSION] changelog section is empty." >&2
             exit 1
           fi
+          # CRA Art 13(19) and Annex II point 7: the end of the support
+          # period, at least month and year, five years from the release date.
+          released="$(sed -n "s/^## \[$VERSION\] - \([0-9-]*\).*/\1/p" CHANGELOG.md)"
+          if ! end="$(date -u -d "$released +5 years" '+%B %Y')"; then
+            echo "::error::The [$VERSION] heading carries no release date to count the support period from." >&2
+            exit 1
+          fi
+          {
+            echo
+            echo "### Support period"
+            echo
+            echo "Cadasto B.V. handles vulnerabilities in this release until the end of $end (Regulation (EU) 2024/2847 Art 13(8) and (19)). The security update for a release in its support period ships in the newest release; see [SECURITY.md](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions)."
+          } >> release-notes.md
           echo "Release notes for $VERSION:"; cat release-notes.md
         env:
           VERSION: ${{ steps.tag.outputs.version }}
@@ -601,8 +614,8 @@ jobs:
         org.opencontainers.image.source=https://github.com/FerroHEALTH/FerroEHR
         org.opencontainers.image.url=https://ferroehr.eu/
         org.opencontainers.image.documentation=https://ferroehr.eu/docs/latest/
-        org.opencontainers.image.vendor=FerroHEALTH
-        org.opencontainers.image.authors=FerroHEALTH <https://github.com/FerroHEALTH>
+        org.opencontainers.image.vendor=Cadasto B.V.
+        org.opencontainers.image.authors=Cadasto B.V. <https://www.cadasto.com/contact/>
         org.opencontainers.image.licenses=BUSL-1.1
         org.opencontainers.image.base.name=gcr.io/distroless/cc-debian13:nonroot
         org.opencontainers.image.base.digest=sha256:e792ab3d241a468a4fd7519ddbbebe66b49b5f365771716ea688ad40b6c6f1c2
@@ -740,8 +753,8 @@ jobs:
         org.opencontainers.image.source=https://github.com/FerroHEALTH/FerroEHR
         org.opencontainers.image.url=https://ferroehr.eu/
         org.opencontainers.image.documentation=https://ferroehr.eu/docs/latest/
-        org.opencontainers.image.vendor=FerroHEALTH
-        org.opencontainers.image.authors=FerroHEALTH <https://github.com/FerroHEALTH>
+        org.opencontainers.image.vendor=Cadasto B.V.
+        org.opencontainers.image.authors=Cadasto B.V. <https://www.cadasto.com/contact/>
         org.opencontainers.image.licenses=BUSL-1.1
         org.opencontainers.image.base.name=gcr.io/distroless/cc-debian13:nonroot
         org.opencontainers.image.base.digest=sha256:e792ab3d241a468a4fd7519ddbbebe66b49b5f365771716ea688ad40b6c6f1c2
@@ -773,8 +786,8 @@ jobs:
         org.opencontainers.image.source=https://github.com/FerroHEALTH/FerroEHR
         org.opencontainers.image.url=https://ferroehr.eu/
         org.opencontainers.image.documentation=https://ferroehr.eu/docs/latest/
-        org.opencontainers.image.vendor=FerroHEALTH
-        org.opencontainers.image.authors=FerroHEALTH <https://github.com/FerroHEALTH>
+        org.opencontainers.image.vendor=Cadasto B.V.
+        org.opencontainers.image.authors=Cadasto B.V. <https://www.cadasto.com/contact/>
         org.opencontainers.image.licenses=BUSL-1.1 AND PostgreSQL
         org.opencontainers.image.base.name=postgres:18.6
         org.opencontainers.image.base.digest=sha256:5a5a84b19854a9ffaa54082c166ff4ec27473a361e496e5ea167f298f2da9722

@@ -39,3 +39,7 @@ config:
         # Identity and roles only; the hash is in `secrets:` above.
         - username: ferroehr
           roles: [ADMIN, USER]
+
+# A test cluster is not an installation; it sends no usage report (#3623).
+usageReport:
+  enabled: false
