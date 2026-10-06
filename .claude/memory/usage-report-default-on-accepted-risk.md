@@ -5,7 +5,7 @@ metadata:
   type: project
 ---
 
-The #3580 adjudication (`docs/plans/usage-report/adjudication-3580.md`) concluded that Art. 5(3) applies on its wording, no exemption fits, and a default-on report with a boot line is not consent; it recommended opt-in. Offered three options (opt-in + licence flag, opt-in only, keep on), the owner chose "Keep on by default" and accepts the residual risk.
+The #3580 adjudication (summary on #3580; full text `docs/plans/usage-report/adjudication-3580.md`, deleted at close, readable at `944803867`) concluded that Art. 5(3) applies on its wording, no exemption fits, and a default-on report with a boot line is not consent; it recommended opt-in. Offered three options (opt-in + licence flag, opt-in only, keep on), the owner chose "Keep on by default" and accepts the residual risk.
 
 **Why:** the owner wants fleet visibility from every install; prior art (Grafana, GitLab) ships default-on.
 
