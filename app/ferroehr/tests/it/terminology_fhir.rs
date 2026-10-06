@@ -27,7 +27,7 @@ use wiremock::{Mock, MockServer, ResponseTemplate};
 fn provider(base: &str, operation: FhirOperation) -> FhirTerminologyProvider {
     let cfg = FhirProviderConfig {
         kind: ProviderKind::Fhir,
-        url: base.to_owned(),
+        url: ferroehr::config::secret::SecretUrl::new(base),
         operation,
         connect_timeout_ms: 500,
         request_timeout_ms: 800,
@@ -46,7 +46,7 @@ fn provider(base: &str, operation: FhirOperation) -> FhirTerminologyProvider {
 fn cached_provider(base: &str, operation: FhirOperation) -> FhirTerminologyProvider {
     let cfg = FhirProviderConfig {
         kind: ProviderKind::Fhir,
-        url: base.to_owned(),
+        url: ferroehr::config::secret::SecretUrl::new(base),
         operation,
         connect_timeout_ms: 500,
         request_timeout_ms: 800,

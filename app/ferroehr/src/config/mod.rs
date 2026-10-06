@@ -132,6 +132,13 @@ impl FerroEhrConfig {
         self.validate_key_sources(&mut errors);
         self.validate_privacy(&mut errors);
         self.validate_audit(&mut errors);
+        errors.extend(
+            self.audit
+                .categories
+                .errors()
+                .into_iter()
+                .map(ConfigError::semantic),
+        );
         self.validate_cohort(&mut errors);
         self.validate_deployment(&mut errors);
         errors.extend(self.usage_report.errors());
@@ -161,11 +168,28 @@ impl FerroEhrConfig {
     /// the point the law says to delete it (#3346), which `0` — keep forever —
     /// always does. The jurisdictions in force are the ones the active
     /// identifier rules name, and the German ceiling additionally waits for the
-    /// deployment to declare itself one of the SGB V § 307 controllers. Where a
-    /// floor and a ceiling contradict each other, no horizon satisfies both and
-    /// the refusal says so rather than silently preferring one.
+    /// deployment to declare itself one of the SGB V § 307 controllers. Bounds
+    /// are written in calendar years: `retention_years` is compared exactly, a
+    /// day count conservatively ([`crate::system_log::config::RetentionBound`]).
+    /// Where a floor and a ceiling contradict each other in years, no horizon
+    /// satisfies both and the refusal says so; where only the day rounding
+    /// leaves no day count between them, the refusal names `retention_years`.
     fn validate_audit(&self, errors: &mut Vec<ConfigError>) {
+        use crate::system_log::config::{Retention, RetentionBound};
         let store = &self.audit.store;
+        match store.retention_years {
+            Some(0) => errors.push(ConfigError::semantic(
+                "audit.store.retention_years = 0 keeps nothing; set retention_days = 0 to keep \
+                 records forever, or a year count of 1 or more"
+                    .to_owned(),
+            )),
+            Some(years) if store.retention_days > 0 => errors.push(ConfigError::semantic(format!(
+                "audit.store.retention_days = {} and audit.store.retention_years = {years} are \
+                 both set; state the horizon once, in days or in calendar years",
+                store.retention_days
+            ))),
+            _ => {}
+        }
         if !(self.audit.enabled && store.enabled) {
             return;
         }
@@ -177,53 +201,68 @@ impl FerroEhrConfig {
             .filter_map(|key| crate::privacy::detect::rule(key))
             .map(|rule| rule.jurisdiction)
             .collect();
-        let declared = self.audit.store.sgb_v_309_controller;
-        let mut floors: Vec<(&str, u32)> = Vec::new();
-        let mut ceilings: Vec<(&str, u32)> = Vec::new();
+        let declared = store.sgb_v_309_controller;
+        let mut floors: Vec<(&str, RetentionBound)> = Vec::new();
+        let mut ceilings: Vec<(&str, RetentionBound)> = Vec::new();
         for jurisdiction in jurisdictions {
-            if let Some(floor) = crate::system_log::config::retention_floor_days(jurisdiction) {
+            if let Some(floor) = crate::system_log::config::retention_floor(jurisdiction) {
                 floors.push((jurisdiction, floor));
             }
             if let Some(ceiling) =
-                crate::system_log::config::retention_ceiling_days(jurisdiction, declared)
+                crate::system_log::config::retention_ceiling(jurisdiction, declared)
             {
                 ceilings.push((jurisdiction, ceiling));
             }
         }
+        let retention = store.retention();
+        let hint = years_fix(&floors, &ceilings)
+            .filter(|_| !matches!(retention, Retention::Years(_)))
+            .map(|years| {
+                format!(
+                    "; no retention_days value satisfies both the floor and the ceiling, so set \
+                     retention_years = {years} instead"
+                )
+            })
+            .unwrap_or_default();
+        let horizon = retention.describe();
         for &(jurisdiction, floor) in &floors {
+            let (days, years, source) = (floor.days, floor.years, floor.source);
             for &(capped, ceiling) in &ceilings {
-                if ceiling < floor {
+                if ceiling.years < years {
                     errors.push(ConfigError::semantic(format!(
-                        "the {capped} access-log retention ceiling of {ceiling} days is below \
-                         the {jurisdiction} floor of {floor} days, so no horizon satisfies \
-                         both; run the two jurisdictions as separate deployments, or drop the \
-                         privacy.identifier_scan rule that does not apply here"
+                        "the {capped} access-log retention ceiling of {} days ({} years) is \
+                         below the {jurisdiction} floor of {days} days ({years} years, {source}), \
+                         so no horizon satisfies both; run the two jurisdictions as separate \
+                         deployments, or drop the privacy.identifier_scan rule that does not \
+                         apply here",
+                        ceiling.days, ceiling.years
                     )));
                 }
             }
-            if store.retention_days > 0 && store.retention_days < floor {
+            if !floor.admits_as_floor(retention) {
+                let bound = match retention {
+                    Retention::Years(_) => format!("{years} years"),
+                    Retention::Forever | Retention::Days(_) => format!("{days} days"),
+                };
                 errors.push(ConfigError::semantic(format!(
-                    "audit.store.retention_days = {} is below the {jurisdiction} access-log \
-                     retention floor of {floor} days (five years, Besluit vaststelling \
-                     bewaartermijn logging, https://wetten.overheid.nl/BWBR0042391); keep \
-                     records at least that long, or set 0 to keep them forever",
-                    store.retention_days
+                    "audit.store.{horizon} is below the {jurisdiction} access-log retention floor \
+                     of {bound} ({source}); keep records at least that long, or set \
+                     retention_days = 0 to keep them forever{hint}"
                 )));
             }
         }
         for &(jurisdiction, ceiling) in &ceilings {
-            if store.retention_days == 0 || store.retention_days > ceiling {
-                let horizon = match store.retention_days {
-                    0 => "0 (keep forever)".to_owned(),
-                    days => days.to_string(),
+            if !ceiling.admits_as_ceiling(retention) {
+                let bound = match retention {
+                    Retention::Years(_) => format!("{} years", ceiling.years),
+                    Retention::Forever | Retention::Days(_) => format!("{} days", ceiling.days),
                 };
                 errors.push(ConfigError::semantic(format!(
-                    "audit.store.retention_days = {horizon} is above the {jurisdiction} \
-                     access-log retention ceiling of {ceiling} days (the three-year limitation \
-                     period of SGB V § 309 Abs. 1, after which Abs. 3 requires deletion \
-                     unverzüglich, https://www.gesetze-im-internet.de/sgb_5/__309.html); set a \
-                     horizon at or below it, or clear audit.store.sgb_v_309_controller if this \
-                     deployment is not one of the § 307 controllers"
+                    "audit.store.{horizon} is above the {jurisdiction} access-log retention \
+                     ceiling of {bound} ({}); set a horizon at or below it, or clear \
+                     audit.store.sgb_v_309_controller if this deployment is not one of the \
+                     § 307 controllers{hint}",
+                    ceiling.source
                 )));
             }
         }
@@ -509,50 +548,103 @@ impl FerroEhrConfig {
                     != oidc.issuer.trim().trim_end_matches('/') =>
             {
                 errors.push(ConfigError::semantic(format!(
-                    "smart.endpoints.issuer ({advertised:?}) and auth.oidc.issuer ({:?}) \
+                    "smart.endpoints.issuer ({:?}) and auth.oidc.issuer ({:?}) \
                      name different authorization servers: applications would obtain tokens \
                      from the first and every request would be refused by the second",
-                    oidc.issuer
+                    secret::redact_userinfo(advertised),
+                    secret::redact_userinfo(&oidc.issuer)
                 )));
             }
             _ => {}
         }
     }
 
-    /// The redacted TOML rendering (secrets show `***`) for `/management/env`
-    /// and `ferroehr config check`.
+    /// Returns the redacted configuration as a TOML table, the tree
+    /// `ferroehr report` records.
+    ///
+    /// The table is [`Self::to_redacted_json`]'s tree, so every rendering
+    /// masks the same leaves the same way.
+    ///
+    /// # Errors
+    /// [`ConfigError`] if the tree cannot be serialized to TOML.
+    pub fn to_redacted_table(&self) -> Result<toml::Table, ConfigError> {
+        toml::Table::try_from(without_nulls(self.to_redacted_json()?))
+            .map_err(|e| ConfigError::semantic(format!("rendering config as TOML: {e}")))
+    }
+
+    /// Returns the redacted TOML rendering `ferroehr config check` prints.
+    ///
+    /// The rendering is [`Self::to_redacted_json`]'s tree in the
+    /// configuration's own key order, with the unset keys TOML cannot carry
+    /// left out.
     ///
     /// # Errors
     /// [`ConfigError`] if the tree cannot be serialized to TOML.
     pub fn to_redacted_toml(&self) -> Result<String, ConfigError> {
-        toml::to_string_pretty(self)
+        toml::to_string_pretty(&without_nulls(self.to_redacted_json()?))
             .map_err(|e| ConfigError::semantic(format!("rendering config as TOML: {e}")))
     }
 
-    /// The effective configuration as a redacted JSON tree, the source of the
-    /// `GET /admin/config` endpoint and the `/management/env` snapshot the binary
-    /// builds at boot. No openEHR spec governs configuration — our own
-    /// design/extension.
+    /// Returns the effective configuration as a redacted JSON tree, the one
+    /// redacted tree every rendering derives from.
+    ///
+    /// The binary builds the `/management/env` and `GET /admin/config`
+    /// snapshot with it; [`Self::to_redacted_toml`] and
+    /// [`Self::to_redacted_table`] render it. No openEHR spec governs
+    /// configuration — our own design/extension.
     ///
     /// Redaction is a property of the leaf type rather than of a key-name scan:
     /// every secret-bearing field is typed [`secret::Secret`], whose
     /// [`Serialize`] emits the fixed [`secret::REDACTED`] placeholder, or
     /// [`secret::SecretUrl`], whose [`Serialize`] masks the URL `userinfo`
-    /// component. Serializing `self` therefore yields a tree whose secret leaves
-    /// are already masked, so a field cannot leak by being renamed and a secret
-    /// nested anywhere is masked by its own type. A correctly typed new secret is
-    /// redacted with no change here; one smuggled in as a bare `String` breaks
-    /// that property, and the `redacted_json_masks_every_secret_field` test
-    /// enumerates the current secret set as the standing backstop. Non-secret
-    /// identifiers, such as a Basic user's `username` and `roles`, an OIDC
-    /// `issuer`, or `auth.oidc.jwks_json` public verification material, stay
-    /// visible.
+    /// component. Every URL key that may carry `userinfo` is a `SecretUrl`;
+    /// a URL key whose value is an identifier or is published
+    /// (`auth.oidc.issuer`, the `smart` URLs) is refused at boot when it
+    /// carries `userinfo`. A field therefore cannot leak by being renamed, and
+    /// the `redacted_json_masks_every_secret_field` test enumerates the current
+    /// secret set as the standing backstop. On top of the types, every string
+    /// leaf of the tree passes [`secret::redact_userinfo`], so a URL in a key
+    /// that is not typed `SecretUrl`, or in a configuration no validation has
+    /// run over, is masked too. Non-secret identifiers, such as a Basic user's
+    /// `username` and `roles`, an OIDC `issuer` without `userinfo`, or
+    /// `auth.oidc.jwks_json` public verification material, stay visible.
     ///
     /// # Errors
     /// [`ConfigError`] if the tree cannot be serialized to JSON.
     pub fn to_redacted_json(&self) -> Result<serde_json::Value, ConfigError> {
-        serde_json::to_value(self)
-            .map_err(|e| ConfigError::semantic(format!("rendering config as JSON: {e}")))
+        let mut tree = serde_json::to_value(self)
+            .map_err(|e| ConfigError::semantic(format!("rendering config as JSON: {e}")))?;
+        mask_url_userinfo(&mut tree);
+        Ok(tree)
+    }
+}
+
+/// Masks the `userinfo` of every URL string in `tree`, recursively, with
+/// [`secret::redact_userinfo`].
+fn mask_url_userinfo(tree: &mut serde_json::Value) {
+    match tree {
+        serde_json::Value::String(text) => *text = secret::redact_userinfo(text),
+        serde_json::Value::Array(items) => items.iter_mut().for_each(mask_url_userinfo),
+        serde_json::Value::Object(members) => members.values_mut().for_each(mask_url_userinfo),
+        serde_json::Value::Null | serde_json::Value::Bool(_) | serde_json::Value::Number(_) => {}
+    }
+}
+
+/// Returns `tree` without its `null` object members, the unset keys a TOML
+/// rendering leaves out (TOML has no null value).
+fn without_nulls(tree: serde_json::Value) -> serde_json::Value {
+    match tree {
+        serde_json::Value::Object(members) => serde_json::Value::Object(
+            members
+                .into_iter()
+                .filter(|(_, value)| !value.is_null())
+                .map(|(key, value)| (key, without_nulls(value)))
+                .collect(),
+        ),
+        serde_json::Value::Array(items) => {
+            serde_json::Value::Array(items.into_iter().map(without_nulls).collect())
+        }
+        leaf => leaf,
     }
 }
 
@@ -618,7 +710,7 @@ fn validate_terminology_provider(
     terminology: &crate::service::terminology::config::ExternalTerminologyConfig,
     errors: &mut Vec<ConfigError>,
 ) {
-    if provider.url.trim().is_empty() {
+    if provider.url.expose().trim().is_empty() {
         errors.push(ConfigError::semantic(format!(
             "terminology.external.providers.{name}.url must not be empty (the FHIR R4B base \
              URL of the terminology server)"
@@ -653,7 +745,7 @@ fn validate_terminology_client(
     client: &crate::service::terminology::config::TerminologyOauth2Config,
     errors: &mut Vec<ConfigError>,
 ) {
-    if client.token_url.trim().is_empty() {
+    if client.token_url.expose().trim().is_empty() {
         errors.push(ConfigError::semantic(format!(
             "terminology.external.oauth2_clients.{name}.token_url must not be empty"
         )));
@@ -755,6 +847,29 @@ pub fn discover_file(
     loader::discover_file(cli_config, env)
 }
 
+/// The year count that satisfies every floor and ceiling in force when no day
+/// count does, or `None` when a day count can, or when no year count can.
+///
+/// A floor in years binds a day count to the most those years can span and a
+/// ceiling to the fewest, so a floor and a ceiling of the same years leave no
+/// day count between them while the year count itself satisfies both.
+fn years_fix(
+    floors: &[(&str, crate::system_log::config::RetentionBound)],
+    ceilings: &[(&str, crate::system_log::config::RetentionBound)],
+) -> Option<u32> {
+    let floor = floors
+        .iter()
+        .map(|(_, bound)| *bound)
+        .max_by_key(|b| b.years)?;
+    let ceiling = ceilings
+        .iter()
+        .map(|(_, bound)| *bound)
+        .min_by_key(|b| b.years)?;
+    let floor_days = floors.iter().map(|(_, bound)| bound.days).max()?;
+    let ceiling_days = ceilings.iter().map(|(_, bound)| bound.days).min()?;
+    (floor.years <= ceiling.years && floor_days > ceiling_days).then_some(floor.years)
+}
+
 /// The `multimedia.endpoint` semantic checks.
 ///
 /// An enabled integration with a blank or scheme-less endpoint would boot clean
@@ -770,7 +885,8 @@ fn multimedia_endpoint_errors(
     let Some(endpoint) = &config.endpoint else {
         return Vec::new();
     };
-    let trimmed = endpoint.trim();
+    let trimmed = endpoint.expose().trim();
+    let shown = secret::redact_userinfo(trimmed);
     if trimmed.is_empty() {
         return vec![ConfigError::semantic(
             "multimedia.endpoint is set but empty — give an absolute URL \
@@ -786,14 +902,14 @@ fn multimedia_endpoint_errors(
         // a bucket.
         Ok(url) if !matches!(url.scheme(), "http" | "https") => {
             vec![ConfigError::semantic(format!(
-                "multimedia.endpoint {trimmed:?} has scheme {:?} — an S3 endpoint \
-                 must be http or https (did you mean \"http://{trimmed}\"?)",
+                "multimedia.endpoint {shown:?} has scheme {:?} — an S3 endpoint \
+                 must be http or https (did you mean \"http://{shown}\"?)",
                 url.scheme()
             ))]
         }
         Ok(_) => Vec::new(),
         Err(e) => vec![ConfigError::semantic(format!(
-            "multimedia.endpoint {trimmed:?} is not an absolute URL: {e}"
+            "multimedia.endpoint {shown:?} is not an absolute URL: {e}"
         ))],
     }
 }
@@ -829,6 +945,43 @@ mod tests {
             .expect("a jurisdiction with no registered floor imposes none");
     }
 
+    /// Every EU Member State carries the EHDS floor of three years and the
+    /// refusal names EHDS Art. 9(2); the Dutch five years win over it; the Swiss
+    /// year stands, Switzerland being outside the Union (#3625).
+    #[test]
+    fn the_ehds_floor_holds_in_every_member_state_and_a_longer_national_floor_wins() {
+        for rule in ["de-kvnr", "fi-hetu", "se-personnummer"] {
+            let mut config = FerroEhrConfig::default();
+            config.privacy.identifier_scan.rules = vec![rule.to_owned()];
+            config.audit.store.retention_days = 1095;
+            let text = config
+                .validate()
+                .expect_err("1095 days is below the EHDS floor")
+                .to_string();
+            assert!(
+                text.contains("floor of 1096 days") && text.contains("EHDS Art. 9(2)"),
+                "{rule}: {text}"
+            );
+            config.audit.store.retention_days = 1096;
+            config.validate().expect("the EHDS floor itself passes");
+        }
+
+        let mut nl = FerroEhrConfig::default();
+        nl.privacy.identifier_scan.rules = vec!["nl-bsn".to_owned()];
+        nl.audit.store.retention_days = 1096;
+        let text = nl
+            .validate()
+            .expect_err("the Dutch floor outlasts the EHDS floor")
+            .to_string();
+        assert!(text.contains("floor of 1830 days"), "{text}");
+
+        let mut ch = FerroEhrConfig::default();
+        ch.privacy.identifier_scan.rules = vec!["ch-ahvn13".to_owned()];
+        ch.audit.store.retention_days = 366;
+        ch.validate()
+            .expect("Switzerland keeps its one-year floor; EHDS does not reach it");
+    }
+
     /// The German ceiling reaches a deployment only once it declares itself one
     /// of the SGB V § 307 controllers, and then caps the horizon — including
     /// "keep forever", which is the case the floor rule could never produce
@@ -858,8 +1011,81 @@ mod tests {
             .expect_err("1096 days is above the ceiling");
         assert!(errors.to_string().contains("1095"), "{errors}");
 
+        // Germany also carries the EHDS floor of three years (#3625): 1095 days
+        // can fall short of three calendar years, so no day count passes both,
+        // and the refusal names the horizon in years that does.
         config.audit.store.retention_days = 1095;
-        config.validate().expect("the ceiling itself passes");
+        let errors = config
+            .validate()
+            .expect_err("1095 days can fall short of the three-year EHDS floor");
+        assert!(
+            errors.to_string().contains("set retention_years = 3"),
+            "{errors}"
+        );
+        config.audit.store.retention_days = 0;
+        config.audit.store.retention_years = Some(3);
+        config
+            .validate()
+            .expect("three calendar years meet the floor and the ceiling exactly");
+    }
+
+    /// A horizon in calendar years is compared exactly against floors in years:
+    /// the Dutch five years and the Swiss one year (#3625).
+    #[test]
+    fn retention_years_meets_a_floor_in_years_exactly() {
+        let mut nl = FerroEhrConfig::default();
+        nl.privacy.identifier_scan.rules = vec!["nl-bsn".to_owned()];
+        nl.audit.store.retention_years = Some(4);
+        let text = nl
+            .validate()
+            .expect_err("four years are below the Dutch floor")
+            .to_string();
+        assert!(
+            text.contains("retention_years = 4") && text.contains("floor of 5 years"),
+            "{text}"
+        );
+        nl.audit.store.retention_years = Some(5);
+        nl.validate().expect("five years meet the Dutch floor");
+
+        let mut ch = FerroEhrConfig::default();
+        ch.privacy.identifier_scan.rules = vec!["ch-ahvn13".to_owned()];
+        ch.audit.store.retention_years = Some(1);
+        ch.validate().expect("one year meets the Swiss floor");
+
+        let mut de = FerroEhrConfig::default();
+        de.privacy.identifier_scan.rules = vec!["de-kvnr".to_owned()];
+        de.audit.store.sgb_v_309_controller = true;
+        de.audit.store.retention_years = Some(4);
+        let text = de
+            .validate()
+            .expect_err("four years outlast the SGB V period")
+            .to_string();
+        assert!(text.contains("ceiling of 3 years"), "{text}");
+    }
+
+    /// The horizon is stated once: days and years together, or zero years, is a
+    /// boot error naming the keys.
+    #[test]
+    fn retention_days_and_retention_years_are_mutually_exclusive() {
+        let mut config = FerroEhrConfig::default();
+        config.audit.store.retention_days = 1096;
+        config.audit.store.retention_years = Some(3);
+        let text = config
+            .validate()
+            .expect_err("two horizons are refused")
+            .to_string();
+        assert!(
+            text.contains("retention_days = 1096") && text.contains("retention_years = 3"),
+            "{text}"
+        );
+
+        config.audit.store.retention_days = 0;
+        config.audit.store.retention_years = Some(0);
+        let text = config
+            .validate()
+            .expect_err("zero years keeps nothing")
+            .to_string();
+        assert!(text.contains("retention_years = 0"), "{text}");
     }
 
     /// A ceiling below a floor is a contradiction no horizon resolves, so it is
@@ -885,6 +1111,7 @@ mod tests {
 
     use super::*;
     use crate::config::authz::AbacParam;
+    use crate::config::secret::SecretUrl;
 
     /// Build an injected env map from `(key, value)` pairs.
     fn env(pairs: &[(&str, &str)]) -> HashMap<String, String> {
@@ -1083,7 +1310,8 @@ mod tests {
                 .providers
                 .get("onto")
                 .expect("onto")
-                .url,
+                .url
+                .expose(),
             "https://onto/fhir"
         );
     }
@@ -1514,6 +1742,85 @@ mod tests {
         assert_eq!(c.db.max_connections, 7);
     }
 
+    /// Userinfo written into ANY URL key reaches neither the TOML rendering
+    /// (`ferroehr config check`), the TOML table (`ferroehr report`), the JSON
+    /// tree (`/management/env`, `GET /admin/config`) nor `Debug`; each URL
+    /// keeps its host and path with the userinfo masked.
+    #[test]
+    fn url_userinfo_reaches_no_rendering() {
+        use crate::service::terminology::config::{FhirProviderConfig, TerminologyOauth2Config};
+
+        let leaky =
+            |n: u32| SecretUrl::new(format!("https://u{n}:URL_PW_SENTINEL_{n}@h{n}:1/p{n}"));
+        let mut c = FerroEhrConfig::default();
+        c.db.url = leaky(1);
+        c.db.migrate_url = Some(leaky(2));
+        c.storage.clinical.url = Some(leaky(3));
+        c.storage.party.url = Some(leaky(4));
+        c.storage.linkage.url = Some(leaky(5));
+        c.storage.audit.url = Some(leaky(6));
+        c.events.url = leaky(7);
+        c.fhir.outbound.url = leaky(8);
+        c.audit.fhir_feed.url = leaky(9);
+        c.terminology.external.providers.insert(
+            "ts".to_owned(),
+            FhirProviderConfig {
+                url: leaky(10),
+                ..FhirProviderConfig::default()
+            },
+        );
+        c.terminology.external.oauth2_clients.insert(
+            "client".to_owned(),
+            TerminologyOauth2Config {
+                token_url: leaky(11),
+                ..TerminologyOauth2Config::default()
+            },
+        );
+        c.usage_report.endpoint = leaky(12);
+        c.authz.abac.remote.server = Some(leaky(13));
+        c.telemetry.otlp_endpoint = Some(leaky(14));
+        c.multimedia.endpoint = Some(leaky(15));
+
+        let toml = c.to_redacted_toml().expect("toml");
+        let table = c.to_redacted_table().expect("table").to_string();
+        let json = serde_json::to_string(&c.to_redacted_json().expect("json")).expect("json");
+        let debug = format!("{c:?}");
+        for (surface, rendered) in [
+            ("toml", &toml),
+            ("table", &table),
+            ("json", &json),
+            ("debug", &debug),
+        ] {
+            assert!(
+                !rendered.contains("URL_PW_SENTINEL"),
+                "URL userinfo leaked into the {surface} rendering: {rendered}"
+            );
+            for n in 1..=15 {
+                assert!(
+                    rendered.contains(&format!("https://***@h{n}:1/p{n}")),
+                    "URL {n} lost its host and path in the {surface} rendering: {rendered}"
+                );
+            }
+        }
+    }
+
+    /// The SMART/OIDC issuer mismatch refusal quotes both issuers, so it masks
+    /// any userinfo in them rather than printing it.
+    #[test]
+    fn the_issuer_mismatch_refusal_masks_userinfo() {
+        use crate::config::auth::OidcConfig;
+        let mut c = FerroEhrConfig::default();
+        c.smart.enabled = true;
+        c.smart.endpoints.issuer = Some("https://a:SMART_PW_SENTINEL@as.example/r".to_owned());
+        c.auth.oidc = Some(OidcConfig {
+            issuer: "https://b:OIDC_PW_SENTINEL@idp.example/r".to_owned(),
+            ..OidcConfig::default()
+        });
+        let text = c.validate().expect_err("refused").to_string();
+        assert!(!text.contains("SMART_PW_SENTINEL"), "{text}");
+        assert!(!text.contains("OIDC_PW_SENTINEL"), "{text}");
+    }
+
     /// `to_redacted_json` masks EVERY secret-bearing leaf in the whole config
     /// tree — the body `GET /admin/config` returns. Each secret is populated
     /// with a unique high-entropy sentinel; none may appear in the rendered
@@ -1656,7 +1963,7 @@ mod tests {
         );
         assert!(!c.usage_report.enabled);
         assert_eq!(
-            c.usage_report.endpoint,
+            c.usage_report.endpoint.expose(),
             "https://collector.example/v1/report"
         );
         assert_eq!(c.usage_report.slow_aql_ms, 250);
@@ -2022,7 +2329,7 @@ mod tests {
         for bad in ["", "   ", "seaweedfs:8333", "/bucket"] {
             let mut c = FerroEhrConfig::default();
             c.multimedia.enabled = true;
-            c.multimedia.endpoint = Some(bad.to_owned());
+            c.multimedia.endpoint = Some(SecretUrl::new(bad));
             let errors = c.validate().expect_err("a bad endpoint must be refused");
             assert!(
                 format!("{errors:?}").contains("multimedia.endpoint"),
@@ -2039,7 +2346,7 @@ mod tests {
         c.multimedia.enabled = true;
         c.multimedia.endpoint = None;
         assert!(c.validate().is_ok(), "an absent endpoint is legitimate");
-        c.multimedia.endpoint = Some("http://seaweedfs:8333".to_owned());
+        c.multimedia.endpoint = Some(SecretUrl::new("http://seaweedfs:8333"));
         assert!(c.validate().is_ok(), "an absolute endpoint is accepted");
     }
 
@@ -2326,7 +2633,7 @@ mod tests {
             .providers
             .get_mut("default")
             .expect("provider")
-            .url = "https://ts.example/fhir".to_owned();
+            .url = SecretUrl::new("https://ts.example/fhir");
         assert!(c.validate().is_ok());
     }
 
@@ -2341,7 +2648,7 @@ mod tests {
             "default".to_owned(),
             crate::service::terminology::config::FhirProviderConfig {
                 kind: crate::service::terminology::config::ProviderKind::Fhir,
-                url: "https://ts.example/fhir".to_owned(),
+                url: SecretUrl::new("https://ts.example/fhir"),
                 operation: crate::service::terminology::config::FhirOperation::ValidateCode,
                 connect_timeout_ms: 2_000,
                 request_timeout_ms: 10_000,
@@ -2381,7 +2688,7 @@ mod tests {
             "default".to_owned(),
             crate::service::terminology::config::FhirProviderConfig {
                 kind: crate::service::terminology::config::ProviderKind::Fhir,
-                url: "https://ts.example/fhir".to_owned(),
+                url: SecretUrl::new("https://ts.example/fhir"),
                 operation: crate::service::terminology::config::FhirOperation::ValidateCode,
                 connect_timeout_ms: 2_000,
                 request_timeout_ms: 10_000,
@@ -2416,7 +2723,7 @@ mod tests {
         c.terminology.external.oauth2_clients.insert(
             "ts-client".to_owned(),
             crate::service::terminology::config::TerminologyOauth2Config {
-                token_url: "https://idp.example/token".to_owned(),
+                token_url: SecretUrl::new("https://idp.example/token"),
                 client_id: "cdr".to_owned(),
                 ..crate::service::terminology::config::TerminologyOauth2Config::default()
             },
@@ -2471,7 +2778,12 @@ mod tests {
         let external = &c.terminology.external;
         assert!(external.enabled);
         assert_eq!(
-            external.providers.get("snomed").expect("snomed").url,
+            external
+                .providers
+                .get("snomed")
+                .expect("snomed")
+                .url
+                .expose(),
             "https://snowstorm/fhir"
         );
         assert_eq!(
@@ -2483,7 +2795,7 @@ mod tests {
             .oauth2_clients
             .get("ts-client")
             .expect("oauth2 client");
-        assert_eq!(client.token_url, "https://idp/token");
+        assert_eq!(client.token_url.expose(), "https://idp/token");
         assert_eq!(
             client.client_secret.as_ref().map(Secret::expose),
             Some("s3cret")
@@ -2503,7 +2815,7 @@ mod tests {
             "default".to_owned(),
             crate::service::terminology::config::FhirProviderConfig {
                 kind: crate::service::terminology::config::ProviderKind::Fhir,
-                url: "https://ts.example/fhir".to_owned(),
+                url: SecretUrl::new("https://ts.example/fhir"),
                 operation: crate::service::terminology::config::FhirOperation::ValidateCode,
                 connect_timeout_ms: 2_000,
                 request_timeout_ms: 10_000,

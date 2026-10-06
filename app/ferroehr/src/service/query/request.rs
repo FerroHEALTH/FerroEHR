@@ -109,6 +109,15 @@ pub struct QueryOutcome {
     pub served_origins: Vec<String>,
     /// The true number of distinct origins behind [`Self::served_origins`].
     pub origin_count: u64,
+    /// What the statement touched, for the access record's category
+    /// classification (EHDS Annex II 3.2(c), #3621): the identifiers of the
+    /// served versions, or the query's positive constraints when the answer
+    /// carries none. `None` when nothing was executed.
+    pub accessed: Option<crate::system_log::categories::AccessedContent>,
+    /// The identifiers of the versions served from each EHR in
+    /// [`Self::served_ehrs`], keyed by EHR id, so each per-EHR access record
+    /// is classified by what that EHR disclosed.
+    pub served_ehr_content: BTreeMap<String, Vec<crate::system_log::categories::ContentIds>>,
 }
 
 impl QueryOutcome {
@@ -123,6 +132,8 @@ impl QueryOutcome {
             served_rows: 0,
             served_origins: Vec::new(),
             origin_count: 0,
+            accessed: None,
+            served_ehr_content: BTreeMap::new(),
         }
     }
 }

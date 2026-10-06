@@ -141,7 +141,7 @@ the authority and the wording below is a paraphrase.
 |---|---|---|---|---|
 | (a) the healthcare provider or other individuals having accessed | `organisation` | — (no such attribute) | a second `agent` with `who` referencing `Organization/…` | Recorded |
 | (b) the specific natural person or persons having accessed | `principal` (+ `token_id`, `client_ip`) | `ActiveParticipant/@UserID` | `agent.who` | Recorded |
-| (c) the categories of data accessed | `resource_class` + `domain` (+ `result_count`) | `ParticipantObjectIdentification` type and role codes | `entity.type` / `entity.role` | Partial |
+| (c) the categories of data accessed | `categories` + `category_basis` + `category_evidence` + `category_map_digest`, classified through the `[audit.categories]` map (beside `resource_class`, `domain` and `result_count`) | none (no such element) | an `entity` named "categories of the data accessed", with one `detail` per category, the basis, each piece of evidence and the map digest | Recorded |
 | (d) the time and date of access | `recorded_at` | `EventIdentification/@EventDateTime` | `recorded` | Recorded |
 | (e) the origin or origins of data | `origins` + `origin_count` (the `FEEDER_AUDIT` originating systems of the served version bodies, or the server that created them, derived at commit onto `version.origins`) | — (no such element) | one `entity` per origin, named "origin of the served data" | Recorded |
 
@@ -162,12 +162,46 @@ site rather than the caller's organisation. Where no claim is configured or the
 caller authenticated with Basic, the field stays empty rather than being
 guessed.
 
-Element (c) is partial for a vocabulary reason rather than a plumbing one. The
-record says what kind of object was read and which pseudonymisation domain it
-came from, so "was this clinical content or an identity" is answerable per
-event. What it does not say is which **Annex I priority category** the data
-falls in; openEHR resource classes are a different vocabulary, and the mapping
-between them is not one this project should invent.
+Element (c) asks for the **priority category** of the data, in the sense of
+Art. 14(1): patient summaries, electronic prescriptions, electronic
+dispensations, medical imaging, medical test results and discharge reports,
+plus any category a Member State adds in national law. AQL selects archetypes
+and templates, never categories, and no openEHR specification maps the one
+onto the other, so the deployment declares the mapping in
+[`[audit.categories]`](installation/config-audit.md#auditcategories): a
+template id, or failing that the root archetype id, maps to a set of categories
+(`patient-summary`, `eprescription`, `edispensation`, `imaging`,
+`test-results`, `discharge-report`, `national:<code>`, or `none` for content
+that holds no priority-category data). FerroEHR ships no map.
+
+Each record is classified when the access happens, from what it served or
+wrote, and never at commit, because the map is your reading of your templates
+and can change:
+
+- a composition read or write is classified by the version's template id, then
+  by its root archetype id;
+- an AQL execution is classified by the template and root archetype ids of the
+  versions its result page came from; where the answer carries no version (a
+  `DISTINCT` or aggregate projection, or zero rows) by the query's positive
+  archetype and template constraints, so an operand under `NOT CONTAINS` or a
+  predicate under `NOT` never counts. Each per-EHR record of a query carries
+  the categories that EHR disclosed;
+- `EHR`, `EHR_STATUS`, the directory, item tags and revision histories are
+  recorded as `none`, by resource kind.
+
+An access the map cannot classify is recorded `unclassified`, with the
+template and archetype ids as evidence, and is never refused.
+`category_basis` says what the classification rests on (`template`,
+`archetype`, `query` or `resource-kind`), and `category_map_digest` names the
+map that produced it, so a later map never rereads an old record. The map's
+digest is also on the boot line and on `GET /management/info` under
+`audit.category_map`. The classification stays in the access log: it is never
+written to the request log, a span or a metric label. The DICOM rendering has
+no element for it (PS3.15 §A.5), so it travels in the local store and the FHIR
+export only.
+
+Three records carry no classification: a logical delete, which writes no
+content; a `CONTRIBUTION` read; and the EHR Extract export record.
 
 Element (e) asks where the DATA came from, which is not where the request came
 from. openEHR models that provenance as `FEEDER_AUDIT` on the content itself,
@@ -215,26 +249,38 @@ a data subject's right of access is served from, and a repository that silently
 forgets is worse than one that grows — so the software keeps everything until
 an operator says otherwise, rather than choosing a horizon on their behalf.
 
-Choosing that horizon is the deployment's, and it is a legal question rather
-than a technical one: EHDS sets no retention period for the access log, while
-national law does — NEN 7513 is the Dutch reference for this log and the
-Wabvpz for how long it must survive. The setting is per node, and one node
-serves one organisation, so two organisations needing different horizons run
-two instances.
+Choosing that horizon is the deployment's, and it is a legal question:
+EHDS Art. 9(2) makes the access information "available for at least three
+years from each date of access to the data", and national law can ask for
+longer. NEN 7513 is the Dutch reference for this log and the Wabvpz for how
+long it must survive. The setting is per node, and one node serves one
+organisation, so two organisations needing different horizons run two
+instances.
 
 **A floor is enforced where a jurisdiction sets one.** The jurisdictions a
 deployment answers to are the ones its `[privacy.identifier_scan]` rules name,
 and where one publishes a minimum retention for the access log the server
-refuses to boot with a shorter `retention_days`, naming the configured value
-and the floor. `0` always passes. The floors registered:
+refuses to boot with a shorter horizon, naming the configured value and the
+floor. `0` always passes. The floors are written in calendar years, as the law
+writes them: a horizon set as `[audit.store] retention_years` is compared
+against the years exactly, and one set as `retention_days` against the most
+days those years can span (the day count in brackets below). The floors
+registered:
 
 | Jurisdiction | Floor | Source |
 |---|---|---|
+| Every EU Member State (AT, BE, BG, CY, CZ, DE, DK, EE, ES, FI, FR, GR, HR, HU, IE, IT, LT, LU, LV, MT, NL, PL, PT, RO, SE, SI, SK) | three years from each date of access (`1096` days, the most three calendar years can span) | [Regulation (EU) 2025/327](https://eur-lex.europa.eu/eli/reg/2025/327/oj) (EHDS) Art. 9(2); a longer national floor wins. Iceland, Liechtenstein and Norway are not listed: EHDS reaches the EEA only through an EEA Joint Committee decision |
 | NL | five years from the moment the entry is written (`1830` days, the most five calendar years can span) | [Besluit vaststelling bewaartermijn logging](https://wetten.overheid.nl/BWBR0042391) (Stcrt. 2019, 38007), under Art. 5 of the [Besluit elektronische gegevensverwerking door zorgaanbieders](https://wetten.overheid.nl/BWBR0040238), which binds the period to NEN 7513 |
 | CH | one year, and kept apart from the processing system (`366` days, the most one calendar year can span) | [Datenschutzverordnung (DSV) Art. 4 Abs. 5](https://www.fedlex.admin.ch/eli/cc/2022/568/de), as amended on 1 December 2025, for the logs of a large-scale automated processing of sensitive personal data; the separate storage is the deployment's, through the [forwarding sinks](#getting-the-log-out) |
 
-The other shipped jurisdictions (DE, FI, GB, NO, SE) have no floor registered: an
-unknown requirement is never guessed at, and a deployment there sets its own.
+For the Netherlands the five national years win over the three EHDS years;
+Switzerland is outside the Union and keeps its one year. Of the other shipped
+jurisdictions, DE, FI and SE carry the EHDS floor, while GB and NO have no
+floor registered: an unknown requirement is never guessed at, and a deployment
+there sets its own. Art. 9 applies from 26 March 2029 for patient summaries,
+prescriptions and dispensations and from 26 March 2031 for the other priority
+categories (Art. 105). The floor is enforced from this release on, so a log
+kept today already meets it when Art. 9 applies.
 The effective retention is on the boot line beside the audit-enabled facts and
 on `GET /management/info` under `audit`.
 

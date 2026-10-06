@@ -507,6 +507,7 @@ async fn every_execution_is_recorded_as_a_linkage_access() {
         store: StoreConfig {
             enabled: true,
             retention_days: 0,
+            retention_years: None,
             sgb_v_309_controller: false,
         },
         ..AuditConfig::default()

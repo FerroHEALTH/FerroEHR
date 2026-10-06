@@ -376,7 +376,7 @@ impl UsageReporter {
         }
         let response = self
             .client
-            .post(&self.config.endpoint)
+            .post(self.config.endpoint.expose())
             .header(http::header::CONTENT_TYPE, "application/json")
             .body(body)
             .send()

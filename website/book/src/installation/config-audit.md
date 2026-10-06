@@ -60,9 +60,62 @@ purpose_codes = []
 |---|---|---|---|
 | `enabled` | bool | `true` | Persist every record in the `audit` schema, served through the ITI-81 `GET /fhir/r4/AuditEvent` search. |
 | `retention_days` | int | `0` | Days to keep records; `0` keeps them forever. Applied hourly by the retention reaper. A non-zero value below the retention floor of a jurisdiction the active `[privacy.identifier_scan]` rules name is a boot error naming both numbers; see [Audit trail](../audit.md#retention-and-who-chooses-it). |
+| `retention_years` | int | unset | Calendar years to keep records, in place of `retention_days`. Compared exactly against the floors and ceilings, which are written in years, and reaped with calendar arithmetic. Setting it together with a non-zero `retention_days`, or to `0`, is a boot error. |
+| `sgb_v_309_controller` | bool | `false` | Set only if the deploying organisation is, or acts for, one of the controllers SGB V § 307 names for a German telematics-infrastructure application. It caps the horizon at the three-year period of SGB V § 309 Abs. 1, after which Abs. 3 requires deletion without delay, so a declared controller cannot keep records forever. |
 
 The local store is the durability anchor of the whole subsystem: with it on, the
 FHIR feed drains from it, so a down repository loses nothing.
+
+The floors and ceilings are written in calendar years. In every EU Member State
+the floor is three years (EHDS Art. 9(2)), and a longer national floor wins:
+five years in the Netherlands. Switzerland keeps its one-year floor. A
+`retention_years` value is compared against them exactly. A `retention_days`
+value is held to the most days the years can span for a floor (`1096` for three
+years, `1830` for the Dutch five, `366` for one) and to the fewest for a ceiling
+(`1095` for the German three). A declared § 309 controller in Germany therefore
+has no `retention_days` value that passes both the EHDS floor and the § 309
+ceiling, and sets `retention_years = 3`:
+
+```toml
+[audit.store]
+retention_years = 3
+sgb_v_309_controller = true
+```
+
+### `[audit.categories]`
+
+The map every access record is classified through by EHDS priority category
+(Annex II 3.2(c); see [the EHDS logging elements](../audit.md#the-ehds-logging-elements-mapped)).
+A template id, or failing that a root archetype id, maps to a list of
+categories. **Empty by default**: FerroEHR ships no map, and an access the map
+cannot classify is recorded `unclassified` with its ids, never refused.
+
+```toml
+[audit.categories.templates]
+"International Patient Summary" = ["patient-summary"]
+"Laboratory Report" = ["test-results"]
+
+[audit.categories.archetypes]
+"openEHR-EHR-COMPOSITION.report-result.v1" = ["test-results"]
+"openEHR-EHR-COMPOSITION.encounter.v1" = ["none"]
+```
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `templates` | table of template id → list of category | empty | Consulted first, by the template id the object was committed against. |
+| `archetypes` | table of archetype id → list of category | empty | Consulted for an object whose template the map does not name, by its root archetype id. A key that is not an archetype id refuses boot. |
+
+The categories are `patient-summary`, `eprescription`, `edispensation`,
+`imaging`, `test-results` and `discharge-report` (EHDS Art. 14(1)), a national
+additional category as `national:<code>`, and `none` for content that holds no
+priority-category data. Keys compare case-insensitively. An unknown spelling,
+an empty list, `none` combined with a category, or two keys that differ only in
+case refuses boot with a message naming the entry.
+
+The map's SHA-256 digest is on the boot line, on `GET /management/info` under
+`audit.category_map`, and on every access record. At boot the map is also
+mirrored into the retention register, so a retention period can be keyed on a
+category through the [admin marks API](../operations-admin-apis.md).
 
 ### `[audit.syslog]`: the classic DICOM/syslog feed (ITI-20)
 

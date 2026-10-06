@@ -208,6 +208,42 @@ async fn reap_deletes_only_rows_past_the_horizon() {
     assert_eq!(remaining, 1);
 }
 
+/// A horizon in calendar years (`retention_years`, #3625) reaps what is older
+/// than the same calendar date that many years ago, and keeps the chain
+/// verifiable across the reaped span.
+#[tokio::test]
+async fn reap_years_deletes_only_rows_past_the_calendar_horizon() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let store = AuditStore::new(pool.clone());
+
+    // One record 1000 days old (inside three calendar years) and one 1200 days
+    // old (outside them).
+    let now = Timestamp::now();
+    for days in [1000_i64, 1200] {
+        let at = now - jiff::SignedDuration::from_hours(days * 24);
+        let event = read_event(at);
+        let rendered = fhir::to_fhir(&event, &ctx(), None).expect("render");
+        store.insert(&event, None, &rendered).await.expect("insert");
+    }
+
+    assert_eq!(store.reap_years(0).await.expect("reap 0 years"), 0);
+    assert_eq!(store.reap_years(3).await.expect("reap 3 years"), 1);
+    let remaining: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.audit_event")
+        .fetch_one(&pool)
+        .await
+        .expect("count");
+    assert_eq!(remaining, 1, "the record inside three years survives");
+    let findings: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.verify_audit_chain()")
+        .fetch_one(&pool)
+        .await
+        .expect("verify");
+    assert_eq!(
+        findings, 0,
+        "the reaped span is tombstoned, so the chain verifies"
+    );
+}
+
 /// The access-logging fields (#3156) survive the round trip on both write
 /// paths, and the domain is derived from the resource class rather than set by
 /// each call site.

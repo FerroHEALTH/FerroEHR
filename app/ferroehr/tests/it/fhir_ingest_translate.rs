@@ -75,7 +75,7 @@ fn loinc_observation() -> Value {
 fn provider(base: &str) -> FhirTerminologyProvider {
     let cfg = FhirProviderConfig {
         kind: ProviderKind::Fhir,
-        url: base.to_owned(),
+        url: ferroehr::config::secret::SecretUrl::new(base),
         operation: FhirOperation::ValidateCode,
         connect_timeout_ms: 500,
         request_timeout_ms: 800,

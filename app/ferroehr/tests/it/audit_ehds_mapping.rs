@@ -11,12 +11,10 @@
 //! documentation site; this module is what stops that page from becoming a
 //! claim nobody checks.
 //!
-//! Three of the five are recorded and rendered, one is partial, and one is a
-//! gap. **The gap is asserted as a gap**: a test that expects the absence
-//! fails the day the field arrives, which is the point — the page and the
-//! code then have to move together, and a gap cannot quietly close while the
-//! documentation still calls it open. Where a rendering cannot carry an
-//! element its FORMAT does not define, that absence is pinned too.
+//! All five are recorded; the renderings differ. Where a rendering cannot
+//! carry an element its FORMAT does not define, that absence is pinned as a
+//! test which fails the day the format changes, so the page and the code move
+//! together.
 //!
 //! No openEHR spec governs the read-side access log — our own
 //! design/extension. openEHR specifies the write-side `AUDIT_DETAILS` only
@@ -128,13 +126,13 @@ fn element_d_the_time_of_access_is_recorded_and_rendered() {
     );
 }
 
-/// (c) "the categories of data accessed" — partial, and the test says which
-/// half holds.
+/// (c) "the categories of data accessed" — the resource class and the
+/// pseudonymisation domain stand beside the priority category.
 ///
 /// The record carries the resource class and the pseudonymisation domain, so
 /// "what kind of thing was read, and was it clinical or identifying" is
-/// answerable. What it does not carry is the Annex I priority category, which
-/// is a different vocabulary from openEHR's resource classes.
+/// answerable per event; the EHDS priority category itself is asserted in
+/// [`element_c_the_priority_category_is_recorded_and_rendered_in_fhir_only`].
 #[test]
 fn element_c_the_resource_class_and_domain_stand_in_for_the_category() {
     let event = access_event();
@@ -156,6 +154,44 @@ fn element_c_the_resource_class_and_domain_stand_in_for_the_category() {
     assert!(
         json.contains("entity"),
         "the FHIR rendering must carry the entity: {json}"
+    );
+}
+
+/// (c) "the categories of data accessed" — the EHDS priority category the
+/// `[audit.categories]` map classifies the access into (#3621), recorded on the
+/// event and rendered as FHIR entity details; the DICOM rendering carries
+/// nothing, and that half is pinned as the format limit it is (PS3.15 §A.5
+/// defines no element for it,
+/// <https://dicom.nema.org/medical/dicom/current/output/chtml/part15/sect_A.5.html>).
+#[test]
+fn element_c_the_priority_category_is_recorded_and_rendered_in_fhir_only() {
+    let map: ferroehr::system_log::categories::CategoryMapConfig =
+        toml::from_str("[templates]\n\"Laboratory Report\" = [\"test-results\"]\n")
+            .expect("the map parses");
+    let map = map.compile().expect("the map compiles");
+    let mut event = access_event();
+    event.category = Some(map.classify(
+        &ferroehr::system_log::categories::AccessedContent::Objects(vec![
+            ferroehr::system_log::categories::ContentIds {
+                template_id: Some("Laboratory Report".to_owned()),
+                archetype_id: None,
+                resource_kind: None,
+            },
+        ]),
+    ));
+    event.category_map_digest = Some(map.digest());
+    let (xml, json) = renderings(&event);
+    assert!(
+        json.contains("categories of the data accessed") && json.contains("test-results"),
+        "the FHIR rendering carries the category: {json}"
+    );
+    assert!(
+        json.contains(&map.digest().to_string()),
+        "the FHIR rendering names the map that classified the record: {json}"
+    );
+    assert!(
+        !xml.contains("test-results") && !xml.contains("Laboratory Report"),
+        "PS3.15 §A.5 has no element for the category: {xml}"
     );
 }
 

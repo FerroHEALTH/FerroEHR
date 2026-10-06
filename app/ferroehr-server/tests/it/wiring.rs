@@ -296,6 +296,93 @@ async fn run_config_default_is_a_pure_stdout_path() -> anyhow::Result<()> {
     run(cli).await
 }
 
+/// Runs the built `ferroehr config check` against `toml` with an empty
+/// environment, returning whether it succeeded and its stdout plus stderr.
+fn config_check(toml: &str) -> (bool, String) {
+    let file = assert_fs::NamedTempFile::new("ferroehr.toml").expect("a temp config path");
+    file.write_str(toml).expect("write the config");
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_ferroehr"))
+        .args(["config", "check", "--config"])
+        .arg(file.path())
+        .env_clear()
+        .output()
+        .expect("the binary runs");
+    let text = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    (output.status.success(), text)
+}
+
+/// Userinfo in a URL key never reaches `ferroehr config check`: a secret-URL
+/// key prints masked, and a key that refuses userinfo at boot refuses it
+/// without quoting it.
+#[test]
+fn config_check_prints_no_url_userinfo() {
+    let (ok, text) = config_check(
+        r#"
+[auth]
+enabled = false
+
+[db]
+url = "postgres://u1:URL_PW_SENTINEL_1@h1:5432/p1"
+
+[telemetry]
+otlp_endpoint = "https://u2:URL_PW_SENTINEL_2@h2:4317/p2"
+
+[multimedia]
+endpoint = "https://u3:URL_PW_SENTINEL_3@h3:8333/p3"
+
+[authz.abac.remote]
+server = "https://u4:URL_PW_SENTINEL_4@h4:3001/p4/"
+
+[terminology.external.providers.ts]
+url = "https://u5:URL_PW_SENTINEL_5@h5:443/p5"
+
+[terminology.external.oauth2_clients.client]
+token_url = "https://u6:URL_PW_SENTINEL_6@h6:443/p6"
+client_id = "client"
+"#,
+    );
+    assert!(ok, "the configuration checks: {text}");
+    assert!(!text.contains("URL_PW_SENTINEL"), "{text}");
+    for (n, port) in [
+        (1, 5432),
+        (2, 4317),
+        (3, 8333),
+        (4, 3001),
+        (5, 443),
+        (6, 443),
+    ] {
+        assert!(
+            text.contains(&format!("://***@h{n}:{port}/p{n}")),
+            "URL {n} lost its host and path: {text}"
+        );
+    }
+
+    let (ok, text) = config_check(
+        r#"
+[auth.oidc]
+issuer = "https://u7:URL_PW_SENTINEL_7@idp.example/realms/r"
+audiences = ["ferroehr"]
+hmac_secret = "an-hmac-secret-of-sufficient-length-for-hs256"
+algorithms = ["HS256"]
+
+[usage_report]
+endpoint = "https://u8:URL_PW_SENTINEL_8@report.example/v1/report"
+
+[smart.endpoints]
+token_endpoint = "https://u9:URL_PW_SENTINEL_9@as.example/token"
+"#,
+    );
+    assert!(!ok, "userinfo in these keys is refused: {text}");
+    assert!(!text.contains("URL_PW_SENTINEL"), "{text}");
+    assert!(text.contains("auth.oidc.issuer"), "{text}");
+    assert!(text.contains("usage_report.endpoint"), "{text}");
+    assert!(text.contains("smart.endpoints.token_endpoint"), "{text}");
+}
+
 // ── the boot-installed [privacy] policy ───────────────────────────────────────
 
 /// The SHIPPED DEFAULT configuration, assembled through the loader the binary

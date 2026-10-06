@@ -22,8 +22,8 @@
 //! configuration, the cluster identities and the migration bookkeeping, never
 //! a clinical, demographic or audit relation. The configuration is the
 //! type-redacted tree `ferroehr config check` prints
-//! ([`FerroEhrConfig::to_redacted_toml`]), with the `userinfo` of every URL
-//! leaf masked as [`SecretUrl`] masks it; a database error quoted in a reason
+//! ([`FerroEhrConfig::to_redacted_table`]), every URL `userinfo` masked by
+//! [`redact_userinfo`]; a database error quoted in a reason
 //! has every configured DSN's user name and password masked too, since a
 //! refused authentication names the role it tried.
 
@@ -33,7 +33,7 @@ use serde::Serialize;
 
 use crate::config::FerroEhrConfig;
 use crate::config::deployment::{DatabaseFacts, DeploymentPosture};
-use crate::config::secret::{REDACTED, SecretUrl};
+use crate::config::secret::{REDACTED, redact_userinfo};
 use crate::db::domain::Domain;
 use crate::db::{DatabaseLevels, DbError};
 use crate::licence::state::{LicenceState, LicenceStatus};
@@ -294,7 +294,7 @@ fn configuration_part(
     config: &FerroEhrConfig,
     manifest: &mut Vec<ManifestEntry>,
 ) -> Option<toml::Table> {
-    match redacted_configuration(config) {
+    match config.to_redacted_table() {
         Ok(table) => {
             manifest.push(ManifestEntry::included("configuration"));
             Some(table)
@@ -396,37 +396,6 @@ fn openehr_crates() -> Vec<CrateVersion> {
         .collect()
 }
 
-/// The effective configuration as `ferroehr config check` renders it, with
-/// the `userinfo` of every string leaf that is a URL masked as well.
-///
-/// The second pass covers a URL a deployment wrote into a key that is not
-/// typed [`SecretUrl`], which the type-based redaction alone would print
-/// verbatim.
-fn redacted_configuration(config: &FerroEhrConfig) -> Result<toml::Table, toml::ser::Error> {
-    let mut table = toml::Table::try_from(config)?;
-    for (_key, value) in &mut table {
-        mask_userinfo(value);
-    }
-    Ok(table)
-}
-
-/// Masks the `userinfo` of every URL in `value`, recursively.
-fn mask_userinfo(value: &mut toml::Value) {
-    match value {
-        toml::Value::String(text) => *text = SecretUrl::new(text.as_str()).redacted(),
-        toml::Value::Array(items) => items.iter_mut().for_each(mask_userinfo),
-        toml::Value::Table(table) => {
-            for (_key, value) in table {
-                mask_userinfo(value);
-            }
-        }
-        toml::Value::Integer(_)
-        | toml::Value::Float(_)
-        | toml::Value::Boolean(_)
-        | toml::Value::Datetime(_) => {}
-    }
-}
-
 /// The user names and passwords of every configured DSN, which a database
 /// error may quote.
 #[derive(Debug)]
@@ -470,7 +439,7 @@ impl Scrubber {
             .split(' ')
             .map(|word| {
                 if word.contains("://") {
-                    SecretUrl::new(word).redacted()
+                    redact_userinfo(word)
                 } else {
                     word.to_owned()
                 }
@@ -515,6 +484,7 @@ fn mask_word(text: &str, needle: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::secret::SecretUrl;
 
     /// A credential part is masked where it stands alone and kept where it is
     /// part of a longer identifier.

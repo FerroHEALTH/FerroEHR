@@ -537,16 +537,42 @@ purpose_codes = []
 [audit.store]
 enabled = true
 retention_days = 0           # 0 = keep forever; reaped hourly otherwise
-                             # Floors and ceilings are jurisdictional: five
-                             # years NL, one year CH, at most three years DE
-                             # under sgb_v_309_controller. Boot refuses a
-                             # horizon outside them.
+                             # Floors and ceilings are jurisdictional, written
+                             # in calendar years: three years in every EU
+                             # Member State (EHDS Art. 9(2)), five years NL,
+                             # one year CH, at most three years DE under
+                             # sgb_v_309_controller. Boot refuses a horizon
+                             # outside them. A day count is held to the most
+                             # (floor) or fewest (ceiling) days the years can
+                             # span, e.g. 1096 for the EU floor.
+# The horizon in calendar years instead, compared exactly against those bounds
+# and reaped with calendar arithmetic. Set it OR retention_days, never both. A
+# declared SGB V § 309 controller in Germany sets 3: no day count meets both the
+# three-year EHDS floor and the three-year § 309 ceiling.
+#? retention_years = 3
 # Set this only if the deploying organisation is, or acts for, one of the
 # controllers SGB V § 307 names for a German telematics-infrastructure
 # application. It caps retention_days at the three-year period of § 309 Abs. 1,
 # after which Abs. 3 requires deletion unverzüglich — so a declared controller
 # cannot keep records forever.
 sgb_v_309_controller = false
+
+# The EHDS priority category of every access (Annex II 3.2(c)): which
+# categories each template, and failing that each root archetype, holds.
+# Categories: patient-summary | eprescription | edispensation | imaging |
+# test-results | discharge-report | national:<code> | none. EMPTY by default:
+# FerroEHR ships no map, and an access the map cannot classify is recorded
+# "unclassified" with its ids, never refused. Keys compare case-insensitively;
+# an unknown spelling or an empty list refuses boot. The map's digest is on the
+# boot line, on /management/info and on every access record, and the map is
+# mirrored into the retention register, so a retention period can be keyed on
+# a category.
+[audit.categories.templates]
+#? "International Patient Summary" = ["patient-summary"]
+#? "Laboratory Report" = ["test-results"]
+[audit.categories.archetypes]
+#? "openEHR-EHR-COMPOSITION.report-result.v1" = ["test-results"]
+#? "openEHR-EHR-COMPOSITION.encounter.v1" = ["none"]
 
 # Classic ATNA feed: DICOM PS3.15 audit XML over syslog (IHE ITI-20).
 [audit.syslog]

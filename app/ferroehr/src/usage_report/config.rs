@@ -8,6 +8,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::config::loader::ConfigError;
+use crate::config::secret::SecretUrl;
 
 /// How the instance was deployed, as the report states it.
 ///
@@ -37,8 +38,9 @@ pub struct UsageReportConfig {
     /// which, with the switch.
     pub enabled: bool,
     /// The collector endpoint. HTTPS, except a loopback host, which may be
-    /// plain HTTP because nothing leaves the machine.
-    pub endpoint: String,
+    /// plain HTTP because nothing leaves the machine. Credentials are refused
+    /// at boot, and any `userinfo` is masked in every rendering.
+    pub endpoint: SecretUrl,
     /// The execution time in milliseconds above which an AQL query counts as
     /// slow in the report.
     pub slow_aql_ms: u64,
@@ -50,7 +52,7 @@ impl Default for UsageReportConfig {
     fn default() -> Self {
         Self {
             enabled: true,
-            endpoint: "https://report.ferropulse.eu/v1/report".to_owned(),
+            endpoint: SecretUrl::new("https://report.ferropulse.eu/v1/report"),
             slow_aql_ms: 1000,
             deployment: Deployment::Unknown,
         }
@@ -65,7 +67,7 @@ impl UsageReportConfig {
     #[must_use]
     pub fn errors(&self) -> Vec<ConfigError> {
         let mut errors = Vec::new();
-        match url::Url::parse(&self.endpoint) {
+        match url::Url::parse(self.endpoint.expose()) {
             Ok(url) => {
                 if !url.username().is_empty() || url.password().is_some() {
                     errors.push(ConfigError::semantic(
@@ -98,7 +100,8 @@ impl UsageReportConfig {
     /// Returns whether the endpoint is plain HTTP to a loopback host.
     #[must_use]
     pub fn is_loopback_http(&self) -> bool {
-        url::Url::parse(&self.endpoint).is_ok_and(|url| url.scheme() == "http" && is_loopback(&url))
+        url::Url::parse(self.endpoint.expose())
+            .is_ok_and(|url| url.scheme() == "http" && is_loopback(&url))
     }
 }
 
@@ -118,7 +121,7 @@ mod tests {
 
     fn with_endpoint(endpoint: &str) -> UsageReportConfig {
         UsageReportConfig {
-            endpoint: endpoint.to_owned(),
+            endpoint: SecretUrl::new(endpoint),
             ..UsageReportConfig::default()
         }
     }

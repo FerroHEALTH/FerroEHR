@@ -174,37 +174,73 @@ impl FerroEhrService {
         Ok(())
     }
 
-    /// Declare the retention period of one content category in one
-    /// jurisdiction, with the legal citation it rests on.
+    /// Declare the retention period of one content kind in one jurisdiction,
+    /// optionally keyed on one EHDS priority category, with the legal citation
+    /// it rests on.
     ///
     /// GDPR Art. 30(1)(f) asks the record of processing activities for "the
     /// envisaged time limits for erasure of the different categories of data"
     /// and DSG Art. 25 Abs. 2 lit. d asks that the subject learn "die
     /// Aufbewahrungsdauer der Personendaten oder ... die Kriterien zur
     /// Festlegung dieser Dauer" (`docs/law/eu/gdpr/text.html`,
-    /// `docs/law/ch/fadp/text-de.html`). The register is where that answer
-    /// comes from.
+    /// `docs/law/ch/fadp/text-de.html`). EHDS Annex II 3.4 asks the storing
+    /// components to support retention periods that "take into account the
+    /// origins and categories of electronic health data"
+    /// (`docs/law/eu/ehds/text.html`); `category` is that dimension, spelled
+    /// as `[audit.categories]` spells it, and `None` keys the period on every
+    /// object of the kind. The register is where those answers come from.
     ///
     /// # Errors
-    /// - `precondition_violation` (`400`) — a category, anchor rule or period
-    ///   the register refuses.
+    /// - `precondition_violation` (`400`) — a kind, category, anchor rule or
+    ///   period the register refuses.
     /// - `exception` — a database fault mid-transaction (rolled back).
     pub async fn put_retention_policy(
         &self,
         kind: &str,
         jurisdiction: &str,
+        category: Option<&str>,
         period: &str,
         anchor: &str,
         source: &str,
     ) -> Result<(), SmError> {
+        if let Some(category) = category {
+            crate::system_log::categories::Category::parse(category)
+                .map_err(|e| SmError::precondition(e.to_string()))?;
+        }
         let mut tx = self.pool.begin().await.map_err(ServiceError::Database)?;
-        marks::put_retention_policy(&mut tx, kind, jurisdiction, period, anchor, source)
-            .await
-            .map_err(|e| {
-                SmError::precondition(format!("the retention register refused the period: {e}"))
-            })?;
+        marks::put_retention_policy(
+            &mut tx,
+            kind,
+            jurisdiction,
+            category,
+            period,
+            anchor,
+            source,
+        )
+        .await
+        .map_err(|e| {
+            SmError::precondition(format!("the retention register refused the period: {e}"))
+        })?;
         tx.commit().await.map_err(ServiceError::Database)?;
         Ok(())
+    }
+
+    /// Mirror the `[audit.categories]` map into the retention register's
+    /// `category_map`, replacing the previous mirror whole, so the
+    /// `retention_due` view keys category periods on the map in force.
+    ///
+    /// Called once at boot. No openEHR spec governs the map — our own
+    /// design/extension.
+    ///
+    /// # Errors
+    /// `exception` — a database fault (rolled back).
+    pub async fn mirror_category_map(
+        &self,
+        map: &crate::system_log::categories::CategoryMap,
+    ) -> Result<(), SmError> {
+        Ok(marks::replace_category_map(&self.pool, &map.rows())
+            .await
+            .map_err(ServiceError::Storage)?)
     }
 
     /// The retention register as the book page and the access answer render it.

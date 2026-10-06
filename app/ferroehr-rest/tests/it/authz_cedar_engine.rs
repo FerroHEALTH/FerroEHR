@@ -142,7 +142,10 @@ async fn remote_permit_when_patient_ok() -> (MockServer, RemotePdp) {
         enabled: true,
         engine: AbacEngineKind::Remote,
         remote: RemoteConfig {
-            server: Some(format!("{}/", server.uri())),
+            server: Some(ferroehr::config::secret::SecretUrl::new(format!(
+                "{}/",
+                server.uri()
+            ))),
             connect_timeout_ms: 500,
             request_timeout_ms: 1000,
         },

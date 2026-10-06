@@ -42,6 +42,11 @@ pub struct ResourceMeta {
     /// created it. Empty when the operation serves no version body. The access
     /// log records it (EHDS Annex II 3.2(e)); no header renders it.
     pub origins: Vec<String>,
+    /// The template and root archetype ids of the objects this response
+    /// served or wrote, which the access record classifies by EHDS priority
+    /// category (Annex II 3.2(c), #3621). Empty when the operation served or
+    /// wrote no versioned content; no header renders it.
+    pub content: Vec<crate::system_log::categories::ContentIds>,
     /// The `ITEM_TAGs` (RM `common.item_tag`) currently associated with this
     /// resource, or `None` when the operation carries no tags. The ITS-REST
     /// adapter renders this into the `openehr-item-tag` /
@@ -70,6 +75,7 @@ impl ResourceMeta {
             uid: uid.into(),
             last_modified: None,
             origins: Vec::new(),
+            content: Vec::new(),
             item_tags: None,
             version_item_tags: None,
         }
@@ -79,6 +85,14 @@ impl ResourceMeta {
     #[must_use]
     pub fn with_origins(mut self, origins: Vec<String>) -> Self {
         self.origins = origins;
+        self
+    }
+
+    /// Attach the identifiers of the objects this response serves or writes,
+    /// for the access record's category classification.
+    #[must_use]
+    pub fn with_content(mut self, content: Vec<crate::system_log::categories::ContentIds>) -> Self {
+        self.content = content;
         self
     }
 

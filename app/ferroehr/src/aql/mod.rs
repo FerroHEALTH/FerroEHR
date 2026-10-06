@@ -16,6 +16,7 @@
 //! Entry point: [`plan`].
 
 mod analyze;
+pub mod constraints;
 pub mod error;
 pub mod exec;
 pub mod ir;

@@ -214,6 +214,7 @@ impl SmartConfig {
                 ));
             }
         }
+        self.validate_no_userinfo()?;
         if self.enabled {
             let origin = self.public_base_url.as_deref().unwrap_or("");
             if !(origin.starts_with("http://") || origin.starts_with("https://")) {
@@ -236,6 +237,65 @@ impl SmartConfig {
             }
             self.validate_published_endpoints()?;
             self.validate_published_metadata()?;
+        }
+        Ok(())
+    }
+
+    /// No URL this section holds carries a `userinfo` component, whether or not
+    /// SMART is enabled.
+    ///
+    /// The discovery document publishes these URLs to every application, so a
+    /// credential in one would be served to anyone who asks; refusing it at
+    /// boot also keeps the redacted configuration views free of it. The
+    /// issuer is additionally an OpenID Connect issuer identifier, whose only
+    /// components are scheme, host, port and path (OpenID Connect Core 1.0
+    /// §1.2). A `platform_base_url` given as a bare path holds no authority and
+    /// passes.
+    ///
+    /// # Errors
+    /// A message naming the offending key; it never quotes the value.
+    fn validate_no_userinfo(&self) -> Result<(), String> {
+        let e = &self.endpoints;
+        let candidates: [(&str, Option<&String>); 10] = [
+            ("smart.platform_base_url", self.platform_base_url.as_ref()),
+            ("smart.public_base_url", self.public_base_url.as_ref()),
+            ("smart.endpoints.issuer", e.issuer.as_ref()),
+            ("smart.endpoints.jwks_uri", e.jwks_uri.as_ref()),
+            (
+                "smart.endpoints.authorization_endpoint",
+                e.authorization_endpoint.as_ref(),
+            ),
+            ("smart.endpoints.token_endpoint", e.token_endpoint.as_ref()),
+            (
+                "smart.endpoints.registration_endpoint",
+                e.registration_endpoint.as_ref(),
+            ),
+            (
+                "smart.endpoints.introspection_endpoint",
+                e.introspection_endpoint.as_ref(),
+            ),
+            (
+                "smart.endpoints.revocation_endpoint",
+                e.revocation_endpoint.as_ref(),
+            ),
+            (
+                "smart.endpoints.management_endpoint",
+                e.management_endpoint.as_ref(),
+            ),
+        ];
+        for (key, value) in candidates {
+            let Some(raw) = value else { continue };
+            // NOTE: no openEHR spec governs this — our own design; a value that does
+            // not parse as an absolute URL has no authority, so no `userinfo`.
+            let Ok(url) = Url::parse(raw.trim()) else {
+                continue;
+            };
+            if !url.username().is_empty() || url.password().is_some() {
+                return Err(format!(
+                    "{key} must carry no userinfo: the discovery document publishes it to \
+                     every application, so a credential in it would be served to anyone"
+                ));
+            }
         }
         Ok(())
     }
@@ -388,6 +448,40 @@ mod tests {
         assert!(!c.episode.enabled);
         assert!(!c.launch_base64_json);
         assert!(c.endpoints.issuer.is_none());
+    }
+
+    /// A published URL carrying `userinfo` is refused whether or not SMART is
+    /// enabled, and the refusal never quotes the credential.
+    #[test]
+    fn userinfo_in_any_published_url_is_refused() {
+        let leaky = "https://as:hunter2@as.example/x".to_owned();
+        let setters: [fn(&mut SmartConfig, String); 10] = [
+            |c, v| c.platform_base_url = Some(v),
+            |c, v| c.public_base_url = Some(v),
+            |c, v| c.endpoints.issuer = Some(v),
+            |c, v| c.endpoints.jwks_uri = Some(v),
+            |c, v| c.endpoints.authorization_endpoint = Some(v),
+            |c, v| c.endpoints.token_endpoint = Some(v),
+            |c, v| c.endpoints.registration_endpoint = Some(v),
+            |c, v| c.endpoints.introspection_endpoint = Some(v),
+            |c, v| c.endpoints.revocation_endpoint = Some(v),
+            |c, v| c.endpoints.management_endpoint = Some(v),
+        ];
+        for set in setters {
+            let mut c = SmartConfig::default();
+            set(&mut c, leaky.clone());
+            let err = c
+                .validate()
+                .expect_err("userinfo is refused while disabled");
+            assert!(err.contains("must carry no userinfo"), "{err}");
+            assert!(!err.contains("hunter2"), "{err}");
+        }
+        // A bare-path platform base holds no authority.
+        let c = SmartConfig {
+            platform_base_url: Some("/gateway/v1".to_owned()),
+            ..SmartConfig::default()
+        };
+        assert!(c.validate().is_ok());
     }
 
     #[test]

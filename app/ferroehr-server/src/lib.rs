@@ -653,6 +653,10 @@ fn log_resolved_posture(
             fail_mode = ?audit.fail_mode,
             resolve_subject = audit.resolve_subject,
             retention_days = audit.store.retention_days,
+            retention_years = ?audit.store.retention_years,
+            category_map = AuditPosture::of(audit)
+                .category_map
+                .map_or_else(|| "invalid".to_owned(), |digest| digest.to_string()),
             "IHE ATNA audit enabled"
         );
     }
@@ -1072,9 +1076,13 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
 
     telemetry.start_samplers(pool.clone());
 
-    // `/management/env` reports the whole config tree; secrets render `***` by
-    // construction of the `Secret` type.
-    let env_snapshot = Arc::new(serde_json::to_value(&config).unwrap_or(serde_json::Value::Null));
+    // `/management/env` and `GET {base}/admin/config` serve the whole config
+    // tree, redacted by its `Secret`/`SecretUrl` leaf types.
+    let env_snapshot = Arc::new(
+        config
+            .to_redacted_json()
+            .context("rendering the redacted configuration snapshot")?,
+    );
 
     // Version signing (fail-closed at boot for `pgp` without a usable key).
     let signer =
@@ -1099,6 +1107,21 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         signer,
         deployment,
     )?);
+
+    // The retention register keys category periods on the map in force, so it
+    // is mirrored before the listener takes traffic. `validate` has already
+    // refused a map that does not compile.
+    let category_map = config
+        .audit
+        .categories
+        .compile()
+        .map_err(ferroehr::system_log::AuditError::CategoryMap)
+        .context("compiling the [audit.categories] map")?;
+    service
+        .mirror_category_map(&category_map)
+        .await
+        .map_err(|e| anyhow::anyhow!("{e}"))
+        .context("mirroring the [audit.categories] map into the retention register")?;
 
     // Outbound only and detached: neither boot, health nor readiness waits on
     // it, and a slow or unreachable collector reaches none of them.

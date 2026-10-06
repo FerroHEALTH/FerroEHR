@@ -94,7 +94,7 @@ impl TokenSource {
         if client_id.is_empty() {
             return Err(fail("client_id must not be empty"));
         }
-        let token_url = oauth2::TokenUrl::new(cfg.token_url.trim().to_owned())
+        let token_url = oauth2::TokenUrl::new(cfg.token_url.expose().trim().to_owned())
             .map_err(|e| fail(&format!("invalid token_url: {e}")))?;
         let secret = cfg
             .client_secret
@@ -245,7 +245,7 @@ mod tests {
 
     fn client_config(token_url: &str) -> TerminologyOauth2Config {
         TerminologyOauth2Config {
-            token_url: token_url.to_owned(),
+            token_url: crate::config::secret::SecretUrl::new(token_url),
             client_id: "cdr".to_owned(),
             client_secret: Some(crate::config::secret::Secret::new("s3cret")),
             client_secret_file: None,

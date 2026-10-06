@@ -24,7 +24,7 @@ use argon2::{Algorithm, Params, PasswordHash};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::config::secret::Secret;
+use crate::config::secret::{Secret, redact_userinfo};
 
 /// Top-level authentication settings (`[auth]`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -153,6 +153,16 @@ pub enum AuthConfigError {
         /// The URL parse failure, as reported by `url`.
         reason: String,
     },
+    /// `auth.oidc.issuer` carries a `userinfo` component (OpenID Connect Core
+    /// 1.0 §1.2 "Issuer Identifier").
+    ///
+    /// Carries the issuer with the `userinfo` masked, so the refusal never
+    /// prints the credential it refuses.
+    #[error(
+        "auth.oidc.issuer {0:?} must carry no userinfo: an issuer identifier holds only \
+         scheme, host, port and path components (OpenID Connect Core 1.0 §1.2)"
+    )]
+    IssuerHasUserinfo(String),
     /// `auth.oidc.issuer` carries a query component (RFC 8414 §2).
     #[error("auth.oidc.issuer {0:?} must have no query component (RFC 8414 §2)")]
     IssuerHasQuery(String),
@@ -376,8 +386,10 @@ pub struct OidcConfig {
     /// static key material is supplied. Required when the table is present.
     ///
     /// Boot-validated as an RFC 8414 §2 issuer identifier: an absolute `https`
-    /// URL with no query and no fragment component. The scheme requirement is
-    /// relaxed only by [`Self::allow_insecure_issuer`].
+    /// URL with no query and no fragment component, and no `userinfo` (OpenID
+    /// Connect Core 1.0 §1.2 names scheme, host, port and path as its only
+    /// components), so it never carries a credential and renders verbatim. The
+    /// scheme requirement is relaxed only by [`Self::allow_insecure_issuer`].
     pub issuer: String,
     /// Accepted audiences (`aud`) — at least one is required.
     ///
@@ -572,16 +584,24 @@ impl OidcConfig {
         Ok(())
     }
 
-    /// Judge [`Self::issuer`] against the RFC 8414 §2 issuer-identifier rules.
+    /// Judges [`Self::issuer`] against the issuer-identifier rules of RFC 8414
+    /// §2 and OpenID Connect Core 1.0 §1.2.
+    ///
+    /// The `userinfo` check runs before every rule whose refusal quotes the
+    /// issuer, and the parse refusal quotes it masked, so no refusal prints a
+    /// credential.
     fn validate_issuer(&self) -> Result<(), AuthConfigError> {
         let issuer = self.issuer.trim();
         if issuer.is_empty() {
             return Err(AuthConfigError::IssuerMissing);
         }
         let url = Url::parse(issuer).map_err(|e| AuthConfigError::IssuerNotAUrl {
-            issuer: issuer.to_owned(),
+            issuer: redact_userinfo(issuer),
             reason: e.to_string(),
         })?;
+        if !url.username().is_empty() || url.password().is_some() {
+            return Err(AuthConfigError::IssuerHasUserinfo(redact_userinfo(issuer)));
+        }
         if url.query().is_some() {
             return Err(AuthConfigError::IssuerHasQuery(issuer.to_owned()));
         }
@@ -878,6 +898,48 @@ mod tests {
             cfg.validate(),
             Err(AuthConfigError::IssuerHasFragment(with_fragment.to_owned()))
         );
+    }
+
+    /// OpenID Connect Core 1.0 §1.2: an issuer identifier "contains scheme,
+    /// host, and optionally, port number and path components", so `userinfo`
+    /// is refused, and the refusal masks it rather than quoting it.
+    #[test]
+    fn issuer_with_userinfo_is_a_boot_error_that_masks_it() {
+        for issuer in [
+            "https://idp:hunter2@idp.example/realms/ferroehr",
+            "https://idp@idp.example/realms/ferroehr",
+        ] {
+            let cfg = AuthConfig {
+                oidc: Some(OidcConfig {
+                    issuer: issuer.to_owned(),
+                    ..valid_oidc()
+                }),
+                ..AuthConfig::default()
+            };
+            let err = cfg
+                .validate()
+                .expect_err("userinfo in an issuer is refused");
+            assert_eq!(
+                err,
+                AuthConfigError::IssuerHasUserinfo(
+                    "https://***@idp.example/realms/ferroehr".to_owned()
+                )
+            );
+            let shown = err.to_string();
+            assert!(!shown.contains("hunter2"), "{shown}");
+            assert!(!shown.contains("idp@"), "{shown}");
+        }
+        // The userinfo rule fires before the query rule, whose refusal quotes
+        // the issuer.
+        let cfg = AuthConfig {
+            oidc: Some(OidcConfig {
+                issuer: "https://idp:hunter2@idp.example/r?tenant=a".to_owned(),
+                ..valid_oidc()
+            }),
+            ..AuthConfig::default()
+        };
+        let shown = cfg.validate().expect_err("refused").to_string();
+        assert!(!shown.contains("hunter2"), "{shown}");
     }
 
     #[test]

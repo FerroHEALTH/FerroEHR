@@ -21,6 +21,8 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
+use crate::config::secret::{SecretUrl, redact_userinfo};
+
 /// The server-wide disposition for an EHR that carries no
 /// `ACCESS_CONTROL_SETTINGS` of its own — the `ehr_access_default` tri-state's
 /// two states.
@@ -185,8 +187,9 @@ pub struct CedarConfig {
 #[serde(default, deny_unknown_fields)]
 pub struct RemoteConfig {
     /// The PDP base URL; the policy name is appended, so it must end with `/`
-    /// (required when `engine = remote`).
-    pub server: Option<String>,
+    /// (required when `engine = remote`). Any `userinfo` in it is masked in
+    /// every rendering.
+    pub server: Option<SecretUrl>,
     /// TCP connect timeout in milliseconds (default 2000): without one, a PDP
     /// that blackholes packets parks the request until the OS TCP timeout.
     pub connect_timeout_ms: u64,
@@ -314,7 +317,8 @@ pub enum AuthzConfigError {
     /// `engine = remote` without a configured base URL.
     #[error("authz.abac.remote.server is required when abac.engine = remote")]
     RemoteServerMissing,
-    /// The remote base URL does not end with `/` (the policy name is appended).
+    /// The remote base URL does not end with `/` (the policy name is appended);
+    /// carries the URL with its `userinfo` masked.
     #[error("authz.abac.remote.server must end with '/' (got {0:?})")]
     RemoteServerTrailingSlash(String),
     /// `engine = cedar` without a configured policy directory.
@@ -422,12 +426,13 @@ impl AbacConfig {
         let server = self
             .remote
             .server
-            .as_deref()
+            .as_ref()
+            .map(SecretUrl::expose)
             .filter(|s| !s.trim().is_empty())
             .ok_or(AuthzConfigError::RemoteServerMissing)?;
         if !server.ends_with('/') {
             return Err(AuthzConfigError::RemoteServerTrailingSlash(
-                server.to_owned(),
+                redact_userinfo(server),
             ));
         }
         for kind in REQUIRED_REMOTE_POLICY_KINDS {
@@ -631,7 +636,7 @@ mod tests {
         let no_slash = AuthzConfig {
             abac: AbacConfig {
                 remote: RemoteConfig {
-                    server: Some("http://pdp:3001/exec".to_owned()),
+                    server: Some(SecretUrl::new("http://pdp:3001/exec")),
                     ..RemoteConfig::default()
                 },
                 ..base.clone()
@@ -646,7 +651,7 @@ mod tests {
         let ok = AuthzConfig {
             abac: AbacConfig {
                 remote: RemoteConfig {
-                    server: Some("http://pdp:3001/exec/".to_owned()),
+                    server: Some(SecretUrl::new("http://pdp:3001/exec/")),
                     ..RemoteConfig::default()
                 },
                 ..base
@@ -667,7 +672,7 @@ mod tests {
                 enabled: true,
                 engine: AbacEngineKind::Remote,
                 remote: RemoteConfig {
-                    server: Some("http://pdp:3001/exec/".to_owned()),
+                    server: Some(SecretUrl::new("http://pdp:3001/exec/")),
                     ..RemoteConfig::default()
                 },
                 policy,

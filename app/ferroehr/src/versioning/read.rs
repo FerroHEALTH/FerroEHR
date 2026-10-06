@@ -120,6 +120,9 @@ pub(crate) struct VersionRead {
     /// row nothing stamped; read through
     /// [`crate::versioning::origins::of_stored`].
     pub(crate) origins: Option<Value>,
+    /// The template id and root archetype id the access record classifies
+    /// this version by (EHDS Annex II 3.2(c), #3621).
+    pub(crate) content: crate::system_log::categories::ContentIds,
     /// The reassembled canonical JSON, or `Value::Null` for a deleted version
     /// (a logical delete stores no node rows — master06 §Logical Deletion).
     pub(crate) canonical: Value,
@@ -230,6 +233,11 @@ fn version_read(
         .as_ref()
         .map(|fragment| WrappedOriginal::decode(stored.vo_id, fragment))
         .transpose()?;
+    let content = crate::system_log::categories::ContentIds::of_kind(
+        &stored.kind,
+        stored.template_id.clone(),
+        stored.root_archetype.clone(),
+    );
     Ok(VersionRead {
         vo_id: stored.vo_id,
         ehr_id: stored.ehr_id,
@@ -260,6 +268,7 @@ fn version_read(
         signature: stored.signature,
         signature_client_supplied: stored.signature_client_supplied,
         origins: stored.origins,
+        content,
         wrapped,
         canonical: stored.canonical,
         attestations_at_committal: stored.attestations_at_committal,

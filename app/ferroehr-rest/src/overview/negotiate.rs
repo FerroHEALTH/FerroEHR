@@ -1095,6 +1095,9 @@ pub(crate) fn set_versioning_headers(resp: &mut Response, meta: &ResourceMeta) {
             origins: meta.origins.clone(),
             origin_count: (!meta.origins.is_empty())
                 .then(|| u64::try_from(meta.origins.len()).unwrap_or(u64::MAX)),
+            content: (!meta.content.is_empty()).then(|| {
+                ferroehr::system_log::categories::AccessedContent::Objects(meta.content.clone())
+            }),
         });
 }
 

@@ -60,6 +60,7 @@ async fn rejecting_sender() -> (ferroehr::system_log::sender::AuditSender, Audit
         store: StoreConfig {
             enabled: true,
             retention_days: 0,
+            retention_years: None,
             sgb_v_309_controller: false,
         },
         ..AuditConfig::default()

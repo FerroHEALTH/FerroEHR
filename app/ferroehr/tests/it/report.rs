@@ -70,7 +70,7 @@ fn configuration_with_secrets(files: &assert_fs::TempDir) -> FerroEhrConfig {
     config.terminology.external.oauth2_clients = BTreeMap::from([(
         "terminology".to_owned(),
         TerminologyOauth2Config {
-            token_url: "https://idp.example/token".to_owned(),
+            token_url: SecretUrl::new("https://idp.example/token"),
             client_id: "ferroehr".to_owned(),
             client_secret: Some(Secret::new(CLIENT_SECRET)),
             ..TerminologyOauth2Config::default()

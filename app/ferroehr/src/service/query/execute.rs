@@ -34,6 +34,7 @@ use crate::service::FerroEhrService;
 use crate::service::error::internal_fault;
 use crate::service::query::request::{AqlQueryRequest, QueryOutcome};
 use crate::service::status::{QUERY_TIMEOUT_TAG, SmError};
+use crate::system_log::categories::{AccessedContent, ContentIds};
 
 use super::result_set::{build_params, result_set_json, substitute_params};
 
@@ -204,11 +205,14 @@ impl FerroEhrService {
             .collect();
         let served_origins = result.served_origins.clone();
         let origin_count = result.origin_count;
+        let (accessed, served_ehr_content) = accessed_content(&result);
         let mut outcome = QueryOutcome::plain(result_set_json(aql, &executed, name, result));
         outcome.served_ehrs = served_ehrs;
         outcome.served_rows = served_rows;
         outcome.served_origins = served_origins;
         outcome.origin_count = origin_count;
+        outcome.accessed = Some(accessed);
+        outcome.served_ehr_content = served_ehr_content;
         if let Some(scope) = scope {
             outcome.ehr_ids = scope.ehr_ids;
             outcome.template_ids = scope.template_ids;
@@ -312,6 +316,43 @@ impl FerroEhrService {
         }
         Ok(ids)
     }
+}
+
+/// What a statement touched, for the access record's category classification:
+/// the identifiers of the served versions, or the query's positive constraints
+/// when the answer carries none; and the identifiers per served EHR.
+///
+/// No openEHR spec governs access-log classification — our own design/extension
+/// (EHDS Annex II 3.2(c), `docs/law/eu/ehds/text.html`).
+fn accessed_content(
+    result: &aql::exec::QueryResult,
+) -> (
+    AccessedContent,
+    std::collections::BTreeMap<String, Vec<ContentIds>>,
+) {
+    let mut overall = std::collections::BTreeSet::new();
+    let mut per_ehr: std::collections::BTreeMap<String, Vec<ContentIds>> =
+        std::collections::BTreeMap::new();
+    for served in &result.served_content {
+        let ids = ContentIds::of_kind(
+            &served.kind,
+            served.template_id.clone(),
+            served.root_archetype.clone(),
+        );
+        if let Some(ehr_id) = served.ehr_id {
+            per_ehr
+                .entry(ehr_id.to_string())
+                .or_default()
+                .push(ids.clone());
+        }
+        overall.insert(ids);
+    }
+    let accessed = if overall.is_empty() {
+        AccessedContent::Query(result.constraints.clone())
+    } else {
+        AccessedContent::Objects(overall.into_iter().collect())
+    };
+    (accessed, per_ehr)
 }
 
 /// A failed execution step carrying both the ITS-REST-mapped error and the

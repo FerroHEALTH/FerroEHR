@@ -111,7 +111,7 @@ impl FerroTerm {
 fn provider(base: &str) -> FhirTerminologyProvider {
     let cfg = FhirProviderConfig {
         kind: ProviderKind::Fhir,
-        url: base.to_owned(),
+        url: ferroehr::config::secret::SecretUrl::new(base),
         operation: FhirOperation::ValidateCode,
         connect_timeout_ms: 2000,
         request_timeout_ms: 5000,

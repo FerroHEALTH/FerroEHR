@@ -104,6 +104,15 @@ pub enum TestkitError {
     /// setup with a REACHABLE daemon still fails through the other variants.
     #[error("testkit: {0}")]
     DockerUnavailable(String),
+    /// The container's published host has no IPv4 address to reach the
+    /// IPv4-published port on.
+    #[error("testkit: the container host {host} resolves to no IPv4 address: {reason}")]
+    NoIpv4Host {
+        /// The host the container runtime reported.
+        host: String,
+        /// Why no IPv4 address came back.
+        reason: String,
+    },
 }
 
 /// One fresh, fully migrated database for one test: a clone of the migrated
@@ -286,9 +295,29 @@ async fn resolve_server_url() -> Result<String, TestkitError> {
     let container = CONTAINER.get_or_try_init(start_container).await?;
     let host = container.get_host().await?.to_string();
     let port = container.get_host_port_ipv4(5432).await?;
-    Ok(format!(
-        "postgres://postgres:postgres@{host}:{port}/postgres"
-    ))
+    let address = ipv4_address(&host, port).await?;
+    Ok(format!("postgres://postgres:postgres@{address}/postgres"))
+}
+
+/// Returns the IPv4 socket address `host` reaches the IPv4-published `port` on.
+///
+/// The DSN names this address rather than the host, which is usually
+/// `localhost`: a name that resolves to `::1` first makes every connection try
+/// an IPv6 port nothing listens on, and since a published port lies in the
+/// ephemeral range, the kernel now and then picks that very port as the
+/// attempt's source port, so the connection opens onto itself (RFC 9293 §3.5,
+/// simultaneous open) and the client reads its own `SSLRequest` back as a
+/// `0x00` reply.
+async fn ipv4_address(host: &str, port: u16) -> Result<std::net::SocketAddr, TestkitError> {
+    let no_ipv4 = |reason: String| TestkitError::NoIpv4Host {
+        host: host.to_owned(),
+        reason,
+    };
+    tokio::net::lookup_host(format!("{host}:{port}"))
+        .await
+        .map_err(|e| no_ipv4(e.to_string()))?
+        .find(std::net::SocketAddr::is_ipv4)
+        .ok_or_else(|| no_ipv4("the lookup returned only IPv6 addresses".to_owned()))
 }
 
 /// Starts — or adopts — the reusable named `PostgreSQL` 18 container.
@@ -746,9 +775,25 @@ fn stale(name: &str, current_template: &str, now_secs: u64) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{
-        DB_PREFIX, SQLSTATE_OBJECT_IN_USE, SWEEP_GRACE, clone_url, fresh_name, probe_docker,
-        redacted, refusal_is_benign, stale,
+        DB_PREFIX, SQLSTATE_OBJECT_IN_USE, SWEEP_GRACE, TestkitError, clone_url, fresh_name,
+        ipv4_address, probe_docker, redacted, refusal_is_benign, stale,
     };
+
+    /// `localhost` resolves to `::1` before `127.0.0.1` on common hosts; the DSN
+    /// must name the IPv4 loopback, never an IPv6 port nothing listens on.
+    #[tokio::test]
+    async fn the_server_address_is_ipv4_even_for_localhost() {
+        let address = ipv4_address("localhost", 5432)
+            .await
+            .expect("localhost resolves");
+        assert_eq!(address.to_string(), "127.0.0.1:5432");
+        let literal = ipv4_address("127.0.0.1", 6543).await.expect("a literal");
+        assert_eq!(literal.to_string(), "127.0.0.1:6543");
+        assert!(matches!(
+            ipv4_address("::1", 5432).await,
+            Err(TestkitError::NoIpv4Host { .. })
+        ));
+    }
 
     #[test]
     fn clone_url_replaces_database_segment() {

@@ -38,6 +38,7 @@
               with no RM type (typed-FHIR evaluation tracked separately)"
 )]
 
+use std::collections::BTreeMap;
 use std::net::SocketAddr;
 
 use axum::extract::{ConnectInfo, Request, State};
@@ -46,8 +47,9 @@ use axum::response::{IntoResponse, Response};
 use http::{HeaderValue, StatusCode, header};
 use openehr_its::rest::runtime::ApiError;
 
+use ferroehr::system_log::categories::{AccessedContent, ContentIds, ResourceKind};
 use ferroehr::system_log::event::{
-    AuditEvent, EmitOutcome, EventActionCode, EventOutcome, EventType, ObjectClass,
+    AccessDomain, AuditEvent, EmitOutcome, EventActionCode, EventOutcome, EventType, ObjectClass,
 };
 
 use crate::extensions::access::authn::{FreshAuthentication, Principal};
@@ -86,16 +88,22 @@ pub struct AuditObject {
     /// and DEMOGRAPHIC bundles, so the operation alone cannot say which domain
     /// a contribution read touched; the demographic group sets this and the
     /// class decides for everything else.
-    pub domain: Option<ferroehr::system_log::event::AccessDomain>,
+    pub domain: Option<AccessDomain>,
     /// The distinct origins of the data this response served and their true
     /// count (EHDS Annex II 3.2(e), #3212), read from the version metadata the
     /// handler holds; empty when the operation serves no version body.
     pub origins: Vec<String>,
     /// The true number of distinct origins, when the set above was capped.
     pub origin_count: Option<u64>,
+    /// What the response served or wrote, for the record's EHDS priority
+    /// category (Annex II 3.2(c), #3621): the template and root archetype ids
+    /// of the objects, or a query's positive constraints. `None` leaves the
+    /// operation and the resource class to decide.
+    pub content: Option<AccessedContent>,
 }
 
-/// The EHRs a query served, each with its served-row count.
+/// The EHRs a query served, each with its served-row count and the
+/// identifiers of the versions it served from that EHR.
 ///
 /// A response extension the query dispatch sets and the audit middleware
 /// reads: an AQL statement is one operation but potentially many accesses, and
@@ -103,7 +111,12 @@ pub struct AuditObject {
 /// here rather than emitting from the service keeps the caller identity in the
 /// one place that has it.
 #[derive(Debug, Clone)]
-pub struct AuditServedEhrs(pub Vec<(String, u64)>);
+pub struct AuditServedEhrs {
+    /// The served EHRs with their served-row counts, in first-served order.
+    pub served: Vec<(String, u64)>,
+    /// The identifiers of the versions served from each EHR, keyed by EHR id.
+    pub content: BTreeMap<String, Vec<ContentIds>>,
+}
 
 /// The access-logging facts every record of one request shares: the request
 /// correlation id, the declared purpose of use, and the organisation the
@@ -141,7 +154,8 @@ fn emit_served_ehr_records(
     timestamp: jiff::Timestamp,
     access: &AccessContext,
 ) -> bool {
-    let Some(AuditServedEhrs(served)) = resp.extensions().get::<AuditServedEhrs>() else {
+    let Some(AuditServedEhrs { served, content }) = resp.extensions().get::<AuditServedEhrs>()
+    else {
         return false;
     };
     let mut rejected = false;
@@ -161,6 +175,11 @@ fn emit_served_ehr_records(
         event.ehr_id = Some(ehr_id.clone());
         event.object_id = Some(ehr_id.clone());
         event.result_count = Some(*rows);
+        event.category = content.get(ehr_id).and_then(|objects| {
+            state
+                .backend()
+                .audit_classify(&AccessedContent::Objects(objects.clone()))
+        });
         fill_access(&mut event, access, state);
         rejected |= state.backend().emit(event) == EmitOutcome::Rejected;
     }
@@ -267,6 +286,15 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
         if let Some(object) = object.as_ref() {
             event.record_origins(object.origins.clone(), object.origin_count);
         }
+        if event.outcome == EventOutcome::Success
+            && let Some(accessed) = accessed_content(
+                op,
+                object_class,
+                object.as_ref().and_then(|o| o.content.clone()),
+            )
+        {
+            event.category = state.backend().audit_classify(&accessed);
+        }
         // A handler that knows its domain better than the resource class does
         // says so; the class decides for everything else.
         if let Some(domain) = object.as_ref().and_then(|o| o.domain) {
@@ -324,6 +352,41 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
         return resp;
     }
     resp
+}
+
+/// What an operation touched, for the record's EHDS priority category
+/// (Annex II 3.2(c), #3621).
+///
+/// Item tags and revision histories are marked by the operation, whatever the
+/// handler attached; then the handler's own content decides; then the resource
+/// class marks the EHR itself and its directory. `EHR`, `EHR_STATUS`, the
+/// directory `FOLDER`, item tags and revision histories hold no
+/// priority-category data. `None` for an operation outside the clinical
+/// domain, or one that touched no classifiable content. No openEHR spec
+/// governs access-log classification — our own design/extension.
+fn accessed_content(
+    op: &str,
+    object_class: ObjectClass,
+    content: Option<AccessedContent>,
+) -> Option<AccessedContent> {
+    if AccessDomain::of(object_class) != AccessDomain::Ehr || object_class == ObjectClass::Extract {
+        return None;
+    }
+    if op.contains("_tags_") {
+        return Some(AccessedContent::ResourceKind(ResourceKind::ItemTag));
+    }
+    if op.ends_with("revision_history") {
+        return Some(AccessedContent::ResourceKind(ResourceKind::RevisionHistory));
+    }
+    if op.starts_with("versioned_ehr_status") {
+        return Some(AccessedContent::ResourceKind(ResourceKind::EhrStatus));
+    }
+    match (content, object_class) {
+        (Some(content), _) => Some(content),
+        (None, ObjectClass::Ehr) => Some(AccessedContent::ResourceKind(ResourceKind::Ehr)),
+        (None, ObjectClass::Directory) => Some(AccessedContent::ResourceKind(ResourceKind::Folder)),
+        (None, _) => None,
+    }
 }
 
 /// Maps an HTTP status to the DICOM `EventOutcomeIndicator` (PS3.15 §A.5.1).

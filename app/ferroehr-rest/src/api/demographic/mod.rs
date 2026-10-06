@@ -139,6 +139,7 @@ fn set_versioning_headers(resp: &mut Response, meta: Option<&ResourceMeta>) {
             domain: Some(ferroehr::system_log::event::AccessDomain::Demographic),
             origins: Vec::new(),
             origin_count: None,
+            content: None,
         });
 }
 

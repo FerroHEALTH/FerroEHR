@@ -83,7 +83,10 @@ pub fn init(cfg: &TelemetryConfig, build: &BuildInfo) -> Result<TelemetryGuard, 
     let otel_resource = resource(&cfg.otel, build);
     let otlp_reader = if cfg.otel.export_enabled() && cfg.otel.metrics_push {
         Some(build_metric_reader(
-            &cfg.otel.otlp_endpoint.clone().unwrap_or_default(),
+            cfg.otel
+                .otlp_endpoint
+                .as_ref()
+                .map_or("", crate::config::secret::SecretUrl::expose),
         )?)
     } else {
         None
@@ -98,9 +101,13 @@ pub fn init(cfg: &TelemetryConfig, build: &BuildInfo) -> Result<TelemetryGuard, 
 
     // 2) Traces: only when an OTLP endpoint is set.
     if cfg.otel.export_enabled() {
-        let endpoint = cfg.otel.otlp_endpoint.clone().unwrap_or_default();
+        let endpoint = cfg
+            .otel
+            .otlp_endpoint
+            .as_ref()
+            .map_or("", crate::config::secret::SecretUrl::expose);
 
-        let provider = build_tracer_provider(&endpoint, &cfg.otel, otel_resource)?;
+        let provider = build_tracer_provider(endpoint, &cfg.otel, otel_resource)?;
         tracer = Some(provider.tracer(SCOPE));
         tracer_provider = Some(provider);
 

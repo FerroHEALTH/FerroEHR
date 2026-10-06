@@ -64,6 +64,9 @@ pub struct Committed {
     /// The OPT `template_id` a COMPOSITION was committed against (`None`
     /// otherwise).
     pub template_id: Option<String>,
+    /// The archetype id of the written version's root node, case-folded as the
+    /// node table stores it; `None` for a logical delete, which writes no node.
+    pub root_archetype: Option<String>,
     /// The server-computed commit instant (the audit `time_committed`,
     /// master06 §Committal and Audits) — the write response's `Last-Modified`, carried
     /// here so the service layer never re-reads the row it just wrote.
@@ -92,6 +95,20 @@ pub(crate) struct CommittedContribution {
 }
 
 impl Committed {
+    /// The identifiers the access record classifies this write by (EHDS Annex
+    /// II 3.2(c), #3621); `None` for a version that carries no content (a
+    /// logical delete), which wrote no priority-category data.
+    #[must_use]
+    pub fn content_ids(&self) -> Option<crate::system_log::categories::ContentIds> {
+        let ids = crate::system_log::categories::ContentIds::of_kind(
+            self.kind.as_str(),
+            self.template_id.clone(),
+            self.root_archetype.clone(),
+        );
+        (ids.resource_kind.is_some() || ids.template_id.is_some() || ids.archetype_id.is_some())
+            .then_some(ids)
+    }
+
     /// The committed version's full `OBJECT_VERSION_ID` (`ETag`/`Location`
     /// value — RM common master06 §Version Identification).
     #[must_use]
@@ -939,6 +956,11 @@ async fn commit_resolved(
             kind: r.kind,
             change_type: audit.change_type.clone(),
             template_id: r.template_id,
+            root_archetype: r
+                .rows
+                .first()
+                .filter(|root| root.num == 0)
+                .and_then(|root| root.archetype.clone()),
             time_committed,
         },
         contribution_id,

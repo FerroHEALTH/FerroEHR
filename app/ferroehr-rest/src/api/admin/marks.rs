@@ -237,11 +237,13 @@ pub(crate) async fn admin_research_objection(
     get, path = "/admin/retention/policy", tag = "admin-marks",
     responses(
         (status = 200, description = "Every declared period, with the content \
-                                      category, the jurisdiction, the anchor \
-                                      rule and the legal citation it rests on. \
-                                      This is the register GDPR Art. 30(1)(f) \
-                                      and DSG Art. 25 Abs. 2 lit. d are \
-                                      answered from.",
+                                      kind, the EHDS priority category it is \
+                                      keyed on (null for every object of the \
+                                      kind), the jurisdiction, the anchor rule \
+                                      and the legal citation it rests on. This \
+                                      is the register GDPR Art. 30(1)(f), DSG \
+                                      Art. 25 Abs. 2 lit. d and EHDS Annex II \
+                                      3.4 are answered from.",
          body = serde_json::Value),
         (status = 401, description = "Unauthenticated.", body = serde_json::Value),
         (status = 403, description = "Not in the Admin class.", body = serde_json::Value),
@@ -264,10 +266,18 @@ pub(crate) async fn admin_retention_policies(
     put, path = "/admin/retention/policy", tag = "admin-marks",
     request_body(content = serde_json::Value,
                  description = "`{ \"kind\": …, \"jurisdiction\": …, \
-                                \"period\": …, \"anchor\": …, \"source\": … }`. \
-                                `kind` is COMPOSITION | EHR_STATUS | FOLDER | \
-                                EHR, `period` a PostgreSQL interval, `anchor` \
-                                one of last_commit | death | majority, and \
+                                \"category\": …?, \"period\": …, \"anchor\": …, \
+                                \"source\": … }`. `kind` is COMPOSITION | \
+                                EHR_STATUS | FOLDER | EHR; `category`, when \
+                                present, keys the period on one EHDS priority \
+                                category as `[audit.categories]` spells it \
+                                (patient-summary | eprescription | \
+                                edispensation | imaging | test-results | \
+                                discharge-report | national:<code> | none), \
+                                and an object the map cannot classify takes \
+                                the longest period configured for its kind; \
+                                `period` is a PostgreSQL interval, `anchor` one \
+                                of last_commit | death | majority, and \
                                 `source` the legal citation the period rests \
                                 on.",
                  example = json!({
@@ -279,11 +289,11 @@ pub(crate) async fn admin_retention_policies(
                  })),
     responses(
         (status = 204, description = "The period is declared, replacing any \
-                                      earlier one for that category and \
+                                      earlier one for that kind, category and \
                                       jurisdiction."),
         (status = 400, description = "The body is not the object above, or the \
-                                      register refused the category, the anchor \
-                                      rule or a non-positive period.",
+                                      register refused the kind, the category, \
+                                      the anchor rule or a non-positive period.",
          body = serde_json::Value),
         (status = 401, description = "Unauthenticated.", body = serde_json::Value),
         (status = 403, description = "Not in the Admin class.", body = serde_json::Value),
@@ -396,9 +406,12 @@ pub(crate) async fn admin_retention_hold(
     responses(
         (status = 200, description = "The EHRs whose period has run and which \
                                       carry no EHR-wide hold, oldest first, \
-                                      each with the citation the period rests \
-                                      on and the counts of objects due and \
-                                      objects exempted by a per-object hold. \
+                                      one row per period (and per EHDS \
+                                      priority category where the period is \
+                                      keyed on one), each with the citation \
+                                      the period rests on and the counts of \
+                                      objects due and objects exempted by a \
+                                      per-object hold. \
                                       A LIST, never a disposal: the server \
                                       deletes no clinical content on a timer \
                                       (RM common master06 §Logical Deletion), \
@@ -532,6 +545,7 @@ async fn run(
                         "period": row.period,
                         "anchor": row.anchor,
                         "source": row.source,
+                        "category": row.category,
                     })
                 })
                 .collect();
@@ -548,6 +562,7 @@ async fn run(
                 .put_retention_policy(
                     required_str(&body, "kind")?,
                     required_str(&body, "jurisdiction")?,
+                    optional_str(&body, "category")?,
                     required_str(&body, "period")?,
                     required_str(&body, "anchor")?,
                     required_str(&body, "source")?,
@@ -620,6 +635,7 @@ async fn run(
                         "due_at": row.due_at.to_string(),
                         "objects_due": row.objects_due,
                         "objects_held": row.objects_held,
+                        "category": row.category,
                     })
                 })
                 .collect();

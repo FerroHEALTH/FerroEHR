@@ -288,8 +288,9 @@ fn purpose_codings(event: &AuditEvent) -> Vec<AuditCoding> {
         .collect()
 }
 
-/// The entity list: the patient (when resolved), the touched data object,
-/// and/or the query expression.
+/// The entity list: the patient (when resolved), the touched data object
+/// and/or the query expression, the origins of the served data, and the
+/// categories of the data accessed.
 fn build_entities(event: &AuditEvent, subject: Option<&str>, missing: &str) -> Vec<AuditEntityRef> {
     use crate::system_log::codes::AtnaObject;
 
@@ -309,7 +310,9 @@ fn build_entities(event: &AuditEvent, subject: Option<&str>, missing: &str) -> V
             role: Some(coding(SYS_OBJECT_ROLE, "24", "Query")),
             name: None,
             query: Some(expression),
+            details: Vec::new(),
         });
+        entities.extend(category_entity(event));
         return entities;
     }
 
@@ -322,6 +325,7 @@ fn build_entities(event: &AuditEvent, subject: Option<&str>, missing: &str) -> V
             role: Some(coding(SYS_OBJECT_ROLE, "1", "Patient")),
             name: None,
             query: None,
+            details: Vec::new(),
         });
     }
 
@@ -332,6 +336,7 @@ fn build_entities(event: &AuditEvent, subject: Option<&str>, missing: &str) -> V
             role: None,
             name: None,
             query: None,
+            details: Vec::new(),
         });
     }
 
@@ -355,10 +360,49 @@ fn build_entities(event: &AuditEvent, subject: Option<&str>, missing: &str) -> V
             role: None,
             name: Some(name),
             query: None,
+            details: Vec::new(),
         });
     }
 
+    entities.extend(category_entity(event));
     entities
+}
+
+/// The categories of the data accessed (EHDS Annex II 3.2(c), #3621), as one
+/// named entity whose details carry each category, the basis, each piece of
+/// evidence and the digest of the map that classified the record.
+///
+/// FHIR R4 `AuditEvent.entity.detail` is a `(type, value[x])` pair
+/// (<https://hl7.org/fhir/R4/auditevent.html>); the detail type names are our
+/// own. `None` when the record carries no classification.
+fn category_entity(event: &AuditEvent) -> Option<AuditEntityRef> {
+    let record = event.category.as_ref()?;
+    let mut details: Vec<(String, String)> = record
+        .categories
+        .iter()
+        .map(|category| ("category".to_owned(), category.clone()))
+        .collect();
+    details.push((
+        "category-basis".to_owned(),
+        record.basis.as_str().to_owned(),
+    ));
+    details.extend(
+        record
+            .evidence
+            .iter()
+            .map(|id| ("category-evidence".to_owned(), id.clone())),
+    );
+    if let Some(digest) = event.category_map_digest {
+        details.push(("category-map".to_owned(), digest.to_string()));
+    }
+    Some(AuditEntityRef {
+        what: None,
+        entity_type: Some(coding(SYS_AUDIT_ENTITY_TYPE, "2", "System Object")),
+        role: None,
+        name: Some("categories of the data accessed".to_owned()),
+        query: None,
+        details,
+    })
 }
 
 /// The BALP profile(s) this record actually satisfies. The `RESTful` profiles

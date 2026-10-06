@@ -65,9 +65,10 @@ impl AuditStore {
             "INSERT INTO audit.audit_event (recorded_at, action, outcome, event_code, \
              operation, principal, organisation, patient_id, resource_class, resource_id, \
              client_ip, token_id, domain, purpose, legal_basis, result_count, \
-             request_id, fhir, roles, origins, origin_count) \
+             request_id, fhir, roles, origins, origin_count, categories, category_basis, \
+             category_evidence, category_map_digest) \
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, \
-             $15, $16, $17, $18, $19, $20, $21) \
+             $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25) \
              RETURNING id",
         )
         .bind(Timestamp::from(event.timestamp))
@@ -91,6 +92,10 @@ impl AuditStore {
         .bind(roles_json(event))
         .bind(origins_json(event))
         .bind(origin_count(event))
+        .bind(categories_json(event))
+        .bind(category_basis(event))
+        .bind(category_evidence_json(event))
+        .bind(category_map_digest(event))
         .fetch_one(&self.pool)
         .await?
         .try_get::<Uuid, _>("id")
@@ -138,6 +143,7 @@ impl AuditStore {
         let mut roles: Vec<Option<serde_json::Value>> = Vec::with_capacity(records.len());
         let mut origins: Vec<Option<serde_json::Value>> = Vec::with_capacity(records.len());
         let mut origin_counts: Vec<Option<i64>> = Vec::with_capacity(records.len());
+        let mut classified = CategoryColumns::with_capacity(records.len());
         for (event, subject, fhir) in records {
             let Some(fhir) = fhir else {
                 continue;
@@ -163,6 +169,7 @@ impl AuditStore {
             roles.push(roles_json(event));
             origins.push(origins_json(event));
             origin_counts.push(origin_count(event));
+            classified.push(event);
         }
         if fhir_docs.is_empty() {
             return Ok(());
@@ -171,12 +178,13 @@ impl AuditStore {
             "INSERT INTO audit.audit_event (recorded_at, action, outcome, event_code, \
              operation, principal, organisation, patient_id, resource_class, resource_id, \
              client_ip, token_id, domain, purpose, legal_basis, result_count, \
-             request_id, fhir, roles, origins, origin_count) \
+             request_id, fhir, roles, origins, origin_count, categories, category_basis, \
+             category_evidence, category_map_digest) \
              SELECT * FROM UNNEST($1::timestamptz[], $2::text[], $3::smallint[], $4::text[], \
              $5::text[], $6::text[], $7::text[], $8::text[], $9::text[], $10::text[], \
              $11::text[], $12::text[], $13::text[], $14::text[], $15::text[], \
              $16::bigint[], $17::text[], $18::jsonb[], $19::jsonb[], $20::jsonb[], \
-             $21::bigint[])",
+             $21::bigint[], $22::jsonb[], $23::text[], $24::jsonb[], $25::text[])",
         )
         .bind(recorded_at)
         .bind(actions)
@@ -199,6 +207,10 @@ impl AuditStore {
         .bind(roles)
         .bind(origins)
         .bind(origin_counts)
+        .bind(classified.categories)
+        .bind(classified.bases)
+        .bind(classified.evidence)
+        .bind(classified.digests)
         .execute(&self.pool)
         .await?;
         Ok(())
@@ -279,6 +291,27 @@ impl AuditStore {
             .fetch_one(&self.pool)
             .await?;
         Ok(u64::try_from(removed).unwrap_or(0))
+    }
+
+    /// Delete records older than the same calendar date `retention_years`
+    /// years ago (`[audit.store] retention_years`; 0 = keep forever). Returns
+    /// the number of reaped rows.
+    ///
+    /// The calendar arithmetic and the chain tombstones are
+    /// `audit.reap_audit_events_years`, the year-keyed twin of the day-keyed
+    /// path [`Self::reap`] takes; both reap through one body.
+    ///
+    /// # Errors
+    /// [`AuditError::Store`] when the reap fails.
+    pub async fn reap_years(&self, retention_years: u32) -> Result<u64, AuditError> {
+        if retention_years == 0 {
+            return Ok(0);
+        }
+        let removed: i64 = sqlx::query_scalar("SELECT audit.reap_audit_events_years($1)")
+            .bind(i32::try_from(retention_years).unwrap_or(i32::MAX))
+            .fetch_one(&self.pool)
+            .await?;
+        u64::try_from(removed).map_err(|e| AuditError::Store(sqlx::Error::Decode(Box::new(e))))
     }
 
     /// Check the repository's tamper evidence: recompute every record's digest,
@@ -542,6 +575,60 @@ fn origin_count(event: &AuditEvent) -> Option<i64> {
     event
         .origin_count
         .map(|count| i64::try_from(count).unwrap_or(i64::MAX))
+}
+
+/// The four classification columns of a batched insert, one entry per record.
+struct CategoryColumns {
+    categories: Vec<Option<serde_json::Value>>,
+    bases: Vec<Option<&'static str>>,
+    evidence: Vec<Option<serde_json::Value>>,
+    digests: Vec<Option<String>>,
+}
+
+impl CategoryColumns {
+    fn with_capacity(capacity: usize) -> Self {
+        Self {
+            categories: Vec::with_capacity(capacity),
+            bases: Vec::with_capacity(capacity),
+            evidence: Vec::with_capacity(capacity),
+            digests: Vec::with_capacity(capacity),
+        }
+    }
+
+    fn push(&mut self, event: &AuditEvent) {
+        self.categories.push(categories_json(event));
+        self.bases.push(category_basis(event));
+        self.evidence.push(category_evidence_json(event));
+        self.digests.push(category_map_digest(event));
+    }
+}
+
+/// The `categories` column value: the classified category spellings as a JSON
+/// array, or `NULL` when the operation touched no clinical content.
+fn categories_json(event: &AuditEvent) -> Option<serde_json::Value> {
+    event
+        .category
+        .as_ref()
+        .map(|record| serde_json::json!(record.categories))
+}
+
+/// The `category_basis` column value.
+fn category_basis(event: &AuditEvent) -> Option<&'static str> {
+    event.category.as_ref().map(|record| record.basis.as_str())
+}
+
+/// The `category_evidence` column value: the identifiers the classification
+/// rests on, as a JSON array.
+fn category_evidence_json(event: &AuditEvent) -> Option<serde_json::Value> {
+    event
+        .category
+        .as_ref()
+        .map(|record| serde_json::json!(record.evidence))
+}
+
+/// The `category_map_digest` column value.
+fn category_map_digest(event: &AuditEvent) -> Option<String> {
+    event.category_map_digest.map(|digest| digest.to_string())
 }
 
 /// The `roles` column value: the role names as a JSON array, or `NULL` when

@@ -421,7 +421,7 @@ metrics_push = false
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `otlp_endpoint` | string | unset | OTLP/gRPC collector endpoint. Unset ⇒ no trace export. |
+| `otlp_endpoint` | secret URL | unset | OTLP/gRPC collector endpoint. Unset ⇒ no trace export. Credentials embedded in it are redacted from every rendering. |
 | `service_name` | string | `ferroehr` | The `service.name` resource attribute. |
 | `environment` | string | `dev` | The `deployment.environment` resource attribute. |
 | `traces_sample_ratio` | float | `1.0` | Head-sampling ratio (`0.1` is a common production start). |
@@ -456,7 +456,7 @@ deployment = "unknown"
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `enabled` | bool | `true` | Send the report. `false` sends nothing and writes nothing to the database for it. Environment: `FERROEHR__USAGE_REPORT__ENABLED`. |
-| `endpoint` | string | `https://report.ferropulse.eu/v1/report` | Where reports go. Must be an absolute `https` URL without credentials; plain `http` is accepted for a loopback host only. Environment: `FERROEHR__USAGE_REPORT__ENDPOINT`. |
+| `endpoint` | secret URL | `https://report.ferropulse.eu/v1/report` | Where reports go. Must be an absolute `https` URL without credentials (refused at boot, and redacted from every rendering); plain `http` is accepted for a loopback host only. Environment: `FERROEHR__USAGE_REPORT__ENDPOINT`. |
 | `slow_aql_ms` | int | `1000` | Execution time in milliseconds above which an AQL query counts as slow in the daily report. At least `1`. Environment: `FERROEHR__USAGE_REPORT__SLOW_AQL_MS`. |
 | `deployment` | enum{helm,compose,binary,unknown} | `unknown` | How the instance was deployed, as the report states it. The Helm chart sets it to `helm`. Environment: `FERROEHR__USAGE_REPORT__DEPLOYMENT`. |
 

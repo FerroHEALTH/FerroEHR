@@ -513,7 +513,9 @@ async fn tags_delete(state: AppState, parts: RequestParts) -> Result<Response, R
 /// and the commit instant ITS-REST derives `Last-Modified` from
 /// (`Requests_and_responses.md` §"`ETag` and Last-Modified").
 fn commit_meta(ehr_id: EhrId, uid: String, committed: &Committed) -> ResourceMeta {
-    ResourceMeta::new(ehr_id.to_string(), uid).with_last_modified(committed.time_committed)
+    ResourceMeta::new(ehr_id.to_string(), uid)
+        .with_last_modified(committed.time_committed)
+        .with_content(committed.content_ids().into_iter().collect())
 }
 
 /// Render a COMPOSITION create/update response: FLAT/STRUCTURED interop bodies

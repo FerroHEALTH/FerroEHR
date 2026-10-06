@@ -35,13 +35,15 @@ use serde_json::{Map, Value};
 use crate::extensions::access::authz::engine::{AuthzError, PolicyEngine};
 use crate::extensions::access::authz::request::{AuthzRequest, Combination, Decision};
 use ferroehr::config::authz::{AbacConfig, AbacParam, PolicyRule};
+use ferroehr::config::secret::SecretUrl;
 
 /// The remote policy-decision-point client.
 #[derive(Debug)]
 pub struct RemotePdp {
     client: reqwest::Client,
-    /// The base URL, guaranteed to end with `/` (config boot validation).
-    server: String,
+    /// The base URL, guaranteed to end with `/` (config boot validation);
+    /// every rendering masks its `userinfo`.
+    server: SecretUrl,
     /// Per-resource-kind policy bindings, keyed by [`ResourceKind::config_key`].
     ///
     /// [`ResourceKind::config_key`]: crate::extensions::access::authz::request::ResourceKind::config_key
@@ -60,7 +62,7 @@ impl RemotePdp {
             .remote
             .server
             .clone()
-            .filter(|s| !s.trim().is_empty())
+            .filter(|s| !s.expose().trim().is_empty())
             .ok_or_else(|| AuthzError::PolicyLoad("abac.remote.server is not set".to_owned()))?;
         let client = reqwest::Client::builder()
             .connect_timeout(Duration::from_millis(config.remote.connect_timeout_ms))
@@ -111,7 +113,8 @@ impl RemotePdp {
         rule: &PolicyRule,
         combo: &Combination<'_>,
     ) -> Result<bool, AuthzError> {
-        let url = format!("{}{}", self.server, rule.name);
+        let url = format!("{}{}", self.server.expose(), rule.name);
+        let shown = format!("{}{}", self.server, rule.name);
         let body = Self::body(rule, combo);
         let response = self
             .client
@@ -119,7 +122,7 @@ impl RemotePdp {
             .json(&body)
             .send()
             .await
-            .map_err(|e| AuthzError::Unreachable(format!("POST {url}: {e}")))?;
+            .map_err(|e| AuthzError::Unreachable(format!("POST {shown}: {e}")))?;
         let status = response.status();
         if status == reqwest::StatusCode::OK {
             return Ok(true);
@@ -128,7 +131,7 @@ impl RemotePdp {
             return Ok(false);
         }
         Err(AuthzError::Unreachable(format!(
-            "POST {url}: the policy server answered {status}, which is not an \
+            "POST {shown}: the policy server answered {status}, which is not an \
              authorization decision"
         )))
     }

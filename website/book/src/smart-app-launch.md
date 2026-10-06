@@ -52,6 +52,7 @@ The boot rules, and why each one exists:
 | `code_challenge_methods_supported` includes `S256` | SMART App Launch requires PKCE (RFC 7636), and `plain` alone is not sufficient |
 | `grant_types_supported` names neither `implicit` nor a password grant | both are deprecated in SMART and must never be advertised |
 | the advertised `issuer` carries no query or fragment | the RFC 8414 §2 issuer-identifier rules, the same ones `auth.oidc.issuer` is held to |
+| no `smart` URL carries a user name or password, even with SMART disabled | the document publishes these URLs to every app, so a credential in one would be served to anyone who asks |
 
 SMART scopes ride only **Bearer** tokens, so the OIDC bearer requirement above
 is also what makes the scope gate able to see a scope at all (see

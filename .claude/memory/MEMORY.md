@@ -79,3 +79,5 @@
 - [Refs PR can close an issue](refs-pr-can-close-issue.md) — check closingIssuesReferences before merging a plan-only PR
 - [Usage report stays default-on (accepted risk)](usage-report-default-on-accepted-risk.md) — owner chose on-by-default over the #3580 opt-in reading; do not re-propose
 - [EHDS/CRA manufacturer posture](ehds-cra-manufacturer-posture.md) — Cadasto B.V. manufacturer per release (A73 adopted); FerroEHR+FerroBRIDGE one EHR system; v4.3.5 = readiness
+- [Migration headers keep the old holder](migration-headers-keep-old-holder.md) — released migrations keep "Vernum Projecten B.V."; editing breaks the sqlx checksum
+- [Tests run in PR CI](tests-run-in-pr-ci.md) — never run nextest/cargo test locally (RAM); local = fmt/clippy/check/doc; tell every worker

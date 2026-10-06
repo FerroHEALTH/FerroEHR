@@ -87,13 +87,15 @@ impl FerroEhrService {
         ehr_id: EhrId,
         committed: &crate::versioning::change::Committed,
     ) -> ServiceResponse {
-        let meta = self.version_meta(
-            ehr_id,
-            committed.vo_id,
-            &committed.creating_system_id,
-            committed.tree,
-            committed.time_committed,
-        );
+        let meta = self
+            .version_meta(
+                ehr_id,
+                committed.vo_id,
+                &committed.creating_system_id,
+                committed.tree,
+                committed.time_committed,
+            )
+            .with_content(committed.content_ids().into_iter().collect());
         ServiceResponse::new(Value::Null, meta)
     }
 
@@ -171,13 +173,15 @@ impl FerroEhrService {
         vo_id: VoId,
         read: VersionRead,
     ) -> Result<ServiceResponse, VersionIdError> {
-        let meta = self.version_meta(
-            ehr_id,
-            vo_id,
-            &read.creating_system_id,
-            read.tree,
-            read.time_committed,
-        );
+        let meta = self
+            .version_meta(
+                ehr_id,
+                vo_id,
+                &read.creating_system_id,
+                read.tree,
+                read.time_committed,
+            )
+            .with_content(vec![read.content.clone()]);
         Ok(ServiceResponse::new(
             self.with_uid(read.canonical, vo_id, &read.creating_system_id, read.tree)?,
             meta,
