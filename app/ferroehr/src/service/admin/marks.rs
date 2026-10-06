@@ -205,7 +205,7 @@ impl FerroEhrService {
     ) -> Result<(), SmError> {
         if let Some(category) = category {
             crate::system_log::categories::Category::parse(category)
-                .map_err(|e| SmError::precondition(e.to_string()))?;
+                .map_err(|e| SmError::precondition(e.to_string()).with_source(e))?;
         }
         let mut tx = self.pool.begin().await.map_err(ServiceError::Database)?;
         marks::put_retention_policy(

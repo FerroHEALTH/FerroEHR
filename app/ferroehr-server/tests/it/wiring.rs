@@ -343,10 +343,12 @@ url = "https://u5:URL_PW_SENTINEL_5@h5:443/p5"
 [terminology.external.oauth2_clients.client]
 token_url = "https://u6:URL_PW_SENTINEL_6@h6:443/p6"
 client_id = "client"
+client_secret = "CLIENT_SECRET_SENTINEL"
 "#,
     );
     assert!(ok, "the configuration checks: {text}");
     assert!(!text.contains("URL_PW_SENTINEL"), "{text}");
+    assert!(!text.contains("CLIENT_SECRET_SENTINEL"), "{text}");
     for (n, port) in [
         (1, 5432),
         (2, 4317),
