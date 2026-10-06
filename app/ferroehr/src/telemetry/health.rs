@@ -6,10 +6,11 @@
 //! A [`HealthIndicator`] is a named, async, bounded check (e.g. "ping the DB").
 //! This module owns the trait, the registry, and the aggregation rules; the
 //! concrete indicators live in [`crate::telemetry::indicators`] and the HTTP
-//! probe handlers in the protocol adapter (`ferroehr-rest`, the always-on
-//! public `/health` family). The registry runs every indicator concurrently,
-//! each bounded to [`CHECK_TIMEOUT`], so a wedged dependency cannot hang a
-//! probe.
+//! handlers in the protocol adapter (`ferroehr-rest`: the always-on public
+//! `/health` family serves the status-only [`HealthSummary`], the authenticated
+//! management view the detailed [`AggregateHealth`]). The registry runs every
+//! indicator concurrently, each bounded to [`CHECK_TIMEOUT`], so a wedged
+//! dependency cannot hang a probe.
 //!
 //! No openEHR spec governs health probes — our own operational design.
 
@@ -98,8 +99,8 @@ pub trait HealthIndicator: Send + Sync + std::fmt::Debug {
     }
 }
 
-/// The set of indicators evaluated by the public `/health/readiness` probe.
-/// Cheaply cloneable (`Arc` of indicator handles).
+/// The set of indicators evaluated by the `/health/readiness` probe and the
+/// management health view. Cheaply cloneable (`Arc` of indicator handles).
 #[derive(Clone, Default, Debug)]
 pub struct HealthRegistry {
     indicators: Arc<[Arc<dyn HealthIndicator>]>,
@@ -146,8 +147,8 @@ impl HealthRegistry {
                 Ok(v) => v,
                 Err(join_err) => {
                     // A panicked check counts as a required DOWN. The join
-                    // error's Display can carry the panic payload, and this
-                    // surface is unauthenticated — so it is logged, not served.
+                    // error's Display can carry the panic payload, so it is
+                    // logged, never served.
                     tracing::error!(error = %join_err, "health: check task failed");
                     overall = HealthStatus::Down;
                     components.insert("unknown", Health::down("health check task failed"));
@@ -179,7 +180,11 @@ fn combine(current: HealthStatus, component: HealthStatus, required: bool) -> He
     }
 }
 
-/// The aggregate `/health` body.
+/// The evaluated registry: the aggregate status and every component's result,
+/// detail included.
+///
+/// The detailed body served by the authenticated management view; the public
+/// readiness probe serves [`AggregateHealth::summary`] instead.
 #[derive(Debug, Clone, Serialize)]
 pub struct AggregateHealth {
     /// The overall status.
@@ -193,10 +198,66 @@ impl AggregateHealth {
     /// (`DEGRADED` is still served up — the surface is reachable).
     #[must_use]
     pub fn http_status(&self) -> StatusCode {
-        match self.status {
-            HealthStatus::Down => StatusCode::SERVICE_UNAVAILABLE,
-            HealthStatus::Up | HealthStatus::Degraded => StatusCode::OK,
+        http_status_of(self.status)
+    }
+
+    /// The aggregate without any component detail: each component's name and
+    /// status, nothing else.
+    ///
+    /// A detail string can name a dependency, a count or a chain position, so
+    /// the unauthenticated readiness probe serves this view and the detail stays
+    /// behind authentication.
+    #[must_use]
+    pub fn summary(&self) -> HealthSummary {
+        HealthSummary {
+            status: self.status,
+            components: self
+                .components
+                .iter()
+                .map(|(name, health)| {
+                    (
+                        *name,
+                        ComponentSummary {
+                            status: health.status,
+                        },
+                    )
+                })
+                .collect(),
         }
+    }
+}
+
+/// The aggregate reduced to statuses: what the unauthenticated readiness probe
+/// may say.
+#[derive(Debug, Clone, Serialize)]
+pub struct HealthSummary {
+    /// The overall status.
+    pub status: HealthStatus,
+    /// Each component's status, keyed by its name.
+    pub components: BTreeMap<&'static str, ComponentSummary>,
+}
+
+impl HealthSummary {
+    /// The HTTP status for this summary, the same mapping as
+    /// [`AggregateHealth::http_status`].
+    #[must_use]
+    pub fn http_status(&self) -> StatusCode {
+        http_status_of(self.status)
+    }
+}
+
+/// One component in a [`HealthSummary`]: its status and no detail.
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct ComponentSummary {
+    /// The component status.
+    pub status: HealthStatus,
+}
+
+/// `503` when `DOWN`, else `200`.
+fn http_status_of(status: HealthStatus) -> StatusCode {
+    match status {
+        HealthStatus::Down => StatusCode::SERVICE_UNAVAILABLE,
+        HealthStatus::Up | HealthStatus::Degraded => StatusCode::OK,
     }
 }
 
@@ -282,6 +343,32 @@ mod tests {
         let agg = r.evaluate().await;
         assert_eq!(agg.status, HealthStatus::Degraded);
         assert_eq!(agg.http_status(), StatusCode::OK);
+    }
+
+    /// The summary keeps every component's name and status and drops every
+    /// detail; the status code mapping is the aggregate's.
+    #[tokio::test]
+    async fn summary_carries_names_and_statuses_only() {
+        let r = reg(vec![
+            Fixed {
+                name: "db",
+                health: Health::down("connection refused by 10.0.0.5:5432"),
+                required: true,
+            },
+            Fixed {
+                name: "audit",
+                health: Health::degraded("queue backpressure"),
+                required: false,
+            },
+        ]);
+        let agg = r.evaluate().await;
+        let summary = agg.summary();
+        assert_eq!(summary.status, HealthStatus::Down);
+        assert_eq!(summary.http_status(), agg.http_status());
+        assert_eq!(
+            serde_json::to_string(&summary).unwrap(),
+            r#"{"status":"DOWN","components":{"audit":{"status":"DEGRADED"},"db":{"status":"DOWN"}}}"#
+        );
     }
 
     #[tokio::test]

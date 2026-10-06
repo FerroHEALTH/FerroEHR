@@ -26,7 +26,7 @@ what you query and what you read back.
 
 ## What makes this implementation different
 
-- **Compliance you can run yourself.** The openEHR conformance catalogue is
+- **Conformance you can run yourself.** The openEHR conformance catalogue is
   executed by a committed runner against a live server, over both canonical
   JSON and canonical XML, and the profile verdicts are computed from the
   per-case outcomes. The run records live in the repository, and every number

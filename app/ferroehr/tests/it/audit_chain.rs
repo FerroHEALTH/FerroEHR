@@ -26,12 +26,17 @@ use sqlx::{AssertSqlSafe, Connection, PgConnection, PgPool, Row};
 use uuid::Uuid;
 
 use ferroehr::db;
+use ferroehr::system_log::chain_check::{ChainCheck, ChainCheckState};
+use ferroehr::system_log::config::{AuditConfig, StoreConfig};
 use ferroehr::system_log::event::{
     AuditEvent, EventActionCode, EventOutcome, EventType, ObjectClass,
 };
 use ferroehr::system_log::fhir;
 use ferroehr::system_log::message::AuditContext;
+use ferroehr::system_log::sender;
 use ferroehr::system_log::store::AuditStore;
+use ferroehr::telemetry::health::{HealthIndicator, HealthStatus};
+use ferroehr::telemetry::indicators::AuditChainHealth;
 
 fn ctx() -> AuditContext {
     AuditContext {
@@ -443,4 +448,106 @@ async fn the_batched_write_path_is_chained_too() {
             .collect();
     assert_eq!(positions, vec![1, 2, 3, 4, 5]);
     assert!(store.verify_chain().await.expect("verify").is_empty());
+}
+
+/// The scheduled check reports a tampered record on the management health
+/// surface (CRA Annex I Part I(2)(f), "report on corruptions"): an intact trail
+/// reads `UP`, and once a record is rewritten the indicator reads `DOWN` and
+/// names the damaged position.
+#[tokio::test]
+async fn the_chain_check_reports_a_tampered_record_on_the_health_surface() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = testdb.pool();
+    let store = AuditStore::new(pool.clone());
+    seed(&store, 3).await;
+
+    let check = ChainCheck::new();
+    let indicator = AuditChainHealth::new(check.clone());
+    assert!(matches!(check.state(), ChainCheckState::Pending));
+    assert_eq!(indicator.check().await.status, HealthStatus::Up);
+
+    assert!(matches!(
+        check.run(&store).await,
+        ChainCheckState::Intact { .. }
+    ));
+    assert_eq!(indicator.check().await.status, HealthStatus::Up);
+
+    with_triggers_disabled(
+        &pool,
+        "UPDATE audit.audit_event SET principal = 'nobody' WHERE chain_seq = 2",
+    )
+    .await;
+
+    let damaged = check.run(&store).await;
+    assert!(
+        matches!(
+            &damaged,
+            ChainCheckState::Damaged { total: 1, findings, .. }
+                if findings.first().and_then(|f| f.chain_seq) == Some(2)
+        ),
+        "exactly the tampered record must be reported: {damaged:?}"
+    );
+    let health = indicator.check().await;
+    assert_eq!(health.status, HealthStatus::Down);
+    let detail = health.detail.expect("a damaged chain names the finding");
+    assert!(detail.contains("position 2"), "{detail}");
+    assert!(detail.contains("modified"), "{detail}");
+    assert!(!indicator.required(), "damage never flips readiness");
+}
+
+/// The audit subsystem schedules the check whenever the local store is on, so
+/// a deployment gets it without configuring anything beyond the interval.
+#[tokio::test]
+async fn the_audit_subsystem_schedules_the_chain_check() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = testdb.pool();
+    let config = AuditConfig {
+        enabled: true,
+        store: StoreConfig {
+            verify_interval_seconds: 1,
+            ..StoreConfig::default()
+        },
+        ..AuditConfig::default()
+    };
+    let (sender, handle) = sender::start(config, None, Some(pool.clone()))
+        .await
+        .expect("start the audit subsystem");
+    let check = handle
+        .chain_check()
+        .expect("the local store is on, so the check is scheduled");
+
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(15);
+    while matches!(check.state(), ChainCheckState::Pending) {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "the scheduled check must run within its interval"
+        );
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    assert!(
+        matches!(check.state(), ChainCheckState::Intact { .. }),
+        "{:?}",
+        check.state()
+    );
+
+    let off = AuditConfig {
+        enabled: true,
+        store: StoreConfig {
+            verify_interval_seconds: 0,
+            ..StoreConfig::default()
+        },
+        ..AuditConfig::default()
+    };
+    let (off_sender, off_handle) = sender::start(off, None, Some(pool.clone()))
+        .await
+        .expect("start the audit subsystem");
+    assert!(
+        off_handle.chain_check().is_none(),
+        "0 turns the schedule off"
+    );
+
+    drop(sender);
+    drop(off_sender);
+    handle.shutdown(std::time::Duration::from_secs(5)).await;
+    off_handle.shutdown(std::time::Duration::from_secs(5)).await;
 }

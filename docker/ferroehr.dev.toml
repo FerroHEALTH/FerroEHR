@@ -41,20 +41,24 @@ enabled = true
 # binary and each endpoint is independently opt-in; production deployments enable
 # only what they need, and preferably on a separate internal port
 # (`management.port`). The health probes need none of this — `/health`,
-# `/health/liveness` and `/health/readiness` are always served.
+# `/health/liveness` and `/health/readiness` are always served, statuses only;
+# the detail behind them is `/management/health`.
 [management]
 enabled = true
 
 # Per-endpoint access levels (dev posture): the read-only introspection an
 # authenticated viewer session may see, the Prometheus text left public so a
-# scrape needs no credentials, and the two sensitive endpoints (the effective
-# configuration and the live log-filter control) admin-gated.
+# scrape needs no credentials, and the sensitive endpoints (the effective
+# configuration, the live log-filter control, the health detail and the full
+# status document) admin-gated.
 [management.endpoints]
 info = "private"
 metrics = "private"
 prometheus = "public"
 env = "admin_only"
 loggers = "admin_only"
+health = "admin_only"
+status = "admin_only"
 
 # Dev-only trust for the shipped dev Keycloak realm (docker/keycloak/import):
 # standard OIDC discovery — the issuer is the canonical KC_HOSTNAME from

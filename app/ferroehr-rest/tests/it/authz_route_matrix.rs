@@ -123,6 +123,8 @@ const MANAGEMENT: &[(&str, &str)] = &[
     ("POST", "/management/loggers"),
     ("DELETE", "/management/loggers"),
     ("GET", "/management/flamegraph"),
+    ("GET", "/management/health"),
+    ("GET", "/management/status"),
 ];
 
 /// Clinical reads (base-relative). `POST /query/**` is a read despite its verb

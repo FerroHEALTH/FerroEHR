@@ -78,7 +78,7 @@ server validates tokens as a resource server; it never issues them.
 | `clock_skew_leeway_seconds` | int | `60` | Leeway on the time-based claims (`exp`/`nbf`). Capped at `300`; above that is a boot error. |
 | `allow_insecure_issuer` | bool | `false` | Accept a non-`https` `issuer`. **Development and test only.** |
 | `hmac_secret` / `hmac_secret_file` | secret / path | unset | Symmetric `HS*` secret (development/test), minimum 32 bytes. At most one of the pair. |
-| `jwks_json` / `jwks_json_file` | string / path | unset | Static JWKS document. At most one of the pair. |
+| `jwks_json` / `jwks_json_file` | string / path | unset | Static JWKS document of public keys. At most one of the pair. A symmetric key (`kty: "oct"`) or a private-key member (`d`, `p`, `q`, `dp`, `dq`, `qi`, `oth`, `k`) is a boot error, so the set holds no secret and `config check`, `GET {base}/admin/config` and `ferroehr report` show it in clear. |
 | `connect_timeout_ms` | int | `3000` | TCP connect timeout for the discovery + JWKS fetches. |
 | `request_timeout_ms` | int | `5000` | Whole-request timeout for the discovery + JWKS fetches (connect, TLS, body read). |
 | `negative_cache_ttl_seconds` | int | `10` | How long a *failed* discovery/JWKS fetch is remembered (`0` disables). |

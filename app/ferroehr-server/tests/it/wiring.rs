@@ -207,7 +207,9 @@ fn unknown_subcommand_is_rejected() {
 
 /// `ferroehr --version` names the manufacturer after the version: the name,
 /// the postal address, the single point of contact and the website
-/// (Regulation (EU) 2025/327, `docs/law/eu/ehds/text.html` Art. 30(1)(g)).
+/// (Regulation (EU) 2025/327, `docs/law/eu/ehds/text.html` Art. 30(1)(g)),
+/// then the support period (Regulation (EU) 2024/2847,
+/// `docs/law/eu/cra/text.html` Art. 13(19)).
 #[test]
 fn version_names_the_manufacturer() {
     let shown = Cli::try_parse_from(["ferroehr", "--version"])
@@ -217,8 +219,9 @@ fn version_names_the_manufacturer() {
         shown,
         format!(
             "ferroehr {}\nManufactured by Cadasto B.V., Comeniusstraat 2d, 1817 MS Alkmaar, The \
-             Netherlands, info@cadasto.com\nhttps://www.cadasto.com/contact/\n",
-            env!("CARGO_PKG_VERSION")
+             Netherlands, info@cadasto.com\nhttps://www.cadasto.com/contact/\nSupport: {}\n",
+            env!("CARGO_PKG_VERSION"),
+            ferroehr::support::SupportPeriod::current().describe_on(ferroehr::support::today_utc())
         )
     );
 }

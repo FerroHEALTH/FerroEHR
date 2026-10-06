@@ -642,7 +642,8 @@ configs:
       # Ops introspection (/management/...) on the main listener, for the
       # optional viewer and for curl-based poking. The health probes
       # (/health, /health/liveness, /health/readiness) are always served and
-      # need none of this.
+      # need none of this; they report statuses only, and the detail behind
+      # them is /management/health.
       [management]
       enabled = true
 
@@ -652,6 +653,8 @@ configs:
       prometheus = "public"
       env = "admin_only"
       loggers = "admin_only"
+      health = "admin_only"
+      status = "admin_only"
 
       # The external terminology server FerroTERM, declared here and switched
       # on by docker-compose.terminology.yml (the overlay only flips the

@@ -3,8 +3,8 @@
 
 //! Integration tests for the management surface: the access-level matrix, the
 //! Prometheus exposition + route-template label + cardinality guard,
-//! separate-port isolation, and the boundary that the surface carries no health
-//! route at all (the probes are the always-on public `/health` family).
+//! separate-port isolation, and the split between the always-on public probes
+//! (statuses only) and the authenticated health detail and status document.
 //!
 //! No openEHR spec governs the management surface — our own operational design.
 
@@ -19,6 +19,8 @@
 
 use std::sync::{Arc, OnceLock};
 
+use async_trait::async_trait;
+
 use argon2::Argon2;
 use argon2::password_hash::PasswordHasher;
 use axum::Router;
@@ -27,7 +29,7 @@ use ferroehr::config::auth::{AuthConfig, BasicConfig, BasicUser};
 use ferroehr::config::management::{AccessLevel, EndpointLevels, ManagementConfig};
 use ferroehr::config::server::ServerConfig;
 use ferroehr::telemetry::build_info::BuildInfo;
-use ferroehr::telemetry::health::HealthRegistry;
+use ferroehr::telemetry::health::{Health, HealthIndicator, HealthRegistry};
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authz::AuthzHandle;
 use ferroehr_rest::extensions::management::Observability;
@@ -319,12 +321,10 @@ async fn endpoint_levels_are_independent() {
     }
 }
 
-/// The management surface hosts NO health route any more: with the surface
-/// enabled and its one configurable endpoint public, every former
+/// With the `health` endpoint left off (the default), the management surface
+/// routes no health path: with the surface enabled and `info` public, every
 /// `/management/health*` path is a plain `404`, while the public health family
-/// answers on the same app. (Test adapted to the routing this split
-/// deliberately changed — the aggregate-health view is now the
-/// `/health/readiness` indicator body.)
+/// answers on the same app.
 #[tokio::test]
 async fn management_serves_no_health_route() {
     let (_db, app) = app_with(AccessLevel::Public, &["ADMIN"], true).await;
@@ -366,6 +366,145 @@ async fn health_family_survives_management_disabled() {
     assert_eq!(
         status_of(app, get("/management/info")).await,
         StatusCode::NOT_FOUND
+    );
+}
+
+/// A fixed indicator whose detail names exactly the kind of fact the public
+/// probe must not disclose.
+#[derive(Debug)]
+struct Detailed;
+
+/// The detail [`Detailed`] reports.
+const INDICATOR_DETAIL: &str = "3 findings; chain broken at position 42 (10.0.0.5:5432)";
+
+#[async_trait]
+impl HealthIndicator for Detailed {
+    fn name(&self) -> &'static str {
+        "audit_chain"
+    }
+
+    async fn check(&self) -> Health {
+        Health::degraded(INDICATOR_DETAIL)
+    }
+
+    fn required(&self) -> bool {
+        false
+    }
+}
+
+/// Builds an app with authentication and RBAC on, the [`Detailed`] indicator
+/// registered, and the `health` and `status` endpoints at `level`.
+async fn app_with_detail(level: AccessLevel, roles: &[&str]) -> (testkit::TestDb, Router) {
+    let config = base_config(auth_config(roles));
+    let authz = authz_for(&config, true);
+    let mut observability = one_endpoint(EndpointLevels {
+        health: level,
+        status: level,
+        ..EndpointLevels::default()
+    });
+    observability.health = HealthRegistry::new(vec![Arc::new(Detailed)]);
+    build_app(config, authz, observability).await
+}
+
+/// Sends `req` and returns the status with the body parsed as JSON.
+async fn json_of(app: Router, req: Request<Body>) -> (StatusCode, serde_json::Value) {
+    let response = app.oneshot(req).await.expect("response");
+    let status = response.status();
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
+    (status, serde_json::from_slice(&bytes).expect("json body"))
+}
+
+/// The public readiness body names each indicator and its status and nothing
+/// more; the detail behind it is `GET /management/health`, which needs a
+/// credential (`401`), then the admin role at `admin_only` (`403`), and then
+/// serves every indicator with its detail. No openEHR spec governs health
+/// probes — our own design.
+#[tokio::test]
+async fn readiness_is_status_only_and_management_health_carries_the_detail() {
+    let (_db, app) = app_with_detail(AccessLevel::AdminOnly, &["ADMIN"]).await;
+    let (status, body) = json_of(app.clone(), get("/health/readiness")).await;
+    assert_eq!(status, StatusCode::OK, "DEGRADED still serves: {body}");
+    assert_eq!(
+        body,
+        serde_json::json!({
+            "status": "DEGRADED",
+            "components": { "audit_chain": { "status": "DEGRADED" } }
+        }),
+        "the public probe carries statuses only"
+    );
+    assert!(
+        !body.to_string().contains("detail"),
+        "no detail field reaches the public probe: {body}"
+    );
+
+    assert_eq!(
+        status_of(app.clone(), get("/management/health")).await,
+        StatusCode::UNAUTHORIZED
+    );
+    let (status, body) = json_of(app, get_auth("/management/health")).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["status"], "DEGRADED");
+    assert_eq!(
+        body["components"]["audit_chain"],
+        serde_json::json!({ "status": "DEGRADED", "detail": INDICATOR_DETAIL }),
+        "the management view carries the detail: {body}"
+    );
+
+    let (_db, app) = app_with_detail(AccessLevel::AdminOnly, &["USER"]).await;
+    assert_eq!(
+        status_of(app, get_auth("/management/health")).await,
+        StatusCode::FORBIDDEN
+    );
+}
+
+/// The licence, the deployment gaps and the support period are served by
+/// `GET /management/status` behind its access level and are absent from the
+/// public `GET /ferroehr/rest/status`, which keeps only the profile of the
+/// deployment block (CRA support statement: `docs/law/eu/cra/text.html`
+/// Art. 13(19); the rest is our own design).
+#[tokio::test]
+async fn management_status_carries_what_the_public_status_withholds() {
+    let (_db, app) = app_with_detail(AccessLevel::Private, &["USER"]).await;
+
+    let (status, public) = json_of(app.clone(), get("/ferroehr/rest/status")).await;
+    assert_eq!(status, StatusCode::OK);
+    for withheld in ["licence", "support"] {
+        assert!(
+            public.get(withheld).is_none(),
+            "{withheld} must not be public: {public}"
+        );
+    }
+    assert_eq!(
+        public["deployment"],
+        serde_json::json!({ "profile": "sandbox" })
+    );
+
+    assert_eq!(
+        status_of(app.clone(), get("/management/status")).await,
+        StatusCode::UNAUTHORIZED
+    );
+    let (status, full) = json_of(app, get_auth("/management/status")).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(full["status"], "UP");
+    assert_eq!(full["server_version"], public["server_version"]);
+    assert!(full["licence"].get("state").is_some(), "licence: {full}");
+    assert_eq!(full["deployment"]["profile"], "sandbox");
+    assert!(full["deployment"]["gaps"].is_array(), "gaps: {full}");
+    assert!(
+        full["deployment"]["accepted"].is_array(),
+        "accepted: {full}"
+    );
+    let support =
+        ferroehr::support::SupportPeriod::current().report_on(ferroehr::support::today_utc());
+    assert_eq!(
+        full["support"],
+        serde_json::to_value(&support).expect("support report"),
+        "the management status states the support period"
     );
 }
 
@@ -630,6 +769,7 @@ async fn a_management_request_is_recorded_in_the_audit_trail() {
             retention_days: 0,
             retention_years: None,
             sgb_v_309_controller: false,
+            verify_interval_seconds: 0,
         },
         ..AuditConfig::default()
     };

@@ -639,6 +639,7 @@ async fn setting_and_lifting_a_mark_is_recorded_in_the_access_trail() {
             retention_days: 0,
             retention_years: None,
             sgb_v_309_controller: false,
+            verify_interval_seconds: 0,
         },
         ..AuditConfig::default()
     };

@@ -42,6 +42,7 @@ fn store_only_config() -> AuditConfig {
             retention_days: 0,
             retention_years: None,
             sgb_v_309_controller: false,
+            verify_interval_seconds: 0,
         },
         ..AuditConfig::default()
     }
@@ -130,4 +131,60 @@ async fn an_export_without_audit_configured_records_nothing_and_still_succeeds()
         .await
         .expect("audit count");
     assert_eq!(recorded, 0, "no sender means no audit record at all");
+}
+
+/// The extract record of each direction carries the categories of the data it
+/// served or landed (EHDS Annex II 3.2(c), `docs/law/eu/ehds/text.html`): the
+/// seeded EHR holds only an `EHR_STATUS`, its `EHR_ACCESS` and a directory, so
+/// both records read `none` by resource kind, with the kinds as evidence.
+#[tokio::test]
+async fn the_extract_records_carry_the_categories_of_the_data() {
+    let (_src_db, src_pool, source) = repository().await;
+    let (_dst_db, dst_pool, target) = repository().await;
+    let (out_sender, _out_handle): (_, AuditHandle) =
+        start(store_only_config(), None, Some(src_pool.clone()))
+            .await
+            .expect("source audit sender");
+    let (in_sender, _in_handle): (_, AuditHandle) =
+        start(store_only_config(), None, Some(dst_pool.clone()))
+            .await
+            .expect("target audit sender");
+    let source: FerroEhrService = source.with_audit(out_sender);
+    let target: FerroEhrService = target.with_audit(in_sender);
+
+    let ehr = seed_full_ehr(&source).await;
+    let extract = {
+        let mut extracts = source.extract_ehrs(ehr).await.expect("extract_ehrs");
+        openehr_its::json::from_canonical_value(&extracts.remove(0)).expect("EXTRACT")
+    };
+    target.import_ehr(None, extract).await.expect("import_ehr");
+
+    for (pool, direction) in [(&src_pool, "export"), (&dst_pool, "import")] {
+        assert_eq!(extract_events(pool).await.len(), 1, "{direction}");
+        let row = sqlx::query(
+            "SELECT categories, category_basis, category_evidence FROM audit.audit_event \
+             WHERE resource_class = 'extract'",
+        )
+        .fetch_one(pool)
+        .await
+        .expect("the extract record");
+        let categories: Option<serde_json::Value> = row.get("categories");
+        let basis: Option<String> = row.get("category_basis");
+        let evidence: Option<serde_json::Value> = row.get("category_evidence");
+        assert_eq!(
+            categories,
+            Some(serde_json::json!(["none"])),
+            "{direction}: the record is classified"
+        );
+        assert_eq!(basis.as_deref(), Some("resource-kind"), "{direction}");
+        let evidence = evidence.expect("evidence");
+        for kind in ["EHR_STATUS", "FOLDER"] {
+            assert!(
+                evidence
+                    .as_array()
+                    .is_some_and(|ids| ids.iter().any(|id| id == kind)),
+                "{direction}: {kind} is evidence, got {evidence}"
+            );
+        }
+    }
 }

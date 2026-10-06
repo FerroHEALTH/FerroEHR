@@ -62,6 +62,13 @@ bad="$(jq -r '
   | map(select(. as $s | ["shipped","partial","open"] | index($s) | not))
   | unique | join(", ")' "$WORK/ehds.json")"
 [[ -z "$bad" ]] || die "unknown source value(s): $bad (expected shipped, partial or open)"
+# Each Annex III element names the file of the documentation tree that holds
+# it, and the page links that file, so a missing file is a dead link on a
+# compliance page and stops the render.
+while IFS= read -r tree; do
+  [[ -n "$tree" && "$tree" != "null" ]] || die "an Annex III element names no tree file"
+  [[ -f "docs/technical-documentation/$tree" ]] || die "docs/technical-documentation/$tree does not exist"
+done < <(jq -r '.technical_documentation[].tree' "$WORK/ehds.json")
 
 reg_title="$(jq -r '.regulation.title' "$WORK/ehds.json")"
 reg_url="$(jq -r '.regulation.url' "$WORK/ehds.json")"
@@ -82,43 +89,55 @@ components, meet the essential requirements of Annex II, and carry technical
 documentation and an EU declaration of conformity before it is placed on the
 market or put into service.
 
-This page states, requirement by requirement, what FerroEHR provides today.
-It exists so an evaluator can see the real position rather than infer one,
-and so the project has a checklist rather than an intention.
+Cadasto B.V. is the manufacturer of each tagged FerroEHR release, and the EHR
+system it declares is FerroEHR and FerroBRIDGE together: FerroEHR ships the
+European logging software component, FerroBRIDGE the European
+interoperability software component. This page states, requirement by
+requirement, what FerroEHR provides today, and names FerroBRIDGE where a
+requirement is its part.
+
+<!-- toc -->
 
 > [!WARNING]
-> **No conformity assessment has been carried out.** No technical
-> documentation has been drawn up under Article 37, no EU declaration of
-> conformity exists under Article 39, and FerroEHR is not registered under
+> **No conformity assessment has been carried out.** The technical
+> documentation of Article 37 is being drawn up and still lacks elements (see
+> [Technical documentation](technical-documentation.md)), no EU declaration
+> of conformity exists under Article 39, and FerroEHR is not registered under
 > Article 49. A status of "Shipped" below means the software provides the
-> capability — it is not a claim of conformity, and nothing on this page is
+> capability. It is not a claim of conformity, and nothing on this page is
 > one.
 
 ## The regulation, and how to check this page against it
 
-[$reg_title]($reg_url) — $reg_journal.
+[$reg_title]($reg_url), $reg_journal.
 
-Every requirement identifier, heading and date on this page was read from
-that published text on **$read_on**. The wording in the "Requirement" column
-is this project's own paraphrase for navigation; the regulation is the
-authority and its text governs. Where the two differ, the regulation is
-right and this page is a defect worth reporting.
+Every requirement identifier, heading and date on this page was read from the
+Official Journal text vendored in the repository at
+[\`docs/law/eu/ehds/text.html\`](https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/law/eu/ehds/text.html)
+on **$read_on**. The wording in the "Requirement" column is this project's own
+paraphrase for navigation; the regulation is the authority and its text
+governs. Where the two differ, the regulation is right and this page is a
+defect worth reporting.
 
 ## When it applies
 
 HEADER
 
-  jq -r '.dates[] | "- **\(.when)** — \(.what)"' "$WORK/ehds.json"
+  jq -r '.dates[] | "- **\(.when):** \(.what)"' "$WORK/ehds.json"
 
   cat <<'COMPONENTS'
 
-The last of those matters most here: a deployment that a health institution
-runs for itself, or that is offered as a service, is *put into service* under
-Article 26(2) rather than placed on the market.
+The last of those reaches a deployment that a health institution runs for
+itself, or that is offered as a service: Article 26(2) treats both as *put
+into service*. An organisation that runs an unmodified FerroEHR release for
+itself puts Cadasto B.V.'s product into service and does not become the
+manufacturer. Where Cadasto B.V. hosts FerroEHR as a service for a customer,
+it is the manufacturer and the operator of that deployment.
 
 ## The two harmonised software components
 
-Article 25(1) requires an EHR system to include both.
+Article 25(1) requires an EHR system to include both. Each is shipped by one
+product of the EHR system Cadasto B.V. declares.
 
 | Component | Status | Where it stands |
 |---|---|---|
@@ -134,10 +153,11 @@ COMPONENTS
 
   cat <<'ANNEX2'
 
-## Annex II — the essential requirements
+## Annex II: the essential requirements
 
 The identifiers are the Annex's own. "Evidence" links what a reader can check
-for themselves; "Gap" says what is missing when a row is not complete.
+for themselves; "Gap" says what is missing when a row is not complete, and
+the issue that closes it where one exists.
 
 ANNEX2
 
@@ -160,29 +180,55 @@ ANNEX2
        "")
   ' "$WORK/ehds.json"
 
-  cat <<'QUESTIONS'
-## Open questions
+  cat <<'DECISIONS'
+## The position this page rests on
 
-These decide whether Chapter III applies to a given deployment at all, and to
-whom. They are questions this project has not answered, stated as questions.
+Cadasto B.V. decided these on 2026-10-06. They answer the questions earlier
+versions of this page left open.
 
-QUESTIONS
+DECISIONS
+
+  jq -r '
+    def issue_links: if (.issues // []) | length == 0 then "" else
+      (" ([#" + ([.issues[] | "\(.)](https://github.com/FerroHEALTH/FerroEHR/issues/\(.))"] | join(", [#")) + ")") end;
+    .decisions[] | "- \(.text | gsub("\n"; " "))\(. | issue_links)"
+  ' "$WORK/ehds.json"
+
+  cat <<'COUNSEL'
+
+## Questions for counsel
+
+Nothing in this repository answers these. They are stated as questions until
+counsel has answered them.
+
+COUNSEL
 
   jq -r '
     def issue_links: if (.issues // []) | length == 0 then "" else
       (" Tracked in " + ([.issues[] | "[#\(.)](https://github.com/FerroHEALTH/FerroEHR/issues/\(.))"] | join(", ")) + ".") end;
-    .open_questions[] | "- \(.question | gsub("\n"; " "))\(. | issue_links)"
+    .counsel[] | "- \(.question | gsub("\n"; " "))\(. | issue_links)"
   ' "$WORK/ehds.json"
 
   cat <<'FOOTER'
 
+## The Cyber Resilience Act
+
+FerroEHR is also a product with digital elements under Regulation (EU)
+2024/2847. Its reporting duties apply now, and from 11 December 2027 the CRA's
+essential requirements are assessed through this Regulation's Chapter III
+procedure, in one technical documentation set and one declaration. The
+[Cyber Resilience Act](cra.md) page states the position.
+
 ## Related
 
-- [Technical documentation readiness](technical-documentation.md) — the Annex
-  III elements, and what exists for each.
-- [Shared responsibility](shared-responsibility.md) — which duties the
+- [Technical documentation](technical-documentation.md): the Annex III
+  elements, and the file of the documentation tree that holds each.
+- [Information sheet](information-sheet.md) and
+  [instructions for use](instructions-for-use.md): what accompanies each
+  release (Article 30(1)(d), Article 38).
+- [Shared responsibility](shared-responsibility.md): which duties the
   software can carry and which belong to the deployment.
-- [Control matrix](control-matrix.md) — the legal controls the tracker
+- [Control matrix](control-matrix.md): the legal controls the tracker
   declares, generated from the tracker.
 FOOTER
 }
@@ -193,23 +239,36 @@ render_techdoc() {
      the CI job re-renders and diffs, so an edit here is reverted with a red
      build. Change the YAML. -->
 
-# Technical documentation readiness
+# Technical documentation
 
 Article 37 of the EHDS regulation requires a manufacturer to draw up technical
 documentation before an EHR system is placed on the market or put into
 service, and to keep it up to date. Article 37(2) says it must contain at
-least the elements of Annex III.
+least the elements of Annex III, and a reference to the results of the
+European digital testing environment of Article 40. From 11 December 2027 the
+same documentation carries the content of CRA Annex VII (CRA Art. 31(3) as
+EHDS Article 104 replaces it).
 
-**This page is not that documentation.** It is a map of what FerroEHR can
-already supply for each element and what does not exist, so the gap is
-visible rather than discovered when someone needs the file.
+Cadasto B.V., the manufacturer of each tagged FerroEHR release, keeps that
+documentation in the repository, in
+[\`docs/technical-documentation/\`](https://github.com/FerroHEALTH/FerroEHR/tree/main/docs/technical-documentation):
+one file per Annex III element and per CRA Annex VII point that adds one, each
+linking its evidence. The tree as it stands at a release tag is that release's
+documentation. This page maps each Annex III element to its file and to the
+published material it cites. It covers FerroEHR's part of the EHR system, the
+logging component and the system-level requirements; FerroBRIDGE documents the
+interoperability component.
+
+<!-- toc -->
 
 > [!WARNING]
-> No technical documentation has been drawn up, and no EU declaration of
-> conformity exists. A "Shipped" row below means the material an element asks
-> for is published and can be cited — not that the element has been written.
+> The documentation is incomplete: element 3 and element 6 cannot be written
+> yet, and element 4 lacks the testing-environment results. No EU declaration
+> of conformity exists. An "Available" row below means the material the
+> element asks for is written and cited from the tree, not that any authority
+> has examined it.
 
-[$reg_title]($reg_url) — $reg_journal. Read on **$read_on**; the regulation
+[$reg_title]($reg_url), $reg_journal. Read on **$read_on**; the regulation
 governs and the summaries here are this project's paraphrase.
 
 ## Annex III, element by element
@@ -220,8 +279,10 @@ HEADER
     def badge: {shipped:"Available", partial:"Partial", open:"Missing"}[.];
     def link: if .href then "[what exists](\(.href))" else "—" end;
     def note: if .note then (.note | gsub("\n"; " ")) else "—" end;
+    def tree: "[`\(.tree)`](https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/technical-documentation/\(.tree))";
     .technical_documentation[]
     | ("### \(.id). \(.heading)\n",
+       "Documented in \(. | tree).\n",
        "| # | Element | State | Material | Notes |",
        "|---|---|---|---|---|",
        (.points[] | "| \(.id) | \(.summary | gsub("\n"; " ")) | \(.source | badge) | \(. | link) | \(. | note) |"),
@@ -229,46 +290,72 @@ HEADER
   ' "$WORK/ehds.json"
 
   cat <<'REST'
+## What CRA Annex VII adds
+
+CRA Annex VII asks for four things Annex III does not, each with its own file
+in the tree: the design, development and vulnerability-handling processes
+with the software bills of materials (point 2), the cybersecurity
+[risk assessment](cra-risk-assessment.md) (point 3), the information taken
+into account to set the support period (point 4), and the standards applied or
+the solutions adopted in their place (point 5). The
+[hazard log](hazard-log.md) is the EHDS-side assessment of the logging
+component, which CRA Art. 13(4), as EHDS Article 104 amends it, lets the
+cybersecurity risk assessment be part of.
+
 ## Test evidence
 
 Element 4 asks for the results of the verification and validation tests. What
-exists is the openEHR conformance record: an independent instrument's runs
+exists is the openEHR conformance record (an independent instrument's runs
 against a composed deployment, with the results, verdicts and the statement
 committed under `docs/conformance/` and published on the
-[conformance pages](../conformance.md).
+[conformance pages](../conformance.md)) and the tests the hazard log names for
+each control of the logging component.
 
-Read what that record does and does not say. It demonstrates conformity to
-the **openEHR** specifications. Conformity to Annex II is a different claim
-against a different yardstick, and the European digital testing environment
-of Article 40 — whose results Article 37(2) also requires a reference to —
-does not exist yet.
-
-## Risk analysis
-
-Annex III does not name a risk analysis as a separate element, but element 1
-asks for a description of the system architecture and element 2 for the
-system in place to evaluate performance. The material FerroEHR publishes for
-both is the [architecture](../concepts/architecture.md) chapter and the
-[security](../security.md) chapter, with the pseudonymisation boundary
-and its data flows documented as they land.
+The conformance record demonstrates conformity to the **openEHR**
+specifications. Conformity to Annex II is a different claim against a
+different yardstick. The European digital testing environment of Article 40,
+whose results Article 37(2) asks the documentation to reference, is not
+published; running it is tracked in
+[#3620](https://github.com/FerroHEALTH/FerroEHR/issues/3620).
 
 ## Declaration of conformity
 
 Article 39 requires an EU declaration of conformity stating that the
 essential requirements of Annex II are met, and Annex IV sets out what it
-contains. **No declaration exists**, and none can be drawn up yet: the common
-specifications of Article 36 have not been adopted, so there is nothing to
-declare conformity against, and the manufacturer of a given deployment has
-not been identified — see the open questions on the
-[readiness page](ehds-readiness.md).
+contains, including the common specifications applied and the result of the
+Article 40 testing environment. **No declaration has been drawn up.** The
+common specifications of Article 36 have not been adopted, the testing
+environment is not published, and the exchange format the interoperability
+component must carry waits on implementing acts under Article 15(1). Chapter
+III applies to EHR systems from 26 March 2029 (Article 105).
 
-When those two are settled, the declaration is drawn up by the manufacturer
-of the deployment, not by this project on their behalf.
+When a declaration is drawn up, Cadasto B.V. draws it up for the EHR system,
+FerroEHR and FerroBRIDGE together, as one declaration for the EHDS and the
+CRA. It is published online for each release it covers, for at least ten
+years (Article 39(4)), and kept with the documentation for ten years after the
+system covered is placed on the market (Article 30(3)).
+
+## Keeping it current, keeping it for ten years
+
+- **Change control (Article 30(2)).** A release whose changes touch a module
+  of the logging component updates the documentation tree in the same
+  release, and the release procedure refuses the release otherwise.
+- **Retention (Article 30(3)).** The tree is part of the signed release tag,
+  which cannot be deleted or moved, and of the source archive each release
+  deposits with Zenodo; the book pages it cites are frozen with each release at
+  `/docs/vX.Y.Z/`.
+- **Translation (Article 37(3) and (4)).** The documentation is written in
+  English. A market surveillance authority that asks, with reasons, for a
+  translation of parts of it into an official language of its Member State
+  writes to info@cadasto.com, and Cadasto B.V. provides the translation within
+  30 days of the request, or sooner where a serious and immediate risk
+  justifies it.
 
 ## Related
 
-- [EHDS readiness](ehds-readiness.md) — status per Annex II requirement.
-- [Shared responsibility](shared-responsibility.md) — which duties belong to
+- [EHDS readiness](ehds-readiness.md): the status per Annex II requirement.
+- [Cyber Resilience Act](cra.md): the CRA position.
+- [Shared responsibility](shared-responsibility.md): which duties belong to
   the deployment.
 REST
 }
@@ -278,8 +365,8 @@ render_categories() {
 The six priority categories of personal electronic health data are Annex I of
 the EHDS regulation, and Annex II 2.1 to 2.3 require an EHR system to provide
 and receive them in the European electronic health record exchange format.
-That format is set by implementing acts under Article 36 which have not been
-adopted, so this table is not a conformance claim against it. What it says is
+That format is set by implementing acts under Article 15(1) that have not
+been adopted, so this table is not a conformance claim against it. What it says is
 narrower and checkable: which category has a committed template whose example
 composition round-trips through this façade today.
 
@@ -320,11 +407,13 @@ could otherwise assume:
 
 The connector this table measures is planned to leave: FerroBRIDGE
 (<https://github.com/rubentalstra/FerroBRIDGE>) is the FHIRconnect and OMOP
-bridge, and [#3080](https://github.com/FerroHEALTH/FerroEHR/issues/3080)
-retires the in-tree connector once it ships. The EHDS readiness question does
-NOT leave with it — it is asked of the EHR system — so this table moves to the
-compliance chapter at that point rather than being deleted with the page it
-currently sits on.
+bridge, and it ships the European interoperability software component of the
+EHR system Cadasto B.V. declares, FerroEHR and FerroBRIDGE together.
+[#3080](https://github.com/FerroHEALTH/FerroEHR/issues/3080) retires the
+in-tree connector once FerroBRIDGE carries the mappings. The EHDS question does
+not leave with the connector, because it is asked of the EHR system, so this
+table moves to the compliance chapter at that point instead of being deleted
+with the page it currently sits on.
 
 Two of the example compositions this rests on — the patient summary and the
 imaging report — were patched by hand rather than regenerated against a

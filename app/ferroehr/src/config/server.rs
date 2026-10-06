@@ -390,6 +390,18 @@ impl Default for ServerConfig {
     }
 }
 
+/// Whether a bind address is loopback-only, so a plaintext listener there is
+/// not reachable off the host.
+///
+/// A host part that does not parse as an IP address (a DNS name, or the empty
+/// host of `:8080`) is treated as routable: assuming otherwise would exempt
+/// exactly the ambiguous case that deserves the check.
+#[must_use]
+pub fn binds_loopback(bind: &str) -> bool {
+    bind.parse::<std::net::SocketAddr>()
+        .is_ok_and(|address| address.ip().is_loopback())
+}
+
 impl ServerConfig {
     /// The Swagger UI mount path, derived from the base path's parent.
     #[must_use]
@@ -492,7 +504,29 @@ impl Default for SystemOptionsConfig {
 
 #[cfg(test)]
 mod tests {
-    use crate::config::server::ServerConfig;
+    use crate::config::server::{ServerConfig, binds_loopback};
+
+    #[test]
+    fn loopback_binds_are_recognized() {
+        assert!(binds_loopback("127.0.0.1:8080"));
+        assert!(binds_loopback("127.0.0.53:8080"));
+        assert!(binds_loopback("[::1]:8080"));
+    }
+
+    /// The plaintext-listener gap must open for anything reachable off the host,
+    /// and an unparseable host counts as reachable.
+    #[test]
+    fn routable_and_ambiguous_binds_are_not_loopback() {
+        for bind in [
+            "0.0.0.0:8080",
+            "10.0.0.4:8080",
+            "[::]:8080",
+            "ferroehr.internal:8080",
+            ":8080",
+        ] {
+            assert!(!binds_loopback(bind), "{bind} must count as routable");
+        }
+    }
 
     /// The REST root drops the openEHR API segments and nothing else, for every
     /// base-path shape `FerroEhrConfig::validate` admits.

@@ -62,6 +62,7 @@ purpose_codes = []
 | `retention_days` | int | `0` | Days to keep records; `0` keeps them forever. Applied hourly by the retention reaper. A non-zero value below the retention floor of a jurisdiction the active `[privacy.identifier_scan]` rules name is a boot error naming both numbers; see [Audit trail](../audit.md#retention-and-who-chooses-it). |
 | `retention_years` | int | unset | Calendar years to keep records, in place of `retention_days`. Compared exactly against the floors and ceilings, which are written in years, and reaped with calendar arithmetic. Setting it together with a non-zero `retention_days`, or to `0`, is a boot error. |
 | `sgb_v_309_controller` | bool | `false` | Set only if the deploying organisation is, or acts for, one of the controllers SGB V § 307 names for a German telematics-infrastructure application. It caps the horizon at the three-year period of SGB V § 309 Abs. 1, after which Abs. 3 requires deletion without delay, so a declared controller cannot keep records forever. |
+| `verify_interval_seconds` | int | `86400` | Seconds between two scheduled verifications of the store's hash chain; `0` turns the schedule off. A finding is logged at `ERROR`, counted in `atna_audit_chain_findings` and reported by the `audit_chain` indicator on `GET /health/readiness`. See [Tamper evidence](../audit.md#tamper-evidence). |
 
 The local store is the durability anchor of the whole subsystem: with it on, the
 FHIR feed drains from it, so a down repository loses nothing.

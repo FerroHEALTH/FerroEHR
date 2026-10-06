@@ -158,6 +158,21 @@ jobs:
       - name: Changelog structure (no duplicate subsections, canonical types)
         run: bash scripts/checks/changelog-structure.sh
 
+      # EHDS Art. 30(2): a release that changes the logging component carries
+      # its technical documentation; the previous release is taken by version.
+      - name: The technical documentation follows the logging component
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          base="${TAG%%-*}"
+          prev="$(git ls-remote --tags --refs origin 'v*' | sed 's#.*refs/tags/##' \
+            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | grep -vxF "$base" \
+            | { cat; echo "$base"; } | sort -V | awk -v t="$base" '$0==t{print p; exit} {p=$0}')"
+          [ -n "$prev" ] || { echo "::error::no release tag below $base"; exit 1; }
+          git fetch --no-tags --depth=1 origin "+refs/tags/${prev}:refs/tags/${prev}"
+          bash scripts/checks/technical-documentation.sh --since "$prev"
+
       # The release NOTES are produced here, not at publish time: the section
       # existing and being non-empty is a release fact like any other, and the
       # extraction that proves it may as well hand the result on. The artifact
@@ -366,6 +381,13 @@ jobs:
       # before its most important assets exist — a release carrying the compose
       # files and nothing to verify. A draft is still mutable, which is exactly
       # the window those uploads need.
+      # EHDS Art. 30(1)(d): the information sheet and the instructions for use
+      # of this tag ride the release.
+      - name: Cut the information sheet and the instructions for use
+        env:
+          TAG: ${{ needs.plan.outputs.tag }}
+        run: bash scripts/release/accompanying-documents.sh "$TAG" .
+
       - name: Create the GitHub release as a draft
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
@@ -385,6 +407,8 @@ jobs:
             docker-compose.observability.yml
             docker-compose.db-publish.yml
             ferroehr-${{ needs.plan.outputs.tag }}.spdx.json
+            ferroehr-${{ needs.plan.outputs.tag }}-information-sheet.md
+            ferroehr-${{ needs.plan.outputs.tag }}-instructions-for-use.md
           # Releases publish as OFFICIAL releases (owner sign-off
           # 2026-07-31, superseding the 2026-07-11 always-prerelease rule);
           # only an explicitly suffixed tag (v3.16.0-rc1, ...) is a
@@ -487,7 +511,9 @@ jobs:
             "docker-compose.yml" \
             "docker-compose.keycloak.yml" \
             "docker-compose.observability.yml" \
-            "docker-compose.db-publish.yml"; do
+            "docker-compose.db-publish.yml" \
+            "ferroehr-${TAG}-information-sheet.md" \
+            "ferroehr-${TAG}-instructions-for-use.md"; do
             printf '%s\n' "$assets" | grep -Fxq "$asset" || missing="$missing $asset"
           done
           [ -z "$missing" ] || {

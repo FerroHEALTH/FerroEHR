@@ -322,7 +322,7 @@ is worth more than rounding a level up.
 
 ## The `openehr-*` crates
 
-The eight specification crates publish to crates.io through Trusted
+The nine specification crates publish to crates.io through Trusted
 Publishing: the workflow authenticates with a short-lived OIDC token, and no
 long-lived crates.io token exists anywhere. Be precise about what that does
 and does not give you: it is **authentication, not provenance**. crates.io

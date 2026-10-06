@@ -1,15 +1,19 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The management surface: **ops introspection only** — info, Prometheus,
-//! metrics, env, loggers, and the on-demand CPU flamegraph.
+//! The management surface: **ops introspection** — info, Prometheus, metrics,
+//! env, loggers, the on-demand CPU flamegraph, the per-indicator health detail
+//! and the full status document.
 //!
-//! No openEHR spec governs this — our own operational surface. Health probes do
-//! not live here: `/health` and its siblings are always-on and public
+//! No openEHR spec governs this — our own operational surface. The orchestrator
+//! probes do not live here: `/health` and its siblings are always-on and public
 //! ([`crate::extensions::health`]) because they must not depend on an operator
-//! remembering to enable an introspection surface, while the endpoints that do
-//! live here — the redacted effective config, the live log-filter control, the
-//! metric views — are sensitive and stay off by default.
+//! remembering to enable an introspection surface. What a probe or an
+//! anonymous client may learn ends at a status: the detail behind readiness
+//! (`/management/health`) and the licence, deployment gaps and support period
+//! (`/management/status`) live here with the redacted effective config, the
+//! live log-filter control and the metric views, all sensitive and all off by
+//! default.
 //!
 //! Every endpoint is off by default, opt-in via [`ManagementConfig`], gated by
 //! its own access-level layer and optionally served from a separate internal
@@ -36,9 +40,11 @@ mod logger_routes;
 mod metrics;
 
 use ferroehr::config::authz::RbacConfig;
+use ferroehr::config::deployment::DeploymentPosture;
 use ferroehr::config::management::{AccessLevel, ManagementConfig};
+use ferroehr::licence::state::LicenceStatus;
 use ferroehr::telemetry::build_info::BuildInfo;
-use ferroehr::telemetry::health::HealthRegistry;
+use ferroehr::telemetry::health::{AggregateHealth, HealthRegistry};
 use ferroehr::telemetry::log_reload::LogReload;
 
 use std::sync::Arc;
@@ -57,6 +63,8 @@ use crate::extensions::access::authn::Authenticator;
 use crate::extensions::access::authz::classify::OperationClass;
 use crate::extensions::access::authz::roles::RbacDecision;
 use crate::overview::error::RestError;
+use crate::overview::status::FullStatus;
+use crate::state::AppState;
 use openehr_its::rest::runtime::ApiError;
 
 /// Everything the management router needs. Assembled by the binary (which owns
@@ -80,6 +88,12 @@ pub struct ManagementState {
     pub env_snapshot: Arc<Value>,
     /// The one process-wide profiling permit (`/flamegraph` concurrency guard).
     pub profiler: flamegraph::ProfilerSlot,
+    /// The health-indicator registry `/health` evaluates with every detail.
+    pub health: HealthRegistry,
+    /// The licence in force, as `/status` reports it.
+    pub licence: LicenceStatus,
+    /// The evaluated deployment posture, as `/status` reports it.
+    pub deployment: DeploymentPosture,
 }
 
 impl std::fmt::Debug for ManagementState {
@@ -93,17 +107,19 @@ impl std::fmt::Debug for ManagementState {
 }
 
 impl ManagementState {
-    /// Assemble the management state from the observability bundle the binary
-    /// built and the shared authenticator. The bundle's health registry is not
-    /// part of it: the probes are the always-on public family
-    /// ([`crate::extensions::health`]), which reads the registry from
-    /// [`AppState`](crate::state::AppState).
+    /// Assembles the management state from the application state and the
+    /// shared authenticator.
+    ///
+    /// The observability bundle the binary built supplies the configuration,
+    /// the telemetry handles and the health registry; the service supplies the
+    /// licence and the deployment posture, both fixed at boot.
     #[must_use]
-    pub fn from_observability(
-        obs: Observability,
+    pub fn from_app_state(
+        state: &AppState,
         authenticator: Arc<Authenticator>,
         rbac: RbacConfig,
     ) -> Self {
+        let obs = state.observability().clone();
         Self {
             config: obs.management,
             authenticator,
@@ -113,6 +129,9 @@ impl ManagementState {
             build_info: obs.build_info,
             env_snapshot: obs.env_snapshot,
             profiler: flamegraph::ProfilerSlot::default(),
+            health: obs.health,
+            licence: state.backend().licence().status(),
+            deployment: state.backend().deployment().clone(),
         }
     }
 }
@@ -240,6 +259,22 @@ pub fn router(state: ManagementState) -> Router {
         );
     }
 
+    // ── Health: every readiness indicator with its detail ──────────────────
+    if cfg.endpoints.health.is_mounted() {
+        router = router.route(
+            &format!("{base}/health"),
+            get(health_view).route_layer(mk(cfg.endpoints.health)),
+        );
+    }
+
+    // ── Status: the full status document ───────────────────────────────────
+    if cfg.endpoints.status.is_mounted() {
+        router = router.route(
+            &format!("{base}/status"),
+            get(status_view).route_layer(mk(cfg.endpoints.status)),
+        );
+    }
+
     // ── Loggers (only when a reloadable filter is present) ──────────────────
     if cfg.endpoints.loggers.is_mounted() && state.log_reload.is_some() {
         router = router.route(
@@ -270,6 +305,11 @@ async fn stamp_audit_op(req: axum::extract::Request, next: Next) -> Response {
 /// The audit operation id of a management request: the endpoint, and for the
 /// loggers the verb, because a filter change is a different act from a read.
 fn audit_op_for(method: &http::Method, path: &str) -> &'static str {
+    // `/metrics/{name}`: the endpoint is the segment before the name, whatever
+    // the name spells.
+    if path.contains("/metrics/") {
+        return "management_metrics";
+    }
     let endpoint = path
         .trim_end_matches('/')
         .rsplit('/')
@@ -281,11 +321,11 @@ fn audit_op_for(method: &http::Method, path: &str) -> &'static str {
         (_, "metrics") => "management_metrics",
         (_, "env") => "management_env",
         (_, "flamegraph") => "management_flamegraph",
+        (_, "health") => "management_health",
+        (_, "status") => "management_status",
         (m, "loggers") if m == http::Method::POST => "management_loggers_set",
         (m, "loggers") if m == http::Method::DELETE => "management_loggers_reset",
         (_, "loggers") => "management_loggers_get",
-        // `/metrics/{name}`: the endpoint is the segment before the name.
-        _ if path.contains("/metrics/") => "management_metrics",
         _ => "management",
     }
 }
@@ -312,6 +352,8 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
         .routes(routes!(env_view))
         .routes(routes!(loggers_get, loggers_post, loggers_reset))
         .routes(routes!(flamegraph_view))
+        .routes(routes!(health_view))
+        .routes(routes!(status_view))
         .into_openapi()
 }
 
@@ -560,6 +602,62 @@ async fn flamegraph_view(
     }
 }
 
+/// Every readiness indicator with its detail (`GET /management/health`).
+///
+/// OUR OWN EXTENSION — no openEHR spec governs this: the ITS-REST resource set
+/// defines no management or introspection surface.
+///
+/// The same registry evaluation as the public `GET /health/readiness`, with
+/// each indicator's detail, which the public probe withholds. The status code
+/// follows the aggregate the same way: `200` while `UP` or `DEGRADED`, `503`
+/// once a required indicator is `DOWN`. Access-level gated by the `health`
+/// endpoint's configured [`AccessLevel`]; absent (a router `404`, answered
+/// before authentication) unless opted in.
+#[utoipa::path(
+    get, path = "/management/health", tag = "management",
+    responses(
+        (status = 200, description = "Aggregate UP or DEGRADED; `{status, components: {<name>: {status, detail?}}}`.", body = serde_json::Value),
+        (status = 401, description = "Authentication required (access level Private/AdminOnly with auth enabled).", body = serde_json::Value),
+        (status = 403, description = "Caller lacks the configured admin scope (access level AdminOnly).", body = serde_json::Value),
+        (status = 503, description = "A required indicator is DOWN; the same body, naming it and why.", body = serde_json::Value)
+    )
+)]
+async fn health_view(State(s): State<ManagementState>) -> Response {
+    AggregateHealthResponse(s.health.evaluate().await).into_response()
+}
+
+/// The aggregate rendered with its own HTTP status
+/// ([`AggregateHealth::http_status`]).
+struct AggregateHealthResponse(AggregateHealth);
+
+impl IntoResponse for AggregateHealthResponse {
+    fn into_response(self) -> Response {
+        (self.0.http_status(), Json(self.0)).into_response()
+    }
+}
+
+/// The full status document (`GET /management/status`).
+///
+/// OUR OWN EXTENSION — no openEHR spec governs this: the ITS-REST resource set
+/// defines no management or introspection surface.
+///
+/// The public `GET /ferroehr/rest/status` fields plus the licence in force,
+/// the complete deployment posture (the separations not made and the ones
+/// accepted by name) and the support period of this release. Access-level
+/// gated by the `status` endpoint's configured [`AccessLevel`]; absent (a
+/// router `404`, answered before authentication) unless opted in.
+#[utoipa::path(
+    get, path = "/management/status", tag = "management",
+    responses(
+        (status = 200, description = "A JSON `{status, server_version, openehr_rest_api_version, timestamp, licence: {state, use?, licensee?, not_after?, configured_token}, deployment: {profile, gaps, accepted}, support: {release_date, support_ends, status}}` object.", body = serde_json::Value),
+        (status = 401, description = "Authentication required (access level Private/AdminOnly with auth enabled).", body = serde_json::Value),
+        (status = 403, description = "Caller lacks the configured admin scope (access level AdminOnly).", body = serde_json::Value)
+    )
+)]
+async fn status_view(State(s): State<ManagementState>) -> Json<FullStatus> {
+    Json(FullStatus::now(s.licence, s.deployment))
+}
+
 fn recorder_unavailable() -> Response {
     (
         StatusCode::SERVICE_UNAVAILABLE,
@@ -663,4 +761,45 @@ fn forbidden(reason: &str) -> Response {
         "management endpoint: {reason}"
     )))
     .into_response()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::audit_op_for;
+    use http::Method;
+
+    /// Every management endpoint maps to its own audit operation, and a metric
+    /// whose name spells another endpoint is still a metrics read.
+    #[test]
+    fn each_endpoint_has_its_audit_operation() {
+        for (method, path, op) in [
+            (Method::GET, "/management/info", "management_info"),
+            (Method::GET, "/management/health", "management_health"),
+            (Method::GET, "/management/status", "management_status"),
+            (Method::GET, "/management/metrics", "management_metrics"),
+            (
+                Method::GET,
+                "/management/metrics/status",
+                "management_metrics",
+            ),
+            (
+                Method::GET,
+                "/management/metrics/health",
+                "management_metrics",
+            ),
+            (
+                Method::POST,
+                "/management/loggers",
+                "management_loggers_set",
+            ),
+            (
+                Method::DELETE,
+                "/management/loggers",
+                "management_loggers_reset",
+            ),
+            (Method::GET, "/management/loggers", "management_loggers_get"),
+        ] {
+            assert_eq!(audit_op_for(&method, path), op, "{method} {path}");
+        }
+    }
 }

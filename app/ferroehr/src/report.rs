@@ -13,7 +13,7 @@
 //! The parts are the build provenance with the manufacturer
 //! ([`BuildInfo`]), the platform the binary was built for, the enabled cargo
 //! features, the `openehr-*` crate versions linked, the licence summary
-//! `GET /rest/status` serves, the deployment posture, the migration level of
+//! `GET /management/status` serves, the deployment posture, the migration level of
 //! every schema, and the effective configuration. The [`Report::manifest`]
 //! names every part with its state, so a part that could not be read carries
 //! its reason rather than an empty value.
@@ -76,7 +76,7 @@ pub struct Report {
     pub features: Vec<&'static str>,
     /// The `openehr-*` crates this binary links, with their versions.
     pub openehr_crates: Vec<CrateVersion>,
-    /// The licence summary `GET /rest/status` serves; `None` when the embedded
+    /// The licence summary `GET /management/status` serves; `None` when the embedded
     /// licence anchors could not be read.
     pub licence: Option<LicenceStatus>,
     /// The deployment posture, measured over the databases when they answered

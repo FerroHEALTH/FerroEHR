@@ -38,16 +38,32 @@ whom it does not hold should raise it with Cadasto B.V. at
 Releases published before 2026-10-06 carry no end date in their notes; their
 support period is five years from the month of their tag all the same.
 
-**How a security fix reaches you.** The fix lands on `main` and ships in the
-next tagged release. That is normally the next *patch* on the current minor
-(so a fix does not oblige you to take new behaviour), but the project does
-not promise it: if the fix is only correct alongside a behavioural change, the
-release carrying it is the release carrying the change, and the changelog
-entry says so. A chart-only fix ships as a new chart version through the same
-publish lane between server releases. Each security update stays available
-for at least ten years after it is issued, or for the rest of the support
-period if that is longer (Art 13(9)): releases are immutable and are never
-deleted.
+**The running server states its own support period.** The end month is on the
+boot banner, in `ferroehr --version`, under `support` in
+`GET /management/info` and in `GET {rest root}/status` as `support.status`
+(`supported`, `ended` or `unreleased`). Once the period has ended the server
+logs a warning at boot and once a day (Art 13(19)). It does not contact anyone
+to look for a newer release. To hear of new releases and fixes, subscribe to
+the release feed, `https://github.com/FerroHEALTH/FerroEHR/releases.atom`, and
+poll the published advisories,
+`GET https://api.github.com/repos/FerroHEALTH/FerroEHR/security-advisories`.
+
+**How a security fix reaches you.** The fix lands on `main` and ships in a
+**security-only patch release**: the next *patch* on the current minor,
+carrying the security fix and nothing that adds or changes functionality, so
+taking the fix does not oblige you to take new behaviour (CRA Annex I Part
+II(2): "where technically feasible, new security updates shall be provided
+separately from functionality updates"). A release may carry a security fix
+together with functional changes only when a recorded reason makes the
+separate release technically infeasible, for example a fix that is only
+correct together with a behavioural change, or a fix to code that a
+functional change already merged on `main` replaced. The reason is written in
+that release's notes, under its `### Security` heading, so you can see why
+the fix did not come alone. A chart-only fix ships as a new chart version
+through the same publish lane between server releases. Each security update
+stays available for at least ten years after it is issued, or for the rest of
+the support period if that is longer (Art 13(9)): releases are immutable and
+are never deleted.
 
 **Running an older release.** A release is never retro-fitted: GitHub release
 immutability means a published release's assets and tag cannot be modified,
@@ -66,18 +82,28 @@ No release has been withdrawn.
 
 **Please do not open a public issue for suspected vulnerabilities.**
 
-Report privately via
-[GitHub private vulnerability reporting](https://github.com/FerroHEALTH/FerroEHR/security/advisories/new)
-("Report a vulnerability" on the repository's Security tab).
+Report privately, through either route:
 
-Include what you can: affected component/endpoint, reproduction steps or a proof
-of concept, impact assessment, and any suggested fix.
+- [GitHub private vulnerability reporting](https://github.com/FerroHEALTH/FerroEHR/security/advisories/new)
+  ("Report a vulnerability" on the repository's Security tab), which needs a
+  GitHub account; or
+- email to [info@cadasto.com](mailto:info@cadasto.com), the single point of
+  contact of Cadasto B.V., the manufacturer (CRA Art 13(17)), with "FerroEHR
+  vulnerability" in the subject. No account is needed. The address has no
+  published encryption key, so send the details you are comfortable sending by
+  email and say that more is available; we will agree a channel for the rest.
+
+Both routes reach the same people and the same procedure, with the same
+response times below. Include what you can: affected component/endpoint,
+reproduction steps or a proof of concept, impact assessment, and any suggested
+fix.
 
 ### What you can expect from us
 
 - **An acknowledgement within 5 working days.** If you have not heard anything by
-  then, the report has not reached us; escalate by opening a public issue
-  saying only that a private report is awaiting acknowledgement, with no details.
+  then, the report has not reached us; try the other route, or open a public
+  issue saying only that a private report is awaiting acknowledgement, with no
+  details.
 - An assessment with a severity and an intended fix window within 10 working
   days of the acknowledgement.
 - Coordinated disclosure: we will agree a date with you rather than impose one,
@@ -105,6 +131,53 @@ We name reporters in the advisory and the changelog by default, using whatever
 name and link you give us. Tell us if you would rather not be named; declining
 credit costs you nothing and changes nothing about how the report is handled.
 
+### Security advisories
+
+**Every fixed vulnerability gets a GitHub security advisory** on this
+repository, published when the release that fixes it is published (CRA Annex
+I Part II(4) and (8)). That covers a vulnerability in FerroEHR's own code and
+a fix to a dependency or a base image that changes what a shipped artefact
+(a binary, an image, the Helm chart or a published `openehr-*` crate)
+contains or how it behaves. A dependency finding that the published OpenVEX
+documents under [`security/vex/`](security/vex/) show does not affect the
+artefact gets no advisory; the VEX statement is its record. Each advisory
+carries:
+
+- a description of the vulnerability and its impact;
+- its severity, as a CVSS vector and score;
+- the affected and fixed versions of each artefact concerned (the server
+  release, the chart version, the crate versions);
+- what to do: the release to upgrade to, and any mitigation that works before
+  you can upgrade;
+- the CVE identifier, when one is assigned, and credit to the reporter unless
+  they declined it.
+
+The `### Security` entry for the fix in [`CHANGELOG.md`](CHANGELOG.md) carries
+the advisory's `GHSA-` identifier, and the release notes repeat it. The
+advisories are machine-readable through the GitHub REST API
+(`GET /repos/FerroHEALTH/FerroEHR/security-advisories`), and an advisory that
+names a published crate also reaches the GitHub Advisory Database in OSV
+format.
+
+**When publication of the details may wait.** Part II(4) allows that "in duly
+justified cases, where manufacturers consider the security risks of
+publication to outweigh the security benefits, they may delay making public
+information regarding a fixed vulnerability until after users have been given
+the possibility to apply the relevant patch". Cadasto B.V. uses it only when
+all of these hold, and records the reason in the draft advisory:
+
+1. the vulnerability can be exploited without credentials, or by any
+   authenticated caller, against a deployment that has not yet upgraded;
+2. no mitigation short of upgrading is available;
+3. the details are not already public, and the vulnerability is not actively
+   exploited (an actively exploited vulnerability is told to users at once,
+   under CRA Art 14(8)).
+
+Even then, the advisory is published with the fixing release, naming the
+affected versions, the severity and the release to upgrade to, and only the
+technical description and any reproduction wait. They are added no later than
+30 days after the fixing release, or as soon as they become public elsewhere.
+
 ### What Cadasto B.V. reports to the authorities (CRA Art 14)
 
 Since 11 September 2026 the manufacturer notifies every actively exploited
@@ -122,9 +195,9 @@ time (Art 14(7)). It comes in three steps:
 | Notification | 72 hours | the release concerned, the nature of the exploit or incident, the corrective or mitigating measures taken and those users can take (Art 14(2)(b), 14(4)(b)) |
 | Final report | a vulnerability: 14 days after a corrective or mitigating measure is available; an incident: one month after the notification | the description, severity and impact, what is known of the actor or the root cause, and the update or measures (Art 14(2)(c), 14(4)(c)) |
 
-A report you send us through private vulnerability reporting is one way the
-manufacturer becomes aware, so a report of a vulnerability you have seen
-exploited starts the 24-hour clock. Say so in the report. Coordinated
+A report you send us, through private vulnerability reporting or by email, is
+one way the manufacturer becomes aware, so a report of a vulnerability you
+have seen exploited starts the 24-hour clock. Say so in the report. Coordinated
 disclosure with you continues alongside the notification; the CSIRT can delay
 passing it on while a fix is prepared (Art 16(2)).
 
@@ -161,6 +234,16 @@ procedure says how the three relate.
   [`security/vex/`](security/vex/), with the justification and an impact
   statement you can check. If you think one of those arguments is wrong, that is
   a valid report.
+- A vulnerability we find, or are told of, in a component FerroEHR integrates
+  (a Rust crate, the PostgreSQL or distroless base image, a vendored asset) is
+  reported to that component's maintainer through its own channel (CRA Art
+  13(6)), and a fix we write for it is offered upstream. Each such report is
+  entered in the public register
+  [`docs/registers/upstream-reports.tsv`](docs/registers/upstream-reports.tsv)
+  once the upstream advisory is out, and the procedure is in
+  [`docs/post-market.md`](docs/post-market.md#vulnerabilities-in-integrated-components).
+  A vulnerability in a component that you found yourself goes to that
+  component's maintainer; tell us as well if it reaches FerroEHR.
 
 ## Repository security settings — the posture of record
 
@@ -178,7 +261,7 @@ finding.
 | Secret scanning — **non-provider patterns** | enabled | the credential classes this repository is most likely to leak are not provider tokens: private keys, database URLs with an embedded password, HTTP basic-auth URLs, generic high-entropy secrets. The chart mounts a config volume carrying a private key, the OIDC configuration takes an HMAC secret with an enforced entropy floor, and the platform library ships a signing module |
 | Secret scanning — **validity checks** | enabled | the difference between "rotate this eventually" and "this credential is live right now" |
 | Dependabot security updates | enabled | advisory-driven bumps, exempt from the update cooldowns |
-| Private vulnerability reporting | enabled | the reporting route this document points at |
+| Private vulnerability reporting | enabled | one of the two reporting routes this document points at |
 | Ruleset `main` (default branch) | active — no deletion, no force-push, signed commits, pull request required (code-owner review, stale approvals dismissed on push), `conclusion` status check required on an up-to-date branch; repository admins may bypass (the merge-on-local-gates lever — a deliberate, recorded trade against the Scorecard admin-enforcement warning) | the merge gate |
 | Ruleset `release-tags` (`refs/tags/v*`) | active — no tag deletion, no non-fast-forward tag update, signatures required | three lanes publish off a raw tag push (the release, the Helm chart, the documentation version cut). Release immutability protects the window *after* a release is published; this protects the window in which a tag drives a build, an image push and a chart publish |
 
@@ -202,6 +285,31 @@ following them is the cluster operator's responsibility, as recorded in the
 [cluster-hardening chapter](website/book/src/installation/kubernetes-hardening.md).
 A vulnerability in FerroEHR — including in the Helm chart — comes to us through
 the process above.
+
+## If Cadasto B.V. ceases operations
+
+CRA Art 13(23) has a manufacturer that ceases its operations, and as a result
+cannot meet the Regulation, inform the market surveillance authorities and,
+"by any means available and to the extent possible", the users, "before the
+cessation of operations takes effect". If that happens, Cadasto B.V. will:
+
+- announce it before it takes effect, through a pinned GitHub issue on this
+  repository, a notice at the top of this file and on the
+  documentation site, and a message to every operator it knows of from its
+  register of economic operators supplied;
+- state from which date vulnerabilities in FerroEHR are no longer handled and
+  security updates no longer issued. From that date the support periods in the
+  table above end early, and the notice says so;
+- leave every published release, image, chart version, crate, advisory and
+  this documentation where they are. Releases are immutable, and nothing is
+  withdrawn because the manufacturer stops.
+
+Under the licence published with each version (`LICENSE`, the Change Date),
+a version becomes licensed under the Apache License 2.0 four years after its
+publication. The licence text ties that change to the version's publication
+date and sets no condition on the Licensor continuing to exist. A commercial
+licence is governed by its own contract. The internal procedure is in
+[`docs/post-market.md`](docs/post-market.md#cessation-of-operations).
 
 ## Machine-readable policy
 

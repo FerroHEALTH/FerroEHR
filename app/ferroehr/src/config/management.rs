@@ -10,12 +10,13 @@
 //! [`AccessLevel::Off`] (→ `404`). The surface only exists once a deployment
 //! opts each piece in explicitly.
 //!
-//! The surface is **ops introspection only** — build info, Prometheus, the
-//! metric views, the redacted effective config, and the live log-filter
-//! control. Health probes are NOT configured here: the `/health`,
-//! `/health/liveness`, and `/health/readiness` endpoints are always-on and
-//! public, so an orchestrator can probe a server that has this whole section
-//! switched off.
+//! The surface is **ops introspection** — build info, Prometheus, the metric
+//! views, the redacted effective config, the live log-filter control, the
+//! per-indicator health detail and the full status document. The orchestrator
+//! probes are NOT configured here: `/health`, `/health/liveness` and
+//! `/health/readiness` are always-on and public, so an orchestrator can probe a
+//! server that has this whole section switched off; they say only whether the
+//! server is ready, and the detail behind that answer is `endpoints.health`.
 //!
 //! No openEHR spec governs configuration or the management surface — our own
 //! design.
@@ -84,6 +85,13 @@ pub struct EndpointLevels {
     /// `/management/flamegraph` — the on-demand CPU flamegraph (pprof sampling).
     #[serde(default)]
     pub flamegraph: AccessLevel,
+    /// `/management/health` — every readiness indicator with its detail.
+    #[serde(default)]
+    pub health: AccessLevel,
+    /// `/management/status` — the status document with the licence, the
+    /// deployment posture and the support period.
+    #[serde(default)]
+    pub status: AccessLevel,
 }
 
 /// Limits for the on-demand CPU profiler behind `/management/flamegraph`.
@@ -166,9 +174,9 @@ mod tests {
         assert_eq!(c.profiling.max_frequency, 999);
     }
 
-    /// The health probes are not part of this section any more (they are the
-    /// always-on public `/health` family), so a config still carrying the
-    /// removed keys must fail loudly at boot rather than be silently ignored
+    /// The probes are not part of this section (they are the always-on public
+    /// `/health` family), so a config carrying the removed probe switch or a
+    /// probe level must fail loudly at boot rather than be silently ignored
     /// (`deny_unknown_fields`).
     #[test]
     fn removed_probe_keys_are_rejected() {
@@ -178,11 +186,26 @@ mod tests {
             err.to_string().contains("probes_enabled"),
             "the error must name the offending key: {err}"
         );
-        let err = toml::from_str::<EndpointLevels>("health = \"public\"")
-            .expect_err("endpoints.health must be an unknown field");
-        assert!(
-            err.to_string().contains("health"),
-            "the error must name the offending key: {err}"
-        );
+        for probe in ["liveness", "readiness"] {
+            let err = toml::from_str::<EndpointLevels>(&format!("{probe} = \"public\""))
+                .expect_err("a probe level must be an unknown field");
+            assert!(
+                err.to_string().contains(probe),
+                "the error must name the offending key: {err}"
+            );
+        }
+    }
+
+    /// The health detail and the full status document are endpoints like the
+    /// others: off unless named, and parsed at the level written.
+    #[test]
+    fn health_and_status_endpoints_default_off() {
+        let levels = EndpointLevels::default();
+        assert_eq!(levels.health, AccessLevel::Off);
+        assert_eq!(levels.status, AccessLevel::Off);
+        let levels: EndpointLevels =
+            toml::from_str("health = \"admin_only\"\nstatus = \"private\"").expect("parses");
+        assert_eq!(levels.health, AccessLevel::AdminOnly);
+        assert_eq!(levels.status, AccessLevel::Private);
     }
 }

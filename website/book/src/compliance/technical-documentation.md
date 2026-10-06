@@ -2,43 +2,60 @@
      the CI job re-renders and diffs, so an edit here is reverted with a red
      build. Change the YAML. -->
 
-# Technical documentation readiness
+# Technical documentation
 
 Article 37 of the EHDS regulation requires a manufacturer to draw up technical
 documentation before an EHR system is placed on the market or put into
 service, and to keep it up to date. Article 37(2) says it must contain at
-least the elements of Annex III.
+least the elements of Annex III, and a reference to the results of the
+European digital testing environment of Article 40. From 11 December 2027 the
+same documentation carries the content of CRA Annex VII (CRA Art. 31(3) as
+EHDS Article 104 replaces it).
 
-**This page is not that documentation.** It is a map of what FerroEHR can
-already supply for each element and what does not exist, so the gap is
-visible rather than discovered when someone needs the file.
+Cadasto B.V., the manufacturer of each tagged FerroEHR release, keeps that
+documentation in the repository, in
+[`docs/technical-documentation/`](https://github.com/FerroHEALTH/FerroEHR/tree/main/docs/technical-documentation):
+one file per Annex III element and per CRA Annex VII point that adds one, each
+linking its evidence. The tree as it stands at a release tag is that release's
+documentation. This page maps each Annex III element to its file and to the
+published material it cites. It covers FerroEHR's part of the EHR system, the
+logging component and the system-level requirements; FerroBRIDGE documents the
+interoperability component.
+
+<!-- toc -->
 
 > [!WARNING]
-> No technical documentation has been drawn up, and no EU declaration of
-> conformity exists. A "Shipped" row below means the material an element asks
-> for is published and can be cited — not that the element has been written.
+> The documentation is incomplete: element 3 and element 6 cannot be written
+> yet, and element 4 lacks the testing-environment results. No EU declaration
+> of conformity exists. An "Available" row below means the material the
+> element asks for is written and cited from the tree, not that any authority
+> has examined it.
 
-[Regulation (EU) 2025/327 of the European Parliament and of the Council of 11 February 2025 on the European Health Data Space and amending Directive 2011/24/EU and Regulation (EU) 2024/2847](https://eur-lex.europa.eu/eli/reg/2025/327/oj) — OJ L series, 2025/327, 5.3.2025. Read on **2026-09-10**; the regulation
+[Regulation (EU) 2025/327 of the European Parliament and of the Council of 11 February 2025 on the European Health Data Space and amending Directive 2011/24/EU and Regulation (EU) 2024/2847](https://eur-lex.europa.eu/eli/reg/2025/327/oj), OJ L series, 2025/327, 5.3.2025. Read on **2026-10-06**; the regulation
 governs and the summaries here are this project's paraphrase.
 
 ## Annex III, element by element
 
 ### 1. A detailed description of the EHR system
 
+Documented in [`annex-iii-1-description.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/technical-documentation/annex-iii-1-description.md).
+
 | # | Element | State | Material | Notes |
 |---|---|---|---|---|
-| 1(a) | Intended purpose, date and version. | Missing | — | The version and release date are published per release; the intended purpose is a manufacturer's statement that does not exist. |
-| 1(b) | The categories of personal electronic health data it processes. | Partial | [what exists](../concepts/storage.md) | The storage model is documented and the pseudonymisation domains are separated, but a mapping onto the Annex I priority categories is not written. |
+| 1(a) | Intended purpose, date and version. | Available | [what exists](intended-purpose.md) | The statement of intended purpose is versioned with the book, which is frozen per release; the version and release date are each release's tag and changelog heading. |
+| 1(b) | The categories of personal electronic health data it processes. | Available | [what exists](intended-purpose.md#the-data-ferroehr-is-designed-to-process) | — |
 | 1(c) | How it interacts with hardware or software that is not part of it. | Available | [what exists](../beyond-core/index.md) | — |
-| 1(d) | Versions of relevant software or firmware, and update requirements. | Available | [what exists](../installation/kubernetes.md) | — |
+| 1(d) | Versions of relevant software or firmware, and update requirements. | Available | [what exists](../operations.md#upgrades) | — |
 | 1(e) | Every form in which it is placed on the market or put into service. | Available | [what exists](../installation/index.md) | — |
-| 1(f) | The hardware it is intended to run on. | Partial | [what exists](../operations.md) | The measured deployment classes state an environment envelope; a minimum hardware specification as such is not published. |
+| 1(f) | The hardware it is intended to run on. | Partial | [what exists](instructions-for-use.md#what-it-runs-on) | The instructions for use name the platforms, the chart's resource defaults and the database; the measured deployment classes state the environment each ran on. No minimum hardware specification is published. |
 | 1(g) | The system architecture, and how the components integrate. | Available | [what exists](../concepts/architecture.md) | — |
 | 1(h) | Technical specifications, variants, configurations. | Available | [what exists](../installation/configuration.md) | — |
-| 1(i) | A description of every change through the lifecycle. | Available | [what exists](../introduction.md) | — |
-| 1(j) | Instructions for use and, where applicable, for installation. | Available | [what exists](../installation/index.md) | — |
+| 1(i) | A description of every change through the lifecycle. | Available | [what exists](../introduction.md) | The changelog of every release, and the revision table of the documentation tree. |
+| 1(j) | Instructions for use and, where applicable, for installation. | Available | [what exists](instructions-for-use.md) | — |
 
 ### 2. The system in place to evaluate the EHR system's performance
+
+Documented in [`annex-iii-2-performance-evaluation.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/technical-documentation/annex-iii-2-performance-evaluation.md).
 
 | # | Element | State | Material | Notes |
 |---|---|---|---|---|
@@ -46,66 +63,100 @@ governs and the summaries here are this project's paraphrase.
 
 ### 3. References to the common specifications used
 
+Documented in [`annex-iii-3-common-specifications.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/technical-documentation/annex-iii-3-common-specifications.md).
+
 | # | Element | State | Material | Notes |
 |---|---|---|---|---|
-| 3 | Common specifications under Article 36 against which conformity is declared. | Missing | — | The implementing acts that set the common specifications have not been adopted. Nothing can reference them yet. |
+| 3 | Common specifications under Article 36 against which conformity is declared. | Missing | — | The implementing acts that set the Article 36 common specifications have not been adopted. Nothing can reference them yet. |
 
 ### 4. Verification and validation results
 
+Documented in [`annex-iii-4-verification-and-validation.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/technical-documentation/annex-iii-4-verification-and-validation.md).
+
 | # | Element | State | Material | Notes |
 |---|---|---|---|---|
-| 4 | Results and critical analyses of the tests demonstrating conformity. | Partial | [what exists](../conformance.md) | The openEHR conformance record is complete and committed. It demonstrates conformity to the openEHR specifications, which is a different claim from conformity to Annex II; the European digital testing environment of Article 40 does not exist yet. |
+| 4 | Results and critical analyses of the tests demonstrating conformity. | Partial | [what exists](../conformance.md) | The openEHR conformance record and the hazard log's named tests are committed. They show conformity to the openEHR specifications and the controls of the logging component, which is a different claim from conformity to Annex II; the European digital testing environment of Article 40, whose results Article 37(2) asks for, is not published. |
 
 ### 5. A copy of the information sheet
 
+Documented in [`annex-iii-5-information-sheet.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/technical-documentation/annex-iii-5-information-sheet.md).
+
 | # | Element | State | Material | Notes |
 |---|---|---|---|---|
-| 5 | The information sheet required by Article 38. | Missing | — | No information sheet has been drawn up. |
+| 5 | The information sheet required by Article 38. | Available | [what exists](information-sheet.md) | Published with the book of each release and attached to each GitHub release. |
 
 ### 6. A copy of the EU declaration of conformity
 
+Documented in [`annex-iii-6-declaration-of-conformity.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/technical-documentation/annex-iii-6-declaration-of-conformity.md).
+
 | # | Element | State | Material | Notes |
 |---|---|---|---|---|
-| 6 | The declaration required by Article 39. | Missing | — | No declaration exists, and none can be made before the common specifications are adopted and the manufacturer is identified. |
+| 6 | The declaration required by Article 39. | Missing | — | No declaration has been drawn up: the Article 36 common specifications and the Article 40 testing environment it would rest on are not available. |
+
+## What CRA Annex VII adds
+
+CRA Annex VII asks for four things Annex III does not, each with its own file
+in the tree: the design, development and vulnerability-handling processes
+with the software bills of materials (point 2), the cybersecurity
+[risk assessment](cra-risk-assessment.md) (point 3), the information taken
+into account to set the support period (point 4), and the standards applied or
+the solutions adopted in their place (point 5). The
+[hazard log](hazard-log.md) is the EHDS-side assessment of the logging
+component, which CRA Art. 13(4), as EHDS Article 104 amends it, lets the
+cybersecurity risk assessment be part of.
 
 ## Test evidence
 
 Element 4 asks for the results of the verification and validation tests. What
-exists is the openEHR conformance record: an independent instrument's runs
+exists is the openEHR conformance record (an independent instrument's runs
 against a composed deployment, with the results, verdicts and the statement
 committed under `docs/conformance/` and published on the
-[conformance pages](../conformance.md).
+[conformance pages](../conformance.md)) and the tests the hazard log names for
+each control of the logging component.
 
-Read what that record does and does not say. It demonstrates conformity to
-the **openEHR** specifications. Conformity to Annex II is a different claim
-against a different yardstick, and the European digital testing environment
-of Article 40 — whose results Article 37(2) also requires a reference to —
-does not exist yet.
-
-## Risk analysis
-
-Annex III does not name a risk analysis as a separate element, but element 1
-asks for a description of the system architecture and element 2 for the
-system in place to evaluate performance. The material FerroEHR publishes for
-both is the [architecture](../concepts/architecture.md) chapter and the
-[security](../security.md) chapter, with the pseudonymisation boundary
-and its data flows documented as they land.
+The conformance record demonstrates conformity to the **openEHR**
+specifications. Conformity to Annex II is a different claim against a
+different yardstick. The European digital testing environment of Article 40,
+whose results Article 37(2) asks the documentation to reference, is not
+published; running it is tracked in
+[#3620](https://github.com/FerroHEALTH/FerroEHR/issues/3620).
 
 ## Declaration of conformity
 
 Article 39 requires an EU declaration of conformity stating that the
 essential requirements of Annex II are met, and Annex IV sets out what it
-contains. **No declaration exists**, and none can be drawn up yet: the common
-specifications of Article 36 have not been adopted, so there is nothing to
-declare conformity against, and the manufacturer of a given deployment has
-not been identified — see the open questions on the
-[readiness page](ehds-readiness.md).
+contains, including the common specifications applied and the result of the
+Article 40 testing environment. **No declaration has been drawn up.** The
+common specifications of Article 36 have not been adopted, the testing
+environment is not published, and the exchange format the interoperability
+component must carry waits on implementing acts under Article 15(1). Chapter
+III applies to EHR systems from 26 March 2029 (Article 105).
 
-When those two are settled, the declaration is drawn up by the manufacturer
-of the deployment, not by this project on their behalf.
+When a declaration is drawn up, Cadasto B.V. draws it up for the EHR system,
+FerroEHR and FerroBRIDGE together, as one declaration for the EHDS and the
+CRA. It is published online for each release it covers, for at least ten
+years (Article 39(4)), and kept with the documentation for ten years after the
+system covered is placed on the market (Article 30(3)).
+
+## Keeping it current, keeping it for ten years
+
+- **Change control (Article 30(2)).** A release whose changes touch a module
+  of the logging component updates the documentation tree in the same
+  release, and the release procedure refuses the release otherwise.
+- **Retention (Article 30(3)).** The tree is part of the signed release tag,
+  which cannot be deleted or moved, and of the source archive each release
+  deposits with Zenodo; the book pages it cites are frozen with each release at
+  `/docs/vX.Y.Z/`.
+- **Translation (Article 37(3) and (4)).** The documentation is written in
+  English. A market surveillance authority that asks, with reasons, for a
+  translation of parts of it into an official language of its Member State
+  writes to info@cadasto.com, and Cadasto B.V. provides the translation within
+  30 days of the request, or sooner where a serious and immediate risk
+  justifies it.
 
 ## Related
 
-- [EHDS readiness](ehds-readiness.md) — status per Annex II requirement.
-- [Shared responsibility](shared-responsibility.md) — which duties belong to
+- [EHDS readiness](ehds-readiness.md): the status per Annex II requirement.
+- [Cyber Resilience Act](cra.md): the CRA position.
+- [Shared responsibility](shared-responsibility.md): which duties belong to
   the deployment.

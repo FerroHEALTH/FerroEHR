@@ -1,8 +1,9 @@
 # Complaints, incidents and vulnerabilities
 
 This page says how to complain about FerroEHR, how to report a vulnerability
-or an incident, what its manufacturer records, and what it does when a
-released version turns out not to conform. It describes the manufacturer's
+or an incident, what its manufacturer records and publishes, what it does when
+a released version turns out not to conform, and what happens if it ceases
+operations. It describes the manufacturer's
 procedures under two regulations: Regulation (EU) 2025/327 on the European
 Health Data Space (the EHDS), Articles 30, 43, 44 and 45, and Regulation (EU)
 2024/2847, the Cyber Resilience Act (the CRA), Articles 13 and 14. The
@@ -59,11 +60,16 @@ and keep distributors informed thereof". Pick the channel by what the report
 contains:
 
 - **A vulnerability, including one you have seen exploited:** report it
-  privately through
-  [GitHub private vulnerability reporting][pvr],
-  as [`SECURITY.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md)
-  says. If you have seen it exploited, say so: that starts the CRA clock
-  described [below](#actively-exploited-vulnerabilities-and-severe-incidents-cra-art-14).
+  privately, either through
+  [GitHub private vulnerability reporting][pvr] or by email to
+  [info@cadasto.com](mailto:info@cadasto.com) with "FerroEHR vulnerability" in
+  the subject, as [`SECURITY.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#reporting-a-vulnerability)
+  says. Both routes reach the same procedure; email needs no GitHub account,
+  because CRA Art. 13(17) has the single point of contact "not limit such
+  means to automated tools". If you have seen it exploited, say so: that
+  starts the CRA clock described
+  [below](#actively-exploited-vulnerabilities-and-severe-incidents-cra-art-14)
+  from the moment your report arrives.
 - **Anything that harmed a person, or could have:** write to
   [info@cadasto.com](mailto:info@cadasto.com) with "FerroEHR incident" in the
   subject, so it is handled as a possible serious incident from the first
@@ -81,7 +87,8 @@ the case, or build a synthetic one.
 
 EHDS Art. 30(1)(o) asks the manufacturer to "keep a register of complaints
 and a register of non-conforming EHR systems and keep distributors informed
-thereof". Both are kept in the repository, where anyone can read them:
+thereof". Both are kept in the repository, where anyone can read them,
+beside a third the CRA asks for:
 
 - [`docs/registers/complaints.tsv`][complaints]:
   every complaint, whatever the channel, with the versions it concerns, how
@@ -90,10 +97,15 @@ thereof". Both are kept in the repository, where anyone can read them:
   every finding that released versions do not conform, with the requirement
   missed, whether it was a serious incident or notified under the CRA, the
   corrective action, and when the authorities and the users were told.
+- [`docs/registers/upstream-reports.tsv`][upstream]:
+  every vulnerability the manufacturer reported to the maintainer of a
+  component FerroEHR integrates, as CRA Art. 13(6) asks, with the channel,
+  the upstream reference, whether a fix was shared and the outcome.
 
-No row names the person who complained or carries patient data. A
-vulnerability enters the registers when its advisory is published, so a row
-never discloses one before its fix.
+No row names the person who complained or carries patient data, and the
+upstream register names components, never people. A vulnerability enters the
+registers when its advisory is published, so a row never discloses one before
+its fix.
 
 ## Corrective action, withdrawal and recall
 
@@ -222,6 +234,50 @@ it, and the hospital's notification does not stand in for them. The
 manufacturer gives the hospital the facts it needs: the advisory, the
 affected versions and the mitigations.
 
+## Security advisories
+
+CRA Annex I Part II(4) has the manufacturer, "once a security update has been
+made available, share and publicly disclose information about fixed
+vulnerabilities, including a description of the vulnerabilities, information
+allowing users to identify the product with digital elements affected, the
+impacts of the vulnerabilities, their severity and clear and accessible
+information helping users to remediate the vulnerabilities". Every fixed
+vulnerability in FerroEHR, and every dependency or base-image fix that changes
+a shipped artefact, gets a GitHub security advisory on the repository,
+published with the fixing release, with a CVSS severity, the affected and
+fixed versions of each artefact and what to do. The `### Security` entry of
+the changelog carries its `GHSA-` identifier. The same paragraph allows a
+delay "in duly justified cases"; when the manufacturer uses it, only the
+technical detail waits, and
+[`SECURITY.md` § Security advisories](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#security-advisories)
+lists the criteria. A security fix ships as a security-only patch release
+unless its release notes say why that was technically infeasible (Part II(2)).
+
+## Vulnerabilities in components FerroEHR integrates
+
+When the manufacturer identifies a vulnerability in a component integrated in
+FerroEHR, it reports it "to the person or entity manufacturing or maintaining
+the component" and shares any fix it wrote (CRA Art. 13(6)), through the
+component's own security channel: the project's private reporting, the
+RustSec advisory database for a Rust crate, or a distribution's security
+tracker for a base-image package. Each report enters the upstream register
+above once it is public. A vulnerability you find in such a component goes to
+its maintainer; tell the manufacturer too if it reaches FerroEHR.
+
+## If the manufacturer ceases operations
+
+CRA Art. 13(23) has a manufacturer that ceases its operations, and as a result
+cannot meet the Regulation, inform "the relevant market surveillance
+authorities as well as, by any means available and to the extent possible,
+the users" before the cessation takes effect. Cadasto B.V. would notify the
+authorities first, then every operator and commercial licensee it knows of,
+then the public, through a pinned issue, `SECURITY.md` and this site, naming
+the date from which vulnerabilities are no longer handled. Every published
+release, image, chart, crate and advisory stays published. Under the licence
+published with each version, a version becomes licensed under the Apache
+License 2.0 four years after its publication
+([`SECURITY.md` § If Cadasto B.V. ceases operations](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#if-cadasto-bv-ceases-operations)).
+
 ## The support period
 
 The support period of each release is five years from the month it is
@@ -250,3 +306,4 @@ what of that documentation exists today.
 [complaints]: https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/registers/complaints.tsv
 [non-conforming]: https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/registers/non-conforming-versions.tsv
 [supported]: https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions
+[upstream]: https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/registers/upstream-reports.tsv

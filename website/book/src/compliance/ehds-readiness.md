@@ -10,95 +10,131 @@ components, meet the essential requirements of Annex II, and carry technical
 documentation and an EU declaration of conformity before it is placed on the
 market or put into service.
 
-This page states, requirement by requirement, what FerroEHR provides today.
-It exists so an evaluator can see the real position rather than infer one,
-and so the project has a checklist rather than an intention.
+Cadasto B.V. is the manufacturer of each tagged FerroEHR release, and the EHR
+system it declares is FerroEHR and FerroBRIDGE together: FerroEHR ships the
+European logging software component, FerroBRIDGE the European
+interoperability software component. This page states, requirement by
+requirement, what FerroEHR provides today, and names FerroBRIDGE where a
+requirement is its part.
+
+<!-- toc -->
 
 > [!WARNING]
-> **No conformity assessment has been carried out.** No technical
-> documentation has been drawn up under Article 37, no EU declaration of
-> conformity exists under Article 39, and FerroEHR is not registered under
+> **No conformity assessment has been carried out.** The technical
+> documentation of Article 37 is being drawn up and still lacks elements (see
+> [Technical documentation](technical-documentation.md)), no EU declaration
+> of conformity exists under Article 39, and FerroEHR is not registered under
 > Article 49. A status of "Shipped" below means the software provides the
-> capability — it is not a claim of conformity, and nothing on this page is
+> capability. It is not a claim of conformity, and nothing on this page is
 > one.
 
 ## The regulation, and how to check this page against it
 
-[Regulation (EU) 2025/327 of the European Parliament and of the Council of 11 February 2025 on the European Health Data Space and amending Directive 2011/24/EU and Regulation (EU) 2024/2847](https://eur-lex.europa.eu/eli/reg/2025/327/oj) — OJ L series, 2025/327, 5.3.2025.
+[Regulation (EU) 2025/327 of the European Parliament and of the Council of 11 February 2025 on the European Health Data Space and amending Directive 2011/24/EU and Regulation (EU) 2024/2847](https://eur-lex.europa.eu/eli/reg/2025/327/oj), OJ L series, 2025/327, 5.3.2025.
 
-Every requirement identifier, heading and date on this page was read from
-that published text on **2026-09-10**. The wording in the "Requirement" column
-is this project's own paraphrase for navigation; the regulation is the
-authority and its text governs. Where the two differ, the regulation is
-right and this page is a defect worth reporting.
+Every requirement identifier, heading and date on this page was read from the
+Official Journal text vendored in the repository at
+[`docs/law/eu/ehds/text.html`](https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/law/eu/ehds/text.html)
+on **2026-10-06**. The wording in the "Requirement" column is this project's own
+paraphrase for navigation; the regulation is the authority and its text
+governs. Where the two differ, the regulation is right and this page is a
+defect worth reporting.
 
 ## When it applies
 
-- **26 March 2027** — The Regulation applies from this date.
-- **26 March 2029** — Articles 25, 26, 27, 47, 48 and 49 apply to the priority categories of personal electronic health data in Article 14(1)(a), (b) and (c), and to EHR systems the manufacturer intends to process them.
-- **26 March 2031** — The same articles apply to the categories in Article 14(1)(d), (e) and (f), and Chapter III applies to EHR systems put into service in the Union as described in Article 26(2).
+- **26 March 2027:** The Regulation applies from this date.
+- **26 March 2029:** Articles 25, 26, 27, 47, 48 and 49 apply to the priority categories of personal electronic health data in Article 14(1)(a), (b) and (c), and to EHR systems the manufacturer intends to process them.
+- **26 March 2031:** The same articles apply to the categories in Article 14(1)(d), (e) and (f), and Chapter III applies to EHR systems put into service in the Union as described in Article 26(2).
 
-The last of those matters most here: a deployment that a health institution
-runs for itself, or that is offered as a service, is *put into service* under
-Article 26(2) rather than placed on the market.
+The last of those reaches a deployment that a health institution runs for
+itself, or that is offered as a service: Article 26(2) treats both as *put
+into service*. An organisation that runs an unmodified FerroEHR release for
+itself puts Cadasto B.V.'s product into service and does not become the
+manufacturer. Where Cadasto B.V. hosts FerroEHR as a service for a customer,
+it is the manufacturer and the operator of that deployment.
 
 ## The two harmonised software components
 
-Article 25(1) requires an EHR system to include both.
+Article 25(1) requires an EHR system to include both. Each is shipped by one
+product of the EHR system Cadasto B.V. declares.
 
 | Component | Status | Where it stands |
 |---|---|---|
-| European interoperability software component for EHR systems | Open question ([#3171](https://github.com/FerroHEALTH/FerroEHR/issues/3171), [#3206](https://github.com/FerroHEALTH/FerroEHR/issues/3206)) | The requirements this component carries are Annex II 2.1 to 2.3: an interface that provides and receives personal electronic health data in the European electronic health record exchange format. FerroEHR serves the openEHR ITS-REST surface and an optional FHIR façade; neither is that format, and the format's own content is set by implementing acts under Article 36. |
-| European logging software component for EHR systems | Partial ([#3204](https://github.com/FerroHEALTH/FerroEHR/issues/3204)) | Annex II 3.2 lists five things every access event must record. The access-event model records the accessing organisation and person, the subject, the object and its domain, the outcome, the purpose and the time, the origins of the served data, and the audit trail is retrievable. One of the five is still short: the category is an openEHR resource class rather than an Annex I priority category. |
+| European interoperability software component for EHR systems | Open question ([#3080](https://github.com/FerroHEALTH/FerroEHR/issues/3080)) | Shipped by FerroBRIDGE, the other product of the EHR system Cadasto B.V. declares, which holds the mappings from openEHR to the European electronic health record exchange format and reads FerroEHR over ITS-REST. The format itself is set by implementing acts under Article 15(1) that have not been adopted, so no component can emit it yet. FerroEHR's in-tree FHIR connector is to be retired in favour of FerroBRIDGE. |
+| European logging software component for EHR systems | Partial ([#3622](https://github.com/FerroHEALTH/FerroEHR/issues/3622)) | Shipped by FerroEHR: the access-event model, the audit store with its hash chain and the scheduled verification of that chain, the DICOM and FHIR renderings and the sinks, the middleware that records and classifies every API access, the ITI-81 retrieval, and the retention register. All five Annex II 3.2 elements are recorded, and every access record outside the demographic domain carries a category; a token that names a client application rather than a person is recorded as that client. The central store and review of the log are planned to move to FerroSYS in a later release. |
 
-## Annex II — the essential requirements
+## Annex II: the essential requirements
 
 The identifiers are the Annex's own. "Evidence" links what a reader can check
-for themselves; "Gap" says what is missing when a row is not complete.
+for themselves; "Gap" says what is missing when a row is not complete, and
+the issue that closes it where one exists.
 
 ### 1. General requirements
 
 | # | Requirement (our paraphrase) | Status | Evidence | Notes |
 |---|---|---|---|---|
-| 1.1 | The components achieve the performance the manufacturer intended and are suitable for their intended purpose in normal use, without putting patient safety at risk. | Open question | — | **Question:** The requirement is a claim by a manufacturer about an intended purpose. FerroEHR is source-available software rather than a placed product, so who the manufacturer is depends on who puts a deployment into service — the question #3168 has to answer before this can be a status rather than a question. Tracked in [#3168](https://github.com/FerroHEALTH/FerroEHR/issues/3168) |
-| 1.2 | The components can be supplied and installed following the manufacturer's instructions without adversely affecting their characteristics and performance. | Partial | [Deployment artifacts and their documented installation](../installation/index.md) | **Gap:** The artifacts and their instructions exist and a deployment probe reads the running stack back. What does not exist is the manufacturer's declared intended purpose those characteristics would be measured against. |
-| 1.3 | Interoperability, safety and security features uphold the rights of natural persons in line with the intended purpose, as set out in Chapter II. | Partial | [The rights the software can serve, and who must serve the rest](shared-responsibility.md) | **Gap:** Chapter II rights are largely a deployment's duty rather than a product's. The shared-responsibility page states which side each one falls on; the patient-facing access route is not built. |
-| 1.4 | Components intended to operate with other products, including medical devices, are designed so interoperability and compatibility are reliable and secure and data can be shared with the device. | Open question | — | **Question:** FerroEHR claims no interoperability with a medical device. If a deployment claims it, Article 27 puts that claim's requirements on the party making it. |
+| 1.1 | The components achieve the performance the manufacturer intended and are suitable for their intended purpose in normal use, without putting patient safety at risk. | Partial | [The manufacturer's intended-purpose statement](intended-purpose.md); [The hazard log of the logging component](hazard-log.md) | **Gap:** Cadasto B.V. states the intended purpose, and the hazard log assesses the logging component against it in normal conditions of use, each hazard with its control and the test that shows it. Three hazards keep open work: an emergency access to restricted data is not marked (H9), the Helm values carry no category map (H3), and whether a natural person stands behind a token is not recorded (H2). The interoperability component's assessment is FerroBRIDGE's. The Regulation names no method for showing performance or safety, and no conformity assessment has examined either. Tracked in [#3624](https://github.com/FerroHEALTH/FerroEHR/issues/3624), [#3655](https://github.com/FerroHEALTH/FerroEHR/issues/3655), [#3622](https://github.com/FerroHEALTH/FerroEHR/issues/3622) |
+| 1.2 | The components can be supplied and installed following the manufacturer's instructions without adversely affecting their characteristics and performance. | Partial | [The instructions for use](instructions-for-use.md); [Deployment artifacts and their documented installation](../installation/index.md) | **Gap:** The instructions for use set the production profile, which refuses to start while a separation is missing. The Helm chart and the Compose files declare no profile, so an installation that follows the quickstart instead of the instructions runs the sandbox posture, which must not hold real personal data. Tracked in [#3637](https://github.com/FerroHEALTH/FerroEHR/issues/3637) |
+| 1.3 | Interoperability, safety and security features uphold the rights of natural persons in line with the intended purpose, as set out in Chapter II. | Partial | [The rights the software can serve, and who must serve the rest](shared-responsibility.md); [One patient's access log, through a subject-scoped grant](../audit.md#retrieving-audit-records-iti-81) | **Gap:** Most Chapter II rights are served through the electronic health data access services Member States establish (Art. 4(1)) and through the deploying organisation; the shared-responsibility page says which side each falls on. Art. 11(5) asks that an access to restricted data in the vital interest of the person be logged in a clear and understandable format the person can reach; the access record does not yet mark such an emergency override. Tracked in [#3624](https://github.com/FerroHEALTH/FerroEHR/issues/3624) |
+| 1.4 | Components intended to operate with other products, including medical devices, are designed so interoperability and compatibility are reliable and secure and data can be shared with the device. | Partial | [The access log's IHE ATNA transactions and mutual TLS](../audit.md#node-authentication-iti-19-mutual-tls); [Medical device purposes are outside the intended purpose](intended-purpose.md#what-the-intended-purpose-excludes) | **Gap:** The logging component works with other products through IHE ATNA: ITI-20 feeds, ITI-81 retrieval, ITI-19 mutual TLS. The syslog feed ships with UDP transport when switched on, which delivers no record reliably; TLS syslog and the outbox-driven FHIR feed are the reliable choices, and the instructions for use name them. FerroEHR claims no interoperability with a medical device; a device manufacturer that claims it carries Art. 27(1). |
 
 ### 2. Requirements for interoperability
 
 | # | Requirement (our paraphrase) | Status | Evidence | Notes |
 |---|---|---|---|---|
-| 2.1 | A system that stores or intermediates personal electronic health data provides an interface giving access to it in the European electronic health record exchange format, through the European interoperability software component. | Open question | [Which priority categories round-trip through the FHIR façade](../beyond-core/fhir.md#the-ehds-priority-categories-and-what-round-trips) | **Question:** The exchange format waits on the Article 36 implementing acts; the FHIR façade's round trips per priority category are recorded, and the profile mappings that would carry the format belong to FerroBRIDGE. Tracked in [#3171](https://github.com/FerroHEALTH/FerroEHR/issues/3171), [#3206](https://github.com/FerroHEALTH/FerroEHR/issues/3206) |
-| 2.2 | Such a system can receive personal electronic health data in that format, through the same component. | Open question | — | **Question:** Receiving the exchange format waits on the same Article 36 acts as providing it. Tracked in [#3171](https://github.com/FerroHEALTH/FerroEHR/issues/3171) |
-| 2.3 | A system designed to provide access to personal electronic health data can receive it in that format, through the same component. | Open question | — | **Question:** The same open question as 2.2: the format is not yet fixed. Tracked in [#3171](https://github.com/FerroHEALTH/FerroEHR/issues/3171) |
-| 2.4 | A system that lets a user enter structured personal electronic health data allows entry with enough granularity to provide it in the exchange format. | Partial | [Templates and the archetype-constrained entry model](../templates-validation.md) | **Gap:** openEHR templates constrain entry to the archetype's granularity, which is finer than any exchange format is likely to require. That the granularity SUFFICES for the European format cannot be shown until the format is set by implementing act. |
-| 2.5 | The components include no feature that prohibits, restricts or unduly burdens authorised access, sharing or permitted use. | Shipped | [The query surface over the whole stored record](../querying-aql.md); [Authorisation refuses or permits; it adds no commercial gate](../security.md) | — |
+| 2.1 | A system that stores or intermediates personal electronic health data provides an interface giving access to it in the European electronic health record exchange format, through the European interoperability software component. | Open question | [The interoperability component is FerroBRIDGE's part of the system](intended-purpose.md#what-the-intended-purpose-excludes) | **Question:** This requirement is carried by FerroBRIDGE, which ships the interoperability component of the EHR system and reads FerroEHR over ITS-REST. The exchange format is set by implementing acts under Art. 15(1) that have not been adopted; the two EHDS implementing acts adopted so far, 2026/2083 (Art. 23) and 2026/2099 (Art. 16), set neither the format nor the Art. 36 common specifications. Tracked in [#3080](https://github.com/FerroHEALTH/FerroEHR/issues/3080) |
+| 2.2 | Such a system can receive personal electronic health data in that format, through the same component. | Open question | — | **Question:** Carried by FerroBRIDGE, and waiting on the same Art. 15(1) implementing acts as 2.1. Tracked in [#3080](https://github.com/FerroHEALTH/FerroEHR/issues/3080) |
+| 2.3 | A system designed to provide access to personal electronic health data can receive it in that format, through the same component. | Open question | — | **Question:** Carried by FerroBRIDGE, and waiting on the same Art. 15(1) implementing acts as 2.1. Tracked in [#3080](https://github.com/FerroHEALTH/FerroEHR/issues/3080) |
+| 2.4 | A system that lets a user enter structured personal electronic health data allows entry with enough granularity to provide it in the exchange format. | Partial | [Templates and the archetype-constrained entry model](../templates-validation.md) | **Gap:** Clinical applications enter structured data through the REST API against operational templates, which constrain it to the archetype's granularity, finer than an exchange format is likely to need. That the granularity suffices cannot be shown until the Art. 15(1) implementing acts set the format's datasets. |
+| 2.5 | The components include no feature that prohibits, restricts or unduly burdens authorised access, sharing or permitted use. | Shipped | [The re-assessment against the authorisation defaults](claims-review.md#annex-ii-25-re-assessed); [The query surface over the whole stored record](../querying-aql.md); [Authorisation refuses or permits; it adds no commercial gate](../security.md) | — |
 | 2.6 | The components include no feature that prohibits, restricts or unduly burdens exporting the data in order to replace the system with another product. | Shipped | [Whole-repository dump and load](../operations-admin-apis.md); [EHR-Extract export](../beyond-core/messaging.md) | — |
 
 ### 3. Requirements for security and logging
 
 | # | Requirement (our paraphrase) | Status | Evidence | Notes |
 |---|---|---|---|---|
-| 3.1 | A system used by health professionals provides reliable identification and authentication of them. | Shipped | [Basic and OAuth2/OIDC authentication](../security.md) | — |
-| 3.2 | The European logging software component records, for every access event or group of events, at least the healthcare provider or other individuals who accessed the data, the specific natural person or persons who accessed it, the categories of data, the time and date, and the origin of the data. | Partial | [The five elements mapped onto fields, gaps included](../audit.md#the-ehds-logging-elements-mapped) | **Gap:** Points (a), (b), (d) and (e) are recorded: the accessing organisation beside the natural person, the time, and the origins of the served data read from the FEEDER_AUDIT provenance openEHR stamps on content, with the true distinct count beside the capped set. Point (c) is recorded through a map the deployment declares from its templates and archetypes to the Art. 14(1) priority categories; FerroEHR ships no map, so until one is declared every access is recorded unclassified. A logical delete, a CONTRIBUTION read and the EHR Extract export record carry no category. The DICOM rendering carries neither the organisation, the declared purpose, the origins nor the categories, because PS3.15 A.5 defines no element for them; the FHIR rendering carries all four. Tracked in [#3204](https://github.com/FerroHEALTH/FerroEHR/issues/3204), [#3212](https://github.com/FerroHEALTH/FerroEHR/issues/3212), [#3621](https://github.com/FerroHEALTH/FerroEHR/issues/3621) |
+| 3.1 | A system used by health professionals provides reliable identification and authentication of them. | Partial | [Basic and OAuth2/OIDC authentication](../security.md#authentication) | **Gap:** FerroEHR verifies a token's signature, issuer, audience and roles, and identifies the professional through the deploying organisation's identity provider. It reads no authentication assurance level, and a token may name a client application rather than a natural person. For cross-border exchange, Implementing Regulation (EU) 2026/2099 Art. 6(3) binds the entity each Member State lists to authenticate the professional at assurance level substantial, high from 26 March 2032; that entity is not the EHR system. Tracked in [#3622](https://github.com/FerroHEALTH/FerroEHR/issues/3622) |
+| 3.2 | The European logging software component records, for every access event or group of events, at least the healthcare provider or other individuals who accessed the data, the specific natural person or persons who accessed it, the categories of data, the time and date, and the origin of the data. | Partial | [The five elements mapped onto fields, gaps included](../audit.md#the-ehds-logging-elements-mapped); [The category map a deployment declares](../installation/config-audit.md#auditcategories) | **Gap:** Points (a), (d) and (e) are recorded: the accessing organisation, the time, and the origins of the served data read from the FEEDER_AUDIT provenance openEHR stamps on content, with the true distinct count beside the capped set. Point (b) records the authenticated principal, which is a client application when the token names no person. Point (c) is recorded through the `[audit.categories]` map the deployment declares from its templates and archetypes to the Art. 14(1) priority categories; FerroEHR ships no map, so until one is declared every access is recorded unclassified. Records in the demographic domain carry no category, because no priority category lives there. The FHIR rendering of a read or a query carries the origins of the served data. The DICOM rendering carries neither the organisation, the declared purpose, the origins nor the categories, because PS3.15 A.5 defines no element for them. Tracked in [#3622](https://github.com/FerroHEALTH/FerroEHR/issues/3622) |
 | 3.3 | The components include tools or mechanisms to review and analyse the log data, or support connecting external software that does. | Shipped | [Audit retrieval (IHE ATNA ITI-81) and the syslog and FHIR feeds](../audit.md) | — |
-| 3.4 | Components that store personal electronic health data support different retention periods and access rights that take the origin and category of the data into account. | Partial | [Per-EHR access control and the audit retention setting](../security.md); [Retention periods keyed on a priority category](retention.md#keying-a-period-on-a-priority-category) | **Gap:** Access rights are per EHR, per role and per attribute, and audit retention is configurable, with a floor of three years in every EU Member State (Art. 9(2)). A retention period can be keyed on the priority CATEGORY of clinical data, an unclassified object taking the longest period for its kind. Retention that varies by the ORIGIN of clinical data is not implemented; the archival tier moves records without expiring them. Tracked in [#3621](https://github.com/FerroHEALTH/FerroEHR/issues/3621) |
+| 3.4 | Components that store personal electronic health data support different retention periods and access rights that take the origin and category of the data into account. | Partial | [Retention periods keyed on a priority category](retention.md#keying-a-period-on-a-priority-category); [The access-log horizon in calendar years, and its floors](../installation/config-audit.md#auditstore-the-local-audit-record-repository); [Access rights per EHR, per role and per template](../security.md#abac-attribute-based-fine-grained) | **Gap:** A retention period can be keyed on the priority category of clinical content, through the category map the deployment declares, and an unclassified object takes the longest period configured for its kind. The access log's horizon is set in calendar years (`retention_years`), with a three-year floor in every EU Member State (Art. 9(2)) and a longer national floor where one applies. Access rights can be keyed on the template through ABAC; the category is not itself an authorisation attribute. Neither retention nor access rights take the ORIGIN of the data into account, and the archival tier moves records without expiring them. |
 
-## Open questions
+## The position this page rests on
 
-These decide whether Chapter III applies to a given deployment at all, and to
-whom. They are questions this project has not answered, stated as questions.
+Cadasto B.V. decided these on 2026-10-06. They answer the questions earlier
+versions of this page left open.
 
-- Who is the manufacturer of a FerroEHR deployment? FerroEHR is source-available software, not a product placed on the market. Article 26(2) treats an EHR system manufactured and used within a health institution, and one offered as a service, as put into service — which puts the manufacturer's duties on the party doing that rather than on the project. Tracked in [#3168](https://github.com/FerroHEALTH/FerroEHR/issues/3168).
-- Article 25(2) excludes general purpose software used in a healthcare environment from Chapter III. A clinical data repository is not general purpose software, so the exclusion is unlikely to apply, but the line has not been drawn by guidance yet. Tracked in [#3168](https://github.com/FerroHEALTH/FerroEHR/issues/3168).
-- The European electronic health record exchange format is set by implementing acts under Article 36 that have not been adopted. Until they are, requirements 2.1 to 2.3 name a format with no content, and what the interoperability component must emit cannot be built to a specification. Tracked in [#3171](https://github.com/FerroHEALTH/FerroEHR/issues/3171).
+- **Cadasto B.V. is the manufacturer of each tagged release.** Each tagged release (the binaries, the OCI images, the Helm chart and the source archive) is one product Cadasto B.V. places on the market. A deployment that an organisation runs for itself puts that product into service; it does not make the deploying organisation the manufacturer. Cadasto B.V. may also host FerroEHR as a service for another organisation; Art. 26(2) treats an EHR system "offered as a service" as put into service, and Cadasto B.V. is then both the manufacturer and the operator. ([#3606](https://github.com/FerroHEALTH/FerroEHR/issues/3606))
+- **The EHR system is FerroEHR and FerroBRIDGE together.** FerroEHR ships the European logging software component (Annex II 3), FerroBRIDGE the European interoperability software component (Annex II 2.1 to 2.3). The two are independent of each other (Art. 2(2)(n) and (o), Art. 30(1)(b)) because they are separate products that meet only over ITS-REST. The technical documentation and the declaration of conformity name the pair; FerroBRIDGE declares the interoperability component's requirements, FerroEHR the logging component's and the system-level ones of Annex II 1. ([#3606](https://github.com/FerroHEALTH/FerroEHR/issues/3606))
+- **One documentation set for the EHDS and the CRA.** From 11 December 2027 one technical documentation set, one EU declaration of conformity and one CE marking cover both acts: Article 104 of this Regulation inserts CRA Art. 32(5a), which routes the CRA's Annex I conformity through the conformity assessment procedure of this Chapter, and replaces CRA Art. 31(3) with a single set of technical documentation. ([#3616](https://github.com/FerroHEALTH/FerroEHR/issues/3616))
+- **The general-purpose exclusion does not apply.** Article 25(2) excludes general purpose software used in a healthcare environment from this Chapter. FerroEHR is intended to store the health records of a healthcare provider, which is the use Art. 2(2)(k) names, so Cadasto B.V. treats it as an EHR system. ([#3606](https://github.com/FerroHEALTH/FerroEHR/issues/3606))
+
+## Questions for counsel
+
+Nothing in this repository answers these. They are stated as questions until
+counsel has answered them.
+
+- Does a deployment that modifies the source and puts the result into service become a manufacturer itself (Art. 34 of this Regulation; CRA Art. 21 and 22)?
+- What is the scope of the Art. 35 register of economic operators supplied: does a download under the public licence supply an economic operator?
+- Does CRA Art. 13(10), which lets a manufacturer patch only the latest version when earlier versions' users get it free of charge, hold for commercial licensees under BUSL-1.1? Tracked in [#3647](https://github.com/FerroHEALTH/FerroEHR/issues/3647).
+- Is a deployment Cadasto B.V. hosts as a service remote data processing outside the CRA's product scope (CRA recitals 11 and 12), and is Cadasto B.V. then an essential or important entity under NIS2, for example as a managed service provider?
+- Is FerroEHR an important product with digital elements under CRA Annex III and Implementing Regulation (EU) 2025/2392, which decides the conformity assessment route for the CRA requirements?
+
+## The Cyber Resilience Act
+
+FerroEHR is also a product with digital elements under Regulation (EU)
+2024/2847. Its reporting duties apply now, and from 11 December 2027 the CRA's
+essential requirements are assessed through this Regulation's Chapter III
+procedure, in one technical documentation set and one declaration. The
+[Cyber Resilience Act](cra.md) page states the position.
 
 ## Related
 
-- [Technical documentation readiness](technical-documentation.md) — the Annex
-  III elements, and what exists for each.
-- [Shared responsibility](shared-responsibility.md) — which duties the
+- [Technical documentation](technical-documentation.md): the Annex III
+  elements, and the file of the documentation tree that holds each.
+- [Information sheet](information-sheet.md) and
+  [instructions for use](instructions-for-use.md): what accompanies each
+  release (Article 30(1)(d), Article 38).
+- [Shared responsibility](shared-responsibility.md): which duties the
   software can carry and which belong to the deployment.
-- [Control matrix](control-matrix.md) — the legal controls the tracker
+- [Control matrix](control-matrix.md): the legal controls the tracker
   declares, generated from the tracker.

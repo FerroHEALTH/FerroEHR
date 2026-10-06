@@ -64,6 +64,7 @@
 
 pub mod access_context;
 pub mod categories;
+pub mod chain_check;
 pub mod codes;
 pub mod config;
 pub mod event;
@@ -253,6 +254,53 @@ impl FerroEhrService {
             .map(|sender| sender.categories().classify(content))
     }
 
+    /// The content identities an access record of `vo_ids` is classified by:
+    /// each object's newest version that carries content, so a container read
+    /// or a logical delete names the data it addresses (EHDS Annex II 3.2(c),
+    /// `docs/law/eu/ehds/text.html`).
+    ///
+    /// Empty without a reading when auditing is off, because no record will
+    /// carry it.
+    ///
+    /// # Errors
+    /// [`SmError`] when the read fails.
+    pub async fn audit_content_of_objects(
+        &self,
+        vo_ids: &[crate::ids::VoId],
+    ) -> Result<Vec<categories::ContentIds>, SmError> {
+        if !self.audit_enabled() {
+            return Ok(Vec::new());
+        }
+        let served = crate::storage::version_repo::read::content_of_objects(&self.pool, vo_ids)
+            .await
+            .map_err(crate::service::error::ServiceError::from)?;
+        Ok(served.iter().map(content_ids).collect())
+    }
+
+    /// The content identities a CONTRIBUTION read is classified by: those of
+    /// the versions it committed, each logical delete read through to the
+    /// version it deleted.
+    ///
+    /// Empty without a reading when auditing is off.
+    ///
+    /// # Errors
+    /// [`SmError`] when the read fails.
+    pub async fn audit_content_of_contribution(
+        &self,
+        contribution_id: uuid::Uuid,
+    ) -> Result<Vec<categories::ContentIds>, SmError> {
+        if !self.audit_enabled() {
+            return Ok(Vec::new());
+        }
+        let served = crate::storage::version_repo::read::content_of_contribution(
+            &self.pool,
+            contribution_id,
+        )
+        .await
+        .map_err(crate::service::error::ServiceError::from)?;
+        Ok(served.iter().map(content_ids).collect())
+    }
+
     /// Whether the local Audit Record Repository is available (the store is
     /// wired), i.e. the ITI-81 retrieval surface can be served.
     #[must_use]
@@ -283,4 +331,15 @@ impl FerroEhrService {
             crate::service::error::internal_fault("search the audit record repository", &e)
         })
     }
+}
+
+/// The classifier's identities of one stored content tuple.
+fn content_ids(
+    served: &crate::storage::version_repo::read::ServedContent,
+) -> categories::ContentIds {
+    categories::ContentIds::of_kind(
+        &served.kind,
+        served.template_id.clone(),
+        served.root_archetype.clone(),
+    )
 }

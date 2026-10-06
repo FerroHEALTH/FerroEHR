@@ -21,6 +21,7 @@
 use std::path::PathBuf;
 
 use argon2::{Algorithm, Params, PasswordHash};
+use serde::de::IgnoredAny;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -202,6 +203,49 @@ pub enum AuthConfigError {
         /// issuer discovery). Not named `source`: `thiserror` reads a field of
         /// that name as the error's `Error::source`.
         key_source: &'static str,
+    },
+    /// `auth.oidc.jwks_json` is not a JWK Set document.
+    ///
+    /// Only the failure class and position are kept: the parser's own message
+    /// can quote the offending value, which may be key material.
+    #[error(
+        "auth.oidc.jwks_json is not a JWK Set (RFC 7517 §5): {category:?} error at line {line}, \
+         column {column}"
+    )]
+    JwksUnparsable {
+        /// What kind of failure the parser reported.
+        category: serde_json::error::Category,
+        /// The 1-based line of the failure.
+        line: usize,
+        /// The 1-based column of the failure.
+        column: usize,
+    },
+    /// `auth.oidc.jwks_json` carries a symmetric (`kty: "oct"`) key.
+    #[error(
+        "auth.oidc.jwks_json key #{index} (kid {kid:?}) is a symmetric key (kty \"oct\", \
+         RFC 7517 §4.1, RFC 7518 §6.4): a static JWKS holds public keys that verify \
+         RS*/ES*/PS* only, and a symmetric key is a secret; configure it as \
+         auth.oidc.hmac_secret instead"
+    )]
+    JwksSymmetricKey {
+        /// The zero-based position of the key in the set's `keys` array.
+        index: usize,
+        /// The key's `kid`, a public identifier, when it has one.
+        kid: Option<String>,
+    },
+    /// `auth.oidc.jwks_json` carries private key material.
+    #[error(
+        "auth.oidc.jwks_json key #{index} (kid {kid:?}) carries the private-key member \
+         {member:?} (RFC 7518 §6.2.2, §6.3.2, RFC 8037 §2): a verifier needs the public key \
+         only, so private material is never configured here"
+    )]
+    JwksPrivateKeyMaterial {
+        /// The zero-based position of the key in the set's `keys` array.
+        index: usize,
+        /// The key's `kid`, a public identifier, when it has one.
+        kid: Option<String>,
+        /// The name of the first private-key member found (never its value).
+        member: &'static str,
     },
     /// `auth.oidc.algorithms` names `none` — an unsigned token.
     #[error(
@@ -435,6 +479,10 @@ pub struct OidcConfig {
     /// Exactly one of the pair may be set; the loader reads and trims the file.
     pub hmac_secret_file: Option<PathBuf>,
     /// A static JWKS document (JSON). Preferred over discovery when present.
+    ///
+    /// Public verification material only: boot refuses a set carrying a
+    /// symmetric key or a private-key member, so the value is shown in clear
+    /// on every configuration rendering.
     pub jwks_json: Option<String>,
     /// File-based indirection for [`Self::jwks_json`] — a JWKS is a file-shaped
     /// blob that never belonged in an env var. The loader reads the file.
@@ -459,6 +507,67 @@ pub struct OidcConfig {
     /// the issuer returns. Successfully fetched key material keeps its own,
     /// longer lifetime and is unaffected.
     pub negative_cache_ttl_seconds: u64,
+}
+
+/// The members of a JWK Set document [`OidcConfig::validate_jwks`] judges
+/// (RFC 7517 §5); every other member is ignored.
+#[derive(Deserialize)]
+struct JwkSetShape {
+    /// The `keys` array.
+    keys: Vec<JwkShape>,
+}
+
+/// The members of one JWK [`OidcConfig::validate_jwks`] judges: the key type,
+/// the key id, and the presence (never the value) of every private-key member.
+#[derive(Deserialize)]
+struct JwkShape {
+    /// `kty` (RFC 7517 §4.1), compared case-sensitively.
+    kty: String,
+    /// `kid` (RFC 7517 §4.5).
+    #[serde(default)]
+    kid: Option<String>,
+    /// `d`: the EC, RSA or OKP private key (RFC 7518 §6.2.2.1, §6.3.2.1; RFC 8037 §2).
+    #[serde(default)]
+    d: Option<IgnoredAny>,
+    /// `p`: the RSA first prime factor (RFC 7518 §6.3.2.2).
+    #[serde(default)]
+    p: Option<IgnoredAny>,
+    /// `q`: the RSA second prime factor (RFC 7518 §6.3.2.3).
+    #[serde(default)]
+    q: Option<IgnoredAny>,
+    /// `dp`: the RSA first factor CRT exponent (RFC 7518 §6.3.2.4).
+    #[serde(default)]
+    dp: Option<IgnoredAny>,
+    /// `dq`: the RSA second factor CRT exponent (RFC 7518 §6.3.2.5).
+    #[serde(default)]
+    dq: Option<IgnoredAny>,
+    /// `qi`: the RSA first CRT coefficient (RFC 7518 §6.3.2.6).
+    #[serde(default)]
+    qi: Option<IgnoredAny>,
+    /// `oth`: the RSA other primes info (RFC 7518 §6.3.2.7).
+    #[serde(default)]
+    oth: Option<IgnoredAny>,
+    /// `k`: the symmetric key value (RFC 7518 §6.4.1).
+    #[serde(default)]
+    k: Option<IgnoredAny>,
+}
+
+impl JwkShape {
+    /// Returns the name of the first private-key member the key carries.
+    fn private_member(&self) -> Option<&'static str> {
+        [
+            ("d", self.d.is_some()),
+            ("p", self.p.is_some()),
+            ("q", self.q.is_some()),
+            ("dp", self.dp.is_some()),
+            ("dq", self.dq.is_some()),
+            ("qi", self.qi.is_some()),
+            ("oth", self.oth.is_some()),
+            ("k", self.k.is_some()),
+        ]
+        .into_iter()
+        .find_map(|(name, present)| present.then_some(name))
+    }
 }
 
 /// The largest accepted [`OidcConfig::clock_skew_leeway_seconds`] (5 minutes) —
@@ -538,6 +647,43 @@ impl OidcConfig {
             }
         }
         self.validate_algorithms()?;
+        self.validate_jwks()?;
+        Ok(())
+    }
+
+    /// Refuses a static JWK Set that carries secret key material.
+    ///
+    /// The JWKS key source verifies `RS*`/`ES*`/`PS*` only (see
+    /// [`Self::validate_algorithms`]), so it needs public keys alone. A
+    /// symmetric key (`kty: "oct"`, RFC 7518 §6.4) or a private-key member
+    /// (RFC 7518 §6.2.2, §6.3.2; RFC 8037 §2) could never verify a token here
+    /// and is a secret, so it is refused at boot; what remains is public
+    /// verification material that every configuration rendering shows in clear.
+    fn validate_jwks(&self) -> Result<(), AuthConfigError> {
+        let Some(jwks) = &self.jwks_json else {
+            return Ok(());
+        };
+        let set: JwkSetShape =
+            serde_json::from_str(jwks).map_err(|e| AuthConfigError::JwksUnparsable {
+                category: e.classify(),
+                line: e.line(),
+                column: e.column(),
+            })?;
+        for (index, key) in set.keys.into_iter().enumerate() {
+            if key.kty == "oct" {
+                return Err(AuthConfigError::JwksSymmetricKey {
+                    index,
+                    kid: key.kid,
+                });
+            }
+            if let Some(member) = key.private_member() {
+                return Err(AuthConfigError::JwksPrivateKeyMaterial {
+                    index,
+                    kid: key.kid,
+                    member,
+                });
+            }
+        }
         Ok(())
     }
 
@@ -667,6 +813,80 @@ mod tests {
         };
         assert!(hmac_ok.validate().is_ok());
         assert!(valid_oidc().validate().is_ok(), "RS256 + discovery");
+    }
+
+    /// RFC 7517 §4.1 / RFC 7518 §6.4: a symmetric key in the static JWKS is a
+    /// secret the public-key source can never use, so boot refuses it before
+    /// any rendering could print it.
+    #[test]
+    fn a_symmetric_key_in_jwks_json_is_refused_at_boot() {
+        let secret_k = "c3VwZXItc2VjcmV0LXN5bW1ldHJpYy1rZXktbWF0ZXJpYWw";
+        let cfg = OidcConfig {
+            jwks_json: Some(format!(
+                r#"{{"keys":[{{"kty":"oct","kid":"shared","k":"{secret_k}"}}]}}"#
+            )),
+            ..valid_oidc()
+        };
+        let err = cfg.validate().expect_err("an oct key must be refused");
+        assert!(matches!(
+            err,
+            AuthConfigError::JwksSymmetricKey { index: 0, .. }
+        ));
+        assert!(!err.to_string().contains(secret_k), "{err}");
+
+        let auth = AuthConfig {
+            oidc: Some(cfg),
+            ..AuthConfig::default()
+        };
+        assert!(
+            auth.validate().is_err(),
+            "the [auth] section refuses it too"
+        );
+    }
+
+    /// RFC 7518 §6.3.2: a private RSA member makes the key a private key, which
+    /// a verifier never needs; a public key set boots.
+    #[test]
+    fn private_key_material_in_jwks_json_is_refused_and_public_keys_boot() {
+        let private = OidcConfig {
+            jwks_json: Some(
+                r#"{"keys":[{"kty":"RSA","kid":"k1","n":"AQAB","e":"AQAB","d":"cHJpdmF0ZQ"}]}"#
+                    .to_owned(),
+            ),
+            ..valid_oidc()
+        };
+        let err = private
+            .validate()
+            .expect_err("a private member must be refused");
+        assert!(matches!(
+            err,
+            AuthConfigError::JwksPrivateKeyMaterial { member: "d", .. }
+        ));
+        assert!(!err.to_string().contains("cHJpdmF0ZQ"), "{err}");
+
+        let public = OidcConfig {
+            jwks_json: Some(
+                r#"{"keys":[{"kty":"RSA","kid":"k1","n":"AQAB","e":"AQAB"}]}"#.to_owned(),
+            ),
+            ..valid_oidc()
+        };
+        assert!(public.validate().is_ok());
+
+        let garbage = OidcConfig {
+            jwks_json: Some("not json".to_owned()),
+            ..valid_oidc()
+        };
+        assert!(matches!(
+            garbage.validate(),
+            Err(AuthConfigError::JwksUnparsable { .. })
+        ));
+        // A parse failure never quotes the value it choked on.
+        let wrong_shape = OidcConfig {
+            jwks_json: Some(r#"{"keys":"c2VjcmV0LWtleS1tYXRlcmlhbA"}"#.to_owned()),
+            ..valid_oidc()
+        };
+        let err = wrong_shape.validate().expect_err("not a JWK Set");
+        assert!(!err.to_string().contains("c2VjcmV0"), "{err}");
     }
 
     /// RFC 8725 §3.2 / RFC 9068 §4 step 5: an unsigned token proves nothing, and

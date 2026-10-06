@@ -3,9 +3,11 @@
 
 //! The deployment profile the connected CDR declares (#3264).
 //!
-//! `GET {rest root}/status` carries `deployment: {profile, gaps, accepted}`:
-//! the profile the server was configured with (`sandbox` or `production`) and
-//! the production separations it has not made, as `snake_case` codes. A browser
+//! `GET {rest root}/status` carries `deployment: {profile}`, the profile the
+//! server was configured with (`sandbox` or `production`); the production
+//! separations it has not made (`gaps`, `accepted`, as `snake_case` codes) are
+//! served only by the authenticated `GET /management/status`, so a public
+//! document lists none and the notice then states the rule alone. A browser
 //! tab is where one deployment gets mistaken for another, so the shell states
 //! the profile it is connected to, and under `sandbox` says plainly what that
 //! means. Plain types here, the component stays thin. No openEHR spec governs

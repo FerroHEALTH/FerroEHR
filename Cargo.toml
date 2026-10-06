@@ -404,7 +404,7 @@ criterion = { version = "0.8.2", features = ["html_reports"] }
 #   cargo-llvm-cov, sccache ; linker: mold (Linux).
 #
 # Toolchain: Rust stable 1.98.1, edition 2024; the MSRV steps to 1.97 with it.
-# Nothing here uses a 1.98 feature, and the eight published crates are the only
+# Nothing here uses a 1.98 feature, and the nine published crates are the only
 # artifacts whose consumers would feel a bump (docs/VERSIONS.md §MSRV policy).
 # Database: PostgreSQL 18 (target 18.6+; 18.x is the current stable line; PG 19 in beta — do not target).
 

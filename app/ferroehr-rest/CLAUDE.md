@@ -19,13 +19,20 @@ terminology / management / event-subscription surfaces). Entry point:
 
 - **The health family is always-on and ungated** (`extensions::health`:
   `/health`, `/health/liveness`, `/health/readiness`), mounted outside the API
-  subtree — no auth, no audit, no overload shed, no config switch. The
-  `/management` surface is ops introspection only (info/prometheus/metrics/env/
-  loggers/flamegraph) and carries no health route. No openEHR spec governs
-  either — our own operational surface. `/management/flamegraph` is the
-  on-demand CPU profiler (pprof sampling → SVG; `extensions/management/
-  flamegraph.rs`, caps in `ferroehr::config::management::ProfilingConfig`) —
-  the `/flamegraph` skill documents all three profiling instruments.
+  subtree — no auth, no audit, no overload shed, no config switch — and says
+  as little as possible: readiness carries each indicator's name and status,
+  never its detail. **Everything reachable without a credential says only what
+  a client or probe needs** (owner decision 2026-10-06): the detail lives on the
+  `/management` surface behind its per-endpoint access levels —
+  `/management/health` (every indicator with its detail) and
+  `/management/status` (licence, deployment gaps, support period; the public
+  `{rest root}/status` keeps status, versions, timestamp and the deployment
+  profile only), beside info/prometheus/metrics/env/loggers/flamegraph. No
+  openEHR spec governs either — our own operational surface.
+  `/management/flamegraph` is the on-demand CPU profiler (pprof sampling →
+  SVG; `extensions/management/flamegraph.rs`, caps in
+  `ferroehr::config::management::ProfilingConfig`) — the `/flamegraph` skill
+  documents all three profiling instruments.
 
 - **The wire is the spec:** status codes, headers (`ETag`, `Location`,
   `Last-Modified`, `Prefer`, committal merge), and content negotiation

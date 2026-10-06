@@ -417,7 +417,7 @@ fn resolve_secret_files(config: &mut FerroEhrConfig, errors: &mut Vec<ConfigErro
             oidc.hmac_secret_file.take(),
             errors,
         );
-        // jwks_json is a plain (non-secret) string blob.
+        // jwks_json is public verification material; validation refuses secret keys in it.
         if let Some(path) = oidc.jwks_json_file.take() {
             if oidc.jwks_json.is_some() {
                 errors.push(ConfigError::new(

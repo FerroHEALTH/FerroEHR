@@ -88,6 +88,8 @@ pub const ATNA_AUDIT_SENT: &str = "atna_audit_sent";
 pub const ATNA_AUDIT_SEND_FAILED: &str = "atna_audit_send_failed";
 /// ATNA audit records reaped by retention.
 pub const ATNA_AUDIT_REAPED: &str = "atna_audit_reaped";
+/// Findings of the scheduled audit hash-chain verification (`kind`).
+pub const ATNA_AUDIT_CHAIN_FINDINGS: &str = "atna_audit_chain_findings";
 /// Process start time, unix seconds.
 pub const PROCESS_START_TIME: &str = "process_start_time";
 /// Build identity, always `1`, carrying `version`/`git_sha`/`rm_version`.
@@ -201,6 +203,8 @@ pub struct Metrics {
     pub atna_audit_send_failed: Counter<u64>,
     /// ATNA audit records reaped by retention.
     pub atna_audit_reaped: Counter<u64>,
+    /// Findings of the scheduled audit hash-chain verification.
+    pub atna_audit_chain_findings: Counter<u64>,
 }
 
 impl Metrics {
@@ -317,6 +321,13 @@ impl Metrics {
             atna_audit_reaped: meter
                 .u64_counter(ATNA_AUDIT_REAPED)
                 .with_description("ATNA audit records reaped by retention")
+                .build(),
+            atna_audit_chain_findings: meter
+                .u64_counter(ATNA_AUDIT_CHAIN_FINDINGS)
+                .with_description(
+                    "Findings of the scheduled audit hash-chain verification \
+                     (kind = damage | unverifiable)",
+                )
                 .build(),
         }
     }

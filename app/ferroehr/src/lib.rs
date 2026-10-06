@@ -34,6 +34,8 @@
 //!   own config gate.
 //! - [`manufacturer`] — the manufacturer every surface names, and [`report`]
 //!   — the redacted deployment report `ferroehr report` writes.
+//! - [`support`] — the support period of this release, which every identity
+//!   surface states.
 
 // Doctests are copy-paste templates: they must use `?`, never unwrap
 // (C-QUESTION-MARK, https://rust-lang.github.io/api-guidelines/documentation.html#c-question-mark).
@@ -50,6 +52,7 @@ pub mod privacy;
 pub mod report;
 pub mod service;
 pub mod storage;
+pub mod support;
 pub mod system_log;
 pub mod telemetry;
 pub mod templates;

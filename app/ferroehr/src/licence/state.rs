@@ -114,7 +114,7 @@ pub enum ConfiguredToken {
     Refused,
 }
 
-/// The public summary served on `/rest/status`. Never a refusal reason,
+/// The summary served on `/management/status`. Never a refusal reason,
 /// which can name a file system path.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct LicenceStatus {

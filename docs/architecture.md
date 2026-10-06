@@ -437,13 +437,24 @@ same licence and the same holder:
 - A deployment of an unmodified release puts that product into service; it does
   not make the deploying organisation the manufacturer. The readiness pages no
   longer say otherwise.
+- Cadasto B.V. may also host FerroEHR as a service for other organisations
+  (owner, 2026-10-06). A hosted deployment is put into service by Cadasto B.V.
+  itself (EHDS Art 26(2)), and Cadasto B.V. is then also the customer's
+  processor (GDPR Art 28). Every page states both cases, self-hosted and
+  hosted, and never assumes only one.
+- Cadasto B.V. holds ISO 9001, ISO/IEC 27001 and NEN 7510 certification (the
+  badges on <https://www.cadasto.com/>, read 2026-10-06). A certificate covers
+  Cadasto B.V.'s management system within its certified scope, never the
+  product: no page calls FerroEHR certified, and a page that relies on the
+  certification for the development process or a hosted service says so only
+  once the owner has confirmed that the scope covers it.
 
 **The EHR system is FerroEHR and FerroBRIDGE together.** EHDS Art 25(1) asks an
 EHR system to include both harmonised software components:
 
 | Component | Shipped by | Where |
 |---|---|---|
-| European logging software component (Annex II 3) | FerroEHR | `ferroehr::system_log` (the access-event model, the audit store, the DICOM and FHIR renderings, the sinks), `ferroehr-rest::system_log` (the middleware that records every API access and classifies it), the ITI-81 `GET /fhir/r4/AuditEvent` retrieval in `ferroehr-rest::extensions::fhir`, and the retention register in `ferroehr::storage::marks` |
+| European logging software component (Annex II 3) | FerroEHR | `ferroehr::system_log` (the access-event model, the audit store, the DICOM and FHIR renderings, the sinks, and `system_log::chain_check`, the scheduled verification of the store's hash chain), the audit schema migrations in `app/ferroehr/migrations/audit/`, `ferroehr-rest::system_log` (the middleware that records every API access and classifies it), the ITI-81 `GET /fhir/r4/AuditEvent` retrieval in `ferroehr-rest::extensions::fhir`, and the retention register in `ferroehr::storage::marks` |
 | European interoperability software component (Annex II 2.1 to 2.3) | FerroBRIDGE | the openEHR-to-exchange-format mappings (#3206); FerroEHR's in-tree FHIR connector is retired (#3080), and the AuditEvent route above is not part of that retirement |
 
 The two components are independent of each other (Art 2(2)(n) and (o), Art
@@ -465,9 +476,13 @@ answers them:
    licence supplies an economic operator.
 3. Whether a deployment that modifies the source and puts the result into
    service becomes a manufacturer itself (CRA Art 21 and Art 22, EHDS Art 34).
-4. Whether FerroEHR is an important product with digital elements under CRA
+4. Whether a deployment Cadasto B.V. hosts as a service is remote data
+   processing outside the CRA's product scope, and whether Cadasto B.V. is then
+   an essential or important entity under NIS2 (for example as a managed
+   service provider).
+5. Whether FerroEHR is an important product with digital elements under CRA
    Annex III and Implementing Regulation (EU) 2025/2392, which decides the
-   conformity-assessment route (#3611).
+   conformity-assessment route.
 
 ## Build state
 

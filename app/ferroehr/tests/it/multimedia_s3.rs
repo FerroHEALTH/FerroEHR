@@ -302,7 +302,7 @@ fn blob_key(status: &Value) -> String {
 async fn blob_store_round_trips_against_seaweedfs() {
     let sw = Seaweed::start().await;
     let store = BlobStore::from_params(ferroehr_ext::multimedia::store::BlobStoreParams {
-        endpoint: sw.config().endpoint.map(|e| e.expose().to_owned()),
+        endpoint: sw.config().endpoint_url().expect("endpoint"),
         bucket: sw.config().bucket,
         region: sw.config().region,
         access_key_id: None,

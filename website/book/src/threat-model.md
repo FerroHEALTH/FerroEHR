@@ -312,7 +312,8 @@ default, with optional syslog and ATX:FHIR-Feed forwarding. Refusals (`401`,
 and an unattributable denial is recorded as unattributed rather than under a
 fabricated subject. Records are **hash-chained**, so
 `SELECT * FROM audit.verify_audit_chain()` names any record that was altered
-or removed. ITI-81 is the retrieval side; ITI-19 mutual TLS is available for
+or removed, and the server runs that verification itself on a schedule
+([tamper evidence](audit.md#tamper-evidence)). ITI-81 is the retrieval side; ITI-19 mutual TLS is available for
 node authentication.
 
 **Residual risk.**
@@ -357,8 +358,10 @@ tags are signed and the tags are protected by a ruleset.
   between an idea and a released binary; the mitigation is machine enforcement
   and it is honestly recorded in
   [GOVERNANCE.md](https://github.com/FerroHEALTH/FerroEHR/blob/main/GOVERNANCE.md).
-- **Only the newest release receives fixes.** There is no maintenance branch to
-  backport to; see [SECURITY.md](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md).
+- **Fixes ship in the newest release only.** Each release is supported for
+  five years, and a fix for it arrives as a newer release; there is no
+  maintenance branch to backport to. See
+  [SECURITY.md](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions).
 
 ## What each database credential can reach
 

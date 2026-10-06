@@ -186,8 +186,15 @@ and can change:
   archetype and template constraints, so an operand under `NOT CONTAINS` or a
   predicate under `NOT` never counts. Each per-EHR record of a query carries
   the categories that EHR disclosed;
-- `EHR`, `EHR_STATUS`, the directory, item tags and revision histories are
-  recorded as `none`, by resource kind.
+- a logical delete writes no content, so it is classified by the version it
+  deleted; a `VERSIONED_COMPOSITION` read by the composition it holds;
+- a `CONTRIBUTION` read, with or without `Prefer: resolve_refs`, is classified
+  by the versions the contribution committed, a deleted version again by the
+  version it deleted;
+- an EHR Extract export is classified by every version it carried, and an
+  Extract import by the newest content of every versioned object it landed;
+- `EHR`, `EHR_STATUS`, `EHR_ACCESS`, the directory, item tags and revision
+  histories are recorded as `none`, by resource kind.
 
 An access the map cannot classify is recorded `unclassified`, with the
 template and archetype ids as evidence, and is never refused.
@@ -200,8 +207,8 @@ written to the request log, a span or a metric label. The DICOM rendering has
 no element for it (PS3.15 §A.5), so it travels in the local store and the FHIR
 export only.
 
-Three records carry no classification: a logical delete, which writes no
-content; a `CONTRIBUTION` read; and the EHR Extract export record.
+Records in the demographic domain carry no classification, because no
+priority category lives there.
 
 Element (e) asks where the DATA came from, which is not where the request came
 from. openEHR models that provenance as `FEEDER_AUDIT` on the content itself,
@@ -344,7 +351,7 @@ its own content. The chain is built by the database itself, not by the server,
 which means it covers every writer: the per-event insert, the batched drain,
 and any statement typed by hand.
 
-Three controls sit on top of it, and they are separate on purpose:
+Four controls sit on top of it, and they are separate on purpose:
 
 - **The table refuses the ordinary rewrite paths outright.** The only permitted
   change to a stored record is the per-sink forwarding stamp; an `UPDATE` of any
@@ -371,7 +378,20 @@ Three controls sit on top of it, and they are separate on purpose:
   chain position, its id, when it was recorded) and what is wrong with it:
   content modified after it was written, records deleted with no retention
   record for the removal, or records removed from the end of the chain where no
-  successor would have noticed. Run it on a schedule and alert on any output.
+  successor would have noticed.
+- **The server runs that query itself, on a schedule.** With the local store on,
+  the check runs one minute after boot and then every
+  `[audit.store] verify_interval_seconds` (default `86400`, one day; `0` turns
+  it off). A run that finds damage logs at `ERROR`, one summary line with the
+  finding count and one line per finding (the first 20), and adds the count to
+  the `atna_audit_chain_findings` counter with `kind = "damage"`. A run that
+  cannot verify at all counts as `kind = "unverifiable"`, because a trail that
+  cannot be checked is never a pass. The latest result is the `audit_chain`
+  indicator on `GET /health/readiness`: `UP` while intact, `DOWN` with
+  the first finding when damaged, `DEGRADED` when unverifiable. It never flips
+  readiness, because the trail keeps recording while the damage is
+  investigated. Alert on the counter or on that component, and use the query
+  above to see every finding. Each replica runs its own check.
 
 > [!IMPORTANT]
 > This is **detection, not prevention**, and the boundary is worth stating

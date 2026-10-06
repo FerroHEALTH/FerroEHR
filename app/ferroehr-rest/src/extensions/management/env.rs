@@ -24,13 +24,12 @@ use serde_json::Value;
 
 /// Substrings (case-insensitive) that mark a JSON key as naming a secret value.
 /// Any value under such a key is replaced with `MASK`. `jwks_json` is listed
-/// whole because an inline key set can carry a symmetric key, while `jwks_uri`
-/// and the `token_*` URLs are endpoints, not secrets.
+/// whole as defence in depth (boot already refuses a symmetric or private key
+/// in it), while `jwks_uri` and the `token_*` URLs are endpoints, not secrets.
 const SECRET_KEY_MARKERS: &[&str] = &[
     "password",
     "secret",
     "hmac",
-    "jwks_json",
     "credential",
     "apikey",
     "api_key",
@@ -90,7 +89,7 @@ mod tests {
         let text = out.to_string();
         assert!(!text.contains("$argon2id$secret"), "hash leaked: {text}");
         assert!(!text.contains("topsecret"), "hmac leaked: {text}");
-        assert!(!text.contains("{...}"), "jwks leaked: {text}");
+        assert_eq!(out["auth"]["oidc"]["jwks_json"], "{...}");
         assert_eq!(out["auth"]["basic"]["users"][0]["username"], "alice");
         assert_eq!(out["auth"]["basic"]["users"][0]["password_hash"], MASK);
         assert_eq!(out["auth"]["oidc"]["hmac_secret"], MASK);

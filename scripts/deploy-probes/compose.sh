@@ -115,9 +115,11 @@ probes_shipped_config_boots() {
   probe_done
 
   probe "P-BOOT-02" "working" "image" "-" \
-    "the health family answers without authentication"
+    "the health family answers without authentication, statuses only"
   assert_eq "200" "$(http_code "$CDR/health/liveness")"
   assert_eq "200" "$(http_code "$CDR/health/readiness")"
+  assert_not_contains "$(curl -s "$CDR/health/readiness")" '"detail"' \
+    "the public probe names each indicator and its status; the detail is /management/health"
   probe_done
 }
 
@@ -136,6 +138,12 @@ probes_deployment_posture() {
   assert_contains "$status" '"deployment"' "the posture block is served"
   assert_contains "$status" '"profile":"sandbox"' \
     "the quickstart declares the sandbox profile"
+  assert_not_contains "$status" '"gaps"' \
+    "the open separations are weak points: the public document names none of them"
+  assert_eq "401" "$(http_code "$CDR/management/status")" \
+    "the full posture needs a credential"
+  assert_contains "$(curl -s -u "$BASIC" "$CDR/management/status")" '"gaps"' \
+    "the authenticated status document carries the open separations"
   probe_done
 
   # The quickstart runs all four domains on one database and applies its own
@@ -369,6 +377,8 @@ probes_health_broken() {
       "liveness must be process-local — restarting cannot fix a dependency"
     local body; body="$(curl -s "$CDR/health/readiness")"
     assert_contains "$body" '"status":"DOWN"' "readiness must name the failing component"
+    assert_contains "$(curl -s -u "$BASIC" "$CDR/management/health")" '"detail"' \
+      "the management view must say why the component is down"
   else
     probe_fail "readiness 503 within 60s" "$(curl -s -o /dev/null -w '%{http_code}' "$CDR/health/readiness")" \
       "a readiness probe that never fails cannot remove a pod from rotation"

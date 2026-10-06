@@ -50,4 +50,5 @@ LABEL org.opencontainers.image.title="FerroEHR PostgreSQL" \
       org.opencontainers.image.licenses="BUSL-1.1 AND PostgreSQL" \
       org.opencontainers.image.base.name="postgres:18.6" \
       org.opencontainers.image.base.digest="sha256:5a5a84b19854a9ffaa54082c166ff4ec27473a361e496e5ea167f298f2da9722" \
-      eu.ferroehr.image.manufacturer="Cadasto B.V., Comeniusstraat 2d, 1817 MS Alkmaar, The Netherlands, info@cadasto.com"
+      eu.ferroehr.image.manufacturer="Cadasto B.V., Comeniusstraat 2d, 1817 MS Alkmaar, The Netherlands, info@cadasto.com" \
+      eu.ferroehr.image.accompanying-documents="Information sheet and instructions for use: the assets ferroehr-v<version>-information-sheet.md and ferroehr-v<version>-instructions-for-use.md of https://github.com/FerroHEALTH/FerroEHR/releases/tag/v<version>, where <version> is this image's org.opencontainers.image.version"

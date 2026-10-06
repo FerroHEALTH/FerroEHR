@@ -4,7 +4,9 @@ The application core (five app crates, zero re-exports). Top-level modules
 (`src/lib.rs`): `service` (the SM service layer), `storage`, `aql` (the query
 engine), `versioning` (change control + VERSION `signature` signing),
 `validation`, `templates`, `db` (sqlx pools + migrations), `config` (the full
-`ferroehr.toml` tree), `telemetry`, `system_log` (IHE ATNA), `privacy`,
+`ferroehr.toml` tree), `telemetry`, `system_log` (IHE ATNA, including the
+scheduled hash-chain check `chain_check`), `support` (the release's support
+period, embedded from the changelog by `build.rs`), `privacy`,
 `licence`, `ids`, `extensions`, `banner`, `manufacturer` (the one source of
 the manufacturer every surface names; the viewer compiles this file through
 `#[path]`, so it stays dependency-free but for `serde`), `report` (the

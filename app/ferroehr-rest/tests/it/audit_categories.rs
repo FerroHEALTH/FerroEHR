@@ -153,6 +153,7 @@ async fn app(
             retention_days: 0,
             retention_years: None,
             sgb_v_309_controller: false,
+            verify_interval_seconds: 0,
         },
         categories,
         ..AuditConfig::default()
@@ -441,6 +442,99 @@ async fn a_flat_write_is_classified_by_its_template() {
     assert_eq!(write.categories, json!(["patient-summary"]));
     assert_eq!(write.basis.as_deref(), Some("template"));
     assert_eq!(write.evidence, json!([IPS]));
+}
+
+/// Commit a canonical composition; returns its full version uid.
+async fn commit_version(app: &Router, ehr: &str, body: &Value) -> String {
+    let (status, headers, text) = send(
+        app,
+        Request::post(format!("{BASE}/ehr/{ehr}/composition"))
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from(body.to_string()))
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "commit: {text}");
+    etag(&headers)
+}
+
+/// A logical delete writes no content, so its record carries the categories of
+/// the version it deleted (#3653).
+#[tokio::test]
+async fn a_logical_delete_is_classified_by_the_version_it_deletes() {
+    let (_db, pool, app, ehr) = app(map(&json!({})), Observability::default()).await;
+    let uid = commit_version(&app, &ehr, &composition(ENCOUNTER)).await;
+    let (status, _, text) = send(
+        &app,
+        Request::delete(format!("{BASE}/ehr/{ehr}/composition/{uid}"))
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "delete: {text}");
+
+    let delete = classified(&pool, "composition_delete", "composition").await;
+    assert_eq!(delete.categories, json!(["test-results"]));
+    assert_eq!(delete.basis.as_deref(), Some("archetype"));
+}
+
+/// A `VERSIONED_COMPOSITION` read is classified by the COMPOSITION it holds
+/// (#3653).
+#[tokio::test]
+async fn a_versioned_composition_read_is_classified_by_its_composition() {
+    let (_db, pool, app, ehr) = app(map(&json!({})), Observability::default()).await;
+    let vo = commit(&app, &ehr, &composition(REPORT)).await;
+    let (status, _, text) = send(
+        &app,
+        Request::get(format!("{BASE}/ehr/{ehr}/versioned_composition/{vo}"))
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "versioned composition: {text}");
+
+    let read = classified(&pool, "versioned_composition_get", "composition").await;
+    assert_eq!(read.categories, json!(["imaging"]));
+    assert_eq!(read.basis.as_deref(), Some("archetype"));
+}
+
+/// A CONTRIBUTION read is classified by the versions it committed, with and
+/// without `Prefer: resolve_refs` (#3653).
+#[tokio::test]
+async fn a_contribution_read_is_classified_by_its_versions() {
+    let templates = json!({ IPS: ["patient-summary"] });
+    let (_db, pool, app, ehr) = app(map(&templates), Observability::default()).await;
+    let uid = commit_version(&app, &ehr, &ips_composition()).await;
+    let vo = uid.split("::").next().unwrap().to_owned();
+    let (status, _, text) = send(
+        &app,
+        Request::get(format!(
+            "{BASE}/ehr/{ehr}/versioned_composition/{vo}/version/{uid}"
+        ))
+        .body(Body::empty())
+        .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "version envelope: {text}");
+    let envelope: Value = serde_json::from_str(&text).unwrap();
+    let contribution = envelope["contribution"]["id"]["value"]
+        .as_str()
+        .expect("the version names its contribution")
+        .to_owned();
+
+    for prefer in [None, Some("return=representation, resolve_refs")] {
+        let mut request = Request::get(format!("{BASE}/ehr/{ehr}/contribution/{contribution}"));
+        if let Some(prefer) = prefer {
+            request = request.header("prefer", prefer);
+        }
+        let (status, _, text) = send(&app, request.body(Body::empty()).unwrap()).await;
+        assert_eq!(status, StatusCode::OK, "contribution {prefer:?}: {text}");
+
+        let read = classified(&pool, "contribution_get", "contribution").await;
+        assert_eq!(read.categories, json!(["patient-summary"]), "{prefer:?}");
+        assert_eq!(read.basis.as_deref(), Some("template"), "{prefer:?}");
+        assert_eq!(read.evidence, json!([IPS]), "{prefer:?}");
+    }
 }
 
 /// A tracing layer recording every span field and event field it sees.

@@ -3,9 +3,10 @@
 
 //! The CDR's **operational surfaces** the viewer consumes.
 //!
-//! The public health family (`/health/readiness`) and the CDR's management
-//! surface (build info, metric views, the redacted effective config, the live
-//! log-filter control).
+//! The CDR's dependency health (`/management/health`, or the public
+//! `/health/readiness` statuses when that endpoint is not offered) and its
+//! management surface (build info, metric views, the redacted effective
+//! config, the live log-filter control).
 //!
 //! NOTE: no openEHR spec governs any of this — our own operational surface /
 //! product extension. The vendored ITS-REST System API defines exactly one
@@ -15,8 +16,11 @@
 //!
 //! **Two health readers would be one too many.** The application shell's status
 //! pill polls the product status document (`{rest root}/status`); this module
-//! reads the *other* health contract, `/health/readiness` — the dependency
-//! indicators — and nothing else re-reads either claim.
+//! reads the *other* health contract, the dependency indicators, and nothing
+//! else re-reads either claim. The CDR serves the indicators twice: each one's
+//! status on the public `/health/readiness`, and with its detail on the
+//! authenticated `/management/health`. [`fetch_readiness`] reads the detailed
+//! one and falls back to the statuses only when it is not offered.
 //!
 //! **Probe-and-hide.** The management surface is off by default and each of its
 //! endpoints is independently opt-in, so the viewer discovers it
@@ -175,7 +179,7 @@ pub struct IndicatorRow {
     pub detail: String,
 }
 
-/// The `/health/readiness` body: the aggregate plus every indicator.
+/// The dependency-health body: the aggregate plus every indicator.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct ReadinessView {
     /// The aggregate status (`UP` / `DEGRADED` / `DOWN`).
@@ -183,15 +187,21 @@ pub struct ReadinessView {
     /// Per-indicator rows, name-sorted so both render passes agree
     /// (hydration determinism).
     pub components: Vec<IndicatorRow>,
+    /// Whether the rows carry the indicators' detail: `true` when read from
+    /// `/management/health`, `false` from the status-only public probe.
+    pub detailed: bool,
 }
 
-/// Distil a `/health/readiness` body into a [`ReadinessView`].
+/// Distil a `/management/health` or `/health/readiness` body into a
+/// [`ReadinessView`].
 ///
-/// Read defensively: a missing/renamed field yields an empty string rather than
-/// dropping the row, and an unparseable aggregate renders as `UNKNOWN` instead
-/// of erroring — the probe answering at all is itself information.
+/// Both carry `{status, components: {<name>: {status}}}`; only the management
+/// body adds a `detail` per component. Read defensively: a missing/renamed
+/// field yields an empty string rather than dropping the row, and an
+/// unparseable aggregate renders as `UNKNOWN` instead of erroring — the probe
+/// answering at all is itself information.
 #[must_use]
-pub fn readiness_view(body: &serde_json::Value) -> ReadinessView {
+pub fn readiness_view(body: &serde_json::Value, detailed: bool) -> ReadinessView {
     let status = body
         .get("status")
         .and_then(serde_json::Value::as_str)
@@ -219,27 +229,53 @@ pub fn readiness_view(body: &serde_json::Value) -> ReadinessView {
         })
         .unwrap_or_default();
     components.sort_by(|a, b| a.name.cmp(&b.name));
-    ReadinessView { status, components }
+    ReadinessView {
+        status,
+        components,
+        detailed,
+    }
 }
 
-/// Read the CDR's dependency health (`GET /health/readiness`).
+/// Whether a `/management/health` answer sends the reader to the public
+/// status-only probe instead: `404` (the endpoint is not mounted) or `403`
+/// (its access level refuses this session's role). A `401` is not a
+/// fallback: the CDR no longer accepts the session, which the screen reports.
+#[must_use]
+pub fn falls_back_to_public_readiness(status: http::StatusCode) -> bool {
+    status == http::StatusCode::NOT_FOUND || status == http::StatusCode::FORBIDDEN
+}
+
+/// Read the CDR's dependency health.
 ///
-/// The public health family is always mounted and ungated, so this reads the
-/// CDR's API origin — never the management base URL — with no credential. `503`
-/// is the DOWN state, not a failure: the body carries the indicators that
-/// explain it, which is exactly what the panel renders.
+/// `GET /management/health` with the session's credential serves every
+/// indicator with its detail. Where that endpoint is not mounted or refuses
+/// this session's role ([`falls_back_to_public_readiness`]), the public
+/// `GET /health/readiness` on the CDR's API origin still gives each
+/// indicator's status, without detail. On either, `503` is the DOWN state,
+/// not a failure: the body carries the indicators that explain it, which is
+/// exactly what the panel renders.
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::CdrUnreachable`] on transport failure;
-/// [`ViewerError::Cdr`] on any status other than `200`/`503`;
+/// [`ViewerError::CdrUnauthorized`] when the CDR no longer accepts this
+/// session; [`ViewerError::CdrUnreachable`] on transport failure;
+/// [`ViewerError::Cdr`] on any other status than `200`/`503`;
 /// [`ViewerError::Internal`] when the body is not JSON.
 #[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_readiness() -> Result<ReadinessView, ViewerError> {
-    crate::session::require_session().await?;
+    let session = crate::session::require_session().await?;
     let state: crate::state::AppState = expect_context();
-    let url = state.cdr.origin_url("health/readiness");
-    let response = state.cdr.get_public(&url, "application/json").await?;
+    let url = state.cdr.management_url("health");
+    let detailed = state
+        .cdr
+        .get(&session.credential, &url, "application/json")
+        .await?;
+    let (response, is_detailed) = if falls_back_to_public_readiness(detailed.status) {
+        let url = state.cdr.origin_url("health/readiness");
+        (state.cdr.get_public(&url, "application/json").await?, false)
+    } else {
+        (detailed, true)
+    };
     let body = if response.is(http::StatusCode::SERVICE_UNAVAILABLE) {
         response.body
     } else {
@@ -247,7 +283,7 @@ pub async fn fetch_readiness() -> Result<ReadinessView, ViewerError> {
     };
     let value = serde_json::from_str::<serde_json::Value>(&body)
         .map_err(|e| ViewerError::Internal(format!("readiness JSON: {e}")))?;
-    Ok(readiness_view(&value))
+    Ok(readiness_view(&value, is_detailed))
 }
 
 // ── Management: the probe ───────────────────────────────────────────────────
@@ -676,8 +712,8 @@ async fn management_get(path: &str) -> Result<Option<String>, ViewerError> {
 mod tests {
     use super::{
         BuildInfoView, ManagementAvailability, MetricDetailView, MetricSample,
-        availability_of_status, build_info_view, format_metric, logger_view, metric_detail_view,
-        metric_total, readiness_view, renders_management_ops,
+        availability_of_status, build_info_view, falls_back_to_public_readiness, format_metric,
+        logger_view, metric_detail_view, metric_total, readiness_view, renders_management_ops,
     };
     use crate::error::ViewerError;
 
@@ -728,7 +764,7 @@ mod tests {
 
     #[test]
     fn readiness_rows_are_name_sorted_and_carry_the_detail() {
-        // The CDR's `/health/readiness` body shape (AggregateHealth): the
+        // The CDR's `/management/health` body shape (AggregateHealth): the
         // aggregate plus one entry per indicator, `detail` only when the
         // indicator gave one.
         let body = serde_json::json!({
@@ -739,7 +775,8 @@ mod tests {
                 "db": { "status": "UP" }
             }
         });
-        let view = readiness_view(&body);
+        let view = readiness_view(&body, true);
+        assert!(view.detailed);
         assert_eq!(view.status, "DEGRADED");
         let names: Vec<&str> = view.components.iter().map(|c| c.name.as_str()).collect();
         assert_eq!(names, vec!["audit", "db", "migrations"]);
@@ -751,14 +788,42 @@ mod tests {
 
     #[test]
     fn a_readiness_body_without_the_expected_fields_still_renders() {
-        let view = readiness_view(&serde_json::json!({}));
+        let view = readiness_view(&serde_json::json!({}), false);
         assert_eq!(
             view,
             super::ReadinessView {
                 status: "UNKNOWN".to_owned(),
                 components: Vec::new(),
+                detailed: false,
             }
         );
+    }
+
+    #[test]
+    fn the_public_readiness_body_renders_statuses_without_detail() {
+        // The CDR's public `/health/readiness` body (HealthSummary): names and
+        // statuses, no detail.
+        let body = serde_json::json!({
+            "status": "UP",
+            "components": { "db": { "status": "UP" }, "migrations": { "status": "UP" } }
+        });
+        let view = readiness_view(&body, false);
+        assert!(!view.detailed);
+        assert_eq!(view.components.len(), 2);
+        assert!(view.components.iter().all(|c| c.detail.is_empty()));
+    }
+
+    #[test]
+    fn only_an_absent_or_refused_management_health_falls_back() {
+        assert!(falls_back_to_public_readiness(http::StatusCode::NOT_FOUND));
+        assert!(falls_back_to_public_readiness(http::StatusCode::FORBIDDEN));
+        for status in [
+            http::StatusCode::OK,
+            http::StatusCode::SERVICE_UNAVAILABLE,
+            http::StatusCode::UNAUTHORIZED,
+        ] {
+            assert!(!falls_back_to_public_readiness(status), "{status}");
+        }
     }
 
     #[test]

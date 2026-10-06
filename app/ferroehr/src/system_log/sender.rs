@@ -48,7 +48,8 @@ use tokio::task::JoinHandle;
 use super::event::{AuditEvent, EmitOutcome};
 
 use crate::system_log::AuditError;
-use crate::system_log::config::{AuditConfig, FailMode, FhirFeedConfig, Retention};
+use crate::system_log::chain_check::ChainCheck;
+use crate::system_log::config::{AuditConfig, FailMode, FhirFeedConfig, Retention, StoreConfig};
 use crate::system_log::message::{AuditContext, AuditMessage};
 use crate::system_log::store::AuditStore;
 use crate::system_log::syslog::{Transport, assemble_syslog};
@@ -258,9 +259,18 @@ pub struct AuditHandle {
     /// shutdown after the drain flushes: their state is durable (the store),
     /// so undelivered rows simply ship on the next boot.
     workers: Vec<JoinHandle<()>>,
+    /// The result of the scheduled hash-chain verification, when it runs.
+    chain_check: Option<ChainCheck>,
 }
 
 impl AuditHandle {
+    /// Returns the shared result of the scheduled hash-chain verification;
+    /// `None` when the local store is off or `verify_interval_seconds` is `0`.
+    #[must_use]
+    pub fn chain_check(&self) -> Option<ChainCheck> {
+        self.chain_check.clone()
+    }
+
     /// Await the drain task, bounded by `timeout`, then stop the background
     /// workers. All [`AuditSender`] clones must be dropped first so the
     /// channel closes and the drain flushes then exits.
@@ -393,11 +403,9 @@ pub async fn start(
             direct_feed = Some(feed);
         }
     }
-    if let Some(store) = store.clone()
-        && config.store.retention() != Retention::Forever
-    {
-        workers.push(tokio::spawn(reaper(store, config.store.retention())));
-    }
+    let chain_check = store
+        .as_ref()
+        .and_then(|store| spawn_store_upkeep(store, &config.store, &mut workers));
 
     if store.is_none() && syslog.is_none() && !config.fhir_feed.enabled {
         tracing::warn!(
@@ -450,7 +458,38 @@ pub async fn start(
             warn_epoch: Instant::now(),
         }),
     };
-    Ok((sender, AuditHandle { join, workers }))
+    Ok((
+        sender,
+        AuditHandle {
+            join,
+            workers,
+            chain_check,
+        },
+    ))
+}
+
+/// Spawns the local store's upkeep workers onto `workers`: the retention
+/// reaper unless records are kept forever, and the scheduled hash-chain
+/// verification unless `verify_interval_seconds` is `0`, whose shared result is
+/// returned.
+fn spawn_store_upkeep(
+    store: &AuditStore,
+    config: &StoreConfig,
+    workers: &mut Vec<JoinHandle<()>>,
+) -> Option<ChainCheck> {
+    if config.retention() != Retention::Forever {
+        workers.push(tokio::spawn(reaper(store.clone(), config.retention())));
+    }
+    if config.verify_interval_seconds == 0 {
+        return None;
+    }
+    let check = ChainCheck::new();
+    workers.push(tokio::spawn(crate::system_log::chain_check::scheduled(
+        store.clone(),
+        check.clone(),
+        Duration::from_secs(config.verify_interval_seconds),
+    )));
+    Some(check)
 }
 
 async fn drain(
@@ -846,7 +885,7 @@ mod tests {
     use std::sync::{LazyLock, Mutex};
 
     use super::*;
-    use crate::system_log::config::{StoreConfig, SyslogConfig, Transport as ConfigTransport};
+    use crate::system_log::config::{StoreConfig, SyslogConfig};
     use crate::system_log::event::{EventActionCode, EventOutcome, ObjectClass};
 
     fn udp_config() -> AuditConfig {
@@ -858,10 +897,11 @@ mod tests {
                 retention_days: 0,
                 retention_years: None,
                 sgb_v_309_controller: false,
+                verify_interval_seconds: 0,
             },
             syslog: SyslogConfig {
                 enabled: true,
-                transport: ConfigTransport::Udp,
+                transport: crate::system_log::config::Transport::Udp,
                 // A port nothing listens on is fine: connected UDP send does
                 // not fail.
                 host: "127.0.0.1".to_owned(),

@@ -24,14 +24,24 @@ work that stays with the deploying organisation.
 the true one.
 
 > [!NOTE]
-> The FerroEHR project is not your processor. It publishes software and
-> operates nothing on your behalf. The one thing a deployment sends out by
-> default is the [usage report](../usage-report.md): a random instance id, the
-> version, the licence grant type and coarse performance figures, with no
-> patient data. Cadasto B.V. receives it as controller for its own purposes,
-> and its collector also stores the IP address each report comes from. Where a
-> row says "the processor", it means whoever runs the deployment, which may be
-> you.
+> Cadasto B.V. is the manufacturer of each FerroEHR release. Whether it is
+> also your processor depends on who runs the deployment:
+>
+> - **Self-hosted.** You run the deployment, or a processor of your choosing
+>   runs it for you. Cadasto B.V. supplies the software and processes no
+>   personal data on your behalf, so it is not your processor (GDPR Art. 4(8)
+>   defines a processor as one "which processes personal data on behalf of the
+>   controller").
+> - **Hosted by Cadasto B.V.** Cadasto B.V. runs the deployment as a service
+>   for you. It is then also your processor, and Art. 28(3) has that processing
+>   "governed by a contract or other legal act" binding it with regard to you.
+>
+> In both cases the one thing a deployment sends out by default is the
+> [usage report](../usage-report.md): a random instance id, the version, the
+> licence grant type and coarse performance figures, with no patient data.
+> Cadasto B.V. receives it as controller for its own purposes, and its
+> collector also stores the IP address each report comes from. Where a row
+> says "the processor", it means whoever runs the deployment for you.
 
 ## GDPR
 
@@ -69,8 +79,21 @@ provisions carry. No row below claims conformity with any of them.
 | Obligation | What FerroEHR provides | What the deploying organisation does |
 |---|---|---|
 | [Chapter II](https://eur-lex.europa.eu/eli/reg/2025/327/oj), primary use and the patient's sight of who accessed their data | An access trail of every read, write and refusal, [searchable by patient and by agent](../audit.md#retrieving-audit-records-iti-81), and a [subject-scoped read grant](../installation/config-auth.md#authzrbac) sized for a patient portal | Build the patient-facing access route on that grant and authenticate the person; the product serves one subject's log to it, never every patient's |
-| [Chapter III](https://eur-lex.europa.eu/eli/reg/2025/327/oj), EHR systems: the European interoperability and logging software components, and published technical documentation | The [EHDS readiness page](ehds-readiness.md) with a status and evidence per Annex II requirement, the [technical documentation](technical-documentation.md) page per Annex II item, and an access trail carrying the logging component's elements; the exchange format is an open question until the Article 36 implementing acts fix it | Follow the implementing acts and, when a deployment is placed as an EHR system, carry the manufacturer's conformity assessment and declaration |
+| [Chapter III](https://eur-lex.europa.eu/eli/reg/2025/327/oj), EHR systems: the two harmonised software components, technical documentation, the information sheet and instructions for use, the declaration of conformity | The logging component, with a status and evidence per Annex II requirement on the [EHDS readiness page](ehds-readiness.md); the [technical documentation](technical-documentation.md), the [information sheet](information-sheet.md) and the [instructions for use](instructions-for-use.md) of each release, kept by Cadasto B.V. as manufacturer. The interoperability component is FerroBRIDGE's, and the exchange format waits on implementing acts under Article 15(1) | Configure the deployment as the instructions for use say. A self-hosted deployment of an unmodified release puts Cadasto B.V.'s product into service and leaves the manufacturer's duties with Cadasto B.V.; in a deployment Cadasto B.V. hosts, it carries them as manufacturer and operator |
 | [Chapter IV](https://eur-lex.europa.eu/eli/reg/2025/327/oj), secondary use | [AQL](../querying-aql.md) over the stored record and a [change-event outbox](../beyond-core/amqp.md); the batch export the FerroBRIDGE OMOP load consumes, filtered by the restriction and objection marks, is planned in [#3379](https://github.com/FerroHEALTH/FerroEHR/issues/3379) | Deal with the health data access body and carry the data holder's duties |
+
+## CRA
+
+[Regulation (EU) 2024/2847](https://eur-lex.europa.eu/eli/reg/2024/2847/oj)
+puts its duties on the manufacturer of a product with digital elements, which
+for each FerroEHR release is Cadasto B.V. The [Cyber Resilience Act](cra.md)
+page states the position.
+
+| Obligation | What FerroEHR provides | What the deploying organisation does |
+|---|---|---|
+| [Art. 13 and Annex I](https://eur-lex.europa.eu/eli/reg/2024/2847/oj), the essential cybersecurity requirements and the manufacturer's obligations, from 11 December 2027 | The [CRA risk assessment](cra-risk-assessment.md), point by point against Annex I, with the evidence and the open work | Run a supported release, apply security updates, and keep the security environment the [intended purpose](intended-purpose.md#the-security-environment-ferroehr-assumes) assumes |
+| [Art. 14](https://eur-lex.europa.eu/eli/reg/2024/2847/oj), reporting actively exploited vulnerabilities and severe incidents, since 11 September 2026 | Cadasto B.V. notifies the CSIRT and ENISA ([complaints, incidents and vulnerabilities](post-market.md)) | Report what you see to Cadasto B.V.; your own NIS2 and GDPR notifications stay yours |
+| [Art. 13(8)](https://eur-lex.europa.eu/eli/reg/2024/2847/oj), the support period | Five years per release, the end date in the release notes | Upgrade before the end date, and to the newest release when it carries a security fix |
 
 ## National law
 

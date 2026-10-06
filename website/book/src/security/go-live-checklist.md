@@ -73,8 +73,8 @@ in deployment_accepts (which is then stated on every boot and on /rest/status):
 ```
 
 The gaps are `shared_credential`, `shared_cluster`, `open_subject_namespace`,
-`audit_off`, `audit_fails_open`, `open_ehr_access_default` and
-`migrate_on_runtime_credential`. `shared_cluster` is read from
+`audit_off`, `audit_fails_open`, `open_ehr_access_default`,
+`migrate_on_runtime_credential`, `auth_off` and `plaintext_listener`. `shared_cluster` is read from
 `pg_control_system().system_identifier` on each pool, the audit pool included,
 rather than from the DSN text, so two names for one cluster do not pass it.
 
@@ -83,6 +83,12 @@ the conformance instrument and the development stacks need them: the
 `EHR_ACCESS` default is `open`, and the audit trail fails open. A production
 deployment either changes both, or names each in `deployment_accepts` and
 carries the decision.
+
+`plaintext_listener` opens whenever the main listener speaks plain HTTP on an
+address reachable off the host. Behind a TLS-terminating ingress, accept it by
+name: the entry records that the ingress carries the encryption. A separate
+management listener (`management.port`) speaks plain HTTP and no gap covers
+it, so keep that port off any network clinical clients or the internet reach.
 
 A gap you have decided to run with goes in `deployment_accepts` by name. It is
 then stated on every boot and on `GET /ferroehr/rest/status`, so it is run
@@ -209,11 +215,16 @@ request; `closed` refuses an auditable operation with `503` when the record
 cannot be taken. `closed` is the posture that makes "no unaudited access" true.
 
 Retention has a jurisdictional floor. Where one of your active identifier rules
-names a jurisdiction with a registered floor, a shorter `retention_days` is a
-boot error naming the floor. The Netherlands is the one registered today, at
-1830 days, from the
-[Besluit vaststelling bewaartermijn logging](https://wetten.overheid.nl/BWBR0042391).
-A deployment elsewhere sets its own floor by hand and records why.
+names a jurisdiction with a registered floor, a shorter horizon is a boot error
+naming the floor. Every EU Member State carries three years from each date of
+access (EHDS Art. 9(2)); the Netherlands five years, from the
+[Besluit vaststelling bewaartermijn logging](https://wetten.overheid.nl/BWBR0042391);
+Switzerland one year (DSV Art. 4 Abs. 5). The floors are in calendar years, so
+state the horizon as `[audit.store] retention_years`, which is compared
+exactly; a `retention_days` is held to the most days those years can span
+(1096, 1830 and 366). The [audit trail page](../audit.md#retention-and-who-chooses-it)
+lists the floors with their sources. A deployment in a jurisdiction with no
+floor registered sets its own horizon and records why.
 
 Verify the chain works before you need it:
 
@@ -225,7 +236,8 @@ SELECT * FROM audit.verify_audit_chain();
 - [ ] A copy is forwarded off the box, to a sink the server's own identity
       cannot rewrite.
 - [ ] `fail_mode` is a decision, not a default.
-- [ ] `retention_days` is `0` or at or above the floor that applies to you.
+- [ ] `retention_years` (or `retention_days`) is `0` or at or above the floor
+      that applies to you.
 - [ ] `audit.verify_audit_chain()` returns no rows on a healthy trail.
 
 ## 7. Schema preparation runs on its own credential

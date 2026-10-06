@@ -77,6 +77,15 @@ pub struct StoreConfig {
     /// So the deployment declares it here, beside the horizon it bounds, and the
     /// DE ceiling applies from then on.
     pub sgb_v_309_controller: bool,
+    /// Seconds between two scheduled verifications of the store's hash chain
+    /// (`FERROEHR__AUDIT__STORE__VERIFY_INTERVAL_SECONDS`); `0` turns the
+    /// schedule off. Default one day.
+    ///
+    /// Each run is `audit.verify_audit_chain()`, a full pass over the trail; a
+    /// finding is logged at `ERROR`, counted and reported by the `audit_chain`
+    /// health indicator (`docs/law/eu/cra/text.html Annex I Part I(2)(f)`:
+    /// "report on corruptions").
+    pub verify_interval_seconds: u64,
 }
 
 impl Default for StoreConfig {
@@ -86,6 +95,10 @@ impl Default for StoreConfig {
             retention_days: 0,
             retention_years: None,
             sgb_v_309_controller: false,
+            // One day: a full digest pass over the trail is too heavy for an
+            // hourly cadence on a large repository, and a day bounds how long
+            // damage goes unreported.
+            verify_interval_seconds: 86_400,
         }
     }
 }

@@ -99,6 +99,8 @@ fn extensions_doc_is_non_empty() {
         "/health/liveness",
         "/health/readiness",
         "/management/info",
+        "/management/health",
+        "/management/status",
         "/ferroehr/rest/.well-known/smart-configuration",
         "/ferroehr/rest/api-docs/openapi.json",
         "/ferroehr/rest/openehr/v1/terminology",
@@ -555,6 +557,8 @@ async fn full_app() -> Router {
         env: AccessLevel::Public,
         loggers: AccessLevel::Public,
         flamegraph: AccessLevel::Public,
+        health: AccessLevel::Public,
+        status: AccessLevel::Public,
     };
     let observability = Observability {
         management: ManagementConfig {

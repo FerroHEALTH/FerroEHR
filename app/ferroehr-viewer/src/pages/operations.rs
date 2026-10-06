@@ -14,10 +14,11 @@
 //!
 //! * *Health.* The application shell's topbar pill polls the product status
 //!   document (`{rest root}/status`: is the API answering, at which version).
-//!   The health card here reads the OTHER contract — the public
-//!   `/health/readiness` indicators (database ping, migrations applied,
-//!   component flags) — and the card says so on screen, so the two are never
-//!   mistaken for the same claim.
+//!   The health card here reads the OTHER contract — the dependency
+//!   indicators (database ping, migrations applied, component flags), with
+//!   their detail from `/management/health` or as statuses only from the
+//!   public `/health/readiness` — and the card says so on screen, so the two
+//!   are never mistaken for the same claim.
 //! * *Configuration.* `GET /management/env` and the Admin API's
 //!   `GET /admin/config` serve the SAME snapshot (both are the binary's
 //!   `FerroEhrConfig::to_redacted_json` value, the management route adding a
@@ -177,8 +178,9 @@ fn status_pill(status: &str) -> AnyView {
 
 // ── Health ──────────────────────────────────────────────────────────────────
 
-/// The dependency-health card: the public `/health/readiness` aggregate plus
-/// every indicator. A pure read, so a failure renders inline and never toasts.
+/// The dependency-health card: the readiness aggregate plus every indicator,
+/// with its detail where the CDR offers `/management/health` to this session.
+/// A pure read, so a failure renders inline and never toasts.
 fn health_card() -> AnyView {
     let resource = Resource::new(|| (), |()| async move { fetch_readiness().await });
     let body = view! {
@@ -198,38 +200,57 @@ fn health_card() -> AnyView {
 }
 
 /// Render a readiness aggregate: the overall pill, the one-line explanation of
-/// how it differs from the topbar pill, and the per-indicator table.
+/// how it differs from the topbar pill, and the per-indicator table — with a
+/// detail column when the view carries detail, and a line saying where the
+/// detail lives when it does not.
 fn readiness_body(view: ReadinessView) -> AnyView {
     let pill = status_pill(&view.status);
+    let detailed = view.detailed;
     let rows = view
         .components
         .into_iter()
         .map(|component| {
-            let detail = if component.detail.is_empty() {
-                "—".to_owned()
-            } else {
-                component.detail
-            };
             let pill = status_pill(&component.status);
+            let detail = detailed.then(|| {
+                let text = if component.detail.is_empty() {
+                    "—".to_owned()
+                } else {
+                    component.detail
+                };
+                view! { <td class=CELL>{text}</td> }
+            });
             view! {
                 <tr class=ROW>
                     <td class=CELL_MONO>{component.name}</td>
                     <td class=CELL>{pill}</td>
-                    <td class=CELL>{detail}</td>
+                    {detail}
                 </tr>
             }
             .into_any()
         })
         .collect_view()
         .into_any();
-    let table = table_shell(&["Indicator", "Status", "Detail"], rows);
+    let table = if detailed {
+        table_shell(&["Indicator", "Status", "Detail"], rows)
+    } else {
+        table_shell(&["Indicator", "Status"], rows)
+    };
+    let scope = (!detailed).then(|| {
+        view! {
+            <p class="mb-3 text-sm text-ink-muted">
+                "Statuses only: the detail behind each one is served by the CDR's "
+                <code>"/management/health"</code>
+                ", which this deployment does not offer to this session."
+            </p>
+        }
+    });
     view! {
         <div id="ops-readiness">
             {pill}
             <p class="mt-2 mb-3 text-sm text-ink-muted">
                 "The topbar pill reports the API itself (status document: reachable, and at which version). "
                 "This is the other question — the CDR's readiness probe, one row per dependency it checks."
-            </p> {table}
+            </p> {scope} {table}
         </div>
     }
     .into_any()

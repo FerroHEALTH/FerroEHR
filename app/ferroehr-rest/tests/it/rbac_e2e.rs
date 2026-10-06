@@ -158,6 +158,7 @@ async fn audit_capture() -> (UdpSocket, AuditSender) {
             retention_days: 0,
             retention_years: None,
             sgb_v_309_controller: false,
+            verify_interval_seconds: 0,
         },
         syslog: SyslogConfig {
             enabled: true,

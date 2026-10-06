@@ -17,10 +17,11 @@
 //!   §Authentication and authorization); the `401`/`403`/`WWW-Authenticate`
 //!   discipline there IS normative and is cited at the authn layer.
 //! - [`health`] — the always-on public `/health`, `/health/liveness`,
-//!   `/health/readiness` family (no openEHR spec governs health probes; the
-//!   ITS-REST System API defines only `OPTIONS /`).
-//! - [`management`] — metrics/info/env/loggers, a pure ops-introspection
-//!   surface (no openEHR spec governs it). Hosts the single spec-version
+//!   `/health/readiness` family, statuses only (no openEHR spec governs health
+//!   probes; the ITS-REST System API defines only `OPTIONS /`).
+//! - [`management`] — metrics/info/env/loggers/flamegraph, the health detail
+//!   and the full status document, an ops-introspection surface behind
+//!   per-endpoint access levels (no openEHR spec governs it). Hosts the single spec-version
 //!   `provenance` source below (the module constants).
 //! - [`openapi`] — serves the server's OWN `utoipa`-generated document (never a
 //!   vendored OAS), not an API the spec itself defines.

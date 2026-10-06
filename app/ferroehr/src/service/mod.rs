@@ -152,12 +152,13 @@ pub struct FerroEhrService {
     signer: Arc<Signer>,
     /// The boot outcome of the `[licence]` section
     /// ([`crate::licence::state::LicenceState`]); no licence by default. Read
-    /// by `/rest/status`; it changes nothing else.
+    /// by `/management/status`; it changes nothing else.
     licence: crate::licence::state::LicenceState,
     /// The declared deployment posture and the separations it found open
-    /// ([`crate::config::deployment::DeploymentPosture`]), served on
-    /// `/rest/status`; the sandbox default with nothing evaluated until the
-    /// binary installs the boot evaluation.
+    /// ([`crate::config::deployment::DeploymentPosture`]): the profile on
+    /// `/rest/status`, the whole posture on `/management/status`; the sandbox
+    /// default with nothing evaluated until the binary installs the boot
+    /// evaluation.
     deployment: crate::config::deployment::DeploymentPosture,
     /// The stamp key every server-minted identifier carries
     /// ([`crate::licence::stamp`]), derived from `licence` once at boot.
