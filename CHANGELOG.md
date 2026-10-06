@@ -15,6 +15,8 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+## [4.3.4] - 2026-10-06
+
 ### Added
 
 - **A usage report to FerroPULSE, on by default** (#3578). At each process
@@ -39,7 +41,7 @@ workflow refuses a tag that has no matching section here.
   or the chart value `usageReport.enabled=false`. The new `[usage_report]`
   section also takes `endpoint` and `slow_aql_ms` (default 1000), and
   `ferroehr usage-report --print [--event start|daily]` prints the exact JSON
-  the instance would send without sending it. The Helm chart (10.2.0) and the
+  the instance would send without sending it. The Helm chart (10.2.1) and the
   compose files set the deployment kind; the conformance compose files switch
   the report off. A new clinical migration adds the `usage_report_instance`
   and `usage_report_window` tables.
@@ -10218,7 +10220,8 @@ but has not yet run in production.
   seccomp, default-deny NetworkPolicy) and golden-render validation.
 
 
-[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.3...HEAD
+[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.4...HEAD
+[4.3.4]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.3...v4.3.4
 [4.3.3]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.2...v4.3.3
 [4.3.2]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.1...v4.3.2
 [4.3.1]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.0...v4.3.1

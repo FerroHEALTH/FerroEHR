@@ -95,7 +95,7 @@
 
 services:
   ferroehr-postgres:
-    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:4.3.3}
+    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:4.3.4}
     # Docker's default 64MB /dev/shm starves PostgreSQL's dynamic shared
     # memory under load (parallel workers error `could not resize shared
     # memory segment … No space left on device`); measured runs share this
@@ -218,7 +218,7 @@ services:
   # single credential.
   ferroehr-backup-clinical:
     profiles: [backup]
-    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:4.3.3}
+    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:4.3.4}
     depends_on:
       ferroehr-postgres:
         condition: service_healthy
@@ -256,7 +256,7 @@ services:
 
   ferroehr-backup-party:
     profiles: [backup]
-    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:4.3.3}
+    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:4.3.4}
     depends_on:
       ferroehr-postgres:
         condition: service_healthy
@@ -288,7 +288,7 @@ services:
 
   ferroehr-backup-linkage:
     profiles: [backup]
-    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:4.3.3}
+    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:4.3.4}
     depends_on:
       ferroehr-postgres:
         condition: service_healthy
@@ -331,7 +331,7 @@ services:
       - /tmp
 
   ferroehr:
-    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:4.3.3}
+    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:4.3.4}
     depends_on:
       ferroehr-postgres:
         condition: service_healthy
@@ -372,6 +372,8 @@ services:
       # Measurement parity (logging equal and minimal on both SUTs):
       # measured comparison runs set warn on BOTH SUTs; default stays info.
       FERROEHR__LOG__FILTER: ${FERROEHR__LOG__FILTER:-info}
+      # The usage report (on by default): https://ferroehr.eu/docs/latest/usage-report.html
+      FERROEHR__USAGE_REPORT__DEPLOYMENT: compose
       # Multimedia (the `s3` profile), passed through from YOUR shell. These are
       # declared with no value on purpose: "If the value is not resolved, the
       # variable is unset and is removed from the service container environment"
@@ -447,7 +449,7 @@ services:
   # FERROEHR_VIEWER__AUTH__OIDC__* variables at your identity provider.
   ferroehr-viewer:
     profiles: [viewer]
-    image: ${FERROEHR_VIEWER_IMAGE:-ghcr.io/ferrohealth/ferroehr-viewer:4.3.3}
+    image: ${FERROEHR_VIEWER_IMAGE:-ghcr.io/ferrohealth/ferroehr-viewer:4.3.4}
     depends_on:
       ferroehr:
         condition: service_healthy
