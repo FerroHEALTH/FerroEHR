@@ -293,10 +293,10 @@ pub async fn template_usage() -> Result<(Vec<(String, i64)>, u32), ViewerError> 
     Ok((usage, total))
 }
 
-/// The `/system` screen: the CDR's status document, the conformance-manifest
-/// card (product identity, claimed profile, mounted API groups), the SMART
-/// discovery card, and the served-OpenAPI viewer for the family named by
-/// `?openapi=`.
+/// Renders the `/system` screen: the CDR's status document, the
+/// conformance-manifest card (product identity, claimed profile, mounted API
+/// groups), the SMART discovery card, the served-OpenAPI viewer for the family
+/// named by `?openapi=`, the redacted configuration, and the manufacturer card.
 #[expect(
     clippy::must_use_candidate,
     reason = "#[component] rewrites the fn; view!/mount always consumes the value"
@@ -319,19 +319,57 @@ pub fn SystemPage() -> impl IntoView {
     let activity = activity_log_card();
     let usage = usage_card();
     let config = config_card();
+    let manufacturer = manufacturer_card();
 
     view! {
         <Title text="System" />
         <div class="p-6">
             <PageHeader
                 title="System"
-                subtitle="CDR status, the openEHR conformance manifest, SMART discovery, repository usage, the served OpenAPI documents, and the redacted runtime configuration."
+                subtitle="CDR status, the openEHR conformance manifest, SMART discovery, repository usage, the served OpenAPI documents, the redacted runtime configuration, and the manufacturer."
             />
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-                {status} {manifest} {smart} {usage} {openapi} {config} {activity}
+                {status} {manifest} {smart} {usage} {openapi} {config} {activity} {manufacturer}
             </div>
         </div>
     }
+}
+
+/// The manufacturer card: the name, postal address, single point of contact
+/// and website of the manufacturer of this viewer, as Regulation (EU) 2025/327
+/// (`docs/law/eu/ehds/text.html` Art. 30(1)(g)) asks the EHR system to show
+/// them.
+///
+/// Static, compiled in from [`crate::manufacturer::MANUFACTURER`] on both
+/// targets, so the server pass and hydration render the same markup and the
+/// card needs no request. The footer links here through `#manufacturer`.
+fn manufacturer_card() -> AnyView {
+    let manufacturer = crate::manufacturer::MANUFACTURER;
+    let body = view! {
+        <dl id="manufacturer" class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+            <dt class="font-medium text-ink-muted">"name"</dt>
+            <dd class="text-ink">{manufacturer.name}</dd>
+            <dt class="font-medium text-ink-muted">"postal address"</dt>
+            <dd class="text-ink">{manufacturer.postal_address}</dd>
+            <dt class="font-medium text-ink-muted">"contact"</dt>
+            <dd class="break-all">
+                <a
+                    href=format!("mailto:{}", manufacturer.email)
+                    class="text-accent-ink hover:underline"
+                >
+                    {manufacturer.email}
+                </a>
+            </dd>
+            <dt class="font-medium text-ink-muted">"website"</dt>
+            <dd class="break-all">
+                <a href=manufacturer.website class="text-accent-ink hover:underline">
+                    {manufacturer.website}
+                </a>
+            </dd>
+        </dl>
+    }
+    .into_any();
+    titled_card("Manufacturer", false, body)
 }
 
 /// The conformance-manifest card: what the CDR advertises about ITSELF through

@@ -770,6 +770,10 @@ fn authed_shell(
         <footer class="flex h-10 shrink-0 items-center gap-2 border-t border-edge bg-raised px-4 text-xs text-ink-muted">
             <span>{format!("viewer v{}", env!("CARGO_PKG_VERSION"))}</span>
             <span>"·"</span>
+            <a href="/system#manufacturer" class="hover:text-ink" data-footer-manufacturer="">
+                {format!("Manufactured by {}", crate::manufacturer::MANUFACTURER.name)}
+            </a>
+            <span>"·"</span>
             <Suspense fallback=|| ()>
                 {move || {
                     Suspend::new(async move {

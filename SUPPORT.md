@@ -1,6 +1,6 @@
 # Getting help
 
-Three destinations, and they are not interchangeable. Picking the right one is
+Four destinations, and they are not interchangeable. Picking the right one is
 the difference between an answer and a thread nobody is paged for.
 
 ## I have a question
@@ -64,6 +64,18 @@ acknowledgement does not arrive.
 server you deployed alongside FerroEHR, goes to that project**, not here.
 SECURITY.md § *Reporting a vulnerability in Kubernetes itself* has the routing.
 
+## I want to make a complaint, or report harm
+
+Cadasto B.V. is FerroEHR's manufacturer under Regulation (EU) 2025/327 and
+Regulation (EU) 2024/2847. Write to [info@cadasto.com](mailto:info@cadasto.com)
+with "FerroEHR complaint" in the subject, or open an issue when the complaint
+can be public. Anything that harmed a person, or could have, goes to the same
+address with "FerroEHR incident" in the subject. Every complaint enters the
+[register of complaints](docs/registers/complaints.tsv), whatever the
+channel. The book's
+[Complaints, incidents and vulnerabilities](https://ferroehr.eu/docs/latest/compliance/post-market.html)
+page says what happens next. Never include patient data.
+
 ## I want to change something
 
 [CONTRIBUTING.md](CONTRIBUTING.md) is the practical guide: setup, the gates
@@ -81,6 +93,8 @@ sincere; none of it is a contractual commitment, and only the security-report
 windows in SECURITY.md are stated as promises at all.
 
 Only the newest release receives fixes ([SECURITY.md § Supported
-versions](SECURITY.md#supported-versions)). If your deployment needs a stronger
+versions](SECURITY.md#supported-versions)). The manufacturer's duties under
+Regulation (EU) 2025/327 and Regulation (EU) 2024/2847 are set by those
+Regulations, not by this file. If your deployment needs a stronger
 guarantee than a single-maintainer project can give, the honest options are to
 fork and maintain, or to fund the capacity that would change the answer.

@@ -20,7 +20,7 @@ commit the result.
 | CKM archetypes (**ADL 1.4**) | `scripts/vendor/ckm-archetypes.sh` | `corpus/archetypes/ckm/adl14/` |
 | ADL **2** archetypes + their 1.4 twins | `scripts/vendor/adl2-archetypes.sh` | `crates/openehr-adl/tests/corpus/adl2-reference/`, `corpus/archetypes/adl2/` |
 | CKM example skeletons (generated once vs a composed SUT) | `scripts/generate-ckm-examples.sh` | `…/templates/ckm/*.example.json` |
-| EU legal acts + the EDPB guidelines (01/2025 pseudonymisation, 2/2023 ePrivacy Art. 5(3); the compliance citations' referents) | `scripts/vendor/law-eu.sh` | `docs/law/eu/` |
+| EU legal acts (GDPR, ePrivacy, EHDS + implementing acts 2026/2083 and 2026/2099, Recommendation 2019/243, NIS2 + its English corrigendum, CRA + its English corrigenda + implementing act 2025/2392 + delegated acts 2026/881 and 2025/1535, Regulations 2019/1020 and 765/2008, MDR) + the EDPB guidelines (01/2025 pseudonymisation, 2/2023 ePrivacy Art. 5(3); the compliance citations' referents) | `scripts/vendor/law-eu.sh` | `docs/law/eu/` |
 | Dutch acts and decrees (+ the NEN 75xx records, text absent by copyright) | `scripts/vendor/law-nl.sh` | `docs/law/nl/` |
 | German federal law (gesetze-im-internet XML, pinned by builddate; the DigiG as its BGBl. PDF) | `scripts/vendor/law-de.sh` | `docs/law/de/` |
 | Swiss federal law (Fedlex filestore HTML, German + non-binding English where published at the same consolidation) | `scripts/vendor/law-ch.sh` | `docs/law/ch/` |
@@ -137,7 +137,17 @@ Vendoring is half a change. The standing owner rule (`.claude/rules/testing.md`
   so an NL re-run always changes the digests even when no act changed a word; a
   re-pin diff there is not evidence of an upstream change by itself.
 - Only the OJ text has legal effect; a consolidation is vendored when EUR-Lex
-  publishes one that folds in an amendment (GDPR, MDR, ePrivacy), and the OJ
-  text otherwise (EHDS, NIS2, CRA). Where recitals or an amending act must be
+  publishes one that folds in an amendment (GDPR, MDR, ePrivacy, 2019/1020,
+  765/2008), and the OJ text otherwise (EHDS, NIS2, CRA, the implementing
+  acts, Recommendation 2019/243). Where recitals or an amending act must be
   citable, the OJ text is vendored beside the consolidation (`oj.html`, e.g.
-  the GDPR recitals, 2009/136/EC). Each `PROVENANCE.md` records which and why.
+  the GDPR recitals, 2009/136/EC). A corrigendum the pinned text does not
+  carry is vendored beside it from its own CELEX (the three English CRA
+  corrigenda and the English NIS2 corrigendum; each act's initial
+  consolidation folds them in but no amendment, so the OJ text stays the
+  pin). Corrigenda CELEX numbers run `R(01)`,
+  `R(02)`, ... and many exist in one or two languages only: find the English
+  ones by asking the Cellar SPARQL endpoint
+  (`publications.europa.eu/webapi/rdf/sparql`) for each corrigendum's
+  `cdm:expression_uses_language`, never by probing numbers until one 404s.
+  Each `PROVENANCE.md` records which and why.

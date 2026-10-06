@@ -322,6 +322,20 @@ async fn the_footer_reports_the_viewer_version_and_this_session_s_scope_count() 
     assert!(footer.contains("0 scope(s)"), "{footer}");
 }
 
+/// The footer names the manufacturer and links to its details on `/system`
+/// (Regulation (EU) 2025/327, `docs/law/eu/ehds/text.html` Art. 30(1)(g)).
+#[tokio::test]
+async fn the_footer_names_the_manufacturer() {
+    let pass = render_route("/").await;
+    let footer = pass
+        .html
+        .split_once("<footer")
+        .and_then(|(_, rest)| rest.split_once("</footer>"))
+        .map_or("", |(inside, _)| inside);
+    assert!(footer.contains("Manufactured by Cadasto B.V."), "{footer}");
+    assert!(footer.contains("href=\"/system#manufacturer\""), "{footer}");
+}
+
 // ------------------------------------------------------------------- outlet
 
 #[tokio::test]

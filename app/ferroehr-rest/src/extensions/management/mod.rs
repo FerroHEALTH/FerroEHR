@@ -321,7 +321,8 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
 // implements `Handler` for async functions; the `unused_async` allow records
 // that the work is synchronous and the async is the framework contract.
 
-/// Build/spec provenance — version, git, spec pins (`GET /management/info`).
+/// Build/spec provenance — version, git, spec pins, manufacturer
+/// (`GET /management/info`).
 ///
 /// OUR OWN EXTENSION — no openEHR spec governs this: the ITS-REST resource set
 /// defines no management or introspection surface.
@@ -333,7 +334,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
 #[utoipa::path(
     get, path = "/management/info", tag = "management",
     responses(
-        (status = 200, description = "Build + spec provenance.", body = serde_json::Value),
+        (status = 200, description = "Build + spec provenance and the manufacturer of this release.", body = serde_json::Value),
         (status = 401, description = "Authentication required (access level Private/AdminOnly with auth enabled).", body = serde_json::Value),
         (status = 403, description = "Caller lacks the configured admin scope (access level AdminOnly).", body = serde_json::Value)
     )

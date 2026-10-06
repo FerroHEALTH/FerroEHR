@@ -1,10 +1,10 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://ferroehr.eu/vex/postgres-gosu-go-stdlib",
-  "author": "FerroEHR project",
+  "author": "Cadasto B.V.",
   "role": "vendor",
-  "timestamp": "2026-08-18T00:00:00Z",
-  "version": 3,
+  "timestamp": "2026-10-06T00:00:00Z",
+  "version": 4,
   "tooling": "hand-authored; see security/vex/README.md",
   "statements": [
     {

@@ -908,6 +908,145 @@ pub async fn verify_schema(settings: &DbConfig, storage: &StorageConfig) -> Resu
     Ok(())
 }
 
+/// One migration set's recorded level beside the level this build embeds.
+///
+/// No openEHR spec governs migration bookkeeping — our own design.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct SetLevel {
+    /// The schema the set runs in, which also holds its bookkeeping table.
+    pub schema: &'static str,
+    /// The highest version the bookkeeping records as applied successfully;
+    /// `None` when the schema has never been migrated.
+    pub applied: Option<i64>,
+    /// The highest version this build embeds; `None` for a set that embeds no
+    /// migration.
+    pub embedded: Option<i64>,
+}
+
+/// The migration levels of one database the domains reach.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct DatabaseLevels {
+    /// The domains resident in this database.
+    pub domains: Vec<Domain>,
+    /// The `ext` set, then each resident domain's set.
+    pub sets: Vec<SetLevel>,
+}
+
+/// Reads the recorded migration level of every set in every database the
+/// domains reach, issuing no DDL.
+///
+/// The read [`verify_schema`] does, summarized rather than judged: it connects
+/// on the same credential per database (the migration DSN for every domain in
+/// its database, a relocated domain's own DSN otherwise), so the credentials it
+/// names need read access to the bookkeeping and nothing more.
+///
+/// # Errors
+///
+/// [`DbError::SchemaUnreadable`] when a credential cannot read a set's
+/// bookkeeping, [`DbError::DomainCannotBeRelocated`] when the layout splits a
+/// domain from the one its set depends on, or [`DbError::Sqlx`] when a
+/// connection or a read fails for any other reason.
+pub async fn schema_levels(
+    settings: &DbConfig,
+    storage: &StorageConfig,
+) -> Result<Vec<DatabaseLevels>, DbError> {
+    let mut databases = Vec::new();
+    for group in preparation_plan(settings, storage).await? {
+        let mut conn = migration_connection(&group.dsn).await?;
+        let outcome = recorded_levels(&mut conn, &group.domains).await;
+        close_quietly(conn).await;
+        databases.push(DatabaseLevels {
+            domains: group.domains,
+            sets: outcome?,
+        });
+    }
+    Ok(databases)
+}
+
+/// The `ext` set's level, then each named domain's, on one connection.
+async fn recorded_levels(
+    conn: &mut PgConnection,
+    domains: &[Domain],
+) -> Result<Vec<SetLevel>, DbError> {
+    let mut sets = vec![set_level(&mut *conn, "ext", &EXT_MIGRATOR).await?];
+    for domain in domains {
+        let (schema, migrator) = domain_migrator(*domain);
+        sets.push(set_level(&mut *conn, schema, migrator).await?);
+    }
+    Ok(sets)
+}
+
+/// One set's highest successfully applied version beside its embedded one.
+async fn set_level(
+    conn: &mut PgConnection,
+    schema: &'static str,
+    migrator: &Migrator,
+) -> Result<SetLevel, DbError> {
+    let embedded = migrator.iter().map(|migration| migration.version).max();
+    // The schema name is one of the `domain_migrator` literals, never input,
+    // and both statements classify a privilege refusal as `verify_set` does.
+    let bookkeeping = format!("{schema}._sqlx_migrations");
+    let present: bool = match sqlx::query_scalar("SELECT to_regclass($1) IS NOT NULL")
+        .bind(&bookkeeping)
+        .fetch_one(&mut *conn)
+        .await
+    {
+        Ok(present) => present,
+        Err(error) => return Err(unreadable_bookkeeping(&mut *conn, schema, error).await),
+    };
+    if !present {
+        return Ok(SetLevel {
+            schema,
+            applied: None,
+            embedded,
+        });
+    }
+    let query = format!("SELECT max(version) FROM {bookkeeping} WHERE success");
+    let applied: Option<i64> = match sqlx::query_scalar(sqlx::AssertSqlSafe(query))
+        .fetch_one(&mut *conn)
+        .await
+    {
+        Ok(applied) => applied,
+        Err(error) => return Err(unreadable_bookkeeping(&mut *conn, schema, error).await),
+    };
+    Ok(SetLevel {
+        schema,
+        applied,
+        embedded,
+    })
+}
+
+/// Reads what the database layer can measure about a deployment's databases:
+/// the cluster each domain pool reached, and the domains whose database schema
+/// preparation reaches on a runtime credential.
+///
+/// The facts [`crate::config::deployment::DeploymentPosture::evaluate`] reads
+/// beside the configuration. No openEHR spec governs deployment posture — our
+/// own design/extension.
+///
+/// # Errors
+///
+/// [`DbError::Sqlx`] when a pool cannot read its cluster identity or a
+/// migration connection cannot be opened, and whatever
+/// [`domains_prepared_on_a_runtime_credential`] returns.
+pub async fn database_facts(
+    settings: &DbConfig,
+    storage: &StorageConfig,
+    pools: &DomainPools,
+) -> Result<crate::config::deployment::DatabaseFacts, DbError> {
+    let clusters = crate::config::deployment::ClusterIdentities {
+        clinical: Some(cluster_identity(&pools.clinical).await?),
+        party: Some(cluster_identity(&pools.party).await?),
+        linkage: Some(cluster_identity(&pools.linkage).await?),
+        audit: Some(cluster_identity(&pools.audit).await?),
+    };
+    Ok(crate::config::deployment::DatabaseFacts {
+        clusters,
+        prepared_on_runtime_credential: domains_prepared_on_a_runtime_credential(settings, storage)
+            .await?,
+    })
+}
+
 /// Close a detached connection, reporting a failure to close as a trace event
 /// rather than as the operation's outcome: the work is already done, and a
 /// failed close must not mask its result.

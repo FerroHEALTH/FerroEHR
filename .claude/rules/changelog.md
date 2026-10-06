@@ -21,6 +21,12 @@ optional:
   releases):** the `vX.Y.Z` GitHub milestone collects the release's issues;
   the release is cut when the milestone reaches **zero open issues** (or
   the owner calls the cut and moves the stragglers to the next milestone).
+- **The support period goes into every release's notes.** The release lane
+  appends a "Support period" section to the notes it extracts: five years
+  from the date on the `## [X.Y.Z] - YYYY-MM-DD` heading, month and year (CRA
+  Art 13(8) and (19), Annex II point 7, `docs/law/eu/cra/text.html`;
+  `SECURITY.md` §Supported versions). The heading's date is therefore the
+  release date, and a heading without one stops the lane.
 - **Cutting a release** (on a `release/vX.Y.Z` branch): rename
   `[Unreleased]` → `## [X.Y.Z] - YYYY-MM-DD`, re-add an empty
   `[Unreleased]`, update the link references at the bottom, bump the
@@ -197,3 +203,30 @@ optional:
   configure a Trusted Publisher) — it is pushed manually with a scoped API
   token, after which the crate's two Trusted Publisher entries are configured
   on crates.io as described above.
+
+## Withdrawing a release
+
+A release found not to conform is withdrawn, never edited, deleted or
+retagged (EHDS Art 30(1)(i) and (j), `docs/law/eu/ehds/text.html`; CRA Art
+13(21), `docs/law/eu/cra/text.html`). The order, from `docs/post-market.md`:
+
+1. The finding has a row in `docs/registers/non-conforming-versions.tsv` whose
+   `versions` column names the release.
+2. The correcting release ships through the ordinary cut above, as the next
+   patch (there are no maintenance branches).
+3. `scripts/release/withdraw.sh <version> --to <correcting version>
+   [--chart <chart version>]`, first with `--dry-run`, then without. It
+   refuses a version the register does not name and a correcting release
+   that is not a later published release; it moves the `<major>.<minor>` and
+   `latest` tags of `ghcr.io/ferrohealth/ferroehr`, `ferroehr-viewer` and
+   `ferroehr-postgres` that still point at the withdrawn digest (with
+   `docker buildx imagetools create`, the command the release lane's
+   `scan-and-tag.yml` uses); it leaves the `<version>` and `sha-<commit>` tags,
+   the digests and the GitHub release in place; and it prints the advisory
+   text, the `SECURITY.md` line, the notices to the authorities and to users,
+   and the register columns to fill. An OCI chart registry cannot mark one
+   chart version deprecated, so the chart version is named in the advisory
+   and `SECURITY.md` instead; the script says so.
+4. Post the notices, add the `SECURITY.md` line in a PR, and fill the
+   register row. `scripts/release/withdraw.sh --self-test` drives the script
+   against stub `docker`, `gh` and `helm` tools.

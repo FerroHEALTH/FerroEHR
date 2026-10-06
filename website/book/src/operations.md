@@ -947,7 +947,7 @@ not a default you already have.
 
 | Endpoint | Endpoint name to set | Purpose | Level to give it |
 |---|---|---|---|
-| `GET /management/info` | `info` | product name and version, build SHA, build date, `rustc`, the active `spec_profile`, the openEHR specification versions that profile selects, the PostgreSQL target, and the `audit` posture (`enabled`, `fail_mode`, `local_store`, `retention_days`) | `admin_only` |
+| `GET /management/info` | `info` | product name and version, build SHA, build date, `rustc`, the active `spec_profile`, the openEHR specification versions that profile selects, the PostgreSQL target, the `audit` posture (`enabled`, `fail_mode`, `local_store`, `retention_days`), and the `manufacturer` of the release (`name`, `postal_address`, `email`, `website`) | `admin_only` |
 | `GET /management/prometheus` | `prometheus` | Prometheus text exposition | `admin_only`, or `public` only when the port is not reachable outside the cluster; a `public` endpoint is served OUTSIDE authentication |
 | `GET /management/metrics` | `metrics` | JSON list of the registered metric names | `admin_only` |
 | `GET /management/metrics/{name}` | `metrics` | the current value(s) of one metric; `404` for a name that is not registered | `admin_only` |
@@ -996,6 +996,30 @@ With the surface enabled, the viewer grows an **Operations** screen over
 it (dependency health, build provenance, the metric registry, and runtime log
 control) which appears only while the CDR serves `/management/info`. See
 [Viewer → Operations panel](viewer/operations.md).
+
+## The manufacturer and the deployment report
+
+Cadasto B.V. is the manufacturer of each tagged release. The running system
+names it, with its postal address and single point of contact, on every
+surface an operator or a user reads:
+
+| Surface | What it shows |
+|---|---|
+| startup banner | `Manufactured by Cadasto B.V. · https://www.cadasto.com/contact/`, then the postal address and `info@cadasto.com` |
+| `ferroehr --version` | the version, then `Manufactured by Cadasto B.V., Comeniusstraat 2d, 1817 MS Alkmaar, The Netherlands, info@cadasto.com` and the website |
+| `GET /management/info` | a `manufacturer` object with `name`, `postal_address`, `email` and `website` |
+| `OPTIONS` on the API base path | `vendor` defaults to `Cadasto B.V.` ([`[server.identity]`](installation/config-server.md#serveridentity)) |
+| viewer | the footer of every screen, and a Manufacturer card on `/system` |
+| container images | the `eu.ferroehr.image.manufacturer` label |
+
+`ferroehr report` writes one JSON file naming what a deployment runs: the
+version, commit and build date, the enabled features, the specification pins
+and `openehr-*` crate versions, the schema migration level, the deployment
+posture, the licence summary, the manufacturer and the effective
+configuration with every secret redacted. Attach it to a complaint or a
+serious-incident report; see
+[`ferroehr report`](installation/config-cli.md#ferroehr-report) for what it
+holds and what it leaves out.
 
 ## Next
 

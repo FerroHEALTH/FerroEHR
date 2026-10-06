@@ -58,7 +58,7 @@ The response carries an `Allow` header and a JSON body:
 {
   "solution": "FerroEHR",
   "solution_version": "…",
-  "vendor": "FerroEHR project",
+  "vendor": "Cadasto B.V.",
   "restapi_specs_version": "1.1.0",
   "conformance_profile": "…",
   "endpoints": ["/ehr", "/definition", "/query", "/demographic"]

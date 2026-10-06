@@ -295,7 +295,7 @@ data is [`system_id`](#system_id-the-data-authoring-identity).
 |---|---|---|---|
 | `solution` | string | `FerroEHR` | Product name. |
 | `solution_version` | string | the build's version | Product version. |
-| `vendor` | string | `FerroEHR project` | Providing organisation. |
+| `vendor` | string | `Cadasto B.V.` | Providing organisation: by default the manufacturer of the release, the name `ferroehr --version` and `GET /management/info` give. |
 | `restapi_specs_version` | string | the ITS-REST release this build implements (`1.1.0`) | The openEHR REST API edition advertised. |
 | `conformance_profile` | string | the profile the build's recorded conformance verdict earned | Advertised conformance profile. |
 

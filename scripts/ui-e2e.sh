@@ -73,6 +73,8 @@ export COMPOSE_PROJECT_NAME=ferroehr-e2e
 # export is what keeps the image mode's `stop ferroehr-viewer` cleanup and
 # the trap's `down -v` able to see the container at all.
 export COMPOSE_PROFILES=keycloak,viewer
+# A test instance sends no usage report (the compose files read this switch).
+export FERROEHR__USAGE_REPORT__ENABLED=false
 # Build provenance for the compose-built images: the OCI-standard REVISION arg
 # (forwarded by the compose build.args block, bridged into build.rs by the
 # server Dockerfile). Degrades to `unknown` off-checkout.

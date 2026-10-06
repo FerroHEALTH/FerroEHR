@@ -2,8 +2,15 @@
 name: compliance-researcher
 description: >
   Answers "what does the law require" from the vendored regulation corpus at
-  docs/law/ (EU: GDPR, ePrivacy, EHDS, NIS2, CRA, MDR, the EDPB
-  guidelines on pseudonymisation and on ePrivacy Art. 5(3); NL: UAVG, Wabvpz, BW 7, the
+  docs/law/ (EU: GDPR, ePrivacy, EHDS, the EHDS implementing acts
+  2026/2083 (MyHealth@EU) and 2026/2099 (cross-border identification),
+  Recommendation 2019/243 (the EHR exchange format), NIS2 with its
+  corrigendum, CRA with its corrigenda, the CRA implementing act 2025/2392
+  (product categories), the CRA delegated acts 2026/881 (delaying the
+  dissemination of notifications) and 2025/1535 (an Art. 2(5) exclusion), the
+  market-surveillance Regulation 2019/1020, Regulation 765/2008 (accreditation,
+  CE marking), MDR, the EDPB guidelines on pseudonymisation and on ePrivacy
+  Art. 5(3); NL: UAVG, Wabvpz, BW 7, the
   Telecommunicatiewet, the logging decree, Begz; DE: BDSG,
   SGB V, GDNG, StGB, DigiG; CH: DSG, DSV, EPDG, EPDV, EPDV-EDI), returning the
   obligations as testable statements with article-level citations, verbatim

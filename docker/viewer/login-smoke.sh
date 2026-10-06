@@ -53,6 +53,8 @@ command -v "$DRIVER_BIN" >/dev/null 2>&1 || {
 # (docs.docker.com/compose/how-tos/project-name, /profiles).
 export COMPOSE_PROJECT_NAME=ferroehr-ui-login-smoke
 export COMPOSE_PROFILES=viewer
+# A test instance sends no usage report (the quickstart reads this switch).
+export FERROEHR__USAGE_REPORT__ENABLED=false
 # The standalone quickstart file only: an explicit -f suppresses the automatic
 # override merge, so this drives what a downloader runs
 # (docs.docker.com/compose/how-tos/multiple-compose-files).

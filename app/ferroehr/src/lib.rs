@@ -32,6 +32,8 @@
 //! - [`extensions`] — quarantined enterprise extensions (eventing, FHIR
 //!   connector, multimedia offload), each off by default behind its
 //!   own config gate.
+//! - [`manufacturer`] — the manufacturer every surface names, and [`report`]
+//!   — the redacted deployment report `ferroehr report` writes.
 
 // Doctests are copy-paste templates: they must use `?`, never unwrap
 // (C-QUESTION-MARK, https://rust-lang.github.io/api-guidelines/documentation.html#c-question-mark).
@@ -43,7 +45,9 @@ pub mod db;
 pub mod extensions;
 pub mod ids;
 pub mod licence;
+pub mod manufacturer;
 pub mod privacy;
+pub mod report;
 pub mod service;
 pub mod storage;
 pub mod system_log;

@@ -127,20 +127,23 @@ ARG REVISION=""
 #
 # base.name/base.digest name the IMMEDIATE parent — the `FROM` of this runtime
 # stage, not an intermediate build stage. They are kept in step with that pin by
-# scripts/checks/image-labels.sh.
+# scripts/checks/image-labels.sh. eu.ferroehr.image.manufacturer names the
+# manufacturer (Regulation (EU) 2025/327 Art. 30(1)(g)) as the one line
+# app/ferroehr/src/manufacturer.rs renders, which a test holds it to.
 LABEL org.opencontainers.image.title="FerroEHR" \
       org.opencontainers.image.description="Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1)" \
       org.opencontainers.image.url="https://ferroehr.eu/" \
       org.opencontainers.image.documentation="https://ferroehr.eu/docs/latest/" \
       org.opencontainers.image.source="https://github.com/FerroHEALTH/FerroEHR" \
-      org.opencontainers.image.vendor="FerroHEALTH" \
-      org.opencontainers.image.authors="FerroHEALTH <https://github.com/FerroHEALTH>" \
+      org.opencontainers.image.vendor="Cadasto B.V." \
+      org.opencontainers.image.authors="Cadasto B.V. <https://www.cadasto.com/contact/>" \
       org.opencontainers.image.licenses="BUSL-1.1" \
       org.opencontainers.image.base.name="gcr.io/distroless/cc-debian13:nonroot" \
       org.opencontainers.image.base.digest="sha256:e792ab3d241a468a4fd7519ddbbebe66b49b5f365771716ea688ad40b6c6f1c2" \
       org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.revision="${REVISION}" \
-      eu.ferroehr.image.carries-sandbox-posture="true"
+      eu.ferroehr.image.carries-sandbox-posture="true" \
+      eu.ferroehr.image.manufacturer="Cadasto B.V., Comeniusstraat 2d, 1817 MS Alkmaar, The Netherlands, info@cadasto.com"
 
 # ── The hosted-sandbox posture travels in the image (#2974) ────────────────────
 # The compose file, the Caddyfile and the two sandbox configuration files the

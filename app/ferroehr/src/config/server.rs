@@ -465,7 +465,10 @@ pub struct SystemOptionsConfig {
     pub solution: String,
     /// `Options.solution_version` — the product version.
     pub solution_version: String,
-    /// `Options.vendor` — the organisation providing the solution.
+    /// `Options.vendor` — the organisation providing the solution
+    /// (ITS-REST `specifications/schemas/others/Options.yaml`, a plain string);
+    /// defaults to the manufacturer's name
+    /// ([`crate::manufacturer::MANUFACTURER`]).
     pub vendor: String,
     /// `Options.restapi_specs_version` — the ITS-REST version targeted.
     pub restapi_specs_version: String,
@@ -476,10 +479,11 @@ pub struct SystemOptionsConfig {
 impl Default for SystemOptionsConfig {
     fn default() -> Self {
         Self {
-            // `solution` names the product, `vendor` the organisation.
+            // `solution` names the product, `vendor` the organisation
+            // providing it: the manufacturer of this release.
             solution: "FerroEHR".to_owned(),
             solution_version: env!("CARGO_PKG_VERSION").to_owned(),
-            vendor: "FerroEHR project".to_owned(),
+            vendor: crate::manufacturer::MANUFACTURER.name.to_owned(),
             restapi_specs_version: crate::telemetry::provenance::ITS_REST.to_owned(),
             conformance_profile: crate::telemetry::provenance::CONFORMANCE_PROFILE.to_owned(),
         }

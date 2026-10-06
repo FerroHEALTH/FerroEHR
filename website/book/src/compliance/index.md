@@ -356,6 +356,9 @@ binds a community or the identity issuers, the row says so.
   declared control, straight from the tracker.
 - **[Shared responsibility](shared-responsibility.md):** which obligation is
   the software's and which is yours, obligation by obligation.
+- **[Complaints, incidents and vulnerabilities](post-market.md):** how to
+  complain or report a serious incident, the manufacturer's registers, and
+  what happens when a release is withdrawn.
 - **[Security](../security.md):** how each control is
   configured.
 - **[Threat model](../threat-model.md):** what survives each control.

@@ -14,6 +14,8 @@
 
 use std::fmt::Write as _;
 
+use crate::manufacturer::MANUFACTURER;
+
 /// The `FerroEHR` ASCII wordmark (`FIGlet` "standard" font, five lines,
 /// ≤ 55 columns). A raw string so the backslashes/quotes in the art are
 /// literal.
@@ -27,13 +29,14 @@ const WORDMARK: &str = r"
 /// The project's public repository.
 const PROJECT_URL: &str = "https://github.com/FerroHEALTH/FerroEHR";
 
-/// Render the full banner for the given product `version` and ACTIVE
+/// Renders the full banner for the given product `version` and ACTIVE
 /// generation set.
 ///
 /// Kept parameterized (rather than reading `CARGO_PKG_VERSION` / a global)
 /// so it is unit-testable; [`print()`] supplies the real values. The pins
-/// are read from the shared [`crate::telemetry::provenance`] source, so the
-/// banner can never drift from what the server actually serves.
+/// are read from the shared [`crate::telemetry::provenance`] source and the
+/// manufacturer's name, postal address and contact from [`MANUFACTURER`], so
+/// the banner can never drift from what the server actually serves.
 #[must_use]
 pub fn render(
     version: &str,
@@ -44,7 +47,10 @@ pub fn render(
     let mut out = format!(
         "{WORDMARK}\n\n  \
          openEHR-conformant Clinical Data Repository · v{version}\n  \
-         Maintained by Ruben Talstra · {PROJECT_URL}\n\n"
+         Maintained by Ruben Talstra · {PROJECT_URL}\n  \
+         Manufactured by {} · {}\n  \
+         {} · {}\n\n",
+        MANUFACTURER.name, MANUFACTURER.website, MANUFACTURER.postal_address, MANUFACTURER.email,
     );
     let pins: &[(&str, &str)] = &[
         ("Profile", profile.as_str()),
@@ -196,6 +202,29 @@ mod tests {
 
     /// The banner reports the ACTIVE generation, not a fixed pin: the stable
     /// profile prints the released RM version.
+    /// The banner names the manufacturer with its postal address, its single
+    /// point of contact and its website (Regulation (EU) 2025/327,
+    /// `docs/law/eu/ehds/text.html` Art. 30(1)(g)).
+    #[test]
+    fn banner_names_the_manufacturer() {
+        let b = render(
+            "9.9.9",
+            crate::config::profile::SpecProfile::Development,
+            &sandbox(),
+            false,
+        );
+        assert!(
+            b.contains("  Manufactured by Cadasto B.V. · https://www.cadasto.com/contact/\n"),
+            "{b}"
+        );
+        assert!(
+            b.contains(
+                "  Comeniusstraat 2d, 1817 MS Alkmaar, The Netherlands · info@cadasto.com\n"
+            ),
+            "{b}"
+        );
+    }
+
     #[test]
     fn banner_follows_the_active_profile() {
         let b = render(

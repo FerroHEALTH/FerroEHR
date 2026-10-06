@@ -562,6 +562,8 @@ jobs:
         run: bash .claude/hooks/crate_version_bump_guard_test.sh
       - name: The GHCR prune deletes nothing on a dry run and keeps young and retagged manifests
         run: bash scripts/watch/ghcr-prune-orphans.sh --self-test
+      - name: The release withdrawal refuses unregistered versions and moves only the floating tags
+        run: bash scripts/release/withdraw.sh --self-test
 
   # The tracker helpers set the native issue type and the Priority and Effort
   # fields, and declare the label taxonomy (.claude/rules/issue-workflow.md).
@@ -850,6 +852,15 @@ jobs:
         run: bash scripts/checks/compose-hardening.sh
       - name: The overlay's inline dashboard matches the chart's canonical copy
         run: bash scripts/checks/dashboard-drift.sh
+      # The shipped default sends a usage report; a test instance must not.
+      - name: The launcher detector catches an unswitched launcher
+        run: bash scripts/checks/usage-report-off.sh --self-test
+      - name: Every test launcher switches the usage report off
+        run: bash scripts/checks/usage-report-off.sh
+      - name: The EUR-Lex watcher's detector reports a new act and fails on a silent source
+        run: bash scripts/watch/eu-acts.sh --self-test
+      - name: The watcher issue engine dedups by whole key and files the rest
+        run: bash .github/actions/file-watcher-issue/file-issue.sh self-test
 
   # The shaped terminology seed has one canonical directory and one copy inside
   # the Helm chart (a chart's `.Files` reaches only what is packaged with it),

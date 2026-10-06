@@ -36,7 +36,7 @@
 #     the varying detail in the body.
 #   * `--dedup-key K` (repeatable) — the key is a token that must appear in the
 #     title: a match is an issue whose title contains EVERY key as a whole
-#     WORD (regex word boundaries, case-insensitive — #2796: RM/AM/SM occur
+#     WORD (no word character on either side, case-insensitive — #2796: RM/AM/SM occur
 #     inside "the ARM build" and "transform", so substring containment could
 #     dedup a genuine release against an unrelated issue). This is what the
 #     spec watchers need, where the Jira key or the component-plus-version
@@ -52,6 +52,7 @@
 #                      [--state open|all] [--on-existing comment|update|skip]
 #                      [--repo R] [--dry-run]
 #   file-issue.sh find [--title T] [--dedup-key K]... [--state open|all] [--repo R]
+#   file-issue.sh self-test
 #
 # ISSUE TYPE. `--type` sets GitHub's native issue type on a created issue
 # (.claude/rules/issue-workflow.md §Type, priority and labels). It is set
@@ -69,11 +70,67 @@
 # default · GITHUB_OUTPUT to receive the outputs.
 set -euo pipefail
 
+# Drives `file` against a stub `gh` on PATH (#3628): the dedup rule decides
+# create or comment, so each case pins which of the two the engine chose.
+self_test() {
+  local dir fails=0
+  dir="$(mktemp -d)"
+  trap 'rm -rf "$dir"' RETURN
+  cat >"$dir/gh" <<'STUB'
+#!/usr/bin/env bash
+case "$1 $2" in
+  "issue list") printf '%s' "$STUB_LIST" ;;
+  "issue create") echo "https://github.com/o/r/issues/9" ;;
+  "issue comment" | "issue edit") : ;;
+  *) : ;;
+esac
+STUB
+  chmod +x "$dir/gh"
+  printf 'body\n' >"$dir/body"
+  # $1 = case name, $2 = stub list JSON, $3 = expected outcome, rest = args
+  check() {
+    local name="$1" list="$2" want="$3" got
+    shift 3
+    got="$(PATH="$dir:$PATH" STUB_LIST="$list" GITHUB_OUTPUT="" \
+      bash "$0" file --body-file "$dir/body" --repo o/r "$@" | awk '{print $2}')"
+    if [ "$got" = "$want" ]; then
+      echo "ok: $name"
+    else
+      echo "FAIL: $name (wanted $want, got ${got:-nothing})"
+      fails=$((fails + 1))
+    fi
+  }
+  check "a new key files an issue" '[]' created \
+    --title "EU act 32026R0999 adopted" --dedup-key 32026R0999
+  check "an issue carrying the key is commented on" \
+    '[{"number":4,"title":"EU act 32026R0999 adopted"}]' commented \
+    --title "EU act 32026R0999 adopted" --dedup-key 32026R0999
+  check "a key ending in a parenthesis matches" \
+    '[{"number":4,"title":"EU act 32024R2847R(01) corrects the CRA"}]' commented \
+    --title "x" --dedup-key '32024R2847R(01)'
+  check "a key with slash and dot matches" \
+    '[{"number":4,"title":"ITS-REST 1.1.0 / AQL released"}]' commented \
+    --title "x" --dedup-key 1.1.0 --dedup-key /
+  check "a key inside a longer word does not match" \
+    '[{"number":4,"title":"the ARM build"}]' created \
+    --title "RM 1.2.1 released" --dedup-key RM
+  check "a longer CELEX does not match its prefix" \
+    '[{"number":4,"title":"EU act 32024R2847R(01) corrects the CRA"}]' created \
+    --title "x" --dedup-key 32024R2847
+  check "the default key matches an equal title" \
+    '[{"number":4,"title":"Base image moved"}]' commented --title "Base image moved"
+  check "the default key ignores a title that only contains it" \
+    '[{"number":4,"title":"Base image moved twice"}]' created --title "Base image moved"
+  [ "$fails" -eq 0 ] || { echo "file-issue: self-test FAILED ($fails)" >&2; return 1; }
+  echo "file-issue: self-test OK."
+}
+
 verb="${1:-}"
 case "$verb" in
+  self-test) self_test; exit $? ;;
   file | find) shift ;;
   *)
-    echo "file-issue: expected verb 'file' or 'find', got '${verb:-<none>}'" >&2
+    echo "file-issue: expected verb 'file', 'find' or 'self-test', got '${verb:-<none>}'" >&2
     exit 2
     ;;
 esac
@@ -141,16 +198,18 @@ find_existing() {
     printf '%s' "$json" | jq -r --arg t "$title" \
       'map(select(.title == $t)) | .[0].number // empty'
   else
-    # Word-boundary containment, not substring (#2796): the short component
+    # Whole-token containment, not substring (#2796): the short component
     # tokens RM/AM/SM occur inside ordinary words ("the ARM build",
     # "transform"), so a plain contains() could dedup a genuine notification
     # against an unrelated issue. Each key is regex-escaped, then must match
-    # between word boundaries, case-insensitively.
+    # with no word character on either side, case-insensitively; lookarounds
+    # rather than `\b`, so a key ending in punctuation (`32024R2847R(01)`) still
+    # matches.
     printf '%s' "$json" | jq -r --args \
       'map(select(.title as $t
                   | all($ARGS.positional[];
                         gsub("(?<c>[.\\\\+*?()|\\[\\]{}^$-])"; "\\" + .c) as $rx
-                        | $t | test("\\b" + $rx + "\\b"; "i"))))
+                        | $t | test("(?<!\\w)" + $rx + "(?!\\w)"; "i"))))
        | .[0].number // empty' -- "${dedup_keys[@]}"
   fi
 }

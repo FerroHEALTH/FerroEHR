@@ -110,10 +110,14 @@ Therefore, on every page and in every issue:
 
 ## Layering by jurisdiction
 
-The EU layer (GDPR, ePrivacy, EHDS, the EDPB guidelines, NIS2, CRA, MDR) applies to
-every EU deployment and is written once. Each country is one section on top
-of it, in the shape of the Dutch one, read only by a deployment in that
-country: the national acts as a four-column table, the national standards
+The EU layer (GDPR, ePrivacy, EHDS and its implementing acts 2026/2083 and
+2026/2099, Recommendation 2019/243, the EDPB guidelines, NIS2, CRA with its
+implementing act 2025/2392 and its delegated acts 2026/881 and 2025/1535,
+Regulation 2019/1020 on market surveillance,
+Regulation 765/2008 on accreditation and the CE marking, MDR) applies to every
+EU deployment and is written once. Each country is one section on top of it,
+in the shape of the Dutch one, read only by a deployment in that country: the
+national acts as a four-column table, the national standards
 (the NEN section shape; a paywalled standard gets a record, never text), and,
 where the country issues a personal identifier with a published algorithm, a
 rule in the identifier scanner citing the register that defines it.

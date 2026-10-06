@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+#
+# The register of non-conforming FerroEHR versions, kept by its
+# manufacturer, Cadasto B.V. (Regulation (EU) 2025/327 Art 30(1)(o)). One
+# row per finding that released versions do not conform, appended and never
+# rewritten; a row is closed by filling its last column.
+#
+# A version is entered when the manufacturer considers, or has reason to
+# believe, that it does not conform with Annex II or with an obligation of
+# Chapter III (Art 30(1)(i)), or with an essential cybersecurity requirement
+# of Regulation (EU) 2024/2847 Annex I. A vulnerability is entered once its
+# advisory is published.
+#
+# Columns:
+#   id                   N-<year>-<number>, in the order the findings were made
+#   found                the date the manufacturer became aware, YYYY-MM-DD
+#   versions             the released versions that do not conform, each X.Y.Z, separated by commas
+#                        (scripts/release/withdraw.sh refuses a version this column does not name)
+#   requirement          the Annex II item or the article they miss
+#   summary              the non-conformity, in one sentence
+#   serious_incident     yes, with the date it was reported (Art 44(7)), or no
+#   cra_notified         the dates of the CRA Art 14 early warning, notification and final report, or no
+#   action               corrective action, recall or withdrawal, and its timetable (docs/post-market.md)
+#   corrected_in         the version that brings FerroEHR into conformity
+#   authorities_told     the date and the Member States told (Art 30(1)(i))
+#   users_told           the date and the route users and distributors were told (Art 30(1)(j))
+#   closed               the date the finding was closed, YYYY-MM-DD
+id	found	versions	requirement	summary	serious_incident	cra_notified	action	corrected_in	authorities_told	users_told	closed

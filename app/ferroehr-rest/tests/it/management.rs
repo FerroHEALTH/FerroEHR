@@ -166,6 +166,35 @@ async fn public_endpoint_needs_no_auth() {
     );
 }
 
+/// `GET /management/info` names the manufacturer with its postal address, its
+/// single point of contact and its website (Regulation (EU) 2025/327,
+/// `docs/law/eu/ehds/text.html` Art. 30(1)(g)).
+#[tokio::test]
+async fn info_names_the_manufacturer() {
+    let (_db, app) = app_with(AccessLevel::Public, &["ADMIN"], true).await;
+    let response = app
+        .oneshot(get("/management/info"))
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
+    let body: serde_json::Value = serde_json::from_slice(&bytes).expect("json body");
+    assert_eq!(
+        body["manufacturer"],
+        serde_json::json!({
+            "name": "Cadasto B.V.",
+            "postal_address": "Comeniusstraat 2d, 1817 MS Alkmaar, The Netherlands",
+            "email": "info@cadasto.com",
+            "website": "https://www.cadasto.com/contact/",
+        })
+    );
+}
+
 #[tokio::test]
 async fn private_endpoint_401_then_200() {
     let (_db, app) = app_with(AccessLevel::Private, &["ADMIN"], true).await;

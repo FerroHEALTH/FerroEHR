@@ -76,3 +76,4 @@
   - [Control matrix](compliance/control-matrix.md)
   - [EHDS readiness](compliance/ehds-readiness.md)
   - [Technical documentation readiness](compliance/technical-documentation.md)
+  - [Complaints, incidents and vulnerabilities](compliance/post-market.md)

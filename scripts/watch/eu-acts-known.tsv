@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+# The acts scripts/watch/eu-acts.sh already knows: one CELEX<TAB>note per
+# line. Every act Cellar relates to Regulation (EU) 2025/327 or (EU) 2024/2847
+# that is not listed here gets an issue. Add a line when that issue is triaged.
+32024R2847R(01)	corrigendum to Regulation (EU) 2024/2847
+32024R2847R(02)	corrigendum to Regulation (EU) 2024/2847
+32024R2847R(03)	corrigendum to Regulation (EU) 2024/2847
+32024R2847R(04)	corrigendum to Regulation (EU) 2024/2847
+32024R2847R(05)	corrigendum to Regulation (EU) 2024/2847
+32024R2847R(06)	corrigendum to Regulation (EU) 2024/2847
+32024R2847R(07)	corrigendum to Regulation (EU) 2024/2847
+32025R0327	Regulation (EU) 2025/327 (EHDS), which amends Regulation (EU) 2024/2847
+32025R0327R(01)	corrigendum to Regulation (EU) 2025/327
+32025R0327R(02)	corrigendum to Regulation (EU) 2025/327
+32025R0327R(03)	corrigendum to Regulation (EU) 2025/327
+32025R1535	Delegated Regulation (EU) 2025/1535, CRA Art 2(5)
+32025R2392	Implementing Regulation (EU) 2025/2392, CRA Art 7(4)
+32026R0771	Implementing Regulation (EU) 2026/771, EHDS Art 92(11)
+32026R0881	Delegated Regulation (EU) 2026/881, CRA Art 14(9)
+32026R2083	Implementing Regulation (EU) 2026/2083, EHDS Art 23(4) and 23(8)
+32026R2098	Implementing Regulation (EU) 2026/2098, EHDS Art 77(4)
+32026R2099	Implementing Regulation (EU) 2026/2099, EHDS Art 16(2)

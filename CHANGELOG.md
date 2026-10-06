@@ -15,6 +15,111 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+### Added
+
+- **The regulation corpus gains the EHDS implementing acts and the
+  market-surveillance acts** (#3607). `docs/law/eu/` now carries Commission
+  Implementing Regulations (EU) 2026/2083 (MyHealth@EU) and 2026/2099
+  (cross-border identification and authentication), both applying from 26
+  March 2027; Commission Recommendation (EU) 2019/243 on the European
+  electronic health record exchange format, which EHDS recital 26 names;
+  Regulation (EU) 2019/1020 on market surveillance, whose Article 3
+  definitions EHDS Article 2(1)(d) takes over, at its consolidation of 12
+  August 2026; Regulation (EC) No 765/2008, whose Article 30 sets the general
+  principles of the CE marking, at its consolidation of 16 July 2021; and CRA
+  Implementing Regulation (EU) 2025/2392 on the important and critical product
+  categories. Each is fetched by `scripts/vendor/law-eu.sh` with its own
+  provenance record and digests.
+- **The CRA record carries the Regulation's three English corrigenda**
+  (#3607). They correct the title, Article 64(10) ("paragraphs 2 to 9", where
+  the published text says "3 to 9") and the point number Article 67 adds to
+  Directive (EU) 2020/1828. The vendored OJ text includes none of them, and
+  `docs/law/eu/cra/PROVENANCE.md` says which file to cite for which provision.
+- **Complaints, serious incidents and exploited vulnerabilities have a
+  written procedure** (#3613). The new book page *Complaints, incidents and
+  vulnerabilities* names FerroEHR's manufacturer, Cadasto B.V., and its single
+  point of contact, the channels (GitHub private vulnerability reporting;
+  info@cadasto.com with "FerroEHR incident" or "FerroEHR complaint" in the
+  subject; a public issue), the public registers of complaints and of
+  non-conforming versions under `docs/registers/`, and what happens on a
+  non-conformity, an EHDS serious incident (reported within three days of
+  awareness, EHDS Art. 44(7)) and an actively exploited vulnerability or severe
+  incident (the CRA Art. 14 early warning within 24 hours, notification within
+  72 hours and final report), with NIS2 kept separate. `docs/post-market.md`
+  is the maintainers' checklist; `SUPPORT.md` and the issue chooser point to
+  the page.
+- **A non-conforming release can be withdrawn** (#3615).
+  `scripts/release/withdraw.sh <version> --to <version>` refuses a version the
+  register of non-conforming versions does not name, moves the
+  `<major>.<minor>` and `latest` tags of the server, viewer and PostgreSQL
+  images that still point at it to the correcting release, and prints the
+  advisory, the `SECURITY.md` line, the notices to authorities and users, and
+  the register columns to fill. The version's own tag, its digests and its
+  chart version stay published, so a deployment pinned to them keeps running
+  it until it is moved; an OCI chart registry cannot mark one chart version
+  deprecated, and the notice says so. `--dry-run` prints every command and
+  changes nothing.
+- **The regulation corpus gains the CRA delegated acts and the NIS2
+  corrigendum** (#3627). `docs/law/eu/` now carries Commission Delegated
+  Regulation (EU) 2026/881 (when a CSIRT may delay passing on a CRA Art. 14
+  notification, CRA Art. 14(9) and 16(2)) and (EU) 2025/1535 (the CRA Art.
+  2(5) exclusion of products within Regulation (EU) No 168/2013), and the
+  English corrigendum to NIS2 Art. 19(1) beside the NIS2 text, whose record
+  now says which file to cite. `docs/law/README.md` records Implementing
+  Regulations (EU) 2026/771 (the EHDS Board) and 2026/2098 (dataset metadata
+  for secondary use) as adopted and not vendored, with the reason.
+- **Every release states its support period** (#3610). Cadasto B.V. is the
+  manufacturer of each tagged release under the Cyber Resilience Act, and
+  `SECURITY.md` now gives each release a support period of five years from the
+  month it is published (CRA Art. 13(8)), with the end date printed in a new
+  "Support period" section of the release notes (Art. 13(19), Annex II point
+  7). The security update for a release in its support period ships in the
+  newest release (Art. 13(10)).
+- **`SECURITY.md` describes the CRA Art. 14 notifications** (#3609): the
+  early warning within 24 hours, the notification within 72 hours and the
+  final report Cadasto B.V. sends through ENISA's single reporting platform to
+  the Dutch CSIRT for an actively exploited vulnerability or a severe incident,
+  and how users are told through the security advisory.
+- **A weekly EUR-Lex watcher** (#3608) files one issue per new act adopted
+  under, amending or correcting the EHDS (Regulation (EU) 2025/327) or the CRA
+  (Regulation (EU) 2024/2847), naming the article it implements, against a
+  committed baseline of the 18 acts known on 2026-10-06.
+- **The control matrix knows the CRA** (#3606) as a legal source, so a control
+  can declare a CRA article.
+- **The running system names its manufacturer** (#3612), as EHDS Art. 30(1)(g)
+  asks: Cadasto B.V., Comeniusstraat 2d, 1817 MS Alkmaar, The Netherlands,
+  info@cadasto.com, <https://www.cadasto.com/contact/>. It appears on the
+  startup banner, in `ferroehr --version`, as a `manufacturer` object on
+  `GET /management/info`, in the viewer's footer and a Manufacturer card on
+  `/system`, and in an `eu.ferroehr.image.manufacturer` label on the three
+  container images, all read from one source file.
+- **`ferroehr report`** (#3614) writes one redacted JSON document naming what a
+  deployment runs: version, commit, build date, enabled features,
+  specification pins, `openehr-*` crate versions, the migration level of each
+  schema set, the deployment posture, the licence summary, the manufacturer and
+  the effective configuration. A manifest names any part it could not read and
+  why. No credential, URL userinfo or patient data reaches it. Attach it to a
+  complaint or a serious-incident report.
+
+### Changed
+
+- **The system-options `vendor` defaults to `Cadasto B.V.`** (#3612), read from
+  the manufacturer constant (it was `FerroEHR project`); `[server.identity]
+  vendor` still overrides it. The OCI `vendor` and `authors` labels of the three
+  images, and the author of the two OpenVEX documents, name Cadasto B.V. too.
+- **The quickstart `docker-compose.yml` forwards
+  `FERROEHR__USAGE_REPORT__ENABLED` from your shell** (#3623). The report stays
+  on by default; exporting the variable as `false` before `docker compose up`
+  now switches it off, which it did not before.
+
+### Fixed
+
+- **CI and the test harnesses no longer send usage reports** (#3623). The
+  compose smoke test, the viewer login smoke, the deploy probes, the Helm
+  probe, the browser end-to-end runs and the conformance runs switch the
+  report off, so throwaway instances on GitHub-hosted runners stop appearing in
+  FerroPULSE. A CI check fails any new test launcher that leaves it on.
+
 ## [4.3.4] - 2026-10-06
 
 ### Added

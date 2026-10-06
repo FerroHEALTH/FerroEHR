@@ -187,6 +187,10 @@ enabled = false
 FERROEHR__USAGE_REPORT__ENABLED=false
 ```
 
+The quickstart `docker-compose.yml` forwards this variable from your shell, so
+`export FERROEHR__USAGE_REPORT__ENABLED=false` before `docker compose up`
+switches the report off there too.
+
 ```yaml
 # Helm values
 usageReport:

@@ -83,6 +83,14 @@ ACTS=(
   "cra|32024R2847|http://data.europa.eu/eli/reg/2024/2847/oj||400000|Regulation (EU) 2024/2847 — horizontal cybersecurity requirements for products with digital elements (Cyber Resilience Act)"
   "mdr|02017R0745-20260719|http://data.europa.eu/eli/reg/2017/745/oj|2026-07-19|1000000|Regulation (EU) 2017/745 — medical devices (Medical Device Regulation)"
   "eprivacy|02002L0058-20091219|http://data.europa.eu/eli/dir/2002/58/oj|2009-12-19|45000|Directive 2002/58/EC — privacy and electronic communications (ePrivacy Directive)"
+  "myhealth-eu-2026-2083|32026R2083|http://data.europa.eu/eli/reg_impl/2026/2083/oj||90000|Commission Implementing Regulation (EU) 2026/2083 — MyHealth@EU"
+  "cross-border-identification-2026-2099|32026R2099|http://data.europa.eu/eli/reg_impl/2026/2099/oj||29000|Commission Implementing Regulation (EU) 2026/2099 — interoperable, cross-border identification and authentication mechanism for natural persons, health professionals and healthcare providers"
+  "ehr-exchange-format-2019-243|32019H0243|http://data.europa.eu/eli/reco/2019/243/oj||55000|Commission Recommendation (EU) 2019/243 — European Electronic Health Record exchange format"
+  "market-surveillance-2019-1020|02019R1020-20260812|http://data.europa.eu/eli/reg/2019/1020/oj|2026-08-12|188000|Regulation (EU) 2019/1020 — market surveillance and compliance of products"
+  "accreditation-765-2008|02008R0765-20210716|http://data.europa.eu/eli/reg/2008/765/oj|2021-07-16|460000|Regulation (EC) No 765/2008 — requirements for accreditation"
+  "cra-product-categories-2025-2392|32025R2392|http://data.europa.eu/eli/reg_impl/2025/2392/oj||52000|Commission Implementing Regulation (EU) 2025/2392 — technical description of the categories of important and critical products with digital elements"
+  "cra-dissemination-delay-2026-881|32026R0881|http://data.europa.eu/eli/reg_del/2026/881/oj||19500|Commission Delegated Regulation (EU) 2026/881 — terms and conditions for applying the cybersecurity-related grounds in relation to delaying the dissemination of notifications"
+  "cra-exclusion-vehicles-2025-1535|32025R1535|http://data.europa.eu/eli/reg_del/2025/1535/oj||9000|Commission Delegated Regulation (EU) 2025/1535 — exclusion from the Cyber Resilience Act of certain products with digital elements within the scope of Regulation (EU) No 168/2013"
 )
 
 # directory | file | CELEX (percent-encoded) | media type | byte floor | a word the document must contain
@@ -96,6 +104,10 @@ EXTRAS=(
   "gdpr|corrigendum-2018-05-23.html|32016R0679R%2802%29|application/xhtml+xml|15000|Corrigendum"
   "eprivacy|oj.html|32002L0058|text/html|40000|Whereas"
   "eprivacy|amending-directive-2009-136.html|32009L0136|application/xhtml+xml|190000|2002/58/EC"
+  "cra|corrigendum-2024-12-05.html|32024R2847R%2801%29|application/xhtml+xml|2700|Corrigendum"
+  "cra|corrigendum-2025-07-02.html|32024R2847R%2802%29|application/xhtml+xml|2500|Corrigendum"
+  "cra|corrigendum-2025-10-17.html|32024R2847R%2804%29|application/xhtml+xml|3000|Corrigendum"
+  "nis2|corrigendum-2023-12-22.html|32022L2555R%2804%29|application/xhtml+xml|2100|Corrigendum"
 )
 
 # directory | PDF URL | document page | adoption (the record's cell) | byte floor | SHA-256 pin | title
@@ -140,10 +152,18 @@ act_reason() {
   case "$1" in
   gdpr) printf '%s' "The processing law every deployment answers to: the lawfulness, minimisation, security and rights obligations the pseudonymisation boundary, the access log and the records of processing are built against." ;;
   ehds) printf '%s' "The health-data regulation whose Chapter III puts requirements on an EHR system itself, including the Annex II logging elements the audit trail is measured against." ;;
-  nis2) printf '%s' "The cybersecurity directive that binds the essential and important entities a deployment of this software typically is, and the incident-reporting regime around it." ;;
+  nis2) printf '%s' "The cybersecurity directive, transposed into national law, whose security and incident-reporting duties reach the essential and important entities that deploy this software, among them hospitals." ;;
   cra) printf '%s' "The horizontal cybersecurity regulation for products with digital elements, which EHDS Chapter III cross-references for the essential requirements an EHR system inherits." ;;
   mdr) printf '%s' "The medical-device regulation behind the Article 27 interoperability question the EHDS readiness page leaves open for a deployment that claims interoperability with a device." ;;
   eprivacy) printf '%s' "The directive whose Article 5(3) governs storing information in, or gaining access to information stored in, the terminal equipment of a subscriber or user, which the usage report's default is read against (#3580)." ;;
+  myhealth-eu-2026-2083) printf '%s' "An EHDS implementing act, adopted under Article 23(4) and (8) of Regulation (EU) 2025/327 and applying from 26 March 2027 (its Article 19); the EHDS readiness and technical-documentation pages state whether the EHDS implementing acts have been adopted, and this is one of the adopted ones (#3607)." ;;
+  cross-border-identification-2026-2099) printf '%s' "An EHDS implementing act, adopted under Article 16(2) of Regulation (EU) 2025/327 and applying from 26 March 2027, its Article 3(3) and Article 5(2) from 26 March 2029 (its Article 9); the EHDS readiness and technical-documentation pages state whether the EHDS implementing acts have been adopted, and this is one of the adopted ones (#3607)." ;;
+  ehr-exchange-format-2019-243) printf '%s' "The Recommendation that recital 26 of Regulation (EU) 2025/327 says \"provides the foundations\" for the European electronic health record exchange format (#3607)." ;;
+  market-surveillance-2019-1020) printf '%s' "The market-surveillance regulation whose Article 3 definitions, 'placing on the market', 'manufacturer' and 'economic operator' among them, Article 2(1)(d) of Regulation (EU) 2025/327 takes over, and which Article 43(1) of that Regulation applies to EHR systems (#3607)." ;;
+  accreditation-765-2008) printf '%s' "The regulation whose Article 30 sets the general principles of the CE marking, which Article 41(3) of Regulation (EU) 2025/327 applies to the CE marking of an EHR system and Article 29 of Regulation (EU) 2024/2847 to a product with digital elements (#3607)." ;;
+  cra-product-categories-2025-2392) printf '%s' "Adopted under Article 7(4) of Regulation (EU) 2024/2847: its Annex I gives the technical description of the important product categories (classes I and II of Annex III to that Regulation) and its Annex II that of the critical product categories (Annex IV), which a manufacturer reads to see whether its product falls into one (#3607)." ;;
+  cra-dissemination-delay-2026-881) printf '%s' "Adopted under Article 14(9) of Regulation (EU) 2024/2847: it sets the conditions under which the CSIRT that first receives a manufacturer's Article 14 notification may delay passing it on under Article 16(2), which SECURITY.md and the post-market procedure cite (#3627)." ;;
+  cra-exclusion-vehicles-2025-1535) printf '%s' "Adopted under Article 2(5), second subparagraph, of Regulation (EU) 2024/2847: it excludes from that Regulation the products with digital elements within the scope of Regulation (EU) No 168/2013 (two- or three-wheel vehicles and quadricycles), and is vendored so that a reading of the Regulation's scope covers every delegated act limiting it (#3627)." ;;
   *) printf '%s' "" ;;
   esac
 }
@@ -155,6 +175,10 @@ extra_role() {
   gdpr/corrigendum-2018-05-23.html) printf '%s' "The English corrigendum, OJ L 127, 23.5.2018, p. 2." ;;
   eprivacy/oj.html) printf '%s' "The Directive as published in OJ L 201, 31.7.2002, p. 37, recitals included." ;;
   eprivacy/amending-directive-2009-136.html) printf '%s' "Directive 2009/136/EC as published in OJ L 337, 18.12.2009, p. 11, whole." ;;
+  cra/corrigendum-2024-12-05.html) printf '%s' "The English corrigendum of OJ L, 2024/90780, 5.12.2024, to the title." ;;
+  cra/corrigendum-2025-07-02.html) printf '%s' "The English corrigendum of OJ L, 2025/90555, 2.7.2025, to Article 64(10)." ;;
+  cra/corrigendum-2025-10-17.html) printf '%s' "The English corrigendum of OJ L, 2025/90828, 17.10.2025, to Article 67." ;;
+  nis2/corrigendum-2023-12-22.html) printf '%s' "The English corrigendum of OJ L, 2023/90206, 22.12.2023, to Article 19(1)." ;;
   *) printf '%s' "" ;;
   esac
 }
@@ -240,13 +264,178 @@ not list Article 104 among the provisions with a later date.
 changes. A reader of Article 13(4), 31(3) or 32 for an EHR system reads the
 amended wording in `docs/law/eu/ehds/text.html` Art. 104 (`id="art_104"`).
 
-EUR-Lex publishes no consolidation that folds the amendment in. On 2026-10-05
-the only consolidated version it lists for this act is `02024R2847-20241120`,
-the initial one, and its document metadata gives 26 March 2027 as the date
-from which the three changes apply. The OJ text therefore stays pinned. The
-metadata also lists one English corrigendum, CELEX `32024R2847R(01)` (OJ L,
-2024/90780, 5.12.2024), which corrects the reference to Regulation (EU)
-2019/1020 in the title and nothing else; it is not vendored.
+EUR-Lex publishes no consolidation that folds the amendment in. On 2026-10-06
+the only consolidated version the Publications Office lists for this act is
+`02024R2847-20241120`, the initial one, and EUR-Lex's document metadata, read
+2026-10-05, gives 26 March 2027 as the date from which the three changes
+apply.
+
+## The corrigenda, and which file to cite for what
+
+The Publications Office records seven corrigenda to this Regulation, CELEX
+`32024R2847R(01)` to `32024R2847R(07)` (read 2026-10-06). Three have an
+English version, and all three are vendored beside the OJ text:
+
+- `corrigendum-2024-12-05.html`, CELEX `32024R2847R(01)`, OJ L, 2024/90780:
+  the title reads "Regulations (EU) No 168/2013 and (EU) 2019/1020" in place
+  of "(EU) No 2019/1020".
+- `corrigendum-2025-07-02.html`, CELEX `32024R2847R(02)`, OJ L, 2025/90555:
+  the introductory wording of Article 64(10) reads "By way of derogation from
+  paragraphs 2 to 9" in place of "paragraphs 3 to 9".
+- `corrigendum-2025-10-17.html`, CELEX `32024R2847R(04)`, OJ L, 2025/90828:
+  the point Article 67 adds to Annex I to Directive (EU) 2020/1828 is
+  numbered "72." in place of "69.".
+
+The other four correct other language versions only: `R(03)` French and
+Hungarian, `R(05)` Slovak, `R(06)` French, `R(07)` German.
+
+`text.html` is the OJ text of 20 November 2024 and includes none of the three
+English corrigenda: its Article 64(10) still reads "paragraphs 3 to 9".
+Every other article is cited from `text.html`:
+`docs/law/eu/cra/text.html Art. 13(1)`. A citation of Article 64(10) or
+Article 67, or of the title, reads `text.html` together with the corrigendum
+for it, and cites both.
+
+## Why the OJ text stays pinned
+
+The consolidation `02024R2847-20241120` (its header prints the version
+"000.003") folds in all three English corrigenda (marked ►C1 to ►C3 in it)
+and no amendment. The rule this script pins by moves an act to a
+consolidated CELEX when an amendment has been folded in, and none has: the
+EHDS Article 104 changes apply from 26 March 2027 and are not in it. The OJ
+text therefore stays the pin, with the corrigenda beside it, and it keeps the
+recitals, which the consolidation does not carry. When EUR-Lex publishes a
+consolidation that folds in the EHDS amendment, the pin moves to it.
+EOF
+    ;;
+  nis2)
+    cat <<'EOF'
+## The corrigendum, and which file to cite for what
+
+The Publications Office records nine corrigenda to this Directive, CELEX
+`32022L2555R(01)` to `32022L2555R(09)` (read 2026-10-06). One has an English
+version, `R(04)`, and it is vendored beside the OJ text:
+
+- `corrigendum-2023-12-22.html`, CELEX `32022L2555R(04)`, OJ L, 2023/90206,
+  22.12.2023: Article 19(1), first sentence, reads "The Cooperation Group
+  shall, by 17 January 2025, establish" in place of "on 17 January 2025".
+
+The other eight correct other language versions only: `R(01)` Italian and
+Dutch, `R(02)` Dutch, `R(03)` Slovenian, `R(05)` Croatian, Maltese, Romanian,
+Slovak, Slovenian and Swedish, `R(06)` Estonian, `R(07)` Italian, `R(08)`
+French and Hungarian, `R(09)` Estonian and Polish. `R(04)` also has German,
+Estonian, Hungarian, Italian and Swedish versions; only the English one is
+vendored.
+
+`text.html` is the OJ text of 27 December 2022 and does not include the
+corrigendum: its Article 19(1) still reads "on 17 January 2025". Every other
+article is cited from `text.html`: `docs/law/eu/nis2/text.html Art. 23(1)`. A
+citation of Article 19(1) reads `text.html` together with the corrigendum and
+cites both.
+
+## Why the OJ text stays pinned
+
+The Publications Office lists one consolidated version of this Directive,
+`02022L2555-20221227` (read 2026-10-06; its header prints the version
+"000.004"). It folds in the English corrigendum, marked ►C1 in it, and no
+amendment. The rule this script pins by moves an act to a consolidated CELEX
+when an amendment has been folded in, and none has, so the OJ text stays the
+pin, with the corrigendum beside it, and keeps the recitals the consolidation
+does not carry.
+EOF
+    ;;
+  cra-dissemination-delay-2026-881)
+    cat <<'EOF'
+## Whom it binds, and its corrigendum
+
+Its Articles 3 to 5 are addressed to the CSIRT designated as coordinator that
+first receives a notification: they say when that CSIRT may hold a
+notification back from the other CSIRTs. A manufacturer has no duty under it.
+What a manufacturer reads in it is Article 3(a): the delay is open where "the
+manufacturer has informed the CSIRT initially receiving the notification that
+an effective risk mitigation measure, such as a security update or user
+guidance, is expected to be made available within 72 hours".
+
+The Publications Office records one corrigendum, CELEX `32026R0881R(01)`, in
+German only, and one consolidated version, `02026R0881-20260420`, also in
+German only (read 2026-10-06). Neither touches the English text, which is
+pinned as published in OJ L, 2026/881, 20.4.2026. Cite it as
+`docs/law/eu/cra-dissemination-delay-2026-881/text.html Art. 3`.
+EOF
+    ;;
+  cra-exclusion-vehicles-2025-1535)
+    cat <<'EOF'
+## What it excludes
+
+Its Article 1 excludes the application of Regulation (EU) 2024/2847 for
+products with digital elements within the scope of Regulation (EU) No
+168/2013, except L1e vehicles designed to pedal. An EHR system is not such a
+product, so the exclusion does not reach FerroEHR. Of the acts the
+Publications Office records as based on Regulation (EU) 2024/2847 (read
+2026-10-06), it is the only one adopted under Article 2(5). It has no
+corrigendum and no consolidated version. Cite it as
+`docs/law/eu/cra-exclusion-vehicles-2025-1535/text.html Art. 1`.
+EOF
+    ;;
+  ehr-exchange-format-2019-243)
+    cat <<'EOF'
+## Citing it
+
+A recommendation has no articles. The operative part is a run of numbered
+points, (1) to (21), under headings, after "HAS ADOPTED THIS
+RECOMMENDATION:"; the points carry no anchor in the XHTML. The recitals carry
+`id="rct_1"` to `id="rct_19"`. A citation names the point:
+`docs/law/eu/ehr-exchange-format-2019-243/text.html point (11)`.
+
+The Publications Office lists no consolidation and no corrigendum for this
+Recommendation (read 2026-10-06).
+EOF
+    ;;
+  market-surveillance-2019-1020)
+    cat <<'EOF'
+## What the consolidation folds in, and what it does not
+
+`text.html` is the consolidation at 12 August 2026, the latest the
+Publications Office lists (read 2026-10-06; the earlier ones are dated
+2019-06-25, 2024-02-18 and 2024-05-23). Its header lists three amending acts,
+Regulation (EU) 2023/1542 (►M1), Regulation (EU) 2024/1252 (►M2) and
+Regulation (EU) 2025/40 (►M3), and the corrigendum to Regulation (EU)
+2024/1252 of OJ L, 2024/90589, 1.10.2024 (►C1). Cite the articles from here:
+`docs/law/eu/market-surveillance-2019-1020/text.html Art. 3`.
+
+- Article 66 of Regulation (EU) 2024/2847 adds point 72 to Annex I of this
+  Regulation, and that Regulation applies from 11 December 2027 (its Article
+  71(2)). The consolidation does not carry point 72; read it in
+  `docs/law/eu/cra/text.html` Art. 66.
+- The consolidation carries no recital. The OJ text is not vendored beside it
+  because no page cites a recital of this Regulation yet; when one does, it
+  is added through the EXTRAS table.
+- The Publications Office records twelve corrigenda to this Regulation,
+  CELEX `32019R1020R(01)` to `32019R1020R(12)`, and none has an English
+  version (read 2026-10-06).
+EOF
+    ;;
+  accreditation-765-2008)
+    cat <<'EOF'
+## What the consolidation folds in
+
+`text.html` is the consolidation at 16 July 2021, the latest the Publications
+Office lists (read 2026-10-06). It folds in one amending act, Regulation (EU)
+2019/1020 (►M1), whose Article 39(1) replaced the title (the words "and
+market surveillance relating to the marketing of products" are gone),
+deleted Article 1(2) and (3), points 1, 2, 14, 15, 17, 18 and 19 of Article
+2, and Chapter III (Articles 15 to 29), and amended Article 32(1). Regulation
+(EU) 2019/1020 applies from 16 July 2021 (its Article 44). Market
+surveillance is therefore read in
+`docs/law/eu/market-surveillance-2019-1020/`, and this text is cited for
+accreditation, the definitions that remain and the CE marking:
+`docs/law/eu/accreditation-765-2008/text.html Art. 30`.
+
+Article 30 and Annex II (the CE marking, which this file carries as an
+embedded image) are unchanged by the amendment. The consolidation carries no
+recital, and the OJ text is not vendored beside it. The Publications Office
+records five corrigenda to this Regulation, CELEX `32008R0765R(01)` to
+`32008R0765R(05)`, and none has an English version (read 2026-10-06).
 EOF
     ;;
   *) ;;

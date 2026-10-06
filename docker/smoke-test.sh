@@ -29,6 +29,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # (`ferroehr`) stack (issue #282 D3). Only the two core services are started
 # (the viewer and seaweedfs are behind profiles and stay down).
 export COMPOSE_PROJECT_NAME=ferroehr-smoke
+# A test instance sends no usage report (the quickstart reads this switch).
+export FERROEHR__USAGE_REPORT__ENABLED=false
 # The single compose model for every call below: the standalone quickstart file
 # ONLY. An explicit -f suppresses the automatic override merge
 # (docs.docker.com/compose/how-tos/multiple-compose-files), so this smoke test
