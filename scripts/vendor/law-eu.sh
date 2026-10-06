@@ -108,7 +108,7 @@ EXTRAS=(
 # version history page, and changing the digest, title and adoption cell here.
 # The byte floor follows the rule of the ACTS table above.
 EDPB_DOCS=(
-  "edpb-guidelines-01-2025-pseudonymisation|https://www.edpb.europa.eu/system/files/2025-01/edpb_guidelines_202501_pseudonymisation_en.pdf|https://www.edpb.europa.eu/our-work-tools/documents/public-consultations/2025/guidelines-012025-pseudonymisation_en|16 January 2025 (version 1.0, for public consultation)|300000|db1b9931b3403fab8bab846cb5868df776c415589ad925477117bc6b062bd085|Guidelines 01/2025 on pseudonymisation"
+  "edpb-guidelines-01-2025-pseudonymisation|https://www.edpb.europa.eu/system/files/2025-01/edpb_guidelines_202501_pseudonymisation_en.pdf|https://www.edpb.europa.eu/public-consultations/guidelines-012025-on-pseudonymisation_en|16 January 2025 (version 1.0, for public consultation)|300000|db1b9931b3403fab8bab846cb5868df776c415589ad925477117bc6b062bd085|Guidelines 01/2025 on pseudonymisation"
   "edpb-guidelines-02-2023-eprivacy-5-3|https://www.edpb.europa.eu/system/files/documents/2024-10/edpb_guidelines_202302_technical_scope_art_53_eprivacydirective_v2_en_0.pdf|https://www.edpb.europa.eu/documents/guideline/guidelines-22023-on-technical-scope-of-art-53-of-eprivacy-directive_en|7 October 2024 (version 2.0, after public consultation)|270000|dbc1d37783e35ae8668925f92a590ae282eec24c98381a5a8f91b5c2048b5b03|Guidelines 2/2023 on Technical Scope of Art. 5(3) of ePrivacy Directive"
 )
 
@@ -479,6 +479,32 @@ EOF
 # page as read on the date the pin was set.
 edpb_note() {
   case "$1" in
+  edpb-guidelines-01-2025-pseudonymisation)
+    cat <<'EOF'
+## Version
+
+Checked on the EDPB site on 2026-10-06: the version for public consultation
+adopted on 16 January 2025 is still the current EDPB text of these
+guidelines. No later version has been adopted.
+
+- The document page above reads "Closed for feedback", gives the feedback
+  period as 17 January to 14 March 2025, and offers two downloads: this PDF
+  and "Summary: pseudonymisation, when and how to apply it". The page's
+  former address,
+  `https://www.edpb.europa.eu/our-work-tools/documents/public-consultations/2025/guidelines-012025-pseudonymisation_en`,
+  redirects to it.
+- The EDPB's documents listing, filtered to guidelines, has no entry for
+  01/2025. Guidelines finalised after consultation are listed there, as 2/2023
+  is.
+- Guidelines 02/2026 on anonymisation, adopted for public consultation on 8
+  July 2026, are a separate document and are not vendored.
+
+The PDF prints no version number and no version history: its cover reads
+"Adopted on 16 January 2025" and every page footer "Adopted - version for
+public consultation". "Version 1.0" in this record and in
+`docs/law/README.md` names that first and only published version.
+EOF
+    ;;
   edpb-guidelines-02-2023-eprivacy-5-3)
     cat <<'EOF'
 ## Version
