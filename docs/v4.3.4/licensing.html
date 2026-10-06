@@ -1,0 +1,596 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Licensing &amp; legal - FerroEHR Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        <!-- Content-Security-Policy as a <meta> element, because GitHub Pages serves
+             static files and cannot set response headers. A meta CSP is genuinely
+             weaker than the header: `frame-ancestors`, `report-uri` and `sandbox` are
+             IGNORED in meta form (w3c CSP3 §3.3), and it applies only after the parser
+             reaches it. It still stops an injected external script or an exfiltrating
+             `connect-src`, which is the realistic risk for a docs site, so it is worth
+             having while being honest that the site cannot carry the full header set —
+             documented on the security page. `unsafe-inline` is required: mdBook emits
+             inline theme/sidebar scripts and inline styles of its own. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <!-- Self-hosted KaTeX stylesheet (fonts under katex/fonts/) — the site
+             serves no external requests, so mdbook-katex runs with no-css = true
+             and the vendored sheet is linked here. Version 0.16.4, matching the
+             KaTeX the katex-rs renderer inside mdbook-katex bundles (its
+             KATEX-VERSION file); provenance in website/book/KATEX-PROVENANCE.md. -->
+        <link rel="stylesheet" href="katex/katex.min.css">
+
+        <meta name="description" content="User documentation for FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-e96d0476.css">
+        <link rel="stylesheet" href="css/chrome-d279d366.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom-79743c4e.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "rust";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "searchindex-e58f6d6a.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-625c28d6.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">FerroEHR Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/src/licensing.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="licensing--legal"><a class="header" href="#licensing--legal">Licensing &amp; legal</a></h1>
+<p>This page is the complete licensing picture for FerroEHR: what the project’s own
+code is licensed under, which third-party material ships inside the repository
+and the container images, and the trademark and lineage acknowledgments. It is a
+summary for evaluators and deployers, not legal advice.</p>
+<ul>
+<li><a href="#do-you-need-a-commercial-licence">Do you need a commercial licence?</a>
+<ul>
+<li><a href="#installing-a-commercial-licence">Installing a commercial licence</a></li>
+</ul>
+</li>
+<li><a href="#ferroehrs-own-code-the-business-source-license-11">FerroEHR’s own code: the Business Source License 1.1</a></li>
+<li><a href="#vendored-third-party-material">Vendored third-party material</a></li>
+<li><a href="#machine-readable-licensing-reuse-33">Machine-readable licensing (REUSE 3.3)</a></li>
+<li><a href="#rust-dependencies">Rust dependencies</a></li>
+<li><a href="#trademarks-and-lineage">Trademarks and lineage</a></li>
+<li><a href="#questions">Questions</a></li>
+</ul>
+<h2 id="do-you-need-a-commercial-licence"><a class="header" href="#do-you-need-a-commercial-licence">Do you need a commercial licence?</a></h2>
+<p>FerroEHR is source-available under the Business Source License 1.1, which is
+not an OSI-approved open-source licence.
+<a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSE"><code>LICENSE</code></a> is the
+authority and names the Licensor, the Licensed Work, the Additional Use Grant
+and the Change Date; this table is the same boundary in the order people ask
+about it, and the sections below give the full text of each rule.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>What you are doing</th><th>What you need</th><th>Why</th></tr>
+</thead>
+<tbody>
+<tr><td>Reading, building, modifying or redistributing the source</td><td>Free</td><td>The licence grants it without a fee and without asking anyone.</td></tr>
+<tr><td>Development, testing, evaluation, prototyping</td><td>Free</td><td>All non-production use is granted.</td></tr>
+<tr><td>Production use for Non-Commercial Purposes</td><td>Free</td><td>Personal use, academic or scientific research, teaching, and use by a non-profit organisation or public body that is not in the course of a business, does not deliver a service for payment, and is not for commercial advantage.</td></tr>
+<tr><td>A hospital, clinic or care provider running it for its patients</td><td>Commercial licence</td><td>Delivering health care, or any other service for payment, is production use outside the grant.</td></tr>
+<tr><td>A vendor or integrator, or any company running it in production</td><td>Commercial licence</td><td>Production use in the course of a business is outside the grant.</td></tr>
+<tr><td>Offering it, or a work derived from it, to third parties as a hosted, managed or embedded service</td><td>Commercial licence</td><td>Excluded from the grant in every case, whoever you are.</td></tr>
+<tr><td>Selling, sublicensing or otherwise distributing it for a fee</td><td>Commercial licence</td><td>Excluded from the grant in every case, whoever you are.</td></tr>
+</tbody>
+</table>
+</div>
+<p>The last two rows hold whatever else you are: they need a commercial licence
+even for an organisation the rows above would otherwise leave free.</p>
+<h3 id="installing-a-commercial-licence"><a class="header" href="#installing-a-commercial-licence">Installing a commercial licence</a></h3>
+<p>A commercial licence is a signed token file the licensor issues to you. Place
+it where the server can read it and point <code>[licence] file</code> (or
+<code>FERROEHR__LICENCE__FILE</code>) at it; <code>GET /ferroehr/rest/status</code> then reports
+<code>licence.use = "commercial"</code> with your organisation as <code>licensee</code>. Without a
+token the same field reports the <code>non-commercial</code> grant every build embeds.
+The server behaves identically under either; identifiers it mints carry a
+few bits derived from the licence id in place of random bits, so a record
+states which grant it was written under, and nothing else.</p>
+<p>Each version becomes Apache License 2.0 four years after that version is
+published. A commercial licence is arranged with Cadasto B.V., the Licensor,
+which handles the business side of FerroEHR: write to
+<a href="mailto:info@cadasto.com">info@cadasto.com</a> or use
+<a href="https://www.cadasto.com/contact/">https://www.cadasto.com/contact/</a>. Technical questions go to the maintainer
+named in
+<a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/MAINTAINERS.md"><code>MAINTAINERS.md</code></a>.</p>
+<p>The nine <code>openehr-*</code> crates on crates.io are a separate question. The five
+generated model crates and the <code>openehr-its</code> wire layer are Apache-2.0, so any
+Rust project can use them without a licence conversation; the three
+hand-written engines carry the same Business Source License as the
+application. Full detail is under
+<a href="#ferroehrs-own-code-the-business-source-license-11">FerroEHR’s own code</a>
+below.</p>
+<h2 id="ferroehrs-own-code-the-business-source-license-11"><a class="header" href="#ferroehrs-own-code-the-business-source-license-11">FerroEHR’s own code: the Business Source License 1.1</a></h2>
+<p>Everything written for this project (the server and application crates, the
+code generator and tooling, the viewer, and the three hand-written
+specification engines <code>openehr-query</code>, <code>openehr-adl</code> and <code>openehr-sdt</code>) is licensed under the
+<a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSE">Business Source License 1.1</a>,
+SPDX identifier <code>BUSL-1.1</code>. The Licensor is Cadasto B.V. The copyright
+holder is stated as <em>Cadasto B.V.</em>, identically in <code>LICENSE</code>, in
+<code>REUSE.toml</code>, and in every first-party file header; a CI gate compares those
+sources with this page and with the <code>README.md</code> of each hand-written engine
+crate, so they cannot drift apart. Ruben Talstra remains the maintainer, which
+is a credit rather than a holder statement.</p>
+<p>FerroEHR is source-available. The Business Source License 1.1 is not an
+OSI-approved open-source licence, and this project does not claim that it is.</p>
+<p><strong>What the licence allows without asking anyone.</strong> You can read the source,
+build it, modify it, and redistribute it without a fee. All non-production use
+is permitted: development, testing, evaluation and prototyping. Production use
+is permitted for Non-Commercial Purposes, which the licence defines as
+personal use, academic or scientific research, teaching, and use by a
+non-profit organisation or public body that is not in the course of a
+business, does not deliver a service for payment, and is not for commercial
+advantage.</p>
+<p><strong>What needs a commercial licence from the Licensor.</strong> Any other production
+use, including the delivery of health care or any other service for payment.
+A hospital, clinic or care provider running FerroEHR for its patients needs a
+commercial licence, and so does a vendor, integrator or any company running it
+in production. Two uses need one in every case, whoever you are:</p>
+<ul>
+<li>offering FerroEHR, or a work derived from it, to third parties as a hosted,
+managed or embedded service, meaning a service through which anyone other
+than you and your affiliates stores, manages or queries health data held by
+it;</li>
+<li>selling, sublicensing or otherwise distributing FerroEHR for a fee, on its
+own or as a component of another product.</li>
+</ul>
+<p>Companies and care providers building on FerroEHR are wanted here, and the
+commercial licence is the normal path for them. The Licensor arranges it and
+handles every other business or licensing question: write to
+<a href="mailto:info@cadasto.com">info@cadasto.com</a> or use
+<a href="https://www.cadasto.com/contact/">https://www.cadasto.com/contact/</a>. The maintainer named in
+<a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/MAINTAINERS.md"><code>MAINTAINERS.md</code></a>,
+Ruben Talstra (<code>@rubentalstra</code> on GitHub), handles the technical side: code,
+review, releases, issues and security reports.</p>
+<p><strong>The Change Date.</strong> Each version becomes available under the Apache License
+2.0, its Change License, four years after that version is published.</p>
+<p><strong>What the change does not affect.</strong> Releases v3.0.0 through v4.0.17 stay under
+the MIT terms they were published with, and so do the <code>openehr-*</code> crate
+versions 0.0.56 and earlier on crates.io (MIT AND Apache-2.0 for the crates
+that embed openEHR-derived material); <code>openehr-query</code>, <code>openehr-adl</code> and
+<code>openehr-its</code> 0.0.58 and 0.0.59 stay Apache-2.0, and <code>openehr-its</code> 0.0.60 to
+0.0.67 stay <code>BUSL-1.1 AND Apache-2.0</code>. Relicensing changes future versions
+only. <code>LICENSES/MIT.txt</code> reproduces that grant as those versions carry
+it, Ruben Talstra’s copyright line included, because a published grant is a
+record of what was handed out and is not rewritten afterwards.</p>
+<p>The conformance instrument is no longer part of this repository. It is
+<a href="https://github.com/rubentalstra/Veredictum">Veredictum</a>, an independent
+project under Apache-2.0, and the conformance pipeline here consumes it at a
+pinned version. The vendored test corpora this repository still carries keep
+their upstream terms exactly as the table below states.</p>
+<p><strong>Six of the nine published <code>openehr-*</code> spec crates are the exception: they
+are Apache-2.0, not BUSL-1.1.</strong> <code>openehr-base</code>, <code>openehr-rm</code>, <code>openehr-am</code>,
+<code>openehr-lang</code> and <code>openehr-term</code> are the generated openEHR model, published on
+crates.io under the licence of the openEHR machine-readable artifacts they are
+generated from, so any Rust project can use them, in proprietary and hosted
+products included, with no commercial licence involved. They embed
+openEHR-derived material (specification documentation text in the generated doc
+comments), which is Apache-2.0 as well; their generated files name the openEHR
+Foundation as a second copyright holder. <code>openehr-term</code> also embeds the official
+openEHR terminology XML, which is CC-BY-SA 3.0 (see the table below) and is
+redistributed verbatim with attribution, so it declares
+<code>Apache-2.0 AND CC-BY-SA-3.0</code> and ships both texts.</p>
+<p><code>openehr-its</code>, the ITS wire layer, is the sixth. Its canonical XML codecs,
+<code>_type</code> dispatch, REST contract and archetype XML codecs are generated from the
+Apache-2.0 openEHR XSD, OpenAPI and BMM artifacts, and it embeds the vendored
+ITS-JSON schema. The hand-written runtimes, canonical JSON entry points and
+wire-validation dispatcher are Apache-2.0 with it, because the generated code
+cannot ship without them. From 0.0.69 it declares <code>Apache-2.0</code>, and every
+file names the openEHR Foundation as the second copyright holder.</p>
+<p>The three hand-written engines, <code>openehr-query</code> (the AQL parser), <code>openehr-adl</code>
+(the ADL engine) and <code>openehr-sdt</code> (the Simplified Formats, RM-instance
+validation and the SMART scope grammar), are the project’s own engineering and
+carry the Business Source License 1.1 like the application, each with its own
+<code>LICENSE</code> naming the crate as the Licensed Work and each declaring <code>BUSL-1.1</code>.
+See <a href="crates.html#licensing">Rust crates</a>.</p>
+<h2 id="vendored-third-party-material"><a class="header" href="#vendored-third-party-material">Vendored third-party material</a></h2>
+<p>The repository vendors external material verbatim: machine-readable
+specification artifacts the code generator consumes, the openEHR specification
+text used as the conformance oracle, and real-world clinical models and fixtures
+used as test corpora. Each family keeps its upstream license:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Material</th><th>Source</th><th>License</th></tr>
+</thead>
+<tbody>
+<tr><td>openEHR machine-readable artifacts (BMM meta-models, XML Schemas, OpenAPI documents, JSON Schemas)</td><td>the openEHR <code>specifications-ITS-*</code> repositories</td><td><a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/Apache-2.0.txt">Apache-2.0</a></td></tr>
+<tr><td>The normative ADL, cADL, ODIN, BEL and Expression-Language ANTLR grammars</td><td><code>openEHR/adl-antlr</code>, <code>openEHR/openEHR-antlr4</code></td><td><a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/Apache-2.0.txt">Apache-2.0</a></td></tr>
+<tr><td>openEHR specification text (the conformance reference)</td><td>the openEHR <code>specifications-*</code> repositories</td><td><a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC-BY-SA-3.0.txt">CC-BY-SA 3.0</a></td></tr>
+<tr><td>The AQL grammar and the computable terminology assets (the terminology XML the server embeds, and its schemas)</td><td><code>specifications-QUERY</code>, <code>specifications-TERM</code></td><td><a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC-BY-SA-3.0.txt">CC-BY-SA 3.0</a></td></tr>
+<tr><td>Clinical models (archetypes and templates) from the openEHR Clinical Knowledge Manager</td><td>ckm.openehr.org</td><td>per-file <code>licence</code> metadata — a <strong>mix</strong> of <a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC-BY-SA-4.0.txt">CC-BY-SA 4.0</a> and <a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC-BY-SA-3.0.txt">CC-BY-SA 3.0</a></td></tr>
+<tr><td>The ADL 2 archetype library, with its ADL 1.4 twins (the shared corpus)</td><td><code>openEHR/adl-archetypes</code></td><td><strong>no stated licence</strong> — see below</td></tr>
+<tr><td>The ADL 2 validator-regression library (the <code>openehr-adl</code> corpus)</td><td><code>openEHR/adl-archetypes</code>, a different subtree</td><td>mixed: mostly <strong>unstated</strong>, else <a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC-BY-SA-3.0.txt">CC-BY-SA 3.0</a>, <a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC-BY-4.0.txt">CC-BY 4.0</a> or <a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC-BY-3.0.txt">CC-BY 3.0</a></td></tr>
+<tr><td>Test corpora (archie fixtures and reference models, Better <code>web-template-tests</code>, EHRbase SDK canonical-JSON data)</td><td>Nedap, Better Ltd, vitasystems</td><td>Apache-2.0</td></tr>
+<tr><td>Three ISO 13606 / rejected-extract BMM reference models inside the archie corpus</td><td>offered by their authors under MPL 1.1 / GPL 2.0 / LGPL 2.1</td><td>taken under <a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/MPL-1.1.txt">MPL 1.1</a> — see the election below</td></tr>
+<tr><td>One terminology schema file, <code>PropertyUnitData.xsd</code></td><td>ADL Designer / ADL2-tools, via the openEHR TERM assets</td><td><a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/AGPL-3.0-only.txt">AGPL-3.0-only</a> — see the contradiction below</td></tr>
+<tr><td>The self-hosted KaTeX stylesheet and fonts this documentation site renders maths with</td><td>KaTeX contributors</td><td>MIT</td></tr>
+<tr><td>The Citation File Format 1.2.0 JSON Schema (validates <code>CITATION.cff</code> in CI)</td><td><code>citation-file-format/citation-file-format</code></td><td><a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC-BY-4.0.txt">CC-BY 4.0</a></td></tr>
+<tr><td>EU legal acts vendored for the compliance citations (GDPR, ePrivacy Directive, EHDS, NIS2, CRA, MDR), under <code>docs/law/eu/</code></td><td>the EU Publications Office (EUR-Lex)</td><td><a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/LicenseRef-EUR-Lex-Reuse.txt"><code>LicenseRef-EUR-Lex-Reuse</code></a> (Commission Decision 2011/833/EU); the consolidated texts additionally <a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC-BY-4.0.txt">CC-BY 4.0</a></td></tr>
+<tr><td>EDPB Guidelines 01/2025 on pseudonymisation and 2/2023 on the technical scope of Art. 5(3) of the ePrivacy Directive</td><td>European Data Protection Board</td><td><a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/LicenseRef-EDPB-Reuse.txt"><code>LicenseRef-EDPB-Reuse</code></a></td></tr>
+<tr><td>Dutch acts and decrees (UAVG, Wabvpz, BW Boek 7, the Telecommunicatiewet, the logging-retention decree, Begz), under <code>docs/law/nl/</code></td><td>wetten.overheid.nl</td><td><a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/LicenseRef-Auteurswet-Art11-Public-Domain.txt"><code>LicenseRef-Auteurswet-Art11-Public-Domain</code></a>: no copyright subsists in Dutch legislation</td></tr>
+<tr><td>German federal law (BDSG, SGB V, GDNG, StGB; the DigiG as its Bundesgesetzblatt issue), under <code>docs/law/de/</code></td><td>gesetze-im-internet.de and recht.bund.de</td><td><a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/LicenseRef-UrhG-Para5-Amtliche-Werke.txt"><code>LicenseRef-UrhG-Para5-Amtliche-Werke</code></a>: no copyright protection for German legislation (§ 5 Abs. 1 UrhG)</td></tr>
+<tr><td>Swiss federal law (DSG/FADP, DSV/DPO, EPDG, EPDV, EPDV-EDI; German, plus the non-binding English where Fedlex publishes it), under <code>docs/law/ch/</code></td><td>Fedlex (the Federal Chancellery)</td><td><a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/LicenseRef-URG-Art5-Nicht-Geschuetzte-Werke.txt"><code>LicenseRef-URG-Art5-Nicht-Geschuetzte-Werke</code></a>: Swiss legislation and its official translations are not protected by copyright (Art. 5 URG)</td></tr>
+</tbody>
+</table>
+</div>
+<p>The NEN 7510, 7512 and 7513 standards the compliance pages cite are sold under
+copyright and are not in the tree; <code>docs/law/nl/nen-75xx/</code> holds a record of the
+clauses cited and why the text is absent.</p>
+<p>Every vendored tree in the repository carries a provenance note naming its exact
+upstream source and pinned revision, with the upstream <code>LICENSE</code> file vendored
+alongside where the source publishes one; the specification and corpus trees
+name their license there as well, and <code>REUSE.toml</code> below is the authority for
+all of them. The fuzzing seed corpus is a copy of several of those trees, so it
+is declared under the union of their licenses rather than guessing each seed’s
+origin from its filename.</p>
+<p><strong>The CKM clinical-model corpus is mixed, and the table says so on purpose.</strong> A
+first-hand count over the vendored CKM material finds both CC-BY-SA 4.0 (the
+majority) and CC-BY-SA 3.0 (several hundred files), so no single version is a
+true statement about the tree. Each of those archetypes carries its own
+<code>licence</code> field inside its <code>description</code> block, and that per-file metadata is
+the authority for any individual file, which also means licensing for this
+material already survives being copied out of the repository.</p>
+<p><strong>The ADL 2 archetype library states no licence at all</strong>, and this is the one
+tree here that carries no grant. Measured on 2026-09-10 over the vendored copy
+(<code>openEHR/adl-archetypes</code> at the pinned commit): of 652 archetypes, exactly one
+states a licence — and it states CC-BY 4.0, not CC-BY-SA — while the other 651
+carry <code>copyright = &lt;"© openEHR Foundation"&gt;</code> and nothing more. Upstream states
+nothing either: no <code>LICENSE</code> file at that commit, and a four-line <code>README.md</code>.</p>
+<p>The validator-regression library from the same upstream repository is a
+different subtree and measures differently: of its 302 archetypes, 111 state a
+licence and 191 state none, and where one is stated it is predominantly
+CC-BY-SA 3.0 (100 of the 111), with 10 CC-BY 4.0 and 1 CC-BY 3.0. <strong>No file in
+it states CC-BY-SA 4.0</strong>, which is why its declaration names what is actually
+there rather than inheriting the CKM expression.</p>
+<p>An unstated licence is not a permissive one, so this material is declared
+<code>LicenseRef-openEHR-unstated</code>, whose text in <code>LICENSES/</code> records the
+measurement and says plainly that it is not a licence. If you lift a file out
+of that tree, you are doing so without a stated permission from the copyright
+holder, and that is your call to make rather than one this repository has made
+for you. The tree is here because it is the only independent source of paired
+ADL 1.4 and ADL 2 forms of the same archetype: generating the pairs with this
+project’s own converter would validate that converter against its own output.
+Whether it stays committed is tracked on the issue this correction came from.</p>
+<p><strong>Two positions worth stating explicitly</strong>, because both are the kind of thing a
+compliance review finds and a summary table hides:</p>
+<ul>
+<li><strong>The MPL election.</strong> Three BMM reference models in the archie corpus
+(<code>cen_EN13606_0.95.bmm</code>, <code>cen_ts14796_0.90.bmm</code>,
+<code>openehr_ehr_extract_999.bmm</code>) are offered by their authors under a
+tri-license: MPL 1.1, GPL 2.0, or LGPL 2.1. This project <strong>takes them under
+MPL 1.1</strong>, a file-scoped weak copyleft. The election is recorded in that
+corpus’s <code>PROVENANCE.md</code>, so <strong>no GPL or LGPL obligation attaches to anything
+here</strong>.</li>
+<li><strong>One upstream contradiction, not resolved by us.</strong>
+<code>crates/openehr-term/assets/schema/PropertyUnitData.xsd</code> carries an ADL
+Designer / ADL2-tools header offering it under the GNU Affero General Public
+License, inside an upstream repository whose own <code>LICENSE</code> is CC-BY-SA 3.0.
+Both cannot be right, the contradiction is upstream’s, and re-licensing
+someone else’s file is not ours to do, so it is declared at the <strong>more
+restrictive</strong> of the two readings, the one the file’s own text asserts. No
+obligation reaches a consumer: the terminology schemas are excluded from the
+published crate by that crate’s <code>include</code> list, so the file ships in nothing.</li>
+</ul>
+<h2 id="machine-readable-licensing-reuse-33"><a class="header" href="#machine-readable-licensing-reuse-33">Machine-readable licensing (REUSE 3.3)</a></h2>
+<p>The <code>PROVENANCE.md</code> arrangement above is accurate, and it stays. What it does
+not do is survive a file leaving this repository: someone who lifts a single
+archetype out of a test corpus takes a CC-BY-SA file bearing no marking they
+copied. People build on this project and redistribute it, so downstream
+file-level redistribution is the expected case.</p>
+<p>So licensing is <strong>also</strong> published in the machine-readable form the
+<a href="https://reuse.software/spec-3.3/">REUSE Specification 3.3</a> defines:</p>
+<ul>
+<li><strong><a href="https://github.com/FerroHEALTH/FerroEHR/tree/main/LICENSES"><code>LICENSES/</code></a></strong>
+holds the full text of every license any file in the tree is offered under,
+named by SPDX identifier: <code>BUSL-1.1</code>, <code>MIT</code>, <code>Apache-2.0</code>, <code>CC-BY-SA-3.0</code>,
+<code>CC-BY-SA-4.0</code>, <code>CC-BY-4.0</code>, <code>CC-BY-3.0</code>, <code>MPL-1.1</code>, <code>AGPL-3.0-only</code> — plus
+<code>LicenseRef-openEHR-unstated</code>, which is not a licence but the record that
+one tree carries none.</li>
+<li><strong><a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/REUSE.toml"><code>REUSE.toml</code></a></strong>
+declares, by glob, which files are offered under which, including the two
+positions above, represented rather than flattened.</li>
+<li><strong>Every first-party source file carries the header inside itself:</strong> an
+<code>SPDX-FileCopyrightText</code> line and an <code>SPDX-License-Identifier</code> line stating the
+same position <code>REUSE.toml</code> declares for it, so a file copied out of this
+repository takes its licensing along. Rust files of the five generated spec
+crates and of <code>openehr-its</code> state <code>Apache-2.0</code>, and every other first-party
+Rust, shell, SQL and YAML file, the <code>openehr-query</code>, <code>openehr-adl</code> and
+<code>openehr-sdt</code> sources included, states <code>BUSL-1.1</code>. A copied migration or
+script arrives licensed, which is the whole point.</li>
+</ul>
+<p>The vendored trees are glob-declared rather than headered for a reason that is
+not convenience: <strong>no vendored file may be edited</strong>, so a header sweep over
+third-party material was never available. <code>REUSE.toml</code> is the mechanism that
+makes the declaration complete without touching one. The generated spec-crate
+sources are the mirror case: a hand-written header there would be erased by the
+next code-generation run, so they receive theirs from the code generator, which
+stamps every file it writes.</p>
+<p>All of it is gated in CI, and by more than one check, because each one can only
+see part of the picture:</p>
+<ul>
+<li><code>reuse lint</code> proves the declarations are <strong>complete</strong>: every file carries
+licensing information and no license text is orphaned.</li>
+<li>A second check fails the build if the set of licenses declared in <code>REUSE.toml</code>,
+the texts present in <code>LICENSES/</code>, and the licenses named <strong>on this page</strong> ever
+stop agreeing. A license cannot enter the tree without this chapter acquiring
+it.</li>
+<li>Two header checks fail the build if a first-party file loses its header or
+states a license other than the one declared for its path: one for Rust, one
+for shell, SQL and YAML.</li>
+<li>One check fails if the copyright holder is stated differently in <code>LICENSE</code>,
+<code>REUSE.toml</code>, the file headers, this page, or an engine crate’s <code>README.md</code>.</li>
+<li>One check refuses copyleft license <strong>text</strong> inside this project’s own source,
+which is a conflict no reviewer reliably catches by eye.</li>
+</ul>
+<p>What none of them can check is whether the <em>prose</em> on this page is correct. No
+tool can judge that, which is why any change to what the repository
+redistributes updates this chapter in the same pull request.</p>
+<p>The CC-BY-SA specification text and clinical models are redistributed
+<strong>verbatim, with attribution</strong>: they are reference and test material, not part
+of the compiled server. The FerroEHR binary you deploy is built from this
+project’s own BUSL-1.1 code, plus the Apache-2.0 machine-readable inputs the
+generated crates carry, plus the CC-BY-SA 3.0 openEHR terminology bundle
+<code>openehr-term</code> compiles in (five languages, the external-terminology index,
+and the property/unit data). No
+copyleft obligation beyond those attribution-and-share-alike terms on the
+verbatim data attaches to anything shipped.</p>
+<h2 id="rust-dependencies"><a class="header" href="#rust-dependencies">Rust dependencies</a></h2>
+<p>All third-party Rust crates are pinned in the workspace manifest and
+license-gated in CI with <code>cargo deny</code>, which checks licenses, security
+advisories, bans, and sources on every change. The allow-list is permissive
+(MIT, Apache-2.0, the BSD family, ISC, Zlib, BSL-1.0, Unicode-3.0, CC0-1.0,
+MIT-0, CDLA-Permissive-2.0) and deliberately admits two <strong>file-scoped weak
+copyleft</strong> licenses: MPL 2.0, and CDDL 1.0 as a single crate-scoped exception for
+the flamegraph renderer the profiling instruments use. Obligations under both
+attach to those crates’ own files, which are consumed unmodified. No strong
+copyleft (GPL, LGPL, AGPL, SSPL) is admitted, and a new dependency carrying one
+fails the build.</p>
+<p>A separate FOSSA lane publishes dependency and license analysis from the
+committed CLI configuration for review. It is analysis-only by design and gates
+no merge; <code>cargo deny</code> is the gate.</p>
+<h2 id="trademarks-and-lineage"><a class="header" href="#trademarks-and-lineage">Trademarks and lineage</a></h2>
+<ul>
+<li><strong>openEHR®</strong> is the registered trademark of the
+<a href="https://www.openehr.org/">openEHR Foundation</a>. FerroEHR is an independent
+implementation of the openEHR specifications and is <strong>not affiliated with or
+endorsed by</strong> the openEHR Foundation.</li>
+<li>FerroEHR began as a fork of <strong>EHRbase</strong>, developed by
+<a href="https://www.vitagroup.ag/">vitasystems GmbH</a> and the
+<a href="https://www.plri.de/">Peter L. Reichertz Institute</a>, and records that lineage
+in the labelled import commit at the root of its history. EHRbase itself
+remains Apache-2.0; no code from it is present
+in this tree, and it is consulted as prior art only. FerroEHR is not affiliated
+with or endorsed by the EHRbase project. The measured
+<a href="comparison.html">comparison</a> between the two is published in both directions.</li>
+</ul>
+<h2 id="questions"><a class="header" href="#questions">Questions</a></h2>
+<p>If you need a clarification for a compliance review, open a
+<a href="https://github.com/FerroHEALTH/FerroEHR/issues">GitHub discussion or issue</a>;
+provenance questions can usually be answered by pointing at the exact
+<code>PROVENANCE.md</code> and upstream pin.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="contributing.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="compliance/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="contributing.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="compliance/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-09f2665d.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="theme/mermaid-eefea253.min.js"></script>
+        <script src="theme/mermaid-init-ccf746f1.js"></script>
+        <script src="theme/version-picker-dddf05c1.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

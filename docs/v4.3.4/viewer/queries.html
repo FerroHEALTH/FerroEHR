@@ -1,0 +1,484 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Dashboard &amp; queries - FerroEHR Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        <!-- Content-Security-Policy as a <meta> element, because GitHub Pages serves
+             static files and cannot set response headers. A meta CSP is genuinely
+             weaker than the header: `frame-ancestors`, `report-uri` and `sandbox` are
+             IGNORED in meta form (w3c CSP3 §3.3), and it applies only after the parser
+             reaches it. It still stops an injected external script or an exfiltrating
+             `connect-src`, which is the realistic risk for a docs site, so it is worth
+             having while being honest that the site cannot carry the full header set —
+             documented on the security page. `unsafe-inline` is required: mdBook emits
+             inline theme/sidebar scripts and inline styles of its own. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <!-- Self-hosted KaTeX stylesheet (fonts under katex/fonts/) — the site
+             serves no external requests, so mdbook-katex runs with no-css = true
+             and the vendored sheet is linked here. Version 0.16.4, matching the
+             KaTeX the katex-rs renderer inside mdbook-katex bundles (its
+             KATEX-VERSION file); provenance in website/book/KATEX-PROVENANCE.md. -->
+        <link rel="stylesheet" href="../katex/katex.min.css">
+
+        <meta name="description" content="User documentation for FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../css/chrome-d279d366.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/custom-79743c4e.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "rust";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "../searchindex-e58f6d6a.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-625c28d6.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">FerroEHR Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/src/viewer/queries.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="dashboard--queries"><a class="header" href="#dashboard--queries">Dashboard &amp; queries</a></h1>
+<p>The viewer’s query surfaces are three views of the same thing: the dashboard
+summarises what the repository holds, the Query Builder assembles AQL from a
+template’s own paths, and the raw editor runs AQL you wrote yourself. All three
+save to, and run against, the CDR’s own stored-query registry; nothing is kept
+on the viewer’s side.</p>
+<ul>
+<li><a href="#dashboard">Dashboard</a></li>
+<li><a href="#the-query-builder">The Query Builder</a></li>
+<li><a href="#the-raw-aql-editor">The raw AQL editor</a></li>
+<li><a href="#exporting-results">Exporting results</a></li>
+<li><a href="#stored-queries--namespaces">Stored queries &amp; namespaces</a>
+<ul>
+<li><a href="#opening-a-stored-query-in-the-builder">Opening a stored query in the builder</a></li>
+<li><a href="#running-a-stored-query">Running a stored query</a>
+<ul>
+<li><a href="#choosing-how-the-version-resolves">Choosing how the version resolves</a></li>
+</ul>
+</li>
+<li><a href="#grouping-is-the-namespace">Grouping is the namespace</a></li>
+<li><a href="#versions">Versions</a></li>
+<li><a href="#deleting-a-stored-query">Deleting a stored query</a></li>
+</ul>
+</li>
+</ul>
+<h2 id="dashboard"><a class="header" href="#dashboard">Dashboard</a></h2>
+<p>The landing screen shows EHR / composition / template / stored-query counts,
+one tile per <strong>stored-query namespace</strong> (the summed match counts of the
+queries in it), and a commit-activity trend rendered as pure SVG.</p>
+<p>The namespace tiles are live: each one runs every stored query in that
+namespace as a count. If one of them fails, the tile reports no number rather
+than a misleading total. Run that query on the Queries screen to read the
+CDR’s own diagnostic.</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/dashboard/dashboard.png" alt="Dashboard"><span class="img-wrapper"><img src="img/dashboard/dashboard.png" alt="Dashboard"></span></label></p>
+<h2 id="the-query-builder"><a class="header" href="#the-query-builder">The Query Builder</a></h2>
+<p>Build AQL without writing it: pick a template, pick paths from its tree,
+and add typed conditions: each data type gets the right widget, populated
+from the template’s own constraints (coded value sets, ordinal scales,
+quantity units). Conditions combine into arbitrarily nested ALL/ANY groups
+with per-condition and per-group negation. The generated AQL is previewed
+live and is always grammatically valid, since the builder assembles the same
+query syntax tree the server parses, then prints it, so it never hand-builds
+query text.</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/queries/query-builder.png" alt="Query builder"><span class="img-wrapper"><img src="img/queries/query-builder.png" alt="Query builder"></span></label></p>
+<p>A <strong>coded condition</strong> can go further than the template’s own list. Its
+terminology field is backed by the terminologies the CDR serves, offered as
+suggestions while staying free text: an AQL author must be able to name a
+terminology this server does not host. Beside the code box, <strong>look up</strong> asks the
+CDR what the code means and adds it as <code>code — text</code>; a code the terminology
+does not define is still added, marked <em>unvalidated</em>, because the builder never
+refuses a code the CDR happens not to know. <strong>Expand</strong> a value set and its
+members become one-click chips. Typing a code and pressing <strong>add</strong> works exactly
+as it always has, and whichever route a code took, the query carries the bare
+code, and the rubric is only how it reads on screen. When the CDR does not serve
+its <a href="terminology.html">terminology surface</a> the field is simply a plain text box.</p>
+<p>Choose what comes back: whole compositions, projected data points (with
+column aliases), a bare match count, or the distinct EHR ids matching the
+criteria tree (<strong>EHRs (cohort)</strong>). That shape is a plain AQL projection over
+the clinical record and is unrelated to the server’s
+<a href="../querying-aql.html#cohort-queries-across-the-pseudonymisation-boundary">cross-domain cohort query</a>,
+which the viewer does not drive. Run pages through the result set; save the
+query to the CDR’s stored-query registry under a namespace and a name (see
+<a href="#grouping-is-the-namespace">Grouping is the namespace</a>).</p>
+<h2 id="the-raw-aql-editor"><a class="header" href="#the-raw-aql-editor">The raw AQL editor</a></h2>
+<p>The same run/save surface for hand-written AQL: grammar validation before
+anything reaches the CDR, JSON parameter bindings, paged results. The
+builder’s “open in raw editor” hands its generated query across. When the editor
+was opened from a stored query, it also links back the other way, with
+<strong>Open in builder</strong> and <strong>Run with parameters</strong>, so the three surfaces are
+reachable from each other for the same stored definition.</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/queries/query-aql.png" alt="Raw AQL editor"><span class="img-wrapper"><img src="img/queries/query-aql.png" alt="Raw AQL editor"></span></label></p>
+<p>Every non-empty result set offers a <strong>Table | Chart</strong> toggle. The chart draws
+<strong>one line per numeric column</strong>, named by that column’s alias, and its legend
+switches a series on and off; the last visible series stays on, so the chart
+never empties. When a column holds ISO-8601 date/times it is offered as the
+<strong>X axis</strong> and used by default: a real time scale, where points sit at their
+true distance apart whatever order the rows came back in. The row order stays
+available as the fallback axis, and a single numeric column still draws as one
+plain line. A result set with nothing to chart (no numeric column, or a single
+row) says so in the chart pane rather than showing a blank box.</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/queries/query-aql-results.png" alt="Query results"><span class="img-wrapper"><img src="img/queries/query-aql-results.png" alt="Query results"></span></label></p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/queries/query-results-chart.png" alt="Chart view"><span class="img-wrapper"><img src="img/queries/query-results-chart.png" alt="Chart view"></span></label></p>
+<h2 id="exporting-results"><a class="header" href="#exporting-results">Exporting results</a></h2>
+<p>Both results panes (the builder and the raw editor) offer <strong>Export CSV</strong>
+and <strong>Export JSON</strong>, a plain form download that works even before the
+page’s WebAssembly loads. The export runs the query’s own <code>LIMIT</code> window,
+or the server’s default fetch limit when the query has none. CSV cells
+hold scalar values verbatim; structured values are embedded as compact
+JSON.</p>
+<h2 id="stored-queries--namespaces"><a class="header" href="#stored-queries--namespaces">Stored queries &amp; namespaces</a></h2>
+<p>Fresh repositories start empty, with the action that fills the screen:</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/queries/queries-empty.png" alt="Stored queries — empty"><span class="img-wrapper"><img src="img/queries/queries-empty.png" alt="Stored queries — empty"></span></label></p>
+<p>List the CDR’s stored queries, inspect a query’s AQL, and jump into the
+editor to run it.</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/queries/queries.png" alt="Stored queries"><span class="img-wrapper"><img src="img/queries/queries.png" alt="Stored queries"></span></label></p>
+<p>The table is paged by the shared footer under it: rows on screen out of how
+many, previous/next, and 25/50/100 rows per page, all in the URL (see
+<a href="index.html#paging">Paging</a>). The namespace panel beside it is derived from the
+same listing and shows every namespace, whichever page you are on.</p>
+<p>Each stored query row offers three hand-offs:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Action</th><th>What it opens</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Run</strong></td><td>The <a href="#running-a-stored-query">stored-query runner</a>, which executes <em>that stored query</em> on the CDR, with its parameters prompted</td></tr>
+<tr><td><strong>Open in editor</strong></td><td>The raw AQL editor, seeded with that version’s query text</td></tr>
+<tr><td><strong>Open in builder</strong></td><td>The <a href="#the-query-builder">query builder</a>, with the query loaded back into its controls, when it fits (see <a href="#opening-a-stored-query-in-the-builder">Opening a stored query in the builder</a>)</td></tr>
+</tbody>
+</table>
+</div>
+<p>Both editing hand-offs pre-fill the namespace, name, and version fields, with
+the version set to the <em>next</em> one, so saving again publishes a new version
+instead of colliding with the one you opened (see <a href="#versions">Versions</a>).</p>
+<h3 id="opening-a-stored-query-in-the-builder"><a class="header" href="#opening-a-stored-query-in-the-builder">Opening a stored query in the builder</a></h3>
+<p>The builder writes one shape of AQL, and it will only load a stored query back
+into its controls when it can reproduce that query <strong>byte for byte</strong>; it
+re-lowers what it recognised and compares the result against the stored text.
+Anything else opens with a notice naming exactly what the builder cannot
+express (a <code>$parameter</code> it has no field for, a query over other RM classes, an
+aggregate outside its output shapes) beside a link to work on it in the raw
+editor instead. There is no partial load: a builder that showed <em>most</em> of a
+stored query would quietly rewrite it on the next save.</p>
+<p>A query that does load arrives complete (template, conditions including
+nested ALL/ANY groups and negation, output shape, ordering, limit) with its
+condition labels and value lists taken from the template’s own constraints, and
+the next version proposed in the save field.</p>
+<h3 id="running-a-stored-query"><a class="header" href="#running-a-stored-query">Running a stored query</a></h3>
+<p><strong>Run</strong> on a stored-query row opens the runner for that query. It shows the
+stored AQL, prompts one field per parameter the query declares, and executes the
+<em>stored definition</em> on the CDR, not a copy of its text, so what runs is what
+every other openEHR client would get.</p>
+<p>Values are read as JSON first: <code>38.5</code> is sent as a number and <code>true</code> as a
+boolean, while <code>at0037</code>, <code>2026-07-01</code> and <code>1.0.0</code> are sent as text without any
+quoting. To force a numeric-looking value to stay text, quote it: <code>"0123"</code>. A
+field left blank is not sent at all, so the CDR can apply its own default or say
+what is missing.</p>
+<p>Results render in the same results pane as the other query screens: table or
+chart, with previous/next paging. A query that sets its own row window (an AQL
+<code>LIMIT</code> or <code>TOP</code>) is run as stored and the pane says so rather than paging it,
+because openEHR does not allow a request window and a query window together.</p>
+<h4 id="choosing-how-the-version-resolves"><a class="header" href="#choosing-how-the-version-resolves">Choosing how the version resolves</a></h4>
+<p>openEHR defines three ways to name the version of a stored query you are
+reading, and the runner offers all three. The line under the picker always
+states the exact request your choice sends:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Resolution</th><th>Request</th><th>Which version runs</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Latest version</strong></td><td><code>POST /query/{name}</code></td><td>the latest version of that query</td></tr>
+<tr><td><strong>Version prefix</strong></td><td><code>POST /query/{name}/1</code> or <code>…/1.2</code></td><td>the latest version matching the prefix</td></tr>
+<tr><td><strong>Exact version</strong></td><td><code>POST /query/{name}/1.2.0</code></td><td>exactly that version</td></tr>
+</tbody>
+</table>
+</div>
+<p>A version that does not fit the chosen form (a full <code>1.2.0</code> typed as a prefix, or
+a bare <code>1</code> typed as exact) is refused with an explanation before anything is
+sent.</p>
+<h3 id="grouping-is-the-namespace"><a class="header" href="#grouping-is-the-namespace">Grouping is the namespace</a></h3>
+<p>A stored query is identified by a qualified name, <code>namespace::name</code>, the
+namespace optional and, when present, a reverse domain name whose purpose in
+the openEHR REST specification is exactly “separation of use of stored
+queries by teams, companies, etc.”</p>
+<p>The viewer therefore does <strong>not</strong> invent a grouping of its own: a query’s
+group <em>is</em> its namespace, chosen when you save it. The right-hand panel on
+<strong>Queries</strong> and the cohort tiles on the <strong>Dashboard</strong> are both derived live
+from <code>GET /definition/query</code>. There is nothing to create, edit, or remove:
+and nothing kept on the viewer’s disk, so the grouping is durable in the
+CDR and reads identically for every openEHR client and every viewer
+replica. Queries saved without a namespace collect under <strong>unqualified</strong>.</p>
+<p>Both save surfaces (the builder and the raw editor) therefore offer the
+<strong>Namespace</strong> field beside the <strong>Query name</strong>, and show the exact qualified
+name the save writes. Typing the whole <code>namespace::name</code> into the name
+field works too.</p>
+<h3 id="versions"><a class="header" href="#versions">Versions</a></h3>
+<p>A stored query is identified by its qualified name <strong>and a version</strong>, and the
+version is SEMVER-style, <code>major.minor.patch</code>. The save surfaces expose it as
+an optional <strong>Version</strong> field, and the line under the fields always states
+which of the two openEHR store operations a click will perform:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Version field</th><th>What a save does</th></tr>
+</thead>
+<tbody>
+<tr><td>empty</td><td><code>PUT /definition/query/{name}</code>; the CDR files it at the default slot <code>1.0.0</code> and <strong>replaces</strong> whatever was stored there</td></tr>
+<tr><td><code>1.2.0</code></td><td><code>PUT /definition/query/{name}/{version}</code>; stores a <strong>new, immutable</strong> version; if that exact <code>(name, version)</code> pair already exists the CDR refuses it (<code>409</code>) and the viewer says so</td></tr>
+</tbody>
+</table>
+</div>
+<p>Because an explicit version is immutable, <strong>Open in editor</strong> and <strong>Open in
+builder</strong> both propose the next minor version (opening <code>1.0.0</code> fills the field
+with <code>1.1.0</code>): edit, save, and both versions are then listed side by side.
+Which part to bump is yours to change; the field is free text and only checks
+that a version you type is a complete triple.</p>
+<p>A shorter pattern like <code>1</code> or <code>1.0</code> is a <strong>read</strong> form, not a store form: when
+<em>fetching or executing</em> a stored query, openEHR resolves a partial version to
+the latest one matching that prefix, and omitting the version entirely means
+the latest of all. The viewer therefore refuses a partial version in the save
+field (with an explanation) rather than filing a definition under a string that
+later lookups would treat as a pattern. The CDR refuses one too, with a <code>400</code>:
+a prefix names no version a store could create, and openEHR assigns the write
+no other outcome.</p>
+<p>The default slot <code>1.0.0</code> is the CDR’s own choice; openEHR does not say which
+version a version-less store mints, so the version-less form always writes and
+reports that one slot, even when higher versions of the same name already
+exist. If you need a specific version, type it.</p>
+<h3 id="deleting-a-stored-query"><a class="header" href="#deleting-a-stored-query">Deleting a stored query</a></h3>
+<p><strong>Delete from CDR</strong> (on a stored-query row) deletes <em>that version</em> of the
+query from the CDR’s stored-query store, for every client. The only
+destructive action on the screen. It appears only when the CDR’s admin API is
+enabled (<code>admin.enabled</code> / <code>FERROEHR__ADMIN__ENABLED</code>, off by default; see
+<a href="../installation/config-auth.html#admin"><code>[admin]</code></a>); the delete itself
+additionally needs the ADMIN role, and a session without it is refused with
+a message naming what is missing.</p>
+<p>It opens a confirmation dialog that names the exact query and version before
+anything is sent, and a refused delete is reported with the CDR’s own
+diagnostic and the next action to take. Deleting the last query of a
+namespace simply makes that namespace stop appearing.</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/queries/queries-admin-delete.png" alt="Stored-query delete"><span class="img-wrapper"><img src="img/queries/queries-admin-delete.png" alt="Stored-query delete"></span></label></p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../viewer/index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../viewer/browsing.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../viewer/index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../viewer/browsing.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../theme/mermaid-eefea253.min.js"></script>
+        <script src="../theme/mermaid-init-ccf746f1.js"></script>
+        <script src="../theme/version-picker-dddf05c1.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

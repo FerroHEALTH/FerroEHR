@@ -1,0 +1,578 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Usage report - FerroEHR Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        <!-- Content-Security-Policy as a <meta> element, because GitHub Pages serves
+             static files and cannot set response headers. A meta CSP is genuinely
+             weaker than the header: `frame-ancestors`, `report-uri` and `sandbox` are
+             IGNORED in meta form (w3c CSP3 §3.3), and it applies only after the parser
+             reaches it. It still stops an injected external script or an exfiltrating
+             `connect-src`, which is the realistic risk for a docs site, so it is worth
+             having while being honest that the site cannot carry the full header set —
+             documented on the security page. `unsafe-inline` is required: mdBook emits
+             inline theme/sidebar scripts and inline styles of its own. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <!-- Self-hosted KaTeX stylesheet (fonts under katex/fonts/) — the site
+             serves no external requests, so mdbook-katex runs with no-css = true
+             and the vendored sheet is linked here. Version 0.16.4, matching the
+             KaTeX the katex-rs renderer inside mdbook-katex bundles (its
+             KATEX-VERSION file); provenance in website/book/KATEX-PROVENANCE.md. -->
+        <link rel="stylesheet" href="katex/katex.min.css">
+
+        <meta name="description" content="User documentation for FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-e96d0476.css">
+        <link rel="stylesheet" href="css/chrome-d279d366.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom-79743c4e.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "rust";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "searchindex-e58f6d6a.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-625c28d6.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">FerroEHR Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/src/usage-report.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="usage-report"><a class="header" href="#usage-report">Usage report</a></h1>
+<p>Every FerroEHR instance sends a small JSON report to FerroPULSE, a collector
+that Cadasto B.V. runs. It goes out at each process start and once a day. It
+says that the instance is alive, which version it runs, under which licence
+grant type, and how fast it answers, in coarse aggregates. The report is on by
+default. Every boot logs one INFO line that says whether it is on and how to
+switch it off.</p>
+<p>This page lists every field the report carries, says when it is sent and how to
+print it before it is sent, gives the switch, and carries the privacy notice for
+the data the collector stores. No openEHR specification governs any of it; the
+report is FerroEHR’s own design.</p>
+<ul>
+<li><a href="#when-a-report-is-sent">When a report is sent</a></li>
+<li><a href="#what-a-report-contains">What a report contains</a>
+<ul>
+<li><a href="#the-daily-metrics">The daily metrics</a></li>
+</ul>
+</li>
+<li><a href="#what-a-report-never-contains">What a report never contains</a></li>
+<li><a href="#see-the-report-before-it-is-sent">See the report before it is sent</a></li>
+<li><a href="#switch-it-off">Switch it off</a></li>
+<li><a href="#network">Network</a></li>
+<li><a href="#privacy-notice">Privacy notice</a>
+<ul>
+<li><a href="#controller">Controller</a></li>
+<li><a href="#purposes-and-lawful-basis">Purposes and lawful basis</a></li>
+<li><a href="#what-the-collector-stores">What the collector stores</a></li>
+<li><a href="#recipients-and-location">Recipients and location</a></li>
+<li><a href="#retention">Retention</a></li>
+<li><a href="#your-right-to-object">Your right to object</a></li>
+<li><a href="#your-other-rights">Your other rights</a></li>
+<li><a href="#operators-in-switzerland">Operators in Switzerland</a></li>
+</ul>
+</li>
+</ul>
+<h2 id="when-a-report-is-sent"><a class="header" href="#when-a-report-is-sent">When a report is sent</a></h2>
+<p>There are two kinds of report, and both are one HTTPS <code>POST</code> to
+<code>https://report.ferropulse.eu/v1/report</code> with a JSON body of at most 64 KiB.</p>
+<ul>
+<li><strong><code>start</code>:</strong> at each process start, once the server has connected to its
+database. An instance sends at most one start report per ten minutes,
+however many replicas start: the time of the last one is kept in the
+database. A pod in a crash loop sends one start report per ten minutes, not
+one per restart.</li>
+<li><strong><code>daily</code>:</strong> the first attempt 10 minutes after boot, then roughly every
+24 hours (23.5 to 24.5 hours after the previous one, spread at random). One
+replica sends it for the whole instance. Every replica adds its counts to a
+window kept in the database, and the replica that claims the report sends
+the totals and empties the window. A replica can claim it only when no daily
+report went out in the last 23 hours, so a restart does not add one.</li>
+</ul>
+<p>The boot line, with the report on, reads:</p>
+<pre><code class="language-text">usage report ON: instance id, version, licence type, deployment, uptime, host size and coarse performance aggregates, at each start and once a day; no patient data. Off: FERROEHR__USAGE_REPORT__ENABLED=false. Details: https://ferroehr.eu/docs/latest/usage-report.html
+</code></pre>
+<p>It carries the configured endpoint as the structured field <code>endpoint</code>. With the
+report off, the line reads:</p>
+<pre><code class="language-text">usage report OFF (usage_report.enabled = false): nothing is sent. Details: https://ferroehr.eu/docs/latest/usage-report.html
+</code></pre>
+<h2 id="what-a-report-contains"><a class="header" href="#what-a-report-contains">What a report contains</a></h2>
+<p>Every report carries these fields:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Field</th><th>Sent in</th><th>What it is</th></tr>
+</thead>
+<tbody>
+<tr><td><code>schema</code></td><td>both</td><td>Always <code>1</code>, the version of the report format.</td></tr>
+<tr><td><code>event</code></td><td>both</td><td><code>start</code> or <code>daily</code>.</td></tr>
+<tr><td><code>first_start</code></td><td><code>start</code></td><td><code>true</code> when this start created the instance id, which marks a new installation; <code>false</code> on every later start.</td></tr>
+<tr><td><code>product</code></td><td>both</td><td>Always <code>ferroehr</code>.</td></tr>
+<tr><td><code>instance_id</code></td><td>both</td><td>A random UUID (version 4), created at the first start and stored in the database. It is not derived from the host, the licence or anything else about the deployment. Every replica shares it, and a restore of the database keeps it.</td></tr>
+<tr><td><code>version</code></td><td>both</td><td>The server version, for example <code>4.3.4</code>.</td></tr>
+<tr><td><code>git_sha</code></td><td>both</td><td>The commit the binary was built from, 7 to 40 hex digits. A build that recorded no commit, such as one from a source tarball, sends <code>0000000</code>.</td></tr>
+<tr><td><code>spec_profile</code></td><td>both</td><td>The <a href="installation/configuration.html#spec_profile"><code>spec_profile</code></a> setting: <code>development</code> or <code>stable</code>.</td></tr>
+<tr><td><code>licence</code></td><td>both</td><td>The licence grant type: <code>commercial</code> when an installed licence permits commercial use, <code>non-commercial</code> otherwise. Never the licence id.</td></tr>
+<tr><td><code>deployment</code></td><td>both</td><td>How the instance was deployed: <code>helm</code>, <code>compose</code>, <code>binary</code> or <code>unknown</code>. It comes from <code>[usage_report] deployment</code>, which the Helm chart sets to <code>helm</code>.</td></tr>
+<tr><td><code>uptime_s</code></td><td>both</td><td>Seconds since this process started.</td></tr>
+<tr><td><code>db_ok</code></td><td>both</td><td>Whether the database answered the health check.</td></tr>
+<tr><td><code>migrations_ok</code></td><td>both</td><td>Whether the database carries this build’s migrations.</td></tr>
+<tr><td><code>postgres_major</code></td><td>both</td><td>The PostgreSQL major version, for example <code>18</code>.</td></tr>
+<tr><td><code>cpu_bucket</code></td><td>both</td><td>The CPUs available to the process, as a range: <code>1-2</code>, <code>3-4</code>, <code>5-8</code>, <code>9-16</code> or <code>17+</code>.</td></tr>
+<tr><td><code>memory_bucket</code></td><td>both</td><td>The memory available to the process in GiB, the smaller of the host’s memory and the container limit, as a range: <code>&lt;4</code>, <code>4-8</code>, <code>8-16</code>, <code>16-32</code> or <code>32+</code>. Off Linux the server cannot read it and sends <code>&lt;4</code>.</td></tr>
+<tr><td><code>metrics</code></td><td><code>daily</code></td><td>The performance aggregates below.</td></tr>
+</tbody>
+</table>
+</div>
+<p>A start report, formatted here for reading (the server sends it on one line):</p>
+<pre><code class="language-json">{
+  "schema": 1,
+  "event": "start",
+  "first_start": true,
+  "product": "ferroehr",
+  "instance_id": "5f0c6b2e-3d4a-4c8b-9e1f-2a3b4c5d6e7f",
+  "version": "4.3.4",
+  "git_sha": "1a2b3c4d",
+  "spec_profile": "stable",
+  "licence": "non-commercial",
+  "deployment": "helm",
+  "uptime_s": 0,
+  "db_ok": true,
+  "migrations_ok": true,
+  "postgres_major": 18,
+  "cpu_bucket": "3-4",
+  "memory_bucket": "8-16"
+}
+</code></pre>
+<h3 id="the-daily-metrics"><a class="header" href="#the-daily-metrics">The daily metrics</a></h3>
+<p>The daily report adds one object that covers the window since the previous
+daily report:</p>
+<pre><code class="language-json">"metrics": {
+  "window_24h": {
+    "requests_bucket": "1k-10k",
+    "routes": {
+      "composition": {
+        "p50_ms": 12.5, "p95_ms": 80.1, "p99_ms": 240.0,
+        "errors_5xx": 0,
+        "histogram": [10, 40, 120, 300, 90, 30, 8, 2, 0, 0, 0]
+      }
+    },
+    "aql": {
+      "executions": 1200, "slow": 3, "p95_ms": 310.0,
+      "histogram": [0, 5, 40, 200, 500, 300, 120, 30, 4, 1, 0]
+    }
+  }
+}
+</code></pre>
+<ul>
+<li><strong><code>requests_bucket</code>:</strong> the number of requests the REST API served in the
+window, as a range: <code>0</code>, <code>1-100</code>, <code>100-1k</code>, <code>1k-10k</code>, <code>10k-100k</code> or
+<code>100k+</code>. Each range includes its lower bound and excludes its upper one, so
+<code>1-100</code> means 1 to 99.</li>
+<li><strong><code>routes</code>:</strong> one entry per group of endpoints that served at least one
+request. A request is placed in a group by the route template it matched,
+never by the path the client sent. The groups are <code>ehr</code> (EHR and
+<code>EHR_STATUS</code>), <code>composition</code> (compositions and their version history),
+<code>contribution</code>, <code>query</code> (query execution), <code>definition</code> (templates and
+stored queries), <code>directory</code>, <code>admin</code>, and <code>other</code> for everything else,
+such as demographics, messaging and terminology.</li>
+<li><strong><code>p50_ms</code>, <code>p95_ms</code>, <code>p99_ms</code>:</strong> the median, 95th and 99th percentile
+latency of the group in milliseconds, estimated from its histogram.</li>
+<li><strong><code>errors_5xx</code>:</strong> the responses with a 5xx status.</li>
+<li><strong><code>histogram</code>:</strong> 11 request counts, one per latency bucket. The bucket upper
+bounds in milliseconds are 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000,
+and no bound for the last. Counts add up across instances, so a fleet
+percentile comes from summed histograms.</li>
+<li><strong><code>aql</code>:</strong> AQL execution over the window. <code>executions</code> counts the queries
+that reached execution, <code>slow</code> the executions that took longer than
+<a href="installation/config-server.html#usage_report"><code>slow_aql_ms</code></a> (its default
+is in the configuration reference), and <code>p95_ms</code> and <code>histogram</code> are as above.</li>
+</ul>
+<h2 id="what-a-report-never-contains"><a class="header" href="#what-a-report-never-contains">What a report never contains</a></h2>
+<p>A report carries no patient data, no EHR id or any other id taken from a
+request, no request path, no AQL text or query parameter, no error message, no
+audit-log content, no user name, no client IP address, no licence id, no host
+name and no customer or staff name. The report types in the server have no
+field that could hold any of these, and the collector refuses a report with a
+member it does not know.</p>
+<p>The collector does record the IP address the report arrives from. See
+<a href="#what-the-collector-stores">What the collector stores</a>.</p>
+<h2 id="see-the-report-before-it-is-sent"><a class="header" href="#see-the-report-before-it-is-sent">See the report before it is sent</a></h2>
+<p><code>ferroehr usage-report --print</code> prints the exact JSON body the instance would
+send now, and sends nothing. Add <code>--event daily</code> for the daily report; the
+default is <code>--event start</code>. The command loads the same configuration as the
+server and connects to the database to read the instance id and the shared
+window, to which the running replicas add their counts every five minutes. It
+writes nothing. Run it where the server runs:</p>
+<pre><code class="language-shell"># Kubernetes (the image has no shell, so call the binary by its path)
+kubectl -n ferroehr exec deploy/ferroehr -- /usr/local/bin/ferroehr usage-report --print
+
+# Docker Compose
+docker compose exec ferroehr /usr/local/bin/ferroehr usage-report --print --event daily
+</code></pre>
+<p>The JSON goes to stdout on one line. Notes go to stderr: when the database
+holds no instance id yet, the id shown is a sample, and the first start creates
+the real one; with the report off, the command says so. It works with the
+report off, and then shows the instance id stored at an earlier start. That id
+is what you give Cadasto to have stored reports erased (see
+<a href="#your-right-to-object">Your right to object</a>).</p>
+<h2 id="switch-it-off"><a class="header" href="#switch-it-off">Switch it off</a></h2>
+<p>Any one of these stops the report:</p>
+<pre><code class="language-toml">[usage_report]
+enabled = false
+</code></pre>
+<pre><code class="language-shell">FERROEHR__USAGE_REPORT__ENABLED=false
+</code></pre>
+<pre><code class="language-yaml"># Helm values
+usageReport:
+  enabled: false
+</code></pre>
+<p>Under the Helm chart the switch is <code>usageReport.enabled</code> (on the command line,
+<code>--set usageReport.enabled=false</code>). The chart writes it into the rendered
+configuration together with <code>deployment = "helm"</code>, and it refuses to render
+when <code>config.usage_report.enabled</code> or <code>config.usage_report.deployment</code> is also
+set.</p>
+<p>With the report off, the server sends nothing to FerroPULSE and writes nothing
+to its database for the report, and the boot line says <code>usage report OFF</code>.
+Nothing else in the server changes. Switching it off stops new reports only.
+Reports already stored at the collector stay until the retention period ends,
+unless you ask for them to be erased.</p>
+<h2 id="network"><a class="header" href="#network">Network</a></h2>
+<ul>
+<li><strong>Destination:</strong> outbound HTTPS to <code>report.ferropulse.eu</code>, port 443. The
+<code>endpoint</code> key moves it; the server refuses an endpoint that is plain HTTP
+(except to a loopback host) or that carries credentials.</li>
+<li><strong>One direction only:</strong> the server reads the status code of the answer and
+nothing else. It does not follow redirects, and nothing the collector answers
+changes the server’s configuration or behaviour.</li>
+<li><strong>Failures stay local:</strong> a send gives up after 5 seconds without a
+connection or 10 seconds in total. A failure is logged once at DEBUG. Boot,
+the health and readiness probes, and request handling never wait on the
+report, so a slow or unreachable collector affects none of them. A daily
+attempt that failed before it claimed the window tries again an hour later.
+A claimed window whose send fails is dropped, not resent.</li>
+<li><strong>NetworkPolicy egress:</strong> with the chart’s
+<code>networkPolicy.egress.enabled</code> on, the pod needs a rule in
+<code>networkPolicy.egress.rules</code> that admits <code>report.ferropulse.eu</code> on port 443.
+A NetworkPolicy cannot match a DNS name, so the rule is an <code>ipBlock</code>; see
+<a href="installation/hardening-network-policy.html#egress-deny-by-default-and-what-it-breaks">Egress</a>.
+Without the rule the report fails quietly and nothing else is affected. If
+you do not want the report, switch it off: a blocked report is still
+attempted at every start and every day.</li>
+</ul>
+<h2 id="privacy-notice"><a class="header" href="#privacy-notice">Privacy notice</a></h2>
+<p>This section gives the information that Articles 13 and 14 of the
+<a href="https://eur-lex.europa.eu/eli/reg/2016/679/oj">GDPR</a> list, for the personal
+data a report and its stored record can contain. A report names no person.
+It can still relate to one: the collector stores the address each report
+comes from, and an instance run by one person, such as a practitioner on their
+own internet connection, can be linked to that person through the address or
+through the instance id. Where that is so, the report is personal data, and
+this notice applies to it.</p>
+<p>This page is also part of the user information Cadasto supplies with FerroEHR
+under Annex II of the
+<a href="https://eur-lex.europa.eu/eli/reg/2024/2847/oj">Cyber Resilience Act</a>: it
+names the outbound connection, what it carries, and how to switch it off.</p>
+<h3 id="controller"><a class="header" href="#controller">Controller</a></h3>
+<p>Cadasto B.V., the Netherlands. Write to
+<a href="mailto:info@cadasto.com">info@cadasto.com</a> or use
+<a href="https://www.cadasto.com/contact/">https://www.cadasto.com/contact/</a>. Cadasto has not appointed a data
+protection officer.</p>
+<h3 id="purposes-and-lawful-basis"><a class="header" href="#purposes-and-lawful-basis">Purposes and lawful basis</a></h3>
+<p>Cadasto processes the reports for three purposes:</p>
+<ul>
+<li>to know which FerroEHR versions run in the field, so it can tell how many
+installations a security release concerns and whether they upgrade;</li>
+<li>to know how many installations run under each licence grant type;</li>
+<li>to see how the product performs in real use, so it can find and fix slow
+paths.</li>
+</ul>
+<p>The lawful basis is Art. 6(1)(f) GDPR, legitimate interest. The interest is
+Cadasto’s, as the maker of FerroEHR: keeping the product it publishes secure
+and maintained, which needs the versions in use and the reach of each security
+release, and improving it, which needs the licence mix and field performance.
+The data come from the FerroEHR instance itself. You are not obliged to send
+them: the report can be switched off, and switching it off changes nothing else
+in FerroEHR.</p>
+<h3 id="what-the-collector-stores"><a class="header" href="#what-the-collector-stores">What the collector stores</a></h3>
+<ul>
+<li>Every report as it arrives, with the fields listed above.</li>
+<li>With each report: the time of receipt, the UTC day, the source IP address
+(IPv4 or IPv6), and the country derived from that address.</li>
+<li>Per instance id: when it was last seen, its current version, and whether it
+is alive.</li>
+<li>Per day: latency totals summed across the whole fleet, without instance ids.</li>
+</ul>
+<p>The country comes from an IP-to-country database bundled with the collector,
+so no address leaves the collector host for the lookup. IP geolocation by
+<a href="https://db-ip.com">DB-IP</a>, licensed
+<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. To limit request
+rates, the collector also keeps a short counter per source address in memory,
+which is lost when it restarts.</p>
+<h3 id="recipients-and-location"><a class="header" href="#recipients-and-location">Recipients and location</a></h3>
+<p>Hetzner Online GmbH (Gunzenhausen, Germany) hosts the collector in its cloud
+and processes the reports as Cadasto’s processor, under a data processing
+agreement Cadasto has signed (Art. 28 GDPR). The collector runs in Hetzner’s
+data centre in Falkenstein, Germany. The FerroPULSE dashboard that shows the
+reports sits behind a GitHub login with no public or anonymous access; only
+members of the FerroHEALTH organisation can sign in.</p>
+<h3 id="retention"><a class="header" href="#retention">Retention</a></h3>
+<p>A daily job deletes reports and start reports 13 months after they were
+received, an instance record 13 months after the instance was last seen, and
+the fleet-wide daily totals 13 months after their day. Backups of the
+collector’s database are kept for 14 days, so a deleted report can remain in a
+backup for at most 14 days more.</p>
+<h3 id="your-right-to-object"><a class="header" href="#your-right-to-object">Your right to object</a></h3>
+<blockquote class="blockquote-tag blockquote-tag-important">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v9.5A1.75 1.75 0 0 1 14.25 13H8.06l-2.573 2.573A1.458 1.458 0 0 1 3 14.543V13H1.75A1.75 1.75 0 0 1 0 11.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h6.5a.25.25 0 0 0 .25-.25v-9.5a.25.25 0 0 0-.25-.25Zm7 2.25v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 9a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Important</p>
+<p><strong>You have the right to object</strong> at any time, on grounds relating to your
+particular situation, to the processing of reports that are personal data
+concerning you (Art. 21(1) GDPR).</p>
+<p><strong>To stop future reports</strong>, switch the report off as described in
+<a href="#switch-it-off">Switch it off</a>. No request to anyone is needed.</p>
+<p><strong>To have the reports already stored erased</strong>, write to
+<a href="mailto:info@cadasto.com">info@cadasto.com</a> with the instance id that
+<code>ferroehr usage-report --print</code> shows. Cadasto then deletes every report,
+start report and instance record stored for that instance id, source
+addresses included (Art. 17(1)(c) GDPR). Switch the report off first, or the
+next report starts a new record.</p>
+<p>The fleet-wide daily totals hold no instance ids, so an erased instance’s
+share in days already summed stays in those totals.</p>
+</blockquote>
+<h3 id="your-other-rights"><a class="header" href="#your-other-rights">Your other rights</a></h3>
+<p>At the same address you can ask for access to the reports stored for your
+instance id (Art. 15), for their rectification (Art. 16) or erasure (Art. 17),
+or for restriction of their processing (Art. 18). You have the right to lodge
+a complaint with a supervisory authority, in particular in the Member State of
+your habitual residence, place of work or place of the alleged infringement
+(Art. 77).</p>
+<h3 id="operators-in-switzerland"><a class="header" href="#operators-in-switzerland">Operators in Switzerland</a></h3>
+<p>Under the Swiss Federal Act on Data Protection
+(<a href="https://www.fedlex.admin.ch/eli/cc/2022/491/de">DSG</a> Art. 19 Abs. 4), these
+are the states your report’s data are disclosed to: <strong>Germany</strong>, where the
+Hetzner data centre in Falkenstein runs the collector, and <strong>the Netherlands</strong>,
+where Cadasto B.V. is established. Both are listed in Annex 1 of the
+Swiss Data Protection Ordinance
+(<a href="https://www.fedlex.admin.ch/eli/cc/2022/568/de">DSV</a>) as states whose
+legislation provides adequate protection (DSG Art. 16 Abs. 1).</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="operations-admin-apis.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="conformance.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="operations-admin-apis.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="conformance.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-09f2665d.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="theme/mermaid-eefea253.min.js"></script>
+        <script src="theme/mermaid-init-ccf746f1.js"></script>
+        <script src="theme/version-picker-dddf05c1.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

@@ -1,0 +1,221 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1918" width="900" height="1918" role="img">
+<style>
+text { fill: #52514e; font: 12px -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; }
+.title { fill: #0b0b0b; font-weight: 600; }
+.muted { fill: #8a8880; font-size: 11px; }
+.grid { stroke: #e4e2dd; stroke-width: 1; }
+.p50 { fill: #7db4ea; } .p90 { fill: #3d7fd0; } .p99 { fill: #1b5cab; }
+.measured { fill: #2a78d6; }
+.floor { fill: none; stroke: #8a8880; stroke-width: 1.5; stroke-dasharray: 4 3; }
+.earned { fill: #1baf7a; font-weight: 600; }
+.notearned { fill: #b3261e; font-weight: 600; }
+.slo { stroke: #b3261e; stroke-width: 1.5; stroke-dasharray: 6 4; }
+.slotext { fill: #b3261e; font-size: 11px; }
+.sut { stroke: #2a78d6; fill: none; stroke-width: 1.8; }
+.db { stroke: #8a8880; fill: none; stroke-width: 1.6; stroke-dasharray: 5 3; }
+.warm { fill: #efede8; }
+.curve { stroke: #2a78d6; fill: none; stroke-width: 2; }
+.cmp { stroke: #8a8880; fill: none; stroke-width: 2; stroke-dasharray: 7 4; }
+.cmpfill { fill: #8a8880; }
+.knee { stroke: #1baf7a; stroke-width: 2; stroke-dasharray: 2 3; }
+@media (prefers-color-scheme: dark) {
+text { fill: #c3c2b7; }
+.title { fill: #ffffff; }
+.muted { fill: #8f8e85; }
+.grid { stroke: #3a3a38; }
+.p50 { fill: #3d5f82; } .p90 { fill: #3987e5; } .p99 { fill: #9ec7ef; }
+.measured { fill: #3987e5; }
+.floor { stroke: #8f8e85; }
+.earned { fill: #26c78d; }
+.notearned { fill: #e5484d; }
+.slo { stroke: #e5484d; }
+.slotext { fill: #e5484d; }
+.sut { stroke: #3987e5; }
+.db { stroke: #8f8e85; }
+.warm { fill: #2a2a28; }
+.curve { stroke: #3987e5; }
+.cmp { stroke: #8f8e85; }
+.cmpfill { fill: #8f8e85; }
+.knee { stroke: #26c78d; }
+}
+</style>
+<text x="24" y="28" class="title">Latency percentiles — class POC measured run (PERF-hospital_sim-class_POC)</text>
+<text x="24" y="44" class="muted">Re-derived from the committed HDR V2 histograms · offered load 2.0/s sustained for 3600 s · errors are a verdict input, not shown</text>
+<rect x="24" y="54" width="14" height="10" rx="3" class="p50"/><text x="42.0" y="63" class="muted">p50</text>
+<rect x="86" y="54" width="14" height="10" rx="3" class="p90"/><text x="104.0" y="63" class="muted">p90</text>
+<rect x="148" y="54" width="14" height="10" rx="3" class="p99"/><text x="166.0" y="63" class="muted">p99</text>
+<line x1="238.0" y1="78" x2="238.0" y2="1884.0" class="grid"/><text x="238.0" y="1900.0" class="muted" text-anchor="middle">0.1 ms</text>
+<line x1="364.4" y1="78" x2="364.4" y2="1884.0" class="grid"/><text x="364.4" y="1900.0" class="muted" text-anchor="middle">1 ms</text>
+<line x1="490.8" y1="78" x2="490.8" y2="1884.0" class="grid"/><text x="490.8" y="1900.0" class="muted" text-anchor="middle">10 ms</text>
+<line x1="617.3" y1="78" x2="617.3" y2="1884.0" class="grid"/><text x="617.3" y="1900.0" class="muted" text-anchor="middle">100 ms</text>
+<line x1="743.7" y1="78" x2="743.7" y2="1884.0" class="grid"/><text x="743.7" y="1900.0" class="muted" text-anchor="middle">1000 ms</text>
+<line x1="743.7" y1="78" x2="743.7" y2="1884.0" class="slo"/><text x="749.7" y="90.0" class="slotext">SLO p99 &#8804; 1 s</text>
+<text x="228.0" y="102.5" text-anchor="end">adhoc_query</text>
+<rect x="238.0" y="83.0" width="311.5" height="9" rx="2" class="p50"/><text x="555.5" y="91.0" class="muted">29</text>
+<rect x="238.0" y="94.0" width="325.6" height="9" rx="2" class="p90"/><text x="569.6" y="102.0" class="muted">38</text>
+<rect x="238.0" y="105.0" width="354.4" height="9" rx="2" class="p99"/><text x="598.4" y="113.0" class="muted">64</text>
+<text x="228.0" y="145.5" text-anchor="end">admin_contribution_report</text>
+<rect x="238.0" y="126.0" width="404.6" height="9" rx="2" class="p50"/><text x="648.6" y="134.0" class="muted">159</text>
+<rect x="238.0" y="137.0" width="410.4" height="9" rx="2" class="p90"/><text x="654.4" y="145.0" class="muted">176</text>
+<rect x="238.0" y="148.0" width="433.6" height="9" rx="2" class="p99"/><text x="677.6" y="156.0" class="muted">269</text>
+<text x="228.0" y="188.5" text-anchor="end">analytics_query</text>
+<rect x="238.0" y="169.0" width="352.7" height="9" rx="2" class="p50"/><text x="596.7" y="177.0" class="muted">62</text>
+<rect x="238.0" y="180.0" width="363.9" height="9" rx="2" class="p90"/><text x="607.9" y="188.0" class="muted">76</text>
+<rect x="238.0" y="191.0" width="416.4" height="9" rx="2" class="p99"/><text x="660.4" y="199.0" class="muted">197</text>
+<text x="228.0" y="231.5" text-anchor="end">archetype_adl2_list</text>
+<rect x="238.0" y="212.0" width="265.6" height="9" rx="2" class="p50"/><text x="509.6" y="220.0" class="muted">13</text>
+<rect x="238.0" y="223.0" width="284.3" height="9" rx="2" class="p90"/><text x="528.3" y="231.0" class="muted">18</text>
+<rect x="238.0" y="234.0" width="310.2" height="9" rx="2" class="p99"/><text x="554.2" y="242.0" class="muted">28</text>
+<text x="228.0" y="274.5" text-anchor="end">composition_commit</text>
+<rect x="238.0" y="255.0" width="341.5" height="9" rx="2" class="p50"/><text x="585.5" y="263.0" class="muted">50</text>
+<rect x="238.0" y="266.0" width="382.6" height="9" rx="2" class="p90"/><text x="626.6" y="274.0" class="muted">106</text>
+<rect x="238.0" y="277.0" width="420.9" height="9" rx="2" class="p99"/><text x="664.9" y="285.0" class="muted">214</text>
+<text x="228.0" y="317.5" text-anchor="end">composition_commit_flat</text>
+<rect x="238.0" y="298.0" width="331.2" height="9" rx="2" class="p50"/><text x="575.2" y="306.0" class="muted">42</text>
+<rect x="238.0" y="309.0" width="343.9" height="9" rx="2" class="p90"/><text x="587.9" y="317.0" class="muted">53</text>
+<rect x="238.0" y="320.0" width="343.9" height="9" rx="2" class="p99"/><text x="587.9" y="328.0" class="muted">53</text>
+<text x="228.0" y="360.5" text-anchor="end">composition_delete</text>
+<rect x="238.0" y="341.0" width="308.8" height="9" rx="2" class="p50"/><text x="552.8" y="349.0" class="muted">28</text>
+<rect x="238.0" y="352.0" width="321.9" height="9" rx="2" class="p90"/><text x="565.9" y="360.0" class="muted">35</text>
+<rect x="238.0" y="363.0" width="321.9" height="9" rx="2" class="p99"/><text x="565.9" y="371.0" class="muted">35</text>
+<text x="228.0" y="403.5" text-anchor="end">composition_read</text>
+<rect x="238.0" y="384.0" width="301.3" height="9" rx="2" class="p50"/><text x="545.3" y="392.0" class="muted">24</text>
+<rect x="238.0" y="395.0" width="318.6" height="9" rx="2" class="p90"/><text x="562.6" y="403.0" class="muted">33</text>
+<rect x="238.0" y="406.0" width="356.3" height="9" rx="2" class="p99"/><text x="600.3" y="414.0" class="muted">66</text>
+<text x="228.0" y="446.5" text-anchor="end">composition_read_current</text>
+<rect x="238.0" y="427.0" width="306.4" height="9" rx="2" class="p50"/><text x="550.4" y="435.0" class="muted">27</text>
+<rect x="238.0" y="438.0" width="323.1" height="9" rx="2" class="p90"/><text x="567.1" y="446.0" class="muted">36</text>
+<rect x="238.0" y="449.0" width="348.7" height="9" rx="2" class="p99"/><text x="592.7" y="457.0" class="muted">57</text>
+<text x="228.0" y="489.5" text-anchor="end">composition_read_flat</text>
+<rect x="238.0" y="470.0" width="281.1" height="9" rx="2" class="p50"/><text x="525.1" y="478.0" class="muted">17</text>
+<rect x="238.0" y="481.0" width="302.3" height="9" rx="2" class="p90"/><text x="546.3" y="489.0" class="muted">25</text>
+<rect x="238.0" y="492.0" width="302.3" height="9" rx="2" class="p99"/><text x="546.3" y="500.0" class="muted">25</text>
+<text x="228.0" y="532.5" text-anchor="end">composition_revision_history</text>
+<rect x="238.0" y="513.0" width="271.3" height="9" rx="2" class="p50"/><text x="515.3" y="521.0" class="muted">14</text>
+<rect x="238.0" y="524.0" width="292.5" height="9" rx="2" class="p90"/><text x="536.5" y="532.0" class="muted">21</text>
+<rect x="238.0" y="535.0" width="315.3" height="9" rx="2" class="p99"/><text x="559.3" y="543.0" class="muted">31</text>
+<text x="228.0" y="575.5" text-anchor="end">composition_update</text>
+<rect x="238.0" y="556.0" width="337.0" height="9" rx="2" class="p50"/><text x="581.0" y="564.0" class="muted">46</text>
+<rect x="238.0" y="567.0" width="357.5" height="9" rx="2" class="p90"/><text x="601.5" y="575.0" class="muted">67</text>
+<rect x="238.0" y="578.0" width="427.2" height="9" rx="2" class="p99"/><text x="671.2" y="586.0" class="muted">239</text>
+<text x="228.0" y="618.5" text-anchor="end">composition_version_read</text>
+<rect x="238.0" y="599.0" width="309.6" height="9" rx="2" class="p50"/><text x="553.6" y="607.0" class="muted">28</text>
+<rect x="238.0" y="610.0" width="321.7" height="9" rx="2" class="p90"/><text x="565.7" y="618.0" class="muted">35</text>
+<rect x="238.0" y="621.0" width="339.8" height="9" rx="2" class="p99"/><text x="583.8" y="629.0" class="muted">49</text>
+<text x="228.0" y="661.5" text-anchor="end">contribution_commit</text>
+<rect x="238.0" y="642.0" width="345.3" height="9" rx="2" class="p50"/><text x="589.3" y="650.0" class="muted">54</text>
+<rect x="238.0" y="653.0" width="396.9" height="9" rx="2" class="p90"/><text x="640.9" y="661.0" class="muted">138</text>
+<rect x="238.0" y="664.0" width="413.7" height="9" rx="2" class="p99"/><text x="657.7" y="672.0" class="muted">187</text>
+<text x="228.0" y="704.5" text-anchor="end">contribution_read</text>
+<rect x="238.0" y="685.0" width="289.7" height="9" rx="2" class="p50"/><text x="533.7" y="693.0" class="muted">20</text>
+<rect x="238.0" y="696.0" width="309.4" height="9" rx="2" class="p90"/><text x="553.4" y="704.0" class="muted">28</text>
+<rect x="238.0" y="707.0" width="351.0" height="9" rx="2" class="p99"/><text x="595.0" y="715.0" class="muted">60</text>
+<text x="228.0" y="747.5" text-anchor="end">directory_create</text>
+<rect x="238.0" y="728.0" width="304.1" height="9" rx="2" class="p50"/><text x="548.1" y="736.0" class="muted">25</text>
+<rect x="238.0" y="739.0" width="328.4" height="9" rx="2" class="p90"/><text x="572.4" y="747.0" class="muted">40</text>
+<rect x="238.0" y="750.0" width="371.3" height="9" rx="2" class="p99"/><text x="615.3" y="758.0" class="muted">86</text>
+<text x="228.0" y="790.5" text-anchor="end">directory_read</text>
+<rect x="238.0" y="771.0" width="281.9" height="9" rx="2" class="p50"/><text x="525.9" y="779.0" class="muted">17</text>
+<rect x="238.0" y="782.0" width="301.1" height="9" rx="2" class="p90"/><text x="545.1" y="790.0" class="muted">24</text>
+<rect x="238.0" y="793.0" width="329.0" height="9" rx="2" class="p99"/><text x="573.0" y="801.0" class="muted">40</text>
+<text x="228.0" y="833.5" text-anchor="end">directory_update</text>
+<rect x="238.0" y="814.0" width="310.3" height="9" rx="2" class="p50"/><text x="554.3" y="822.0" class="muted">28</text>
+<rect x="238.0" y="825.0" width="320.3" height="9" rx="2" class="p90"/><text x="564.3" y="833.0" class="muted">34</text>
+<rect x="238.0" y="836.0" width="331.5" height="9" rx="2" class="p99"/><text x="575.5" y="844.0" class="muted">42</text>
+<text x="228.0" y="876.5" text-anchor="end">ehr_create</text>
+<rect x="238.0" y="857.0" width="309.4" height="9" rx="2" class="p50"/><text x="553.4" y="865.0" class="muted">28</text>
+<rect x="238.0" y="868.0" width="317.2" height="9" rx="2" class="p90"/><text x="561.2" y="876.0" class="muted">32</text>
+<rect x="238.0" y="879.0" width="318.8" height="9" rx="2" class="p99"/><text x="562.8" y="887.0" class="muted">33</text>
+<text x="228.0" y="919.5" text-anchor="end">ehr_extract_export</text>
+<rect x="238.0" y="900.0" width="401.0" height="9" rx="2" class="p50"/><text x="645.0" y="908.0" class="muted">149</text>
+<rect x="238.0" y="911.0" width="412.0" height="9" rx="2" class="p90"/><text x="656.0" y="919.0" class="muted">182</text>
+<rect x="238.0" y="922.0" width="433.3" height="9" rx="2" class="p99"/><text x="677.3" y="930.0" class="muted">268</text>
+<text x="228.0" y="962.5" text-anchor="end">ehr_read</text>
+<rect x="238.0" y="943.0" width="283.7" height="9" rx="2" class="p50"/><text x="527.7" y="951.0" class="muted">18</text>
+<rect x="238.0" y="954.0" width="303.3" height="9" rx="2" class="p90"/><text x="547.3" y="962.0" class="muted">25</text>
+<rect x="238.0" y="965.0" width="324.0" height="9" rx="2" class="p99"/><text x="568.0" y="973.0" class="muted">37</text>
+<text x="228.0" y="1005.5" text-anchor="end">ehr_status_read</text>
+<rect x="238.0" y="986.0" width="278.8" height="9" rx="2" class="p50"/><text x="522.8" y="994.0" class="muted">16</text>
+<rect x="238.0" y="997.0" width="298.7" height="9" rx="2" class="p90"/><text x="542.7" y="1005.0" class="muted">23</text>
+<rect x="238.0" y="1008.0" width="303.4" height="9" rx="2" class="p99"/><text x="547.4" y="1016.0" class="muted">25</text>
+<text x="228.0" y="1048.5" text-anchor="end">ehr_status_update</text>
+<rect x="238.0" y="1029.0" width="294.2" height="9" rx="2" class="p50"/><text x="538.2" y="1037.0" class="muted">21</text>
+<rect x="238.0" y="1040.0" width="323.3" height="9" rx="2" class="p90"/><text x="567.3" y="1048.0" class="muted">36</text>
+<rect x="238.0" y="1051.0" width="346.4" height="9" rx="2" class="p99"/><text x="590.4" y="1059.0" class="muted">55</text>
+<text x="228.0" y="1091.5" text-anchor="end">party_create</text>
+<rect x="238.0" y="1072.0" width="294.9" height="9" rx="2" class="p50"/><text x="538.9" y="1080.0" class="muted">22</text>
+<rect x="238.0" y="1083.0" width="309.3" height="9" rx="2" class="p90"/><text x="553.3" y="1091.0" class="muted">28</text>
+<rect x="238.0" y="1094.0" width="309.3" height="9" rx="2" class="p99"/><text x="553.3" y="1102.0" class="muted">28</text>
+<text x="228.0" y="1134.5" text-anchor="end">party_read</text>
+<rect x="238.0" y="1115.0" width="278.3" height="9" rx="2" class="p50"/><text x="522.3" y="1123.0" class="muted">16</text>
+<rect x="238.0" y="1126.0" width="301.5" height="9" rx="2" class="p90"/><text x="545.5" y="1134.0" class="muted">24</text>
+<rect x="238.0" y="1137.0" width="301.5" height="9" rx="2" class="p99"/><text x="545.5" y="1145.0" class="muted">24</text>
+<text x="228.0" y="1177.5" text-anchor="end">party_relationship_create</text>
+<rect x="238.0" y="1158.0" width="304.2" height="9" rx="2" class="p50"/><text x="548.2" y="1166.0" class="muted">26</text>
+<rect x="238.0" y="1169.0" width="313.1" height="9" rx="2" class="p90"/><text x="557.1" y="1177.0" class="muted">30</text>
+<rect x="238.0" y="1180.0" width="313.1" height="9" rx="2" class="p99"/><text x="557.1" y="1188.0" class="muted">30</text>
+<text x="228.0" y="1220.5" text-anchor="end">party_relationship_read</text>
+<rect x="238.0" y="1201.0" width="256.8" height="9" rx="2" class="p50"/><text x="500.8" y="1209.0" class="muted">11</text>
+<rect x="238.0" y="1212.0" width="282.0" height="9" rx="2" class="p90"/><text x="526.0" y="1220.0" class="muted">17</text>
+<rect x="238.0" y="1223.0" width="282.0" height="9" rx="2" class="p99"/><text x="526.0" y="1231.0" class="muted">17</text>
+<text x="228.0" y="1263.5" text-anchor="end">party_update</text>
+<rect x="238.0" y="1244.0" width="276.3" height="9" rx="2" class="p50"/><text x="520.3" y="1252.0" class="muted">15</text>
+<rect x="238.0" y="1255.0" width="307.0" height="9" rx="2" class="p90"/><text x="551.0" y="1263.0" class="muted">27</text>
+<rect x="238.0" y="1266.0" width="307.0" height="9" rx="2" class="p99"/><text x="551.0" y="1274.0" class="muted">27</text>
+<text x="228.0" y="1306.5" text-anchor="end">readonly_write_denied</text>
+<rect x="238.0" y="1287.0" width="313.0" height="9" rx="2" class="p50"/><text x="557.0" y="1295.0" class="muted">30</text>
+<rect x="238.0" y="1298.0" width="336.1" height="9" rx="2" class="p90"/><text x="580.1" y="1306.0" class="muted">46</text>
+<rect x="238.0" y="1309.0" width="336.1" height="9" rx="2" class="p99"/><text x="580.1" y="1317.0" class="muted">46</text>
+<text x="228.0" y="1349.5" text-anchor="end">smart_configuration_read</text>
+<rect x="238.0" y="1330.0" width="274.7" height="9" rx="2" class="p50"/><text x="518.7" y="1338.0" class="muted">15</text>
+<rect x="238.0" y="1341.0" width="301.0" height="9" rx="2" class="p90"/><text x="545.0" y="1349.0" class="muted">24</text>
+<rect x="238.0" y="1352.0" width="301.0" height="9" rx="2" class="p99"/><text x="545.0" y="1360.0" class="muted">24</text>
+<text x="228.0" y="1392.5" text-anchor="end">stored_query_execute</text>
+<rect x="238.0" y="1373.0" width="330.3" height="9" rx="2" class="p50"/><text x="574.3" y="1381.0" class="muted">41</text>
+<rect x="238.0" y="1384.0" width="346.8" height="9" rx="2" class="p90"/><text x="590.8" y="1392.0" class="muted">55</text>
+<rect x="238.0" y="1395.0" width="380.7" height="9" rx="2" class="p99"/><text x="624.7" y="1403.0" class="muted">103</text>
+<text x="228.0" y="1435.5" text-anchor="end">system_options</text>
+<rect x="238.0" y="1416.0" width="255.1" height="9" rx="2" class="p50"/><text x="499.1" y="1424.0" class="muted">10</text>
+<rect x="238.0" y="1427.0" width="284.0" height="9" rx="2" class="p90"/><text x="528.0" y="1435.0" class="muted">18</text>
+<rect x="238.0" y="1438.0" width="284.0" height="9" rx="2" class="p99"/><text x="528.0" y="1446.0" class="muted">18</text>
+<text x="228.0" y="1478.5" text-anchor="end">tags_put</text>
+<rect x="238.0" y="1459.0" width="299.8" height="9" rx="2" class="p50"/><text x="543.8" y="1467.0" class="muted">24</text>
+<rect x="238.0" y="1470.0" width="317.8" height="9" rx="2" class="p90"/><text x="561.8" y="1478.0" class="muted">33</text>
+<rect x="238.0" y="1481.0" width="329.7" height="9" rx="2" class="p99"/><text x="573.7" y="1489.0" class="muted">41</text>
+<text x="228.0" y="1521.5" text-anchor="end">tags_read</text>
+<rect x="238.0" y="1502.0" width="283.3" height="9" rx="2" class="p50"/><text x="527.3" y="1510.0" class="muted">17</text>
+<rect x="238.0" y="1513.0" width="305.4" height="9" rx="2" class="p90"/><text x="549.4" y="1521.0" class="muted">26</text>
+<rect x="238.0" y="1524.0" width="326.3" height="9" rx="2" class="p99"/><text x="570.3" y="1532.0" class="muted">38</text>
+<text x="228.0" y="1564.5" text-anchor="end">tdd_import</text>
+<rect x="238.0" y="1545.0" width="321.3" height="9" rx="2" class="p50"/><text x="565.3" y="1553.0" class="muted">35</text>
+<rect x="238.0" y="1556.0" width="351.5" height="9" rx="2" class="p90"/><text x="595.5" y="1564.0" class="muted">60</text>
+<rect x="238.0" y="1567.0" width="351.5" height="9" rx="2" class="p99"/><text x="595.5" y="1575.0" class="muted">60</text>
+<text x="228.0" y="1607.5" text-anchor="end">template_adl2_list</text>
+<rect x="238.0" y="1588.0" width="267.5" height="9" rx="2" class="p50"/><text x="511.5" y="1596.0" class="muted">13</text>
+<rect x="238.0" y="1599.0" width="286.8" height="9" rx="2" class="p90"/><text x="530.8" y="1607.0" class="muted">19</text>
+<rect x="238.0" y="1610.0" width="345.5" height="9" rx="2" class="p99"/><text x="589.5" y="1618.0" class="muted">54</text>
+<text x="228.0" y="1650.5" text-anchor="end">template_example</text>
+<rect x="238.0" y="1631.0" width="312.6" height="9" rx="2" class="p50"/><text x="556.6" y="1639.0" class="muted">30</text>
+<rect x="238.0" y="1642.0" width="380.3" height="9" rx="2" class="p90"/><text x="624.3" y="1650.0" class="muted">102</text>
+<rect x="238.0" y="1653.0" width="431.9" height="9" rx="2" class="p99"/><text x="675.9" y="1661.0" class="muted">261</text>
+<text x="228.0" y="1693.5" text-anchor="end">template_get</text>
+<rect x="238.0" y="1674.0" width="354.9" height="9" rx="2" class="p50"/><text x="598.9" y="1682.0" class="muted">64</text>
+<rect x="238.0" y="1685.0" width="395.5" height="9" rx="2" class="p90"/><text x="639.5" y="1693.0" class="muted">134</text>
+<rect x="238.0" y="1696.0" width="427.2" height="9" rx="2" class="p99"/><text x="671.2" y="1704.0" class="muted">240</text>
+<text x="228.0" y="1736.5" text-anchor="end">template_list</text>
+<rect x="238.0" y="1717.0" width="344.5" height="9" rx="2" class="p50"/><text x="588.5" y="1725.0" class="muted">53</text>
+<rect x="238.0" y="1728.0" width="367.3" height="9" rx="2" class="p90"/><text x="611.3" y="1736.0" class="muted">80</text>
+<rect x="238.0" y="1739.0" width="373.7" height="9" rx="2" class="p99"/><text x="617.7" y="1747.0" class="muted">90</text>
+<text x="228.0" y="1779.5" text-anchor="end">terminology_query</text>
+<rect x="238.0" y="1760.0" width="288.1" height="9" rx="2" class="p50"/><text x="532.1" y="1768.0" class="muted">19</text>
+<rect x="238.0" y="1771.0" width="305.0" height="9" rx="2" class="p90"/><text x="549.0" y="1779.0" class="muted">26</text>
+<rect x="238.0" y="1782.0" width="361.8" height="9" rx="2" class="p99"/><text x="605.8" y="1790.0" class="muted">73</text>
+<text x="228.0" y="1822.5" text-anchor="end">unauthenticated_probe</text>
+<rect x="238.0" y="1803.0" width="284.8" height="9" rx="2" class="p50"/><text x="528.8" y="1811.0" class="muted">18</text>
+<rect x="238.0" y="1814.0" width="298.0" height="9" rx="2" class="p90"/><text x="542.0" y="1822.0" class="muted">23</text>
+<rect x="238.0" y="1825.0" width="298.0" height="9" rx="2" class="p99"/><text x="542.0" y="1833.0" class="muted">23</text>
+<text x="228.0" y="1865.5" text-anchor="end">ward_query</text>
+<rect x="238.0" y="1846.0" width="308.9" height="9" rx="2" class="p50"/><text x="552.9" y="1854.0" class="muted">28</text>
+<rect x="238.0" y="1857.0" width="325.6" height="9" rx="2" class="p90"/><text x="569.6" y="1865.0" class="muted">38</text>
+<rect x="238.0" y="1868.0" width="360.7" height="9" rx="2" class="p99"/><text x="604.7" y="1876.0" class="muted">71</text>
+</svg>

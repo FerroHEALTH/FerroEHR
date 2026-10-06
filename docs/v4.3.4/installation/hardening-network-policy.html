@@ -1,0 +1,590 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Namespaces, network &amp; policy - FerroEHR Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        <!-- Content-Security-Policy as a <meta> element, because GitHub Pages serves
+             static files and cannot set response headers. A meta CSP is genuinely
+             weaker than the header: `frame-ancestors`, `report-uri` and `sandbox` are
+             IGNORED in meta form (w3c CSP3 §3.3), and it applies only after the parser
+             reaches it. It still stops an injected external script or an exfiltrating
+             `connect-src`, which is the realistic risk for a docs site, so it is worth
+             having while being honest that the site cannot carry the full header set —
+             documented on the security page. `unsafe-inline` is required: mdBook emits
+             inline theme/sidebar scripts and inline styles of its own. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <!-- Self-hosted KaTeX stylesheet (fonts under katex/fonts/) — the site
+             serves no external requests, so mdbook-katex runs with no-css = true
+             and the vendored sheet is linked here. Version 0.16.4, matching the
+             KaTeX the katex-rs renderer inside mdbook-katex bundles (its
+             KATEX-VERSION file); provenance in website/book/KATEX-PROVENANCE.md. -->
+        <link rel="stylesheet" href="../katex/katex.min.css">
+
+        <meta name="description" content="User documentation for FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../css/chrome-d279d366.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/custom-79743c4e.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "rust";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "../searchindex-e58f6d6a.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-625c28d6.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">FerroEHR Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/src/installation/hardening-network-policy.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="namespaces-network--policy"><a class="header" href="#namespaces-network--policy">Namespaces, network &amp; policy</a></h1>
+<p>Where the release’s boundaries are drawn: namespace scoping, how organisations
+are separated, the decisions not to adopt a mesh or a second policy engine,
+resource bounds in four nested layers, the ingress policy that narrows ports
+before it narrows sources, and deny-by-default egress: the one control on these
+pages that is not free.</p>
+<ul>
+<li><a href="#namespaces-and-one-instance-per-organisation">Namespaces, and one instance per organisation</a></li>
+<li><a href="#service-mesh-a-recorded-decision">Service mesh: a recorded decision</a></li>
+<li><a href="#centralized-policy-and-which-engine">Centralized policy, and which engine</a></li>
+<li><a href="#resource-bounds-four-layers">Resource bounds: four layers</a></li>
+<li><a href="#ingress-ports-are-narrowed-sources-are-yours">Ingress: ports are narrowed, sources are yours</a></li>
+<li><a href="#egress-deny-by-default-and-what-it-breaks">Egress: deny by default, and what it breaks</a></li>
+</ul>
+<h2 id="namespaces-and-one-instance-per-organisation"><a class="header" href="#namespaces-and-one-instance-per-organisation">Namespaces, and one instance per organisation</a></h2>
+<p><strong>Ours, and satisfied by construction.</strong> Every object the chart renders is
+namespace-scoped: Deployment, Service, ConfigMap, Secret, ServiceAccount,
+NetworkPolicy, PodDisruptionBudget, HorizontalPodAutoscaler, Ingress,
+ServiceMonitor, the migration Job, and the viewer’s own Deployment,
+Service, ServiceAccount, NetworkPolicy and Ingress when that workload is enabled.
+There is <strong>no ClusterRole, no ClusterRoleBinding, no CustomResourceDefinition, no
+cluster-scoped object of any kind</strong>, and no template hard-codes a namespace: every
+reference resolves within the release’s own namespace. So two releases in two
+namespaces cannot collide, and neither can reach the other’s Secrets.</p>
+<p><strong>Separating organisations is a release per organisation</strong>, each in its own
+namespace with its own database. FerroEHR carries no in-database tenancy, and
+that is where openEHR puts the boundary: an openEHR system is one organisation’s
+repository, and multi-tenancy is something the infrastructure beneath it does
+with several such systems (BASE <code>architecture_overview</code>
+<code>master06-design_of_the_ehr.adoc</code> §The EHR System).</p>
+<p>What that buys, against the in-process alternative it replaces:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th>One release per organisation</th></tr>
+</thead>
+<tbody>
+<tr><td>Isolation boundary</td><td>Kubernetes plus PostgreSQL: separate Secrets, NetworkPolicies, quotas, RBAC, and a separate database</td></tr>
+<tr><td>Blast radius of an application-level bug</td><td>one organisation, because a query has nothing else to reach</td></tr>
+<tr><td>Blast radius of a compromised database credential</td><td>one organisation’s database</td></tr>
+<tr><td>Cost</td><td>one Deployment, one connection pool and one image pull per organisation</td></tr>
+</tbody>
+</table>
+</div>
+<p>The cost is real and it is the price of the boundary. A shared process scoped by
+a row predicate is cheaper and is not equivalent, however similar the wire
+behaviour looks.</p>
+<h2 id="service-mesh-a-recorded-decision"><a class="header" href="#service-mesh-a-recorded-decision">Service mesh: a recorded decision</a></h2>
+<p><strong>Not adopted, deliberately.</strong> The cheat sheet presents a mesh as a trade-off, not
+a requirement, and for this workload the trade lands clearly.</p>
+<p>What a mesh would provide, and what already provides it:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Mesh benefit</th><th>Already covered by</th></tr>
+</thead>
+<tbody>
+<tr><td>mTLS between services</td><td>the server terminates TLS natively (<code>config.server.tls</code>), including client-certificate authentication for the IHE ATNA node-authentication posture; the database connection uses <code>sslmode=verify-full</code></td></tr>
+<tr><td>East-west traffic restriction</td><td>the shipped NetworkPolicy, and for the viewer an egress policy that admits the CDR Service, DNS and outbound HTTPS and nothing else</td></tr>
+<tr><td>Request-level observability</td><td>OTLP traces and Prometheus metrics from the application, which sees openEHR operations rather than an L7 proxy’s view of opaque HTTP</td></tr>
+<tr><td>An audit trail of access</td><td>the ATNA/BALP audit trail, which records <em>who read which patient’s record</em>, a property no proxy can reconstruct</td></tr>
+</tbody>
+</table>
+</div>
+<p>Against that: a mesh is a second control plane, a sidecar in every pod (which the
+Restricted profile and the empty capability set then have to accommodate), and an
+opinionated platform to upgrade in lockstep. For <strong>one workload plus an external
+database</strong>, the lateral-movement problem a mesh exists to solve barely exists.</p>
+<p><strong>A genuine gap, named rather than glossed:</strong> a mesh would give <em>workload
+identity</em>: SPIFFE-style cryptographic identity per pod, so the database could
+authenticate the client workload rather than a shared password held in a Secret.
+Nothing in this deployment provides that; the DSN is a bearer credential, and any
+process that can read the Secret can use it. The mitigations available without a
+mesh are an external secret manager plus short-lived credentials, for example
+cloud IAM database authentication, where the DSN carries a rotating token rather
+than a password, bound through <code>serviceAccount.annotations</code>. If you run a mesh
+anyway, expect the overlaps above rather than double-implementing them, and note
+that its sidecar will need its own Pod Security accommodation.</p>
+<h2 id="centralized-policy-and-which-engine"><a class="header" href="#centralized-policy-and-which-engine">Centralized policy, and which engine</a></h2>
+<p><strong>Operator’s, and only for one of the three use cases a general policy engine is
+usually proposed for.</strong></p>
+<ul>
+<li><strong>Application authorization: already solved, do not add a second engine.</strong> This
+server ships a policy-driven authorization layer: RBAC, plus ABAC with an
+embedded Cedar engine or an external policy decision point. Adding a second
+engine for application decisions would mean two policy engines disagreeing about
+one question, and the one that loses is whichever is consulted second.</li>
+<li><strong>Service-mesh authorization: moot</strong>, no mesh (<a href="#service-mesh-a-recorded-decision">above</a>).</li>
+<li><strong>Admission control: applies</strong>, and it is the same lever image provenance and
+Pod Security enforcement need.</li>
+</ul>
+<p><strong>Decision: Kyverno</strong>, chosen for what it must enforce rather than on general
+merit. It is the only one of the three candidates that covers <strong>both</strong> levers with
+one controller: <code>verifyImages</code> does keyless signature and attestation
+verification, and its policies can enforce pod-security constraints beyond what
+namespace labels express. <code>sigstore-policy-controller</code> does provenance only, so it
+would have to be paired with something else. Kubernetes’ built-in
+<strong>ValidatingAdmissionPolicy</strong> (CEL, no external controller) is attractive for pod
+shape and is the right tool for cheap structural rules, but it <strong>cannot verify
+signatures at all</strong>, because CEL evaluation makes no network calls and cannot
+reach a transparency log, so it cannot be the answer to the control that matters
+most here.</p>
+<p>If you already run OPA/Gatekeeper for other reasons, keep it and add
+<code>sigstore-policy-controller</code> alongside for provenance; do not run two general
+admission engines. The copyable provenance policies are in
+<a href="hardening-supply-chain.html#image-provenance-at-admission">Images</a>, and Pod
+Security enforcement needs no engine at all: it is
+<a href="hardening-workload.html#pod-security-admission-complying-versus-being-refused">the namespace label</a>.</p>
+<h2 id="resource-bounds-four-layers"><a class="header" href="#resource-bounds-four-layers">Resource bounds: four layers</a></h2>
+<p><strong>Split exactly.</strong> Container requests and limits are the chart’s; namespace
+<code>ResourceQuota</code> and <code>LimitRange</code> are cluster-admin objects, and a workload chart
+that created one would be claiming the whole namespace for itself, wrong the
+moment anything else shares it.</p>
+<p>The chart’s bounds, and where they come from:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th>Value</th><th>Derivation</th></tr>
+</thead>
+<tbody>
+<tr><td><code>resources.requests.cpu</code></td><td><code>250m</code></td><td>the scheduling floor: enough to boot, run migrations and serve steady traffic. An idle-but-serving pod uses far less, so this is deliberately generous rather than tuned to observed idle: a request is what the scheduler reserves, and a too-tight one gets the pod placed on a node with nothing left for a traffic spike.</td></tr>
+<tr><td><code>resources.requests.memory</code></td><td><code>256Mi</code></td><td>observed steady-state resident use is a fraction of this, and the headroom is for the connection pool, the template and WebTemplate caches, and the per-request AQL working set.</td></tr>
+<tr><td><code>resources.limits.cpu</code></td><td><code>2</code></td><td>AQL execution is the CPU-heavy path and is bounded per query by <code>config.query.timeout_ms</code>; two cores lets a query and normal traffic proceed without throttling. CPU limits throttle rather than kill, so this trades latency, not availability.</td></tr>
+<tr><td><code>resources.limits.memory</code></td><td><code>1Gi</code></td><td>a <strong>hard</strong> ceiling: exceeding it is an OOM kill, so it sits well above observed use. The application-level body and result limits below are what keep a single request from approaching it.</td></tr>
+</tbody>
+</table>
+</div>
+<p>Those figures are for a modest replica. Tune them from your own metrics rather than
+treating them as a recommendation, and remember that raising <code>replicaCount</code>
+multiplies the request, which is what a namespace quota will notice first. The
+viewer has its own, smaller bounds under <code>viewer.resources</code>.</p>
+<p><strong>The layering is the point</strong>, and an operator should see it as one story: four
+nested bounds, each catching what the next cannot:</p>
+<ol>
+<li><strong>Per request:</strong> <code>config.server.limits.body_bytes</code> (413 on an over-large
+body), <code>config.query.timeout_ms</code> and <code>config.query.max_result_rows</code> (a query
+cannot return an unbounded row set), <code>config.db.statement_timeout_ms</code> as the
+backstop the HTTP timeout cannot be, because dropping a handler future does not
+cancel the statement PostgreSQL is running.</li>
+<li><strong>Per connection / per caller:</strong> <code>config.server.connection.header_read_timeout_secs</code>
+and its HTTP/2 siblings bound a socket before a request exists;
+<code>config.server.rate_limit</code> refuses <code>429</code>; <code>config.server.max_in_flight</code> sheds
+<code>503</code> when the server is full.</li>
+<li><strong>Per container:</strong> the requests and limits above.</li>
+<li><strong>Per namespace:</strong> the operator’s, and the only layer that protects <em>other</em>
+workloads from this one:</li>
+</ol>
+<pre><code class="language-yaml">apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: ferroehr
+  namespace: ferroehr
+spec:
+  hard:
+    requests.cpu: "2"
+    requests.memory: 4Gi
+    limits.cpu: "12"
+    limits.memory: 8Gi
+    pods: "12"
+    count/services: "4"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: ferroehr-defaults
+  namespace: ferroehr
+spec:
+  limits:
+    - type: Container
+      # A pod that arrives with no limits gets these, so nothing in the namespace
+      # can be unbounded by omission.
+      default: {cpu: "1", memory: 512Mi}
+      defaultRequest: {cpu: 100m, memory: 128Mi}
+      max: {cpu: "4", memory: 2Gi}
+</code></pre>
+<p>Size the quota above <code>replicaCount</code> × requests with headroom for a rolling
+upgrade: <code>maxSurge: 1</code> means one extra pod exists mid-rollout, and a quota with
+no room for it makes upgrades stall rather than fail, which looks like a hung
+deployment. The migration Job needs its share too when
+<code>migrations.job.enabled</code> is on.</p>
+<h2 id="ingress-ports-are-narrowed-sources-are-yours"><a class="header" href="#ingress-ports-are-narrowed-sources-are-yours">Ingress: ports are narrowed, sources are yours</a></h2>
+<p><strong>The chart’s mechanism, your peers:</strong> and the one control on this page whose
+default looks stronger than it is.</p>
+<p><code>networkPolicy.enabled</code> ships <strong>on</strong>, and the policy it renders admits inbound
+traffic to the API port (plus the management port when that runs on its own
+listener) and to nothing else. That half is unconditional. The other half is not:
+the rule’s <strong>sources</strong> are narrowed only when you set <code>networkPolicy.ingressFrom</code>.
+While that list is empty the rule carries no <code>from</code> clause at all, and in the
+NetworkPolicy API a rule with no <code>from</code> admits <strong>every</strong> source, other
+namespaces and off-cluster clients included, not “any pod in this namespace”
+(<a href="https://kubernetes.io/docs/concepts/services-networking/network-policies/">NetworkPolicies</a>).</p>
+<p>So the shipped posture is: <strong>ports restricted, sources open</strong>. Nothing about
+<code>kubectl get networkpolicy</code>, the object’s own name, or a summary that says
+“NetworkPolicy: enabled” distinguishes that from a policy that restricts both:
+which is why the chart now states it as a value you can see and change rather
+than leaving it implicit in an empty list.</p>
+<p>Narrow it to whatever fronts the CDR:</p>
+<pre><code class="language-yaml">networkPolicy:
+  enabled: true
+  ingressFrom:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ingress-nginx   # your controller's namespace
+    # - ipBlock: {cidr: 10.0.0.0/16}                   # or a CIDR, for off-cluster callers
+  ingressAllowAll: false                               # refuse to ever render the open rule
+</code></pre>
+<p>The viewer does not need an entry: when <code>viewer.enabled</code> is on, the chart
+appends the viewer’s own pod selector to whatever you list, because a narrowed
+policy that forgets it locks the viewer out of the CDR and presents as the CDR
+being down.</p>
+<p><strong>The viewer’s own policy works exactly the same way</strong>, under
+<code>viewer.networkPolicy.ingressFrom</code> and <code>viewer.networkPolicy.ingressAllowAll</code>,
+with the same refusal on <code>false</code> + empty. Its egress half is genuinely closed
+(the CDR Service and DNS, nothing else) but its ingress half ships open like the
+CDR’s, and what sits behind it is a login page. Narrow both.</p>
+<blockquote class="blockquote-tag blockquote-tag-important">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v9.5A1.75 1.75 0 0 1 14.25 13H8.06l-2.573 2.573A1.458 1.458 0 0 1 3 14.543V13H1.75A1.75 1.75 0 0 1 0 11.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h6.5a.25.25 0 0 0 .25-.25v-9.5a.25.25 0 0 0-.25-.25Zm7 2.25v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 9a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Important</p>
+<p><strong><code>networkPolicy.ingressAllowAll: false</code> makes “no open ingress” a checked
+fact.</strong> With it set, an empty <code>ingressFrom</code> is refused at render time, the same
+treatment <a href="#egress-deny-by-default-and-what-it-breaks">egress</a> gives a policy
+with no database destination, and for the same reason: an absent selector is a
+decision, and this one is invisible in the place an operator would look for it.
+Set it in the values file of any deployment where an open ingress rule would be
+a finding, and a later edit that drops your <code>ingressFrom</code> fails the install
+instead of quietly reopening the port.</p>
+<p>It ships as <code>true</code>, which is the honest name for what the chart has always
+rendered: a stock <code>helm install</code> produces the open rule, and now says so, in
+the values file, in the object’s <code>kubernetes.io/description</code>, and in the notes
+printed at install. A non-empty <code>ingressFrom</code> always narrows, whatever this key
+is set to; it decides the empty case only.</p>
+</blockquote>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p><strong>A NetworkPolicy is only as real as the CNI that implements it.</strong> On a cluster
+whose network plugin does not enforce NetworkPolicy, the object is accepted,
+stored and displayed with no effect and no warning. Verify by attempting a
+connection the policy should refuse, from a pod in another namespace, since
+that is precisely the source an empty <code>ingressFrom</code> admits.</p>
+</blockquote>
+<h2 id="egress-deny-by-default-and-what-it-breaks"><a class="header" href="#egress-deny-by-default-and-what-it-breaks">Egress: deny by default, and what it breaks</a></h2>
+<p><strong>The mechanism is the chart’s; the destinations are yours:</strong> and this is the
+control where a NetworkPolicy stops being free.</p>
+<p>Enabling <code>networkPolicy.egress.enabled</code> refuses <strong>all</strong> outbound traffic except
+what is listed. DNS is always included, and the database is a first-class value
+because it is the only destination that is never optional:</p>
+<pre><code class="language-yaml">networkPolicy:
+  egress:
+    enabled: true
+    database:
+      to:
+        - ipBlock: {cidr: 10.0.12.7/32}     # a managed database
+        # or, in-cluster:
+        # - podSelector: {matchLabels: {app.kubernetes.io/name: postgres}}
+      port: 5432
+    rules: []                                # one entry per integration, below
+</code></pre>
+<blockquote class="blockquote-tag blockquote-tag-important">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v9.5A1.75 1.75 0 0 1 14.25 13H8.06l-2.573 2.573A1.458 1.458 0 0 1 3 14.543V13H1.75A1.75 1.75 0 0 1 0 11.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h6.5a.25.25 0 0 0 .25-.25v-9.5a.25.25 0 0 0-.25-.25Zm7 2.25v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 9a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Important</p>
+<p>Enabling egress with <strong>no destinations at all</strong> (neither
+<code>networkPolicy.egress.database.to</code> nor <code>networkPolicy.egress.rules</code>) is refused
+at render time rather than at rollout, because that mistake presents as a
+database fault: readiness reports the database down, the log shows a connect
+timeout, and nothing mentions the network policy. Supplying <code>rules</code> but omitting
+the database destination renders, so keep the database entry where it belongs
+rather than folding it into a raw rule where it is easy to lose.</p>
+</blockquote>
+<p><strong>The destination set, derived from the configuration tree rather than from what a
+default install happens to use.</strong> Every row except the usage report is off
+unless its key is set, so add only the rows you have switched on:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Destination</th><th>Turned on by</th><th>Port</th><th>Typically</th></tr>
+</thead>
+<tbody>
+<tr><td>Cluster DNS</td><td>always</td><td>UDP+TCP 53</td><td>in-cluster (always allowed)</td></tr>
+<tr><td>PostgreSQL</td><td>the DSN, <strong>never optional</strong></td><td>the DSN’s (5432)</td><td>off-cluster (managed)</td></tr>
+<tr><td>OTLP collector</td><td><code>config.telemetry.otlp_endpoint</code></td><td>4317 gRPC / 4318 HTTP</td><td>in-cluster</td></tr>
+<tr><td>OIDC issuer (discovery + JWKS)</td><td><code>config.auth.oidc.issuer</code>, <strong>unless</strong> <code>config.auth.oidc.jwks_json</code> or <code>config.auth.oidc.jwks_json_file</code> is supplied</td><td>443</td><td>off-cluster</td></tr>
+<tr><td>External policy decision point</td><td><code>config.authz.abac.engine: remote</code> plus <code>config.authz.abac.remote.server</code></td><td>the URL’s (3001)</td><td>in-cluster</td></tr>
+<tr><td>FHIR terminology server(s)</td><td><code>config.terminology.external.enabled</code> plus a provider <code>url</code></td><td>443</td><td>off-cluster</td></tr>
+<tr><td>FerroTERM in the cluster</td><td><code>terminology.enabled</code></td><td>8080</td><td>in-cluster, and the <strong>chart renders this rule itself</strong> — it chose the destination when it wired the CDR at the Service, so you do not add it to <code>rules</code>. Omitted, terminology would fail silently: under the shipped fail-open posture an unresolvable binding is accepted, so nothing refuses and nothing logs.</td></tr>
+<tr><td>Terminology token endpoint</td><td><code>config.terminology.external.oauth2_clients.&lt;name&gt;.token_url</code></td><td>443</td><td>off-cluster</td></tr>
+<tr><td>AMQP broker (events)</td><td><code>config.events.enabled</code> plus <code>secrets.eventsUrl</code></td><td>5672, or 5671 with <code>config.events.tls</code></td><td>in-cluster</td></tr>
+<tr><td>AMQP broker (FHIR outbound)</td><td><code>config.fhir.outbound.enabled</code> plus <code>secrets.fhirOutboundUrl</code></td><td>5672 / 5671</td><td>in-cluster</td></tr>
+<tr><td>Object store</td><td><code>config.multimedia.enabled</code> plus <code>config.multimedia.endpoint</code> (unset means AWS regional resolution)</td><td>443, or the endpoint’s</td><td>off-cluster</td></tr>
+<tr><td>Syslog audit repository</td><td><code>config.audit.syslog.enabled</code></td><td>514 UDP, or 6514 TCP with <code>config.audit.syslog.transport: tls</code></td><td>off-cluster</td></tr>
+<tr><td>FHIR audit repository</td><td><code>config.audit.fhir_feed.enabled</code> plus <code>secrets.auditFhirFeedUrl</code></td><td>443</td><td>off-cluster</td></tr>
+<tr><td>FerroPULSE usage report</td><td><code>usageReport.enabled</code>, <strong>on by default</strong></td><td>443</td><td>off-cluster, <code>report.ferropulse.eu</code>. Without the rule the report fails quietly and nothing else is affected; see <a href="../usage-report.html#network">Usage report</a></td></tr>
+</tbody>
+</table>
+</div>
+<p>The viewer, when enabled, carries its own egress policy rather than
+appearing in this table: it admits the CDR Service, DNS, and outbound HTTPS for an
+identity provider. Narrow that last rule to your issuer’s address if you can.</p>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p><strong>A NetworkPolicy cannot match a DNS name.</strong> The API selects peers by pod,
+namespace or <code>ipBlock</code> CIDR only, so every off-cluster row above needs a CIDR
+you supply and keep current. A managed database that moves IP, or a terminology
+server behind a rotating CDN address, will break under a CIDR that was correct
+when written. Where a provider publishes no stable range, the honest options are
+an egress gateway with a fixed address, or leaving egress off and accepting that
+outbound traffic is unrestricted, not a <code>0.0.0.0/0</code> rule that pretends to be a
+policy.</p>
+</blockquote>
+<p><strong>Two failure modes worth knowing before you tighten this.</strong></p>
+<p><strong>An over-tight policy silently stops observability.</strong> A blocked OTLP exporter
+does <strong>not</strong> fail the request that generated the span: it drops the span, with no
+log line and no error. So a policy that forgets the collector produces a server
+that is healthy by every check and has quietly stopped being observable. If you
+enable egress and traces disappear, look at the policy before the collector.</p>
+<p><strong>Tightening egress under a running pod appears to work when it has not.</strong> A
+NetworkPolicy is enforced on new connections; existing conntrack flows survive. So
+a pod whose connection pool is already established keeps serving after you remove
+its database rule, and fails at the next restart, which may be a node drain in
+the middle of the night. Observed on a live cluster:</p>
+<pre><code class="language-text">policy: DNS + database  → readiness 200 {"status":"UP", db UP, migrations UP}, POST /ehr 201
+remove the database rule (DNS only), pod untouched
+                        → readiness STILL 200, db STILL "UP"   ← the pool survives
+delete the pods so a fresh one must connect
+                        → readiness 503, no replica available
+                          kubelet: Readiness probe failed: HTTP probe failed with statuscode: 503
+restore the rule        → ready again, with no restart
+</code></pre>
+<p>So: <strong>verify an egress policy by restarting a pod, not by watching the one that is
+already running.</strong> (The recovery in the last line needing no restart is the
+readiness check re-testing its dependencies on every probe, the same property
+described for <a href="kubernetes.html#health-probes">migrations</a>.)</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../installation/hardening-workload.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../installation/hardening-detection-response.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../installation/hardening-workload.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../installation/hardening-detection-response.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../theme/mermaid-eefea253.min.js"></script>
+        <script src="../theme/mermaid-init-ccf746f1.js"></script>
+        <script src="../theme/version-picker-dddf05c1.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

@@ -1,0 +1,728 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Content negotiation &amp; errors - FerroEHR Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        <!-- Content-Security-Policy as a <meta> element, because GitHub Pages serves
+             static files and cannot set response headers. A meta CSP is genuinely
+             weaker than the header: `frame-ancestors`, `report-uri` and `sandbox` are
+             IGNORED in meta form (w3c CSP3 §3.3), and it applies only after the parser
+             reaches it. It still stops an injected external script or an exfiltrating
+             `connect-src`, which is the realistic risk for a docs site, so it is worth
+             having while being honest that the site cannot carry the full header set —
+             documented on the security page. `unsafe-inline` is required: mdBook emits
+             inline theme/sidebar scripts and inline styles of its own. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <!-- Self-hosted KaTeX stylesheet (fonts under katex/fonts/) — the site
+             serves no external requests, so mdbook-katex runs with no-css = true
+             and the vendored sheet is linked here. Version 0.16.4, matching the
+             KaTeX the katex-rs renderer inside mdbook-katex bundles (its
+             KATEX-VERSION file); provenance in website/book/KATEX-PROVENANCE.md. -->
+        <link rel="stylesheet" href="../katex/katex.min.css">
+
+        <meta name="description" content="User documentation for FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../css/chrome-d279d366.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/custom-79743c4e.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "rust";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "../searchindex-e58f6d6a.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-625c28d6.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">FerroEHR Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/src/using-the-api/content-negotiation.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="content-negotiation--errors"><a class="header" href="#content-negotiation--errors">Content negotiation &amp; errors</a></h1>
+<p>A handful of HTTP mechanisms cut across every openEHR resource: choosing the
+wire format (JSON or XML), controlling how much a write returns (the <code>Prefer</code>
+header), versioned optimistic concurrency (<code>ETag</code> and <code>If-Match</code>), and the
+request headers that enrich a commit (audit metadata and item tags). This
+chapter explains them all, plus the shape of error responses, so the examples in
+<a href="resources.html">Resource walkthroughs</a> make sense in general.</p>
+<ul>
+<li><a href="#json-and-xml">JSON and XML</a>
+<ul>
+<li><a href="#choosing-the-xml-namespace">Choosing the XML namespace</a></li>
+<li><a href="#if-you-validate-responses-against-the-published-xsds">If you validate responses against the published XSDs</a></li>
+</ul>
+</li>
+<li><a href="#simplified-formats-flat-and-structured">Simplified formats (FLAT and STRUCTURED)</a></li>
+<li><a href="#the-prefer-header">The <code>Prefer</code> header</a>
+<ul>
+<li><a href="#prefer-resolve_refs"><code>Prefer: resolve_refs</code></a></li>
+</ul>
+</li>
+<li><a href="#etag-and-if-match--optimistic-concurrency"><code>ETag</code> and <code>If-Match</code> — optimistic concurrency</a></li>
+<li><a href="#last-modified--when-the-version-was-committed"><code>Last-Modified</code> — when the version was committed</a></li>
+<li><a href="#imported-versions">Imported versions</a></li>
+<li><a href="#commit-metadata-headers">Commit metadata headers</a></li>
+<li><a href="#item-tags-via-headers">Item tags via headers</a></li>
+<li><a href="#error-responses">Error responses</a>
+<ul>
+<li><a href="#405-always-names-the-allowed-methods"><code>405</code> always names the allowed methods</a></li>
+</ul>
+</li>
+</ul>
+<h2 id="json-and-xml"><a class="header" href="#json-and-xml">JSON and XML</a></h2>
+<p>FerroEHR speaks <strong>canonical JSON</strong> and <strong>canonical XML</strong> for the RM-typed
+resources. Choose with the standard HTTP headers:</p>
+<ul>
+<li><strong>Request body:</strong> set <code>Content-Type: application/json</code> or <code>application/xml</code>
+(<code>text/xml</code> works the same as <code>application/xml</code>).</li>
+<li><strong>Response:</strong> set <code>Accept: application/json</code> or <code>application/xml</code>. With no
+<code>Accept</code>, or with several acceptable formats at equal quality, JSON wins.</li>
+</ul>
+<p>JSON is wired end to end for every operation. XML is supported for the
+spec-typed RM objects whose canonical XML shape the openEHR ITS-XML schemas
+define: a single composition, <code>EHR_STATUS</code>, <code>EHR</code>, <code>FOLDER</code>, the demographic
+party types, and the version family (versioned objects and revision history).
+Responses that are not a spec-typed RM value (collections, item tags, and the
+query and terminology DTOs) are JSON-only, as is the CONTRIBUTION envelope.</p>
+<pre><code class="language-shell"># Commit a composition as XML, ask for XML back
+curl -u ferroehr:ferroehr \
+  -H 'Content-Type: application/xml' \
+  -H 'Accept: application/xml' \
+  --data-binary @composition.xml \
+  http://localhost:8080/ferroehr/rest/openehr/v1/ehr/$EHR_ID/composition
+</code></pre>
+<h3 id="choosing-the-xml-namespace"><a class="header" href="#choosing-the-xml-namespace">Choosing the XML namespace</a></h3>
+<p>openEHR publishes its canonical XML schemas in two lineages, each declaring its
+own namespace:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Lineage</th><th>Root namespace</th><th>Status</th></tr>
+</thead>
+<tbody>
+<tr><td>v1</td><td><code>http://schemas.openehr.org/v1</code></td><td>The schema release openEHR labels stable, frozen against an older Reference Model</td></tr>
+<tr><td>v2 (<strong>default</strong>)</td><td><code>http://schemas.openehr.org/v2</code></td><td>The newer schema release, still marked <em>trial</em> by openEHR; the only one that models the current Reference Model</td></tr>
+</tbody>
+</table>
+</div>
+<p>Pick one per request with a <code>version</code> parameter on the XML media type:</p>
+<pre><code class="language-shell"># Read a composition in the v1 namespace
+curl -u ferroehr:ferroehr \
+  -H 'Accept: application/xml; version=1' \
+  "http://localhost:8080/ferroehr/rest/openehr/v1/ehr/$EHR_ID/composition/$UID"
+
+# Commit one whose payload already uses the v1 namespace
+curl -u ferroehr:ferroehr \
+  -H 'Content-Type: application/xml; version=1' \
+  -H 'Accept: application/xml; version=1' \
+  --data-binary @composition-v1.xml \
+  "http://localhost:8080/ferroehr/rest/openehr/v1/ehr/$EHR_ID/composition"
+</code></pre>
+<p>What to expect:</p>
+<ul>
+<li><strong>No parameter (or <code>version=2</code>) means the v2 default</strong>, and the response
+header stays <code>Content-Type: application/xml</code>.</li>
+<li>A v1 response says so: <code>Content-Type: application/xml; version=1</code>.</li>
+<li><strong>On requests the parameter is a courtesy, not a requirement.</strong> The reader
+dispatches on element names and <code>xsi:type</code> and never inspects the root
+namespace, so both lineages parse identically whatever you declare; you only
+need the parameter when you want the declaration to be accurate.</li>
+<li>Asking for a lineage the server does not serve (<code>version=3</code>, say) is
+<strong>406 Not Acceptable</strong> on <code>Accept</code> and <strong>415 Unsupported Media Type</strong> on
+<code>Content-Type</code>. The refusal is deliberate: the parameter exists so you can be
+specific about the representation you can consume, and quietly substituting a
+different one would defeat that.</li>
+<li><strong>Operational templates are always v1.</strong> <code>GET …/definition/template/adl1.4/{template_id}</code> returns OPT XML in the v1
+namespace and ignores the parameter; it is a template document, not a
+canonical RM resource.</li>
+</ul>
+<p>The documents FerroEHR writes for the two lineages are byte-identical apart
+from that root namespace: the same elements, the same order, the same <code>xsi:type</code>
+dispatch. <strong>The two schema bundles are a different story</strong>, and that matters if
+you intend to validate.</p>
+<h3 id="if-you-validate-responses-against-the-published-xsds"><a class="header" href="#if-you-validate-responses-against-the-published-xsds">If you validate responses against the published XSDs</a></h3>
+<p>Both published bundles have a problem today, and knowing which one you are
+hitting saves a long debugging session.</p>
+<p><strong>The v1 bundle is frozen at an older Reference Model</strong>, so it does not describe
+everything a current openEHR document may contain. It declares no schema at all
+for EHR, EHR_STATUS, CONTRIBUTION or the demographic party types, and it omits
+attributes that later RM releases added: <code>FOLDER.details</code>,
+<code>ELEMENT.null_reason</code>, <code>DV_QUANTITY.units_system</code> and <code>units_display_name</code>,
+<code>CODE_PHRASE.preferred_term</code>, and <code>ENTRY.workflow_id</code> among them. A perfectly
+valid directory or blood-pressure response can therefore fail v1 validation.
+FerroEHR does not drop clinical content to fit the older bundle. That content gap
+is why <strong>v2 is the default</strong>: the lineage a schema-validating client receives
+without asking has to be the one that models what the server actually emits.</p>
+<p><strong>The v2 bundle currently cannot be compiled at all.</strong> One of its base
+simple types constrains <code>archetypeNodeId</code> with a Perl-flavoured pattern (using
+<code>(?:…)</code> non-capturing groups), and the XML Schema pattern language admits no
+such construct, so a conformant XSD processor rejects the schema set rather
+than the document. The defect sits in every v2 Reference Model folder, not just
+the newest, and it is upstream: nothing in a response can work around it.</p>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p>As a result there is no bundle today that both compiles <em>and</em> models current
+RM content. If you must schema-validate right now, request <code>version=1</code> and
+accept that it will reject valid content it never modelled; otherwise validate
+structurally against your own profile and treat the published XSDs as
+documentation. FerroEHR tracks the v2 defect and will say so here when
+upstream fixes the facet.</p>
+</blockquote>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>The <code>version</code> parameter is a FerroEHR extension: the openEHR REST
+specification predates the two schema lineages and says nothing about
+selecting one. It never changes the media type itself (responses are always
+<code>application/xml</code>), so a client that ignores it behaves exactly as the
+specification describes.</p>
+</blockquote>
+<h2 id="simplified-formats-flat-and-structured"><a class="header" href="#simplified-formats-flat-and-structured">Simplified formats (FLAT and STRUCTURED)</a></h2>
+<p>Beyond the canonical formats, the server implements the openEHR <strong>Simplified
+Formats</strong>: template-driven JSON representations that use friendly field
+identifiers (<code>vital_signs/body_temperature:0/any_event:0/temperature|magnitude</code>)
+instead of full RM paths. Select them the same way as JSON/XML, with these media
+types:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Media type</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>application/openehr.wt.flat+json</code></td><td>FLAT — one flat JSON object of <code>path: value</code> pairs</td></tr>
+<tr><td><code>application/openehr.wt.structured+json</code></td><td>STRUCTURED — the same data as nested JSON</td></tr>
+<tr><td><code>application/openehr.wt+json</code></td><td>A template rendered as Web Template JSON (template endpoints only)</td></tr>
+</tbody>
+</table>
+</div>
+<p>Where they work:</p>
+<ul>
+<li><strong>Compositions:</strong> full round-trip. Commit with
+<code>Content-Type: application/openehr.wt.flat+json</code> (or <code>…structured…</code>) and read
+back with the matching <code>Accept</code>.</li>
+<li><strong>Template examples:</strong> <code>GET …/definition/template/adl1.4/{id}/example</code> (and
+the ADL2 form) return the generated example in canonical JSON or XML, FLAT, or
+STRUCTURED, chosen via <code>Accept</code>.</li>
+<li><strong>Template definitions:</strong> <code>GET …/definition/template/adl1.4/{id}</code> with
+<code>Accept: application/openehr.wt+json</code> returns the Web Template document.
+<code>Accept: application/json</code> returns the same document (it is the only JSON
+representation of a template) under <code>Content-Type: application/json</code>: the
+response always carries the media type you asked for.</li>
+<li><strong>Contributions:</strong> the CONTRIBUTION envelope itself stays canonical JSON; a
+simplified media type applies only to each composition payload inside
+<code>versions[].data</code>.</li>
+</ul>
+<p>Two rules to know when committing a composition in a simplified format:</p>
+<ul>
+<li>A FLAT/STRUCTURED payload cannot carry its own template id, so the
+<strong><code>openehr-template-id</code> request header is required</strong>; the commit is rejected
+with <strong>422</strong> without it.</li>
+<li>There is <strong>no <code>?format=</code> query parameter</strong>: format selection is done
+exclusively through the standard <code>Accept</code> and <code>Content-Type</code> headers.</li>
+</ul>
+<p>Requests naming a media type the endpoint does not support are answered with
+<strong>415 Unsupported Media Type</strong> (request body) or <strong>406 Not Acceptable</strong> (response
+format), with a body naming the formats that endpoint does support. EHR,
+EHR_STATUS, directory, and demographic resources have no simplified
+representation (the format is generated from an operational template, which
+those resources do not have). They speak canonical JSON/XML only.</p>
+<p>The query API is <strong>JSON only</strong>: it does not accept XML or the simplified media
+types.</p>
+<h2 id="the-prefer-header"><a class="header" href="#the-prefer-header">The <code>Prefer</code> header</a></h2>
+<p>Write operations (create/update) accept a <code>Prefer</code> header controlling the
+response body. Its default is <code>return=minimal</code>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th><code>Prefer</code> value</th><th>Effect</th></tr>
+</thead>
+<tbody>
+<tr><td><code>return=minimal</code> (default)</td><td>Empty body; the identifier is in <code>ETag</code>/<code>Location</code>. Status <strong>204</strong> on update, <strong>201</strong> on create.</td></tr>
+<tr><td><code>return=representation</code></td><td>The full created/updated resource in the body, status <strong>200</strong>/<strong>201</strong>.</td></tr>
+<tr><td><code>return=identifier</code></td><td>Just the resource identifier object — <code>{"uid": "…"}</code> (templates: <code>{"template_id": "…"}</code>). Status <strong>200</strong>/<strong>201</strong>, never 204.</td></tr>
+</tbody>
+</table>
+</div>
+<p>Use <code>return=representation</code> when you want the server-completed object back (with
+its assigned version id and any server-set audit fields); use <code>return=minimal</code>
+for throughput when you only need the id.</p>
+<p><code>return=identifier</code> always comes back with a body, so it never uses 204: an
+update that would answer 204 under <code>return=minimal</code> answers <strong>200</strong> with the
+identifier object instead. Under an XML <code>Accept</code> the identifier body is the
+equivalent single element, <code>&lt;uid&gt;…&lt;/uid&gt;</code>.</p>
+<p>Every write response names the preference the server actually applied in a
+<strong><code>Preference-Applied</code></strong> header (<code>return=representation</code>, <code>return=identifier</code>, or
+<code>return=minimal</code>), so a client can tell what it got without sniffing the body.
+The header reports what the response <em>did</em>: a request with no <code>Prefer</code> gets
+<code>return=minimal</code> (the default behaviour), and where an identifier cannot be
+produced at all (an item-tag collection has no uid, for instance) the server
+applies and reports <code>return=minimal</code> rather than claiming an identifier response
+it did not send.</p>
+<h3 id="prefer-resolve_refs"><a class="header" href="#prefer-resolve_refs"><code>Prefer: resolve_refs</code></a></h3>
+<p>Contribution reads return their <code>versions</code> as <code>OBJECT_REF</code>s by default. Add
+<code>resolve_refs</code> to the <code>Prefer</code> header (it combines with the <code>return=…</code> token,
+e.g. <code>Prefer: return=representation, resolve_refs</code>) and the response carries the
+full VERSION objects instead: one round trip instead of one per version. A
+version created here resolves to an <code>ORIGINAL_VERSION</code>; one this server received
+from another system resolves to the <code>IMPORTED_VERSION</code> that wraps it (see
+<a href="#imported-versions">Imported versions</a>).</p>
+<h2 id="etag-and-if-match--optimistic-concurrency"><a class="header" href="#etag-and-if-match--optimistic-concurrency"><code>ETag</code> and <code>If-Match</code> — optimistic concurrency</a></h2>
+<p>openEHR objects are versioned, and updates use HTTP preconditions to prevent
+lost updates:</p>
+<ul>
+<li>
+<p>Every read and successful write returns an <strong><code>ETag</code></strong> header carrying the
+object or version identifier as a <em>weak</em> ETag, <code>W/"…"</code>.</p>
+</li>
+<li>
+<p>Updating or deleting a versioned object requires an <strong><code>If-Match</code></strong> header set
+to the <strong>current</strong> version id. Both the weak form and a bare quoted value are
+accepted; echoing the <code>ETag</code> you received works either way:</p>
+<pre><code class="language-text">If-Match: W/"8849182c-82ad-4088-a07f-48ead4180515::your.system::2"
+If-Match: "8849182c-82ad-4088-a07f-48ead4180515::your.system::2"
+</code></pre>
+</li>
+<li>
+<p>If the object has moved on since you read it, the write fails with <strong>412
+Precondition Failed</strong> and the <em>current</em> version id in the response <code>ETag</code>.
+Re-read, reconcile, and retry against the new version.</p>
+</li>
+</ul>
+<p>A <strong><code>Location</code></strong> header is emitted only when a resource is <strong>created</strong>. Reads
+and deletes identify the version through <code>ETag</code> alone, so do not expect
+<code>Location</code> on them; the <code>ETag</code> is the authoritative identifier.</p>
+<h2 id="last-modified--when-the-version-was-committed"><a class="header" href="#last-modified--when-the-version-was-committed"><code>Last-Modified</code> — when the version was committed</a></h2>
+<p>Alongside the <code>ETag</code>, versioned responses carry a <strong><code>Last-Modified</code></strong> header in
+the standard HTTP-date form (<code>Wed, 22 Jul 2009 19:15:56 GMT</code>). Its value is the
+commit time of the version being served (the audit <code>time_committed</code> of that
+<code>VERSION</code>), so it changes exactly when the <code>ETag</code> does.</p>
+<p>You get it on:</p>
+<ul>
+<li>every <code>VERSION</code> read (<code>…/versioned_composition/{uid}/version[/{version_uid}]</code>,
+<code>…/versioned_ehr_status/version[/{version_uid}]</code>) and revision history read;</li>
+<li>every COMPOSITION, <code>EHR_STATUS</code>, and DIRECTORY read, including the FLAT and
+STRUCTURED representations, which describe the same version;</li>
+<li>every write of those resources (create, update, and the delete <code>204</code>), and the
+EHR create <code>201</code>;</li>
+<li>every CONTRIBUTION, both the read and the commit <code>201</code>, where the value is
+the contribution audit’s commit time. On a contribution commit you get the
+header under either <code>Prefer</code> setting; with <code>return=minimal</code> there is no
+response body, so the header is the only place the commit time appears.</li>
+</ul>
+<p>Resources that are not versioned do not carry it: <code>GET /ehr/{ehr_id}</code> returns the
+weak <code>ETag</code> (built from <code>EHR.ehr_id.value</code>) but no <code>Last-Modified</code>, because the
+<code>EHR</code> root object has no commit audit of its own.</p>
+<p>Template responses (ADL 1.4 and ADL2) carry a weak <code>ETag</code> keyed on the template
+identifier; for ADL2 it is the <strong>resolved</strong> artefact id, so requesting a template
+by a partial id or a major-version prefix still gives you an <code>ETag</code> that changes
+when the served artefact changes.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>Version ids normally end in a plain trunk number (<code>…::2</code>), but openEHR version
+trees can <strong>branch</strong>: when a version that was created on another system is
+modified locally, the server forks a branch and the new version id ends in a
+three-part tree id (<code>…::2.1.1</code>). Treat the version id as an opaque token
+(echo it back in <code>If-Match</code> exactly as received) and it works the same for
+trunk and branch versions. <code>ALL_VERSIONS</code> queries and version reads return
+branch versions alongside trunk ones; the <em>latest</em> version of an object is
+always the latest trunk version.</p>
+</blockquote>
+<h2 id="imported-versions"><a class="header" href="#imported-versions">Imported versions</a></h2>
+<p>Most versions are created here, and a <code>VERSION</code> read returns them as an
+<code>ORIGINAL_VERSION</code>. A version that arrived from <strong>another</strong> system (through an
+EHR Extract import) is a copy, and openEHR wraps a copy: the server commits it
+as an <strong><code>IMPORTED_VERSION</code></strong> and the version resource serves that wrapper. Both
+shapes appear at the same URLs
+(<code>…/versioned_composition/{uid}/version[/{version_uid}]</code>,
+<code>…/versioned_ehr_status/version[/{version_uid}]</code>) and in a <code>resolve_refs</code>
+contribution read, so branch on <code>_type</code>:</p>
+<pre><code class="language-json">{
+  "_type": "IMPORTED_VERSION",
+  "contribution": { "_type": "OBJECT_REF", "type": "CONTRIBUTION", "…": "…" },
+  "commit_audit": { "_type": "AUDIT_DETAILS", "…": "…" },
+  "item": {
+    "_type": "ORIGINAL_VERSION",
+    "uid": { "_type": "OBJECT_VERSION_ID", "value": "…::source.example.org::1" },
+    "contribution": { "_type": "OBJECT_REF", "type": "CONTRIBUTION", "…": "…" },
+    "commit_audit": { "_type": "AUDIT_DETAILS", "…": "…" },
+    "data": { "…": "…" }
+  }
+}
+</code></pre>
+<p>Two acts, kept apart on purpose:</p>
+<ul>
+<li>the <strong>wrapper’s</strong> <code>contribution</code> and <code>commit_audit</code> are <em>this</em> server’s act of
+importing: our system id, the importing user, the instant the import landed
+here, change type <code>249|creation|</code>;</li>
+<li><strong><code>item</code></strong> is the received <code>ORIGINAL_VERSION</code>, byte-for-byte as it was sent,
+keeping the source system’s contribution reference, commit audit and
+signature.</li>
+</ul>
+<p>Three consequences worth designing for:</p>
+<ul>
+<li><strong>An <code>IMPORTED_VERSION</code> has no <code>uid</code> of its own.</strong> It shares the wrapped
+version’s identity, so read the version id from <code>item.uid.value</code>. The <code>ETag</code>
+still carries that id, so the <code>If-Match</code> round trip is unchanged.</li>
+<li><strong>Times are local.</strong> <code>VERSIONED_OBJECT.time_created</code>, <code>Last-Modified</code>, the
+revision history and every as-of-instant read report when the version became
+available <em>here</em>, never the source system’s earlier clock, so a query for the
+record’s state at a past instant returns what this repository actually held
+then. The original committal is still there, inside <code>item.commit_audit</code>.</li>
+<li><strong>An export unwraps.</strong> EHR Extracts carry <code>ORIGINAL_VERSION</code>s, so exporting an
+imported version ships the wrapped original verbatim; the receiving system
+creates its own wrapper. Wrappers never nest.</li>
+</ul>
+<h2 id="commit-metadata-headers"><a class="header" href="#commit-metadata-headers">Commit metadata headers</a></h2>
+<p>When you commit through the direct resource endpoints (EHR creation,
+composition, EHR_STATUS, directory), the server builds the version’s audit for
+you. Two request headers let you set parts of it: <strong><code>openehr-version</code></strong> for the
+version’s own attributes and <strong><code>openehr-audit-details</code></strong> for the commit audit.
+The value is a comma-separated list of <code>attribute.subkey="value"</code> pairs (quoted
+values may contain commas; the header may repeat, and repeats are merged):</p>
+<pre><code class="language-text"># Commit a composition as a draft (lifecycle state "incomplete", code 553)
+openehr-version: lifecycle_state.code_string="553"
+
+# Name the committer, describe the change, and stamp the source system
+openehr-audit-details: committer.name="John Doe",description.value="Corrected dosage",system_id="pas.example.org"
+</code></pre>
+<p>The attributes the server merges:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Header</th><th>Attribute</th><th>Sub-keys</th></tr>
+</thead>
+<tbody>
+<tr><td><code>openehr-version</code></td><td><code>lifecycle_state</code></td><td><code>code_string</code></td></tr>
+<tr><td><code>openehr-audit-details</code></td><td><code>change_type</code></td><td><code>code_string</code></td></tr>
+<tr><td><code>openehr-audit-details</code></td><td><code>description</code></td><td><code>value</code> (or a bare value)</td></tr>
+<tr><td><code>openehr-audit-details</code></td><td><code>committer</code></td><td><code>name</code>, <code>external_ref.id</code>, <code>external_ref.namespace</code>, <code>external_ref.type</code> (defaults to <code>PERSON</code>)</td></tr>
+<tr><td><code>openehr-audit-details</code></td><td><code>system_id</code></td><td>(bare value)</td></tr>
+</tbody>
+</table>
+</div>
+<p>A client-supplied <code>system_id</code> is merged into the commit audit, useful when a
+gateway commits on behalf of a source system; when absent, the server stamps its
+own system id.</p>
+<p>Both EHR creates (<code>POST /ehr</code> and <code>PUT /ehr/{ehr_id}</code>) accept the headers too:
+creating an EHR commits its EHR_STATUS and EHR_ACCESS in a contribution, so the
+supplied description, committer, and system id land on that commit, and
+<code>openehr-version</code> sets the new EHR_STATUS version’s lifecycle state. The
+<code>change_type</code> on a create is constrained to <code>249|creation|</code> (a create commits a
+first version), so restating <code>249</code> is accepted while any other change type is
+rejected. A <code>DELETE</code> accepts the headers as well: a logical delete commits a
+<code>523|deleted|</code> version, and the audit metadata rides with it.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>openEHR itself deprecated an earlier spelling of these headers in
+Release-1.0.3: the attribute sat in the header <em>name</em>
+(<code>openEHR-VERSION.lifecycle_state: code_string="553"</code>,
+<code>openEHR-AUDIT_DETAILS.committer: name="John Doe"</code>, and the bare
+<code>openEHR-AUDIT_DETAILS</code>). The specification keeps them available for backward
+compatibility and so does this server, so an older client keeps working. If
+both forms appear, the value-form header above wins.</p>
+</blockquote>
+<h2 id="item-tags-via-headers"><a class="header" href="#item-tags-via-headers">Item tags via headers</a></h2>
+<p>Item tags (small <code>key</code>/<code>value</code> annotations, optionally pointing at a node inside
+the data via <code>target_path</code>) can ride the same request as a write, so tagging
+does not need a second round trip (the dedicated endpoints are in
+<a href="resources.html#item_tag">Resource walkthroughs</a>). Two headers carry them:</p>
+<ul>
+<li><strong><code>openehr-item-tag</code>:</strong> tags targeting the versioned object;</li>
+<li><strong><code>openehr-version-item-tag</code>:</strong> tags targeting the version being committed.</li>
+</ul>
+<p>The value is a <code>;</code>-separated list of tags, each a comma-separated set of
+<code>key="…"</code>, <code>value="…"</code>, and optional <code>target_path="…"</code> pairs:</p>
+<pre><code class="language-text">openehr-version-item-tag: key="diagnosis",value="confirmed",target_path="/content[0]"; key="reviewed",value="true"
+</code></pre>
+<p>They are accepted on the EHR-group change-controlled writes (composition
+create/update, EHR_STATUS update, directory create/update) and on demographic
+party writes. Sending the header with an <strong>empty value</strong> removes all tags. A
+defective tag refuses the whole request before the content is committed, so a bad
+tag never leaves a half-applied write behind.</p>
+<p>The two headers address <strong>different targets</strong>, so the response echo keeps them
+apart: <code>openehr-item-tag</code> confirms the tags now stored on the versioned object,
+<code>openehr-version-item-tag</code> those stored on the version just committed, and a
+header you did not send is not echoed at all. (Demographic parties store tags
+against the versioned object only, so both headers carry the same list there.)</p>
+<h2 id="error-responses"><a class="header" href="#error-responses">Error responses</a></h2>
+<p>Errors use conventional HTTP status codes (see the summary in
+<a href="resources.html#status-code-summary">Resource walkthroughs</a>) with <strong>one uniform
+JSON body shape</strong>: the openEHR <code>Error</code> object’s members plus a
+machine-readable <code>error</code> reason phrase:</p>
+<ul>
+<li>
+<p><strong>Validation errors</strong> (a composition that fails its template) populate the
+list:</p>
+<pre><code class="language-json">{
+  "message": "Composition validation failed",
+  "validationErrors": [
+    "/content[0]/data/events[0]/data/items[1]/value/magnitude: value out of range",
+    "/content[0]/data/events[0]/data/items[2]/value/defining_code: code not in group"
+  ],
+  "error": "Unprocessable Entity"
+}
+</code></pre>
+<p>Each entry is <code>"&lt;path&gt;: &lt;message&gt;"</code>, so a client can point the user at the
+exact offending node. A refusal from the
+<a href="../installation/config-privacy.html">data-minimisation rules</a> uses the same
+list and the same shape, with one entry per finding, and deliberately never
+echoes the value that matched: repeating it would carry the identifier into
+the response body, the access log and the traces.</p>
+</li>
+<li>
+<p><strong>All other errors</strong> carry the same shape with an empty list:</p>
+<pre><code class="language-json">{ "message": "No EHR with id …", "validationErrors": [], "error": "Not Found" }
+</code></pre>
+<p>This shape is used consistently, including for <code>405 Method Not Allowed</code> and
+<code>501 Not Implemented</code>, which some servers leave bodyless, and for the two
+refusals that come from the transport layer rather than a handler:
+<code>408 Request Timeout</code> (the request exceeded the server’s request-execution
+limit) and <code>413 Payload Too Large</code> (the request body exceeds the accepted
+size).</p>
+</li>
+</ul>
+<p>Match on the HTTP status first; read the body for the human-readable detail and,
+for validation, the per-node list.</p>
+<h3 id="405-always-names-the-allowed-methods"><a class="header" href="#405-always-names-the-allowed-methods"><code>405</code> always names the allowed methods</a></h3>
+<p>Every <code>405 Method Not Allowed</code> carries an <code>Allow</code> header listing the methods the
+target resource currently supports, as
+<a href="https://www.rfc-editor.org/rfc/rfc9110.html#section-15.5.6">RFC 9110 §15.5.6</a>
+requires, so a client can discover the right method without guessing:</p>
+<pre><code class="language-http">HTTP/1.1 405 Method Not Allowed
+Allow: GET,HEAD,PUT
+Content-Type: application/json
+
+{ "message": "the request method is not allowed on this resource", "validationErrors": [], "error": "Method Not Allowed" }
+</code></pre>
+<p>When a resource is switched off by configuration (the
+<a href="../operations-admin-apis.html">admin API</a> with <code>FERROEHR__ADMIN__ENABLED=false</code>),
+the header is present but <strong>empty</strong>, which
+<a href="https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.1">RFC 9110 §10.2.1</a>
+defines as “the resource allows no methods”: nothing you can send to that path
+will be served until the gate is opened.</p>
+<p>A method the server does not recognize at all is answered <code>405</code> as well (with
+<code>Allow</code>), not <code>501</code>. The openEHR spec suggests <code>501</code> there, but the two rules it
+states overlap for any method outside its own list, and a blanket <code>501</code> would
+also mislabel requests to paths that simply do not exist and are owed a <code>404</code>.
+<code>501 Not Implemented</code> remains reserved for a recognized operation this server
+does not implement.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../using-the-api/resources.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../querying-aql.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../using-the-api/resources.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../querying-aql.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../theme/mermaid-eefea253.min.js"></script>
+        <script src="../theme/mermaid-init-ccf746f1.js"></script>
+        <script src="../theme/version-picker-dddf05c1.js"></script>
+
+
+
+    </div>
+    </body>
+</html>
