@@ -26,6 +26,7 @@ legal citation the period rests on.
 | Column | Meaning |
 |---|---|
 | `kind` | The content category: `COMPOSITION`, `EHR_STATUS`, `FOLDER`, or `EHR` for the whole record |
+| `category` | Optional: the EHDS priority category the period is keyed on (`patient-summary`, `eprescription`, `edispensation`, `imaging`, `test-results`, `discharge-report`, `national:<code>` or `none`); empty keys the period on every object of the kind |
 | `jurisdiction` | ISO 3166-1 alpha-2, the same key the [identifier scanner](../installation/config-privacy.md) rules use |
 | `period` | How long content of that category is kept |
 | `anchor` | What the period is measured from: `last_commit`, `death`, or `majority` |
@@ -36,8 +37,9 @@ the anchor instant once the deployment knows it, and any hold that suspends
 disposal for the whole record with the reason it was placed.
 
 `retention_due` joins the two and lists what has run out. Each row names the
-EHR, the category, the citation, when the period expired, and two counts: the
-objects that are due, and the objects exempted by a per-object hold.
+EHR, the kind, the priority category where the period is keyed on one, the
+citation, when the period expired, and two counts: the objects that are due,
+and the objects exempted by a per-object hold.
 
 Ship the register empty and declare the periods your organisation is subject
 to. The periods are not the software's to choose — they follow from the law the
@@ -62,10 +64,25 @@ Content-Type: application/json
 }
 ```
 
-**204** on success, replacing any earlier period for that pair. An unknown
-category, an unknown anchor rule or a non-positive period is **400**.
-`GET {base}/admin/retention/policy` reads the whole register back, which is what
-an access answer and an audit both cite.
+**204** on success, replacing any earlier period for that kind, category and
+jurisdiction. An unknown kind or category, an unknown anchor rule or a
+non-positive period is **400**. `GET {base}/admin/retention/policy` reads the
+whole register back, which is what an access answer and an audit both cite.
+
+### Keying a period on a priority category
+
+EHDS Annex II 3.4 asks the storing components to support retention periods
+"that take into account the origins and categories of electronic health data".
+Add `"category": "test-results"` to the body above and the period covers only
+the objects your [`[audit.categories]`](../installation/config-audit.md#auditcategories)
+map places in that category. The server mirrors the map into the clinical
+domain at every boot, so the due list reads the map in force. An object's
+category comes from its latest version that carries content: the template id
+first, then the root archetype id; every kind other than `COMPOSITION` reads as
+`none`. An object the map cannot classify is listed under the longest period
+configured for its kind, so a missing map entry can only keep content longer. A
+category row with no object is left out of the due list, and a period without a
+category lists every object of its kind.
 
 ### Anchoring an EHR and holding it
 
@@ -199,9 +216,10 @@ These are the acts a supervisory authority asks about after the fact, so they
 are in the trail beside the reads and writes.
 
 The trail has a retention question of its own, and it runs the other way:
-national rules set a **floor** below which an access log may not be reaped —
-five years in the Netherlands, one year in Switzerland — and one sets a
-**ceiling**. SGB V § 309 Abs. 1 asks the controllers of a German
+the law sets a **floor** below which an access log may not be reaped (three
+years from each date of access in every EU Member State under EHDS Art. 9(2),
+five years in the Netherlands, one year in Switzerland), and one national rule
+sets a **ceiling**. SGB V § 309 Abs. 1 asks the controllers of a German
 telematics-infrastructure application to keep access logs for the three-year
 limitation period, and Abs. 3 requires deletion without delay once it has run.
 That provision binds the controllers § 307 names, which no software can infer,
@@ -209,14 +227,24 @@ so the deployment declares it:
 
 ```toml
 [audit.store]
-retention_days = 1095
+retention_years = 3
 sgb_v_309_controller = true
 ```
 
 With the declaration in place, the server refuses at boot any horizon above the
-ceiling — including `retention_days = 0`, keep forever — and refuses a
+ceiling, including `retention_days = 0` (keep forever), and refuses a
 configuration whose floors and ceilings contradict each other outright, rather
-than silently preferring one. Retention of the trail itself is described in
+than silently preferring one.
+
+Germany is a Member State, so the EHDS floor of three years applies there as
+well. Both rules are three calendar years, which is why the horizon above is
+stated in years: `retention_years = 3` meets the floor and the ceiling exactly,
+and the reaper deletes what is older than the same calendar date three years
+ago. A day count cannot: three calendar years span 1095 or 1096 days, so a
+floor in days has to be 1096 and a ceiling 1095, and with
+`sgb_v_309_controller = true` the server refuses every `retention_days` value
+and names `retention_years = 3` as the fix.
+Retention of the trail itself is described in
 [Audit](../audit.md#retention-and-who-chooses-it).
 
 ## What this page does not claim

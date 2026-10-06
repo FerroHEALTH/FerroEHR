@@ -874,6 +874,7 @@ async fn resolving_an_identifier_is_recorded_as_an_access() {
         store: StoreConfig {
             enabled: true,
             retention_days: 0,
+            retention_years: None,
             sgb_v_309_controller: false,
         },
         ..AuditConfig::default()
@@ -1231,6 +1232,7 @@ async fn resolving_a_party_to_its_ehr_is_recorded_as_an_access() {
         store: StoreConfig {
             enabled: true,
             retention_days: 0,
+            retention_years: None,
             sgb_v_309_controller: false,
         },
         ..AuditConfig::default()

@@ -3,11 +3,14 @@
 
 //! `GET /management/env` — the effective configuration, with secrets masked.
 //!
-//! The binary composes a snapshot of the effective configuration (REST, auth,
-//! management, telemetry, DB) as a JSON value; this endpoint returns it after a
-//! recursive redaction pass that (a) masks any value under a secret-bearing key
-//! and (b) strips credentials from DSN/URL values, keeping only the host and
-//! database. No secret substring ever leaves the process.
+//! The binary builds the snapshot once at boot with
+//! `ferroehr::config::FerroEhrConfig::to_redacted_json`, which masks every
+//! secret by its leaf type; this endpoint returns it after a recursive pass
+//! that (a) masks any value under a key naming a secret value and (b) masks
+//! the `userinfo` of every URL value with the same masker the configuration
+//! uses. A URL-valued key such as `token_url` or `jwks_uri` is never masked by
+//! name, so this view shows the same URLs `GET {base}/admin/config` does
+//! (#3657).
 
 #![expect(
     clippy::disallowed_types,
@@ -16,16 +19,18 @@
 )]
 
 use axum::Json;
+use ferroehr::config::secret::redact_userinfo;
 use serde_json::Value;
 
-/// Substrings (case-insensitive) that mark a JSON key as secret-bearing. Any
-/// value under such a key is replaced with `MASK`.
+/// Substrings (case-insensitive) that mark a JSON key as naming a secret value.
+/// Any value under such a key is replaced with `MASK`. `jwks_json` is listed
+/// whole because an inline key set can carry a symmetric key, while `jwks_uri`
+/// and the `token_*` URLs are endpoints, not secrets.
 const SECRET_KEY_MARKERS: &[&str] = &[
     "password",
     "secret",
     "hmac",
-    "token",
-    "jwks",
+    "jwks_json",
     "credential",
     "apikey",
     "api_key",
@@ -40,8 +45,8 @@ pub(super) fn env(snapshot: &Value) -> Json<Value> {
     Json(redact(snapshot))
 }
 
-/// Recursively redact a config value: secret-keyed values → [`MASK`]; strings
-/// that look like a credentialed DSN/URL → credentials stripped.
+/// Recursively redact a config value: secret-keyed values → [`MASK`]; the
+/// `userinfo` of every URL string → masked by [`redact_userinfo`].
 #[must_use]
 pub(crate) fn redact(value: &Value) -> Value {
     match value {
@@ -57,7 +62,7 @@ pub(crate) fn redact(value: &Value) -> Value {
                 .collect(),
         ),
         Value::Array(items) => Value::Array(items.iter().map(redact).collect()),
-        Value::String(s) => Value::String(mask_dsn(s).unwrap_or_else(|| s.clone())),
+        Value::String(s) => Value::String(redact_userinfo(s)),
         other => other.clone(),
     }
 }
@@ -66,25 +71,6 @@ pub(crate) fn redact(value: &Value) -> Value {
 fn is_secret_key(key: &str) -> bool {
     let lower = key.to_ascii_lowercase();
     SECRET_KEY_MARKERS.iter().any(|m| lower.contains(m))
-}
-
-/// If `s` looks like a URL with `user:password@host` userinfo, return a copy
-/// with the userinfo masked (`scheme://***@host/...`). Otherwise `None`.
-fn mask_dsn(s: &str) -> Option<String> {
-    let (scheme, rest) = s.split_once("://")?;
-    // The authority ends at the first '/', '?' or '#'.
-    let authority = rest
-        .find(['/', '?', '#'])
-        .and_then(|end| rest.get(..end))
-        .unwrap_or(rest);
-    let at = authority.find('@')?;
-    // Only mask when there is userinfo containing a credential separator or any
-    // non-empty userinfo (a bare `host@` is not a DSN we care about).
-    if authority.get(..at)?.is_empty() {
-        return None;
-    }
-    let host_and_after = rest.get(at + 1..)?;
-    Some(format!("{scheme}://{MASK}@{host_and_after}"))
 }
 
 #[cfg(test)]
@@ -121,6 +107,27 @@ mod tests {
         assert_eq!(
             url,
             "postgres://***@db.internal:5432/ferroehr?sslmode=require"
+        );
+    }
+
+    #[test]
+    fn endpoint_urls_are_never_masked_by_name() {
+        let cfg = json!({
+            "oauth2_clients": { "c": { "token_url": "https://u:pw@idp.example/token" } },
+            "smart": { "endpoints": { "token_endpoint": "https://idp.example/token", "jwks_uri": "https://idp.example/jwks" } }
+        });
+        let out = redact(&cfg);
+        assert_eq!(
+            out["oauth2_clients"]["c"]["token_url"],
+            "https://***@idp.example/token"
+        );
+        assert_eq!(
+            out["smart"]["endpoints"]["token_endpoint"],
+            "https://idp.example/token"
+        );
+        assert_eq!(
+            out["smart"]["endpoints"]["jwks_uri"],
+            "https://idp.example/jwks"
         );
     }
 

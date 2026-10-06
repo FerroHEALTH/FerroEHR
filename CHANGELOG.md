@@ -17,6 +17,24 @@ workflow refuses a tag that has no matching section here.
 
 ### Added
 
+- **Every access record carries the EHDS priority categories of the data it
+  served or wrote** (#3621, Annex II 3.2(c)). A new `[audit.categories]` map
+  classifies an access from the template id, then the root archetype id, as
+  `patient-summary`, `eprescription`, `edispensation`, `imaging`,
+  `test-results`, `discharge-report`, `national:<code>` or `none`. An access the
+  map cannot classify is recorded `unclassified` with its ids and is never
+  refused. The map's digest is on the boot line, on `GET /management/info` and
+  on every record, and the FHIR `AuditEvent` carries the classification as
+  entity details.
+- **The retention register can key a period on an EHDS priority category**
+  (#3621, Annex II 3.4): `category` on `PUT /admin/retention/policy`, echoed by
+  the policy and due lists. The category map is mirrored into the register at
+  boot, and an unclassified object takes the longest period configured for its
+  kind.
+- **`[audit.store] retention_years`** (#3625) states the access-log horizon in
+  calendar years as an alternative to `retention_days`. It is compared exactly
+  against the retention floors and ceilings, which are now registered in years,
+  and reaped with calendar arithmetic; setting both keys is a boot error.
 - **The regulation corpus gains the EHDS implementing acts and the
   market-surveillance acts** (#3607). `docs/law/eu/` now carries Commission
   Implementing Regulations (EU) 2026/2083 (MyHealth@EU) and 2026/2099
@@ -103,6 +121,17 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **Every EU Member State carries an access-log retention floor of three
+  years** (#3625, EHDS Art. 9(2), applying from 26 March 2029 and 2031 under
+  Art. 105). A longer national floor still wins (the Netherlands, five years),
+  Switzerland keeps one year, and the boot refusal names the provision the
+  floor rests on. A declared SGB V § 309 controller in Germany sets
+  `retention_years = 3`, because no day count meets both the three-year floor
+  and the three-year § 309 ceiling.
+- **`auth.oidc.issuer` and every `smart` URL are refused at boot when they
+  carry a user name or password** (#3629; OpenID Connect Core 1.0 §1.2). The
+  SMART check applies even with SMART disabled, because the discovery document
+  publishes those URLs.
 - **The system-options `vendor` defaults to `Cadasto B.V.`** (#3612), read from
   the manufacturer constant (it was `FerroEHR project`); `[server.identity]
   vendor` still overrides it. The OCI `vendor` and `authors` labels of the three
@@ -114,6 +143,20 @@ workflow refuses a tag that has no matching section here.
 
 ### Fixed
 
+- **The redacted configuration no longer prints the user name or password
+  embedded in a URL** (#3629) on `/management/env`, `GET {base}/admin/config`,
+  `ferroehr config check` or `ferroehr report`. The terminology provider `url`
+  and OAuth2 `token_url`, `usage_report.endpoint`, `authz.abac.remote.server`,
+  `telemetry.otlp_endpoint` and `multimedia.endpoint` are secret URLs, every
+  string value passes one userinfo masker (which now ends the authority at
+  `/`, `?` or `#` and masks up to the last `@`, so a password containing `@` no
+  longer leaks), and `/admin/config` is served from the redacted tree.
+- **The test harness no longer connects a database socket to itself**
+  (#3630). On macOS `localhost` resolves to `::1` first while the test
+  container publishes its port on IPv4 only, and a port in the ephemeral range
+  could occasionally connect to itself (a TCP simultaneous open), which surfaced
+  as an internal database error in a test. testkit now uses the host's IPv4
+  address.
 - **CI and the test harnesses no longer send usage reports** (#3623). The
   compose smoke test, the viewer login smoke, the deploy probes, the Helm
   probe, the browser end-to-end runs and the conformance runs switch the

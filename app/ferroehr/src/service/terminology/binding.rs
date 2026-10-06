@@ -240,7 +240,7 @@ mod tests {
     fn provider_cfg(base: &str) -> FhirProviderConfig {
         FhirProviderConfig {
             kind: ProviderKind::Fhir,
-            url: base.to_owned(),
+            url: crate::config::secret::SecretUrl::new(base),
             operation: FhirOperation::ValidateCode,
             connect_timeout_ms: 500,
             request_timeout_ms: 800,

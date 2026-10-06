@@ -44,7 +44,7 @@ pub fn engine_from_config(
         return Ok(None);
     }
     let params = ferroehr_ext::multimedia::store::BlobStoreParams {
-        endpoint: cfg.endpoint.clone(),
+        endpoint: cfg.endpoint.as_ref().map(|e| e.expose().to_owned()),
         bucket: cfg.bucket.clone(),
         region: cfg.region.clone(),
         access_key_id: cfg.access_key_id.clone(),

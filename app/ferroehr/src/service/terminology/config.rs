@@ -33,7 +33,7 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use crate::config::secret::Secret;
+use crate::config::secret::{Secret, SecretUrl};
 use crate::service::status::SmError;
 
 use super::fhir::FhirTerminologyProvider;
@@ -115,7 +115,8 @@ pub enum Oauth2AuthMethod {
 #[serde(default, deny_unknown_fields)]
 pub struct TerminologyOauth2Config {
     /// The `OAuth2` token endpoint (RFC 6749 §3.2). Empty is a boot error.
-    pub token_url: String,
+    /// Any `userinfo` in it is masked in every rendering.
+    pub token_url: SecretUrl,
     /// The registered client identifier. Empty is a boot error.
     pub client_id: String,
     /// The client secret (redacted in every rendering); or set
@@ -135,7 +136,7 @@ pub struct TerminologyOauth2Config {
 impl Default for TerminologyOauth2Config {
     fn default() -> Self {
         Self {
-            token_url: String::new(),
+            token_url: SecretUrl::default(),
             client_id: String::new(),
             client_secret: None,
             client_secret_file: None,
@@ -176,8 +177,9 @@ pub struct FhirProviderConfig {
     #[serde(rename = "type")]
     pub kind: ProviderKind,
     /// FHIR R4B base URL, e.g. `https://r4.ontoserver.csiro.au/fhir`.
-    /// Empty is a boot error.
-    pub url: String,
+    /// Empty is a boot error. Any `userinfo` in it is masked in every
+    /// rendering.
+    pub url: SecretUrl,
     /// The membership operation for `value_set_validate` (default
     /// `validate_code`).
     pub operation: FhirOperation,
@@ -219,7 +221,7 @@ impl Default for FhirProviderConfig {
     fn default() -> Self {
         Self {
             kind: ProviderKind::Fhir,
-            url: String::new(),
+            url: SecretUrl::default(),
             operation: FhirOperation::ValidateCode,
             connect_timeout_ms: 2_000,
             request_timeout_ms: 10_000,
@@ -281,7 +283,7 @@ impl ExternalTerminologyConfig {
 #[cfg(test)]
 pub(super) fn test_provider_config(url: &str) -> FhirProviderConfig {
     FhirProviderConfig {
-        url: url.to_owned(),
+        url: SecretUrl::new(url),
         cache_capacity: 1024,
         ..FhirProviderConfig::default()
     }

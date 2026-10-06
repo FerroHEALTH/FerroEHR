@@ -228,7 +228,7 @@ requirements:
           persons who accessed it, the categories of data, the time and date,
           and the origin of the data.
         status: partial
-        issues: [3204, 3212]
+        issues: [3204, 3212, 3621]
         evidence:
           - text: The five elements mapped onto fields, gaps included
             href: ../audit.md#the-ehds-logging-elements-mapped
@@ -237,12 +237,14 @@ requirements:
           beside the natural person, the time, and the origins of the served
           data read from the FEEDER_AUDIT provenance openEHR stamps on content,
           with the true distinct count beside the capped set. Point (c) is
-          partial, because the record names an openEHR resource class and a
-          pseudonymisation domain rather than an Annex I priority category.
-          The DICOM rendering carries neither the organisation, the declared
-          purpose nor the origins, because PS3.15 A.5 defines no element for
-          them; the FHIR rendering carries all three. The remaining gap is
-          asserted by a test that fails when it closes.
+          recorded through a map the deployment declares from its templates and
+          archetypes to the Art. 14(1) priority categories; FerroEHR ships no
+          map, so until one is declared every access is recorded unclassified.
+          A logical delete, a CONTRIBUTION read and the EHR Extract export
+          record carry no category. The DICOM rendering carries neither the
+          organisation, the declared purpose, the origins nor the categories,
+          because PS3.15 A.5 defines no element for them; the FHIR rendering
+          carries all four.
       - id: "3.3"
         summary: >-
           The components include tools or mechanisms to review and analyse the
@@ -257,14 +259,20 @@ requirements:
           different retention periods and access rights that take the origin
           and category of the data into account.
         status: partial
+        issues: [3621]
         evidence:
           - text: Per-EHR access control and the audit retention setting
             href: ../security.md
+          - text: Retention periods keyed on a priority category
+            href: retention.md#keying-a-period-on-a-priority-category
         gap: >-
           Access rights are per EHR, per role and per attribute, and audit
-          retention is configurable. Retention that varies by the ORIGIN or
-          CATEGORY of clinical data is not implemented; the archival tier
-          moves records without expiring them.
+          retention is configurable, with a floor of three years in every EU
+          Member State (Art. 9(2)). A retention period can be keyed on the
+          priority CATEGORY of clinical data, an unclassified object taking the
+          longest period for its kind. Retention that varies by the ORIGIN of
+          clinical data is not implemented; the archival tier moves records
+          without expiring them.
 
 # Annex III, "Technical documentation". The elements Article 37(2) requires,
 # with what FerroEHR can supply for each today. This is a readiness map, not

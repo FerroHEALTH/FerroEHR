@@ -61,7 +61,8 @@ impl FerroEhrService {
         let committed = commit_version_set(self, Some(ehr_id), &body, false).await?;
         let body = self.ehr_contribution(ehr_id, committed.id, false).await?;
         let meta = ResourceMeta::new(ehr_id.to_string(), committed.id.to_string())
-            .with_last_modified(committed.time_committed);
+            .with_last_modified(committed.time_committed)
+            .with_content(written_content(&committed.versions));
         Ok(ServiceResponse::new(body, meta))
     }
 
@@ -285,8 +286,23 @@ impl FerroEhrService {
             let committed =
                 commit_version_set(self, Some(an_ehr_id), &a_contribution, false).await?;
             let meta = ResourceMeta::new(an_ehr_id.to_string(), committed.id.to_string())
-                .with_last_modified(committed.time_committed);
+                .with_last_modified(committed.time_committed)
+                .with_content(written_content(&committed.versions));
             Ok(ServiceResponse::new(Value::Null, meta))
         }
     }
+}
+
+/// The identifiers of the versions a CONTRIBUTION wrote, for the access
+/// record's category classification (EHDS Annex II 3.2(c), #3621).
+fn written_content(
+    versions: &[crate::versioning::change::Committed],
+) -> Vec<crate::system_log::categories::ContentIds> {
+    let mut ids: Vec<_> = versions
+        .iter()
+        .filter_map(crate::versioning::change::Committed::content_ids)
+        .collect();
+    ids.sort();
+    ids.dedup();
+    ids
 }

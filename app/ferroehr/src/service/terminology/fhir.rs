@@ -101,7 +101,7 @@ impl FhirTerminologyProvider {
     /// or the `reqwest` client cannot be built (e.g. TLS backend init
     /// failure).
     pub fn new(name: &str, cfg: &FhirProviderConfig) -> Result<Self, SmError> {
-        let base = cfg.url.trim().trim_end_matches('/').to_owned();
+        let base = cfg.url.expose().trim().trim_end_matches('/').to_owned();
         if base.is_empty() {
             return Err(SmError::exception(format!(
                 "terminology provider '{name}' has an empty url"
@@ -1036,7 +1036,7 @@ mod tests {
     fn empty_url_rejected() {
         let cfg = FhirProviderConfig {
             kind: super::super::config::ProviderKind::Fhir,
-            url: "  ".to_owned(),
+            url: crate::config::secret::SecretUrl::new("  "),
             operation: FhirOperation::ValidateCode,
             connect_timeout_ms: 100,
             request_timeout_ms: 100,

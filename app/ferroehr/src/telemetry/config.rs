@@ -14,6 +14,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::config::secret::SecretUrl;
+
 /// The stdout log rendering profile.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
@@ -80,8 +82,9 @@ impl Default for LogConfig {
 #[serde(default, deny_unknown_fields)]
 pub struct OtelConfig {
     /// The OTLP/gRPC collector endpoint. **Unset ⇒ the `OTel` layer is not
-    /// installed** (traces are not exported; zero overhead).
-    pub otlp_endpoint: Option<String>,
+    /// installed** (traces are not exported; zero overhead). Any `userinfo` in
+    /// it is masked in every rendering.
+    pub otlp_endpoint: Option<SecretUrl>,
     /// The `service.name` resource attribute.
     pub service_name: String,
     /// The `deployment.environment` resource attribute.
@@ -120,7 +123,7 @@ impl OtelConfig {
     pub fn export_enabled(&self) -> bool {
         self.otlp_endpoint
             .as_ref()
-            .is_some_and(|e| !e.trim().is_empty())
+            .is_some_and(|e| !e.expose().trim().is_empty())
     }
 }
 

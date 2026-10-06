@@ -16,7 +16,8 @@
 
 use fhir_model::r4b::codes::{AuditEventAction, AuditEventAgentNetworkType, AuditEventOutcome};
 use fhir_model::r4b::resources::{
-    AuditEvent, AuditEventAgent, AuditEventAgentNetwork, AuditEventEntity, AuditEventSource,
+    AuditEvent, AuditEventAgent, AuditEventAgentNetwork, AuditEventEntity, AuditEventEntityDetail,
+    AuditEventEntityDetailValue, AuditEventSource,
 };
 use fhir_model::r4b::types::{
     CodeableConcept, CodeableConceptInner, Coding, CodingInner, Identifier, IdentifierInner, Meta,
@@ -144,6 +145,9 @@ pub struct AuditEntityRef {
     pub name: Option<String>,
     /// The search expression, carried verbatim (FHIR base64-encodes it).
     pub query: Option<String>,
+    /// Named string details (`entity.detail`, 0..*): `(type, valueString)`
+    /// pairs, in order.
+    pub details: Vec<(String, String)>,
 }
 
 /// A resolved audit record, in the neutral shape [`render`] turns into a FHIR
@@ -423,7 +427,21 @@ fn entity(source: &AuditEntityRef) -> AuditEventEntity {
             .as_ref()
             .map(|q| Base64Binary(q.as_bytes().to_vec())),
         query_ext: None,
-        detail: Vec::new(),
+        detail: source
+            .details
+            .iter()
+            .map(|(kind, value)| {
+                Some(AuditEventEntityDetail {
+                    id: None,
+                    extension: Vec::new(),
+                    modifier_extension: Vec::new(),
+                    r#type: kind.clone(),
+                    r#type_ext: None,
+                    value: AuditEventEntityDetailValue::String(value.clone()),
+                    value_ext: None,
+                })
+            })
+            .collect(),
         detail_ext: Vec::new(),
     }
 }
@@ -502,6 +520,7 @@ mod tests {
                 entity_type: None,
                 role: None,
                 query: Some("eu.ferroehr::q1".to_owned()),
+                details: vec![("category".to_owned(), "test-results".to_owned())],
             }],
         }
     }

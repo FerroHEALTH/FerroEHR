@@ -105,8 +105,12 @@ Details that decide behaviour:
   query's other versions survive.
 - **The config view is redacted structurally, not by key name.** Passwords and
   password hashes, HMAC and signing-key secrets and S3 secret keys render as
-  `***`; connection URLs (database, AMQP) keep their host and path and mask
-  the embedded credentials (`postgres://***@host:5432/db`). Non-secret
+  `***`; every URL that can carry credentials (database, AMQP, the FHIR audit
+  feed, terminology servers and their token endpoints, the remote policy
+  server, the OTLP collector, the object store, the usage-report endpoint)
+  keeps its host and path and masks the embedded credentials
+  (`postgres://***@host:5432/db`). The OIDC issuer and the SMART URLs are
+  refused at boot when they carry credentials, so they render as set. Non-secret
   identifiers (usernames, roles, an OIDC issuer) stay visible. Redaction is
   a property of the configuration's secret types, so no secret value can reach
   this response.
@@ -210,16 +214,26 @@ anything.
 | `GET {base}/admin/restriction` | `?ehr_id=…` | **200**: the register, newest request first, lifts included |
 | `POST {base}/admin/restriction/lift` | `{"ehr_id": "…", "vo_id": "…"?}` | **204**: every in-force restriction at that grain is lifted |
 | `POST {base}/admin/research-objection` | `{"ehr_id": "…", "objected": true, "ground": "…"?}` | **204**: the objection, its override, or its withdrawal is recorded |
-| `PUT {base}/admin/retention/policy` | `{"kind": "…", "jurisdiction": "…", "period": "…", "anchor": "…", "source": "…"}` | **204**: the period is declared |
-| `GET {base}/admin/retention/policy` | — | **200**: the whole retention register |
+| `PUT {base}/admin/retention/policy` | `{"kind": "…", "jurisdiction": "…", "category": "…"?, "period": "…", "anchor": "…", "source": "…"}` | **204**: the period is declared, keyed on one EHDS priority category when `category` is set |
+| `GET {base}/admin/retention/policy` | — | **200**: the whole retention register, each period with its `category` (`null` for every object of the kind) |
 | `PUT {base}/admin/retention/anchor` | `{"ehr_id": "…", "jurisdiction": "…", "anchored_at": "…"?, "hold_at": "…"?, "hold_ground": "…"?}` | **204**: the EHR's anchor and any whole-record hold |
 | `POST {base}/admin/retention/hold` | `{"vo_id": "…", "held": true}` | **204**: the per-object exemption is placed or released |
-| `GET {base}/admin/retention/due` | `?limit=100` | **200**: what has run out, oldest first, with the due and held object counts |
+| `GET {base}/admin/retention/due` | `?limit=100` | **200**: what has run out, oldest first, per period and category, with the due and held object counts |
 
 A body of the wrong shape or a malformed id is **400**, an id that names nothing
 is **404**, and a body without `Content-Type: application/json` is **415**, in
 each case before anything is recorded. Setting or lifting a mark is an access
 record of its own.
+
+A `category` is spelled as `[audit.categories]` spells it (`patient-summary`,
+`eprescription`, `edispensation`, `imaging`, `test-results`, `discharge-report`,
+`national:<code>` or `none`; an unknown spelling is **400**), which serves EHDS
+Annex II 3.4: retention periods that take the categories of the data into
+account. The server mirrors the map into the register at every boot. A period
+keyed on a category lists the objects the map places in it; an object the map
+cannot classify is listed under the longest period configured for its kind,
+and a category row with no object is left out of `due`. A period with no
+category lists every object of its kind, as before.
 
 Restricting a record changes what every other route answers: reads of a
 restricted object become **403**, it leaves AQL results at every scope, exports

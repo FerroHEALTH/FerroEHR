@@ -118,7 +118,7 @@ Enabling `[terminology.external]` with no provider configured is a boot error.
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `type` | enum{fhir} | `fhir` | Server kind. Only FHIR R4B is supported. |
-| `url` | string | required | The server's FHIR base URL. Empty is a boot error. |
+| `url` | secret URL | required | The server's FHIR base URL. Empty is a boot error. Credentials embedded in it are redacted from every rendering. |
 | `operation` | enum{validate_code,expand} | `validate_code` | The membership operation. `validate_code` is a direct yes/no with the least payload; `expand` plus a membership test is the fallback for servers without `$validate-code`. |
 | `connect_timeout_ms` | int | `2000` | TCP connect timeout. |
 | `request_timeout_ms` | int | `10000` | Overall request timeout. |
@@ -187,7 +187,7 @@ expires, so a validation burst costs one token request per token lifetime.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `token_url` | string | required | The OAuth2 token endpoint. Empty is a boot error. |
+| `token_url` | secret URL | required | The OAuth2 token endpoint. Empty is a boot error. Credentials embedded in it are redacted from every rendering. |
 | `client_id` | string | required | The registered client identifier. Empty is a boot error. |
 | `client_secret` / `client_secret_file` | secret / path | one is required | The client secret, inline or read from a mounted file. |
 | `scopes` | list of string | `[]` | Scopes requested with the client-credentials grant. |
@@ -288,7 +288,7 @@ contacted.
 |---|---|---|---|
 | `enabled` | bool | `false` | Externalize large multimedia data. |
 | `threshold_bytes` | int | `262144` (256 KiB) | Decoded size strictly above which data is offloaded; at or below it stays inline. |
-| `endpoint` | string | unset ⇒ default AWS endpoint resolution | S3-compatible endpoint. Must be an absolute `http`/`https` URL when set. |
+| `endpoint` | secret URL | unset ⇒ default AWS endpoint resolution | S3-compatible endpoint. Must be an absolute `http`/`https` URL when set. Credentials embedded in it are redacted from every rendering. |
 | `bucket` | string | `openehr-multimedia` | Target bucket for content-addressed blobs. |
 | `region` | string | `us-east-1` | AWS region; S3 requires one even for non-AWS endpoints. |
 | `access_key_id` | string | unset | S3 access key id. Unset, with no secret key either, runs the client anonymously. |

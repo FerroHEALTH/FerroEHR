@@ -19,7 +19,7 @@
 
 use std::path::PathBuf;
 
-use crate::config::secret::Secret;
+use crate::config::secret::{Secret, SecretUrl};
 use serde::{Deserialize, Serialize};
 
 /// DV_MULTIMEDIA externalization settings.
@@ -35,8 +35,8 @@ pub struct MultimediaConfig {
     pub threshold_bytes: usize,
     /// S3-compatible endpoint URL (e.g. a SeaweedFS S3 gateway in dev/test, or
     /// an AWS/MinIO endpoint in prod). `None` uses the object_store default AWS
-    /// endpoint resolution.
-    pub endpoint: Option<String>,
+    /// endpoint resolution. Any `userinfo` in it is masked in every rendering.
+    pub endpoint: Option<SecretUrl>,
     /// Target bucket for content-addressed blobs.
     pub bucket: String,
     /// AWS region (S3 requires one even for non-AWS endpoints).

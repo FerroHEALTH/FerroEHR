@@ -64,6 +64,15 @@ pub struct QueryResult {
     pub served_origins: Vec<String>,
     /// The true number of distinct origins behind [`Self::served_origins`].
     pub origin_count: u64,
+    /// The distinct `(EHR, kind, template id, root archetype id)` tuples of the
+    /// served versions, which the access record's category classification
+    /// reads (EHDS Annex II 3.2(c), #3621); empty when no row could be
+    /// attributed to a version.
+    pub served_content: Vec<crate::storage::version_repo::read::ServedContent>,
+    /// The query's positive archetype and template constraints, which classify
+    /// an answer that carries no version: leaf columns of a `DISTINCT` or
+    /// aggregate projection, or zero rows.
+    pub constraints: crate::system_log::categories::QueryConstraints,
 }
 
 /// Plan, execute, and assemble an AQL query.
@@ -129,12 +138,13 @@ pub async fn execute(
 
     // The versions the served rows came from: every bound root's locator
     // columns, plus the whole-object anchors for a plan that carries no root
-    // columns. One aggregate over their commit-time stamps, never a body walk.
+    // columns. One aggregate over their commit-time stamps and their template
+    // and root-archetype ids, never a body walk.
     let mut versions = served_versions(&rows, &prepared.access_version_cols)?;
     versions.extend(anchors.iter().map(|a| (a.vo_id, a.sys_version)));
     versions.sort_unstable_by(|a, b| a.0.0.cmp(&b.0.0).then(a.1.cmp(&b.1)));
     versions.dedup();
-    let (served_origins, origin_count) = crate::storage::version_repo::read::read_origins(
+    let served = crate::storage::version_repo::read::read_served(
         pool,
         &versions,
         crate::versioning::origins::RECORD_CAP,
@@ -146,8 +156,10 @@ pub async fn execute(
         columns,
         rows: out_rows,
         served_ehrs: served_ehrs(&rows, &prepared.access_ehr_cols)?,
-        served_origins,
-        origin_count,
+        served_origins: served.origins,
+        origin_count: served.origin_count,
+        served_content: served.content,
+        constraints: super::constraints::positive_constraints(ir, params),
     })
 }
 

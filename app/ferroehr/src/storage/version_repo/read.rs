@@ -81,6 +81,11 @@ pub struct StoredVersion {
     pub time_committed: jiff::Timestamp,
     /// The OPT `template_id` a COMPOSITION was committed against (else `None`).
     pub template_id: Option<String>,
+    /// The archetype id of the version's root node (`node.archetype` at
+    /// `num = 0`, case-folded), read in the same statement; `None` on a
+    /// logically deleted version. The access log classifies by it when the
+    /// template id does not.
+    pub root_archetype: Option<String>,
     /// `VERSION.signature` (0..1), opaque radix-64 — on an imported row the
     /// `IMPORTED_VERSION` wrapper's own.
     pub signature: Option<String>,
@@ -163,6 +168,8 @@ macro_rules! version_select {
             "v.other_input_version_uids, v.contribution_id, v.template_id, v.signature, ",
             "v.signature_client_supplied, v.wrapped_original, v.stable_compatible, v.origins, ",
             "v.body, h.restricted_at, ",
+            "(SELECT n.archetype FROM node n WHERE n.tier = v.tier AND n.vo_id = v.vo_id ",
+            "AND n.sys_version = v.sys_version AND n.num = 0) AS root_archetype, ",
             "a.system_id, a.change_type, a.description, a.committer, a.attestation, ",
             "a.time_committed, ",
             "att.attestations_at_committal, att.attestations_after_committal ",
@@ -193,6 +200,8 @@ macro_rules! version_select_raw {
             "v.other_input_version_uids, v.contribution_id, v.template_id, v.signature, ",
             "v.signature_client_supplied, v.wrapped_original, v.stable_compatible, ",
             "v.origins, v.body, h.restricted_at, ",
+            "(SELECT n.archetype FROM node n WHERE n.tier = v.tier AND n.vo_id = v.vo_id ",
+            "AND n.sys_version = v.sys_version AND n.num = 0) AS root_archetype, ",
             "a.system_id, a.change_type, a.description, a.committer, a.attestation, ",
             "a.time_committed, ",
             "att.attestations_at_committal, att.attestations_after_committal ",
@@ -321,6 +330,7 @@ fn stored_version_fields(
             .try_get::<jiff_sqlx::Timestamp, _>("time_committed")?
             .to_jiff(),
         template_id: row.try_get("template_id")?,
+        root_archetype: row.try_get("root_archetype")?,
         signature: row.try_get("signature")?,
         signature_client_supplied: row.try_get("signature_client_supplied")?,
         wrapped_original: row.try_get("wrapped_original")?,
@@ -766,35 +776,80 @@ pub async fn stored_body_all(
     }
 }
 
-/// The distinct origins of a set of versions, for the access record (#3212).
+/// What a set of served versions carried, for the access record: the distinct
+/// origins (#3212) and the distinct template and root-archetype ids per EHR
+/// the category classification reads (#3621).
+#[derive(Debug, Clone, Default)]
+pub struct ServedFacts {
+    /// The distinct origins, sorted and capped at the requested cap.
+    pub origins: Vec<String>,
+    /// The true number of distinct origins behind [`Self::origins`].
+    pub origin_count: u64,
+    /// The distinct `(EHR, kind, template id, root archetype id)` tuples of
+    /// the served versions.
+    pub content: Vec<ServedContent>,
+}
+
+/// The `(ehr_id, kind, template_id, root archetype)` tuple the served-content
+/// aggregate decodes into.
+type ContentTuple = (Option<Uuid>, String, Option<String>, Option<String>);
+
+/// One distinct identity tuple of a served version.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ServedContent {
+    /// The owning EHR, `None` for EHR-less content.
+    pub ehr_id: Option<EhrId>,
+    /// The RM kind of the versioned object.
+    pub kind: String,
+    /// The `template_id` the version was committed against.
+    pub template_id: Option<String>,
+    /// The archetype id of the version's root node, case-folded.
+    pub root_archetype: Option<String>,
+}
+
+/// The origins and the content identities of a set of versions, for the
+/// access record, in one statement.
 ///
-/// The commit-time stamps are unioned in SQL, an unstamped row contributing
-/// its creating system; the set is capped at `cap` with the true distinct
-/// count beside it.
+/// The commit-time origin stamps are unioned in SQL, an unstamped row
+/// contributing its creating system, and capped at `cap` with the true
+/// distinct count beside them. The template id and the root node's archetype
+/// id are aggregated distinct per EHR, so a population page of many versions
+/// carries one tuple per template rather than one per row.
 ///
 /// # Errors
-/// [`StorageError::Database`] when the aggregate fails.
-pub async fn read_origins(
+/// [`StorageError::Database`] when the aggregate fails; [`StorageError::InvalidRows`]
+/// when the aggregated content does not decode or the distinct count is negative.
+pub async fn read_served(
     pool: &PgPool,
     versions: &[(VoId, i32)],
     cap: usize,
-) -> Result<(Vec<String>, u64), StorageError> {
+) -> Result<ServedFacts, StorageError> {
     if versions.is_empty() {
-        return Ok((Vec::new(), 0));
+        return Ok(ServedFacts::default());
     }
     let vo_ids: Vec<Uuid> = versions.iter().map(|(vo_id, _)| vo_id.0).collect();
     let sys_versions: Vec<i32> = versions.iter().map(|(_, sv)| *sv).collect();
     let row = sqlx::query(
-        "WITH o AS ( \
-             SELECT DISTINCT e.origin \
+        "WITH s AS ( \
+             SELECT v.tier, v.vo_id, v.sys_version, v.ehr_id, v.kind, v.template_id, \
+                    v.origins, v.creating_system_id \
              FROM unnest($1::uuid[], $2::int[]) AS a(vo_id, sys_version) \
              JOIN version v ON v.vo_id = a.vo_id AND v.sys_version = a.sys_version \
-             CROSS JOIN LATERAL jsonb_array_elements_text( \
-                 coalesce(v.origins, jsonb_build_array(v.creating_system_id))) AS e(origin) \
+         ), o AS ( \
+             SELECT DISTINCT e.origin \
+             FROM s CROSS JOIN LATERAL jsonb_array_elements_text( \
+                 coalesce(s.origins, jsonb_build_array(s.creating_system_id))) AS e(origin) \
+         ), c AS ( \
+             SELECT DISTINCT s.ehr_id, s.kind, s.template_id, n.archetype \
+             FROM s LEFT JOIN node n ON n.tier = s.tier AND n.vo_id = s.vo_id \
+                  AND n.sys_version = s.sys_version AND n.num = 0 \
          ) \
          SELECT (SELECT count(*) FROM o) AS total, \
-                (SELECT coalesce(jsonb_agg(c.origin ORDER BY c.origin), '[]'::jsonb) \
-                 FROM (SELECT origin FROM o ORDER BY origin LIMIT $3) c) AS origins",
+                (SELECT coalesce(jsonb_agg(x.origin ORDER BY x.origin), '[]'::jsonb) \
+                 FROM (SELECT origin FROM o ORDER BY origin LIMIT $3) x) AS origins, \
+                (SELECT coalesce(jsonb_agg(jsonb_build_array(c.ehr_id, c.kind, c.template_id, \
+                     c.archetype) ORDER BY c.ehr_id, c.kind, c.template_id, c.archetype), \
+                     '[]'::jsonb) FROM c) AS content",
     )
     .bind(&vo_ids)
     .bind(&sys_versions)
@@ -803,7 +858,7 @@ pub async fn read_origins(
     .await?;
     let total: i64 = row.try_get("total")?;
     let set: Value = row.try_get("origins")?;
-    let set = set
+    let origins = set
         .as_array()
         .map(|items| {
             items
@@ -813,5 +868,27 @@ pub async fn read_origins(
                 .collect()
         })
         .unwrap_or_default();
-    Ok((set, u64::try_from(total).unwrap_or(0)))
+    let content: Vec<ContentTuple> =
+        serde_json::from_value(row.try_get("content")?).map_err(|e| {
+            StorageError::InvalidRows(format!("the served-content aggregate did not decode: {e}"))
+        })?;
+    Ok(ServedFacts {
+        origins,
+        origin_count: u64::try_from(total).map_err(|e| {
+            StorageError::InvalidRows(format!(
+                "the served-origin count {total} is not a count: {e}"
+            ))
+        })?,
+        content: content
+            .into_iter()
+            .map(
+                |(ehr_id, kind, template_id, root_archetype)| ServedContent {
+                    ehr_id: ehr_id.map(EhrId),
+                    kind,
+                    template_id,
+                    root_archetype,
+                },
+            )
+            .collect(),
+    })
 }

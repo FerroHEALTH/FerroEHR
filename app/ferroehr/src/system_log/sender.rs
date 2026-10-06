@@ -48,7 +48,7 @@ use tokio::task::JoinHandle;
 use super::event::{AuditEvent, EmitOutcome};
 
 use crate::system_log::AuditError;
-use crate::system_log::config::{AuditConfig, FailMode, FhirFeedConfig};
+use crate::system_log::config::{AuditConfig, FailMode, FhirFeedConfig, Retention};
 use crate::system_log::message::{AuditContext, AuditMessage};
 use crate::system_log::store::AuditStore;
 use crate::system_log::syslog::{Transport, assemble_syslog};
@@ -111,6 +111,8 @@ struct SenderInner {
     purpose_header: String,
     purpose_codes: Vec<String>,
     legal_basis: Option<String>,
+    /// The compiled `[audit.categories]` map every record is classified through.
+    categories: crate::system_log::categories::CategoryMap,
     /// Whether the local store is currently accepting writes (`true` when the
     /// store is disabled — health then rides on the queue alone). Written by
     /// the drain, read by [`AuditSender::emit`] under `fail_mode = closed`.
@@ -186,6 +188,12 @@ impl AuditSender {
         self.inner.legal_basis.as_deref()
     }
 
+    /// The category map every access record is classified through.
+    #[must_use]
+    pub fn categories(&self) -> &crate::system_log::categories::CategoryMap {
+        &self.inner.categories
+    }
+
     /// Enqueue an event (non-blocking). Never awaits, never blocks the request.
     ///
     /// A full queue (or a stopped drain) is metered and mapped through the
@@ -195,7 +203,10 @@ impl AuditSender {
     /// rejects — the event is still enqueued (best-effort: it delivers when
     /// the store recovers), but the operation must not be reported as having
     /// been audited.
-    pub fn emit(&self, event: AuditEvent) -> EmitOutcome {
+    ///
+    /// Every record is stamped with the digest of the category map in force.
+    pub fn emit(&self, mut event: AuditEvent) -> EmitOutcome {
+        event.category_map_digest = Some(self.inner.categories.digest());
         crate::telemetry::metrics::metrics()
             .atna_audit_emitted
             .add(1, &[]);
@@ -383,9 +394,9 @@ pub async fn start(
         }
     }
     if let Some(store) = store.clone()
-        && config.store.retention_days > 0
+        && config.store.retention() != Retention::Forever
     {
-        workers.push(tokio::spawn(reaper(store, config.store.retention_days)));
+        workers.push(tokio::spawn(reaper(store, config.store.retention())));
     }
 
     if store.is_none() && syslog.is_none() && !config.fhir_feed.enabled {
@@ -400,6 +411,11 @@ pub async fn start(
         server_ip: config.server_host.clone().unwrap_or_default(),
         value_if_missing: config.value_if_missing.clone(),
     };
+
+    let categories = config
+        .categories
+        .compile()
+        .map_err(AuditError::CategoryMap)?;
 
     let store_healthy = Arc::new(AtomicBool::new(true));
     let (tx, rx) = mpsc::channel(config.queue_capacity.max(1));
@@ -426,6 +442,7 @@ pub async fn start(
             purpose_header: config.purpose_header.to_ascii_lowercase(),
             purpose_codes: config.purpose_codes.clone(),
             legal_basis: config.legal_basis.clone(),
+            categories,
             fail_mode: config.fail_mode,
             store_healthy,
             dropped_since_warn: AtomicU64::new(0),
@@ -795,7 +812,7 @@ async fn feed_outbox(
     }
 }
 
-/// The hourly retention reaper (`[audit.store] retention_days > 0`).
+/// The hourly retention reaper, for a horizon in days or in calendar years.
 #[expect(
     clippy::infinite_loop,
     reason = "the retention reaper is a detached background task with no \
@@ -803,10 +820,15 @@ async fn feed_outbox(
               declaring `-> !` is not an option because `tokio::spawn` would \
               then need the never type as a type argument, which is unstable"
 )]
-async fn reaper(store: AuditStore, retention_days: u32) {
+async fn reaper(store: AuditStore, retention: Retention) {
     loop {
         tokio::time::sleep(REAP_INTERVAL).await;
-        match store.reap(retention_days).await {
+        let reaped = match retention {
+            Retention::Forever => Ok(0),
+            Retention::Days(days) => store.reap(days).await,
+            Retention::Years(years) => store.reap_years(years).await,
+        };
+        match reaped {
             Ok(0) => {}
             Ok(n) => {
                 crate::telemetry::metrics::metrics()
@@ -834,6 +856,7 @@ mod tests {
             store: StoreConfig {
                 enabled: false,
                 retention_days: 0,
+                retention_years: None,
                 sgb_v_309_controller: false,
             },
             syslog: SyslogConfig {
@@ -878,6 +901,7 @@ mod tests {
                 purpose_header: "x-purpose-of-use".to_owned(),
                 purpose_codes: Vec::new(),
                 legal_basis: None,
+                categories: crate::system_log::categories::CategoryMap::default(),
                 fail_mode,
                 store_healthy: Arc::new(AtomicBool::new(store_healthy)),
                 dropped_since_warn: AtomicU64::new(0),

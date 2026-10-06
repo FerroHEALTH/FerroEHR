@@ -173,6 +173,14 @@ pub struct AuditEvent {
     /// How many distinct origins the served data had; exceeds `origins.len()`
     /// when the set was capped. `None` when nothing was served.
     pub origin_count: Option<u64>,
+    /// The EHDS priority categories of the data the operation served or wrote
+    /// (Annex II 3.2(c), #3621), classified at access through the
+    /// `[audit.categories]` map; `None` for an operation that touched no
+    /// clinical content.
+    pub category: Option<crate::system_log::categories::CategoryRecord>,
+    /// The digest of the category map in force, stamped on every record by the
+    /// sender, so a record says which map classified it.
+    pub category_map_digest: Option<crate::system_log::categories::MapDigest>,
     /// The request correlation id, matching the response's `x-request-id`.
     pub request_id: Option<String>,
     /// The event time.
@@ -271,6 +279,8 @@ impl AuditEvent {
             result_count: None,
             origins: Vec::new(),
             origin_count: None,
+            category: None,
+            category_map_digest: None,
             request_id: None,
             timestamp: Timestamp::now(),
         }

@@ -87,7 +87,7 @@ terminology
 fn provider(base: &str) -> FhirTerminologyProvider {
     let cfg = FhirProviderConfig {
         kind: ProviderKind::Fhir,
-        url: base.to_owned(),
+        url: ferroehr::config::secret::SecretUrl::new(base),
         // VETDF uses `CodeSystem/$lookup` regardless of the membership op.
         operation: FhirOperation::ValidateCode,
         connect_timeout_ms: 500,

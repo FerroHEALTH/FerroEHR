@@ -109,12 +109,14 @@ async fn run(
             domain: None,
             origins: outcome.served_origins.clone(),
             origin_count: (!outcome.served_origins.is_empty()).then_some(outcome.origin_count),
+            content: outcome.accessed.clone(),
         });
     if !outcome.served_ehrs.is_empty() {
         resp.extensions_mut()
-            .insert(crate::system_log::middleware::AuditServedEhrs(
-                outcome.served_ehrs,
-            ));
+            .insert(crate::system_log::middleware::AuditServedEhrs {
+                served: outcome.served_ehrs,
+                content: outcome.served_ehr_content,
+            });
     }
     Ok(resp)
 }

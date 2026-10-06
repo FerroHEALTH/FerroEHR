@@ -144,6 +144,7 @@ pub(crate) async fn attest(
         // on a `commit_audit` it does not have.
         change_type: change_type::ATTESTATION.to_owned(),
         template_id: None,
+        root_archetype: None,
         // The contribution's commit-act time — a 666 attestation adds no new
         // version, so this is the instant the attestation itself committed.
         time_committed,

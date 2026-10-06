@@ -80,10 +80,12 @@ no way to spell an array index.
 > [!NOTE]
 > Enum values are lowercase / `snake_case` tokens, exactly as the tables show.
 > Secret-typed keys are redacted everywhere the configuration is rendered (the
-> `/management/env` snapshot, `ferroehr config check`, logs), and each has a
-> `*_file` sibling that reads the value from a file, for Kubernetes and Docker
-> secret mounts. Setting a secret and its `*_file` sibling at once is a boot
-> error.
+> `/management/env` snapshot, `GET {base}/admin/config`, `ferroehr config
+> check`, `ferroehr report`, logs), and a secret-URL key shows its host and path
+> with the embedded credentials masked. Each secret, and each database, broker
+> and FHIR-outbound URL, has a `*_file` sibling that reads the value from a
+> file, for Kubernetes and Docker secret mounts. Setting a key and its `*_file`
+> sibling at once is a boot error.
 
 ### File discovery
 

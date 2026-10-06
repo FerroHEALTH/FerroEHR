@@ -45,7 +45,7 @@ const LOINC: &str = "http://loinc.org";
 fn provider_cfg(base: &str) -> FhirProviderConfig {
     FhirProviderConfig {
         kind: ProviderKind::Fhir,
-        url: base.to_owned(),
+        url: ferroehr::config::secret::SecretUrl::new(base),
         operation: FhirOperation::ValidateCode,
         connect_timeout_ms: 500,
         request_timeout_ms: 800,
@@ -341,7 +341,7 @@ async fn oauth2_client_credentials_token_is_obtained_and_reused() {
         oauth2_clients: BTreeMap::from([(
             "ts-client".to_owned(),
             TerminologyOauth2Config {
-                token_url: format!("{}/token", idp.uri()),
+                token_url: ferroehr::config::secret::SecretUrl::new(format!("{}/token", idp.uri())),
                 client_id: "ferroehr-cdr".to_owned(),
                 client_secret: Some(ferroehr::config::secret::Secret::new("s3cret")),
                 client_secret_file: None,
@@ -407,7 +407,7 @@ async fn a_refused_grant_is_a_typed_error_not_an_anonymous_request() {
         oauth2_clients: BTreeMap::from([(
             "ts-client".to_owned(),
             TerminologyOauth2Config {
-                token_url: format!("{}/token", idp.uri()),
+                token_url: ferroehr::config::secret::SecretUrl::new(format!("{}/token", idp.uri())),
                 client_id: "ferroehr-cdr".to_owned(),
                 client_secret: Some(ferroehr::config::secret::Secret::new("wrong")),
                 client_secret_file: None,
@@ -485,7 +485,7 @@ async fn client_secret_post_sends_credentials_in_the_body() {
         oauth2_clients: BTreeMap::from([(
             "ts-client".to_owned(),
             TerminologyOauth2Config {
-                token_url: format!("{}/token", idp.uri()),
+                token_url: ferroehr::config::secret::SecretUrl::new(format!("{}/token", idp.uri())),
                 client_id: "ferroehr-cdr".to_owned(),
                 client_secret: Some(ferroehr::config::secret::Secret::new("s3cret")),
                 client_secret_file: None,

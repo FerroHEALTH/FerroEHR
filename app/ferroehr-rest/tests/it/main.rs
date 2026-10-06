@@ -30,6 +30,7 @@ mod abac_e2e;
 mod admin_extension_http;
 mod admin_http;
 mod admin_integrity_http;
+mod audit_categories;
 mod audit_e2e;
 mod audit_iti81;
 mod authz_cedar_engine;

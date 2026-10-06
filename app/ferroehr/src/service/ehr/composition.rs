@@ -226,7 +226,8 @@ impl FerroEhrService {
                 read.origins.as_ref(),
                 &read.canonical,
                 &read.creating_system_id,
-            ));
+            ))
+            .with_content(vec![read.content.clone()]);
         let Some(text) = raw.raw_json else {
             let stamped =
                 self.with_uid(read.canonical, vo_id, &read.creating_system_id, read.tree)?;
@@ -395,7 +396,8 @@ impl FerroEhrService {
                 read.origins.as_ref(),
                 &read.canonical,
                 &read.creating_system_id,
-            ));
+            ))
+            .with_content(vec![read.content.clone()]);
         let ov = version_envelope(&read, self.signer())?;
         Ok(ServiceResponse::new(ov, meta))
     }

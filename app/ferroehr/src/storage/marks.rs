@@ -67,6 +67,9 @@ pub struct RetentionPolicyRow {
     pub anchor: String,
     /// The legal citation the period rests on.
     pub source: String,
+    /// The EHDS priority category the period is keyed on, or `None` for every
+    /// object of the kind (Annex II 3.4).
+    pub category: Option<String>,
 }
 
 /// One EHR whose retention period has run.
@@ -86,6 +89,9 @@ pub struct RetentionDueRow {
     pub objects_due: i64,
     /// Objects exempted by a per-object hold (`vo_head.retention_hold_at`).
     pub objects_held: i64,
+    /// The EHDS priority category the period is keyed on, or `None` for every
+    /// object of the kind.
+    pub category: Option<String>,
 }
 
 /// The marks one EHR carries, as one read.
@@ -318,29 +324,31 @@ pub async fn ehr_marks(pool: &PgPool, ehr_id: EhrId) -> Result<Option<EhrMarks>,
 
 // ── retention ────────────────────────────────────────────────────────────────
 
-/// Declare (or re-declare) the retention period of one content category in one
-/// jurisdiction.
+/// Declare (or re-declare) the retention period of one content kind in one
+/// jurisdiction, optionally keyed on one EHDS priority category (Annex II 3.4).
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure, including the CHECKs
-/// refusing an unknown category, an unknown anchor rule or a non-positive
-/// period.
+/// refusing an unknown kind, an unknown category, an unknown anchor rule or a
+/// non-positive period.
 pub async fn put_retention_policy(
     tx: &mut PgConnection,
     kind: &str,
     jurisdiction: &str,
+    category: Option<&str>,
     period: &str,
     anchor: &str,
     source: &str,
 ) -> Result<(), StorageError> {
     sqlx::query(
-        "INSERT INTO retention_policy (kind, jurisdiction, period, anchor, source) \
-         VALUES ($1, $2, $3::interval, $4, $5) \
-         ON CONFLICT (kind, jurisdiction) DO UPDATE \
+        "INSERT INTO retention_policy (kind, jurisdiction, category, period, anchor, source) \
+         VALUES ($1, $2, $3, $4::interval, $5, $6) \
+         ON CONFLICT (kind, jurisdiction, category) DO UPDATE \
             SET period = EXCLUDED.period, anchor = EXCLUDED.anchor, source = EXCLUDED.source",
     )
     .bind(kind)
     .bind(jurisdiction)
+    .bind(category)
     .bind(period)
     .bind(anchor)
     .bind(source)
@@ -355,8 +363,8 @@ pub async fn put_retention_policy(
 /// [`StorageError::Database`] on a driver failure.
 pub async fn retention_policies(pool: &PgPool) -> Result<Vec<RetentionPolicyRow>, StorageError> {
     let rows = sqlx::query(
-        "SELECT kind, jurisdiction, period::text AS period, anchor, source \
-         FROM retention_policy ORDER BY jurisdiction, kind",
+        "SELECT kind, jurisdiction, category, period::text AS period, anchor, source \
+         FROM retention_policy ORDER BY jurisdiction, kind, category NULLS FIRST",
     )
     .fetch_all(pool)
     .await?;
@@ -368,9 +376,47 @@ pub async fn retention_policies(pool: &PgPool) -> Result<Vec<RetentionPolicyRow>
                 period: row.try_get("period")?,
                 anchor: row.try_get("anchor")?,
                 source: row.try_get("source")?,
+                category: row.try_get("category")?,
             })
         })
         .collect()
+}
+
+/// Replace the boot mirror of the `[audit.categories]` map (`category_map`)
+/// with `rows`, `(key kind, case-folded key, category)`, in one transaction.
+///
+/// The table lock serializes replicas booting at once, so the mirror is always
+/// one map whole. No openEHR spec governs the map — our own design/extension.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure, including the CHECKs
+/// refusing a key kind, an unfolded key or a category spelling the register
+/// does not know.
+pub async fn replace_category_map(
+    pool: &PgPool,
+    rows: &[(&str, String, String)],
+) -> Result<(), StorageError> {
+    let mut tx = pool.begin().await?;
+    sqlx::query("LOCK TABLE category_map IN SHARE ROW EXCLUSIVE MODE")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM category_map")
+        .execute(&mut *tx)
+        .await?;
+    let kinds: Vec<&str> = rows.iter().map(|(kind, _, _)| *kind).collect();
+    let keys: Vec<&str> = rows.iter().map(|(_, key, _)| key.as_str()).collect();
+    let categories: Vec<&str> = rows.iter().map(|(_, _, c)| c.as_str()).collect();
+    sqlx::query(
+        "INSERT INTO category_map (key_kind, key, category) \
+         SELECT * FROM UNNEST($1::text[], $2::text[], $3::text[])",
+    )
+    .bind(kinds)
+    .bind(keys)
+    .bind(categories)
+    .execute(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(())
 }
 
 /// Record one EHR's jurisdiction, anchor instant and any EHR-wide hold.
@@ -441,8 +487,9 @@ pub async fn retention_due(
     limit: i64,
 ) -> Result<Vec<RetentionDueRow>, StorageError> {
     let rows = sqlx::query(
-        "SELECT ehr_id, jurisdiction, kind, source, due_at, objects_due, objects_held \
-         FROM retention_due ORDER BY due_at, ehr_id, kind LIMIT $1",
+        "SELECT ehr_id, jurisdiction, kind, category, source, due_at, objects_due, \
+         objects_held \
+         FROM retention_due ORDER BY due_at, ehr_id, kind, category NULLS FIRST LIMIT $1",
     )
     .bind(limit)
     .fetch_all(pool)
@@ -457,6 +504,7 @@ pub async fn retention_due(
                 due_at: row.try_get::<jiff_sqlx::Timestamp, _>("due_at")?.to_jiff(),
                 objects_due: row.try_get("objects_due")?,
                 objects_held: row.try_get("objects_held")?,
+                category: row.try_get("category")?,
             })
         })
         .collect()

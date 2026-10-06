@@ -653,6 +653,7 @@ async fn audit_search(state: &AppState, parts: &RequestParts) -> Response {
                     domain: Some(ferroehr::system_log::event::AccessDomain::System),
                     origins: Vec::new(),
                     origin_count: None,
+                    content: None,
                 });
             resp
         }

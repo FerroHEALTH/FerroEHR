@@ -43,6 +43,8 @@
 //! - [`event`] — the transport-agnostic audit event model.
 //! - [`access_context`] — the request-scoped purpose of use, for records the
 //!   service layer emits by itself.
+//! - [`categories`] — the EHDS priority-category map and the classifier every
+//!   access record is stamped through.
 //! - [`codes`] — DCM / RFC-3881 code constants and the ATNA rendering of the
 //!   event enums.
 //! - [`message`] — the DICOM `AuditMessage` model and `quick-xml` serializer.
@@ -61,6 +63,7 @@
 )]
 
 pub mod access_context;
+pub mod categories;
 pub mod codes;
 pub mod config;
 pub mod event;
@@ -107,6 +110,10 @@ pub enum AuditError {
     /// Rendering the FHIR `AuditEvent` document failed.
     #[error("audit rendering failed")]
     Render(#[source] Box<dyn std::error::Error + Send + Sync>),
+    /// The `[audit.categories]` map does not compile; the boot validation
+    /// reports the same findings.
+    #[error("the audit category map is invalid: {}", .0.iter().map(ToString::to_string).collect::<Vec<_>>().join("; "))]
+    CategoryMap(Vec<categories::CategoryMapError>),
 }
 
 // quick-xml's `Writer` over an in-memory buffer surfaces write failures as
@@ -231,6 +238,19 @@ impl FerroEhrService {
     #[must_use]
     pub fn audit_legal_basis(&self) -> Option<&str> {
         self.audit.as_ref().and_then(AuditSender::legal_basis)
+    }
+
+    /// Classifies what an access touched through the configured category map
+    /// ([`config::AuditConfig::categories`]); `None` when no audit sender is
+    /// wired, because no record will carry it.
+    #[must_use]
+    pub fn audit_classify(
+        &self,
+        content: &categories::AccessedContent,
+    ) -> Option<categories::CategoryRecord> {
+        self.audit
+            .as_ref()
+            .map(|sender| sender.categories().classify(content))
     }
 
     /// Whether the local Audit Record Repository is available (the store is

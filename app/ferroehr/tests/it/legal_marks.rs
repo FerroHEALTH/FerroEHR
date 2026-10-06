@@ -416,6 +416,7 @@ async fn the_retention_register_lists_what_is_due_and_deletes_nothing() {
     svc.put_retention_policy(
         "EHR",
         "CH",
+        None,
         "20 years",
         "last_commit",
         "EPDV Art. 10 Abs. 1 lit. d",
@@ -428,7 +429,7 @@ async fn the_retention_register_lists_what_is_due_and_deletes_nothing() {
 
     // A period the register refuses stays out of it.
     let bad = svc
-        .put_retention_policy("SOMETHING_ELSE", "CH", "20 years", "last_commit", "x")
+        .put_retention_policy("SOMETHING_ELSE", "CH", None, "20 years", "last_commit", "x")
         .await
         .expect_err("an unknown content category is refused");
     assert_eq!(bad.status, CallStatusType::PreconditionViolation);
@@ -490,6 +491,143 @@ async fn the_retention_register_lists_what_is_due_and_deletes_nothing() {
     assert!(bad_hold.is_err(), "the CHECK refuses a groundless hold");
 }
 
+/// Declare three COMPOSITION periods in DE: ten years for test results, thirty
+/// for imaging (the longest), and five keyed on no category.
+async fn declare_category_periods(svc: &FerroEhrService) {
+    for (category, period) in [
+        (Some("test-results"), "10 years"),
+        (Some("imaging"), "30 years"),
+        (None, "5 years"),
+    ] {
+        svc.put_retention_policy(
+            "COMPOSITION",
+            "DE",
+            category,
+            period,
+            "last_commit",
+            "test period",
+        )
+        .await
+        .expect("declare the period");
+    }
+}
+
+/// A period keyed on an EHDS priority category lists the objects the
+/// `[audit.categories]` map places in it, and an object the map cannot
+/// classify takes the longest period configured for its kind (Regulation (EU)
+/// 2025/327 Annex II 3.4, `docs/law/eu/ehds/text.html`, #3621).
+#[tokio::test]
+async fn a_category_keyed_period_lists_its_objects_and_unclassified_takes_the_longest() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let (ehr_id, _status_vo) = seed(&svc).await;
+
+    // Two templateless compositions, classified by their root archetype: the
+    // encounter is mapped to test results, the report is not mapped at all.
+    svc.create_composition(
+        ehr_id,
+        uv(&crate::fixtures::composition("lab"), "249", None),
+    )
+    .await
+    .expect("the mapped composition");
+    let mut report = crate::fixtures::composition("unmapped");
+    report["archetype_node_id"] = json!("openEHR-EHR-COMPOSITION.report.v1");
+    report["archetype_details"]["archetype_id"]["value"] =
+        json!("openEHR-EHR-COMPOSITION.report.v1");
+    svc.create_composition(ehr_id, uv(&report, "249", None))
+        .await
+        .expect("the unmapped composition");
+
+    let map: ferroehr::system_log::categories::CategoryMapConfig = toml::from_str(
+        r#"
+        [archetypes]
+        "openEHR-EHR-COMPOSITION.encounter.v1" = ["test-results"]
+        "#,
+    )
+    .expect("the map parses");
+    svc.mirror_category_map(&map.compile().expect("the map compiles"))
+        .await
+        .expect("mirror the map");
+
+    declare_category_periods(&svc).await;
+    let bad = svc
+        .put_retention_policy(
+            "COMPOSITION",
+            "DE",
+            Some("laboratory"),
+            "1 year",
+            "last_commit",
+            "x",
+        )
+        .await
+        .expect_err("an unknown category is refused");
+    assert_eq!(bad.status, CallStatusType::PreconditionViolation);
+    let policies = svc.retention_policies().await.expect("register");
+    assert_eq!(
+        policies.len(),
+        3,
+        "one row per kind, category and jurisdiction"
+    );
+
+    svc.put_retention_anchor(
+        &ehr_id.to_string(),
+        "DE",
+        Some("1990-01-01T00:00:00Z"),
+        None,
+    )
+    .await
+    .expect("anchor");
+    let due = svc.retention_due(100).await.expect("due list");
+    let row = |category: Option<&str>| {
+        due.iter()
+            .find(|row| row.category.as_deref() == category)
+            .expect("a due row for every category in force")
+    };
+    assert_eq!(
+        row(None).objects_due,
+        2,
+        "the period keyed on no category lists every composition"
+    );
+    assert_eq!(
+        row(Some("test-results")).objects_due,
+        1,
+        "the mapped composition is listed under its category"
+    );
+    assert_eq!(
+        row(Some("imaging")).objects_due,
+        1,
+        "the unclassified composition takes the longest period for its kind"
+    );
+    assert_eq!(due.len(), 3, "{due:#?}");
+
+    // A map that classifies the report moves it out of the longest period.
+    let map: ferroehr::system_log::categories::CategoryMapConfig = toml::from_str(
+        r#"
+        [archetypes]
+        "openEHR-EHR-COMPOSITION.encounter.v1" = ["test-results"]
+        "openEHR-EHR-COMPOSITION.report.v1" = ["test-results"]
+        "#,
+    )
+    .expect("the map parses");
+    svc.mirror_category_map(&map.compile().expect("the map compiles"))
+        .await
+        .expect("mirror the second map");
+    let due = svc.retention_due(100).await.expect("due list");
+    assert!(
+        due.iter()
+            .all(|row| row.category.as_deref() != Some("imaging")),
+        "a category row with no object is left out: {due:#?}"
+    );
+    assert_eq!(
+        due.iter()
+            .find(|row| row.category.as_deref() == Some("test-results"))
+            .expect("the test-results row")
+            .objects_due,
+        2
+    );
+}
+
 #[tokio::test]
 async fn setting_and_lifting_a_mark_is_recorded_in_the_access_trail() {
     let db = testkit::db().await.expect("testkit database");
@@ -499,6 +637,7 @@ async fn setting_and_lifting_a_mark_is_recorded_in_the_access_trail() {
         store: StoreConfig {
             enabled: true,
             retention_days: 0,
+            retention_years: None,
             sgb_v_309_controller: false,
         },
         ..AuditConfig::default()

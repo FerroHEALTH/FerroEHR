@@ -10,6 +10,10 @@
 //! §A.5); [`AuditMessage::to_xml`] renders canonical (indented) XML with
 //! `quick-xml`, which escapes all attribute/text values. The golden vector
 //! snapshotted in the tests is a PS3.15 §A.5 EHR-create success record.
+//!
+//! The record's EHDS priority categories ([`AuditEvent::category`]) have no
+//! element in the PS3.15 §A.5 schema, so this rendering omits them; the local
+//! store and the FHIR `AuditEvent` carry them.
 
 use quick_xml::events::{BytesEnd, BytesStart, BytesText, Event};
 use quick_xml::writer::Writer;

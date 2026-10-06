@@ -314,7 +314,7 @@ fn certs(pem: &[u8]) -> Vec<rustls::pki_types::CertificateDer<'static>> {
 fn provider_cfg(url: &str) -> FhirProviderConfig {
     FhirProviderConfig {
         kind: ProviderKind::Fhir,
-        url: url.to_owned(),
+        url: ferroehr::config::secret::SecretUrl::new(url),
         operation: FhirOperation::ValidateCode,
         connect_timeout_ms: 2_000,
         request_timeout_ms: 4_000,

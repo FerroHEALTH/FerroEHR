@@ -71,7 +71,7 @@ server validates tokens as a resource server; it never issues them.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `issuer` | string | required when the table is present | Expected `iss`; also the OIDC discovery base. Must be an absolute `https` URL with no query and no fragment (RFC 8414 §2), boot-validated. |
+| `issuer` | string | required when the table is present | Expected `iss`; also the OIDC discovery base. Must be an absolute `https` URL with no query and no fragment (RFC 8414 §2) and no user name or password (OpenID Connect Core 1.0 §1.2), boot-validated. |
 | `audiences` | list of string | **required, non-empty** | Accepted `aud`. An empty or all-blank list is a boot error. |
 | `algorithms` | list of string | `["RS256"]` | Accepted signature algorithms. Boot-bound to the key source: `HS*` requires `hmac_secret`, `RS*`/`ES*`/`PS*` require public keys (a static JWKS or the discovered one). `none` is refused outright. |
 | `require_at_jwt` | bool | `false` | Refuse a token that does not carry `typ: at+jwt`. A token that *does* carry it is held to RFC 9068 §2.2 either way: `iat`, `jti` and `client_id` become mandatory for it. |
@@ -99,6 +99,10 @@ The boot rules, and what each one prevents:
   own signing keys. A development issuer is opted in explicitly with
   `allow_insecure_issuer = true`; the no-query/no-fragment rules still apply,
   since those are structural.
+- **`issuer` carries no user name or password.** OpenID Connect Core 1.0 §1.2
+  defines an issuer identifier as scheme, host, and optionally port and path,
+  so an issuer with `user:password@` in it is refused at boot. The refusal
+  masks the credential instead of quoting it.
 - **`clock_skew_leeway_seconds` is capped at 300.** RFC 7519 §4.1.4 allows
   "some small leeway, usually no more than a few minutes, to account for clock
   skew", and RFC 9068 §4 step 6 repeats the bound. A large leeway silently
@@ -167,9 +171,9 @@ order and design rationale are in [Security](../security.md).
 - **`[authz.abac.cedar]`:** `policy_dir` (path, required when
   `engine = "cedar"` and ABAC is on) and `reload_secs` (int, unset, an
   optional hot-reload interval).
-- **`[authz.abac.remote]`:** `server` (string, required when
+- **`[authz.abac.remote]`:** `server` (secret URL, required when
   `engine = "remote"`, and it must end with `/`, because the policy name is
-  appended), `connect_timeout_ms` (int, `2000`), `request_timeout_ms` (int,
+  appended; credentials embedded in it are redacted from every rendering), `connect_timeout_ms` (int, `2000`), `request_timeout_ms` (int,
   `5000`).
 - **`[authz.abac.policy.<kind>]`:** one entry per resource kind, with `kind` ∈
   `ehr`, `ehr_status`, `composition`, `contribution`, `query`, `directory`.
@@ -242,6 +246,7 @@ configured:
 | `public_base_url`, `authorization_endpoint`, `token_endpoint` required | an enabled Platform without them publishes an unusable document |
 | Every advertised endpoint an absolute `https` URL | the document tells apps where to send an authorization request and exchange a code, so a plaintext endpoint exposes the code and the access token ([RFC 6749 §3.1.2.1](https://www.rfc-editor.org/rfc/rfc6749#section-3.1.2.1), [RFC 8414 §6.2](https://www.rfc-editor.org/rfc/rfc8414#section-6.2)). `allow_insecure_endpoints = true` opts out for development |
 | `issuer` has no query and no fragment | [RFC 8414 §2](https://www.rfc-editor.org/rfc/rfc8414#section-2), the same rule `auth.oidc.issuer` follows, because it is the same identity |
+| No `smart` URL carries a user name or password, whether or not SMART is enabled | the discovery document publishes these URLs to every app, so a credential in one would be served to anyone who asks |
 | `response_types_supported` non-empty | RFC 8414 §2 marks the field **REQUIRED** |
 | `token_endpoint_auth_methods_supported` non-empty | an empty list advertises a server that authenticates no client |
 | `code_challenge_methods_supported` includes `S256` | SMART App Launch requires PKCE ([RFC 7636](https://www.rfc-editor.org/rfc/rfc7636)); publishing a list without it tells every app the server cannot do PKCE, and `plain` alone is not sufficient |

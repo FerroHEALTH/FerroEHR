@@ -628,6 +628,7 @@ async fn a_management_request_is_recorded_in_the_audit_trail() {
         store: StoreConfig {
             enabled: true,
             retention_days: 0,
+            retention_years: None,
             sgb_v_309_controller: false,
         },
         ..AuditConfig::default()

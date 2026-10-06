@@ -268,7 +268,7 @@ async fn fhir_expand_server() -> MockServer {
 fn fhir_provider(base: &str) -> FhirTerminologyProvider {
     let cfg = FhirProviderConfig {
         kind: ProviderKind::Fhir,
-        url: base.to_owned(),
+        url: ferroehr::config::secret::SecretUrl::new(base),
         operation: FhirOperation::Expand,
         connect_timeout_ms: 800,
         request_timeout_ms: 1_500,
