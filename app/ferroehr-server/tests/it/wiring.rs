@@ -25,7 +25,7 @@
 use assert_fs::prelude::{FileWriteStr as _, PathChild as _};
 use clap::Parser as _;
 
-use ferroehr_server::{Cli, run};
+use ferroehr_server::{Cli, run, write_report};
 
 /// A `--set key=value` pair parses into the override list.
 #[test]
@@ -239,9 +239,10 @@ fn report_parses_with_an_optional_output() -> Result<(), clap::Error> {
     Ok(())
 }
 
-/// `ferroehr report` writes its file through the real dispatch against a
-/// database nothing answers on: the file names the unreachable database in its
-/// manifest, and no credential of the configuration reaches it.
+/// `ferroehr report` writes its file, through the seam its dispatch runs after
+/// loading, against a database nothing answers on: the file names the
+/// unreachable database in its manifest, and no credential of the
+/// configuration reaches it.
 #[tokio::test]
 async fn run_report_writes_a_redacted_file_naming_an_unreachable_database() -> anyhow::Result<()> {
     const DB_PW: &str = "DB_PW_SENTINEL_31c7";
@@ -257,17 +258,12 @@ async fn run_report_writes_a_redacted_file_naming_an_unreachable_database() -> a
          url = \"amqp://mq:{EVENTS_PW}@broker:5672/vh\"\n"
     ))?;
     let output = dir.child("report.json");
-    let config_path = config.path().to_string_lossy().into_owned();
-    let output_path = output.path().to_string_lossy().into_owned();
-    run(Cli::try_parse_from([
-        "ferroehr",
-        "--config",
-        &config_path,
-        "report",
-        "--output",
-        &output_path,
-    ])?)
-    .await?;
+    // Assembled with no environment, so a runner's own `FERROEHR_*` variables
+    // stay out of the subject (the strict loader refuses unknown ones).
+    let assembled =
+        ferroehr::config::assemble(Some(config.path()), &std::collections::HashMap::new(), &[])
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+    write_report(&assembled, Some(output.path())).await?;
 
     let written = std::fs::read_to_string(output.path())?;
     for leak in [

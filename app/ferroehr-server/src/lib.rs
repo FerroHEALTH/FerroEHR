@@ -195,22 +195,11 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
     }
 }
 
-/// `ferroehr report`: assembles the deployment report and writes it to
-/// `output`, to stdout for `-`, or to `ferroehr-report-<UTC time>.json` in the
-/// working directory, then names the file on stderr.
-///
-/// Telemetry is not initialised, so stdout carries the report alone when it is
-/// the destination. The databases are read, never written.
+/// `ferroehr report`: loads the configuration and hands it to
+/// [`write_report`].
 ///
 /// # Errors
-/// The configuration does not load or validate, or the report cannot be
-/// serialized or written.
-#[expect(
-    clippy::print_stdout,
-    clippy::print_stderr,
-    reason = "the report subcommand's PURPOSE is console output \
-              (.claude/rules/reliability.md §tools)"
-)]
+/// The configuration does not load, or [`write_report`] fails.
 async fn run_report(
     output: Option<&Path>,
     config_path: Option<&Path>,
@@ -218,8 +207,33 @@ async fn run_report(
 ) -> anyhow::Result<()> {
     let config =
         ferroehr::config::load(config_path, overrides).map_err(|e| anyhow::anyhow!("{e}"))?;
+    write_report(&config, output).await
+}
+
+/// Assembles the deployment report for `config` and writes it to `output`, to
+/// stdout for `-`, or to `ferroehr-report-<UTC time>.json` in the working
+/// directory, then names the file on stderr.
+///
+/// Telemetry is not initialised, so stdout carries the report alone when it is
+/// the destination. The databases are read, never written. This is the seam
+/// `ferroehr report` runs after loading, so a test drives it with a
+/// configuration assembled away from the process environment.
+///
+/// # Errors
+/// The configuration does not validate, or the report cannot be serialized or
+/// written.
+#[expect(
+    clippy::print_stdout,
+    clippy::print_stderr,
+    reason = "the report subcommand's PURPOSE is console output \
+              (.claude/rules/reliability.md §tools)"
+)]
+pub async fn write_report(
+    config: &ferroehr::config::FerroEhrConfig,
+    output: Option<&Path>,
+) -> anyhow::Result<()> {
     config.validate().map_err(|e| anyhow::anyhow!("{e}"))?;
-    let report = Report::gather(&config).await;
+    let report = Report::gather(config).await;
     let written = serde_json::to_string_pretty(&report).context("serializing the report")?;
     if output == Some(Path::new("-")) {
         println!("{written}");
