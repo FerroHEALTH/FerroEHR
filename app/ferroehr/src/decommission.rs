@@ -210,11 +210,13 @@ impl Decommission {
     /// No store can be configured on this build.
     #[cfg(not(feature = "multimedia"))]
     #[expect(
-        clippy::unused_async,
-        reason = "the signature matches the `multimedia` build's, which awaits the store"
+        clippy::unused_self,
+        reason = "the signature matches the `multimedia` build's method, which reads the store"
     )]
-    async fn blob_inventory(&self) -> Result<Option<BlobInventory>, DecommissionError> {
-        Ok(None)
+    fn blob_inventory(
+        &self,
+    ) -> impl Future<Output = Result<Option<BlobInventory>, DecommissionError>> {
+        std::future::ready(Ok(None))
     }
 
     /// Deletes every blob in the configured store.
@@ -229,10 +231,10 @@ impl Decommission {
     /// No store can be configured on this build.
     #[cfg(not(feature = "multimedia"))]
     #[expect(
-        clippy::unused_async,
-        reason = "the signature matches the `multimedia` build's, which awaits the store"
+        clippy::unused_self,
+        reason = "the signature matches the `multimedia` build's method, which reads the store"
     )]
-    async fn delete_blobs(&self) -> Result<Option<usize>, DecommissionError> {
-        Ok(None)
+    fn delete_blobs(&self) -> impl Future<Output = Result<Option<usize>, DecommissionError>> {
+        std::future::ready(Ok(None))
     }
 }
