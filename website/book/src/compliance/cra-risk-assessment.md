@@ -19,8 +19,8 @@ documentation of CRA Annex VII.
 
 The page is versioned with the release: this book is frozen with every release
 at `/docs/vX.Y.Z/`, so each release's documentation carries the assessment
-that applied to it. The statuses below are those of the repository on
-2026-10-06, after commit `d6539d470`.
+that applied to it. The statuses below are those of revision 2 of the
+assessment, 2026-10-07 (the table at the end lists the revisions).
 
 <!-- toc -->
 
@@ -99,7 +99,7 @@ on three levels (high, medium, low).
 |---|---|---|---|---|---|
 | C1 | An unauthenticated caller reads or writes clinical data | high | low under the intended purpose; high when `auth.enabled = false` is misused under `sandbox` or accepted by name under `production` | authentication on by default with a boot refusal when no mechanism is configured; `production` refuses `auth.enabled = false` unless `auth_off` is accepted by name; per-request authorisation | (b), (d) |
 | C2 | An authenticated caller reaches EHRs outside their remit | high | medium: the shipped `EHR_ACCESS` default is `open`, which `production` refuses unless accepted by name | RBAC, ABAC, per-EHR `EHR_ACCESS`; every access recorded | (d), (l) |
-| C3 | Data in transit is read or altered on the network | high | low behind a TLS ingress or with the server's TLS; high on a plaintext listener | rustls TLS 1.3 and mutual TLS, off by default; `production` refuses a plaintext main listener on a routable address unless `plaintext_listener` is accepted by name; a boot warning on a plaintext routable bind | (e) |
+| C3 | Data in transit is read or altered on the network | high | low behind a TLS ingress or with the server's TLS; high on a plaintext listener | rustls TLS 1.3 and mutual TLS, off by default; `production` refuses a plaintext main listener on a routable address, a separate plain-HTTP management listener, and a UDP syslog audit feed, unless `plaintext_listener` or `audit_syslog_udp` is accepted by name; a boot warning on a plaintext routable bind | (e) |
 | C4 | Someone with a database connection reads, rewrites or deletes data, bypassing the API | high | depends on the deploying organisation's database protection | least-privilege roles per domain; append-only versions; version signatures verified on read; the hash-chained access log | (e), (f) |
 | C5 | An access happens and the log does not show it, or the log is altered | high | low with `fail_mode = "closed"` and an off-box sink; medium with the shipped `fail_mode = "open"` | refusals always recorded; `production` refuses audit off and audit failing open unless accepted; the hash chain | (f), (l) |
 | C6 | A national identifier or identifying content leaks into the clinical record, telemetry or a report | high | low | the identifier scanner in `strict` mode; log sanitising; reports with no identifiers | (e), (g) |
@@ -136,19 +136,24 @@ evidence only) and the open work.
 - **How:** `cargo deny` fails the build on any RustSec advisory and on yanked
   crates, with each accepted advisory dated and reasoned in `deny.toml`. Each
   image is scanned by Trivy before it is tagged, so only a passing digest gets
-  a tag, and the published images are re-scanned weekly. Findings argued as
-  not exploitable are published as OpenVEX documents, checked against the
-  resolved dependency graph.
+  a tag, and the published images are re-scanned weekly. Every release also
+  scans each image and server binary with no severity floor and unfixed
+  findings included, joins every finding with its OpenVEX statement, and is
+  refused, before any image is tagged, while a finding has none; the joined
+  record and the raw reports are release assets. The Rust advisory statements
+  are checked against the resolved dependency graph.
 - **Evidence:** `deny.toml`; `trivy.yaml`; `.github/workflows/scan-and-tag.yml`;
   `.github/workflows/image-scan.yml`; `security/vex/`;
-  `scripts/checks/vex-reachability.sh`;
-  [findings a scanner will report](../verifying-releases.md#findings-a-scanner-will-report).
-- **Status:** partial. The image gate blocks HIGH and CRITICAL findings that
-  have a fix (`severity` floor, `ignore-unfixed: true`); a lower or unfixed
-  finding ships with no recorded exploitability judgement. The CRA does not
-  define "known".
-- **Open:** a per-release exploitability record for every finding the gate
-  does not block (planned, #3636).
+  `scripts/checks/vex-reachability.sh`; `scripts/checks/vex-coverage.sh`;
+  `.github/workflows/release.yml` (`vulnerability-record`);
+  [the exploitability record](../verifying-releases.md#the-exploitability-record).
+- **Status:** partial. Every finding of the full scan carries a judgement or
+  the release does not ship. The image binaries are built without
+  `cargo auditable`, so the image scans do not see the Rust dependency graph;
+  the server binary's graph is covered by the scan of the release tarballs,
+  and the viewer binary's by no scan. The CRA does not define "known".
+- **Open:** the image binaries built with `cargo auditable`, so each image
+  scan sees its Rust dependencies (#3675).
 
 ### (b) Secure by default, and reset to the original state
 
@@ -168,19 +173,53 @@ reset the product to its original state"
   all capabilities dropped, `RuntimeDefault` seccomp and an ingress
   NetworkPolicy, and its validation fails a render that loses any of them.
 - **Evidence:** `app/ferroehr/assets/ferroehr.default.toml`;
-  `app/ferroehr/src/config/auth.rs`; `deploy/helm/ferroehr/values.yaml`;
-  `deploy/helm/validate.sh`;
-  [the workload](../installation/hardening-workload.md).
-- **Status:** partial. The shipped `deployment_profile` is `sandbox`, which
-  must not hold real personal data, and with it ship `ehr_access_default =
-  "open"`, `audit.fail_mode = "open"`, `db.migrate = "apply"` and plaintext
-  transport. The chart sets no profile. The binary's default is `sandbox` so
-  that a first boot works without a database role split; a deployment holding
-  patient data sets `production`, which refuses those defaults unless each is
-  accepted by name. No reset operation exists: a fresh deployment on an empty
-  database is the only route back.
-- **Open:** the chart and Compose files declare the profile, and the book
-  documents returning an instance to its original state (planned, #3637).
+  `app/ferroehr/src/config/auth.rs`; `app/ferroehr/src/config/deployment.rs`;
+  `deploy/helm/ferroehr/values.yaml` (`config.deployment_profile`);
+  `docker-compose.yml`; `deploy/helm/validate.sh`;
+  `scripts/deploy-probes/reset.sh`;
+  [the workload](../installation/hardening-workload.md);
+  [returning to the original state](../operations-reset.md).
+- **Why `sandbox` is the default:** the binary, the chart and the Compose
+  files all ship and declare `deployment_profile = "sandbox"`. A `production`
+  default would refuse to start until the deployment has separate database
+  credentials per domain, a declared subject namespace, a closed audit fail
+  mode and a schema-preparation credential of its own, none of which a first
+  boot, an evaluation or the quickstart has. An installation that cannot start
+  invites accepting every gap by name only to make it start, which records a
+  choice nobody made deliberately. A `sandbox` makes no such choice for the
+  operator and stays loud instead: it names every open separation on the boot
+  banner, in the log and on `/management/status`, and
+  `GET /ferroehr/rest/status` reports the profile, so a sandbox cannot pass for
+  a production instance. It also means no existing deployment changes
+  behaviour by upgrading. The instructions for a deployment holding patient
+  data are to set `production`, which refuses every open separation that is
+  not accepted by name.
+- **Which shipped defaults a production holder keeps:** these are secure as
+  shipped and `production` raises nothing about them: authentication on,
+  RBAC on, the admin API and every management endpoint off, Swagger UI
+  `private`, the rate limiter on, version signing on in `digest` mode with
+  read-time verification `strict`, the identifier scanner `strict` over every
+  shipped rule, and the audit trail on with the local store and
+  `retention_days = 0`, which the server refuses at boot where a jurisdiction
+  in force sets a ceiling. These must change, and `production` refuses them:
+  `authz.rbac.ehr_access_default = "open"`, `audit.fail_mode = "open"`, an
+  empty `privacy.subject_namespaces`, one database credential for every
+  domain, and `db.migrate = "apply"` on the runtime credential. Two may be
+  accepted by name when the deployment closes them outside the server:
+  `plaintext_listener`, when a TLS-terminating ingress fronts the port, and
+  `shared_cluster`, when one PostgreSQL cluster holds the domains in separate
+  schemas under separate roles. The usage report is on by default; it carries
+  no health data ([outbound data flows](#outbound-data-flows-annex-i-part-i2g)).
+- **Reset:** the book documents returning an instance to its original state,
+  configuration and database, for Docker Compose, Kubernetes and a single
+  binary. The deployment probe harness runs the Compose procedure and reads
+  the outcome back: the database volume is deleted, an EHR written before the
+  reset is gone, and the server reports the shipped configuration.
+- **Status:** partial. The shipped profile is `sandbox`, so a deployment
+  holding patient data is secure only after it sets `production` and closes
+  the five refused defaults above. The Kubernetes and single-binary reset
+  procedures are documented and not exercised by a probe.
+- **Open:** a probe of the Kubernetes reset procedure (#3677).
 
 ### (c) Security updates, automatic updates, notification and postponement
 
@@ -281,10 +320,13 @@ transit by state of the art mechanisms, and by using other technical means"
   ingress accepts the gap by name, because the ingress carries the encryption
   (`app/ferroehr/src/config/deployment.rs`,
   `production_refuses_a_routable_plaintext_listener_and_exempts_loopback`).
-  The separate management listener (`management.port`) speaks plain HTTP and
-  the refusal does not cover it.
-- **Open:** TLS for the management listener, or a refusal of it on a routable
-  address ([#3668](https://github.com/FerroHEALTH/FerroEHR/issues/3668)).
+  The separate management listener (`management.port`) binds every interface
+  in plain HTTP, so setting it opens the same gap
+  (`production_refuses_a_plain_management_listener_on_its_own_port`), and a
+  syslog audit feed over UDP opens `audit_syslog_udp`
+  (`production_refuses_a_udp_audit_syslog_unless_accepted_by_name`).
+- **Open:** `production` does not refuse the AMQP integration on a plaintext
+  `amqp://` URL (#3676).
 
 ### (f) Integrity, and reporting corruptions
 
@@ -542,7 +584,7 @@ repository's tooling; none is a property of the software a deployment runs.
 
 | Point | How the manufacturer applies it | Status | Tracker |
 |---|---|---|---|
-| (1) Identify components; SBOM | three SBOMs per server release (CycloneDX of the cargo graph per binary, SPDX per image, SPDX of the repository), explained in [three SBOMs](../verifying-releases.md#three-sboms-three-questions); vulnerabilities in VEX, `deny.toml` and the changelog | partial: the crates and the chart carry none | planned, #3643 |
+| (1) Identify components; SBOM | an SBOM per published artefact: CycloneDX of the cargo graph per binary, SPDX per image, SPDX of the repository, CycloneDX per `openehr-*` crate attested against its `.crate` archive, and CycloneDX per chart version naming its images by digest, explained in [the SBOMs](../verifying-releases.md#the-sboms-one-per-published-artefact); vulnerabilities in VEX, `deny.toml`, the changelog and each release's exploitability record | met | shipped, #3643 |
 | (2) Remediate without delay; security updates apart from functionality | acknowledgement in 5 and assessment in 10 working days; a fix ships as a security-only patch unless the release notes record why that is infeasible (`SECURITY.md`) | met as policy from this change on | shipped, #3644 |
 | (3) Regular security tests and reviews | daily fuzzing of seven parsers, CodeQL, OpenSSF Scorecard, clippy with the reliability lints, `cargo deny`, image scans, conformance runs, the deploy probe | met | none |
 | (4) Disclose fixed vulnerabilities | a GitHub security advisory for every fixed vulnerability, with CVSS, affected and fixed versions and remediation, and the criteria for a delay (`SECURITY.md`, `docs/post-market.md`); no advisory has been published yet | partial: the commitment is written, the record starts with the next fix | shipped, #3645 |
@@ -551,6 +593,35 @@ repository's tooling; none is a property of the software a deployment runs.
 | (7) Distribute updates securely | provenance, attestations, signed tags, immutable releases, digest-pinned and scanned images, crates.io Trusted Publishing; the automatic limb does not apply ([above](#automatic-security-updates-annex-i-part-i2c-and-part-ii7)) | met | none |
 | (8) Disseminate updates without delay, free of charge, with advisories | public, immutable releases and moving tags; advisories under (4); whether "free of charge" holds for every commercial licence is a point for counsel | partial | shipped, #3645; counsel's answer open, #3647 |
 
+## Security-relevant paths
+
+These are the paths of the repository that hold an asset or a control of the
+register above. A release that changes any of them since the previous release
+is refused unless this page gains a row in its Revisions table:
+`scripts/checks/cra-risk-assessment.sh --since <previous tag>` runs in the
+release lane, and the same script refuses a declared path that no longer
+exists, so the list cannot rot. CRA Art. 13(14) asks for procedures that keep
+each product of a series in conformity as its design changes.
+
+<!-- security-relevant-paths:start -->
+- `app/ferroehr-rest/src/extensions/access` authentication and the RBAC/ABAC enforcement point
+- `app/ferroehr-rest/src/smart` SMART scope enforcement
+- `app/ferroehr/src/config/auth.rs` the authentication configuration
+- `app/ferroehr/src/config/authz.rs` the authorization configuration
+- `app/ferroehr/src/config/deployment.rs` the deployment profiles and their refusals
+- `app/ferroehr/src/system_log` the access log and the audit chain
+- `app/ferroehr-rest/src/system_log` the audit middleware
+- `app/ferroehr/migrations/audit` the audit store
+- `app/ferroehr/src/versioning/signature` version signing
+- `app/ferroehr/src/versioning/integrity.rs` the integrity check of stored versions
+- `app/ferroehr/src/privacy` the pseudonymisation boundary
+- `docker/Dockerfile` the server image
+- `docker/viewer/Dockerfile` the viewer image
+- `docker/postgres/Dockerfile` the database image
+- `deploy/helm/ferroehr/templates` the chart's security contexts and policies
+- `deploy/helm/ferroehr/values.yaml` the chart's shipped defaults
+<!-- security-relevant-paths:end -->
+
 ## Revisions
 
 CRA Art. 13(3) has the assessment "updated as appropriate during a support
@@ -558,10 +629,12 @@ period", and Art. 13(7) has the manufacturer update it "where applicable" as
 vulnerabilities and third-party information arrive. It is revised:
 
 - with every release whose changes touch an asset or a control in the register
-  (planned as a release gate over declared security-relevant paths, #3649);
+  (the [security-relevant paths](#security-relevant-paths), gated at release,
+  #3649);
 - when a vulnerability or an incident shows a risk the register does not name;
 - when the [intended purpose](intended-purpose.md) changes.
 
 | Version | Date | Change |
 |---|---|---|
 | 1 | 2026-10-06 | First assessment, from the CRA Annex I audit of #3611 |
+| 2 | 2026-10-07 | (a): the per-release exploitability record (#3636); (b): the declared profile in the chart and the Compose files, the reasons for `sandbox` and the shipped defaults a production holder keeps, and the reset procedure (#3637); Part II(1): SBOMs for the crates and the chart (#3643); the declared security-relevant paths and their release gate (#3649) |

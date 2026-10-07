@@ -84,6 +84,12 @@ configured for its kind, so a missing map entry can only keep content longer. A
 category row with no object is left out of the due list, and a period without a
 category lists every object of its kind.
 
+The register does not key a period on the origin of the data. The origins the
+server records are the `FEEDER_AUDIT` originating-system ids a sending system
+chooses, as free text, and content committed directly carries none, so an
+origin key could not be checked the way a category is and would never reach
+that content.
+
 ### Anchoring an EHR and holding it
 
 ```http

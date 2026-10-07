@@ -474,7 +474,7 @@ authenticated `/management` surface.
 | `{rest root}/swagger-ui`, `{rest root}/api-docs/*` | **`private`** (`server.swagger_ui`) | Public only if you set `public`; `admin_only` and `off` are the other levels. |
 | `/management/*` | **not mounted at all** (`management.enabled = false`) | With the master switch off, every route is `404`. |
 | `/management/{info,metrics,prometheus,env,loggers,flamegraph,health,status}` | each **`off`** individually | Even with the master switch on, each endpoint stays unmounted until you name a level for it. There is no global fallback: silence means `off`, so a surface this privileged opens one endpoint at a time, by name. |
-| `management.port` | unset (shares the API listener) | Set it to serve ops introspection from **its own listener** on its own port. It binds all interfaces and always stays plain HTTP even with `[server.tls]` on, so treat it as an internal surface and keep it off any publicly routed port; the interface half of the separation is your network's, not this key's. |
+| `management.port` | unset (shares the API listener) | Set it to serve ops introspection from **its own listener** on its own port. It binds all interfaces and always stays plain HTTP even with `[server.tls]` on, so treat it as an internal surface and keep it off any publicly routed port; the interface half of the separation is your network's, not this key's. Under `deployment_profile = "production"` setting it opens the `plaintext_listener` gap, so the server refuses to start unless the gap is accepted by name. |
 
 `env` and `flamegraph` deserve particular caution: `env` renders the
 effective configuration (redacted, but still configuration), and `flamegraph`

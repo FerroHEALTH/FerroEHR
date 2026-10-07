@@ -16,10 +16,11 @@
 #
 # The graph:
 #
-#   plan ─┬─ github-release ── build-binaries ─── finalize-release ── crates
-#         ├─ binary ─────────── app-image ──┐
-#         ├─ viewer-binary ── viewer-image ─┼─ scan-and-tag ─────┬─ chart
-#         ├─ postgres-image ────────────────┘                    └─ sandbox
+#   plan ─┬─ github-release ─┬─ build-binaries ─┬─ finalize-release ── crates
+#         │                  └─ crate-sboms ────┘        ▲
+#         ├─ binary ─────────── app-image ──┐            │
+#         ├─ viewer-binary ── viewer-image ─┼─ vulnerability-record ─ scan-and-tag ─┬─ chart
+#         ├─ postgres-image ────────────────┘   (+ build-binaries)                  └─ sandbox
 #         ├─ docs-freeze
 #         └─ (smoke hangs off app-image; viewer-smoke off both images —
 #             it drives the viewer against this run's own CDR)
@@ -94,6 +95,8 @@ jobs:
       sha: ${{ steps.rev.outputs.sha }}
       is-release: ${{ steps.kind.outputs.is-release }}
       is-prerelease: ${{ steps.kind.outputs.is-prerelease }}
+      crates: ${{ steps.crates.outputs.list }}
+      crate-version: ${{ steps.crates.outputs.version }}
     steps:
       - id: tag
         name: Resolve the release tag
@@ -155,6 +158,17 @@ jobs:
           TAG: ${{ steps.tag.outputs.tag }}
           VERSION: ${{ steps.tag.outputs.version }}
 
+      # The crates the crates.io leg publishes, for the per-crate SBOM matrix:
+      # the one list publish-crates.sh keeps, so the two cannot disagree.
+      - id: crates
+        name: The published crates and their lockstep version
+        run: |
+          set -euo pipefail
+          {
+            echo "list=$(bash scripts/release/publish-crates.sh list | jq -R . | jq -sc .)"
+            echo "version=$(bash scripts/release/publish-crates.sh version)"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Changelog structure (no duplicate subsections, canonical types)
         run: bash scripts/checks/changelog-structure.sh
 
@@ -172,6 +186,10 @@ jobs:
           [ -n "$prev" ] || { echo "::error::no release tag below $base"; exit 1; }
           git fetch --no-tags --depth=1 origin "+refs/tags/${prev}:refs/tags/${prev}"
           bash scripts/checks/technical-documentation.sh --since "$prev"
+          # CRA Art. 13(3) and 13(14): a release that changes a declared
+          # security-relevant path revises the risk assessment.
+          bash scripts/checks/cra-risk-assessment.sh --self-test
+          bash scripts/checks/cra-risk-assessment.sh --since "$prev"
 
       # The release NOTES are produced here, not at publish time: the section
       # existing and being non-empty is a release fact like any other, and the
@@ -456,6 +474,175 @@ jobs:
       target: ${{ matrix.target }}
       runner: ${{ matrix.runner }}
 
+  # ── One CycloneDX SBOM per published crate ──────────────────────────────────
+  # CRA Annex I Part II(1) (docs/law/eu/cra/text.html): the nine `openehr-*`
+  # crates are products of their own, so each gets an SBOM of its dependency
+  # graph, attested against the `.crate` archive crates.io serves and attached
+  # to the draft. scripts/release/crate-sbom.sh says how the archive is chosen;
+  # the crates leg reads the attestation back from crates.io's own archive.
+  crate-sboms:
+    name: crate SBOM (${{ matrix.crate }})
+    needs: [plan, github-release]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        crate: ${{ fromJSON(needs.plan.outputs.crates) }}
+    permissions:
+      contents: write # attach the SBOM and its attestation bundle to the draft
+      id-token: write # Sigstore, for the SBOM attestation
+      attestations: write # store it against this repository
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }} # == plan's pinned commit: the dispatch-at-tag refusal makes them equal (#2790)
+      # A publishing lane restores no cache: the archive packaged here must be
+      # the one the crates leg uploads from the same commit.
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+        with:
+          tool: cargo-cyclonedx@0.5.9
+      - name: The archive the SBOM describes, and the SBOM
+        id: sbom
+        env:
+          CRATE: ${{ matrix.crate }}
+          VERSION: ${{ needs.plan.outputs.crate-version }}
+        run: |
+          set -euo pipefail
+          bash scripts/release/crate-sbom.sh archive "$CRATE" "$VERSION"
+          bash scripts/release/crate-sbom.sh sbom "$CRATE" "$VERSION"
+          {
+            echo "archive=${CRATE}-${VERSION}.crate"
+            echo "sbom=${CRATE}-${VERSION}.cdx.json"
+          } >> "$GITHUB_OUTPUT"
+      - name: Attest the SBOM against the archive
+        id: attest
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: ${{ steps.sbom.outputs.archive }}
+          sbom-path: ${{ steps.sbom.outputs.sbom }}
+      - name: Name the attestation bundle for the release
+        env:
+          ARCHIVE: ${{ steps.sbom.outputs.archive }}
+          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+        run: cp "$BUNDLE" "${ARCHIVE}.sbom.sigstore.json"
+      - name: Attach to the draft release
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        with:
+          draft: true
+          tag_name: ${{ needs.plan.outputs.tag }}
+          files: |
+            ${{ steps.sbom.outputs.sbom }}
+            ${{ steps.sbom.outputs.archive }}.sbom.sigstore.json
+
+  # ── The exploitability record: every finding, judged, or no release ─────────
+  # CRA Annex I Part I(2)(a) (docs/law/eu/cra/text.html). The scan gate in
+  # scan-and-tag blocks HIGH and CRITICAL findings that have a fix; this job
+  # scans the same pushed digests and the two server binaries with NO severity
+  # floor and NO `ignore-unfixed`, and scripts/checks/vex-coverage.sh refuses
+  # the release while any finding lacks an OpenVEX statement under
+  # security/vex/. It runs BEFORE scan-and-tag, so a refused release leaves its
+  # images untagged as well as its GitHub release a draft.
+  vulnerability-record:
+    name: vulnerability record
+    needs: [plan, github-release, build-binaries, app-image, viewer-image, postgres-image]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write # read the draft's binaries, attach the record to it
+      packages: read # pull the digests the image jobs pushed
+    env:
+      TRIVY_VERSION: "0.73.0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }} # == plan's pinned commit: the dispatch-at-tag refusal makes them equal (#2790)
+      - name: The coverage check refuses what it claims to refuse
+        run: bash scripts/checks/vex-coverage.sh --self-test
+      - uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # v0.3.1
+        with:
+          version: v${{ env.TRIVY_VERSION }}
+          cache: false
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Scan every image and binary, every severity, fixed or not
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.plan.outputs.tag }}
+          APP_DIGEST: ${{ needs.app-image.outputs.digest }}
+          VIEWER_DIGEST: ${{ needs.viewer-image.outputs.digest }}
+          POSTGRES_DIGEST: ${{ needs.postgres-image.outputs.digest }}
+        run: |
+          set -euo pipefail
+          # An explicit empty config and ignore file: trivy reads ./trivy.yaml
+          # and its ignore file by default, which would put the gate's floor
+          # and its exceptions back into the record.
+          : > "$RUNNER_TEMP/empty.yaml"
+          : > "$RUNNER_TEMP/empty.ignore"
+          scan=(--config "$RUNNER_TEMP/empty.yaml" --ignorefile "$RUNNER_TEMP/empty.ignore"
+            --scanners vuln --severity "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
+            --ignore-unfixed=false --format json --quiet)
+          mkdir -p reports
+          targets=()
+          for entry in "ferroehr|$APP_DIGEST" "ferroehr-viewer|$VIEWER_DIGEST" "ferroehr-postgres|$POSTGRES_DIGEST"; do
+            image="${entry%%|*}"
+            digest="${entry#*|}"
+            [ -n "$digest" ] || { echo "::error::no pushed digest for ${image}"; exit 1; }
+            for platform in linux/amd64 linux/arm64; do
+              report="reports/${image}-${platform##*/}.json"
+              trivy image "${scan[@]}" --platform "$platform" --output "$report" \
+                "ghcr.io/ferrohealth/${image}@${digest}"
+              targets+=("pkg:oci/${image}=${report}")
+            done
+          done
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" \
+            --pattern "ferroehr-${TAG}-*-unknown-linux-gnu.tar.gz" --dir binaries
+          for arch in x86_64 aarch64; do
+            root="binaries/${arch}"
+            mkdir -p "$root"
+            tar -C "$root" -xzf "binaries/ferroehr-${TAG}-${arch}-unknown-linux-gnu.tar.gz"
+            report="reports/ferroehr-${arch}-unknown-linux-gnu.json"
+            trivy rootfs "${scan[@]}" --output "$report" "$root"
+            targets+=("pkg:cargo/ferroehr-server=${report}")
+          done
+          printf '%s\n' "${targets[@]}" > targets.txt
+      - name: Every finding carries an exploitability judgement
+        env:
+          TAG: ${{ needs.plan.outputs.tag }}
+        run: |
+          set -euo pipefail
+          mapfile -t targets < targets.txt
+          bash scripts/checks/vex-coverage.sh \
+            --record "ferroehr-${TAG}-vulnerability-record.json" "${targets[@]}"
+          tar -czf "ferroehr-${TAG}-trivy-reports.tar.gz" reports
+      # Kept for a refused run too, so the findings to judge are one download
+      # away rather than one re-run away.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: vulnerability-record
+          path: |
+            reports/
+            ferroehr-*-vulnerability-record.json
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Attach the record to the draft release
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        with:
+          draft: true
+          tag_name: ${{ needs.plan.outputs.tag }}
+          files: |
+            ferroehr-${{ needs.plan.outputs.tag }}-vulnerability-record.json
+            ferroehr-${{ needs.plan.outputs.tag }}-trivy-reports.tar.gz
+
   # The moment the release becomes immutable, so it happens LAST and only when
   # every asset is in place. `needs` the matrix rather than just the draft: a
   # draft with no binaries must never be flipped to published, and a failed
@@ -463,7 +650,7 @@ jobs:
   # release nobody can add to afterwards.
   finalize-release:
     name: github release (publish)
-    needs: [plan, build-binaries]
+    needs: [plan, build-binaries, crate-sboms, vulnerability-record]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -476,6 +663,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.plan.outputs.tag }}
+          CRATES: ${{ needs.plan.outputs.crates }}
+          CRATE_VERSION: ${{ needs.plan.outputs.crate-version }}
         run: |
           set -euo pipefail
           assets="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')"
@@ -515,6 +704,19 @@ jobs:
             "ferroehr-${TAG}-information-sheet.md" \
             "ferroehr-${TAG}-instructions-for-use.md"; do
             printf '%s\n' "$assets" | grep -Fxq "$asset" || missing="$missing $asset"
+          done
+          # The exploitability record (CRA Annex I Part I(2)(a)), and one SBOM
+          # with its attestation bundle per published crate (Part II(1)).
+          for asset in \
+            "ferroehr-${TAG}-vulnerability-record.json" \
+            "ferroehr-${TAG}-trivy-reports.tar.gz"; do
+            printf '%s\n' "$assets" | grep -Fxq "$asset" || missing="$missing $asset"
+          done
+          for crate in $(jq -r '.[]' <<<"$CRATES"); do
+            for suffix in ".cdx.json" ".crate.sbom.sigstore.json"; do
+              asset="${crate}-${CRATE_VERSION}${suffix}"
+              printf '%s\n' "$assets" | grep -Fxq "$asset" || missing="$missing $asset"
+            done
           done
           [ -z "$missing" ] || {
             echo "::error::the draft is missing assets, so it will not be published:$missing"
@@ -825,7 +1027,8 @@ jobs:
   # image, the sandbox tracks `:latest`, and both exist by construction here.
   scan-and-tag:
     name: scan + tag
-    needs: [app-image, viewer-image, postgres-image]
+    # vulnerability-record first: a release it refuses gets no image tags.
+    needs: [app-image, viewer-image, postgres-image, vulnerability-record]
     permissions:
       contents: read
       packages: write # pull the pushed digests, then tag them
@@ -1179,6 +1382,7 @@ jobs:
     permissions:
       contents: read
       id-token: write # OIDC token exchange (rust-lang/crates-io-auth-action)
+      attestations: read # read the crate SBOM attestations back
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -1205,6 +1409,14 @@ jobs:
       - name: Verify all nine crates resolve at the same version
         if: always()
         run: bash scripts/release/publish-crates.sh verify
+      # The crate SBOMs on the release were attested against archives this
+      # pipeline packaged or downloaded; this proves they are the archives
+      # crates.io now serves, with the command a consumer runs.
+      - name: The released SBOMs describe the archives crates.io serves
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CRATE_VERSION: ${{ needs.plan.outputs.crate-version }}
+        run: bash scripts/release/crate-sbom.sh verify-published "$CRATE_VERSION"
 
   # ── announce: the one summary a human reads ─────────────────────────────────
   # Asserts every leg landed — a skipped leg is accepted only where a skip is
@@ -1217,6 +1429,8 @@ jobs:
       - plan
       - github-release
       - build-binaries
+      - crate-sboms
+      - vulnerability-record
       - finalize-release
       - binary
       - app-image
@@ -1252,6 +1466,8 @@ jobs:
           R_PLAN: ${{ needs.plan.result }}
           R_GITHUB_RELEASE: ${{ needs.github-release.result }}
           R_BUILD_BINARIES: ${{ needs.build-binaries.result }}
+          R_CRATE_SBOMS: ${{ needs.crate-sboms.result }}
+          R_VULN_RECORD: ${{ needs.vulnerability-record.result }}
           R_FINALIZE: ${{ needs.finalize-release.result }}
           R_BINARY: ${{ needs.binary.result }}
           R_APP_IMAGE: ${{ needs.app-image.result }}
@@ -1293,6 +1509,8 @@ jobs:
           check "plan" "$R_PLAN"
           check "github release (draft)" "$R_GITHUB_RELEASE"
           check "binaries" "$R_BUILD_BINARIES"
+          check "crate SBOMs" "$R_CRATE_SBOMS"
+          check "vulnerability record" "$R_VULN_RECORD"
           check "github release (published)" "$R_FINALIZE"
           check "image binaries" "$R_BINARY"
           check "app image" "$R_APP_IMAGE"
@@ -1346,6 +1564,10 @@ jobs:
               printf '%s\n' \
                 '- **plan failed**: nothing was published at all. Fix the pin it named and cut' \
                 '  the next patch version; a tag is never re-pointed.' \
+                '- **vulnerability record failed**: a finding has no OpenVEX statement. No image' \
+                '  was tagged and the GitHub release stayed a draft. The run artifact' \
+                '  `vulnerability-record` names each finding; fix it or add its statement under' \
+                '  `security/vex/` in a PR, then cut the next patch version.' \
                 '- **chart failed AFTER the push**: that chart version is public and immutable.' \
                 '  Do NOT re-run the leg — bump `Chart.yaml` version and publish the next one' \
                 '  from publish-chart.yml (dispatch with `publish: true`). That lane says the' \

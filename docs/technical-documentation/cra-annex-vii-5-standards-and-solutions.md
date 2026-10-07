@@ -31,7 +31,7 @@ each with the files that implement it.
 | SMART App Launch, with PKCE (RFC 7636) | [SMART App Launch](../../website/book/src/smart-app-launch.md) |
 | IHE ATNA (ITI-19, ITI-20, ITI-81), IHE BALP, DICOM PS3.15 §A.5 audit messages, FHIR R4 `AuditEvent`, syslog (RFC 5424) | [audit trail](../../website/book/src/audit.md) |
 | SLSA Build Level 3 provenance, Sigstore bundles | [verifying releases](../../website/book/src/verifying-releases.md#what-slsa-level-each-artifact-reaches) |
-| CycloneDX and SPDX software bills of materials | [three SBOMs](../../website/book/src/verifying-releases.md#three-sboms-three-questions) |
+| CycloneDX and SPDX software bills of materials | [the SBOMs](../../website/book/src/verifying-releases.md#the-sboms-one-per-published-artefact) |
 | OpenVEX | `security/vex/` |
 | `security.txt` (RFC 9116) | `website/landing/.well-known/security.txt` |
 | OpenSSF Scorecard | `.github/workflows/scorecard.yml` |

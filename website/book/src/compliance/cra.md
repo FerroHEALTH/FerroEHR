@@ -122,12 +122,8 @@ case:
 The CRA requirements are walked point by point in the
 [CRA risk assessment](cra-risk-assessment.md); the open points are
 issues on the tracker,
-among them a per-release exploitability record
-([#3636](https://github.com/FerroHEALTH/FerroEHR/issues/3636)), the profile
-declared in the chart ([#3637](https://github.com/FerroHEALTH/FerroEHR/issues/3637)),
-secure decommissioning ([#3642](https://github.com/FerroHEALTH/FerroEHR/issues/3642)),
-bills of materials for the crates and the chart
-([#3643](https://github.com/FerroHEALTH/FerroEHR/issues/3643)), the Annex II
+among them secure decommissioning
+([#3642](https://github.com/FerroHEALTH/FerroEHR/issues/3642)), the Annex II
 user information per release
 ([#3650](https://github.com/FerroHEALTH/FerroEHR/issues/3650)) and a release
 gate over security-relevant paths

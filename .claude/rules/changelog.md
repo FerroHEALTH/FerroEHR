@@ -257,6 +257,18 @@ others have no CI check yet, and the cut is refused by hand.
   --sort=-v:refname`, the first below the new one), never by ancestry, and a
   failure refuses the cut. A module added to or removed from the logging
   component changes all three lists in the same PR.
+- **The CRA risk assessment follows the security-relevant paths** (CRA Art.
+  13(3): the assessment "updated as appropriate during a support period";
+  Art. 13(14): products of a series "remain in conformity" as their design
+  changes; `docs/law/eu/cra/text.html`). The paths are declared on
+  `website/book/src/compliance/cra-risk-assessment.md` §Security-relevant
+  paths, between its `security-relevant-paths` markers. A release whose diff
+  since the previous release touches one of them adds a row to that page's
+  Revisions table in the release PR. The cut runs
+  `bash scripts/checks/cra-risk-assessment.sh --since <previous tag>` beside
+  the technical-documentation check, and a failure refuses the cut; the same
+  script refuses a declared path that no longer exists, so a moved module
+  updates the list in its own PR.
 - **Each release keeps its documentation for ten years** (EHDS Art. 30(3); CRA
   Art. 13(13)). Nothing extra is cut for it: the tree travels in the signed
   tag (the `release-tags` ruleset forbids deleting or moving it) and in the

@@ -62,7 +62,7 @@ impl FerroEhrService {
         let body = self.ehr_contribution(ehr_id, committed.id, false).await?;
         let meta = ResourceMeta::new(ehr_id.to_string(), committed.id.to_string())
             .with_last_modified(committed.time_committed)
-            .with_content(written_content(&committed.versions));
+            .with_content(self.written_content(&committed.versions).await);
         Ok(ServiceResponse::new(body, meta))
     }
 
@@ -287,22 +287,44 @@ impl FerroEhrService {
                 commit_version_set(self, Some(an_ehr_id), &a_contribution, false).await?;
             let meta = ResourceMeta::new(an_ehr_id.to_string(), committed.id.to_string())
                 .with_last_modified(committed.time_committed)
-                .with_content(written_content(&committed.versions));
+                .with_content(self.written_content(&committed.versions).await);
             Ok(ServiceResponse::new(Value::Null, meta))
         }
     }
 }
 
-/// The identifiers of the versions a CONTRIBUTION wrote, for the access
-/// record's category classification (EHDS Annex II 3.2(c), #3621).
-fn written_content(
-    versions: &[crate::versioning::change::Committed],
-) -> Vec<crate::system_log::categories::ContentIds> {
-    let mut ids: Vec<_> = versions
-        .iter()
-        .filter_map(crate::versioning::change::Committed::content_ids)
-        .collect();
-    ids.sort();
-    ids.dedup();
-    ids
+impl FerroEhrService {
+    /// The identifiers of the versions a CONTRIBUTION wrote, for the access
+    /// record's category classification (EHDS Annex II 3.2(c), #3621).
+    ///
+    /// A logical delete writes no content, so it is classified by the newest
+    /// version of its object that carries a body, as the single-object delete
+    /// is. The commit has landed, so a failed read leaves the deleted objects
+    /// unclassified rather than failing the response.
+    async fn written_content(
+        &self,
+        versions: &[crate::versioning::change::Committed],
+    ) -> Vec<crate::system_log::categories::ContentIds> {
+        let (deleted, written): (Vec<_>, Vec<_>) = versions
+            .iter()
+            .partition(|v| v.change_type == crate::versioning::audit::change_type::DELETED);
+        let mut ids: Vec<_> = written
+            .into_iter()
+            .filter_map(crate::versioning::change::Committed::content_ids)
+            .collect();
+        if !deleted.is_empty() {
+            let vo_ids: Vec<_> = deleted.iter().map(|v| v.vo_id).collect();
+            match self.audit_content_of_objects(&vo_ids).await {
+                Ok(read) => ids.extend(read),
+                Err(e) => tracing::warn!(
+                    error = %e,
+                    "reading the categories of the objects a CONTRIBUTION deleted failed; the \
+                     access record leaves them unclassified"
+                ),
+            }
+        }
+        ids.sort();
+        ids.dedup();
+        ids
+    }
 }

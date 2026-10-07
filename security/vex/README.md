@@ -23,6 +23,14 @@ re-evaluate.
   a stale `not_affected` is worse than no VEX at all.
 - The scanners consume these files (`trivy --vex`), so a statement that stops
   being true stops being invisible: the finding returns and the gate fails.
+- **Every finding a release ships carries a statement.** The release pipeline
+  scans each image and server binary with no severity floor and unfixed
+  findings included, and `scripts/checks/vex-coverage.sh` refuses the release
+  while a finding has no statement here that judges it: `not_affected` with a
+  `justification` or `impact_statement`, `affected` with an `action_statement`,
+  or `fixed`. Products are named `pkg:oci/<image>` and
+  `pkg:cargo/ferroehr-server`, and a statement matches a finding by its
+  `vulnerability.name` or an `aliases` entry.
 
 ## Documents
 

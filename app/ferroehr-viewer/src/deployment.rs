@@ -114,8 +114,24 @@ pub fn gap_text(code: &str) -> String {
              identifier"
         }
         "audit_off" => "access is not recorded to a durable audit trail",
+        "audit_fails_open" => {
+            "an access record the audit queue cannot take is dropped and the request still \
+             succeeds"
+        }
+        "audit_syslog_udp" => {
+            "the access log is shipped over UDP syslog, unencrypted and without delivery \
+             confirmation"
+        }
+        "open_ehr_access_default" => {
+            "an EHR without its own access settings admits every caller the role checks let \
+             through"
+        }
         "migrate_on_runtime_credential" => {
             "schema preparation runs on the clinical runtime credential"
+        }
+        "auth_off" => "requests are served without authentication",
+        "plaintext_listener" => {
+            "a listener serves plain HTTP on an address reachable from the network"
         }
         other => return other.to_owned(),
     }
@@ -173,6 +189,31 @@ mod tests {
         )
         .expect("parses");
         assert_eq!(doc.sandbox_notice(), None);
+    }
+
+    /// Every gap code the server reports (`DeploymentGap::as_str` in
+    /// `app/ferroehr/src/config/deployment.rs`, which the viewer may not depend
+    /// on) has a plain-words text; a code missing here falls through to the raw
+    /// code, and a server gap added without a text belongs in this list.
+    #[test]
+    fn every_server_gap_has_plain_words() {
+        const SERVER_GAPS: [&str; 10] = [
+            "shared_credential",
+            "shared_cluster",
+            "open_subject_namespace",
+            "audit_off",
+            "audit_fails_open",
+            "audit_syslog_udp",
+            "open_ehr_access_default",
+            "migrate_on_runtime_credential",
+            "auth_off",
+            "plaintext_listener",
+        ];
+        for code in SERVER_GAPS {
+            let text = gap_text(code);
+            assert_ne!(text, code, "`{code}` has no plain-words text");
+            assert!(!text.contains('_'), "`{code}` reads as a code: {text}");
+        }
     }
 
     /// A server that reports no `deployment` block claims nothing, and an

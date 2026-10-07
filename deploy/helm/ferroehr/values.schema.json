@@ -452,9 +452,17 @@
       }
     },
     "config": {
-      "description": "Rendered into ferroehr.toml, so its vocabulary is the SERVER's config tree and this schema deliberately does not fork it: unknown keys are accepted here and adjudicated by the server at boot. Only the keys the chart's own templates branch on are typed, and each accepts null \u2014 setting a key to null is how an overlay deletes it when a pinned older image does not know it yet.",
+      "description": "Rendered into ferroehr.toml, so its vocabulary is the SERVER's config tree and this schema deliberately does not fork it: unknown keys are accepted here and adjudicated by the server at boot. Only the keys the chart's own templates branch on, and the keys the chart documents with their shipped defaults (deployment_profile, audit.store, audit.categories), are typed, by shape and never by the server's vocabulary, and each accepts null \u2014 setting a key to null is how an overlay deletes it when a pinned older image does not know it yet.",
       "type": "object",
       "properties": {
+        "deployment_profile": {
+          "description": "The declared deployment posture: sandbox (the binary's default; must not hold real patient data) or production (refuses to boot while a separation is missing and not named in deployment_accepts). The vocabulary is the server's and is judged at boot.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": "sandbox"
+        },
         "server": {
           "type": [
             "object",
@@ -551,6 +559,67 @@
                 "boolean",
                 "null"
               ]
+            },
+            "store": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "retention_days": {
+                  "description": "Days to keep access-log records; 0 keeps them forever. The server judges it against the jurisdictional floors and ceilings at boot.",
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "default": 0
+                },
+                "retention_years": {
+                  "description": "The horizon in calendar years, in place of a non-zero retention_days. Unset by default; the server refuses 0, and a value outside the jurisdictional bounds, at boot.",
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "default": null
+                }
+              }
+            },
+            "categories": {
+              "description": "[audit.categories]: template id and root archetype id to the EHDS priority categories each holds. Empty by default. The category vocabulary is the server's and is judged at boot; only the shape is typed here.",
+              "type": [
+                "object",
+                "null"
+              ],
+              "default": {
+                "templates": {},
+                "archetypes": {}
+              },
+              "properties": {
+                "templates": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "archetypes": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
             }
           }
         },

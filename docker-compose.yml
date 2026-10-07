@@ -612,6 +612,11 @@ configs:
   # docker/ferroehr.dev.toml via docker-compose.dev.yml.
   ferroehr-config:
     content: |
+      # The declared posture, explicit because this file is the quickstart: a
+      # sandbox must not hold real patient data, names the separations it lacks
+      # on the boot banner, and reports its profile on GET /ferroehr/rest/status.
+      deployment_profile = "sandbox"
+
       [server]
       bind = "0.0.0.0:8080"
       # Permissive CORS — quickstart only. Production configures explicit origins.

@@ -42,73 +42,6 @@ spec:
           protocol: TCP
 
 ---
-# Source: ferroehr/templates/viewer.yaml
-# The viewer's ingress half has the same three states the CDR's policy has, and
-# for the same API reason: an ingress rule with no `from` admits every source —
-# other namespaces and off-cluster clients included
-# (https://kubernetes.io/docs/concepts/services-networking/network-policies/ —
-# "If no ... from is specified ... it allows all traffic"). The viewer is the
-# HUMAN-facing surface, so an accidentally open rule here is a login page reachable
-# from anywhere the cluster network reaches.
-#   ingressFrom set                                     → sources narrowed
-#   ingressFrom empty, ingressAllowAll true             → EVERY source (shipped)
-#   ingressFrom empty, ingressAllowAll false            → refused at render, below
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: ferroehr-viewer
-  annotations:
-    kubernetes.io/description: >-
-      Ingress for the viewer: only its HTTP port, but from EVERY source — this policy narrows ports, NOT sources (viewer.networkPolicy.ingressAllowAll=true). Set viewer.networkPolicy.ingressFrom for a PHI workload. Egress admits the CDR Service and DNS only.
-  labels:
-    helm.sh/chart: ferroehr-10.2.2
-    app.kubernetes.io/name: ferroehr-viewer
-    app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "4.3.4"
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/part-of: ferroehr
-    app.kubernetes.io/component: viewer
-spec:
-  podSelector:
-    matchLabels:
-      app.kubernetes.io/name: ferroehr-viewer
-      app.kubernetes.io/instance: ferroehr
-  policyTypes:
-    - Ingress
-    - Egress
-  ingress:
-    -
-      ports:
-        - protocol: TCP
-          port: 3000
-  egress:
-    # The CDR, by pod selector — the viewer's ONLY application destination.
-    #
-    # This selects the server's pods exactly: the viewer carries its own
-    # `app.kubernetes.io/name`, so the two label sets no longer overlap and
-    # this rule cannot admit viewer→viewer traffic.
-    - to:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: ferroehr
-              app.kubernetes.io/instance: ferroehr
-      ports:
-        - protocol: TCP
-          port: 8080
-    # DNS. Without this the Service name above does not resolve and the viewer
-    # fails in a way that looks like the CDR being down.
-    - to:
-        - namespaceSelector: {}
-          podSelector:
-            matchLabels:
-              k8s-app: kube-dns
-      ports:
-        - protocol: UDP
-          port: 53
-        - protocol: TCP
-          port: 53
-
----
 # Source: ferroehr/templates/poddisruptionbudget.yaml
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -148,53 +81,6 @@ metadata:
 automountServiceAccountToken: false
 
 ---
-# Source: ferroehr/templates/viewer.yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: ferroehr-viewer
-  labels:
-    helm.sh/chart: ferroehr-10.2.2
-    app.kubernetes.io/name: ferroehr-viewer
-    app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "4.3.4"
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/part-of: ferroehr
-    app.kubernetes.io/component: viewer
-automountServiceAccountToken: false
----
-# Source: ferroehr/templates/secret.yaml
-# Chart-managed Secret. In production prefer database.existingSecret (and an
-# external secret store / IRSA for the rest); anything set here is rendered from
-# values, so keep it out of committed values.
-#
-# Two key shapes live here, and the difference is deliberate. A key spelled
-# `<config.path>` is MOUNTED as a read-only file and reached through the config
-# tree's `*_file` sibling — the posture the OWASP Kubernetes Security Cheat Sheet
-# asks for, since an environment variable is readable through /proc/<pid>/environ
-# and inherited by every child process
-# (https://cheatsheetseries.owasp.org/cheatsheets/Kubernetes_Security_Cheat_Sheet.html).
-# A key spelled `FERROEHR__…` is injected as an environment VALUE. Only two are
-# left in that form — `audit.fhir_feed.url` and `multimedia.access_key_id`, the
-# remaining config keys with no `*_file` sibling. The DSN and the two AMQP URLs
-# moved to files once the server gained `db.url_file`, `events.url_file` and
-# `fhir.outbound.url_file`.
-apiVersion: v1
-kind: Secret
-metadata:
-  name: ferroehr-env
-  labels:
-    helm.sh/chart: ferroehr-10.2.2
-    app.kubernetes.io/name: ferroehr
-    app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "4.3.4"
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/part-of: ferroehr
-type: Opaque
-stringData:
-  auth.basic.users.clinician.password_hash: "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
-
----
 # Source: ferroehr/templates/configmap.yaml
 apiVersion: v1
 kind: ConfigMap
@@ -229,19 +115,22 @@ data:
       enabled = true
       [audit.categories]
         [audit.categories.archetypes]
+          "openEHR-EHR-COMPOSITION.encounter.v1" = ["none"]
+          "openEHR-EHR-COMPOSITION.report-result.v1" = ["test-results"]
         [audit.categories.templates]
+          "International Patient Summary" = ["patient-summary"]
+          "Laboratory Report" = ["test-results"]
       [audit.store]
         enabled = true
         retention_days = 0.0
+        retention_years = 3.0
+        sgb_v_309_controller = true
     
     [auth]
       enabled = true
-      [auth.basic]
-    
-        [[auth.basic.users]]
-          password_hash_file = "/etc/ferroehr-secrets/auth.basic.users.clinician.password_hash"
-          roles = ["ADMIN"]
-          username = "clinician"
+      [auth.oidc]
+        audiences = ["ferroehr"]
+        issuer = "https://idp.example.com/realms/ferroehr"
     
     [authz]
       [authz.abac]
@@ -289,6 +178,10 @@ data:
       bucket = "openehr-multimedia"
       enabled = false
       region = "us-east-1"
+    
+    [privacy]
+      [privacy.identifier_scan]
+        rules = ["de-kvnr"]
     
     [server]
       base_path = "/ferroehr/rest/openehr/v1"
@@ -351,32 +244,6 @@ spec:
     app.kubernetes.io/instance: ferroehr
 
 ---
-# Source: ferroehr/templates/viewer.yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: ferroehr-viewer
-  annotations:
-    kubernetes.io/description: >-
-      In-cluster address for the FerroEHR Viewer. The viewer is a REST client of the CDR and holds no data of its own; it is the human-facing surface, so this is the Service an Ingress normally publishes.
-  labels:
-    helm.sh/chart: ferroehr-10.2.2
-    app.kubernetes.io/name: ferroehr-viewer
-    app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "4.3.4"
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/part-of: ferroehr
-    app.kubernetes.io/component: viewer
-spec:
-  ports:
-    - name: http
-      port: 3000
-      targetPort: http
-      appProtocol: http
-  selector:
-    app.kubernetes.io/name: ferroehr-viewer
-    app.kubernetes.io/instance: ferroehr
----
 # Source: ferroehr/templates/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -411,7 +278,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: 0a28325fc47a90ef1ff741360d9b4c2b7613e94d39eb300d23d547763fbf3780
+        checksum/config: a8dbfc51901fe98551e10ae06fdb30934d295b10236ad97f852921f715d65d87
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr
@@ -556,11 +423,6 @@ spec:
                   items:
                     - key: FERROEHR__DB__URL
                       path: db.url
-              - secret:
-                  name: ferroehr-env
-                  items:
-                    - key: auth.basic.users.clinician.password_hash
-                      path: auth.basic.users.clinician.password_hash
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
@@ -571,115 +433,3 @@ spec:
             matchLabels:
               app.kubernetes.io/name: ferroehr
               app.kubernetes.io/instance: ferroehr
-
----
-# Source: ferroehr/templates/viewer.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: ferroehr-viewer
-  annotations:
-    kubernetes.io/description: >-
-      The FerroEHR Viewer: a Leptos SSR web UI that consumes the CDR strictly over ITS-REST. It never reaches the database, which the viewer NetworkPolicy enforces rather than assumes.
-  labels:
-    helm.sh/chart: ferroehr-10.2.2
-    app.kubernetes.io/name: ferroehr-viewer
-    app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "4.3.4"
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/part-of: ferroehr
-    app.kubernetes.io/component: viewer
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: ferroehr-viewer
-      app.kubernetes.io/instance: ferroehr
-  template:
-    metadata:
-      labels:
-        app.kubernetes.io/name: ferroehr-viewer
-        app.kubernetes.io/instance: ferroehr
-    spec:
-      serviceAccountName: ferroehr-viewer
-      automountServiceAccountToken: false
-      # Same reason as the server's: the kubelet's per-Service link variables
-      # land in the reserved `FERROEHR_` namespace for any Service named
-      # `ferroehr*`, and a strict boot-time sweep then refuses to start
-      # (https://kubernetes.io/docs/concepts/services-networking/service/#environment-variables).
-      enableServiceLinks: false
-      terminationGracePeriodSeconds: 20
-      hostUsers: false
-      securityContext:
-        fsGroup: 65532
-        fsGroupChangePolicy: OnRootMismatch
-        runAsGroup: 65532
-        runAsNonRoot: true
-        runAsUser: 65532
-        seccompProfile:
-          type: RuntimeDefault
-        supplementalGroupsPolicy: Strict
-      containers:
-        - name: viewer
-          image: "ghcr.io/ferrohealth/ferroehr-viewer:4.3.4"
-          imagePullPolicy: IfNotPresent
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-              - ALL
-            privileged: false
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
-            runAsUser: 65532
-            seccompProfile:
-              type: RuntimeDefault
-          ports:
-            - name: http
-              containerPort: 3000
-              protocol: TCP
-          env:
-            # The CDR is addressed by its in-cluster Service — the viewer never
-            # talks to the database, and the egress policy below enforces that.
-            - name: FERROEHR_VIEWER__CDR__BASE_URL
-              value: "http://ferroehr:8080"
-            # The viewer's base path mirrors the CDR's own, so shortening
-            # config.server.base_path cannot leave the two disagreeing.
-            - name: FERROEHR_VIEWER__CDR__BASE_PATH
-              value: "/ferroehr/rest/openehr/v1"
-          livenessProbe:
-            httpGet:
-              path: /
-              port: http
-            initialDelaySeconds: 10
-            periodSeconds: 20
-          readinessProbe:
-            httpGet:
-              path: /
-              port: http
-            initialDelaySeconds: 5
-            periodSeconds: 10
-          startupProbe:
-            httpGet:
-              path: /
-              port: http
-            periodSeconds: 5
-            failureThreshold: 24
-          lifecycle:
-            preStop:
-              sleep:
-                seconds: 5
-          resources:
-            limits:
-              memory: 512Mi
-            requests:
-              cpu: 50m
-              memory: 128Mi
-          volumeMounts:
-            # `readOnlyRootFilesystem: true` leaves nowhere to write, so the
-            # writable scratch the runtime needs is an explicit emptyDir.
-            - name: tmp
-              mountPath: /tmp
-      volumes:
-        - name: tmp
-          emptyDir: {}

@@ -260,10 +260,11 @@ ticked by being present:
 | `open_subject_namespace` | `[privacy] subject_namespaces` declared, so an `EHR_STATUS` subject is an opaque pseudonym |
 | `audit_off` | `[audit]` enabled with a durable sink (the local store, syslog or the FHIR feed) |
 | `audit_fails_open` | `[audit] fail_mode = "closed"`, so an operation whose access record cannot be taken is refused instead of succeeding unlogged |
+| `audit_syslog_udp` | `[audit.syslog] transport = "tls"` (RFC 5425) whenever the syslog feed is on, so the access log reaches the repository encrypted and with delivery confirmation (EHDS Annex II 1.4). A deployment whose UDP path stays on a trusted segment, with the local store or the FHIR feed holding the durable copy, accepts `audit_syslog_udp` by name |
 | `open_ehr_access_default` | `[authz.rbac] ehr_access_default = "restricted"`, so an EHR carrying no `ACCESS_CONTROL_SETTINGS` is reachable only by an admin. The shipped default is `open` |
 | `migrate_on_runtime_credential` | `[db] migrate_url` set, or `migrate = "verify"`, so no credential that serves requests can alter the schema. Evaluated per domain database: a domain relocated to a database of its own is prepared on that domain's runtime DSN |
 | `auth_off` | `[auth] enabled = true`, so no request is served unauthenticated (CRA Annex I Part I(2)(d)) |
-| `plaintext_listener` | `[server.tls]` enabled, or `[server] bind` on a loopback address, so data does not cross the network in clear (CRA Annex I Part I(2)(e)). A deployment behind a TLS-terminating ingress accepts `plaintext_listener` by name, which records that the ingress carries the encryption. A bind whose host is a DNS name or empty counts as routable |
+| `plaintext_listener` | `[server.tls]` enabled, or `[server] bind` on a loopback address, so data does not cross the network in clear (CRA Annex I Part I(2)(e)). A deployment behind a TLS-terminating ingress accepts `plaintext_listener` by name, which records that the ingress carries the encryption. A bind whose host is a DNS name or empty counts as routable. The gap also opens when `[management] port` is set on an enabled management surface: that listener binds every interface and never speaks TLS, so unset the port (the surface then shares the main listener) or accept the gap by name where the port is unreachable off the host |
 
 An accepted gap is stated on every boot and on `/rest/status`; it can be run,
 not hidden. Environment form: `FERROEHR__DEPLOYMENT_PROFILE=production`,

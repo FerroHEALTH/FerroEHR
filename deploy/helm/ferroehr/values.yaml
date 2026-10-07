@@ -575,6 +575,23 @@ config:
   # loudly at read otherwise).
   spec_profile: development
 
+  # The declared deployment posture, stated here so a rendered ferroehr.toml
+  # always says which one it runs. `sandbox` (the binary's default) must not
+  # hold real patient data: the server names every missing separation on its
+  # boot banner, in the log and on /management/status, and
+  # GET /ferroehr/rest/status reports the profile. `production` refuses to boot
+  # while a separation is missing and not named in `deployment_accepts`. These
+  # chart defaults leave several open (one DSN for every domain, an empty
+  # privacy.subject_namespaces, audit.fail_mode open, the open
+  # authz.rbac.ehr_access_default, db.migrate apply on the runtime credential,
+  # a plaintext listener behind the ingress), so a deployment holding patient
+  # data sets `production` and closes or accepts each one by name, e.g.
+  #   deployment_profile: production
+  #   deployment_accepts: [plaintext_listener]   # TLS terminates at the ingress
+  # No openEHR spec governs this; the reasoning is in the book's CRA risk
+  # assessment, Annex I Part I(2)(b).
+  deployment_profile: sandbox
+
   # [server] — HTTP listener + REST surface.
   server:
     bind: "0.0.0.0:8080"
@@ -711,7 +728,31 @@ config:
     enabled: true
     store:
       enabled: true
+      # Keep forever (0), or a day count. The server refuses a horizon outside
+      # the floors and ceilings of the jurisdictions its identifier rules name
+      # (three years EU-wide, five NL, one CH, at most three DE for a declared
+      # SGB V § 309 controller).
       retention_days: 0
+      # The horizon in calendar years instead, compared exactly against those
+      # bounds; set it OR a non-zero retention_days, never both. Unset (null)
+      # by default. A German SGB V § 309 controller sets 3, with
+      # sgb_v_309_controller: true.
+      # -- (int)
+      # @default -- unset
+      retention_years: null
+    # [audit.categories] — the EHDS priority category of every access: which
+    # categories each template id, and failing that each root archetype id,
+    # holds (patient-summary, eprescription, edispensation, imaging,
+    # test-results, discharge-report, national:<code>, none). EMPTY by
+    # default: an access the map cannot classify is recorded "unclassified",
+    # never refused. Example:
+    #   templates:
+    #     "International Patient Summary": [patient-summary]
+    #   archetypes:
+    #     openEHR-EHR-COMPOSITION.report-result.v1: [test-results]
+    categories:
+      templates: {}
+      archetypes: {}
 
   # [events] — contribution-outbox eventing → AMQP. Our own extension; no
   # openEHR spec governs it. Off by default.

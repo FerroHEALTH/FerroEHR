@@ -73,7 +73,7 @@ in deployment_accepts (which is then stated on every boot and on /rest/status):
 ```
 
 The gaps are `shared_credential`, `shared_cluster`, `open_subject_namespace`,
-`audit_off`, `audit_fails_open`, `open_ehr_access_default`,
+`audit_off`, `audit_fails_open`, `audit_syslog_udp`, `open_ehr_access_default`,
 `migrate_on_runtime_credential`, `auth_off` and `plaintext_listener`. `shared_cluster` is read from
 `pg_control_system().system_identifier` on each pool, the audit pool included,
 rather than from the DSN text, so two names for one cluster do not pass it.
@@ -86,9 +86,16 @@ carries the decision.
 
 `plaintext_listener` opens whenever the main listener speaks plain HTTP on an
 address reachable off the host. Behind a TLS-terminating ingress, accept it by
-name: the entry records that the ingress carries the encryption. A separate
-management listener (`management.port`) speaks plain HTTP and no gap covers
-it, so keep that port off any network clinical clients or the internet reach.
+name: the entry records that the ingress carries the encryption. It also opens
+when a separate management listener (`management.port`) is set, because that
+listener binds every interface and never speaks TLS: unset the port so the
+surface shares the main listener, or accept the gap by name and keep that port
+off any network clinical clients or the internet reach.
+
+`audit_syslog_udp` opens when the syslog feed is on with `transport = "udp"`,
+which ships the access log unencrypted and without delivery confirmation. Set
+`transport = "tls"`, or accept the gap by name where the UDP path stays on a
+trusted segment and the local store or the FHIR feed holds the durable copy.
 
 A gap you have decided to run with goes in `deployment_accepts` by name. It is
 then stated on every boot and on `GET /ferroehr/rest/status`, so it is run

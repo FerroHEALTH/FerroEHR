@@ -38,7 +38,7 @@ kubectl -n ferroehr create secret generic ferroehr-db \
   --from-literal=FERROEHR__DB__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 10.2.1 -n ferroehr \
+  --version 10.2.2 -n ferroehr \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=4.3.4
 ```
@@ -55,7 +55,7 @@ helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
 reference. To read the chart's metadata without installing it:
 
 ```shell
-helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 10.2.1
+helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 10.2.2
 ```
 
 ### Pin two versions, not one
@@ -68,7 +68,7 @@ against.
 
 | | Selects | Pin with | Line |
 |---|---|---|---|
-| Chart version | templates, values schema, defaults | `--version 10.2.1` | SemVer over the chart's own contract |
+| Chart version | templates, values schema, defaults | `--version 10.2.2` | SemVer over the chart's own contract |
 | Image tag | the server binary | `--set image.tag=4.3.4` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
@@ -168,7 +168,7 @@ image, and FerroTERM.
 > the image itself as the authority:
 >
 > ```shell
-> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 10.2.1 \
+> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 10.2.2 \
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
@@ -239,6 +239,43 @@ matched by path, because `url` carries no shape a classifier can see. That is wh
 makes a secret key added to the server's configuration tree in a future release
 move to the Secret rather than leak silently. `extraEnv` is the escape hatch for
 anything neither `config:` nor `secrets:` surfaces.
+
+### The deployment profile and the access log
+
+The chart's values declare three keys with the binary's own defaults, so a
+rendered `ferroehr.toml` always says what it runs:
+
+- **`config.deployment_profile: sandbox`:** a stock install must not hold real
+  patient data: the server names every separation it has not made on its boot
+  banner and on `/management/status`, and reports the profile on
+  `GET /ferroehr/rest/status`. A deployment holding patient data sets
+  `production`, which refuses to start while a separation is missing and not
+  named in `config.deployment_accepts`. The chart defaults leave several open:
+  one DSN for every domain, an empty `config.privacy.subject_namespaces`, the
+  server's `open` defaults for `config.audit.fail_mode` and
+  `config.authz.rbac.ehr_access_default`, `config.db.migrate: apply` on the
+  runtime credential, and a plaintext listener behind the ingress; see [`deployment_profile`](configuration.md#deployment_profile).
+- **`config.audit.store.retention_years`:** unset. Set it in place of
+  `config.audit.store.retention_days` when the horizon must be exact in
+  calendar years, such as `3` for a German SGB V § 309 controller with
+  `config.audit.store.sgb_v_309_controller: true`.
+- **`config.audit.categories`:** an empty `templates` and `archetypes` map,
+  which records every access as `unclassified`. Map your templates and root
+  archetypes to their EHDS priority categories; the keys are template ids and
+  archetype ids, so quote a template id that contains spaces:
+
+```yaml
+config:
+  audit:
+    categories:
+      templates:
+        "International Patient Summary": [patient-summary]
+      archetypes:
+        openEHR-EHR-COMPOSITION.report-result.v1: [test-results]
+```
+
+The [Audit](config-audit.md) page has the category vocabulary and the
+retention floors and ceilings the server enforces at boot.
 
 ## Database roles — who runs migrations
 
@@ -602,7 +639,7 @@ config:
 
 ```shell
 helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 10.2.1 -n ferroehr --reuse-values \
+  --version 10.2.2 -n ferroehr --reuse-values \
   --set config.query.plan_cache_capacity=512
 ```
 
@@ -703,7 +740,7 @@ running. It is the Helm equivalent of the
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 10.2.1 -n ferroehr --reuse-values \
+  --version 10.2.2 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
@@ -944,7 +981,7 @@ Preview an upgrade against what you have installed with
 `helm diff`, or render the new chart version and read it:
 
 ```shell
-helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 10.2.1 \
+helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 10.2.2 \
   -n ferroehr -f my-values.yaml | less
 ```
 

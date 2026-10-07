@@ -130,6 +130,17 @@ pub enum DeploymentGap {
     /// cannot take is dropped and the request succeeds: the access happened and
     /// nothing says so.
     AuditFailsOpen,
+    /// The audit trail ships to a syslog Audit Record Repository over UDP
+    /// (`audit.syslog.transport = "udp"`, RFC 5426), which delivers no record
+    /// reliably and encrypts none.
+    ///
+    /// `docs/law/eu/ehds/text.html Annex II 1.4`: components operated together
+    /// with other products are designed so that "interoperability and
+    /// compatibility are reliable and secure"; RFC 5425 TLS is the transport
+    /// that is. Accepting the gap by name records that the UDP path never leaves
+    /// a trusted segment, or that the local store or the FHIR feed carries the
+    /// durable copy.
+    AuditSyslogUdp,
     /// `authz.rbac.ehr_access_default` is `open`, so an EHR carrying no
     /// `ACCESS_CONTROL_SETTINGS` — which every new EHR does — admits any caller
     /// the coarse layers already let through.
@@ -150,8 +161,15 @@ pub enum DeploymentGap {
     /// protection from unauthorised access by appropriate control mechanisms,
     /// including but not limited to authentication".
     AuthOff,
-    /// The main listener speaks plaintext (`server.tls.enabled = false`) on an
-    /// address reachable off the host; a loopback bind is exempt.
+    /// A listener speaks plaintext on an address reachable off the host: the
+    /// main listener with `server.tls.enabled = false` and a non-loopback bind,
+    /// or the separate management listener (`management.port`), which always
+    /// binds every interface in plain HTTP.
+    ///
+    /// The management listener is covered by this gap rather than given TLS of
+    /// its own, because serving it over TLS is a larger change than the risk it
+    /// carries; accepting the gap by name stays the escape where the port is
+    /// unreachable from outside the pod or host.
     ///
     /// `docs/law/eu/cra/text.html Annex I Part I(2)(e)`: products shall "protect
     /// the confidentiality of stored, transmitted or otherwise processed data
@@ -170,6 +188,7 @@ impl DeploymentGap {
             Self::OpenSubjectNamespace => "open_subject_namespace",
             Self::AuditOff => "audit_off",
             Self::AuditFailsOpen => "audit_fails_open",
+            Self::AuditSyslogUdp => "audit_syslog_udp",
             Self::OpenEhrAccessDefault => "open_ehr_access_default",
             Self::MigrateOnRuntimeCredential => "migrate_on_runtime_credential",
             Self::AuthOff => "auth_off",
@@ -205,6 +224,13 @@ impl DeploymentGap {
                  and the request succeeds; set [audit] fail_mode = \"closed\" to refuse the \
                  operation instead"
             }
+            Self::AuditSyslogUdp => {
+                "[audit.syslog] transport is `udp`, so the access log reaches the Audit Record \
+                 Repository without delivery confirmation or encryption; set [audit.syslog] \
+                 transport = \"tls\" (RFC 5425), or accept audit_syslog_udp by name where the \
+                 path stays on a trusted segment and the local store or the FHIR feed carries \
+                 the durable copy"
+            }
             Self::OpenEhrAccessDefault => {
                 "[authz.rbac] ehr_access_default is `open`, so an EHR carrying no \
                  ACCESS_CONTROL_SETTINGS admits every caller the coarse layers already let \
@@ -221,10 +247,12 @@ impl DeploymentGap {
                  enabled = true with [auth.oidc] or [auth.basic] configured"
             }
             Self::PlaintextListener => {
-                "[server] bind is a routable address and [server.tls] is off, so clinical data and \
-                 credentials cross the network unencrypted; enable [server.tls], bind to loopback, \
-                 or accept plaintext_listener by name when a TLS-terminating ingress fronts this \
-                 port"
+                "a listener serves plain HTTP on a routable address ([server] bind with \
+                 [server.tls] off, or [management] port, which binds every interface without \
+                 TLS), so clinical data and credentials cross the network unencrypted; enable \
+                 [server.tls] or bind to loopback, unset [management] port so the surface shares \
+                 the main listener, or accept plaintext_listener by name when a TLS-terminating \
+                 ingress fronts the port or the management port is unreachable off the host"
             }
         }
     }
@@ -331,6 +359,12 @@ impl DeploymentPosture {
             // moot, and naming both would report one posture twice.
             gaps.push(DeploymentGap::AuditFailsOpen);
         }
+        if audit.enabled
+            && audit.syslog.enabled
+            && audit.syslog.transport == crate::system_log::config::Transport::Udp
+        {
+            gaps.push(DeploymentGap::AuditSyslogUdp);
+        }
         if config.authz.rbac.ehr_access_default == crate::config::authz::EhrAccessDefault::Open {
             gaps.push(DeploymentGap::OpenEhrAccessDefault);
         }
@@ -343,7 +377,9 @@ impl DeploymentPosture {
         if !config.auth.enabled {
             gaps.push(DeploymentGap::AuthOff);
         }
-        if !config.server.tls.enabled && !binds_loopback(&config.server.bind) {
+        let plaintext_main = !config.server.tls.enabled && !binds_loopback(&config.server.bind);
+        let plaintext_management = config.management.enabled && config.management.port.is_some();
+        if plaintext_main || plaintext_management {
             gaps.push(DeploymentGap::PlaintextListener);
         }
         let accepted = gaps
@@ -594,6 +630,7 @@ mod tests {
             DeploymentGap::OpenSubjectNamespace,
             DeploymentGap::AuditOff,
             DeploymentGap::AuditFailsOpen,
+            DeploymentGap::AuditSyslogUdp,
             DeploymentGap::OpenEhrAccessDefault,
             DeploymentGap::MigrateOnRuntimeCredential,
             DeploymentGap::AuthOff,
@@ -812,5 +849,82 @@ mod tests {
         assert!(accepted.permits_boot());
         assert_eq!(accepted.accepted, [DeploymentGap::PlaintextListener]);
         assert_eq!(accepted.gaps, [DeploymentGap::PlaintextListener]);
+    }
+
+    /// `production` refuses an audit feed shipped over UDP syslog, never a TLS
+    /// one or a disabled one, and boots once `audit_syslog_udp` is accepted by
+    /// name (EHDS Annex II 1.4).
+    #[test]
+    fn production_refuses_a_udp_audit_syslog_unless_accepted_by_name() {
+        let mut config = production(separated());
+        config.audit.syslog.enabled = true;
+        config.audit.syslog.transport = crate::system_log::config::Transport::Udp;
+        let posture = DeploymentPosture::evaluate(&config, &distinct_clusters());
+        assert_eq!(posture.gaps, [DeploymentGap::AuditSyslogUdp]);
+        assert!(!posture.permits_boot());
+        let message = posture.refusal_message();
+        assert!(message.contains("audit_syslog_udp"), "{message}");
+        assert!(
+            message.contains(DeploymentGap::AuditSyslogUdp.describe()),
+            "{message}"
+        );
+
+        config.audit.syslog.transport = crate::system_log::config::Transport::Tls;
+        let tls = DeploymentPosture::evaluate(&config, &distinct_clusters());
+        assert!(tls.gaps.is_empty(), "TLS syslog is no gap: {tls:?}");
+
+        config.audit.syslog.transport = crate::system_log::config::Transport::Udp;
+        config.audit.syslog.enabled = false;
+        let off = DeploymentPosture::evaluate(&config, &distinct_clusters());
+        assert!(
+            off.gaps.is_empty(),
+            "a disabled sink ships nothing: {off:?}"
+        );
+
+        config.audit.syslog.enabled = true;
+        config.deployment_accepts = vec![DeploymentGap::AuditSyslogUdp];
+        let accepted = DeploymentPosture::evaluate(&config, &distinct_clusters());
+        assert!(accepted.permits_boot());
+        assert_eq!(accepted.accepted, [DeploymentGap::AuditSyslogUdp]);
+        assert_eq!(accepted.gaps, [DeploymentGap::AuditSyslogUdp]);
+    }
+
+    /// `production` refuses the separate management listener, which binds every
+    /// interface in plain HTTP even with `[server.tls]` on, and boots once
+    /// `plaintext_listener` is accepted by name (CRA Annex I Part I(2)(e)).
+    #[test]
+    fn production_refuses_a_plain_management_listener_on_its_own_port() {
+        let mut config = production(separated());
+        config.management.enabled = true;
+        config.management.port = Some(9090);
+        let posture = DeploymentPosture::evaluate(&config, &distinct_clusters());
+        assert_eq!(posture.gaps, [DeploymentGap::PlaintextListener]);
+        assert!(!posture.permits_boot());
+        assert!(
+            posture.refusal_message().contains("[management] port"),
+            "{}",
+            posture.refusal_message()
+        );
+
+        config.management.port = None;
+        let shared = DeploymentPosture::evaluate(&config, &distinct_clusters());
+        assert!(
+            shared.gaps.is_empty(),
+            "shares the TLS listener: {shared:?}"
+        );
+
+        config.management.port = Some(9090);
+        config.management.enabled = false;
+        let off = DeploymentPosture::evaluate(&config, &distinct_clusters());
+        assert!(
+            off.gaps.is_empty(),
+            "a disabled surface binds nothing: {off:?}"
+        );
+
+        config.management.enabled = true;
+        config.deployment_accepts = vec![DeploymentGap::PlaintextListener];
+        let accepted = DeploymentPosture::evaluate(&config, &distinct_clusters());
+        assert!(accepted.permits_boot());
+        assert_eq!(accepted.accepted, [DeploymentGap::PlaintextListener]);
     }
 }

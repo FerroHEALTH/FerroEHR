@@ -169,10 +169,10 @@ pub async fn serve_full(
     let state = AppState::with_parts(config, backend, authz, observability);
     let main_app = router(state.clone(), Arc::clone(&authenticator));
 
-    // The separate-port management listener stays plain HTTP even with
-    // `[server.tls]` on: an internal ops-introspection surface never exposed
-    // beyond the pod boundary. The health probes are always on the main
-    // listener, so a separate-port deployment does not move them.
+    // The separate-port management listener stays plain HTTP on every interface
+    // even with `[server.tls]` on; keeping it off a routed network is the
+    // deployment's, and `production` refuses it unless the `plaintext_listener`
+    // gap is accepted. The health probes stay on the main listener.
     let management_task = if management_enabled && let Some(port) = management_port {
         let management_app = management_router(&state, authenticator);
         let management_bind = format!("0.0.0.0:{port}");

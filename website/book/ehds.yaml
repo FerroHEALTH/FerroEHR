@@ -173,8 +173,10 @@ requirements:
           The logging component works with other products through IHE ATNA:
           ITI-20 feeds, ITI-81 retrieval, ITI-19 mutual TLS. The syslog feed
           ships with UDP transport when switched on, which delivers no record
-          reliably; TLS syslog and the outbox-driven FHIR feed are the reliable
-          choices, and the instructions for use name them. FerroEHR claims no
+          reliably and encrypts none, so `deployment_profile = "production"`
+          refuses it unless `audit_syslog_udp` is accepted by name; TLS syslog
+          and the outbox-driven FHIR feed are the reliable choices, and the
+          instructions for use name them. FerroEHR claims no
           interoperability with a medical device; a device manufacturer that
           claims it carries Art. 27(1).
   - group: "2"
@@ -337,8 +339,14 @@ requirements:
           (Art. 9(2)) and a longer national floor where one applies. Access
           rights can be keyed on the template through ABAC; the category is not
           itself an authorisation attribute. Neither retention nor access
-          rights take the ORIGIN of the data into account, and the archival
-          tier moves records without expiring them.
+          rights are keyed on the ORIGIN of the data. The origins FerroEHR
+          records are the `FEEDER_AUDIT` originating-system ids a sending system
+          chooses, as free text, and data committed directly carries none, so a
+          period keyed on an origin could neither be checked against a declared
+          vocabulary, as a category is, nor reach the data without a feeder
+          audit; keying on origin first needs a register of the origins a
+          deployment recognises. The archival tier moves records without
+          expiring them.
 
 # Annex III, "Technical documentation". The elements Article 37(2) requires,
 # with the file of the documentation tree (docs/technical-documentation/) that

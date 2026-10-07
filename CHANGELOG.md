@@ -199,8 +199,41 @@ workflow refuses a tag that has no matching section here.
   why. No credential, URL userinfo or patient data reaches it. Attach it to a
   complaint or a serious-incident report.
 
+- **The Helm chart carries the access-log category map and the calendar-year
+  horizon** (#3655): `config.audit.categories` (empty `templates` and
+  `archetypes`, as in the binary) and `config.audit.store.retention_years`
+  (unset) in `values.yaml`, typed by shape in `values.schema.json`. Chart
+  10.2.2.
+- **The Helm chart and the Compose files declare the deployment profile**
+  (#3637): `config.deployment_profile: sandbox`, with a comment listing what
+  `production` refuses under the chart defaults, and
+  `deployment_profile = "sandbox"` in the quickstart, dev and hosted-sandbox
+  configurations. The new book page *Returning to the original state* resets
+  an instance's configuration and database, and the deploy-probe harness runs
+  the Compose procedure.
+- **Every published artefact has an SBOM** (#3643): each release attaches a
+  CycloneDX SBOM per `openehr-*` crate, attested against the `.crate` archive
+  crates.io serves, and each chart version attests a CycloneDX SBOM naming
+  every image it deploys by digest.
+- **Every release publishes an exploitability record** (#3636): every image
+  and server binary is scanned with no severity floor and with unfixed
+  findings included, each finding is joined with its OpenVEX statement in
+  `ferroehr-<tag>-vulnerability-record.json`, and the release is refused,
+  before any image is tagged, while a finding has none.
+- **The CRA risk assessment declares its security-relevant paths** (#3649).
+  A release that changes one of them since the previous release is refused
+  until the assessment gains a revision row.
+
 ### Changed
 
+- **`deployment_profile = "production"` refuses two more plaintext paths unless
+  each is accepted by name.** A syslog audit feed with `transport = "udp"` opens
+  the new `audit_syslog_udp` gap (#3669, EHDS Annex II 1.4): set
+  `[audit.syslog] transport = "tls"`, or accept the gap where the UDP path stays
+  on a trusted segment. A separate management listener (`[management] port`)
+  now opens `plaintext_listener` (#3668), because it binds every interface in
+  plain HTTP: unset the port so the surface shares the main listener, or accept
+  the gap where the port is unreachable off the host.
 - **What FerroEHR answers without a credential says only what a client or
   probe needs** (#3671). `/health/readiness` keeps its `200`/`503` semantics
   but its body carries the aggregate status and each indicator's name and
@@ -280,6 +313,14 @@ workflow refuses a tag that has no matching section here.
 
 ### Fixed
 
+- **An AQL query over `EHR_ACCESS` and a `CONTRIBUTION` that deletes a version
+  are classified like the object path** (#3667). The query records the
+  category `none`, as an `EHR_ACCESS` read does, and the contribution records
+  the categories of the newest version with content before the delete, as a
+  single logical delete does.
+- **The viewer names every deployment gap in plain words** (#3670), including
+  `audit_fails_open`, `open_ehr_access_default`, `auth_off`,
+  `plaintext_listener` and `audit_syslog_udp`, instead of showing the raw code.
 - **The FHIR `AuditEvent` of an AQL query carries the origins of the data it
   served** (#3654), one entity per origin with the capped-count marker, as a
   document read does.
@@ -302,6 +343,10 @@ workflow refuses a tag that has no matching section here.
   probe, the browser end-to-end runs and the conformance runs switch the
   report off, so throwaway instances on GitHub-hosted runners stop appearing in
   FerroPULSE. A CI check fails any new test launcher that leaves it on.
+- **Every access record carries its request id** (#3665). The audit
+  trail's `request_id` column was empty on every record, because the id was
+  read from the response before the request-id layer copied it there; it is
+  now read from the request and equals the `x-request-id` the client received.
 
 ### Security
 
@@ -311,6 +356,9 @@ workflow refuses a tag that has no matching section here.
 - **The S3 store's endpoint refusals no longer print URL userinfo** (#3656): the
   endpoint is validated once, by the configuration, and every refusal quotes it
   masked.
+- **`hickory-resolver` 0.26.3** (GHSA-5j98-2g5x-46v6, GHSA-6w6g-hm98-mhgm,
+  GHSA-6f2x-v7q7-m7m5): the DNS resolver the server binary links is updated
+  past three advisories, two of them high, that the v4.3.4 binaries carry.
 
 ## [4.3.4] - 2026-10-06
 
