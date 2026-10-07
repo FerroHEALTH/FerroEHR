@@ -58,21 +58,27 @@ the scan JSON (`Target`, `PkgName`, `FixedVersion`):
    (trixie/trixie-security)**: already self-healing — the Dockerfile's
    security-upgrade `RUN` layer pulls fixed packages at build time. Remedy =
    rebuild + re-release (a patch release; images republish only on tags).
-   Verify first: `docker build -t ferroehr-postgres:candidate docker/postgres/`
+   Verify first: `docker build -t ferroehr-postgres:candidate docker/postgres/` (under podman: `podman build --platform linux/amd64 …`, and again for arm64 — a digest-pinned base otherwise resolves to whichever platform the local store already holds)
    then `scripts/security/scan-images.sh --candidate ferroehr-postgres:candidate`
    must report 0.
 3. **A newer upstream base exists** (the watcher's issue, or found while
    remediating class 2): base bump, full pin-site checklist below.
-4. **Upstream-bundled binary whose fix lives in ITS toolchain** (gosu: Go
-   stdlib advisories — upstream must rebuild; we add no Go code): per-CVE
-   reachability adjudication. If the vulnerable package is provably not in
-   gosu's execute path (it sets uid/gid and execs: no sockets, no untrusted
-   input), add the CVE to `.trivyignore.yaml` (path-scoped to
-   `usr/local/bin/gosu`) AND its OpenVEX statement to
-   `security/vex/postgres-gosu.openvex.json` (bump `version` + `timestamp`)
-   in the same PR. If it IS reachable, do NOT VEX: that is a release blocker
-   for the image — escalate to the owner (replace the binary or hold).
-5. **Never**: raise the severity floor, add a blanket suppression, scope an
+4. **Upstream-bundled binary whose fix lives in ITS toolchain** (a Go or
+   other foreign-toolchain binary the base ships and we cannot rebuild): remove
+   or replace it. The precedent is gosu (#3673): upstream's Go `gosu` carried a
+   stream of Go standard-library advisories, so the Dockerfile deletes it and
+   installs `docker/postgres/gosu`, a POSIX-sh wrapper over util-linux
+   `setpriv` under the same name, and the image ships no Go code. A new bundled
+   binary that cannot be removed goes to the owner before any VEX statement
+   is written.
+5. **OS package with no fix in Debian yet**: if the package is only used at
+   build time (GnuPG, #3673), purge it in the Dockerfile; otherwise write one
+   OpenVEX statement per id in `security/vex/postgres-os.openvex.json` (bump
+   `version` + `timestamp`), argued from what the image runs and loads, with
+   `affected` + an `action_statement` where a database session or the
+   operator's configuration reaches the code. Never a `.trivyignore.yaml`
+   entry.
+6. **Never**: raise the severity floor, add a blanket suppression, scope an
    ignore wider than one CVE × one path, or VEX a finding we can fix by
    rebuilding ("A finding we can fix is fixed, not VEXed" —
    `security/vex/README.md`).
@@ -108,11 +114,13 @@ touch:
   `version` bump if chart content changed this cycle, and
   `deploy/helm/validate.sh --update` for the goldens
 
-Then re-check the VEX documents: **when the new base rebuilds gosu, the
-adjudicated gosu entries GO** (both the `.trivyignore.yaml` entries and the
-OpenVEX statements) — a stale `not_affected` is worse than no VEX. Confirm
-with the candidate scan: a VEX'd CVE that no longer fires is an entry to
-delete.
+Then re-check the VEX documents against a candidate scan with the release
+lane's flags (no severity floor, unfixed included, no ignore file):
+`security/vex/postgres-os.openvex.json` must cover every finding, a statement
+whose CVE no longer fires is deleted (a stale `not_affected` is worse than no
+VEX), and the upstream entrypoint must still call `gosu` the way the wrapper
+expects (`gosu postgres "$BASH_SOURCE" "$@"`) and must still run with the
+packages the GnuPG purge removes gone.
 
 ## Verification (what "fixed" means)
 

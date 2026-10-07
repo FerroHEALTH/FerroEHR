@@ -398,7 +398,26 @@ tooling at them (`trivy --vex`, and most SCA platforms take an OpenVEX feed).
 | Document | Covers |
 |---|---|
 | `rust-advisories.openvex.json` | the Rust dependency advisories: the ones the advisory gate accepts, plus one that only a `Cargo.lock`-reading scanner reports |
-| `postgres-gosu.openvex.json` | Go standard-library findings in the `gosu` helper the upstream `postgres` image ships |
+| `ferroehr-os.openvex.json` | the Debian packages the `ferroehr` and `ferroehr-viewer` images inherit from their distroless base (glibc, the GCC runtime libraries, zlib) |
+| `postgres-os.openvex.json` | the Debian packages of the `ferroehr-postgres` image, one statement per finding |
+
+A statement with status `affected` names a finding that applies to you, with
+an action statement saying what to do until the fix ships. `trivy --vex`
+leaves those findings in its output on purpose; only `not_affected` and
+`fixed` statements remove one.
+
+The `ferroehr-postgres` image is the upstream `postgres:18.6` image with
+Debian's security updates applied at build time, minus two things: GnuPG and
+the libraries only it uses (upstream needs it only to import a package signing
+key while building the image), and upstream's `gosu`, a Go binary, which a
+short shell wrapper around util-linux `setpriv` replaces under the same name.
+Every finding that remains is a Debian package with no fix in Debian yet. Six
+are `affected`: three libxml2 findings and two glibc character-converter
+findings, which any database login reaches through PostgreSQL's XML functions,
+and the resolver finding CVE-2026-8674. FerroEHR sends no XML to the database,
+so the action statements come down to giving database logins only to the
+FerroEHR roles and your administrators, and keeping the resolver configuration
+the container receives under your control.
 
 The Rust document is **generated** from `deny.toml` (the gate that actually
 decides whether a build passes) joined with the published reasoning, and a CI

@@ -23,6 +23,10 @@ re-evaluate.
   a stale `not_affected` is worse than no VEX at all.
 - The scanners consume these files (`trivy --vex`), so a statement that stops
   being true stops being invisible: the finding returns and the gate fails.
+- **An `affected` statement leaves its finding visible.** `trivy --vex`
+  removes a finding only for `not_affected` or `fixed`; an `affected` finding
+  stays in every scan with its action statement beside it in the release
+  record, which is intended: it applies to the reader until the fix ships.
 - **Every finding a release ships carries a statement.** The release pipeline
   scans each image and server binary with no severity floor and unfixed
   findings included, and `scripts/checks/vex-coverage.sh` refuses the release
@@ -36,8 +40,22 @@ re-evaluate.
 
 | File | Subject | Authored |
 |---|---|---|
-| `postgres-gosu.openvex.json` | Go standard-library advisories in `/usr/local/bin/gosu`, the privilege-dropping helper the upstream `postgres` image ships. Not reachable: gosu sets uid/gid and execs, opening no socket and parsing no untrusted input. | by hand |
+| `ferroehr-os.openvex.json` | The Debian packages the `ferroehr` and `ferroehr-viewer` images inherit from `gcr.io/distroless/cc-debian13:nonroot` (glibc, the gcc-14 runtime libraries, zlib), one statement per CVE naming both images. Each argument rests on what the one program in each image loads and imports: `libgcc_s`, `libm` and `libc` only, no `dlopen`, no C++. CVE-2026-8674 (the stub resolver's long search domain) is `affected`, because both programs resolve names through `getaddrinfo`; its action statement says how an operator keeps the resolver's search list trusted. | by hand |
+| `postgres-os.openvex.json` | The Debian packages of the `ferroehr-postgres` image, one statement per finding, each naming the Debian packages it covers as subcomponents. Six are `affected` with an action statement: three libxml2 findings and two glibc JISX0213 converter findings, which any database session reaches through PostgreSQL's XML functions, and CVE-2026-8674, which the server reaches when an operator configures a host name. | by hand |
 | `rust-advisories.openvex.json` | The Rust dependency advisories: the five accepted by the advisory gate, plus the one a lock-file-reading scanner reports for a crate our feature set never compiles. Each statement additionally carries a `ferroehr:reachability` block — our own extension, since OpenVEX defines none — naming the crates the affected package is reached through. | **generated** |
+
+## The hand-written OS documents
+
+The two OS documents argue from the bytes in the image, so they go stale when
+the image changes. `ferroehr-os.openvex.json` rests on the linked libraries
+and imported symbols of the two Rust programs; re-checking those against
+every new binary is tracked in #3694. `postgres-os.openvex.json` rests on what
+the PostgreSQL 18 server, the upstream entrypoint and the `gosu` wrapper load
+and run, and on the configuration FerroEHR ships (`pg_hba.conf`, no XML in the
+schemas, no LDAP, Kerberos or PAM authentication). On every base bump or
+Debian security update, rerun the release scan over a candidate image and
+re-read every statement whose package changed; a statement whose finding no
+longer fires is deleted.
 
 ## The generated document
 

@@ -1,0 +1,97 @@
+#!/bin/sh
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+# Stands in for /usr/local/bin/gosu, the Go binary the upstream postgres image
+# ships. We cannot rebuild that binary, so every Go standard-library advisory
+# against it was ours to argue in a VEX statement; util-linux `setpriv`, already
+# in the image and patched by Debian, does the same uid/gid switch. The name
+# stays `gosu` so the upstream docker-entrypoint.sh, which runs
+# `exec gosu postgres "$BASH_SOURCE" "$@"`, works unmodified.
+#
+# Usage: gosu user-spec command [args...], user-spec = user | user:group | :group
+#
+# The user is resolved the way gosu resolves it (tianon/gosu setup-user.go over
+# moby/sys/user GetExecUser):
+#   * a name, or a uid, found in the passwd database sets the uid, the gid and
+#     HOME, and the supplementary groups are the groups that list the user;
+#   * an explicit group (a name or a gid) replaces the gid and the process keeps
+#     no supplementary groups;
+#   * a numeric uid with no passwd entry keeps the current gid, no supplementary
+#     groups, and HOME=/.
+# HOME is always reset to the resolved home, as gosu does.
+set -eu
+
+usage() {
+  echo "usage: gosu user-spec command [args...]" >&2
+  exit 1
+}
+
+fail() {
+  echo "error: failed switching to '$spec': $*" >&2
+  exit 1
+}
+
+is_numeric() {
+  case "$1" in
+  '' | *[!0-9]*) return 1 ;;
+  *) return 0 ;;
+  esac
+}
+
+case "${1:-}" in
+--help | -h | -\?)
+  echo "usage: gosu user-spec command [args...] (setpriv-backed)"
+  exit 0
+  ;;
+--version | -v)
+  echo "gosu wrapper over $(setpriv --version)"
+  exit 0
+  ;;
+esac
+[ "$#" -ge 2 ] || usage
+
+spec=$1
+shift
+user=${spec%%:*}
+group=
+case "$spec" in
+*:*) group=${spec#*:} ;;
+esac
+
+uid=$(id -u)
+gid=$(id -g)
+home=/
+name=
+# An empty user part means the current user, as in gosu.
+[ -n "$user" ] || user=$uid
+
+if entry=$(getent passwd "$user"); then
+  IFS=: read -r name _ uid gid _ home _ <<EOF
+$entry
+EOF
+elif is_numeric "$user"; then
+  uid=$user
+else
+  fail "unable to find user $user"
+fi
+
+if [ -n "$group" ]; then
+  if gentry=$(getent group "$group"); then
+    IFS=: read -r _ _ gid _ <<EOF
+$gentry
+EOF
+  elif is_numeric "$group"; then
+    gid=$group
+  else
+    fail "unable to find group $group"
+  fi
+  groups=--clear-groups
+elif [ -n "$name" ]; then
+  groups=--init-groups
+else
+  groups=--clear-groups
+fi
+
+HOME=$home
+export HOME
+exec setpriv --reuid="$uid" --regid="$gid" "$groups" -- "$@"

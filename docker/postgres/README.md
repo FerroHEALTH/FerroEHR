@@ -6,6 +6,26 @@ A preconfigured PostgreSQL 18 image for FerroEHR, mirroring the official
 security updates applied at image build (the pinned upstream base rebuilds on its own cadence, so
 trixie-security fixes are pulled in at OUR build time) plus one-time init scripts.
 
+## What the image removes
+
+- **GnuPG** (gnupg, gpg, gpg-agent, gpgconf, gpgsm, dirmngr, pinentry-curses,
+  gnupg-l10n) and the libraries only it pulled in (libassuan9, libgnutls30t64,
+  libksba8, libnpth0t64, libp11-kit0, libtasn1-6). Upstream installs it to
+  import the PGDG signing key while building its image; nothing at run time
+  calls it, and apt verifies packages with sqv (Sequoia), which stays. The
+  build fails if any of the main packages survives the purge.
+- **Upstream's Go `gosu`.** `/usr/local/bin/gosu` is `gosu` in this directory, a
+  POSIX-sh wrapper that resolves the user the way gosu does and execs
+  util-linux `setpriv --reuid --regid --init-groups`. The upstream
+  `docker-entrypoint.sh` calls it unmodified. Running the container needs the
+  same capabilities as before (`SETUID`, `SETGID` for the drop; `CHOWN`,
+  `DAC_OVERRIDE`, `FOWNER` for the data directory) and works under
+  `no-new-privileges`.
+
+What remains is upstream Debian packages whose open findings have no Debian
+fix yet; `security/vex/postgres-os.openvex.json` carries one OpenVEX
+statement per finding.
+
 ## What the init scripts create
 
 Run once, on an empty data directory, as the bootstrap superuser
