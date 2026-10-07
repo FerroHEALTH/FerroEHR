@@ -104,7 +104,7 @@ requirements:
           are suitable for their intended purpose in normal use, without
           putting patient safety at risk.
         status: partial
-        issues: [3624, 3655, 3622]
+        issues: [3624, 3622]
         evidence:
           - text: The manufacturer's intended-purpose statement
             href: intended-purpose.md
@@ -113,10 +113,10 @@ requirements:
         gap: >-
           Cadasto B.V. states the intended purpose, and the hazard log assesses
           the logging component against it in normal conditions of use, each
-          hazard with its control and the test that shows it. Three hazards
-          keep open work: an emergency access to restricted data is not marked
-          (H9), the Helm values carry no category map (H3), and whether a
-          natural person stands behind a token is not recorded (H2). The
+          hazard with its control and the test that shows it. Two hazards keep
+          open work: an emergency access to restricted data is not marked (H9),
+          and whether a natural person stands behind a token is not recorded
+          (H2). The
           interoperability component's assessment is FerroBRIDGE's. The
           Regulation names no method for showing performance or safety, and no
           conformity assessment has examined either.
@@ -126,7 +126,7 @@ requirements:
           manufacturer's instructions without adversely affecting their
           characteristics and performance.
         status: partial
-        issues: [3637]
+        issues: [3678]
         evidence:
           - text: The instructions for use
             href: instructions-for-use.md
@@ -135,9 +135,13 @@ requirements:
         gap: >-
           The instructions for use set the production profile, which refuses
           to start while a separation is missing. The Helm chart and the
-          Compose files declare no profile, so an installation that follows
-          the quickstart instead of the instructions runs the sandbox posture,
-          which must not hold real personal data.
+          Compose files declare the `sandbox` profile explicitly, and the
+          chart's values say what a deployment holding patient data sets
+          instead, but an installation that follows the quickstart instead of
+          the instructions still runs the sandbox posture, which must not hold
+          real personal data; the server says so on every boot and on
+          `GET /ferroehr/rest/status`. No shipped values file boots under
+          `production` yet.
       - id: "1.3"
         summary: >-
           Interoperability, safety and security features uphold the rights of
