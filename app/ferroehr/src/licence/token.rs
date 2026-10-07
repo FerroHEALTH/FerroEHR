@@ -7,15 +7,15 @@
 //! One armored file, two blocks, in this order:
 //!
 //! 1. `-----BEGIN PGP SIGNED MESSAGE-----` … `-----END PGP SIGNATURE-----`:
-//!    the canonical licence JSON, signed by a signing subkey (RFC 9580 §7,
-//!    the cleartext signature framework).
+//!    the canonical licence JSON, signed by the issuer's primary key (RFC 9580
+//!    §7, the cleartext signature framework).
 //! 2. `-----BEGIN PGP PUBLIC KEY BLOCK-----` … `-----END PGP PUBLIC KEY BLOCK-----`:
-//!    the issuer's public certificate, primary plus subkeys with their binding
-//!    signatures (RFC 9580 §10.1, transferable public keys).
+//!    the issuer's public certificate, the primary with its self-signatures
+//!    (RFC 9580 §10.1, transferable public keys).
 //!
-//! Bundling the certificate is what makes subkey rotation free: the verifier
-//! embeds only the primary, learns the current subkeys from the token, and
-//! checks the bindings itself.
+//! The licensee can read who issued what they hold. The verifier trusts only
+//! its embedded certificates: the bundled one has to match an anchor's
+//! primary key packet, and nothing else in it is read.
 
 use pgp::composed::{CleartextSignedMessage, Deserializable as _, SignedPublicKey};
 

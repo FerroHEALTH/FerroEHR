@@ -17,7 +17,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use jiff::civil::Date;
-use pgp::packet::PublicKey;
+use pgp::composed::SignedPublicKey;
 use serde::Serialize;
 
 use crate::licence::config::LicenceConfig;
@@ -143,7 +143,7 @@ impl LicenceState {
     pub fn load(
         config: &LicenceConfig,
         embedded: &str,
-        anchors: &[PublicKey],
+        anchors: &[SignedPublicKey],
         today: Date,
     ) -> Self {
         let configured = config
@@ -177,19 +177,23 @@ impl LicenceState {
     /// [`Self::load`] as of today in UTC, the calendar every licence window
     /// is read in.
     #[must_use]
-    pub fn load_now(config: &LicenceConfig, embedded: &str, anchors: &[PublicKey]) -> Self {
+    pub fn load_now(config: &LicenceConfig, embedded: &str, anchors: &[SignedPublicKey]) -> Self {
         let today = jiff::Timestamp::now()
             .to_zoned(jiff::tz::TimeZone::UTC)
             .date();
         Self::load(config, embedded, anchors, today)
     }
 
-    fn from_file(path: &Path, anchors: &[PublicKey], today: Date) -> Result<Verified, Reason> {
+    fn from_file(
+        path: &Path,
+        anchors: &[SignedPublicKey],
+        today: Date,
+    ) -> Result<Verified, Reason> {
         let text = std::fs::read_to_string(path).map_err(|e| Reason::Unreadable(Arc::new(e)))?;
         Self::from_text(&text, anchors, today)
     }
 
-    fn from_text(text: &str, anchors: &[PublicKey], today: Date) -> Result<Verified, Reason> {
+    fn from_text(text: &str, anchors: &[SignedPublicKey], today: Date) -> Result<Verified, Reason> {
         let token = Token::parse(text).map_err(|e| Reason::Malformed(Arc::new(e)))?;
         verify(&token, anchors, today).map_err(|e| Reason::Refused(Arc::new(e)))
     }
@@ -331,7 +335,7 @@ mod tests {
         let state = LicenceState::load(
             &LicenceConfig::default(),
             &embedded,
-            &[issuer.primary()],
+            &[issuer.certificate()],
             date(2026, 12, 1),
         );
         assert!(matches!(
@@ -363,7 +367,12 @@ mod tests {
         let config = LicenceConfig {
             file: Some(temp_file("paid.asc", &issuer.token_text(&paid))),
         };
-        let state = LicenceState::load(&config, &embedded, &[issuer.primary()], date(2026, 12, 1));
+        let state = LicenceState::load(
+            &config,
+            &embedded,
+            &[issuer.certificate()],
+            date(2026, 12, 1),
+        );
         assert!(matches!(
             state,
             LicenceState::Licensed {
@@ -392,7 +401,7 @@ mod tests {
         let mut free = licence("Everyone, under BUSL-1.1", Use::NonCommercial);
         free.not_after = date(2099, 12, 31);
         let embedded = issuer.token_text(&free);
-        let anchors = [issuer.primary()];
+        let anchors = [issuer.certificate()];
 
         let cases = [
             (
@@ -453,7 +462,7 @@ mod tests {
         let state = LicenceState::load(
             &LicenceConfig::default(),
             &embedded,
-            &[issuer.primary()],
+            &[issuer.certificate()],
             date(2026, 12, 1),
         );
         assert!(matches!(state, LicenceState::NoLicence(Reason::Refused(_))));
@@ -471,7 +480,7 @@ mod tests {
         let state = LicenceState::load(
             &LicenceConfig::default(),
             &embedded,
-            &[issuer.primary()],
+            &[issuer.certificate()],
             date(2026, 12, 1),
         );
         let LicenceState::NoLicence(reason) = state else {
@@ -491,7 +500,7 @@ mod tests {
                 file: Some(temp_file("junk-typed", "hello\n")),
             },
             &embedded,
-            &[stranger.primary()],
+            &[stranger.certificate()],
             date(2026, 12, 1),
         );
         let LicenceState::Licensed {
