@@ -90,7 +90,7 @@ for the exact list of settings a slim binary rejects.
   offload of large `DV_MULTIMEDIA` blobs to any S3-compatible object store, with
   integrity verification on the way back in.
 
-Security, multi-tenancy, and the audit trail are covered in
+Security, instance separation and the audit trail are covered in
 [Security](../security.md); running the server in production,
 including the health and observability surfaces these integrations feed, is
 covered in [Operations](../operations.md).

@@ -96,19 +96,57 @@ enum Effect {
 /// discovery, the OAS/Swagger pair (mounted only when `server.swagger_ui` is
 /// on) and the System `OPTIONS` manifest, which the router mounts on the outer
 /// router above the CORS layer and therefore above authentication too.
-const PUBLIC: &[(&str, &str)] = &[
-    ("GET", "/health"),
-    ("GET", "/health/liveness"),
-    ("GET", "/health/readiness"),
-    ("GET", "/ferroehr/rest/status"),
-    ("GET", "/ferroehr/rest/.well-known/smart-configuration"),
-    ("GET", "/ferroehr/rest/api-docs/openapi.json"),
+///
+/// This is the inventory of everything reachable without a credential (#3671):
+/// each row names why it is public, and
+/// [`every_route_outside_the_public_inventory_needs_a_credential`] proves that
+/// nothing else is.
+const PUBLIC: &[(&str, &str, &str)] = &[
+    (
+        "GET",
+        "/health",
+        "orchestrator probe: a kubelet probe carries no credential",
+    ),
+    (
+        "GET",
+        "/health/liveness",
+        "orchestrator probe: a kubelet probe carries no credential",
+    ),
+    (
+        "GET",
+        "/health/readiness",
+        "orchestrator probe: a kubelet probe carries no credential",
+    ),
+    (
+        "GET",
+        "/ferroehr/rest/status",
+        "documented client contract: status, versions and profile only",
+    ),
+    (
+        "GET",
+        "/ferroehr/rest/.well-known/smart-configuration",
+        "SMART master04 Service Discovery: always available, read before any token exists",
+    ),
+    (
+        "GET",
+        "/ferroehr/rest/api-docs/openapi.json",
+        "only when server.swagger_ui = public; the default is private",
+    ),
     (
         "GET",
         "/ferroehr/rest/api-docs/ferroehr-{family}.openapi.json",
+        "only when server.swagger_ui = public; the default is private",
     ),
-    ("GET", "/ferroehr/rest/swagger-ui"),
-    ("OPTIONS", "/ferroehr/rest/openehr/v1"),
+    (
+        "GET",
+        "/ferroehr/rest/swagger-ui",
+        "only when server.swagger_ui = public; the default is private",
+    ),
+    (
+        "OPTIONS",
+        "/ferroehr/rest/openehr/v1",
+        "ITS-REST System API: its released OAS declares `security: []`",
+    ),
 ];
 
 /// The ops-introspection surface (absolute paths), gated by its own router
@@ -123,6 +161,8 @@ const MANAGEMENT: &[(&str, &str)] = &[
     ("POST", "/management/loggers"),
     ("DELETE", "/management/loggers"),
     ("GET", "/management/flamegraph"),
+    ("GET", "/management/health"),
+    ("GET", "/management/status"),
 ];
 
 /// Clinical reads (base-relative). `POST /query/**` is a read despite its verb
@@ -409,7 +449,8 @@ fn declared() -> BTreeMap<(String, String), (Class, Effect)> {
             assert!(prior.is_none(), "duplicate table row: {method} {path}");
         }
     };
-    rows(PUBLIC, "", Class::Public, Effect::Read);
+    let public: Vec<(&str, &str)> = PUBLIC.iter().map(|(m, p, _)| (*m, *p)).collect();
+    rows(&public, "", Class::Public, Effect::Read);
     rows(MANAGEMENT, "", Class::Management, Effect::Read);
     rows(CLINICAL_READ, BASE, Class::Clinical, Effect::Read);
     rows(CLINICAL_WRITE, BASE, Class::Clinical, Effect::Write);
@@ -760,6 +801,46 @@ async fn the_public_family_needs_no_credential_and_the_gated_surface_does() {
         gated.status,
         StatusCode::UNAUTHORIZED,
         "an unauthenticated read of a gated route must be 401"
+    );
+}
+
+/// The public inventory is closed (#3671): every mounted route, driven with no
+/// `Authorization` header, is reachable only if [`PUBLIC`] declares it, and
+/// every other route answers `401` (ITS-REST overview `Requests_and_responses.md`).
+///
+/// The management surface keeps its own per-endpoint gate
+/// (`management::private_endpoint_401_then_200` and siblings); its endpoints
+/// are not mounted here, so they must not answer at all.
+#[tokio::test]
+async fn every_route_outside_the_public_inventory_needs_a_credential() {
+    let (_pg, app) = app().await;
+    let declared = declared();
+    let mut failures = Vec::new();
+
+    for (method, path) in mounted(&matrix_config()) {
+        let Some(&(class, _)) = declared.get(&(method.clone(), path.clone())) else {
+            // `every_mounted_route_carries_a_declared_authorization_class` owns
+            // the undeclared case.
+            continue;
+        };
+        let status = probe(&app, &method, &path, None).await.status;
+        let holds = match class {
+            Class::Public => status != StatusCode::UNAUTHORIZED && status != StatusCode::FORBIDDEN,
+            Class::Management => {
+                status == StatusCode::UNAUTHORIZED || status == StatusCode::NOT_FOUND
+            }
+            Class::Clinical | Class::Admin | Class::HandlerAdmin => {
+                status == StatusCode::UNAUTHORIZED
+            }
+        };
+        if !holds {
+            failures.push(format!("{method} {path} ({class:?}) answered {status}"));
+        }
+    }
+
+    assert!(
+        failures.is_empty(),
+        "routes reachable without a credential outside the public inventory: {failures:#?}"
     );
 }
 

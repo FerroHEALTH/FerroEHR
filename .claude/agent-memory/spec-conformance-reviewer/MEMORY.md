@@ -33,3 +33,4 @@
 - [RM Common ch.2-4 fix verification](rm-common-ch234-fix-verification.md) — what the #898/#899/#900 fixes really closed (do not re-report) + the 4 enforcement-proof weaknesses left
 - [Viewer ITS-REST consumption](viewer-wire-consumption.md) — AQL backslash-escaping, headerless CdrResponse, the two error-body shapes, OAS-vs-docs-text citation traps, the 204 branches
 - [Storage generation-2 rewrite](storage-generation-2-review.md) — the correlated `vo_head` subquery (27 sites), write-once-read-never `name_code`, the immutability escape hatch, the freeze/archived_at clobber
+- [CONTRIBUTION committer + 666 lifecycle (#3550/#3590)](contribution-committer-666-lifecycle.md) — check the Veredictum runner member builder before calling a refusal CNF-safe; 400/422 split in UpdateAudit.required

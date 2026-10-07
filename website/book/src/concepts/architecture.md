@@ -2,7 +2,7 @@
 
 This chapter explains how FerroEHR is built and where your data lives, in
 practical terms. You do not need any of it to use the API, but it clarifies why
-the server behaves the way it does: why the compliance claims are checkable, why
+the server behaves the way it does: why the conformance claims are checkable, why
 versioning is exact, and why AQL does not degenerate into a document scan. Two
 ideas run through everything: the openEHR *specification layer* is generated from
 the official machine-readable models, and the *storage* is designed natively for
@@ -226,7 +226,7 @@ language and its supported feature envelope.
 - **Checkable conformance.** The wire contract and data types are generated from
   the standard and drift-checked, and the conformance catalogue is executed
   against a live server with its records committed to the repository, so the
-  compliance claims are machine-derived. See
+  conformance claims are machine-derived. See
   [Conformance](../conformance.md).
 - **Exact versioning.** Nothing is overwritten; every version and its audit are
   retained and readable.

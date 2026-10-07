@@ -32,8 +32,9 @@ use super::MultimediaError;
 /// platform's one config tree).
 #[derive(Debug)]
 pub struct BlobStoreParams {
-    /// S3-compatible endpoint URL; `None` uses default AWS resolution.
-    pub endpoint: Option<String>,
+    /// S3-compatible endpoint URL, already parsed by the platform's one
+    /// validation of the key; `None` uses default AWS resolution.
+    pub endpoint: Option<url::Url>,
     /// Target bucket for content-addressed blobs.
     pub bucket: String,
     /// AWS region (S3 requires one even for non-AWS endpoints).
@@ -72,40 +73,25 @@ impl BlobStore {
     /// SeaweedFS accepts with no credentials configured.
     ///
     /// # Errors
-    /// Returns [`MultimediaError::Config`] if the object_store builder rejects
-    /// the settings.
+    /// Returns [`MultimediaError::Config`] for an endpoint whose scheme is not
+    /// `http`/`https`, and [`MultimediaError::ConfigFailed`] if the
+    /// object_store builder rejects the settings. No message quotes the
+    /// endpoint.
     pub fn from_params(params: BlobStoreParams) -> Result<Self, MultimediaError> {
         let mut builder = AmazonS3Builder::new()
             .with_bucket_name(&params.bucket)
             .with_region(&params.region)
             .with_allow_http(params.allow_http);
         if let Some(endpoint) = &params.endpoint {
-            // Refused here rather than passed to the builder, which accepts it
-            // and leaves `object_store` to panic on `RelativeUrlWithoutBase` at
-            // the first request. `${VAR:-}` in a compose file and an empty Helm
-            // value both produce exactly this.
-            let endpoint = endpoint.trim();
-            if endpoint.is_empty() {
-                return Err(MultimediaError::Config(
-                    "multimedia.endpoint is set but empty — give an absolute URL \
-                     (e.g. http://seaweedfs:8333) or unset it to use default AWS \
-                     endpoint resolution"
-                        .to_owned(),
-                ));
-            }
-            let parsed = url::Url::parse(endpoint).map_err(|e| {
-                MultimediaError::Config(format!(
-                    "multimedia.endpoint {endpoint:?} is not an absolute URL: {e}"
-                ))
-            })?;
-            if !matches!(parsed.scheme(), "http" | "https") {
+            // The scheme is judged again because the type does not carry it; the
+            // refusal names the scheme alone, so it can never quote `userinfo`.
+            if !matches!(endpoint.scheme(), "http" | "https") {
                 return Err(MultimediaError::Config(format!(
-                    "multimedia.endpoint {endpoint:?} has scheme {:?} — an S3 endpoint \
-                     must be http or https",
-                    parsed.scheme()
+                    "multimedia.endpoint has scheme {:?} — an S3 endpoint must be http or https",
+                    endpoint.scheme()
                 )));
             }
-            builder = builder.with_endpoint(endpoint);
+            builder = builder.with_endpoint(endpoint.as_str());
         }
         match (&params.access_key_id, &params.secret_access_key) {
             (Some(id), Some(secret)) => {
@@ -251,15 +237,19 @@ mod tests {
         s.delete("k").await.unwrap();
     }
 
-    /// A blank or scheme-less endpoint is a typed configuration error, never a
-    /// panic on the first request (#2167). This is the second line of defence:
-    /// the platform refuses it at boot, and this refuses it if it ever gets
-    /// past that.
+    /// A non-http(s) endpoint is a typed configuration error, never a panic on
+    /// the first request (#2167), and the refusal never quotes the endpoint's
+    /// `userinfo` (#3656). Blank and relative endpoints cannot reach the store:
+    /// the platform's one validation refuses them before a `Url` exists.
     #[test]
-    fn a_blank_or_schemeless_endpoint_is_a_typed_error_not_a_panic() {
-        for bad in ["", "   ", "seaweedfs:8333", "/bucket"] {
+    fn a_non_http_endpoint_is_a_typed_error_that_never_quotes_userinfo() {
+        for bad in [
+            "seaweedfs:8333",
+            "ftp://user:hunter2@s3.example",
+            "s3://user:hunter2@s3.example/bucket",
+        ] {
             let params = BlobStoreParams {
-                endpoint: Some(bad.to_owned()),
+                endpoint: Some(url::Url::parse(bad).expect("parses as a URL")),
                 bucket: "b".to_owned(),
                 region: "us-east-1".to_owned(),
                 access_key_id: None,
@@ -273,7 +263,25 @@ mod tests {
                 matches!(err, MultimediaError::Config(_)),
                 "endpoint {bad:?} must be a typed Config error, got {err:?}"
             );
+            assert!(!err.to_string().contains("hunter2"), "{err}");
+            assert!(!format!("{err:?}").contains("hunter2"), "{err:?}");
         }
+    }
+
+    /// An https endpoint carrying `userinfo` builds, and the store's `Debug`
+    /// never prints the endpoint.
+    #[test]
+    fn an_endpoint_with_userinfo_builds_without_rendering_it() {
+        let params = BlobStoreParams {
+            endpoint: Some(url::Url::parse("https://user:hunter2@s3.example").expect("url")),
+            bucket: "b".to_owned(),
+            region: "us-east-1".to_owned(),
+            access_key_id: None,
+            secret_access_key: None,
+            allow_http: false,
+        };
+        let store = BlobStore::from_params(params).expect("an https endpoint builds");
+        assert!(!format!("{store:?}").contains("hunter2"));
     }
 
     /// An absolute http(s) endpoint still builds, so the check above is not a
@@ -281,7 +289,7 @@ mod tests {
     #[test]
     fn an_absolute_http_endpoint_still_builds() {
         let params = BlobStoreParams {
-            endpoint: Some("http://seaweedfs:8333".to_owned()),
+            endpoint: Some(url::Url::parse("http://seaweedfs:8333").expect("url")),
             bucket: "b".to_owned(),
             region: "us-east-1".to_owned(),
             access_key_id: None,

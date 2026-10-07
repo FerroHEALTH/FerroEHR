@@ -44,7 +44,7 @@ vendor-neutral REST API and the Archetype Query Language, against a shared
 clinical information model. **FerroEHR** implements that standard natively
 in Rust: a headless, API-first Clinical Data Repository shipped as a single
 self-contained binary on PostgreSQL 18. No JVM, no language runtime. Every
-compliance claim it makes is **machine-verified**: the full conformance
+conformance claim it makes is **machine-verified**: the full conformance
 catalogue is executed against a live server by a committed runner, the run
 records are committed alongside the code, and the published Conformance
 Statement, Certificate and every quoted number derive from those records.
@@ -60,8 +60,8 @@ can actually run: complete, openly developed, source-available, and
 measured against the specification itself. That is what FerroEHR is for.
 
 The whole thing is source-available under the Business Source License 1.1,
-with no open-core tier. Multi-tenancy, RBAC/ABAC, ATNA audit, signatures,
-FHIR, events and the viewer are all in this repository under the same
+with no open-core tier. RBAC/ABAC, ATNA audit, signatures, FHIR, events and
+the viewer are all in this repository under the same
 licence, and nothing is held back to be sold back to you. Reading, building,
 modifying and redistributing the source is free, and so is every
 non-production use. Production use is free for Non-Commercial Purposes and
@@ -86,7 +86,7 @@ on the documentation site.
 
 ## What makes it different
 
-- **Compliance you can verify.** An independent CNF 2.0
+- **Conformance you can verify.** An independent CNF 2.0
   conformance instrument executes the complete machine-readable catalogue across
   the claimed wire formats and computes the openEHR profile verdicts as pure
   functions of the run records. The conformance badges above render straight
@@ -179,7 +179,9 @@ on the documentation site.
   subscriptions, and PHI-free payloads by default
 - **FHIR R4B connectors:** bidirectional and mapping-driven: ingest FHIR
   resources as validated compositions with full provenance, expose
-  committed data through a FHIR read façade, emit FHIR resources on change
+  committed data through a FHIR read façade, emit FHIR resources on change.
+  This connector is to be removed once FerroBRIDGE, the separate FHIR bridge,
+  replaces it ([#3080](https://github.com/FerroHEALTH/FerroEHR/issues/3080))
 - **Binary & object storage:** large multimedia is content-addressed into
   any S3-compatible store with cryptographic integrity verification;
   SeaweedFS works out of the box for self-hosted setups
@@ -190,8 +192,8 @@ on the documentation site.
   identities of its subjects and the map between them live in three separate
   schemas behind five non-overlapping `NOINHERIT` roles, each pool takes its
   own DSN, and the server refuses to boot when a role can read across. National
-  identifiers in the demographic domain can be sealed under a per-tenant key
-  with a keyed digest for lookup; the clinical write path refuses a national
+  identifiers in the demographic domain can be sealed under a key the
+  deployment holds, with a keyed digest for lookup (off by default); the clinical write path refuses a national
   identifier, a non-pseudonym subject reference or an identified party
 - **A declared deployment posture:** `deployment_profile = "production"`
   refuses to start while a separation is open and not accepted by name;
@@ -202,14 +204,20 @@ on the documentation site.
 - **Authorization:** role-based access control plus attribute-based
   policies, via the embedded policy engine or an external policy decision
   point
-- **Multi-tenancy:** fully integrated: each tenant is an isolated logical
-  openEHR system, enforced by PostgreSQL row-level security
-- **ATNA audit logging:** IHE ATNA-compliant system log (DICOM audit
-  messages over TLS syslog), alongside the openEHR contribution audit
-  trail; identified data never enters telemetry
-- **Hardened by default:** layered database roles, a pure-Rust TLS stack,
-  and built-in observability: Prometheus metrics, OpenTelemetry traces,
-  structured logs, health probes
+- **One instance per organisation:** FerroEHR is single-tenant, as openEHR
+  defines an EHR system: several organisations run several instances, each
+  with its own database and roles
+- **ATNA audit logging:** an IHE ATNA access log of every API access and
+  refusal, in DICOM PS3.15 and FHIR `AuditEvent` form, kept in a local
+  hash-chained store with optional syslog and FHIR-feed forwarding,
+  alongside the openEHR contribution audit trail; identified data never
+  enters telemetry
+- **Hardening built in:** layered database roles, a pure-Rust TLS stack
+  (off by default: enable it, or terminate TLS in front of the server), and
+  built-in observability: Prometheus metrics, OpenTelemetry traces,
+  structured logs, health probes. The shipped `deployment_profile` is
+  `sandbox`, which must not hold real patient data; set `production` before
+  it does
 
 ### Deployment
 

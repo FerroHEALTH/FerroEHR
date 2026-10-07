@@ -28,8 +28,9 @@ use crate::extensions::multimedia::config::MultimediaConfig;
 /// rather than quietly serving the compact form.
 ///
 /// # Errors
-/// Returns `MultimediaError::Config` when the integration is ENABLED and its
-/// object-store client cannot be built. A read-back-only store (disabled, but
+/// Returns `MultimediaError::Endpoint` when [`MultimediaConfig::endpoint_url`]
+/// refuses the endpoint, and `MultimediaError::Config` or `ConfigFailed` when
+/// the object-store client cannot be built. A read-back-only store (disabled, but
 /// an endpoint left configured) never fails the boot: turning an integration
 /// off must not be able to stop the server starting, so an unbuildable client
 /// there degrades to `None` — and the read path is loud about it per request.
@@ -44,7 +45,9 @@ pub fn engine_from_config(
         return Ok(None);
     }
     let params = ferroehr_ext::multimedia::store::BlobStoreParams {
-        endpoint: cfg.endpoint.as_ref().map(|e| e.expose().to_owned()),
+        endpoint: cfg
+            .endpoint_url()
+            .map_err(|e| ferroehr_ext::multimedia::MultimediaError::Endpoint(Box::new(e)))?,
         bucket: cfg.bucket.clone(),
         region: cfg.region.clone(),
         access_key_id: cfg.access_key_id.clone(),

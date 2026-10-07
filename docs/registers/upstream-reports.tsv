@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+#
+# The register of vulnerabilities FerroEHR's manufacturer, Cadasto B.V., has
+# reported to the maintainer of a component integrated in FerroEHR
+# (Regulation (EU) 2024/2847 Art 13(6)). One row per report, appended and
+# never rewritten; a row is closed by filling its last two columns.
+#
+# A row is entered once the upstream advisory is public, or once the
+# maintainer has declined one and the agreed disclosure date has passed, so a
+# row never discloses a vulnerability before its fix. Until then the record is
+# the upstream report itself. No row names a person: the maintainer is named
+# by project, never by individual, and the correspondence stays outside the
+# repository. The procedure is docs/post-market.md, "Vulnerabilities in
+# integrated components".
+#
+# Columns:
+#   id              U-<year>-<number>, in the order the reports were made
+#   reported        the date the report went upstream, YYYY-MM-DD
+#   component       the component and the affected versions, as its ecosystem names them (crate@version, image:tag)
+#   channel         rustsec, ghsa (on the upstream repository), distro (a distribution's security tracker), or email
+#   upstream_ref    the upstream advisory, issue or report identifier, once public
+#   fix_shared      the pull request or patch offered upstream, or no
+#   ferroehr_record the FerroEHR advisory, VEX statement or tracker issue that records the effect on FerroEHR
+#   outcome         fixed upstream in <version>, declined, or no response, in one sentence, once closed
+#   closed          the date it was closed, YYYY-MM-DD, once closed
+id	reported	component	channel	upstream_ref	fix_shared	ferroehr_record	outcome	closed

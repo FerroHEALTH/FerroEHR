@@ -6,8 +6,9 @@
 //! No openEHR spec governs this endpoint — it is our own operational surface
 //! (management/ is pure ops — spec-silent by design, a settled adjudication).
 //! It reports the git commit, build timestamp, `rustc` version, the pinned
-//! openEHR specification versions, the `PostgreSQL` target, and the
-//! manufacturer ([`crate::manufacturer::MANUFACTURER`]). The same
+//! openEHR specification versions, the `PostgreSQL` target, the
+//! manufacturer ([`crate::manufacturer::MANUFACTURER`]) and the support period
+//! ([`crate::support::SupportPeriod`]). The same
 //! [`BuildInfo`] feeds the `ferroehr_build_info` gauge and the `OTel` resource
 //! attributes in the binary, so the build facts are captured once.
 //!
@@ -44,6 +45,9 @@ pub struct BuildInfo {
     /// (`docs/law/eu/ehds/text.html` Art. 30(1)(g)) asks the EHR system to name
     /// it.
     pub manufacturer: crate::manufacturer::Manufacturer,
+    /// The support period of this release, judged on the day it is served
+    /// (`docs/law/eu/cra/text.html Art. 13(8)`, (19)).
+    pub support: crate::support::SupportPeriod,
     /// The audit posture the server runs under (#3238): absent only where no
     /// configuration was resolved (the compile-time default).
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -98,6 +102,7 @@ impl BuildInfo {
             },
             postgres_target: provenance::PG_TARGET,
             manufacturer: crate::manufacturer::MANUFACTURER,
+            support: crate::support::SupportPeriod::current(),
             audit: None,
         }
     }

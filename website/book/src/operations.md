@@ -701,11 +701,15 @@ why they are written as your checklist rather than as our claim.
 
 ### How long the version you pinned is supported
 
-Plan the upgrade cadence around this, because it is short and it is deliberate:
+Plan the upgrade cadence around this:
 
-- **Only the most recent release receives security fixes.** There are no
-  maintenance branches, no long-term-support line, and no backports. A version
-  stops receiving fixes the moment a newer release exists.
+- **Each release is supported for five years from the month it is
+  published, and its fixes ship in the newest release.** There are no
+  maintenance branches, no long-term-support line and no backports: a
+  vulnerability in a release inside its support period is fixed in the next
+  release, which every user of an earlier release may run under the same
+  licence terms (CRA Art 13(10)). Staying on an older release means running
+  without the fix.
 - **A fix normally arrives as the next patch** on the current minor, so taking
   it does not oblige you to take new behaviour, but that is the usual case,
   not a promise. Where a fix is only correct alongside a behavioural change,
@@ -714,8 +718,27 @@ Plan the upgrade cadence around this, because it is short and it is deliberate:
   means the assets and the tag of a published release cannot be modified at
   all, so the remedy for any defect is a new version.
 - **The Helm chart and the published crates follow their own version lines**,
-  each supported at its newest published version only. A chart-only fix ships
-  as a new chart version between server releases.
+  each with the same five-year period and its fixes in the newest published
+  version. A chart-only fix ships as a new chart version between server
+  releases.
+
+**The running server states its own support period.** Each release is
+supported for five years from the month of its release date (CRA Art 13(8)),
+and the server reads that date from its changelog heading at build time. The
+end month is on the boot banner (`Support` line), in the boot log, in
+`ferroehr --version`, under `support` in `GET /management/info`, and under
+`support` in `GET /ferroehr/rest/status` as
+`{release_date, support_ends, status}`, where `support_ends` is `YYYY-MM` and
+`status` is `supported`, `ended` or `unreleased`. Once the end month has passed,
+`status` reads `ended` and the server logs a `warn` line at boot and once a day
+(CRA Art 13(19)). A build of a version whose changelog heading carries no date
+is not a release: it reports `unreleased` and no end month.
+
+The server does not contact anyone to look for newer releases. To hear about
+them, subscribe to the release feed
+(`https://github.com/FerroHEALTH/FerroEHR/releases.atom`) and poll the
+published security advisories
+(`GET https://api.github.com/repos/FerroHEALTH/FerroEHR/security-advisories`).
 
 The consequence for change control: budget for taking every release, or budget
 for maintaining a fork. There is no third option, and the full policy (with
@@ -880,7 +903,7 @@ its own probes.
 | `GET /health` | constant `200 OK` (plain text `OK`), touches nothing | load balancers, `docker` `HEALTHCHECK`, anything that must never be auth-gated |
 | `GET /health/liveness` | identical to `/health`, the same constant answer under the orchestrator-conventional path | Kubernetes `livenessProbe` and `startupProbe` |
 | `GET /health/readiness` | `200` when the aggregate is up or degraded, `503` when a **required** component is down; JSON body with every indicator, each bounded to one second | Kubernetes `readinessProbe`, ops dashboards |
-| `GET /ferroehr/rest/status` | product status document: `status`, `server_version`, `openehr_rest_api_version`, `timestamp`, `licence` (the grant in force: `state`, `use`, `licensee`, `not_after`, `configured_token`) and `deployment` (the declared profile, the separations still open and the ones accepted by name) | version/identity checks; the URL the container's `ferroehr healthcheck` subcommand probes |
+| `GET /ferroehr/rest/status` | product status document: `status`, `server_version`, `openehr_rest_api_version`, `timestamp`, `licence` (the grant in force: `state`, `use`, `licensee`, `not_after`, `configured_token`) `deployment` (the declared profile, the separations still open and the ones accepted by name) and `support` (`release_date`, `support_ends`, `status`) | version/identity checks; the URL the container's `ferroehr healthcheck` subcommand probes |
 | `GET /management/*` | ops introspection; see below | operators, off by default, enable deliberately |
 
 Every management request is itself recorded in the audit trail as a
@@ -901,6 +924,7 @@ Not every indicator blocks readiness, and the distinction is deliberate:
 | `db` | a pooled connection answers | yes |
 | `migrations` | this build's schema is present, re-tested on every probe | yes |
 | `audit_sender` | the audit posture: `DEGRADED` with the consequence stated when auditing is off (no access log, no EHDS logging component); `UP` with `fail_mode`, the local store and its retention in the detail, and a stated caution under `fail_mode = "open"` | no: reports `DEGRADED`, never `503` |
+| `audit_chain` | the latest scheduled verification of the local audit store's hash chain (present when the local store is on and `[audit.store] verify_interval_seconds` is not `0`): `UP` while intact or before the first run, `DOWN` naming the finding count and the first damaged position, `DEGRADED` when the verification could not run | no: a damaged chain reports `DOWN` in the body, never `503`, because the trail keeps recording while the damage is investigated |
 | `events` | the event publisher's broker delivery (present only when eventing is enabled) | no: reports `DEGRADED`, never `503`, since the outbox buffers while the broker is down |
 | `fhir_outbound` | the FHIR outbound emitter's broker delivery (present only when the emitter is enabled) | no: reports `DEGRADED`, never `503`, since unemitted rows are retained and re-emitted |
 
@@ -947,7 +971,7 @@ not a default you already have.
 
 | Endpoint | Endpoint name to set | Purpose | Level to give it |
 |---|---|---|---|
-| `GET /management/info` | `info` | product name and version, build SHA, build date, `rustc`, the active `spec_profile`, the openEHR specification versions that profile selects, the PostgreSQL target, the `audit` posture (`enabled`, `fail_mode`, `local_store`, `retention_days`), and the `manufacturer` of the release (`name`, `postal_address`, `email`, `website`) | `admin_only` |
+| `GET /management/info` | `info` | product name and version, build SHA, build date, `rustc`, the active `spec_profile`, the openEHR specification versions that profile selects, the PostgreSQL target, the `audit` posture (`enabled`, `fail_mode`, `local_store`, `retention_days`), the `manufacturer` of the release (`name`, `postal_address`, `email`, `website`), and the `support` period (`release_date`, `support_ends`, `status`) | `admin_only` |
 | `GET /management/prometheus` | `prometheus` | Prometheus text exposition | `admin_only`, or `public` only when the port is not reachable outside the cluster; a `public` endpoint is served OUTSIDE authentication |
 | `GET /management/metrics` | `metrics` | JSON list of the registered metric names | `admin_only` |
 | `GET /management/metrics/{name}` | `metrics` | the current value(s) of one metric; `404` for a name that is not registered | `admin_only` |

@@ -69,6 +69,7 @@ use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
 use crate::service::status::{CallStatusType, SmError};
+use crate::system_log::categories::AccessedContent;
 use crate::system_log::event::EventActionCode;
 use crate::versioning::Kind;
 use crate::versioning::audit::{change_type, change_type_code};
@@ -154,6 +155,7 @@ impl FerroEhrService {
             ));
         }
         let touches_ehr_access = containers.iter().any(|c| c.kind == Kind::EhrAccess);
+        let landed: Vec<VoId> = containers.iter().map(|c| c.vo_id).collect();
         commit_import(&mut tx, &signing, &self.privacy, ehr_id, &audit, containers).await?;
         // An EHR is created as "a root EHR object, an EHR Status object, and an
         // EHR Access object" (RM ehr master04 §EHR Creation) and `EHR.ehr_access`
@@ -178,7 +180,8 @@ impl FerroEhrService {
         } else {
             self.prewarm_ehr_access_open(ehr_id).await;
         }
-        self.emit_extract_audit(ehr_id, EventActionCode::Create)?;
+        let content = self.landed_content(&landed).await;
+        self.emit_extract_audit(ehr_id, EventActionCode::Create, Some(content))?;
         Ok(ehr_id)
     }
 
@@ -236,6 +239,7 @@ impl FerroEhrService {
 
         let mut tx = self.pool.begin().await.map_err(ServiceError::from)?;
         let touches_ehr_access = containers.iter().any(|c| c.kind == Kind::EhrAccess);
+        let landed: Vec<VoId> = containers.iter().map(|c| c.vo_id).collect();
         commit_import(
             &mut tx,
             &signing,
@@ -256,8 +260,29 @@ impl FerroEhrService {
         if touches_ehr_access {
             self.invalidate_ehr_access(an_ehr_id).await;
         }
-        self.emit_extract_audit(an_ehr_id, EventActionCode::Create)?;
+        let content = self.landed_content(&landed).await;
+        self.emit_extract_audit(an_ehr_id, EventActionCode::Create, Some(content))?;
         Ok(())
+    }
+
+    /// What an import landed, for its access record's EHDS priority category
+    /// (Annex II 3.2(c), `docs/law/eu/ehds/text.html`): the newest content of
+    /// each received versioned object.
+    ///
+    /// The import has committed by then, so a failed read is logged and the
+    /// record is written `unclassified` rather than failing a completed import.
+    async fn landed_content(&self, landed: &[VoId]) -> AccessedContent {
+        match self.audit_content_of_objects(landed).await {
+            Ok(content) => AccessedContent::Objects(content),
+            Err(e) => {
+                tracing::warn!(
+                    error = %e,
+                    "reading the categories of an imported Extract failed; the access \
+                     record is written unclassified"
+                );
+                AccessedContent::Objects(Vec::new())
+            }
+        }
     }
 
     /// Replay the extract's demographics chapter into the demographic domain,

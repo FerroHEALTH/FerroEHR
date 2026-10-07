@@ -27,6 +27,7 @@ fn config(arr_url: &str) -> AuditConfig {
             retention_days: 0,
             retention_years: None,
             sgb_v_309_controller: false,
+            verify_interval_seconds: 0,
         },
         fhir_feed: FhirFeedConfig {
             enabled: true,

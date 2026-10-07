@@ -33,7 +33,8 @@ const PROJECT_URL: &str = "https://github.com/FerroHEALTH/FerroEHR";
 /// generation set.
 ///
 /// Kept parameterized (rather than reading `CARGO_PKG_VERSION` / a global)
-/// so it is unit-testable; [`print()`] supplies the real values. The pins
+/// so it is unit-testable; [`print()`] supplies the real values, `support`
+/// being [`crate::support::SupportPeriod::describe_on`] for today. The pins
 /// are read from the shared [`crate::telemetry::provenance`] source and the
 /// manufacturer's name, postal address and contact from [`MANUFACTURER`], so
 /// the banner can never drift from what the server actually serves.
@@ -42,6 +43,7 @@ pub fn render(
     version: &str,
     profile: crate::config::profile::SpecProfile,
     deployment: &crate::config::deployment::DeploymentPosture,
+    support: &str,
     colour: bool,
 ) -> String {
     let mut out = format!(
@@ -63,6 +65,7 @@ pub fn render(
         // Left-pad the version column so the pins line up as a list.
         let _ = writeln!(out, "  {label:<12}{pin}");
     }
+    let _ = writeln!(out, "  {:<12}{support}", "Support");
     let _ = writeln!(out, "  {:<12}{}", "Deployment", deployment.profile);
     // The sandbox notice: red where a terminal shows colour, and the same
     // words where it does not, because colour is the first thing a scraped
@@ -122,9 +125,16 @@ pub fn print(
     deployment: &crate::config::deployment::DeploymentPosture,
     colour: bool,
 ) {
+    let support = crate::support::SupportPeriod::current().describe_on(crate::support::today_utc());
     println!(
         "{}",
-        render(env!("CARGO_PKG_VERSION"), profile, deployment, colour)
+        render(
+            env!("CARGO_PKG_VERSION"),
+            profile,
+            deployment,
+            &support,
+            colour
+        )
     );
 }
 
@@ -149,6 +159,7 @@ mod tests {
             "1.0.0",
             crate::config::profile::SpecProfile::Development,
             &sandbox(),
+            "until the end of October 2031",
             false,
         );
         // The notice is wrapped to the banner's width, so compare on words.
@@ -160,6 +171,7 @@ mod tests {
             "1.0.0",
             crate::config::profile::SpecProfile::Development,
             &sandbox(),
+            "until the end of October 2031",
             true,
         );
         assert!(coloured.contains("\x1b[1;31m"), "{coloured}");
@@ -172,6 +184,7 @@ mod tests {
             "1.0.0",
             crate::config::profile::SpecProfile::Development,
             &production,
+            "until the end of October 2031",
             true,
         );
         assert!(
@@ -186,6 +199,7 @@ mod tests {
             "9.9.9",
             crate::config::profile::SpecProfile::Development,
             &sandbox(),
+            "until the end of October 2031",
             false,
         );
         assert!(b.contains("v9.9.9"), "version must be substituted");
@@ -211,6 +225,7 @@ mod tests {
             "9.9.9",
             crate::config::profile::SpecProfile::Development,
             &sandbox(),
+            "until the end of October 2031",
             false,
         );
         assert!(
@@ -231,6 +246,7 @@ mod tests {
             "9.9.9",
             crate::config::profile::SpecProfile::Stable,
             &sandbox(),
+            "until the end of October 2031",
             false,
         );
         assert!(b.contains("stable"));
@@ -243,6 +259,7 @@ mod tests {
             env!("CARGO_PKG_VERSION"),
             crate::config::profile::SpecProfile::default(),
             &sandbox(),
+            &crate::support::SupportPeriod::current().describe_on(crate::support::today_utc()),
             false,
         )
         .lines()
@@ -262,9 +279,26 @@ mod tests {
                 env!("CARGO_PKG_VERSION"),
                 crate::config::profile::SpecProfile::default(),
                 &sandbox(),
+                "until the end of October 2031",
                 false,
             )
             .contains(env!("CARGO_PKG_VERSION"))
+        );
+    }
+
+    /// The banner states the support period's end month (CRA Art. 13(19)).
+    #[test]
+    fn banner_states_the_support_period() {
+        let b = render(
+            "9.9.9",
+            crate::config::profile::SpecProfile::Development,
+            &sandbox(),
+            "until the end of October 2031",
+            false,
+        );
+        assert!(
+            b.contains("  Support     until the end of October 2031\n"),
+            "{b}"
         );
     }
 }

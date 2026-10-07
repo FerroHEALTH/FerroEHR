@@ -180,8 +180,8 @@ pub fn router(state: AppState, authenticator: Arc<Authenticator>) -> Router {
     // Only when enabled and not bound to a separate port (which the binary
     // serves on its own listener).
     let app = if observability.management.enabled && observability.management.port.is_none() {
-        let mgmt = management::router(ManagementState::from_observability(
-            observability,
+        let mgmt = management::router(ManagementState::from_app_state(
+            &audit_state,
             authenticator,
             mgmt_rbac,
         ))
@@ -429,8 +429,8 @@ fn management_rbac(state: &AppState) -> ferroehr::config::authz::RbacConfig {
 /// Builds the standalone management router for separate-port mode, which the
 /// binary serves on the management listener when `management.port` is set.
 pub fn management_router(state: &AppState, authenticator: Arc<Authenticator>) -> Router {
-    management::router(ManagementState::from_observability(
-        state.observability().clone(),
+    management::router(ManagementState::from_app_state(
+        state,
         authenticator,
         management_rbac(state),
     ))

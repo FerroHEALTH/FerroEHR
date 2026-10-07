@@ -48,10 +48,16 @@ pub(super) async fn run(
             )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let vo_id = parse_uuid(&p.versioned_object_uid, "versioned_object_uid")?;
-            let resp = state
+            let vo_id = ferroehr::ids::VoId(vo_id);
+            let mut resp = state
                 .backend()
-                .versioned_composition_response(ehr_id, ferroehr::ids::VoId(vo_id))
+                .versioned_composition_response(ehr_id, vo_id)
                 .await?;
+            // The container carries no content of its own, so the access
+            // record is classified by the COMPOSITION it holds (EHDS Annex II
+            // 3.2(c)).
+            let content = state.backend().audit_content_of_objects(&[vo_id]).await?;
+            resp.meta = resp.meta.map(|meta| meta.with_content(content));
             Ok(negotiate::read_rm::<VersionedComposition>(
                 h,
                 &base,

@@ -164,7 +164,9 @@ pub(super) async fn run(
                 {
                     m = m.with_last_modified(at);
                 }
-                m
+                // The access record carries the categories of the versions the
+                // CONTRIBUTION committed, resolved or not (EHDS Annex II 3.2(c)).
+                m.with_content(state.backend().audit_content_of_contribution(cid).await?)
             };
             // The envelope stays canonical JSON; a Simplified `Accept`
             // serializes each `versions[i].data` COMPOSITION into the requested

@@ -20,13 +20,13 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>FerroEHR — a pure-Rust openEHR Clinical Data Repository</title>
-  <meta name="description" content="FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0, AQL 1.1, PostgreSQL 18-native storage, shipped as a single self-contained binary. Spec-compliant and machine-verified.">
+  <meta name="description" content="FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0, AQL 1.1, PostgreSQL 18-native storage, shipped as a single self-contained binary. Conformance measured and machine-verified.">
   <link rel="canonical" href="https://ferroehr.eu/">
   <link rel="icon" type="image/svg+xml" href="./assets/logo-mark.svg">
   <link rel="stylesheet" href="./style.css">
   <meta property="og:type" content="website">
   <meta property="og:title" content="FerroEHR — a pure-Rust openEHR Clinical Data Repository">
-  <meta property="og:description" content="Spec-compliant and measured. ITS-REST 1.1.0 · AQL 1.1 · PostgreSQL 18.">
+  <meta property="og:description" content="openEHR conformance, measured. ITS-REST 1.1.0 · AQL 1.1 · PostgreSQL 18.">
   <meta property="og:url" content="https://ferroehr.eu/">
   <meta property="og:site_name" content="FerroEHR">
   <meta property="og:image" content="https://ferroehr.eu/assets/social-card.png">
@@ -36,7 +36,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="https://ferroehr.eu/assets/social-card.png">
   <meta name="twitter:title" content="FerroEHR — a pure-Rust openEHR Clinical Data Repository">
-  <meta name="twitter:description" content="Spec-compliant and measured. ITS-REST 1.1.0 · AQL 1.1 · PostgreSQL 18.">
+  <meta name="twitter:description" content="openEHR conformance, measured. ITS-REST 1.1.0 · AQL 1.1 · PostgreSQL 18.">
 
   <!-- Structured data. `WebSite` + `Organization` identify the site and its
        publisher; `SoftwareSourceCode` describes what the site is ABOUT (an
@@ -57,7 +57,7 @@
         "@id": "https://ferroehr.eu/#website",
         "url": "https://ferroehr.eu/",
         "name": "FerroEHR",
-        "description": "A pure-Rust openEHR Clinical Data Repository, spec-conformant and measured.",
+        "description": "A pure-Rust openEHR Clinical Data Repository, with its openEHR conformance measured.",
         "inLanguage": "en",
         "publisher": { "@id": "https://ferroehr.eu/#publisher" },
         "hasPart": [
@@ -127,7 +127,7 @@
     <section class="hero">
       <div class="wrap">
         <img class="hero-logo" src="./assets/logo.svg" alt="FerroEHR">
-        <h1>A pure-Rust openEHR Clinical Data Repository. Spec-compliant and measured.</h1>
+        <h1>A pure-Rust openEHR Clinical Data Repository. openEHR conformance, measured.</h1>
         <p class="sub">
           openEHR separates clinical knowledge from software: applications store
           and query structured health records through a vendor-neutral REST API
@@ -138,7 +138,7 @@
           <a class="btn btn-primary" href="./docs/latest/getting-started.html">Get started</a>
           <a class="btn btn-ghost" href="https://sandbox.ferroehr.eu" rel="noopener">Try the live demo</a>
         </div>
-        <p class="note">No JVM · no language runtime · every compliance claim machine-verified.</p>
+        <p class="note">No JVM · no language runtime · every conformance number machine-verified.</p>
       </div>
     </section>
 
@@ -176,8 +176,8 @@
       <div class="wrap">
         <div class="section-head">
           <span class="eyebrow">Conformance</span>
-          <h2>Compliance you can verify.</h2>
-          <p>Every release runs the complete conformance catalogue against the live server, in JSON and XML, and computes the openEHR profile verdicts.</p>
+          <h2>Conformance you can verify.</h2>
+          <p>The complete openEHR conformance catalogue runs against a live server, in JSON and XML, and the runner computes the profile verdicts. The committed record names the FerroEHR version it measured.</p>
         </div>
         <!-- Conformance numbers/verdicts are DERIVED AT BUILD TIME from
              docs/conformance/ferroehr/ by scripts/render/conformance-stats.sh
@@ -208,7 +208,7 @@
       <div class="wrap">
         <div class="section-head">
           <span class="eyebrow">Platform</span>
-          <h2>Everything the openEHR standard asks for</h2>
+          <h2>The openEHR platform services</h2>
           <p>Generated from the official machine-readable models: a specification update is a regeneration.</p>
         </div>
         <div class="grid">
@@ -252,7 +252,7 @@
           <article class="card">
             <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
             <h3>Security</h3>
-            <p>OIDC authentication, RBAC/ABAC authorization, multi-tenancy and IHE ATNA audit.</p>
+            <p>OIDC authentication, RBAC/ABAC authorization and an IHE ATNA access log. One instance per organisation.</p>
           </article>
 
           <article class="card">

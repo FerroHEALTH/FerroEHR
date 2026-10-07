@@ -17,6 +17,86 @@ workflow refuses a tag that has no matching section here.
 
 ### Added
 
+- **The server verifies the audit hash chain on a schedule** (#3640, CRA
+  Annex I Part I(2)(f)): `[audit.store] verify_interval_seconds` (default one
+  day, `0` turns it off). A finding is logged at ERROR, counted in
+  `atna_audit_chain_findings` and reported as the `audit_chain` indicator.
+- **The running server states its support period** (#3639): five years from
+  the release month (CRA Art. 13(8)) on the boot banner, in `ferroehr
+  --version`, on `GET /management/info` and on the REST status document
+  (`support.status` is `supported`, `ended` or `unreleased`). Once the period
+  has ended it logs a WARN at boot and daily (CRA Art. 13(19)).
+- **More access records carry EHDS priority categories** (#3653): logical
+  composition deletes, `CONTRIBUTION` reads with or without `resolve_refs`,
+  `VERSIONED_COMPOSITION` reads, and EHR Extract export and import records;
+  `EHR_ACCESS` is classified `none`.
+- **FerroEHR's intended purpose is stated** (#3641). The new book page
+  *Intended purpose* is Cadasto B.V.'s statement of who FerroEHR is for, the
+  data it is designed to process (with the EHDS Art. 14(1) priority
+  categories), the environment it runs in, the security environment it
+  assumes (TLS termination, an identity provider, database protection) and the
+  misuse it foresees (CRA Art. 3(23), Annex II point 4; EHDS Annex III 1(a)).
+- **A CRA cybersecurity risk assessment** (#3635). The new book page *CRA risk
+  assessment* rates FerroEHR's cybersecurity risks, states for each point of
+  CRA Annex I Part I(2) whether it applies, how it is implemented, the
+  evidence and the open issue, justifies the limbs that do not apply
+  (automatic updates, application-level encryption at rest, configuration
+  integrity), and lists every outbound data flow, the usage report included
+  (CRA Art. 13(2) to (4)).
+- **A hazard log for the access log** (#3618). The new book page *Hazard log*
+  lists nine patient-safety hazards of the European logging software
+  component, each with its control, the tests that show it holds and what
+  remains (EHDS Annex II 1.1).
+- **A claims review** (#3619). The new book page *Claims review* records the
+  reading of every public text against EHDS Art. 28, release by release, and
+  re-assesses EHDS Annex II 2.5 against the authorisation defaults.
+- **An information sheet and instructions for use accompany every release**
+  (#3617). The new book pages *Information sheet* (every point of EHDS
+  Art. 38(2): the manufacturer, the name, version and release date, the
+  intended purpose, the Art. 14(1) data categories, and the standards and
+  their versions) and *Instructions for use* (what FerroEHR runs on, an EU
+  deployment's configuration with `deployment_profile = "production"`,
+  `[audit.categories]` and `retention_years`, the maintenance it needs and how
+  often, and the known limitations EHDS Art. 28(b) asks to be stated, with the
+  CRA Annex II user information mapped point by point). The release lane
+  attaches both, cut from the tag, to each GitHub release
+  (`scripts/release/accompanying-documents.sh`).
+- **The technical documentation of EHDS Art. 37 and CRA Annex VII** (#3616)
+  is kept in `docs/technical-documentation/`, one file per Annex III element
+  and per CRA Annex VII point that adds one, each citing its evidence. A
+  release that changes the logging component updates it
+  (`scripts/checks/technical-documentation.sh --since <previous tag>`, EHDS
+  Art. 30(2)), and the tree states how each release's documentation is kept
+  for ten years, where the declaration of conformity will be published, and
+  how a translation is requested.
+- **`SECURITY.md` names how to hear of new releases** (#3639): subscribe to
+  the release feed (`https://github.com/FerroHEALTH/FerroEHR/releases.atom`)
+  and poll the published advisories
+  (`GET https://api.github.com/repos/FerroHEALTH/FerroEHR/security-advisories`),
+  since the server does not look for newer releases itself.
+- **A Cyber Resilience Act page** (#3626) states FerroEHR's position under the
+  CRA: Cadasto B.V. as manufacturer, why BUSL-1.1 is not free and open-source
+  software under CRA Art. 3(48), the reporting duty in force since 11
+  September 2026, the five-year support period, the conformity route through
+  the EHDS (CRA Art. 32(5a)), the default-product reading beside the competing
+  Annex III class I reading, the hosted-service case, and the questions for
+  counsel.
+- **Vulnerabilities can be reported by email** (#3646): `SECURITY.md`,
+  `security.txt` (a second `Contact: mailto:info@cadasto.com`) and the
+  *Complaints, incidents and vulnerabilities* page name info@cadasto.com
+  beside GitHub private vulnerability reporting, so a report needs no GitHub
+  account (CRA Art. 13(17)). An emailed report runs through the same
+  procedure and starts the same CRA Art. 14 clock.
+- **Component vulnerabilities are reported upstream** (#3648). Cadasto B.V.
+  reports a vulnerability it finds in an integrated component to that
+  component's maintainer and offers its fix (CRA Art. 13(6)), and records each
+  report in the new public register `docs/registers/upstream-reports.tsv`.
+- **What happens if Cadasto B.V. ceases operations** (#3651): `SECURITY.md`
+  and the *Complaints, incidents and vulnerabilities* page say whom the
+  manufacturer tells, in which order, that the support periods end on the
+  cessation date and that every published release stays published (CRA
+  Art. 13(23)).
+
 - **Every access record carries the EHDS priority categories of the data it
   served or wrote** (#3621, Annex II 3.2(c)). A new `[audit.categories]` map
   classifies an access from the template id, then the root archetype id, as
@@ -121,6 +201,63 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **What FerroEHR answers without a credential says only what a client or
+  probe needs** (#3671). `/health/readiness` keeps its `200`/`503` semantics
+  but its body carries the aggregate status and each indicator's name and
+  status only; the detail moves to `GET /management/health`. The public
+  `{rest root}/status` keeps status, versions, timestamp and the deployment
+  profile; the licence, the deployment gaps and the support period move to
+  `GET /management/status`. Both new endpoints are `off` until
+  `[management.endpoints]` names a level for them. The Security page lists
+  every route reachable without a credential and why, and a test drives every
+  mounted route to keep that list closed.
+
+- **Licence tokens are verified against the licensor's two master keys.** A
+  `[licence] file` token is accepted when it carries exactly one text
+  signature, made directly by one of the two embedded Cadasto B.V. keys
+  (`F2D214FC30698BA65A846B2BF2EA48D4C316406D`,
+  `0BCE848225EFAECA912175292DBFB014CA506311`); whether a key may sign is read
+  from the embedded certificate, never from the copy the token carries. The
+  previous licensing key is no longer trusted, and the embedded
+  `non-commercial` grant is re-signed (licence id
+  `01a1175c-cd67-777d-bdc0-c95bf1c900d3`). A token signed under the previous
+  key is reported as `refused` on `/management/status`, and the embedded grant stays
+  in force; the server behaves identically either way.
+
+- **`deployment_profile = "production"` refuses two more postures** (#3638):
+  `auth.enabled = false` (`auth_off`) and a plaintext listener on a routable
+  address (`plaintext_listener`), unless the gap is named in
+  `deployment_accepts`. A loopback bind is exempt; a deployment behind a
+  TLS-terminating ingress accepts `plaintext_listener` by name.
+- **A security fix ships in a security-only patch release** (#3644), unless
+  the release notes record why that was technically infeasible (CRA Annex I
+  Part II(2)); `SECURITY.md` no longer leaves it open.
+- **Every fixed vulnerability gets a GitHub security advisory** (#3645), for
+  FerroEHR's own code and for a dependency or base-image fix that changes a
+  shipped artefact, with a CVSS severity, the affected and fixed versions and
+  the remediation; the changelog's `### Security` entry carries the `GHSA-`
+  identifier. `SECURITY.md` states when the technical details of a fixed
+  vulnerability may be published later (CRA Annex I Part II(4)).
+- **The README, the landing page and the book no longer claim multi-tenancy,
+  "spec-compliant" or "hardened by default"** (#3619). FerroEHR is
+  single-tenant; the openEHR conformance record is described as measured, with
+  the version it measured; the README states that TLS is off by default, that
+  the shipped profile is `sandbox`, and that the in-tree FHIR connector is to
+  be removed in favour of FerroBRIDGE.
+
+- **The EHDS readiness and technical-documentation pages follow the
+  manufacturer decision** (#3626). Every Annex II row was re-read on
+  2026-10-06; the open questions are replaced by the decisions of #3606 (Cadasto
+  B.V. is the manufacturer, FerroEHR with FerroBRIDGE is the EHR system,
+  FerroBRIDGE ships the interoperability component) and the questions for
+  counsel; rows 3.1 and 1.3 now say what is missing (the assurance level, the
+  emergency-override mark), row 3.4 reflects the category-keyed retention and
+  `retention_years`, and each partial row links its open issue. The
+  shared-responsibility page and the compliance overview state both cases:
+  Cadasto B.V. is not the processor of a self-hosted deployment, and is the
+  customer's processor where it hosts FerroEHR. *Verifying releases* counts
+  nine published `openehr-*` crates, not eight.
+
 - **Every EU Member State carries an access-log retention floor of three
   years** (#3625, EHDS Art. 9(2), applying from 26 March 2029 and 2031 under
   Art. 105). A longer national floor still wins (the Netherlands, five years),
@@ -143,6 +280,9 @@ workflow refuses a tag that has no matching section here.
 
 ### Fixed
 
+- **The FHIR `AuditEvent` of an AQL query carries the origins of the data it
+  served** (#3654), one entity per origin with the capped-count marker, as a
+  document read does.
 - **The redacted configuration no longer prints the user name or password
   embedded in a URL** (#3629) on `/management/env`, `GET {base}/admin/config`,
   `ferroehr config check` or `ferroehr report`. The terminology provider `url`
@@ -162,6 +302,15 @@ workflow refuses a tag that has no matching section here.
   probe, the browser end-to-end runs and the conformance runs switch the
   report off, so throwaway instances on GitHub-hosted runners stop appearing in
   FerroPULSE. A CI check fails any new test launcher that leaves it on.
+
+### Security
+
+- **`auth.oidc.jwks_json` refuses a symmetric key or private key material at
+  boot** (#3664; RFC 7517 §4.1, RFC 7518 §6.4), so the inline key set holds
+  public keys only, and every configuration view shows the same value.
+- **The S3 store's endpoint refusals no longer print URL userinfo** (#3656): the
+  endpoint is validated once, by the configuration, and every refusal quotes it
+  masked.
 
 ## [4.3.4] - 2026-10-06
 

@@ -8,7 +8,12 @@
 # Expires MUST be refreshed before the date below (RFC 9116 §2.5.5: a stale file
 # is to be treated as invalid). The release procedure is where to do it.
 
+# Two contacts, in order of preference: GitHub private vulnerability reporting
+# (needs a GitHub account), and the manufacturer's single point of contact by
+# email (no account needed; subject "FerroEHR vulnerability"). Both reach the
+# same procedure.
 Contact: https://github.com/FerroHEALTH/FerroEHR/security/advisories/new
+Contact: mailto:info@cadasto.com
 Expires: 2027-08-06T00:00:00.000Z
 Preferred-Languages: en, nl
 Canonical: https://ferroehr.eu/.well-known/security.txt

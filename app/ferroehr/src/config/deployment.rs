@@ -33,6 +33,7 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 
 use crate::config::FerroEhrConfig;
+use crate::config::server::binds_loopback;
 use crate::db::MigrationMode;
 
 /// How rigorously this deployment is held to the separations.
@@ -103,7 +104,7 @@ impl std::str::FromStr for DeploymentProfile {
 ///
 /// Each is a real, checkable property; none is a box ticked by being present.
 /// The token is what `deployment_accepts` names to run `production` without
-/// it, which is then said loudly at boot and on `/rest/status`.
+/// it, which is then said loudly at boot and on `/management/status`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum DeploymentGap {
@@ -143,6 +144,20 @@ pub enum DeploymentGap {
     /// `db.migrate = "apply"` with no `db.migrate_url`, or a relocated domain
     /// whose database is prepared on the domain's own runtime DSN.
     MigrateOnRuntimeCredential,
+    /// `auth.enabled` is `false`, so every request is served unauthenticated.
+    ///
+    /// `docs/law/eu/cra/text.html Annex I Part I(2)(d)`: products shall "ensure
+    /// protection from unauthorised access by appropriate control mechanisms,
+    /// including but not limited to authentication".
+    AuthOff,
+    /// The main listener speaks plaintext (`server.tls.enabled = false`) on an
+    /// address reachable off the host; a loopback bind is exempt.
+    ///
+    /// `docs/law/eu/cra/text.html Annex I Part I(2)(e)`: products shall "protect
+    /// the confidentiality of stored, transmitted or otherwise processed data
+    /// … by encrypting relevant data … in transit". Accepting the gap by name
+    /// records that a TLS-terminating ingress fronts the port.
+    PlaintextListener,
 }
 
 impl DeploymentGap {
@@ -157,11 +172,13 @@ impl DeploymentGap {
             Self::AuditFailsOpen => "audit_fails_open",
             Self::OpenEhrAccessDefault => "open_ehr_access_default",
             Self::MigrateOnRuntimeCredential => "migrate_on_runtime_credential",
+            Self::AuthOff => "auth_off",
+            Self::PlaintextListener => "plaintext_listener",
         }
     }
 
     /// What is missing, what was found, and what to change: the sentence the
-    /// banner, the boot log, the refusal and `/rest/status` all carry.
+    /// banner, the boot log, the refusal and `/management/status` all carry.
     #[must_use]
     pub const fn describe(self) -> &'static str {
         match self {
@@ -198,6 +215,16 @@ impl DeploymentGap {
                 "[db] migrate is `apply` on a credential that also serves requests; set [db] \
                  migrate_url to the credential that prepares the schema, give a relocated domain \
                  a migrator of its own, or run migrate = \"verify\""
+            }
+            Self::AuthOff => {
+                "[auth] enabled is false, so every request is served unauthenticated; set [auth] \
+                 enabled = true with [auth.oidc] or [auth.basic] configured"
+            }
+            Self::PlaintextListener => {
+                "[server] bind is a routable address and [server.tls] is off, so clinical data and \
+                 credentials cross the network unencrypted; enable [server.tls], bind to loopback, \
+                 or accept plaintext_listener by name when a TLS-terminating ingress fronts this \
+                 port"
             }
         }
     }
@@ -313,6 +340,12 @@ impl DeploymentPosture {
         {
             gaps.push(DeploymentGap::MigrateOnRuntimeCredential);
         }
+        if !config.auth.enabled {
+            gaps.push(DeploymentGap::AuthOff);
+        }
+        if !config.server.tls.enabled && !binds_loopback(&config.server.bind) {
+            gaps.push(DeploymentGap::PlaintextListener);
+        }
         let accepted = gaps
             .iter()
             .copied()
@@ -348,7 +381,7 @@ impl DeploymentPosture {
         let mut out = String::from(
             "deployment_profile = \"production\" refuses to start: this deployment has not made \
              the separations production asserts. Make them, or accept each one by name in \
-             deployment_accepts (which is then stated on every boot and on /rest/status):",
+             deployment_accepts (which is then stated on every boot and on /management/status):",
         );
         for gap in self.refusals() {
             out.push_str("\n  - ");
@@ -400,6 +433,13 @@ mod tests {
                     ..crate::config::authz::RbacConfig::default()
                 },
                 ..crate::config::authz::AuthzConfig::default()
+            },
+            server: crate::config::server::ServerConfig {
+                tls: crate::config::server::TlsConfig {
+                    enabled: true,
+                    ..crate::config::server::TlsConfig::default()
+                },
+                ..crate::config::server::ServerConfig::default()
             },
             ..FerroEhrConfig::default()
         }
@@ -455,8 +495,9 @@ mod tests {
                 DeploymentGap::AuditFailsOpen,
                 DeploymentGap::OpenEhrAccessDefault,
                 DeploymentGap::MigrateOnRuntimeCredential,
+                DeploymentGap::PlaintextListener,
             ],
-            "auditing is on by default with the local store, so it is not a gap"
+            "auditing and authentication are on by default, so neither is a gap"
         );
         assert!(posture.permits_boot());
     }
@@ -555,6 +596,8 @@ mod tests {
             DeploymentGap::AuditFailsOpen,
             DeploymentGap::OpenEhrAccessDefault,
             DeploymentGap::MigrateOnRuntimeCredential,
+            DeploymentGap::AuthOff,
+            DeploymentGap::PlaintextListener,
         ] {
             assert_eq!(
                 serde_json::to_string(&gap).ok(),
@@ -701,5 +744,73 @@ mod tests {
         let posture = DeploymentPosture::evaluate(&config, &relocated);
         assert_eq!(posture.gaps, [DeploymentGap::MigrateOnRuntimeCredential]);
         assert!(!posture.permits_boot());
+    }
+
+    /// `production` refuses unauthenticated serving, and accepting `auth_off`
+    /// by name is the only way to boot with it (CRA Annex I Part I(2)(d)).
+    #[test]
+    fn production_refuses_auth_off_unless_accepted_by_name() {
+        let mut config = production(separated());
+        config.auth.enabled = false;
+        let posture = DeploymentPosture::evaluate(&config, &distinct_clusters());
+        assert_eq!(posture.gaps, [DeploymentGap::AuthOff]);
+        assert!(!posture.permits_boot());
+        let message = posture.refusal_message();
+        assert!(message.contains("auth_off"), "{message}");
+        assert!(
+            message.contains(DeploymentGap::AuthOff.describe()),
+            "{message}"
+        );
+
+        config.deployment_accepts = vec![DeploymentGap::AuthOff];
+        let accepted = DeploymentPosture::evaluate(&config, &distinct_clusters());
+        assert!(accepted.permits_boot());
+        assert_eq!(accepted.accepted, [DeploymentGap::AuthOff]);
+        assert_eq!(
+            accepted.gaps,
+            [DeploymentGap::AuthOff],
+            "accepting hides nothing"
+        );
+
+        config.deployment_accepts = vec![DeploymentGap::PlaintextListener];
+        let other_name = DeploymentPosture::evaluate(&config, &distinct_clusters());
+        assert!(
+            !other_name.permits_boot(),
+            "accepting a different gap does not accept this one"
+        );
+    }
+
+    /// `production` refuses a plaintext listener on a routable or ambiguous
+    /// address, exempts a loopback bind, and boots once `plaintext_listener`
+    /// is accepted by name (CRA Annex I Part I(2)(e)).
+    #[test]
+    fn production_refuses_a_routable_plaintext_listener_and_exempts_loopback() {
+        let mut config = production(separated());
+        config.server.tls.enabled = false;
+        for bind in [
+            "0.0.0.0:8080",
+            "10.0.0.4:8080",
+            "[::]:8080",
+            "ferroehr.internal:8080",
+        ] {
+            config.server.bind = bind.to_owned();
+            let posture = DeploymentPosture::evaluate(&config, &distinct_clusters());
+            assert_eq!(posture.gaps, [DeploymentGap::PlaintextListener], "{bind}");
+            assert!(!posture.permits_boot(), "{bind}");
+        }
+
+        for bind in ["127.0.0.1:8080", "[::1]:8080"] {
+            config.server.bind = bind.to_owned();
+            let posture = DeploymentPosture::evaluate(&config, &distinct_clusters());
+            assert!(posture.gaps.is_empty(), "{bind} is loopback: {posture:?}");
+            assert!(posture.permits_boot(), "{bind}");
+        }
+
+        config.server.bind = "0.0.0.0:8080".to_owned();
+        config.deployment_accepts = vec![DeploymentGap::PlaintextListener];
+        let accepted = DeploymentPosture::evaluate(&config, &distinct_clusters());
+        assert!(accepted.permits_boot());
+        assert_eq!(accepted.accepted, [DeploymentGap::PlaintextListener]);
+        assert_eq!(accepted.gaps, [DeploymentGap::PlaintextListener]);
     }
 }

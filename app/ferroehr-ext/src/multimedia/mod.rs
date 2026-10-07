@@ -67,6 +67,10 @@ pub enum MultimediaError {
     /// a caller that cannot tell them apart has to read prose.
     #[error("multimedia store configuration: {0}")]
     ConfigFailed(String, #[source] object_store::Error),
+    /// The platform's validation refused the configured endpoint; the cause is
+    /// the platform's own error type, and its message masks any `userinfo`.
+    #[error("multimedia store configuration: {0}")]
+    Endpoint(#[source] Box<dyn std::error::Error + Send + Sync>),
 }
 
 /// Whether the tree references ANY externalized blob (`s3://…`), regardless of

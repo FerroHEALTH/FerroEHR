@@ -14,6 +14,7 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use crate::system_log::chain_check::{ChainCheck, ChainCheckState};
 use crate::system_log::config::AuditPosture;
 use crate::system_log::sender::AuditSender;
 use crate::telemetry::health::{Health, HealthIndicator, HealthStatus};
@@ -152,6 +153,69 @@ impl HealthIndicator for AuditHealth {
         Health {
             status: HealthStatus::Up,
             detail: Some(detail),
+        }
+    }
+
+    fn required(&self) -> bool {
+        false
+    }
+}
+
+/// `audit_chain` — reports the latest scheduled verification of the local
+/// audit store's hash chain.
+///
+/// Damage reads `DOWN` and an unverifiable trail `DEGRADED`, each naming the
+/// finding; neither flips readiness, because the trail still records while the
+/// damage is investigated. Registered only when the scheduled verification
+/// runs.
+#[derive(Debug)]
+pub struct AuditChainHealth {
+    check: ChainCheck,
+}
+
+impl AuditChainHealth {
+    /// Constructs over the scheduled verification's shared result.
+    #[must_use]
+    pub fn new(check: ChainCheck) -> Self {
+        Self { check }
+    }
+}
+
+#[async_trait]
+impl HealthIndicator for AuditChainHealth {
+    fn name(&self) -> &'static str {
+        "audit_chain"
+    }
+
+    async fn check(&self) -> Health {
+        match self.check.state() {
+            ChainCheckState::Pending => Health {
+                status: HealthStatus::Up,
+                detail: Some("the first scheduled verification has not run yet".to_owned()),
+            },
+            ChainCheckState::Intact { at } => Health {
+                status: HealthStatus::Up,
+                detail: Some(format!("hash chain verified intact at {at}")),
+            },
+            ChainCheckState::Damaged {
+                at,
+                total,
+                findings,
+            } => {
+                let first = findings.first().map_or_else(String::new, |finding| {
+                    let position = finding
+                        .chain_seq
+                        .map_or_else(|| "chain state".to_owned(), |seq| format!("position {seq}"));
+                    format!("; first at {position}: {}", finding.finding)
+                });
+                Health::down(format!(
+                    "hash chain DAMAGED at {at}: {total} finding(s){first}; see \
+                     audit.verify_audit_chain()"
+                ))
+            }
+            ChainCheckState::Unverifiable { at, reason } => Health::degraded(format!(
+                "the hash chain could not be verified at {at}: {reason}"
+            )),
         }
     }
 

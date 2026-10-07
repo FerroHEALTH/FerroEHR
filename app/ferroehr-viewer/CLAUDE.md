@@ -171,8 +171,10 @@ extension); the wire it consumes IS spec-bound (`docs/specs/openehr/ITS-REST/`
   the CDR exposes one fact on more than one endpoint, the viewer picks ONE
   reader and every other screen cross-links to it. Live cases: the topbar pill
   reads the status document (`/ferroehr/rest/status` — API up + version) while
-  the operations panel's health card reads `/health/readiness` (dependency
-  indicators), and the screen states the split; the redacted effective
+  the operations panel's health card reads the dependency indicators
+  (`/management/health` with their detail, falling back to the status-only
+  public `/health/readiness` when that endpoint is absent or refuses the
+  session's role), and the screen states the split; the redacted effective
   configuration is served identically by `/management/env` and `/admin/config`,
   so the ONE viewer lives on `/system` (the API base URL is always configured;
   the management surface may sit on an unreachable internal port) and

@@ -61,7 +61,7 @@ pub struct FerroEhrConfig {
     pub deployment_profile: deployment::DeploymentProfile,
     /// `deployment_accepts` — the [`deployment::DeploymentGap`]s a `production`
     /// deployment runs without, each stated on every boot and on
-    /// `/rest/status`. Ignored under `sandbox`, which accepts everything.
+    /// `/management/status`. Ignored under `sandbox`, which accepts everything.
     pub deployment_accepts: Vec<deployment::DeploymentGap>,
     /// `[server]` — HTTP listener + REST surface + System-Options identity.
     pub server: server::ServerConfig,
@@ -607,7 +607,8 @@ impl FerroEhrConfig {
     /// that is not typed `SecretUrl`, or in a configuration no validation has
     /// run over, is masked too. Non-secret identifiers, such as a Basic user's
     /// `username` and `roles`, an OIDC `issuer` without `userinfo`, or
-    /// `auth.oidc.jwks_json` public verification material, stay visible.
+    /// `auth.oidc.jwks_json` (public verification material only, since boot
+    /// refuses a symmetric or private key in it), stay visible.
     ///
     /// # Errors
     /// [`ConfigError`] if the tree cannot be serialized to JSON.
@@ -870,7 +871,7 @@ fn years_fix(
     (floor.years <= ceiling.years && floor_days > ceiling_days).then_some(floor.years)
 }
 
-/// The `multimedia.endpoint` semantic checks.
+/// The `multimedia.endpoint` semantic checks of an enabled integration.
 ///
 /// An enabled integration with a blank or scheme-less endpoint would boot clean
 /// and then fail on the first `DV_MULTIMEDIA` commit. A `${VAR:-}` compose
@@ -882,35 +883,9 @@ fn multimedia_endpoint_errors(
     if !config.enabled {
         return Vec::new();
     }
-    let Some(endpoint) = &config.endpoint else {
-        return Vec::new();
-    };
-    let trimmed = endpoint.expose().trim();
-    let shown = secret::redact_userinfo(trimmed);
-    if trimmed.is_empty() {
-        return vec![ConfigError::semantic(
-            "multimedia.endpoint is set but empty — give an absolute URL \
-             (e.g. http://seaweedfs:8333) or remove the key to use default \
-             AWS endpoint resolution"
-                .to_owned(),
-        )];
-    }
-    match url::Url::parse(trimmed) {
-        // `seaweedfs:8333` parses as a URL (scheme `seaweedfs`, path `8333`),
-        // so syntax alone does not catch the common "host:port with no scheme"
-        // mistake — an S3 endpoint is http or https, and nothing else reaches
-        // a bucket.
-        Ok(url) if !matches!(url.scheme(), "http" | "https") => {
-            vec![ConfigError::semantic(format!(
-                "multimedia.endpoint {shown:?} has scheme {:?} — an S3 endpoint \
-                 must be http or https (did you mean \"http://{shown}\"?)",
-                url.scheme()
-            ))]
-        }
+    match config.endpoint_url() {
         Ok(_) => Vec::new(),
-        Err(e) => vec![ConfigError::semantic(format!(
-            "multimedia.endpoint {shown:?} is not an absolute URL: {e}"
-        ))],
+        Err(e) => vec![ConfigError::semantic(e.to_string())],
     }
 }
 
@@ -2447,6 +2422,25 @@ mod tests {
             oidc.jwks_json = None;
         }
         assert!(c.validate().is_ok());
+    }
+
+    /// RFC 7518 §6.4: a symmetric key in `auth.oidc.jwks_json` refuses the
+    /// whole tree, so neither the boot path nor `ferroehr config check` nor
+    /// `ferroehr report` (each validates before rendering) can print it.
+    #[test]
+    fn a_symmetric_jwks_key_refuses_the_tree_before_any_rendering() {
+        let secret_k = "b2N0LWtleS1tYXRlcmlhbC10aGF0LW11c3QtbmV2ZXItcHJpbnQ";
+        let mut c = FerroEhrConfig::default();
+        c.auth.oidc = Some(auth::OidcConfig {
+            issuer: "https://idp.example.test".to_owned(),
+            audiences: vec!["ferroehr".to_owned()],
+            jwks_json: Some(format!(r#"{{"keys":[{{"kty":"oct","k":"{secret_k}"}}]}}"#)),
+            ..auth::OidcConfig::default()
+        });
+        let err = c.validate().expect_err("an oct key must refuse the tree");
+        let text = err.to_string();
+        assert!(text.contains("auth.oidc.jwks_json"), "{text}");
+        assert!(!text.contains(secret_k), "{text}");
     }
 
     /// The `[auth.oidc]` boot rules reach the aggregated tree validation, so

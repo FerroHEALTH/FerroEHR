@@ -312,6 +312,7 @@ fn build_entities(event: &AuditEvent, subject: Option<&str>, missing: &str) -> V
             query: Some(expression),
             details: Vec::new(),
         });
+        entities.extend(origin_entities(event));
         entities.extend(category_entity(event));
         return entities;
     }
@@ -340,32 +341,41 @@ fn build_entities(event: &AuditEvent, subject: Option<&str>, missing: &str) -> V
         });
     }
 
-    // The origins of the served data (EHDS Annex II 3.2(e), #3212): one entity
-    // per originating system, named so a reader can tell it from the object
-    // entity, with the true distinct count when the set was capped.
-    let capped = event
-        .origin_count
-        .filter(|count| *count > u64::try_from(event.origins.len()).unwrap_or(u64::MAX));
-    for (index, origin) in event.origins.iter().enumerate() {
-        let name = match (index, capped) {
-            (0, Some(total)) => format!(
-                "origin of the served data ({total} distinct, first {} recorded)",
-                event.origins.len()
-            ),
-            _ => "origin of the served data".to_owned(),
-        };
-        entities.push(AuditEntityRef {
-            what: Some(origin.clone()),
-            entity_type: Some(coding(SYS_AUDIT_ENTITY_TYPE, "2", "System Object")),
-            role: None,
-            name: Some(name),
-            query: None,
-            details: Vec::new(),
-        });
-    }
-
+    entities.extend(origin_entities(event));
     entities.extend(category_entity(event));
     entities
+}
+
+/// The origins of the served data (EHDS Annex II 3.2(e), #3212), one entity
+/// per originating system, for a document read and a query alike.
+///
+/// Each entity is named so a reader can tell it from the object entity; the
+/// first carries the true distinct count when the recorded set was capped.
+fn origin_entities(event: &AuditEvent) -> impl Iterator<Item = AuditEntityRef> + '_ {
+    let recorded = event.origins.len();
+    let capped = event
+        .origin_count
+        .filter(|count| *count > u64::try_from(recorded).unwrap_or(u64::MAX));
+    event
+        .origins
+        .iter()
+        .enumerate()
+        .map(move |(index, origin)| {
+            let name = match (index, capped) {
+                (0, Some(total)) => format!(
+                    "origin of the served data ({total} distinct, first {recorded} recorded)"
+                ),
+                _ => "origin of the served data".to_owned(),
+            };
+            AuditEntityRef {
+                what: Some(origin.clone()),
+                entity_type: Some(coding(SYS_AUDIT_ENTITY_TYPE, "2", "System Object")),
+                role: None,
+                name: Some(name),
+                query: None,
+                details: Vec::new(),
+            }
+        })
 }
 
 /// The categories of the data accessed (EHDS Annex II 3.2(c), #3621), as one
@@ -620,6 +630,48 @@ mod tests {
             v["meta"]["profile"][0],
             "https://profiles.ihe.net/ITI/BALP/StructureDefinition/IHE.BasicAudit.Query"
         );
+    }
+
+    /// A query record renders one origin entity per recorded origin, in the
+    /// shape a document read uses, with the capped-count marker (#3654).
+    #[test]
+    fn query_record_carries_the_origins_of_the_served_data() {
+        let mut e = event(
+            EventActionCode::Execute,
+            ObjectClass::Query,
+            EventOutcome::Success,
+        );
+        e.object_id = Some("eu.ferroehr::q1".to_owned());
+        e.record_origins(vec!["system-a".to_owned(), "system-b".to_owned()], Some(7));
+        let v = json(&e, None);
+        let entities = v["entity"].as_array().expect("entities");
+        let origins: Vec<&serde_json::Value> = entities
+            .iter()
+            .filter(|entity| {
+                entity["name"]
+                    .as_str()
+                    .is_some_and(|name| name.starts_with("origin of the served data"))
+            })
+            .collect();
+        assert_eq!(origins.len(), 2, "{v}");
+        let mut served: Vec<&str> = origins
+            .iter()
+            .map(|entity| {
+                entity["what"]["identifier"]["value"]
+                    .as_str()
+                    .expect("what")
+            })
+            .collect();
+        served.sort_unstable();
+        assert_eq!(served, ["system-a", "system-b"]);
+        assert_eq!(
+            origins[0]["name"],
+            "origin of the served data (7 distinct, first 2 recorded)"
+        );
+        assert_eq!(origins[1]["name"], "origin of the served data");
+        assert_eq!(origins[0]["type"]["code"], "2");
+        // The query entity keeps the first position.
+        assert_eq!(entities[0]["role"]["code"], "24");
     }
 
     #[test]

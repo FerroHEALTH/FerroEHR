@@ -262,6 +262,8 @@ ticked by being present:
 | `audit_fails_open` | `[audit] fail_mode = "closed"`, so an operation whose access record cannot be taken is refused instead of succeeding unlogged |
 | `open_ehr_access_default` | `[authz.rbac] ehr_access_default = "restricted"`, so an EHR carrying no `ACCESS_CONTROL_SETTINGS` is reachable only by an admin. The shipped default is `open` |
 | `migrate_on_runtime_credential` | `[db] migrate_url` set, or `migrate = "verify"`, so no credential that serves requests can alter the schema. Evaluated per domain database: a domain relocated to a database of its own is prepared on that domain's runtime DSN |
+| `auth_off` | `[auth] enabled = true`, so no request is served unauthenticated (CRA Annex I Part I(2)(d)) |
+| `plaintext_listener` | `[server.tls]` enabled, or `[server] bind` on a loopback address, so data does not cross the network in clear (CRA Annex I Part I(2)(e)). A deployment behind a TLS-terminating ingress accepts `plaintext_listener` by name, which records that the ingress carries the encryption. A bind whose host is a DNS name or empty counts as routable |
 
 An accepted gap is stated on every boot and on `/rest/status`; it can be run,
 not hidden. Environment form: `FERROEHR__DEPLOYMENT_PROFILE=production`,

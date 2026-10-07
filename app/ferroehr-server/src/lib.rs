@@ -29,6 +29,7 @@ use ferroehr::config::management::ManagementConfig;
 use ferroehr::db::domain::{Domain, DomainPools};
 use ferroehr::manufacturer::MANUFACTURER;
 use ferroehr::report::Report;
+use ferroehr::support::{SupportPeriod, today_utc};
 use ferroehr::system_log::config::AuditConfig;
 use ferroehr::system_log::config::AuditPosture;
 use ferroehr::system_log::sender::{AuditHandle, AuditSender, SubjectResolver};
@@ -55,9 +56,15 @@ const AUDIT_DRAIN_TIMEOUT: Duration = Duration::from_secs(5);
 /// What `ferroehr --version` prints after the binary's name: the version, then
 /// the manufacturer with its postal address, single point of contact and
 /// website (Regulation (EU) 2025/327, `docs/law/eu/ehds/text.html`
-/// Art. 30(1)(g)).
-static VERSION_TEXT: LazyLock<String> =
-    LazyLock::new(|| MANUFACTURER.version_text(env!("CARGO_PKG_VERSION")));
+/// Art. 30(1)(g)), then the support period (Regulation (EU) 2024/2847,
+/// `docs/law/eu/cra/text.html` Art. 13(19)).
+static VERSION_TEXT: LazyLock<String> = LazyLock::new(|| {
+    format!(
+        "{}\nSupport: {}",
+        MANUFACTURER.version_text(env!("CARGO_PKG_VERSION")),
+        SupportPeriod::current().describe_on(today_utc())
+    )
+});
 
 /// `FerroEHR` server command-line interface.
 #[derive(Debug, Parser)]
@@ -483,17 +490,6 @@ fn prints_banner(format: LogFormat, stdout_is_terminal: bool) -> bool {
     format.resolve(stdout_is_terminal) == ResolvedLogFormat::Pretty
 }
 
-/// Whether a bind address is loopback-only, so a plaintext listener there is
-/// not reachable off the host.
-///
-/// A host part that does not parse as an IP address (a DNS name, or the empty
-/// host of `:8080`) is treated as routable: assuming otherwise would suppress
-/// the warning in exactly the ambiguous case that deserves it.
-fn binds_loopback(bind: &str) -> bool {
-    bind.parse::<std::net::SocketAddr>()
-        .is_ok_and(|address| address.ip().is_loopback())
-}
-
 /// Summarizes which management endpoints are mounted, and at which access
 /// level, as `info=admin_only, prometheus=public`.
 ///
@@ -510,6 +506,8 @@ fn mounted_management_endpoints(levels: EndpointLevels) -> String {
         ("env", levels.env),
         ("loggers", levels.loggers),
         ("flamegraph", levels.flamegraph),
+        ("health", levels.health),
+        ("status", levels.status),
     ];
     let mounted: Vec<String> = described
         .iter()
@@ -568,7 +566,7 @@ fn assemble_service(
 
     // The licence in force: the configured token, else the one the build
     // embeds. Never a boot failure; the outcome is logged once, served on
-    // GET /rest/status, and selects the identifier stamp key.
+    // GET /management/status, and selects the identifier stamp key.
     let licence = load_licence(config)?;
     tracing::info!(licence = %licence, "licence");
 
@@ -838,15 +836,6 @@ fn warn_boot_postures(config: &ferroehr::config::FerroEhrConfig) {
              namespace"
         );
     }
-    if config.auth.enabled && !config.server.tls.enabled && !binds_loopback(&config.server.bind) {
-        tracing::warn!(
-            bind = %config.server.bind,
-            "authentication is enabled but this listener is PLAINTEXT on a routable address. \
-             Credentials and bearer tokens will cross the wire unencrypted unless a \
-             TLS-terminating proxy fronts this port. Enable [server.tls] or ensure the ingress \
-             terminates TLS."
-        );
-    }
 }
 
 /// Connects the four domain pools and prepares every database they reach.
@@ -1012,6 +1001,9 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         telemetry::init(&telemetry_config, &build_info).context("initialising telemetry")?;
 
     warn_boot_postures(&config);
+    // The support statement at boot, and a WARN at boot and daily once the
+    // period has ended (CRA Art. 13(19)).
+    let support_watch = tokio::spawn(ferroehr::support::watch(SupportPeriod::current()));
     let pools = connect_pool(&config).await?;
     let pool = pools.clinical.clone();
 
@@ -1069,6 +1061,9 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         Some(sender) => indicators::AuditHealth::new(sender.clone(), audit_posture),
         None => indicators::AuditHealth::disabled(audit_posture),
     }));
+    if let Some(check) = audit_handle.as_ref().and_then(AuditHandle::chain_check) {
+        indicators.push(Arc::new(indicators::AuditChainHealth::new(check)));
+    }
     #[cfg(feature = "events")]
     if let Some(handle) = &events_handle {
         indicators.push(Arc::new(indicators::EventsHealth::new(handle.healthy())));
@@ -1218,6 +1213,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     if let Some(handle) = fhir_outbound_handle {
         handle.shutdown(AUDIT_DRAIN_TIMEOUT).await;
     }
+    support_watch.abort();
     if let Some(handle) = usage_report {
         handle.abort();
     }
@@ -1329,7 +1325,7 @@ fn subject_resolver(pool: PgPool) -> SubjectResolver {
 
 #[cfg(test)]
 mod tests {
-    use super::{LogFormat, binds_loopback, prints_banner};
+    use super::{LogFormat, prints_banner};
 
     /// The banner follows the RESOLVED rendering: `auto` with stdout piped into
     /// a log collector renders JSON, so no banner may precede it. The terminal
@@ -1348,28 +1344,6 @@ mod tests {
                 prints_banner(LogFormat::Pretty, is_terminal),
                 "explicit pretty always prints the banner"
             );
-        }
-    }
-
-    #[test]
-    fn loopback_binds_are_recognized() {
-        assert!(binds_loopback("127.0.0.1:8080"));
-        assert!(binds_loopback("127.0.0.53:8080"));
-        assert!(binds_loopback("[::1]:8080"));
-    }
-
-    /// The plaintext-authentication warning must fire for anything reachable off
-    /// the host, and an unparseable host counts as reachable.
-    #[test]
-    fn routable_and_ambiguous_binds_are_not_loopback() {
-        for bind in [
-            "0.0.0.0:8080",
-            "10.0.0.4:8080",
-            "[::]:8080",
-            "ferroehr.internal:8080",
-            ":8080",
-        ] {
-            assert!(!binds_loopback(bind), "{bind} must count as routable");
         }
     }
 }

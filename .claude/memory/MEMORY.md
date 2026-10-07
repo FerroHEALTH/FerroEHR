@@ -81,3 +81,4 @@
 - [EHDS/CRA manufacturer posture](ehds-cra-manufacturer-posture.md) — Cadasto B.V. manufacturer per release (A73 adopted); FerroEHR+FerroBRIDGE one EHR system; v4.3.5 = readiness
 - [Migration headers keep the old holder](migration-headers-keep-old-holder.md) — released migrations keep "Vernum Projecten B.V."; editing breaks the sqlx checksum
 - [Tests run in PR CI](tests-run-in-pr-ci.md) — never run nextest/cargo test locally (RAM); local = fmt/clippy/check/doc; tell every worker
+- [Cadasto hosting and certifications](cadasto-hosting-and-certifications.md) — Cadasto may host FerroEHR (operator+processor); ISO 9001/27001/NEN 7510 are org-level, never "FerroEHR certified"

@@ -19,8 +19,9 @@
 
 use std::path::PathBuf;
 
-use crate::config::secret::{Secret, SecretUrl};
+use crate::config::secret::{Secret, SecretUrl, redact_userinfo};
 use serde::{Deserialize, Serialize};
+use url::Url;
 
 /// DV_MULTIMEDIA externalization settings.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -71,17 +72,113 @@ impl Default for MultimediaConfig {
     }
 }
 
+/// Why [`MultimediaConfig::endpoint_url`] refused `multimedia.endpoint`.
+///
+/// Every message quotes the endpoint only through [`redact_userinfo`], so no
+/// refusal carries a credential.
+#[derive(Debug, thiserror::Error)]
+pub enum EndpointError {
+    /// The key is set to a blank string.
+    #[error(
+        "multimedia.endpoint is set but empty — give an absolute URL \
+         (e.g. http://seaweedfs:8333) or remove the key to use default \
+         AWS endpoint resolution"
+    )]
+    Empty,
+    /// The value does not parse as an absolute URL.
+    #[error("multimedia.endpoint {shown:?} is not an absolute URL: {reason}")]
+    NotAbsolute {
+        /// The endpoint, `userinfo` masked.
+        shown: String,
+        /// The parse failure.
+        reason: url::ParseError,
+    },
+    /// The value parses, but its scheme is neither `http` nor `https`.
+    #[error(
+        "multimedia.endpoint {shown:?} has scheme {scheme:?} — an S3 endpoint \
+         must be http or https (did you mean \"http://{shown}\"?)"
+    )]
+    NotHttp {
+        /// The endpoint, `userinfo` masked.
+        shown: String,
+        /// The scheme found.
+        scheme: String,
+    },
+}
+
 impl MultimediaConfig {
     /// Whether the client should run unsigned/anonymous (no credentials given).
     #[must_use]
     pub fn is_anonymous(&self) -> bool {
         self.access_key_id.is_none() && self.secret_access_key.is_none()
     }
+
+    /// Parses [`Self::endpoint`] into the absolute `http`/`https` URL the S3
+    /// client connects to; `None` when the key is absent.
+    ///
+    /// The one validation of the key: boot validation and the object-store
+    /// construction both call it. `seaweedfs:8333` parses as a URL (scheme
+    /// `seaweedfs`, path `8333`), so the scheme is judged on top of the syntax.
+    ///
+    /// # Errors
+    /// [`EndpointError`] for a blank value, a value that is not an absolute
+    /// URL, or a scheme other than `http`/`https`.
+    pub fn endpoint_url(&self) -> Result<Option<Url>, EndpointError> {
+        let Some(endpoint) = &self.endpoint else {
+            return Ok(None);
+        };
+        let trimmed = endpoint.expose().trim();
+        if trimmed.is_empty() {
+            return Err(EndpointError::Empty);
+        }
+        let url = Url::parse(trimmed).map_err(|reason| EndpointError::NotAbsolute {
+            shown: redact_userinfo(trimmed),
+            reason,
+        })?;
+        if !matches!(url.scheme(), "http" | "https") {
+            return Err(EndpointError::NotHttp {
+                shown: redact_userinfo(trimmed),
+                scheme: url.scheme().to_owned(),
+            });
+        }
+        Ok(Some(url))
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Every refusal of a malformed endpoint carrying `userinfo` keeps the
+    /// password out of its message, and an absent or absolute endpoint passes.
+    #[test]
+    fn endpoint_refusals_never_quote_userinfo() {
+        let with = |endpoint: &str| MultimediaConfig {
+            endpoint: Some(SecretUrl::new(endpoint)),
+            ..MultimediaConfig::default()
+        };
+        for bad in ["", "   ", "seaweedfs:8333", "/bucket"] {
+            assert!(with(bad).endpoint_url().is_err(), "{bad:?} must be refused");
+        }
+        for leaky in [
+            "ftp://user:hunter2@s3.example",
+            "s3://user:hunter2@s3.example/bucket",
+            "https://user:hunter2@[::1",
+        ] {
+            let err = with(leaky).endpoint_url().expect_err("refused");
+            assert!(!err.to_string().contains("hunter2"), "{err}");
+            assert!(!format!("{err:?}").contains("hunter2"), "{err:?}");
+        }
+        assert!(matches!(
+            MultimediaConfig::default().endpoint_url(),
+            Ok(None)
+        ));
+        let url = with("https://user:hunter2@s3.example")
+            .endpoint_url()
+            .expect("an absolute https endpoint parses")
+            .expect("set");
+        assert_eq!(url.host_str(), Some("s3.example"));
+    }
 
     #[test]
     fn default_is_disabled_with_256kib_threshold() {

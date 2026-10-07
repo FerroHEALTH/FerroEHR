@@ -408,7 +408,28 @@ async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestEr
             // commit instant is the resource's last modification
             // (RM common master06 §Logical Deletion).
             let uid = committed.version_uid();
-            let resp = ServiceResponse::deleted(commit_meta(ehr_id, uid, &committed));
+            // The deleted version carries no content, so the access record is
+            // classified by the version it deleted (EHDS Annex II 3.2(c)). The
+            // delete has committed, so a failed read leaves the record
+            // unclassified rather than failing the response.
+            let deleted = match state
+                .backend()
+                .audit_content_of_objects(&[VoId(vo_id)])
+                .await
+            {
+                Ok(deleted) => deleted,
+                Err(e) => {
+                    tracing::warn!(
+                        error = %e,
+                        "reading the categories of a deleted COMPOSITION failed; the access \
+                         record is written unclassified"
+                    );
+                    Vec::new()
+                }
+            };
+            let resp = ServiceResponse::deleted(
+                commit_meta(ehr_id, uid, &committed).with_content(deleted),
+            );
             Ok(negotiate::deleted_with_headers(
                 &base,
                 Some("composition"),

@@ -204,6 +204,83 @@ optional:
   token, after which the crate's two Trusted Publisher entries are configured
   on crates.io as described above.
 
+## Security fixes, advisories and the per-release reviews
+
+Manufacturer duties under the CRA (`docs/law/eu/cra/text.html` Annex I Part
+II) and the EHDS (`docs/law/eu/ehds/text.html` Art. 28, Annex II 1.1), checked
+by whoever cuts the release, on the `release/vX.Y.Z` branch, before the tag.
+The documentation checks at the end of this list run in the release lane; the
+others have no CI check yet, and the cut is refused by hand.
+
+- **A security fix ships alone, or says why not** (Annex I Part II(2): "where
+  technically feasible, new security updates shall be provided separately
+  from functionality updates"; `SECURITY.md` §Supported versions). A release
+  whose `### Security` entries sit beside `### Added` or `### Changed` entries
+  is refused unless its `### Security` section opens with a line
+  `Shipped with functional changes because: <reason>`, naming why a
+  security-only patch was technically infeasible (the fix is only correct
+  with a behavioural change; the code it fixes was already replaced on
+  `main`). The release notes are extracted from that section, so the reason
+  reaches them. "The next release was due anyway" is not a reason: cut a
+  security-only patch from the last release's state instead.
+- **Every `### Security` entry names its advisory** (Annex I Part II(4) and
+  (8); `SECURITY.md` §Security advisories). Each entry carries the `GHSA-…`
+  identifier of the repository advisory published with the release, or, for
+  a dependency bump that the OpenVEX documents show does not affect any
+  shipped artefact, the path of that VEX statement. An entry with neither
+  refuses the cut. Publishing the drafted advisories is a step of the cut, in
+  the same hour the GitHub release is published (`docs/post-market.md`, "A
+  fixed vulnerability's advisory").
+- **The hazard log is reviewed when the logging component changes** (EHDS
+  Annex II 1.1). A release whose diff since the previous tag touches
+  `app/ferroehr/src/system_log/`, `app/ferroehr-rest/src/system_log/`, the
+  ITI-81 route in `app/ferroehr-rest/src/extensions/fhir.rs` or
+  `app/ferroehr/src/storage/marks.rs` re-reads
+  `website/book/src/compliance/hazard-log.md` against that tree (each named
+  test still exists and still asserts the control), and adds a row to its
+  version table, in the release PR.
+- **The public claims are reviewed every release** (EHDS Art. 28). The release
+  PR adds a row to the review record of
+  `website/book/src/compliance/claims-review.md` after reading the texts that
+  page lists, and fixes any misleading claim in the same PR.
+- **The technical documentation follows the logging component** (EHDS Art.
+  30(2): changes to a harmonised software component are "reflected in the
+  technical documentation"; Art. 37(1); CRA Art. 31(2)). The tree is
+  `docs/technical-documentation/`. A release whose diff since the previous
+  release touches a module of the logging component (the four paths of the
+  hazard-log bullet above, which are `docs/architecture.md`'s list and the
+  `LOGGING_PATHS` of `scripts/checks/technical-documentation.sh`) updates, in
+  the release PR, the tree file the change affects and adds a row to the
+  revision table in `docs/technical-documentation/README.md`. The cut runs
+  `bash scripts/checks/technical-documentation.sh --since <previous tag>`,
+  with the previous tag taken by version order (`git tag -l 'v*'
+  --sort=-v:refname`, the first below the new one), never by ancestry, and a
+  failure refuses the cut. A module added to or removed from the logging
+  component changes all three lists in the same PR.
+- **Each release keeps its documentation for ten years** (EHDS Art. 30(3); CRA
+  Art. 13(13)). Nothing extra is cut for it: the tree travels in the signed
+  tag (the `release-tags` ruleset forbids deleting or moving it) and in the
+  Zenodo deposit of the release, and the book pages it cites are frozen at
+  `/docs/vX.Y.Z/` by the docs-freeze leg. Never delete a release tag or a
+  frozen book version. When an EU declaration of conformity exists, it is a
+  release asset of each release it covers (EHDS Art. 39(4)) and the cut adds
+  it to the expected-asset check.
+- **The information sheet and the instructions for use ride every release**
+  (EHDS Art. 30(1)(d), Art. 38; recital 37). The draft job of `release.yml`
+  runs `bash scripts/release/accompanying-documents.sh <tag> .`, which cuts
+  `ferroehr-<tag>-information-sheet.md` and
+  `ferroehr-<tag>-instructions-for-use.md` from the tag's
+  `website/book/src/compliance/information-sheet.md` and
+  `instructions-for-use.md` (plain-text Markdown, links rewritten to the
+  frozen book of that tag, version and release date stamped under the
+  title), attaches both to the draft, and the publish job's expected-asset
+  check refuses to publish a release without them. The three images carry an
+  `eu.ferroehr.image.accompanying-documents` label naming where those two
+  assets are. A change to either page that adds or changes a configuration
+  key, a limitation or a maintenance task is reviewed against the code like
+  any other book page; the two pages are re-read in the release PR beside the
+  claims review.
+
 ## Withdrawing a release
 
 A release found not to conform is withdrawn, never edited, deleted or

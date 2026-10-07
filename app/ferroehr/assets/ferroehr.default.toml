@@ -33,8 +33,10 @@ spec_profile = "development"
 # log and on GET /rest/status; `production` refuses to start while one is
 # missing and not named in deployment_accepts (shared_credential,
 # shared_cluster, open_subject_namespace, audit_off, audit_fails_open,
-# open_ehr_access_default, migrate_on_runtime_credential). Our own posture,
-# not a legal requirement.
+# open_ehr_access_default, migrate_on_runtime_credential, auth_off,
+# plaintext_listener; accept plaintext_listener behind a TLS-terminating
+# ingress). Our own posture; auth_off and plaintext_listener follow CRA
+# Annex I Part I(2)(d) and (e).
 deployment_profile = "sandbox"   # sandbox | production
 #? deployment_accepts = ["shared_cluster"]
 
@@ -254,6 +256,8 @@ verified_cache_ttl_seconds = 60
 # tokens it accepts. Boot warns when it is set.
 #? hmac_secret = "..."
 #? hmac_secret_file = "/run/secrets/hmac"
+# jwks_json: a static JWK Set of PUBLIC keys; boot refuses a symmetric (oct)
+# key or a private-key member, so the set is shown in clear by config check.
 #? jwks_json = "{...}"
 #? jwks_json_file = "/etc/ferroehr/jwks.json"
 # Discovery/JWKS fetch hardening (used only when neither hmac_secret nor
@@ -354,9 +358,11 @@ capabilities = []   # extra (HL7 base) capabilities to advertise, e.g. ["launch-
 #? management_endpoint = "https://as.example/manage"
 
 # ── [management] — ops-introspection surface ───────────────────────────────────
-# Introspection only (info / prometheus / metrics / env / loggers / flamegraph),
-# off by default. Health probes are NOT here: /health, /health/liveness and
-# /health/readiness are always mounted and public, whatever this section says.
+# Introspection (info / prometheus / metrics / env / loggers / flamegraph /
+# health / status), off by default. The probes are NOT here: /health,
+# /health/liveness and /health/readiness are always mounted and public, whatever
+# this section says, and say only whether the server is ready; the detail behind
+# that answer is `health`, the licence, posture and support period `status`.
 [management]
 enabled = false
 base_path = "/management"
@@ -372,6 +378,8 @@ prometheus = "off"
 env = "off"
 loggers = "off"
 flamegraph = "off"            # on-demand CPU flamegraph (pprof sampling)
+health = "off"                # every readiness indicator with its detail
+status = "off"                # status document with licence, deployment gaps, support period
 
 # Limits for the on-demand CPU profiler (endpoints.flamegraph). A request
 # asking beyond a cap is refused with 400, never silently clamped.
@@ -556,6 +564,10 @@ retention_days = 0           # 0 = keep forever; reaped hourly otherwise
 # after which Abs. 3 requires deletion unverzüglich — so a declared controller
 # cannot keep records forever.
 sgb_v_309_controller = false
+# Seconds between two scheduled verifications of the hash chain (one day by
+# default; 0 = off). A finding is logged at ERROR, counted in
+# atna_audit_chain_findings and reported by the audit_chain readiness indicator.
+verify_interval_seconds = 86400
 
 # The EHDS priority category of every access (Annex II 3.2(c)): which
 # categories each template, and failing that each root archetype, holds.

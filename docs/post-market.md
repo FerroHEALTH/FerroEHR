@@ -2,8 +2,9 @@
 
 The working checklist Cadasto B.V., the manufacturer of each tagged FerroEHR
 release, follows for a complaint, a non-conforming version, a serious
-incident, an actively exploited vulnerability or severe incident, and a
-request from an authority. The duties and the deadlines come from Regulation
+incident, an actively exploited vulnerability or severe incident, a fixed
+vulnerability's advisory, a vulnerability in an integrated component, a
+request from an authority, and the cessation of its operations. The duties and the deadlines come from Regulation
 (EU) 2025/327, the EHDS (`docs/law/eu/ehds/text.html`), and Regulation (EU)
 2024/2847, the CRA (`docs/law/eu/cra/text.html`); the steps that carry them
 out are our own design. The manufacturer position is recorded in
@@ -18,7 +19,7 @@ When each duty applies:
 |---|---|---|
 | CRA Art 14 notification | 11 September 2026, for every release, including those published before 11 December 2027 | CRA Art 71(2), Art 69(3) |
 | EHDS Art 30 (complaints, registers, corrective action), Art 43 to 45 (market surveillance, serious incidents) | 26 March 2027 | EHDS Art 105, which lists none of them among the later dates |
-| CRA Art 13(21) (corrective measures, withdrawal, recall) | 11 December 2027 | CRA Art 71(2) |
+| CRA Art 13(6), 13(21), 13(23), Annex I Part II (upstream reporting, corrective measures, cessation, vulnerability handling) | 11 December 2027 | CRA Art 71(2) |
 
 The procedure runs now for all of them, so that it is practised before the
 EHDS and the rest of the CRA apply.
@@ -28,7 +29,7 @@ EHDS and the rest of the CRA apply.
 | Who | What |
 |---|---|
 | Cadasto B.V., the manufacturer | Receives complaints and incident reports at `info@cadasto.com`, the single point of contact (EHDS Art 30(1)(g)). Decides whether an event is a serious incident or an actively exploited vulnerability, and signs every report to an authority. The person who decides is an owner fact (see the last section). |
-| The maintainer, Ruben Talstra | Reads private vulnerability reports and the GitHub tracker, enters the register rows, prepares the correcting release, runs `scripts/release/withdraw.sh`, drafts the advisory and the reports for Cadasto B.V. to send. |
+| The maintainer, Ruben Talstra | Reads private vulnerability reports, the vulnerability reports Cadasto B.V. forwards from `info@cadasto.com`, and the GitHub tracker, enters the register rows, prepares the correcting release, runs `scripts/release/withdraw.sh`, drafts the advisory and the reports for Cadasto B.V. to send. |
 | The deploying organisation | Supplies the facts of its deployment and the JSON document `ferroehr report` writes. Owes its own notifications under the GDPR and, where it is an essential or important entity, under NIS2. None of the manufacturer's reports stands in for them. |
 
 ## The channels
@@ -36,8 +37,23 @@ EHDS and the rest of the CRA apply.
 | What | Channel | Who reads it |
 |---|---|---|
 | A vulnerability, including one seen exploited | GitHub private vulnerability reporting ([`SECURITY.md`](../SECURITY.md)) | the maintainer, the same working day where possible |
+| A vulnerability, by email (CRA Art 13(17): the single point of contact "shall not limit such means to automated tools") | `info@cadasto.com`, subject "FerroEHR vulnerability" | Cadasto B.V., forwarded to the maintainer the same day |
 | A possible serious incident: anything that harmed a person or could | `info@cadasto.com`, subject "FerroEHR incident" | Cadasto B.V., forwarded to the maintainer the same day |
 | Any other complaint | `info@cadasto.com`, subject "FerroEHR complaint", or a public GitHub issue | Cadasto B.V. and the maintainer |
+
+An emailed vulnerability report runs through exactly the procedure a private
+GitHub report does. On receipt, the maintainer opens a draft security advisory
+on the repository for it (adding the reporter as a collaborator on the draft
+only if they have a GitHub account and want it; otherwise the conversation
+stays on email), and the acknowledgement and assessment times of
+`SECURITY.md` run from the email's arrival. The email's arrival is also the
+moment the manufacturer becomes aware for CRA Art 14: if the report says the
+vulnerability is exploited, the 24-hour clock of
+[the CRA Art 14 procedure](#an-actively-exploited-vulnerability-or-severe-incident-cra-art-14)
+starts then, not when the draft advisory is opened. Whoever reads
+`info@cadasto.com` therefore forwards a message with "vulnerability" or
+"exploited" in it to the maintainer at once, and writes down the hour it
+arrived.
 
 Distributors, importers and the authorised representative, where there are
 any, are told of these channels and of the registers when they are supplied,
@@ -49,8 +65,11 @@ and of each new register row (EHDS Art 30(1)(n) and (o)).
   whatever the channel, within one working day of receipt.
 - [`registers/non-conforming-versions.tsv`](registers/non-conforming-versions.tsv):
   every finding that released versions do not conform.
+- [`registers/upstream-reports.tsv`](registers/upstream-reports.tsv): every
+  vulnerability reported to the maintainer of an integrated component
+  ([below](#vulnerabilities-in-integrated-components)).
 
-Both are public, appended and never rewritten. No row names a person or
+All three are public, appended and never rewritten. No row names a person or
 carries patient data; the correspondence stays with Cadasto B.V., outside the
 repository. A vulnerability enters both registers when its advisory is
 published, so a row never discloses one before its fix. Until then the draft
@@ -157,8 +176,8 @@ event, not later than three days after the manufacturer becomes aware".
 
 ## An actively exploited vulnerability or severe incident (CRA Art 14)
 
-The manufacturer "becomes aware" through a private vulnerability report, a
-CSIRT telling it of someone else's notification (CRA Art 15(4)), or its own
+The manufacturer "becomes aware" through a private vulnerability report, an
+emailed one, a CSIRT telling it of someone else's notification (CRA Art 15(4)), or its own
 finding. A report through private vulnerability reporting that says the
 vulnerability is exploited starts the clock.
 
@@ -212,6 +231,108 @@ Cadasto B.V.'s. What Cadasto B.V. gives the hospital is the facts: the
 advisory, the affected versions, the mitigations, and the timeline it
 reported.
 
+## A fixed vulnerability's advisory (CRA Annex I Part II(4) and (8))
+
+Every fixed vulnerability gets a GitHub security advisory, published with the
+release that fixes it (`SECURITY.md` §"Security advisories"): one in
+FerroEHR's own code, and one for a dependency or base-image fix that changes
+what a shipped artefact (a binary, an image, the Helm chart, a published
+`openehr-*` crate) contains or how it behaves. A dependency finding that an
+OpenVEX statement under `security/vex/` shows does not affect the artefact
+gets no advisory.
+
+1. **On the report or the finding:** open a draft advisory on the repository.
+   It is the record until publication. Assess the severity as a CVSS vector
+   and score, and name the affected versions of each artefact.
+2. **Decide on a delay** (Part II(4), "in duly justified cases"). Cadasto B.V.
+   delays only the technical description and any reproduction, and only when
+   all three criteria of `SECURITY.md` hold: exploitable without credentials
+   or by any authenticated caller against an unpatched deployment, no
+   mitigation short of upgrading, and the details not public and the
+   vulnerability not actively exploited. Write the decision and the reason
+   into the draft. The delay ends no later than 30 days after the fixing
+   release, or when the details become public elsewhere.
+3. **Ship the fix** as a security-only patch release. If a functional change
+   has to ride with it, write the reason under the release's `### Security`
+   heading (`.claude/rules/changelog.md`, release procedure).
+4. **The changelog entry** under `### Security` carries the advisory's `GHSA-`
+   identifier.
+5. **Publish the advisory** when the release is published: description,
+   impact, CVSS, affected and fixed versions, remediation (the release to
+   upgrade to, and any mitigation that works before), the CVE when assigned,
+   and credit. Request a CVE through the advisory where the vulnerability
+   warrants one.
+6. **Enter the register rows** the vulnerability needs (a complaint row for a
+   reported one, a non-conformity row where it is one), now that the advisory
+   is public.
+
+## Vulnerabilities in integrated components (CRA Art 13(6))
+
+CRA Art 13(6): a manufacturer that identifies a vulnerability "in a component,
+including in an open source-component, which is integrated in the product"
+shall "report the vulnerability to the person or entity manufacturing or
+maintaining the component", and where it has written a fix, "share the
+relevant code or documentation" with them, "where appropriate in a
+machine-readable format".
+
+- **Who reports:** the maintainer, on behalf of Cadasto B.V.
+- **When:** as soon as the vulnerability is confirmed in the component, whether
+  FerroEHR found it (a fuzz crash in a dependency, a review, a test) or a
+  reporter told us of it. A component vulnerability a scanner reports from a
+  published advisory is already known upstream and needs no report.
+- **Through which channel:** the component's own security policy first. For a
+  Rust crate, its `SECURITY.md` or private vulnerability reporting on its
+  repository, then a RustSec advisory (`rustsec/advisory-db`) once it can be
+  public, so that `cargo audit` and `cargo deny` users see it; for a base-image package (PostgreSQL, Debian in the distroless
+  layer), the project's security contact or the distribution's security
+  tracker; for a vendored asset, its publisher's contact.
+- **The fix:** a patch FerroEHR wrote is offered upstream as a pull request or
+  a patch file against the component's repository, under the component's
+  licence.
+- **FerroEHR's own side:** the vulnerability is handled under Annex I Part II
+  like any other: a draft advisory, a security-only release when FerroEHR is
+  affected, or an OpenVEX statement when it is not.
+- **The record:** a row in
+  [`registers/upstream-reports.tsv`](registers/upstream-reports.tsv) once the
+  upstream advisory is public, or once the maintainer has declined one and
+  the agreed disclosure date has passed. The row names the component, the
+  channel, the upstream reference, whether a fix was shared, FerroEHR's own
+  record and the outcome, and never a person. Until then the upstream report
+  is the record.
+
+The `upstream-report` label on this tracker is for defects in the openEHR
+specifications, not for component vulnerabilities.
+
+## Cessation of operations (CRA Art 13(23))
+
+CRA Art 13(23): "A manufacturer that ceases its operations and, as a result, is
+not able to comply with this Regulation shall inform, before the cessation of
+operations takes effect, the relevant market surveillance authorities as well
+as, by any means available and to the extent possible, the users of the
+relevant products with digital elements placed on the market, of the impending
+cessation of operations."
+
+1. **Who decides:** the board of Cadasto B.V. decides that it will cease
+   operations, or that FerroEHR will no longer be maintained, and the date it
+   takes effect. The steps below run as soon as that date is set, so that
+   every notice goes out before it.
+2. **The authorities first:** the market surveillance authority of each Member
+   State where FerroEHR is made available, and, while the EHDS applies, the
+   authority of each Member State where it is put into service. The notice
+   names the products (the server, the images, the chart, the crates), the
+   date, the date from which vulnerabilities are no longer handled, and what
+   stays published.
+3. **The known users:** a direct message to every operator in the EHDS Art 35
+   register of economic operators supplied, and to every commercial licensee.
+4. **The public notice:** a pinned GitHub issue on the repository, a notice at
+   the top of `SECURITY.md` and on the documentation site's landing page, and
+   a final security advisory naming the last supported release.
+5. **What stays:** every release, image, chart version, crate, advisory, the
+   registers and the documentation stay published and are not withdrawn.
+   `SECURITY.md` states that the support periods end on the cessation date.
+6. **Last register rows:** close every open row of the three registers with
+   the outcome as it stands.
+
 ## A request from an authority
 
 A market surveillance authority's request for information or documentation is
@@ -264,6 +385,21 @@ These are open, and nothing in this repository answers them:
    serious-incident report. EHDS Art 43(2) has the Commission and the Member
    States publish them.
 4. Whether Cadasto B.V. is itself an essential or important entity under
-   NIS2 in the Netherlands.
+   NIS2 in the Netherlands, in particular once it hosts FerroEHR as a service
+   for other organisations (for example as a managed service provider or a
+   cloud computing service provider).
 5. The list of distributors, importers and known users to whom the
    Art 30(1)(j) and (n) notices go, which is the EHDS Art 35 register.
+6. Whether `info@cadasto.com` should publish an encryption key for
+   vulnerability reports, and who reads that inbox and forwards a report the
+   same day, including outside working hours.
+7. The 30-day ceiling on delaying an advisory's technical details, which
+   `SECURITY.md` states, is the maintainers' proposal and needs Cadasto B.V.'s
+   confirmation.
+8. Who on the board of Cadasto B.V. decides a cessation of operations, and
+   whether a successor would take over the support periods.
+9. Whether the certified scope of Cadasto B.V.'s ISO 9001, ISO/IEC 27001 and
+   NEN 7510 certificates covers the development and release of FerroEHR, the
+   procedures in this file, and a FerroEHR service Cadasto B.V. hosts for
+   other organisations. The certificates cover Cadasto B.V.'s management
+   system within that scope; they never make FerroEHR a certified product.

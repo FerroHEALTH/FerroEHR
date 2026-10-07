@@ -69,6 +69,8 @@ fn management_lookup(op: &str) -> Option<Classification> {
         | "management_metrics"
         | "management_env"
         | "management_flamegraph"
+        | "management_health"
+        | "management_status"
         | "management_loggers_get" => {
             Classification::audited(Execute, ObjectClass::ApplicationActivity)
         }

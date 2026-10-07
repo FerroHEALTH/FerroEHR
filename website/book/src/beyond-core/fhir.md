@@ -104,8 +104,8 @@ entries returned per mapping.
 The six priority categories of personal electronic health data are Annex I of
 the EHDS regulation, and Annex II 2.1 to 2.3 require an EHR system to provide
 and receive them in the European electronic health record exchange format.
-That format is set by implementing acts under Article 36 which have not been
-adopted, so this table is not a conformance claim against it. What it says is
+That format is set by implementing acts under Article 15(1) that have not
+been adopted, so this table is not a conformance claim against it. What it says is
 narrower and checkable: which category has a committed template whose example
 composition round-trips through this façade today.
 
@@ -143,11 +143,13 @@ could otherwise assume:
 
 The connector this table measures is planned to leave: FerroBRIDGE
 (<https://github.com/rubentalstra/FerroBRIDGE>) is the FHIRconnect and OMOP
-bridge, and [#3080](https://github.com/FerroHEALTH/FerroEHR/issues/3080)
-retires the in-tree connector once it ships. The EHDS readiness question does
-NOT leave with it — it is asked of the EHR system — so this table moves to the
-compliance chapter at that point rather than being deleted with the page it
-currently sits on.
+bridge, and it ships the European interoperability software component of the
+EHR system Cadasto B.V. declares, FerroEHR and FerroBRIDGE together.
+[#3080](https://github.com/FerroHEALTH/FerroEHR/issues/3080) retires the
+in-tree connector once FerroBRIDGE carries the mappings. The EHDS question does
+not leave with the connector, because it is asked of the EHR system, so this
+table moves to the compliance chapter at that point instead of being deleted
+with the page it currently sits on.
 
 Two of the example compositions this rests on — the patient summary and the
 imaging report — were patched by hand rather than regenerated against a

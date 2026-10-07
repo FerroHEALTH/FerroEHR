@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Capture build-time provenance for `/management/info` and the
-//! `ferroehr_build_info` gauge: the git commit, the build timestamp, and the
-//! `rustc` version. All are best-effort — a checkout without git, or a build
+//! `ferroehr_build_info` gauge: the git commit, the build timestamp, the
+//! `rustc` version, and the release date the support period runs from. All are best-effort — a checkout without git, or a build
 //! from a tarball, degrades to `unknown` rather than failing the build.
 
 use std::process::Command;
@@ -70,10 +70,46 @@ fn main() {
     println!("cargo:rustc-env=FERROEHR_OPENEHR_CRATES={openehr_crates}");
     println!("cargo:rerun-if-changed=../../Cargo.lock");
 
+    // The release date of this package version: the date of its
+    // `## [X.Y.Z] - YYYY-MM-DD` heading in the changelog, from which the support
+    // period runs (Regulation (EU) 2024/2847 Art. 13(8)). Empty when the
+    // version has no dated heading, which marks a build that is no release.
+    let version = std::env::var("CARGO_PKG_VERSION").unwrap_or_default();
+    let release_date = std::fs::read_to_string("../../CHANGELOG.md")
+        .ok()
+        .and_then(|changelog| release_date(&changelog, &version))
+        .unwrap_or_default();
+    println!("cargo:rustc-env=FERROEHR_RELEASE_DATE={release_date}");
+    println!("cargo:rerun-if-changed=../../CHANGELOG.md");
+
     println!("cargo:rerun-if-env-changed=REVISION");
     println!("cargo:rerun-if-env-changed=SOURCE_DATE_EPOCH");
     println!("cargo:rerun-if-changed=../../.git/HEAD");
     println!("cargo:rerun-if-changed=../../.git/refs");
+}
+
+/// The date of the `## [<version>] - YYYY-MM-DD` heading in a Keep a Changelog
+/// file, when the heading exists and its date has that shape.
+fn release_date(changelog: &str, version: &str) -> Option<String> {
+    let heading = format!("## [{version}] - ");
+    let date: String = changelog
+        .lines()
+        .find_map(|line| line.strip_prefix(&heading))?
+        .chars()
+        .take(10)
+        .collect();
+    let mut parts = date.split('-');
+    let shaped = matches!(
+        (parts.next(), parts.next(), parts.next(), parts.next()),
+        (Some(year), Some(month), Some(day), None)
+            if year.len() == 4
+                && month.len() == 2
+                && day.len() == 2
+                && date.chars().all(|c| c.is_ascii_digit() || c == '-')
+                && month.parse::<u8>().is_ok_and(|m| (1..=12).contains(&m))
+                && day.parse::<u8>().is_ok_and(|d| (1..=31).contains(&d))
+    );
+    shaped.then_some(date)
 }
 
 /// The `openehr-*` dependencies of the `ferroehr` package in a `Cargo.lock`,

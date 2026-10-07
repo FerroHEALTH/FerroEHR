@@ -361,6 +361,8 @@ pub enum ResourceKind {
     Ehr,
     /// `EHR_STATUS`.
     EhrStatus,
+    /// `EHR_ACCESS`.
+    EhrAccess,
     /// The EHR directory (`FOLDER`).
     Folder,
     /// `ITEM_TAG`s.
@@ -376,6 +378,7 @@ impl ResourceKind {
         match self {
             ResourceKind::Ehr => "EHR",
             ResourceKind::EhrStatus => "EHR_STATUS",
+            ResourceKind::EhrAccess => "EHR_ACCESS",
             ResourceKind::Folder => "FOLDER",
             ResourceKind::ItemTag => "ITEM_TAG",
             ResourceKind::RevisionHistory => "REVISION_HISTORY",
@@ -391,17 +394,20 @@ pub struct ContentIds {
     /// The archetype id of the object's root node.
     pub archetype_id: Option<String>,
     /// Set for an object of a kind that holds no priority-category data
-    /// (`EHR_STATUS`, `FOLDER`), which is classified by kind alone.
+    /// (`EHR_STATUS`, `EHR_ACCESS`, `FOLDER`), which is classified by kind
+    /// alone.
     pub resource_kind: Option<ResourceKind>,
 }
 
 impl ContentIds {
-    /// The ids of a versioned object of RM kind `kind`: an `EHR_STATUS` or a
-    /// `FOLDER` is marked by kind, anything else carries its ids.
+    /// The ids of a versioned object of RM kind `kind`: an `EHR_STATUS`, an
+    /// `EHR_ACCESS` or a `FOLDER` is marked by kind, anything else carries its
+    /// ids.
     #[must_use]
     pub fn of_kind(kind: &str, template_id: Option<String>, archetype_id: Option<String>) -> Self {
         let resource_kind = match kind {
             "EHR_STATUS" => Some(ResourceKind::EhrStatus),
+            "EHR_ACCESS" => Some(ResourceKind::EhrAccess),
             "FOLDER" => Some(ResourceKind::Folder),
             _ => None,
         };

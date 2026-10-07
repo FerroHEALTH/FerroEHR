@@ -188,6 +188,11 @@ async fn unauthenticated_request_is_401_with_challenge() {
     assert_eq!(v["error"], "Unauthorized");
 }
 
+/// The public status document answers without a credential and says only what
+/// a client needs before it holds one: that the server is up, its version, the
+/// ITS-REST release and the deployment profile. The licence, the deployment
+/// gaps and the support period are on the authenticated `/management/status`
+/// (no openEHR spec governs a status endpoint — our own design).
 #[tokio::test]
 async fn status_endpoint_is_public() {
     let (_pg, app) = app(true).await;
@@ -200,6 +205,24 @@ async fn status_endpoint_is_public() {
     assert_eq!(
         v["openehr_rest_api_version"],
         ferroehr::telemetry::provenance::ITS_REST
+    );
+    let mut keys: Vec<&str> = v.as_object().unwrap().keys().map(String::as_str).collect();
+    keys.sort_unstable();
+    assert_eq!(
+        keys,
+        [
+            "deployment",
+            "openehr_rest_api_version",
+            "server_version",
+            "status",
+            "timestamp"
+        ],
+        "the public document carries no licence, support period or other field: {body}"
+    );
+    assert_eq!(
+        v["deployment"],
+        json!({ "profile": "sandbox" }),
+        "only the profile is public; the gaps and accepted gaps are not: {body}"
     );
 }
 
@@ -236,6 +259,8 @@ async fn health_family_is_public_without_the_management_surface() {
     let v: serde_json::Value = serde_json::from_str(&body).unwrap();
     assert_eq!(v["status"], "UP");
     assert!(v.get("components").is_some(), "indicator body: {body}");
+    // The probe body is the aggregate and the components, nothing else.
+    assert_eq!(v.as_object().unwrap().len(), 2, "readiness body: {body}");
 
     // There is no second name for health under the REST root: the retired
     // `/ferroehr/rest/status/health` alias is not routed at all.

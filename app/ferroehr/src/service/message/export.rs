@@ -42,6 +42,7 @@ use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
 use crate::service::status::{CallStatusType, SmError};
+use crate::system_log::categories::{AccessedContent, ContentIds, ResourceKind};
 use crate::system_log::event::EventActionCode;
 use crate::versioning::read::{read_currents, read_version_by_ordinal};
 use crate::versioning::wire::{original_version, revision_history, versioned_object};
@@ -139,8 +140,13 @@ impl FerroEhrService {
             )));
         }
         self.refuse_objected_export(an_ehr_id).await?;
-        let extract = self.export_whole_ehr(an_ehr_id, 1).await?;
-        self.emit_extract_audit(an_ehr_id, EventActionCode::Read)?;
+        let mut served = Vec::new();
+        let extract = self.export_whole_ehr(an_ehr_id, 1, &mut served).await?;
+        self.emit_extract_audit(
+            an_ehr_id,
+            EventActionCode::Read,
+            Some(served_content(served, false)),
+        )?;
         Ok(vec![extract])
     }
 
@@ -173,8 +179,8 @@ impl FerroEhrService {
         let spec_value = openehr_its::json::to_canonical_value(&extract_spec);
 
         let mut out = Vec::with_capacity(extract_spec.manifest.entities.len());
-        let mut exported_ehrs: Vec<EhrId> =
-            Vec::with_capacity(extract_spec.manifest.entities.len());
+        let mut exported_ehrs: std::collections::BTreeMap<EhrId, Vec<ContentIds>> =
+            std::collections::BTreeMap::new();
         for (idx, entity) in extract_spec.manifest.entities.iter().enumerate() {
             let ehr_id =
                 resolve_entity_ehr(self, entity.ehr_id.as_deref(), entity.subject_id.as_deref())
@@ -188,25 +194,27 @@ impl FerroEhrService {
 
             let mut included: Vec<VoId> = vo_kinds.iter().map(|(vo, _)| *vo).collect();
             let mut items = Vec::with_capacity(vo_kinds.len());
+            let served = exported_ehrs.entry(ehr_id).or_default();
             for (vo_id, kind) in vo_kinds {
                 items.push(
-                    self.build_openehr_content_item(ehr_id, vo_id, &kind, sel, true)
+                    self.build_openehr_content_item(ehr_id, vo_id, &kind, sel, true, served)
                         .await?,
                 );
             }
-            self.follow_links(ehr_id, &mut items, &mut included, sel, link_depth)
+            self.follow_links(ehr_id, &mut items, &mut included, sel, link_depth, served)
                 .await?;
             let mut demographics = self.demographic_chapter_items(&items, sel).await?;
             rewrite_content_refs(&mut items);
             rewrite_content_refs(&mut demographics);
             let seq = i32::try_from(idx + 1).unwrap_or(i32::MAX);
             out.push(self.assemble_extract(items, &demographics, spec_value.clone(), seq));
-            exported_ehrs.push(ehr_id);
         }
-        exported_ehrs.sort_unstable();
-        exported_ehrs.dedup();
-        for ehr_id in exported_ehrs {
-            self.emit_extract_audit(ehr_id, EventActionCode::Read)?;
+        for (ehr_id, served) in exported_ehrs {
+            self.emit_extract_audit(
+                ehr_id,
+                EventActionCode::Read,
+                Some(served_content(served, sel.include_revision_history)),
+            )?;
         }
         Ok(out)
     }
@@ -229,6 +237,7 @@ impl FerroEhrService {
         included: &mut Vec<VoId>,
         sel: VersionSelection,
         link_depth: i32,
+        served: &mut Vec<ContentIds>,
     ) -> Result<(), SmError> {
         let mut depth = link_depth;
         while depth > 0 {
@@ -241,7 +250,7 @@ impl FerroEhrService {
                     continue;
                 };
                 items.push(
-                    self.build_openehr_content_item(ehr_id, target, &kind, sel, false)
+                    self.build_openehr_content_item(ehr_id, target, &kind, sel, false, served)
                         .await?,
                 );
                 included.push(target);
@@ -540,6 +549,7 @@ impl FerroEhrService {
         kind: &str,
         sel: VersionSelection,
         is_primary: bool,
+        served: &mut Vec<ContentIds>,
     ) -> Result<Value, ServiceError> {
         let all = self.vo_version_numbers(vo_id).await?;
         let total = i32::try_from(all.len()).unwrap_or(i32::MAX);
@@ -567,6 +577,7 @@ impl FerroEhrService {
                         format!("version {vo_id}::{sv} for extract"),
                     )
                 })?;
+            served.push(read.content.clone());
             let mut version = original_version(&read, self.signer())?;
             if !sel.include_multimedia {
                 strip_inline_multimedia(&mut version);
@@ -793,13 +804,14 @@ impl FerroEhrService {
         &self,
         ehr_id: EhrId,
         sequence_nr: i32,
+        served: &mut Vec<ContentIds>,
     ) -> Result<Value, ServiceError> {
         let sel = VersionSelection::latest_only();
         let vos = self.ehr_versioned_objects(ehr_id).await?;
         let mut items = Vec::with_capacity(vos.len());
         for (vo_id, kind) in vos {
             items.push(
-                self.build_openehr_content_item(ehr_id, vo_id, &kind, sel, true)
+                self.build_openehr_content_item(ehr_id, vo_id, &kind, sel, true, served)
                     .await?,
             );
         }
@@ -813,6 +825,19 @@ impl FerroEhrService {
             sequence_nr,
         ))
     }
+}
+
+/// What an exported Extract served, for its access record's EHDS priority
+/// category (Annex II 3.2(c), `docs/law/eu/ehds/text.html`): the identities of
+/// every version it carried, or, when it carried revision histories and no
+/// version data, the revision-history resource kind.
+fn served_content(mut served: Vec<ContentIds>, revision_history: bool) -> AccessedContent {
+    if served.is_empty() && revision_history {
+        return AccessedContent::ResourceKind(ResourceKind::RevisionHistory);
+    }
+    served.sort();
+    served.dedup();
+    AccessedContent::Objects(served)
 }
 
 /// Read the `EXTRACT_VERSION_SPEC` of a request into a [`VersionSelection`],
