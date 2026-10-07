@@ -138,7 +138,7 @@ impl ManagementState {
 
 /// The observability inputs the binary assembles for the application state.
 ///
-/// Carried in [`AppState`](crate::state::AppState): the management
+/// Carried in [`AppState`]: the management
 /// configuration, the telemetry render/reload handles, the health registry,
 /// build provenance, and the redacted config snapshot. Everything defaults
 /// **off** (management disabled, no handles, empty registry) so a server

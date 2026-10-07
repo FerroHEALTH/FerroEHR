@@ -19,7 +19,7 @@
 //! it implements, and the deployment profile, so a `sandbox` is never mistaken
 //! for a `production` (#3226). The licence, the open and accepted deployment
 //! gaps and the support period name an installation's weak points and its
-//! owner, so they are served only by [`FullStatus`] behind authentication.
+//! owner, so they are served only by `FullStatus` behind authentication.
 
 use axum::extract::State;
 use axum::routing::get;

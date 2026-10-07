@@ -1382,8 +1382,10 @@ const NON_SPEC_FAMILIES: &[NonSpecFamily] = &[
         label: "the ops-introspection management surface",
         prefixes: &["/management"],
         flag: "no openehr spec governs this",
-        // 8 + /management/flamegraph (PR #1864, the on-demand CPU profiler).
-        operations: 9,
+        // 8 + /management/flamegraph (PR #1864, the on-demand CPU profiler)
+        // + /management/health and /management/status (#3671, the detail the
+        // public probes no longer carry).
+        operations: 11,
     },
     NonSpecFamily {
         label: "the terminology extension wire",

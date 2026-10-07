@@ -236,10 +236,12 @@ pub fn readiness_view(body: &serde_json::Value, detailed: bool) -> ReadinessView
     }
 }
 
-/// Whether a `/management/health` answer sends the reader to the public
-/// status-only probe instead: `404` (the endpoint is not mounted) or `403`
-/// (its access level refuses this session's role). A `401` is not a
-/// fallback: the CDR no longer accepts the session, which the screen reports.
+/// Whether a `/management/health` answer falls back to the public probe.
+///
+/// The fallback is the status-only probe, taken on `404` (the endpoint is not
+/// mounted) or `403` (its access level refuses this session's role). A `401`
+/// is not a fallback: the CDR no longer accepts the session, which the screen
+/// reports.
 #[must_use]
 pub fn falls_back_to_public_readiness(status: http::StatusCode) -> bool {
     status == http::StatusCode::NOT_FOUND || status == http::StatusCode::FORBIDDEN

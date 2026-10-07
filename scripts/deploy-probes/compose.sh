@@ -129,12 +129,13 @@ probes_deployment_posture() {
   # #3226 gave the server a declared posture and #3398/#3323 widened what it
   # measures: the audit pool's cluster, schema preparation per domain database,
   # and the two compatibility defaults. Nothing observed that a stack the
-  # project ships reports any of it. Far end: the SERVER's own /rest/status,
-  # not the configuration that was supposed to produce it.
+  # project ships reports any of it. Far end: the SERVER's own status documents
+  # (/rest/status and the authenticated /management/status), not the configuration that was supposed to produce it.
   probe "P-POSTURE-01" "working" "image" "#3226" \
     "/rest/status carries the declared deployment posture"
-  local status
+  local status full_status
   status="$(curl -s "$CDR/ferroehr/rest/status")"
+  full_status="$(curl -s -u "$BASIC" "$CDR/management/status")"
   assert_contains "$status" '"deployment"' "the posture block is served"
   assert_contains "$status" '"profile":"sandbox"' \
     "the quickstart declares the sandbox profile"
@@ -142,7 +143,7 @@ probes_deployment_posture() {
     "the open separations are weak points: the public document names none of them"
   assert_eq "401" "$(http_code "$CDR/management/status")" \
     "the full posture needs a credential"
-  assert_contains "$(curl -s -u "$BASIC" "$CDR/management/status")" '"gaps"' \
+  assert_contains "$full_status" '"gaps"' \
     "the authenticated status document carries the open separations"
   probe_done
 
@@ -153,11 +154,11 @@ probes_deployment_posture() {
   # System, in welchem die Personendaten bearbeitet werden").
   probe "P-POSTURE-02" "working" "image" "#3398" \
     "the co-located quickstart reports its separation gaps"
-  assert_contains "$status" '"shared_credential"' \
+  assert_contains "$full_status" '"shared_credential"' \
     "one DSN for four domains is a shared credential"
-  assert_contains "$status" '"shared_cluster"' \
+  assert_contains "$full_status" '"shared_cluster"' \
     "one cluster for four domains, audit included, is a shared cluster"
-  assert_contains "$status" '"migrate_on_runtime_credential"' \
+  assert_contains "$full_status" '"migrate_on_runtime_credential"' \
     "the quickstart applies its own migrations on the runtime credential"
   probe_done
 
@@ -166,9 +167,9 @@ probes_deployment_posture() {
   # docs/law/eu/gdpr/text.html).
   probe "P-POSTURE-03" "working" "image" "#3323" \
     "the two compatibility defaults are reported as open gaps"
-  assert_contains "$status" '"open_ehr_access_default"' \
+  assert_contains "$full_status" '"open_ehr_access_default"' \
     "the open EHR_ACCESS default is disclosed rather than silent"
-  assert_contains "$status" '"audit_fails_open"' \
+  assert_contains "$full_status" '"audit_fails_open"' \
     "the open audit fail mode is disclosed rather than silent"
   probe_done
 

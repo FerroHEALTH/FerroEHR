@@ -53,7 +53,8 @@ and the clinical applications connected to it are developed against the
   Compose, or the `ferroehr` binary
   ([installation](../installation/index.md)).
 - **Resources:** the Helm chart's defaults are two replicas, each requesting
-  250m CPU and 256 MiB of memory with limits of 2 CPU and 1 GiB. They are a
+  `cpu: 250m` and `memory: 256Mi` with limits of `cpu: "2"` and
+  `memory: 1Gi` (`resources` in the chart's `values.yaml`). They are a
   starting point; size them for your load. No minimum hardware specification
   is published. The [performance](../performance.md) page records the hardware
   each measured run used.

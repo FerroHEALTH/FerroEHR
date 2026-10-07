@@ -832,7 +832,10 @@ mod tests {
             err,
             AuthConfigError::JwksSymmetricKey { index: 0, .. }
         ));
-        assert!(!err.to_string().contains(secret_k), "{err}");
+        assert!(
+            !err.to_string().contains(secret_k),
+            "the refusal must not quote the key"
+        );
 
         let auth = AuthConfig {
             oidc: Some(cfg),
@@ -862,7 +865,10 @@ mod tests {
             err,
             AuthConfigError::JwksPrivateKeyMaterial { member: "d", .. }
         ));
-        assert!(!err.to_string().contains("cHJpdmF0ZQ"), "{err}");
+        assert!(
+            !err.to_string().contains("cHJpdmF0ZQ"),
+            "the refusal must not quote the private member"
+        );
 
         let public = OidcConfig {
             jwks_json: Some(
@@ -886,7 +892,10 @@ mod tests {
             ..valid_oidc()
         };
         let err = wrong_shape.validate().expect_err("not a JWK Set");
-        assert!(!err.to_string().contains("c2VjcmV0"), "{err}");
+        assert!(
+            !err.to_string().contains("c2VjcmV0"),
+            "the refusal must not quote the input"
+        );
     }
 
     /// RFC 8725 §3.2 / RFC 9068 §4 step 5: an unsigned token proves nothing, and

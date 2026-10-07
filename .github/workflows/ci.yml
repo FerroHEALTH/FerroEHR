@@ -2273,7 +2273,9 @@ jobs:
           # alone let PR #3021 through (#3036).
           if [ "$packaged" -eq 0 ] && echo "$changed" | grep -qx 'Cargo.toml'; then
             table=$(git show "$HEAD:Cargo.toml" | awk '/^\[workspace\.dependencies\]/{f=1;next} /^\[/{f=0} f && /^[A-Za-z0-9_-]+[. =]/{print $1}' | sed 's/\.workspace$//' | sort -u)
-            names=$(git diff "$BASE" "$HEAD" -- Cargo.toml | grep -E '^[+-][A-Za-z0-9_-]+(\.workspace)?[[:space:]]*=' | sed -E 's/^[+-]//; s/[[:space:]]*=.*//; s/\.workspace$//' | sort -u)
+            # `|| true`: a Cargo.toml diff touching no entry (a comment) matches
+            # nothing, and grep's exit 1 would end the job silently under pipefail.
+            names=$(git diff "$BASE" "$HEAD" -- Cargo.toml | { grep -E '^[+-][A-Za-z0-9_-]+(\.workspace)?[[:space:]]*=' || true; } | sed -E 's/^[+-]//; s/[[:space:]]*=.*//; s/\.workspace$//' | sort -u)
             for name in $names; do
               echo "$table" | grep -qx "$name" || continue
               if git grep -lE "^${name}(\.workspace)?[[:space:]]*=" "$HEAD" -- 'crates/openehr-*/Cargo.toml' >/dev/null 2>&1; then
