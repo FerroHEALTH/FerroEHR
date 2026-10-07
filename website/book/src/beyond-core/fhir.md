@@ -230,7 +230,9 @@ transient and never park a row.
 > why they are a separate switch on a separate exchange (`ferroehr.fhir`, not
 > `ferroehr.events`): broker access control can then isolate the PHI-bearing
 > stream. Enable it only against a TLS, access-controlled broker, and treat every
-> consumer as a PHI processor.
+> consumer as a PHI processor. Under `deployment_profile = "production"` the server
+> refuses to start with the emitter on a plain `amqp://` broker unless
+> `plaintext_broker` is accepted by name.
 
 > [!NOTE]
 > The change-event publisher has a health indicator; the outbound emitter does

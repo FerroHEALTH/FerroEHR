@@ -326,15 +326,6 @@ async fn settled(pool: &PgPool, subjects: &[String]) -> BTreeMap<String, Vec<Opt
     }
 }
 
-/// Whether the recorded operation `recorded` is the document's `documented` one.
-///
-/// The record keeps the released `operationId` (`definition_template_adl1.4_list`),
-/// while utoipa names a documented operation after its handler function, and a
-/// Rust identifier cannot carry a `.` (the Rust Reference, Identifiers).
-fn same_operation(recorded: &str, documented: &str) -> bool {
-    recorded == documented || recorded.replace('.', "_") == documented
-}
-
 /// The exempt table names only mounted routes, and every other mounted route
 /// writes exactly one access record carrying its operation id.
 ///
@@ -376,7 +367,7 @@ async fn every_route_writes_exactly_one_access_record() {
         let operations = stored.get(subject).cloned().unwrap_or_default();
         let matching = operations
             .iter()
-            .filter(|op| op.as_deref().is_some_and(|op| same_operation(op, expected)))
+            .filter(|op| op.as_deref() == Some(expected.as_str()))
             .count();
         if matching != 1 {
             defects.push(format!(

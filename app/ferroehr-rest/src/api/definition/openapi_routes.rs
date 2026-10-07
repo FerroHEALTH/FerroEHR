@@ -8,10 +8,11 @@
 //! (`docs/specs/openehr/ITS-REST`); no openEHR spec governs the OAS layout. Each
 //! handler forwards to the group dispatcher through [`guarded_dispatch`].
 //!
-//! NOTE (operation ids): a few generated operation ids carry `.` (e.g.
+//! NOTE (operation ids): a few released operation ids carry `.` (e.g.
 //! `definition_template_adl1.4_list`, `definition_query_store.yaml`) — invalid
-//! Rust identifiers, so the handler fn names sanitise `.` to `_` while the op
-//! string passed to the dispatcher is the verbatim generated id it matches on.
+//! Rust identifiers, so the handler fn names sanitise `.` to `_`, while the
+//! served `operationId` (`operation_id = …`) and the op string passed to the
+//! dispatcher are the verbatim released id.
 //!
 //! ## Prose-vs-OAS reconciliations (documented real wire, per handler)
 //!
@@ -109,6 +110,7 @@ pub(crate) fn routes() -> OpenApiRouter<AppState> {
 /// (`GET /definition/template/adl1.4`).
 #[utoipa::path(
     get, path = "/definition/template/adl1.4", tag = "ADL1.4",
+    operation_id = "definition_template_adl1.4_list",
     params(
         ("template_id" = Option<String>, Query,
          description = "\"Pattern for matching `template_id` (supports wildcards \
@@ -232,6 +234,7 @@ pub(crate) async fn definition_template_adl1_4_list(
 /// §XML Format).
 #[utoipa::path(
     post, path = "/definition/template/adl1.4", tag = "ADL1.4",
+    operation_id = "definition_template_adl1.4_upload",
     params(
         ("Content-Type" = Option<String>, Header,
          description = "`application/xml` (or `text/xml`) — the operation's only \
@@ -416,6 +419,7 @@ pub(crate) async fn definition_template_adl1_4_upload(
 /// (`GET /definition/template/adl1.4/{template_id}`).
 #[utoipa::path(
     get, path = "/definition/template/adl1.4/{template_id}", tag = "ADL1.4",
+    operation_id = "definition_template_adl1.4_get",
     params(
         ("template_id" = String, Path,
          description = "\"Template identifier or partial reference. A partial \
@@ -548,6 +552,7 @@ pub(crate) async fn definition_template_adl1_4_get(
 /// (`GET /definition/template/adl1.4/{template_id}/example`).
 #[utoipa::path(
     get, path = "/definition/template/adl1.4/{template_id}/example", tag = "ADL1.4",
+    operation_id = "definition_template_adl1.4_example_get",
     params(
         ("template_id" = String, Path,
          description = "\"Template identifier or partial reference\" (ITS-REST \
@@ -1594,6 +1599,7 @@ pub(crate) async fn definition_query_list(
 /// The AQL text is the `text/plain` request body.
 #[utoipa::path(
     put, path = "/definition/query/{qualified_query_name}", tag = "Query",
+    operation_id = "definition_query_store.yaml",
     params(
         ("qualified_query_name" = String, Path,
          description = "\"The (fully qualified) name of the query …, in a format \
@@ -1892,6 +1898,7 @@ pub(crate) async fn definition_query_version_get(
 /// immutable, so a second store at the same pair is a `409`.
 #[utoipa::path(
     put, path = "/definition/query/{qualified_query_name}/{version}", tag = "Query",
+    operation_id = "definition_query_version_store.yaml",
     params(
         ("qualified_query_name" = String, Path,
          description = "\"The (fully qualified) name of the query …, in a format \

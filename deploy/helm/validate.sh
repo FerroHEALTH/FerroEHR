@@ -96,6 +96,9 @@ declare -a CASES=(
   "viewer:${CI_DIR}/viewer-values.yaml"
   "terminology:${CI_DIR}/terminology-values.yaml"
   "audit-categories:${CI_DIR}/audit-categories-values.yaml"
+  # The user-facing production overlay ships INSIDE the chart (#3678), so it is
+  # rendered from there rather than from a ci/ copy that could drift from it.
+  "production:${CHART_DIR}/values-production.yaml"
 )
 
 # ── Rendered-manifest structure check (awk; there is no Python in this repo) ───
@@ -858,6 +861,67 @@ config_keys_gate() {
   fi
 }
 config_keys_gate
+
+# ── The production overlay makes the separations it claims (#3678) ────────────
+# values-production.yaml says which gap of deployment_profile = "production" it
+# closes and which one it accepts by name. A golden records the render; this
+# asserts the claim, key by key, so an edit that reopens a gap fails here rather
+# than at the operator's first boot. Whether the server ACCEPTS the posture is
+# boot-check.sh's question, which evaluates it with the image itself.
+toml_value() { # <toml> <section> <key>: the raw right-hand side, or nothing
+  awk -v want="$2" -v key="$3" '
+    { line = $0; sub(/^[[:space:]]+/, "", line) }
+    line ~ /^\[/ { section = line; gsub(/^\[|\]$/, "", section); next }
+    section == want && index(line, key " = ") == 1 { print substr(line, length(key) + 4); exit }
+  ' <<<"$1"
+}
+production_overlay_gate() {
+  bold "── production overlay: the separations it claims ────────"
+  local values="${CHART_DIR}/values-production.yaml" toml rendered missing=0
+  local section key want got
+  toml="$(rendered_toml "$values")"
+  rendered="$(helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "$values")"
+  # <section>|<key>|<expected right-hand side>; an empty section is the root.
+  while IFS='|' read -r section key want; do
+    got="$(toml_value "$toml" "$section" "$key")"
+    [[ "$got" == "$want" ]] \
+      || { red "  [${section}] ${key} renders '${got}', the overlay claims ${want:-the key absent}"; missing=1; }
+  done <<'CLAIMS'
+|deployment_profile|"production"
+|deployment_accepts|["plaintext_listener"]
+db|migrate|"verify"
+audit|enabled|true
+audit|fail_mode|"closed"
+audit.store|enabled|true
+authz.rbac|ehr_access_default|"restricted"
+auth|enabled|true
+server.tls|enabled|
+management|port|
+events|enabled|false
+fhir.outbound|enabled|false
+CLAIMS
+  grep -qE '^ *subject_namespaces = \[".+"' <<<"$toml" \
+    || { red "  privacy.subject_namespaces is empty: open_subject_namespace would refuse the boot"; missing=1; }
+  ! grep -qE '^ *transport = "udp"' <<<"$toml" \
+    || { red "  an audit syslog sink renders transport = \"udp\": audit_syslog_udp would refuse the boot"; missing=1; }
+  local file
+  for file in DB__URL_FILE STORAGE__PARTY__URL_FILE STORAGE__LINKAGE__URL_FILE STORAGE__AUDIT__URL_FILE DB__MIGRATE_URL_FILE; do
+    [[ "$(yq -r "select(.kind == \"Deployment\" and .metadata.name == \"${RELEASE_NAME}\") | .spec.template.spec.containers[0].env[] | select(.name == \"FERROEHR__${file}\") | .name" <<<"$rendered")" == "FERROEHR__${file}" ]] \
+      || { red "  the Deployment does not carry FERROEHR__${file}: a domain or the migrator shares a credential"; missing=1; }
+  done
+  [[ "$(yq -r 'select(.kind == "Job") | .metadata.name' <<<"$rendered")" == "${RELEASE_NAME}-migrate" ]] \
+    || { red "  no migration Job renders: under migrate = verify nothing would prepare the schema"; missing=1; }
+  [[ "$(yq -r 'select(.kind == "NetworkPolicy") | .spec.ingress[0].from | length' <<<"$rendered")" -gt 0 ]] \
+    || { red "  the NetworkPolicy admits every source: the plaintext_listener acceptance rests on it admitting the ingress controller alone"; missing=1; }
+  [[ "$(yq -r 'select(.kind == "Ingress") | .spec.tls | length' <<<"$rendered")" -gt 0 ]] \
+    || { red "  the Ingress carries no tls block: the plaintext_listener acceptance rests on TLS ending there"; missing=1; }
+  if [[ "$missing" -eq 0 ]]; then
+    echo "  production, every evaluated separation made, plaintext_listener accepted behind a TLS Ingress and a narrowed NetworkPolicy"
+  else
+    FAIL=1
+  fi
+}
+production_overlay_gate
 
 for case in "${CASES[@]}"; do
   label="${case%%:*}"

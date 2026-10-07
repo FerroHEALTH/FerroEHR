@@ -21,11 +21,16 @@ without a golden is a render nothing compares.
 - `audit-categories.yaml` — `ci/audit-categories-values.yaml` (a German SGB V
   § 309 controller: the access-log horizon as `retention_years: 3` and an EHDS
   priority-category map under `[audit.categories]`).
+- `production.yaml` — `ferroehr/values-production.yaml`, the overlay the chart
+  ships to users (`deployment_profile: production`: one Secret per storage
+  domain, the migration Job under `migrate: verify`, a TLS Ingress and a
+  NetworkPolicy narrowed to the ingress controller).
 
 ## Regenerating
 
-Whenever a chart template or the `ci/*-values.yaml` overlays change and the
-render is *intended* to differ, regenerate and review the diff:
+Whenever a chart template, the `ci/*-values.yaml` overlays or the chart's own
+`values-production.yaml` change and the render is *intended* to differ,
+regenerate and review the diff:
 
 ```bash
 deploy/helm/validate.sh --update

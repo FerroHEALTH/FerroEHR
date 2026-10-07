@@ -255,6 +255,8 @@ rendered `ferroehr.toml` always says what it runs:
   server's `open` defaults for `config.audit.fail_mode` and
   `config.authz.rbac.ehr_access_default`, `config.db.migrate: apply` on the
   runtime credential, and a plaintext listener behind the ingress; see [`deployment_profile`](configuration.md#deployment_profile).
+  The chart's [production overlay](#the-production-overlay) closes them and
+  accepts the plaintext listener by name.
 - **`config.audit.store.retention_years`:** unset. Set it in place of
   `config.audit.store.retention_days` when the horizon must be exact in
   calendar years, such as `3` for a German SGB V § 309 controller with
@@ -276,6 +278,43 @@ config:
 
 The [Audit](config-audit.md) page has the category vocabulary and the
 retention floors and ceilings the server enforces at boot.
+
+### The production overlay
+
+The chart ships `values-production.yaml` beside `values.yaml`. Layered over
+the defaults, it runs `config.deployment_profile: production` with every
+separation that profile checks made, except one it accepts by name:
+
+| Gap | In the overlay |
+|---|---|
+| `shared_credential` | the clinical, party and linkage domains each read their own Secret (`database.existingSecret`, `database.party.existingSecret`, `database.linkage.existingSecret`), and the audit domain reads `database.audit.existingSecret` |
+| `shared_cluster` | yours to make: the server compares the cluster each domain pool reaches, so point the four DSNs at four PostgreSQL clusters, or add `shared_cluster` to `config.deployment_accepts` as a recorded decision |
+| `migrate_on_runtime_credential` | `config.db.migrate: verify`, with `migrations.job.enabled` preparing the schema on `database.migrateExistingSecret` |
+| `open_subject_namespace` | `config.privacy.subject_namespaces` declared |
+| `audit_off`, `audit_fails_open`, `audit_syslog_udp` | the audit trail on with its local store, `config.audit.fail_mode: closed`, no UDP syslog sink |
+| `open_ehr_access_default` | `config.authz.rbac.ehr_access_default: restricted` |
+| `auth_off` | OIDC authentication on |
+| `plaintext_broker` | no AMQP integration on |
+| `plaintext_audit_feed`, `plaintext_object_store` | the audit FHIR feed and the multimedia store off; an `https://` URL for either when you turn it on |
+| `plaintext_listener` | accepted by name: TLS ends at the Ingress (`ingress.tls`), the pod listens in plain HTTP, and the NetworkPolicy admits only the ingress controller's namespace (`networkPolicy.ingressFrom`, with `networkPolicy.ingressAllowAll: false`) |
+
+Every Secret name, the identity provider, the pseudonym namespace, the host,
+the TLS Secret and the ingress controller's namespace in it are examples.
+Replace them in a values file of your own and pass both:
+
+```shell
+helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 10.2.2 --untar
+helm install ferroehr ./ferroehr -n ferroehr \
+  -f ./ferroehr/values-production.yaml -f my-site-values.yaml
+```
+
+A name you forget to replace fails loudly: a Secret that does not exist keeps
+the pod from starting, and the server refuses to start under `production`
+while a separation is open, naming each gap and its remedy. The chart's
+validation renders the overlay and asserts each separation above, and its
+boot check has the server evaluate the posture from the rendered
+configuration. Neither reaches a database, so `shared_cluster` is first judged
+when the pod starts against yours.
 
 ## Database roles — who runs migrations
 

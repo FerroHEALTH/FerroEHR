@@ -27,7 +27,11 @@ defaults to `sandbox`, the binary's default, which must not hold real patient
 data and names every missing separation on its boot banner. A deployment
 holding patient data sets `production`, which refuses to start until each
 separation is made or accepted by name; the comment above the key in
-`values.yaml` lists the ones these defaults leave open.
+`values.yaml` lists the ones these defaults leave open. The chart ships
+`values-production.yaml`, an overlay that sets `production`, makes those
+separations and accepts the plaintext pod listener behind a TLS ingress by
+name; its comments name each example value to replace
+(`helm pull --untar`, then `-f ferroehr/values-production.yaml`).
 
 **A secret set in the wrong place fails the render on purpose.** See
 [Secrets](#secrets): this chart refuses to put a credential in a ConfigMap

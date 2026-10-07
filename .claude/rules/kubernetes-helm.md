@@ -209,6 +209,8 @@ evidence if it ran in an enforcing namespace — say which.
 | `values.schema.json` accepts/rejects | `validate.sh` `schema_gate`, `fixture_gate` |
 | Golden render drift | CI compare against `deploy/helm/golden/` |
 | The chart's copy of the shaped terminology seed matches the canonical `docker/terminology/seed/` | `terminology-seed-drift` → `scripts/checks/terminology-seed-drift.sh` (both directions, mutation-proven). A chart's `.Files` reaches only what is packaged with it, so the copy exists; the guard is what keeps it from becoming a fork |
+| The shipped `values-production.yaml` overlay renders every separation it claims | `validate.sh` `production_overlay_gate` (mutation-proven), plus its golden |
+| A production overlay boots with no open gap it does not accept by name | `deploy/helm/ci/boot-check.sh` `production_posture` (`ferroehr report` `.deployment`, offline); it cannot judge `shared_cluster` or a relocated domain's migration facts, which the server measures only over live connections, and it says so |
 | Chart version bump on packaged-content change | `chart-version-guard` |
 | The committed `appVersion` equals the workspace version, and the image annotations + generated README agree with it | `chart-appversion-guard` → `scripts/checks/chart-appversion.sh` (#2890, mutation-proven). The release PR bumps it in the same sweep as the compose tags; the package-time injection (#2779) stays as belt-and-braces for the release leg and the dispatch recovery lane |
 | Field-vs-`kubeVersion` availability | **review-enforced** — no tool knows which fields a manifest uses; §1 is the procedure |

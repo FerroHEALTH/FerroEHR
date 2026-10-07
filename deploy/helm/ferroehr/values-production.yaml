@@ -1,0 +1,141 @@
+# The production overlay: values that boot the server under
+# `deployment_profile = "production"` with every separation that profile checks
+# made, and the one that a Kubernetes deployment behind an ingress cannot make
+# accepted by name, with its reason. Layer it over the chart defaults:
+#
+#   helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version <chart> --untar
+#   helm install ferroehr ./ferroehr -n ferroehr -f ./ferroehr/values-production.yaml \
+#     -f my-site-values.yaml
+#
+# Every name below that points at YOUR infrastructure is an example to replace:
+# the Secret names, the identity provider, the pseudonym namespace, the host,
+# the TLS Secret and the ingress controller's namespace. The server refuses to
+# start under `production` while a separation is open and not accepted, and the
+# refusal names each gap with its remedy, so a missed replacement fails loudly
+# at boot rather than running a weaker posture.
+#
+# The separations, one per gap the server evaluates (the gap tokens are what
+# `deployment_accepts` takes):
+#
+#   shared_credential            made: the clinical, party and linkage domains
+#                                each connect on their own Secret below.
+#   shared_cluster               made BY YOU: the server compares the cluster
+#                                identity each domain pool reaches
+#                                (pg_control_system().system_identifier), so the
+#                                four DSNs must reach four different PostgreSQL
+#                                clusters. Pointing them at one cluster is refused;
+#                                accept `shared_cluster` by name only as a
+#                                recorded decision.
+#   open_subject_namespace       made: privacy.subject_namespaces is declared.
+#   audit_off                    made: the audit trail is on with its local store.
+#   audit_fails_open             made: audit.fail_mode is `closed`.
+#   audit_syslog_udp             made: no UDP syslog sink (syslog is off; turn it
+#                                on with transport = "tls").
+#   open_ehr_access_default      made: authz.rbac.ehr_access_default is `restricted`.
+#   migrate_on_runtime_credential made: db.migrate is `verify`; the migration Job
+#                                prepares the schema on its own credential.
+#   auth_off                     made: authentication on, through OIDC.
+#   plaintext_listener           ACCEPTED by name: TLS terminates at the Ingress,
+#                                and the pod listener speaks plain HTTP on the pod
+#                                network. The NetworkPolicy admits only the
+#                                ingress controller's namespace, so the plaintext
+#                                hop stays between the controller and the pod.
+#                                The management surface shares the main listener
+#                                (no management.port), so it adds no second
+#                                plaintext port.
+#   plaintext_broker             made: no AMQP integration is on. Enabling one
+#                                uses an amqps:// URL or tls = true.
+#
+# No openEHR spec governs deployment posture; the reasoning per gap is in the
+# book's CRA risk assessment and the instructions for use.
+
+# ── One credential per storage domain, and one that prepares the schema ──────
+# Each Secret holds a full DSN. Point each domain at its own cluster (see
+# shared_cluster above); `?sslmode=verify-full` encrypts the database hop.
+database:
+  # The clinical domain's DSN (role ferroehr_clinical). It is also [db].url.
+  existingSecret: ferroehr-db-clinical
+  existingSecretKey: FERROEHR__DB__URL
+  party:
+    # Role ferroehr_party: every identity the instance holds.
+    existingSecret: ferroehr-db-party
+    existingSecretKey: FERROEHR__STORAGE__PARTY__URL
+  linkage:
+    # Role ferroehr_linkage: the map from a party to its EHR.
+    existingSecret: ferroehr-db-linkage
+    existingSecretKey: FERROEHR__STORAGE__LINKAGE__URL
+  audit:
+    # The audit repository, kept apart from the system that processes the data.
+    existingSecret: ferroehr-db-audit
+    existingSecretKey: FERROEHR__STORAGE__AUDIT__URL
+  # The migrator DSN (role ferroehr_migrator). The server opens it for the
+  # verify step at boot and holds no pool on it.
+  migrateExistingSecret: ferroehr-db-migrate
+  migrateExistingSecretKey: FERROEHR__DB__MIGRATE_URL
+
+# The schema is applied by a pre-install/pre-upgrade Job on the migrator
+# credential; the server itself issues no DDL (config.db.migrate below).
+migrations:
+  job:
+    enabled: true
+    existingSecret: ferroehr-db-migrate
+    existingSecretKey: FERROEHR__DB__MIGRATE_URL
+
+config:
+  deployment_profile: production
+  # The one gap this overlay accepts, and why: see plaintext_listener above.
+  deployment_accepts: [plaintext_listener]
+
+  db:
+    migrate: verify
+
+  auth:
+    enabled: true
+    oidc:
+      # Your identity provider. The server fetches its signing keys from the
+      # issuer's discovery document.
+      issuer: https://idp.example.com/realms/ferroehr
+      audiences: [ferroehr]
+
+  authz:
+    rbac:
+      # An EHR without ACCESS_CONTROL_SETTINGS admits no one until its settings
+      # are authored.
+      ehr_access_default: restricted
+
+  privacy:
+    # The pseudonym namespace(s) your pseudonymisation service issues. From now
+    # on EHR_STATUS.subject.external_ref must name one and carry a UUID.
+    subject_namespaces: [your-pseudonym-service]
+
+  audit:
+    enabled: true
+    # Refuse an auditable operation with 503 when its record cannot be queued.
+    fail_mode: closed
+    store:
+      enabled: true
+
+# ── Network: TLS at the Ingress, and only the controller reaches the pods ─────
+ingress:
+  enabled: true
+  className: ""
+  annotations: {}
+  hosts:
+    - host: ferroehr.example.com
+      paths:
+        - path: /ferroehr
+          pathType: Prefix
+  tls:
+    - secretName: ferroehr-tls
+      hosts:
+        - ferroehr.example.com
+
+networkPolicy:
+  enabled: true
+  # No source is admitted by default: an empty ingressFrom is refused at render.
+  ingressAllowAll: false
+  # The namespace your ingress controller runs in.
+  ingressFrom:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ingress-nginx

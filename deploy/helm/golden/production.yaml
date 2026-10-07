@@ -1,0 +1,615 @@
+---
+# Source: ferroehr/templates/networkpolicy.yaml
+# Ingress policy for the ferroehr pods, admitting traffic ONLY to the API port
+# (and the management port when it runs on its own listener). Every other inbound
+# port is denied. A PHI workload should never be reachable on anything but its
+# serving port.
+#
+# PORTS are narrowed unconditionally; SOURCES only when networkPolicy.ingressFrom
+# is set. An ingress rule with no `from` admits every source — other namespaces
+# and off-cluster clients included
+# (https://kubernetes.io/docs/concepts/services-networking/network-policies/ —
+# "If no ... from is specified ... it allows all traffic"). So there are three
+# states, and the third exists because the first two look identical in every
+# summary of the policy:
+#   ingressFrom set                              → sources narrowed to those peers
+#   ingressFrom empty, ingressAllowAll true      → EVERY source admitted (shipped)
+#   ingressFrom empty, ingressAllowAll false     → refused at render, below
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ferroehr
+  annotations:
+    kubernetes.io/description: >-
+      Ingress for the CDR: only the API port (and the management port when enabled), and only from the networkPolicy.ingressFrom peers.
+  labels:
+    helm.sh/chart: ferroehr-10.2.2
+    app.kubernetes.io/name: ferroehr
+    app.kubernetes.io/instance: ferroehr
+    app.kubernetes.io/version: "4.3.4"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: ferroehr
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: ferroehr
+      app.kubernetes.io/instance: ferroehr
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - port: http
+          protocol: TCP
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+
+---
+# Source: ferroehr/templates/poddisruptionbudget.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ferroehr
+  annotations:
+    kubernetes.io/description: >-
+      Keeps the CDR available during voluntary disruption (node drains, cluster upgrades). AlwaysAllow lets a drain evict already-unhealthy pods rather than waiting for them to recover.
+  labels:
+    helm.sh/chart: ferroehr-10.2.2
+    app.kubernetes.io/name: ferroehr
+    app.kubernetes.io/instance: ferroehr
+    app.kubernetes.io/version: "4.3.4"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: ferroehr
+spec:
+  unhealthyPodEvictionPolicy: AlwaysAllow
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ferroehr
+      app.kubernetes.io/instance: ferroehr
+
+---
+# Source: ferroehr/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ferroehr
+  labels:
+    helm.sh/chart: ferroehr-10.2.2
+    app.kubernetes.io/name: ferroehr
+    app.kubernetes.io/instance: ferroehr
+    app.kubernetes.io/version: "4.3.4"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: ferroehr
+automountServiceAccountToken: false
+
+---
+# Source: ferroehr/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ferroehr
+  labels:
+    helm.sh/chart: ferroehr-10.2.2
+    app.kubernetes.io/name: ferroehr
+    app.kubernetes.io/instance: ferroehr
+    app.kubernetes.io/version: "4.3.4"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: ferroehr
+data:
+  # The whole server configuration as one ferroehr.toml, mounted at
+  # /etc/ferroehr/ferroehr.toml (config search-order position 4). Rendered by
+  # `ferroehr.configToml`, never from .Values.config verbatim: a ConfigMap is not
+  # a sensitive object, so a secret-bearing key is either refused (when a
+  # `secrets:` key carries it) or moves this whole file into the Secret, in which
+  # case this ConfigMap is not created at all.
+  # NOTE: Helm decodes values through JSON, so every number reaches a template as
+  # a float64 and `toToml` writes it back as a TOML float (`10.0`, `1.6777216e+07`)
+  # — the server's configuration layer coerces those onto integer keys, which is
+  # why the rendered file is accepted as written.
+  ferroehr.toml: |
+    deployment_accepts = ["plaintext_listener"]
+    deployment_profile = "production"
+    spec_profile = "development"
+    
+    [admin]
+      enabled = false
+    
+    [audit]
+      enabled = true
+      fail_mode = "closed"
+      [audit.categories]
+        [audit.categories.archetypes]
+        [audit.categories.templates]
+      [audit.store]
+        enabled = true
+        retention_days = 0.0
+    
+    [auth]
+      enabled = true
+      [auth.oidc]
+        audiences = ["ferroehr"]
+        issuer = "https://idp.example.com/realms/ferroehr"
+    
+    [authz]
+      [authz.abac]
+        enabled = false
+      [authz.rbac]
+        admin_role = "ADMIN"
+        ehr_access_default = "restricted"
+        enabled = true
+        user_role = "USER"
+    
+    [db]
+      acquire_timeout_secs = 30.0
+      max_connections = 10.0
+      migrate = "verify"
+      min_connections = 0.0
+      statement_timeout_ms = 60000.0
+    
+    [events]
+      enabled = false
+      exchange = "ferroehr.events"
+      tls = false
+    
+    [fhir]
+      api_enabled = false
+      [fhir.outbound]
+        enabled = false
+        exchange = "ferroehr.fhir"
+        tls = false
+    
+    [log]
+      format = "json"
+    
+    [management]
+      base_path = "/management"
+      enabled = true
+      [management.endpoints]
+        env = "off"
+        flamegraph = "off"
+        info = "off"
+        loggers = "off"
+        metrics = "off"
+        prometheus = "off"
+    
+    [multimedia]
+      allow_http = false
+      bucket = "openehr-multimedia"
+      enabled = false
+      region = "us-east-1"
+    
+    [privacy]
+      subject_namespaces = ["your-pseudonym-service"]
+    
+    [server]
+      base_path = "/ferroehr/rest/openehr/v1"
+      bind = "0.0.0.0:8080"
+      cors_permissive = false
+      swagger_ui = "private"
+      [server.connection]
+        header_read_timeout_secs = 10.0
+        http2_keep_alive_interval_secs = 30.0
+        http2_keep_alive_timeout_secs = 10.0
+        max_concurrent_streams = 256.0
+      [server.limits]
+        body_bytes = 1.6777216e+07
+        bulk_body_bytes = 6.7108864e+07
+      [server.rate_limit]
+        address_burst = 4096.0
+        address_per_second = 2048.0
+        enabled = true
+        principal_burst = 2048.0
+        principal_per_second = 1024.0
+    
+    [signing]
+      enabled = true
+      mode = "digest"
+      verify_on_read = "strict"
+    
+    [terminology]
+      api_enabled = false
+    
+    [usage_report]
+      deployment = "helm"
+      enabled = true
+    
+
+---
+# Source: ferroehr/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: ferroehr
+  labels:
+    helm.sh/chart: ferroehr-10.2.2
+    app.kubernetes.io/name: ferroehr
+    app.kubernetes.io/instance: ferroehr
+    app.kubernetes.io/version: "4.3.4"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: ferroehr
+  annotations:
+    kubernetes.io/description: Stable in-cluster address for the FerroEHR CDR's openEHR
+      ITS-REST API. The management surface, when enabled on its own port, is deliberately
+      NOT exposed here.
+spec:
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      appProtocol: http
+  selector:
+    app.kubernetes.io/name: ferroehr
+    app.kubernetes.io/instance: ferroehr
+
+---
+# Source: ferroehr/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ferroehr
+  annotations:
+    kubernetes.io/description: >-
+      The FerroEHR CDR itself: a stateless openEHR ITS-REST API server against an EXTERNAL PostgreSQL 18. It stores nothing locally, so a pod is disposable; readiness reports the database and its schema, liveness does not.
+  labels:
+    helm.sh/chart: ferroehr-10.2.2
+    app.kubernetes.io/name: ferroehr
+    app.kubernetes.io/instance: ferroehr
+    app.kubernetes.io/version: "4.3.4"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: ferroehr
+spec:
+  replicas: 2
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ferroehr
+      app.kubernetes.io/instance: ferroehr
+  template:
+    metadata:
+      annotations:
+        # Roll pods when anything the process reads AT BOOT changes: the rendered
+        # ferroehr.toml (wherever it lands), the mounted config files, and the
+        # secret values. Hashing the ConfigMap template alone missed the last two,
+        # so a rotated passphrase or an edited Cedar policy propagated into the
+        # volume while every pod kept running on the value it read at startup.
+        checksum/config: 02c9bad0a815a84eb7cc4f60da32c5699b0bf1f743891528a63a705cf45b4b17
+      labels:
+        app.kubernetes.io/name: ferroehr
+        app.kubernetes.io/instance: ferroehr
+    spec:
+      serviceAccountName: ferroehr
+      automountServiceAccountToken: false
+      # NOT a tunable: the kubelet's per-Service link variables
+      # (<SVC>_SERVICE_HOST, <SVC>_PORT_8080_TCP_ADDR, …) land inside the
+      # server's reserved FERROEHR_ namespace for any Service named ferroehr*,
+      # and the strict boot-time env sweep then refuses to start
+      # (https://kubernetes.io/docs/concepts/services-networking/service/#environment-variables).
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 30
+      hostUsers: false
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+        supplementalGroupsPolicy: Strict
+      containers:
+        - name: ferroehr
+          image: "ghcr.io/ferrohealth/ferroehr:4.3.4"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          # Only SECRET config is env; the rest is the mounted ferroehr.toml.
+          # The DSN comes from an existing Secret (preferred) or the chart Secret;
+          # the env layer overrides the file, so each secret here wins over any
+          # matching TOML key.
+          # A secret VALUE appears below only where the config key has no
+          # `*_file` sibling to point at the mounted volume instead; the rest are
+          # `*_FILE` paths, which are not themselves sensitive.
+          env:
+            - name: FERROEHR__DB__URL_FILE
+              value: "/etc/ferroehr-secrets/db.url"
+            - name: FERROEHR__STORAGE__PARTY__URL_FILE
+              value: "/etc/ferroehr-secrets/storage.party.url"
+            - name: FERROEHR__STORAGE__LINKAGE__URL_FILE
+              value: "/etc/ferroehr-secrets/storage.linkage.url"
+            - name: FERROEHR__STORAGE__AUDIT__URL_FILE
+              value: "/etc/ferroehr-secrets/storage.audit.url"
+            - name: FERROEHR__DB__MIGRATE_URL_FILE
+              value: "/etc/ferroehr-secrets/db.migrate_url"
+          livenessProbe:
+            httpGet:
+              path: /health/liveness
+              port: http
+            failureThreshold: 3
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /health/readiness
+              port: http
+            failureThreshold: 3
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+          startupProbe:
+            httpGet:
+              path: /health/liveness
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 30
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: 5
+          resources:
+            limits:
+              cpu: "2"
+              ephemeral-storage: 1Gi
+              memory: 1Gi
+            requests:
+              cpu: 250m
+              ephemeral-storage: 128Mi
+              memory: 256Mi
+          volumeMounts:
+            # readOnlyRootFilesystem=true → give the process a writable scratch dir.
+            - name: tmp
+              mountPath: /tmp
+            # ferroehr.toml (+ any config.files) mounted read-only at /etc/ferroehr.
+            - name: config
+              mountPath: /etc/ferroehr
+              readOnly: true
+            # File-borne secrets, read-only. NOT a subPath mount: a subPath-mounted
+            # Secret never receives updates, so a rotation would not propagate
+            # (https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath).
+            - name: secrets
+              mountPath: /etc/ferroehr-secrets
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: config
+          projected:
+            # Same 0440 as the secrets volume, for the same reason: this volume
+            # is not only ferroehr.toml. Every `config.files` entry lands here,
+            # and that key's documented use includes the PGP signing PRIVATE key
+            # (signing.key_path), mutual-TLS PEMs and a JWKS blob; when the
+            # configuration holds a secret the chart cannot route out of it,
+            # ferroehr.toml itself arrives from a Secret too. Without a mode the
+            # projection defaults to 0644 — world-readable inside the container.
+            # Owner is root, group is fsGroup, so the group bit is what the
+            # non-root process reads through
+            # (https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod).
+            defaultMode: 0440
+            sources:
+              - configMap:
+                  name: ferroehr
+                  items:
+                    - key: ferroehr.toml
+                      path: ferroehr.toml
+        # File-borne secrets. A projected volume rather than a plain secret volume
+        # because the DSN may live in an EXTERNAL Secret the operator created,
+        # which has to be projected beside the chart's own — both under one mount,
+        # and not a subPath mount, so a rotated Secret still propagates.
+        - name: secrets
+          projected:
+            # Owner is root, group is fsGroup, so the group bit is what the
+            # non-root process reads through
+            # (https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod).
+            defaultMode: 0440
+            sources:
+              # The operator's Secret, projected as the file FERROEHR__DB__URL_FILE
+              # points at. Its key name is theirs (database.existingSecretKey);
+              # only the mounted PATH is fixed.
+              - secret:
+                  name: ferroehr-db-clinical
+                  items:
+                    - key: FERROEHR__DB__URL
+                      path: db.url
+              # One storage domain's own Secret, a different credential from the
+              # shared DSN above and projected as its own file.
+              - secret:
+                  name: ferroehr-db-party
+                  items:
+                    - key: FERROEHR__STORAGE__PARTY__URL
+                      path: storage.party.url
+              # One storage domain's own Secret, a different credential from the
+              # shared DSN above and projected as its own file.
+              - secret:
+                  name: ferroehr-db-linkage
+                  items:
+                    - key: FERROEHR__STORAGE__LINKAGE__URL
+                      path: storage.linkage.url
+              # One storage domain's own Secret, a different credential from the
+              # shared DSN above and projected as its own file.
+              - secret:
+                  name: ferroehr-db-audit
+                  items:
+                    - key: FERROEHR__STORAGE__AUDIT__URL
+                      path: storage.audit.url
+              # The schema-preparation Secret — usually the same credential the
+              # migration Job carries, which is why it is a third source rather
+              # than a key of either runtime one.
+              - secret:
+                  name: ferroehr-db-migrate
+                  items:
+                    - key: FERROEHR__DB__MIGRATE_URL
+                      path: db.migrate_url
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          matchLabelKeys:
+            - pod-template-hash
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: ferroehr
+              app.kubernetes.io/instance: ferroehr
+
+---
+# Source: ferroehr/templates/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ferroehr
+  labels:
+    helm.sh/chart: ferroehr-10.2.2
+    app.kubernetes.io/name: ferroehr
+    app.kubernetes.io/instance: ferroehr
+    app.kubernetes.io/version: "4.3.4"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: ferroehr
+spec:
+  tls:
+    - hosts:
+      - ferroehr.example.com
+      secretName: ferroehr-tls
+  rules:
+    - host: "ferroehr.example.com"
+      http:
+        paths:
+          - path: /ferroehr
+            pathType: Prefix
+            backend:
+              service:
+                name: ferroehr
+                port:
+                  number: 8080
+---
+# Source: ferroehr/templates/migration-job.yaml
+# Out-of-band schema migration, as a Helm pre-install/pre-upgrade hook Job.
+#
+# Migrations are DDL, so whoever applies them can rewrite the schema. Running
+# them here — as `ferroehr_migrator`, in a pod that exits — lets the SERVER run
+# as `ferroehr_clinical` with no DDL rights at all, which is what
+# config.db.migrate=verify then enforces (it refuses to boot against a database
+# this job has not migrated, rather than migrating it itself).
+#
+# As a hook, Helm creates it before the Deployment and WAITS for it: a failed
+# migration fails the release instead of rolling pods against a schema that was
+# never applied. Deliberately lean — the migration step needs the DSN and
+# nothing else, so it mounts no ConfigMap and runs on the built-in defaults.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ferroehr-migrate
+  labels:
+    helm.sh/chart: ferroehr-10.2.2
+    app.kubernetes.io/name: ferroehr-migration
+    app.kubernetes.io/instance: ferroehr
+    app.kubernetes.io/version: "4.3.4"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: ferroehr
+    app.kubernetes.io/component: migration
+  annotations:
+    kubernetes.io/description: >-
+      Applies the schema migrations as ferroehr_migrator — a DIFFERENT credential from the runtime DSN — before the server rolls. A Helm pre-install/pre-upgrade hook, so a failed migration fails the release.
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-5"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 600
+  activeDeadlineSeconds: 600
+  podFailurePolicy:
+    rules:
+      - action: Ignore
+        onPodConditions:
+          - type: DisruptionTarget
+  template:
+    metadata:
+      labels:
+        helm.sh/chart: ferroehr-10.2.2
+        app.kubernetes.io/name: ferroehr-migration
+        app.kubernetes.io/instance: ferroehr
+        app.kubernetes.io/version: "4.3.4"
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/part-of: ferroehr
+        app.kubernetes.io/component: migration
+    spec:
+      restartPolicy: Never
+      serviceAccountName: ferroehr
+      automountServiceAccountToken: false
+      # Same reason as the Deployment: the kubelet's per-Service link variables
+      # land inside the server's reserved FERROEHR_ namespace and the strict
+      # boot-time env sweep then refuses to start.
+      enableServiceLinks: false
+      hostUsers: false
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+        supplementalGroupsPolicy: Strict
+      containers:
+        - name: migrate
+          image: "ghcr.io/ferrohealth/ferroehr:4.3.4"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          args: ["db", "migrate"]
+          env:
+            # The migrator DSN, as a mounted file rather than an environment
+            # value (readable through /proc/<pid>/environ and inherited by every
+            # child process — OWASP Kubernetes Security Cheat Sheet).
+            - name: FERROEHR__DB__URL_FILE
+              value: "/etc/ferroehr-secrets/db.url"
+            # This pod's job IS the DDL, whatever the server's posture is.
+            - name: FERROEHR__DB__MIGRATE
+              value: apply
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: migrator-secret
+              mountPath: /etc/ferroehr-secrets
+              readOnly: true
+          resources:
+            {}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: migrator-secret
+          secret:
+            secretName: ferroehr-db-migrate
+            defaultMode: 0440
+            items:
+              - key: FERROEHR__DB__MIGRATE_URL
+                path: db.url
+

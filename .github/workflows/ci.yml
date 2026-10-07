@@ -327,8 +327,10 @@ jobs:
           # the values files stood still and every render stayed green. So a
           # change to the config tree, its validators or the annotated template
           # that is the schema of record re-boots the overlays too. The
-          # Dockerfile is in because it decides what the binary is packaged into.
-          if echo "$changed" | grep -qE '^(deploy/helm/|\.github/workflows/ci\.yml$|docker/Dockerfile$|app/ferroehr/src/config/|app/ferroehr/assets/ferroehr\.default\.toml$|app/ferroehr-rest/src/config\.rs$)' ; then
+          # Dockerfile is in because it decides what the binary is packaged into,
+          # and report.rs because a production overlay's posture is read from
+          # `ferroehr report`.
+          if echo "$changed" | grep -qE '^(deploy/helm/|\.github/workflows/ci\.yml$|docker/Dockerfile$|app/ferroehr/src/config/|app/ferroehr/assets/ferroehr\.default\.toml$|app/ferroehr-rest/src/config\.rs$|app/ferroehr/src/report\.rs$)' ; then
             echo "chart_boot=true" >> "$GITHUB_OUTPUT"
           else
             echo "chart_boot=false" >> "$GITHUB_OUTPUT"

@@ -125,22 +125,29 @@ requirements:
           manufacturer's instructions without adversely affecting their
           characteristics and performance.
         status: partial
-        issues: [3678]
+        issues: [3692]
         evidence:
           - text: The instructions for use
             href: instructions-for-use.md
           - text: Deployment artifacts and their documented installation
             href: ../installation/index.md
+          - text: The chart's production overlay
+            href: ../installation/kubernetes.md#the-production-overlay
         gap: >-
           The instructions for use set the production profile, which refuses
-          to start while a separation is missing. The Helm chart and the
-          Compose files declare the `sandbox` profile explicitly, and the
-          chart's values say what a deployment holding patient data sets
-          instead, but an installation that follows the quickstart instead of
-          the instructions still runs the sandbox posture, which must not hold
-          real personal data; the server says so on every boot and on
-          `GET /ferroehr/rest/status`. No shipped values file boots under
-          `production` yet.
+          to start while a separation is missing, and point a Kubernetes
+          installation at the chart's `values-production.yaml`: it sets
+          `production`, makes every separation a values file can make, and
+          accepts `plaintext_listener` by name behind a TLS ingress. The
+          chart's validation renders it and asserts each separation, and its
+          boot check has the server evaluate the posture from the rendered
+          configuration. Separate database clusters, which the server measures
+          over live connections, are judged by no check before the first boot
+          against the operator's databases. The chart and the Compose files
+          still declare `sandbox` by default, so an installation that follows
+          the quickstart instead of the instructions runs the sandbox posture,
+          which must not hold real personal data; the server says so on every
+          boot and on `GET /ferroehr/rest/status`.
       - id: "1.3"
         summary: >-
           Interoperability, safety and security features uphold the rights of

@@ -34,11 +34,15 @@ spec_profile = "development"
 # missing and not named in deployment_accepts (shared_credential,
 # shared_cluster, open_subject_namespace, audit_off, audit_fails_open,
 # audit_syslog_udp, open_ehr_access_default, migrate_on_runtime_credential,
-# auth_off, plaintext_listener; accept plaintext_listener behind a
-# TLS-terminating ingress; a [management] port opens it too, since that
-# listener is plain HTTP on every interface). Our own posture; auth_off and
-# plaintext_listener follow CRA Annex I Part I(2)(d) and (e), audit_syslog_udp
-# EHDS Annex II 1.4.
+# auth_off, plaintext_listener, plaintext_broker, plaintext_audit_feed,
+# plaintext_object_store; accept plaintext_listener
+# behind a TLS-terminating ingress; a [management] port opens it too, since that
+# listener is plain HTTP on every interface; plaintext_broker opens on an
+# enabled [events] or [fhir.outbound] amqp:// URL without tls,
+# plaintext_audit_feed on an enabled [audit.fhir_feed] http:// url,
+# plaintext_object_store on an enabled [multimedia] with allow_http). Our own
+# posture; auth_off follows CRA Annex I Part I(2)(d), the plaintext_* gaps (e),
+# audit_syslog_udp EHDS Annex II 1.4.
 deployment_profile = "sandbox"   # sandbox | production
 #? deployment_accepts = ["shared_cluster"]
 
@@ -464,7 +468,7 @@ enabled = false
 url = "amqp://guest:guest@localhost:5672/%2f"   # credentials redacted in every rendering
 #? url_file = "/run/secrets/events-amqp"   # or a mounted file instead of env
 exchange = "ferroehr.events"
-tls = false                  # PROD: true (amqps)
+tls = false                  # PROD: true (amqps); production: plaintext_broker on amqp://
 batch_size = 128
 poll_interval_ms = 1000
 retention_days = 7
@@ -481,7 +485,7 @@ enabled = false              # carries PHI — enabling is an explicit decision
 url = "amqp://guest:guest@localhost:5672/%2f"
 #? url_file = "/run/secrets/fhir-amqp"   # or a mounted file instead of env
 exchange = "ferroehr.fhir"    # distinct from [events].exchange for PHI isolation
-tls = false                  # PROD: true (amqps)
+tls = false                  # PROD: true (amqps); production: plaintext_broker on amqp://
 batch_size = 128
 poll_interval_ms = 1000
 publish_max_retries = 3

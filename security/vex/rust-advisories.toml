@@ -60,15 +60,17 @@
 id = "https://ferroehr.eu/vex/rust-dependency-advisories"
 author = "Cadasto B.V."
 role = "vendor"
-timestamp = "2026-10-06T00:00:00Z"
-version = 5
+timestamp = "2026-10-07T00:00:00Z"
+version = 6
 
-# What the statements are about: the released server binary and the container
-# image built from it. Both carry the same Cargo dependency graph, which is the
-# graph every advisory below concerns.
+# What the statements are about: the released server binary, the container
+# image built from it, and the viewer image. The server artifacts carry the
+# same Cargo dependency graph; the viewer image carries the viewer's graph,
+# which every statement below names in its `workspace_roots` where it applies.
 products = [
   "pkg:cargo/ferroehr-server",
   "pkg:oci/ferroehr",
+  "pkg:oci/ferroehr-viewer",
 ]
 
 # ── Accepted by the advisory gate ───────────────────────────────────────────
@@ -110,7 +112,10 @@ own OpenPGP key, and an ECC/EdDSA signing key keeps `rsa` off the signing path \
 entirely; a deployment that enables `pgp` mode with an RSA key is outside this \
 statement and should rotate to an ECC key. `ferroehr-ext` reaches the crate \
 through the same two carriers as the platform library it extends, so the same \
-argument covers it. The spec crates (`openehr-rm`, `openehr-its`, \
+argument covers it. The viewer (`ferroehr-viewer`) reaches the crate through `openidconnect` alone, \
+in its OIDC login, where the only RSA operation is the same PUBLIC-key \
+verification of the identity provider's ID-token signature; it does not \
+depend on `pgp`. The spec crates (`openehr-rm`, `openehr-its`, \
 `openehr-sdt`, `openehr-adl`) reach `rsa` only through their path-only dev-dependency on the \
 `testkit` harness (which depends on the platform library): a test-only edge \
 cargo strips at packaging, so no published crate ships the code at all. No \

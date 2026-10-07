@@ -97,8 +97,8 @@ jobs:
 
       # The published index is dual-arch and trivy reads ONE variant per
       # invocation (`--platform`, default linux/amd64), so each variant is
-      # scanned explicitly (#2412) — the app image by its pushed digest, the
-      # postgres image from per-arch local builds (QEMU for the non-native
+      # scanned explicitly (#2412) — the app and viewer images by their pushed
+      # digests, the postgres image from per-arch local builds (QEMU for the non-native
       # one; its Dockerfile runs the Debian security upgrade, #2408).
       - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
@@ -121,6 +121,35 @@ jobs:
         with:
           scan-type: image
           image-ref: ${{ inputs.app-image }}@${{ inputs.app-digest }}
+          scanners: vuln
+          exit-code: '1'
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          trivy-config: trivy.yaml
+
+      # The viewer image by its pushed digest, both platforms, the same
+      # trivy.yaml: apply-tags tags it only after this job passes (#3674). An
+      # empty digest means its build did not succeed and there is nothing to tag.
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        if: inputs.viewer-digest != ''
+        env:
+          TRIVY_PLATFORM: linux/amd64
+        with:
+          scan-type: image
+          image-ref: ${{ inputs.viewer-image }}@${{ inputs.viewer-digest }}
+          scanners: vuln
+          exit-code: '1'
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          trivy-config: trivy.yaml
+
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        if: inputs.viewer-digest != ''
+        env:
+          TRIVY_PLATFORM: linux/arm64
+        with:
+          scan-type: image
+          image-ref: ${{ inputs.viewer-image }}@${{ inputs.viewer-digest }}
           scanners: vuln
           exit-code: '1'
           severity: HIGH,CRITICAL

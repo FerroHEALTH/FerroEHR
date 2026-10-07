@@ -261,6 +261,22 @@ workflow refuses a tag that has no matching section here.
   restricted object is refused with an emergency purpose exactly as without
   one. The DICOM syslog message has no purpose element and does not carry it.
 
+- **`production` refuses three more plaintext paths** (#3676, #3689; CRA Annex
+  I Part I(2)(e)). An enabled change-event outbox or FHIR outbound emitter on a
+  plain `amqp://` broker (no `amqps://`, no `tls = true`) opens
+  `plaintext_broker`; an enabled audit FHIR feed on an `http://` URL opens
+  `plaintext_audit_feed`; an enabled multimedia store with `allow_http = true`
+  opens `plaintext_object_store`. Each refuses boot unless accepted by name in
+  `deployment_accepts`, and the viewer's deployment notice names each in plain
+  words.
+- **The Helm chart ships `values-production.yaml`** (#3678), an overlay that
+  boots under `deployment_profile = "production"`: one database Secret per
+  storage domain, a migration Job under `migrate = verify`, the audit trail
+  failing closed, a restricted `EHR_ACCESS` default, declared subject
+  namespaces, OIDC, and a TLS Ingress with a NetworkPolicy admitting only the
+  ingress controller. It accepts `plaintext_listener` by name, because TLS ends
+  at the Ingress. Chart validation and the boot check cover it.
+
 ### Changed
 
 - **`deployment_profile = "production"` refuses two more plaintext paths unless
@@ -387,6 +403,11 @@ workflow refuses a tag that has no matching section here.
 - **`FERROEHR__AUDIT__PURPOSE_CODES` is read as a comma-separated list**
   (#3624). The environment form was refused as a string, so the purpose codes
   could only be set in the TOML file.
+- **The served OpenAPI document uses the released `operationId`s with a dot**
+  (#3679): the ADL 1.4 template operations (`definition_template_adl1.4_*`) and
+  the stored-query store operations (`definition_query_store.yaml`,
+  `definition_query_version_store.yaml`) were served in an underscore form
+  that did not match the id in the access record.
 
 ### Security
 
@@ -399,6 +420,15 @@ workflow refuses a tag that has no matching section here.
 - **`hickory-resolver` 0.26.3** (GHSA-5j98-2g5x-46v6, GHSA-6w6g-hm98-mhgm,
   GHSA-6f2x-v7q7-m7m5): the DNS resolver the server binary links is updated
   past three advisories, two of them high, that the v4.3.4 binaries carry.
+- **The `ferroehr-viewer` image is scanned before it is tagged** (#3674): the
+  release and main image lanes scan it by its pushed digest on both platforms,
+  so a fixable high or critical finding stops the viewer's tags as it stops
+  the server's.
+- **Every binary in the published images lists its Rust dependencies**
+  (#3675): the server and viewer binaries inside the images, and the viewer
+  image built from source, are built with `cargo auditable`, so an image scan
+  and the release's exploitability record see the Rust graph. The OpenVEX
+  statement for RUSTSEC-2023-0071 now covers the viewer image.
 
 ## [4.3.4] - 2026-10-06
 

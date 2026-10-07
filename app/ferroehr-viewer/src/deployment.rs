@@ -133,6 +133,16 @@ pub fn gap_text(code: &str) -> String {
         "plaintext_listener" => {
             "a listener serves plain HTTP on an address reachable from the network"
         }
+        "plaintext_broker" => {
+            "change events or FHIR resources are published to a message broker without \
+             encryption"
+        }
+        "plaintext_audit_feed" => {
+            "access records are sent to the audit repository without encryption"
+        }
+        "plaintext_object_store" => {
+            "multimedia files are stored over a connection without encryption"
+        }
         other => return other.to_owned(),
     }
     .to_owned()
@@ -197,7 +207,7 @@ mod tests {
     /// code, and a server gap added without a text belongs in this list.
     #[test]
     fn every_server_gap_has_plain_words() {
-        const SERVER_GAPS: [&str; 10] = [
+        const SERVER_GAPS: [&str; 13] = [
             "shared_credential",
             "shared_cluster",
             "open_subject_namespace",
@@ -208,6 +218,9 @@ mod tests {
             "migrate_on_runtime_credential",
             "auth_off",
             "plaintext_listener",
+            "plaintext_broker",
+            "plaintext_audit_feed",
+            "plaintext_object_store",
         ];
         for code in SERVER_GAPS {
             let text = gap_text(code);

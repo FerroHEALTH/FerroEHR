@@ -24,7 +24,7 @@
           "testkit"
         ]
       },
-      "impact_statement": "The Marvin timing sidechannel leaks information about an RSA PRIVATE key through the timing of private-key operations, so what matters is whether a FerroEHR process performs one. Two paths reach the crate. Through `openidconnect`, in the OIDC authentication path, the sole RSA operation is verifying an RS256 signature on an ID token with the identity provider's PUBLIC key: there is no secret in that computation for a timing observation to recover. Through `pgp`, in VERSION signing, an RSA operation would be a private-key one — but only in `[signing] mode = \"pgp\"`, which is not the default: the shipped default is `digest` mode (SHA-256 over the canonical form), which uses no asymmetric key at all, so the default artifact performs no RSA private-key operation. A deployment that does enable `pgp` mode chooses its own OpenPGP key, and an ECC/EdDSA signing key keeps `rsa` off the signing path entirely; a deployment that enables `pgp` mode with an RSA key is outside this statement and should rotate to an ECC key. `ferroehr-ext` reaches the crate through the same two carriers as the platform library it extends, so the same argument covers it. The spec crates (`openehr-rm`, `openehr-its`, `openehr-sdt`, `openehr-adl`) reach `rsa` only through their path-only dev-dependency on the `testkit` harness (which depends on the platform library): a test-only edge cargo strips at packaging, so no published crate ships the code at all. No upstream fix exists — `rsa` has no patched release — so this is not a deferred upgrade. Re-evaluate if a release beyond rsa 0.9 ships, or if the default signing mode changes.",
+      "impact_statement": "The Marvin timing sidechannel leaks information about an RSA PRIVATE key through the timing of private-key operations, so what matters is whether a FerroEHR process performs one. Two paths reach the crate. Through `openidconnect`, in the OIDC authentication path, the sole RSA operation is verifying an RS256 signature on an ID token with the identity provider's PUBLIC key: there is no secret in that computation for a timing observation to recover. Through `pgp`, in VERSION signing, an RSA operation would be a private-key one — but only in `[signing] mode = \"pgp\"`, which is not the default: the shipped default is `digest` mode (SHA-256 over the canonical form), which uses no asymmetric key at all, so the default artifact performs no RSA private-key operation. A deployment that does enable `pgp` mode chooses its own OpenPGP key, and an ECC/EdDSA signing key keeps `rsa` off the signing path entirely; a deployment that enables `pgp` mode with an RSA key is outside this statement and should rotate to an ECC key. `ferroehr-ext` reaches the crate through the same two carriers as the platform library it extends, so the same argument covers it. The viewer (`ferroehr-viewer`) reaches the crate through `openidconnect` alone, in its OIDC login, where the only RSA operation is the same PUBLIC-key verification of the identity provider's ID-token signature; it does not depend on `pgp`. The spec crates (`openehr-rm`, `openehr-its`, `openehr-sdt`, `openehr-adl`) reach `rsa` only through their path-only dev-dependency on the `testkit` harness (which depends on the platform library): a test-only edge cargo strips at packaging, so no published crate ships the code at all. No upstream fix exists — `rsa` has no patched release — so this is not a deferred upgrade. Re-evaluate if a release beyond rsa 0.9 ships, or if the default signing mode changes.",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
       "products": [
         {
@@ -37,6 +37,14 @@
         },
         {
           "@id": "pkg:oci/ferroehr",
+          "subcomponents": [
+            {
+              "@id": "pkg:cargo/rsa"
+            }
+          ]
+        },
+        {
+          "@id": "pkg:oci/ferroehr-viewer",
           "subcomponents": [
             {
               "@id": "pkg:cargo/rsa"
@@ -87,6 +95,14 @@
               "@id": "pkg:cargo/paste"
             }
           ]
+        },
+        {
+          "@id": "pkg:oci/ferroehr-viewer",
+          "subcomponents": [
+            {
+              "@id": "pkg:cargo/paste"
+            }
+          ]
         }
       ],
       "status": "not_affected",
@@ -125,6 +141,14 @@
               "@id": "pkg:cargo/proc-macro-error2"
             }
           ]
+        },
+        {
+          "@id": "pkg:oci/ferroehr-viewer",
+          "subcomponents": [
+            {
+              "@id": "pkg:cargo/proc-macro-error2"
+            }
+          ]
         }
       ],
       "status": "not_affected",
@@ -133,7 +157,7 @@
       }
     }
   ],
-  "timestamp": "2026-10-06T00:00:00Z",
+  "timestamp": "2026-10-07T00:00:00Z",
   "tooling": "scripts/security/vex-generate.sh from security/vex/rust-advisories.toml + deny.toml",
-  "version": 5
+  "version": 6
 }
