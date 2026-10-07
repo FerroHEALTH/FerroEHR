@@ -201,6 +201,17 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **What FerroEHR answers without a credential says only what a client or
+  probe needs** (#3671). `/health/readiness` keeps its `200`/`503` semantics
+  but its body carries the aggregate status and each indicator's name and
+  status only; the detail moves to `GET /management/health`. The public
+  `{rest root}/status` keeps status, versions, timestamp and the deployment
+  profile; the licence, the deployment gaps and the support period move to
+  `GET /management/status`. Both new endpoints are `off` until
+  `[management.endpoints]` names a level for them. The Security page lists
+  every route reachable without a credential and why, and a test drives every
+  mounted route to keep that list closed.
+
 - **Licence tokens are verified against the licensor's two master keys.** A
   `[licence] file` token is accepted when it carries exactly one text
   signature, made directly by one of the two embedded Cadasto B.V. keys
@@ -210,7 +221,7 @@ workflow refuses a tag that has no matching section here.
   previous licensing key is no longer trusted, and the embedded
   `non-commercial` grant is re-signed (licence id
   `01a1175c-cd67-777d-bdc0-c95bf1c900d3`). A token signed under the previous
-  key is reported as `refused` on `/rest/status`, and the embedded grant stays
+  key is reported as `refused` on `/management/status`, and the embedded grant stays
   in force; the server behaves identically either way.
 
 - **`deployment_profile = "production"` refuses two more postures** (#3638):

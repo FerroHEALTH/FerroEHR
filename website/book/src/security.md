@@ -458,12 +458,22 @@ number.
 
 ## Operational surfaces: what is reachable, and by whom
 
-| Surface | Default | Notes |
+Everything reachable without a credential is listed here, with the reason it
+is public. Every other route answers `401` to a request without one, and a
+test drives every mounted route to keep this list closed. A public answer says
+only what a client or probe needs; the detail behind it is on the
+authenticated `/management` surface.
+
+| Surface | Default | Why it is public, or how it is gated |
 |---|---|---|
-| `/health`, `/health/liveness` | **always on, unauthenticated** | Deliberate: orchestrator probes must not need credentials. Both answer a plain-text `OK` with no I/O behind them. |
-| `/health/readiness` | **always on, unauthenticated** | A status per registered component, `200` while the aggregate is up or degraded and `503` when a required component is down. Each component's detail is a **fixed string**, never a driver error, a DSN, or a panic payload. Causes are logged for the operator instead. |
+| `/health`, `/health/liveness` | **always on, unauthenticated** | Orchestrator probes carry no credential. Both answer a plain-text `OK` with no I/O behind them. |
+| `/health/readiness` | **always on, unauthenticated** | An orchestrator probe: `200` while the aggregate is up or degraded, `503` when a required component is down. The body is the aggregate status and each indicator's name and status, nothing more. The detail is `/management/health`. |
+| `{rest root}/status` | **always on, unauthenticated** | A documented client contract: status, server version, ITS-REST version, timestamp and the deployment profile. The licence, the deployment gaps and the support period are `/management/status`. |
+| `{rest root}/.well-known/smart-configuration` | mounted only with SMART on | SMART App Launch service discovery, read before the client holds any token (ITS-REST SMART App Launch, *Service Discovery*). |
+| `OPTIONS {base path}` | **always on, unauthenticated** | The ITS-REST System API's options manifest, which its released OpenAPI document declares without security. |
+| `{rest root}/swagger-ui`, `{rest root}/api-docs/*` | **`private`** (`server.swagger_ui`) | Public only if you set `public`; `admin_only` and `off` are the other levels. |
 | `/management/*` | **not mounted at all** (`management.enabled = false`) | With the master switch off, every route is `404`. |
-| `/management/{info,metrics,prometheus,env,loggers,flamegraph}` | each **`off`** individually | Even with the master switch on, each endpoint stays unmounted until you name a level for it. There is no global fallback: silence means `off`, so a surface this privileged opens one endpoint at a time, by name. |
+| `/management/{info,metrics,prometheus,env,loggers,flamegraph,health,status}` | each **`off`** individually | Even with the master switch on, each endpoint stays unmounted until you name a level for it. There is no global fallback: silence means `off`, so a surface this privileged opens one endpoint at a time, by name. |
 | `management.port` | unset (shares the API listener) | Set it to serve ops introspection from **its own listener** on its own port. It binds all interfaces and always stays plain HTTP even with `[server.tls]` on, so treat it as an internal surface and keep it off any publicly routed port; the interface half of the separation is your network's, not this key's. |
 
 `env` and `flamegraph` deserve particular caution: `env` renders the
