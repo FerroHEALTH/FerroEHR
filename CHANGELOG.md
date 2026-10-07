@@ -202,8 +202,7 @@ workflow refuses a tag that has no matching section here.
 - **The Helm chart carries the access-log category map and the calendar-year
   horizon** (#3655): `config.audit.categories` (empty `templates` and
   `archetypes`, as in the binary) and `config.audit.store.retention_years`
-  (unset) in `values.yaml`, typed by shape in `values.schema.json`. Chart
-  10.2.2.
+  (unset) in `values.yaml`, typed by shape in `values.schema.json`. Chart 10.2.3.
 - **The Helm chart and the Compose files declare the deployment profile**
   (#3637): `config.deployment_profile: sandbox`, with a comment listing what
   `production` refuses under the chart defaults, and
