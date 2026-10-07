@@ -46,7 +46,10 @@ terminology / management / event-subscription surfaces). Entry point:
 - **Implement the generated traits; never fork the contract.** If the contract
   is wrong, fix `openehr-codegen -- emit-rest` and regenerate — never hand-edit
   `src/rest/generated/` in `openehr-its`.
-- **Authz/authn** live in `extensions::access` (`authn/` = Basic + JWT;
+- **Authz/authn** live in `extensions::access` (`authn/` = Basic + JWT, plus
+  `authn::assurance`, the patient-data gate over `[auth.oidc.assurance]` and
+  `[auth.oidc.professional]`: RFC 9470 step-up `401`, natural-person `403`,
+  judged before RBAC, and the `ActorAuthentication` the audit layer records;
   `authz/` = the RBAC/ABAC engine, incl. a `cedar` policy path; `pep.rs` = the
   policy-enforcement point; `ehr_access.rs`). Use the pinned crates
   (`jsonwebtoken`, `oauth2`, `openidconnect`, `argon2`) — never hand-rolled.

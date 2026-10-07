@@ -105,3 +105,67 @@ probes_original_state() {
     "the book documents DROP DATABASE … WITH (FORCE) and a reinstall of the chart;
      no probe drops an external database or reinstalls a release."
 }
+
+# The decommissioning family: the book's erase procedure
+# (website/book/src/operations-decommissioning.md), run as written against the
+# reset stack. CRA Annex I Part I(2)(m) asks for the possibility "to securely
+# and easily remove on a permanent basis all data and settings"
+# (docs/law/eu/cra/text.html). Destructive by design: run it after the reset.
+probes_decommission() {
+  bold "decommissioning (the book's erase command)"
+
+  local hdr="$PROBE_TMP/erase-ehr.h" ehr_id="" out="" status=0 token=""
+  curl -s -u "$BASIC" -X POST -D "$hdr" -o /dev/null "$API/ehr" || true
+  ehr_id="$(grep -i '^location' "$hdr" 2>/dev/null | tr -d '\r' | awk -F/ '{print $NF}')"
+  if [[ -z "$ehr_id" ]]; then
+    uncovered "the erase command" \
+      "no EHR could be created first, so nothing would show the erase removed it"
+    return
+  fi
+
+  probe "P-ERASE-DRYRUN" "working" "image" "#3642" \
+    "without --confirm the erase is a dry run that names its confirmation and deletes nothing"
+  out="$(dc exec -T ferroehr /usr/local/bin/ferroehr db erase 2>&1)" || status=$?
+  assert_eq "1" "$status" "a dry run exits 1"
+  assert_contains "$out" "to erase, run: ferroehr db erase --confirm" \
+    "the dry run prints the confirming command"
+  assert_eq "200" "$(http_code -u "$BASIC" "$API/ehr/$ehr_id")" \
+    "the EHR survives the dry run"
+  token="$(printf '%s\n' "$out" | sed -nE 's/^to erase, run: ferroehr db erase --confirm (.+)$/\1/p' | tr -d '\r')"
+  probe_done
+
+  probe "P-ERASE-WRONG" "working" "image" "#3642" \
+    "a confirmation naming another instance refuses and deletes nothing"
+  status=0
+  dc exec -T ferroehr /usr/local/bin/ferroehr db erase --confirm not-this-instance >/dev/null 2>&1 || status=$?
+  [[ "$status" -ne 0 ]] || probe_fail "a non-zero exit" "exit 0" \
+    "a wrong confirmation must refuse"
+  assert_eq "200" "$(http_code -u "$BASIC" "$API/ehr/$ehr_id")" \
+    "the EHR survives a refused erase"
+  probe_done
+
+  probe "P-ERASE-CONFIRM" "working" "database" "#3642" \
+    "the confirmed erase removes the data, and the restarted server starts empty"
+  if [[ -z "$token" ]]; then
+    probe_fail "a confirmation token in the dry run's output" "none" "$out"
+    probe_done
+    return
+  fi
+  status=0
+  out="$(dc exec -T ferroehr /usr/local/bin/ferroehr db erase --confirm "$token" 2>&1)" || status=$?
+  assert_eq "0" "$status" "the confirmed erase exits 0: $out"
+  dc -f docker-compose.yml restart ferroehr >/dev/null 2>&1 || true
+  if wait_http "$CDR/health/readiness" 90; then
+    assert_eq "404" "$(http_code -u "$BASIC" "$API/ehr/$ehr_id")" \
+      "GET /ehr/$ehr_id must find nothing after the erase"
+  else
+    probe_fail "a ready CDR after the restart" "not ready" \
+      "$(dc logs --tail 5 ferroehr 2>&1 | tr '\n' ' ')"
+  fi
+  probe_done
+
+  uncovered "the erase of multimedia blobs and of a multi-database layout" \
+    "this stack runs after the reset with multimedia off and one database; the
+     blob deletion and the per-database transactions are covered by the
+     decommission integration tests, not observed here."
+}

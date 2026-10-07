@@ -182,6 +182,49 @@ impl BlobStore {
         }
     }
 
+    /// Lists the key of every blob this store writes: each object at the
+    /// bucket root whose name is a lowercase hex SHA-256 (64 characters).
+    ///
+    /// An object of any other name or under any prefix was not written by this
+    /// store and is left out, so a bucket shared with other content lists only
+    /// ours. The keys come back sorted.
+    ///
+    /// # Errors
+    /// Returns [`MultimediaError::Store`] when the backend cannot list the
+    /// bucket (unreachable, refused, or no such bucket).
+    pub async fn content_keys(&self) -> Result<Vec<String>, MultimediaError> {
+        let listing = self
+            .inner
+            .list_with_delimiter(None)
+            .await
+            .map_err(MultimediaError::Store)?;
+        let mut keys: Vec<String> = listing
+            .objects
+            .into_iter()
+            .map(|object| object.location.to_string())
+            .filter(|key| is_content_key(key))
+            .collect();
+        keys.sort_unstable();
+        Ok(keys)
+    }
+
+    /// Deletes every blob [`Self::content_keys`] lists and returns how many it
+    /// deleted.
+    ///
+    /// Objects this store did not write are left in place. Deleting is
+    /// idempotent per key, so a failure part-way leaves a store that a second
+    /// call finishes.
+    ///
+    /// # Errors
+    /// Returns [`MultimediaError::Store`] when the listing or a delete fails.
+    pub async fn delete_all_content(&self) -> Result<usize, MultimediaError> {
+        let keys = self.content_keys().await?;
+        for key in &keys {
+            self.delete(key).await?;
+        }
+        Ok(keys.len())
+    }
+
     /// Whether a blob exists under `hex`.
     ///
     /// # Errors
@@ -196,10 +239,47 @@ impl BlobStore {
     }
 }
 
+/// Whether `key` has the shape of the keys this store writes: the lowercase hex
+/// SHA-256 of a blob, 64 characters, with no path separator.
+fn is_content_key(key: &str) -> bool {
+    key.len() == 64 && key.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use object_store::memory::InMemory;
+
+    #[tokio::test]
+    async fn delete_all_content_removes_our_blobs_and_leaves_foreign_objects() {
+        let inner: Arc<dyn ObjectStore> = Arc::new(InMemory::new());
+        let s = BlobStore::from_parts(Arc::clone(&inner), "test-bucket".to_owned());
+        let ours = ["a".repeat(64), "0123456789abcdef".repeat(4)];
+        for key in &ours {
+            s.put_if_absent(key, b"blob".to_vec()).await.unwrap();
+        }
+        for foreign in ["README".to_owned(), format!("nested/{}", "b".repeat(64))] {
+            inner
+                .put(&Path::from(foreign.as_str()), b"x".to_vec().into())
+                .await
+                .unwrap();
+        }
+        let upper = "A".repeat(64);
+        inner
+            .put(&Path::from(upper.as_str()), b"x".to_vec().into())
+            .await
+            .unwrap();
+
+        let mut expected = ours.to_vec();
+        expected.sort_unstable();
+        assert_eq!(s.content_keys().await.unwrap(), expected);
+        assert_eq!(s.delete_all_content().await.unwrap(), 2);
+        assert!(s.content_keys().await.unwrap().is_empty());
+        assert!(inner.head(&Path::from("README")).await.is_ok());
+        assert!(inner.head(&Path::from(upper.as_str())).await.is_ok());
+        // A second run finds nothing to delete.
+        assert_eq!(s.delete_all_content().await.unwrap(), 0);
+    }
 
     fn mem_store() -> BlobStore {
         BlobStore::from_parts(Arc::new(InMemory::new()), "test-bucket".to_owned())

@@ -271,6 +271,31 @@ verified_cache_ttl_seconds = 60
                                      # cannot DECIDE, so it never answers 401) instead
                                      # of one discovery attempt per bearer request
 
+# Authentication assurance on patient data (absent ⇒ off: nothing refused, no
+# level recorded). `levels` maps each value the issuer puts in `claim` to an
+# eIDAS level of assurance (low | substantial | high). With `minimum` set, a
+# patient-data request whose token maps below it, or not at all, is refused
+# with 401 and an RFC 9470 step-up challenge naming the accepted values; a
+# Basic credential carries no level and is refused too. Boot refuses a
+# `minimum` no mapped value reaches. Cross-border exchange asks for
+# substantial, high from 26 March 2032 (Implementing Regulation 2026/2099
+# Art. 6(3)).
+#? [auth.oidc.assurance]
+#? claim = "acr"                 # dotted path into a JSON object allowed
+#? minimum = "substantial"       # low | substantial | high; unset = refuse nothing
+#? levels = { "http://eidas.europa.eu/LoA/substantial" = "substantial", "http://eidas.europa.eu/LoA/high" = "high" }
+
+# The natural person behind a token (absent ⇒ tokens are not judged on it).
+# Present, a patient-data request whose token names no natural person is
+# refused with 403, unless it is a client token acting for a professional
+# named in `acting_for_claim`. A token lacking `claim` is a client token;
+# under `client_tokens = "sub_is_client"` so is one whose `sub` equals its
+# `client_id` or `azp` (RFC 9068 §2.2). Basic is refused on patient data.
+#? [auth.oidc.professional]
+#? claim = "sub"                 # the claim naming the person; dotted path allowed
+#? client_tokens = "sub_is_client"   # sub_is_client | claim_absent
+#? acting_for_claim = "act.sub"  # unset = every client token refused on patient data
+
 # ── [authz] — RBAC + ABAC ─────────────────────────────────────────────────────
 [authz.rbac]
 enabled = true
@@ -541,6 +566,11 @@ queue_capacity = 8192
 # is declared), and the legal basis recorded on every access.
 purpose_header = "x-purpose-of-use"
 purpose_codes = []
+# The purpose codes that mark an access as an emergency access in the vital
+# interest of the patient (EHDS Art. 11(5)); each must also be on
+# purpose_codes. Empty = nothing is marked. The mark is logged and shown to the
+# patient through the access log; it lifts no restriction.
+emergency_purpose_codes = []   # e.g. ["ETREAT"]
 #? legal_basis = "gdpr-art-9-2-h"
 
 # The local Audit Record Repository (the durability anchor).

@@ -140,6 +140,7 @@ run_family terminology_ferroterm && probes_terminology_ferroterm
 run_family terminology && probes_terminology
 # Last: it deletes the stack's volumes, which is the procedure under test.
 run_family original_state && probes_original_state
+run_family decommission && probes_decommission
 
 # ── The honest half ───────────────────────────────────────────────────────────
 # Everything #2178 asks for that this run does NOT do. Each entry is a probe

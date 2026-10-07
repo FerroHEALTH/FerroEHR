@@ -357,7 +357,9 @@ start the server against it.
 > [!TIP]
 > When you wipe a FerroEHR database deliberately, drop the **database**, not a
 > schema. `DROP DATABASE` cannot leave half a repository behind, and it is the
-> only wipe with no partial-state failure mode.
+> only wipe with no partial-state failure mode. `ferroehr db erase` drops all
+> five schemas of a database in one transaction, for taking an instance out of
+> service ([Decommissioning](operations-decommissioning.md)).
 
 ## TLS and database security
 

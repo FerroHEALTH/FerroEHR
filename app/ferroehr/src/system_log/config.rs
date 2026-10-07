@@ -275,6 +275,20 @@ pub struct AuditConfig {
     /// deployment that has agreed a vocabulary does not accumulate a trail of
     /// free text that means nothing at review time.
     pub purpose_codes: Vec<String>,
+    /// The declared purpose codes that mark an access as an emergency access
+    /// (`FERROEHR__AUDIT__EMERGENCY_PURPOSE_CODES`). Empty (the default) marks
+    /// nothing.
+    ///
+    /// Regulation (EU) 2025/327 Art. 11(5) lets a health professional reach
+    /// data a natural person restricted under Art. 8 where the person's vital
+    /// interests require it, and requires such cases to be "logged in a clear
+    /// and understandable format" and "easily accessible for the data subject"
+    /// (`docs/law/eu/ehds/text.html Art. 11(5)`). An access whose declared
+    /// purpose is on this list carries the emergency mark on its access record.
+    /// The mark records; it lifts no restriction. Every code must also be on
+    /// `purpose_codes`, so the mark never keys on free text; the boot
+    /// validation refuses anything else.
+    pub emergency_purpose_codes: Vec<String>,
     /// The legal basis this deployment processes under
     /// (`FERROEHR__AUDIT__LEGAL_BASIS`), recorded on every access record.
     ///
@@ -310,6 +324,7 @@ impl Default for AuditConfig {
             server_host: None,
             purpose_header: "x-purpose-of-use".to_owned(),
             purpose_codes: Vec::new(),
+            emergency_purpose_codes: Vec::new(),
             legal_basis: None,
             categories: crate::system_log::categories::CategoryMapConfig::default(),
             store: StoreConfig::default(),

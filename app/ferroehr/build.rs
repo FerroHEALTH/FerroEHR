@@ -86,6 +86,11 @@ fn main() {
     println!("cargo:rerun-if-env-changed=SOURCE_DATE_EPOCH");
     println!("cargo:rerun-if-changed=../../.git/HEAD");
     println!("cargo:rerun-if-changed=../../.git/refs");
+    // `sqlx::migrate!` cannot see a newly added file on stable, and the
+    // directives above switch off Cargo's rerun-on-any-change, so the
+    // embedded migration sets follow the directory here
+    // (https://docs.rs/sqlx/latest/sqlx/macro.migrate.html).
+    println!("cargo:rerun-if-changed=migrations");
 }
 
 /// The date of the `## [<version>] - YYYY-MM-DD` heading in a Keep a Changelog

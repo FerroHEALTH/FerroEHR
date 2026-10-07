@@ -18,6 +18,8 @@
 
 use jiff::Timestamp;
 
+use crate::config::auth::AssuranceLevel;
+
 /// DICOM `EventActionCode` (PS3.15 §A.5.1): the CRUD/execute class of the op.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EventActionCode {
@@ -158,6 +160,13 @@ pub struct AuditEvent {
     /// The purpose-of-use code the caller declared, when the deployment
     /// collects one.
     pub purpose: Option<String>,
+    /// Whether the declared purpose is one of the deployment's emergency
+    /// purpose codes (`[audit] emergency_purpose_codes`): an access declared
+    /// as necessary to protect the vital interests of the data subject
+    /// (`docs/law/eu/ehds/text.html Art. 11(5)`), which the access log shows
+    /// the person. Stamped by the sender at emit, so every emitter carries it.
+    /// The mark records the declaration; it lifts no restriction.
+    pub emergency_access: bool,
     /// The legal-basis code the deployment attributes to this access.
     pub legal_basis: Option<String>,
     /// How many records the operation served: AQL result rows, search entries.
@@ -181,10 +190,58 @@ pub struct AuditEvent {
     /// The digest of the category map in force, stamped on every record by the
     /// sender, so a record says which map classified it.
     pub category_map_digest: Option<crate::system_log::categories::MapDigest>,
+    /// How the accessing person authenticated, and who that person is when
+    /// the token says so (EHDS Annex II 3.1 and 3.2(b), #3622).
+    pub actor: ActorAuthentication,
     /// The request correlation id, matching the response's `x-request-id`.
     pub request_id: Option<String>,
     /// The event time.
     pub timestamp: Timestamp,
+}
+
+/// Whether a natural person or a client application presented the credential.
+///
+/// **No openEHR spec governs this — our own design/extension.**
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ActingMode {
+    /// The token names a natural person.
+    Person,
+    /// The token names a client application, acting for the professional in
+    /// [`ActorAuthentication::professional_id`] when it names one.
+    Client,
+}
+
+impl ActingMode {
+    /// The stored spelling, matching the `ck_audit_event_acting_mode`
+    /// constraint.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            ActingMode::Person => "person",
+            ActingMode::Client => "client",
+        }
+    }
+}
+
+/// How the accessing person authenticated and who that person is, as far as
+/// the credential says (EHDS Annex II 3.1 and 3.2(b),
+/// `docs/law/eu/ehds/text.html Annex II 3`).
+///
+/// Every field is `None` when the deployment configures nothing that reads it:
+/// the mode and the professional need `[auth.oidc.professional]`, the level
+/// needs `[auth.oidc.assurance] levels`. **No openEHR spec governs this — our
+/// own design/extension.**
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ActorAuthentication {
+    /// Whether a person or a client application presented the credential.
+    pub mode: Option<ActingMode>,
+    /// The assurance level the credential's claim value maps to.
+    pub assurance_level: Option<AssuranceLevel>,
+    /// The raw claim value the level was read from (usually `acr`).
+    pub assurance_value: Option<String>,
+    /// The identifier of the natural person who accessed the data: the
+    /// person's own claim, or the professional a client token acts for.
+    pub professional_id: Option<String>,
 }
 
 /// The pseudonymisation domain an audited operation touched.
@@ -275,12 +332,14 @@ impl AuditEvent {
             token_id: None,
             domain: AccessDomain::of(object),
             purpose: None,
+            emergency_access: false,
             legal_basis: None,
             result_count: None,
             origins: Vec::new(),
             origin_count: None,
             category: None,
             category_map_digest: None,
+            actor: ActorAuthentication::default(),
             request_id: None,
             timestamp: Timestamp::now(),
         }

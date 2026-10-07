@@ -61,6 +61,9 @@ honour **refuses to boot** rather than degrading at the first request:
 | `[auth.oidc] algorithms` disagreeing with the key source | error: `HS*` verifies only against a symmetric secret, `RS*`/`ES*`/`PS*` only against public keys |
 | `[auth.oidc] hmac_secret` set at all | boot **warning**: a symmetric key is a development posture (see below) |
 | a `password_hash` below `m=19456,t=2,p=1` argon2id | error: the OWASP Argon2id floor |
+| `[auth.oidc.assurance] minimum` with an empty `levels` map, or with no mapped value at or above it | error: every patient-data request would be refused |
+| an `[auth.oidc.assurance] levels` value that is blank or carries whitespace, a quote or a backslash | error: the step-up challenge names the values in one quoted `acr_values` parameter (RFC 9470 §3) |
+| `[auth.oidc.professional]` with a blank `claim` or `acting_for_claim` | error: nothing to read the person from |
 
 Successfully verified Basic credentials are cached for
 `FERROEHR__AUTH__VERIFIED_CACHE_TTL_SECONDS` (default `60`; `0` disables
@@ -128,6 +131,61 @@ where the operator can read it and the caller cannot. The
 `WWW-Authenticate` challenge still carries the RFC 6750 §3.1 error code, and a
 request that carried no credential at all deliberately gets no code: it has not
 made a mistake yet.
+
+### Assurance level and the natural person on patient data
+
+Two optional blocks under `[auth.oidc]` judge *how* a professional
+authenticated and *who* stands behind a token. Both are off by default; with
+neither configured nothing below changes the wire.
+
+**`[auth.oidc.assurance]`** reads the authentication assurance level from a
+token claim (`claim`, default `acr`) and maps each value your identity provider
+emits to an eIDAS level (`levels`: `low`, `substantial` or `high`). With
+`minimum` set, a patient-data request whose token maps below it, carries a value
+the map does not name, or carries no such claim is refused with `401` and the
+OAuth 2.0 step-up challenge of RFC 9470 §3:
+
+```text
+WWW-Authenticate: Bearer realm="ferroehr", error="insufficient_user_authentication",
+  error_description="patient data requires authentication at assurance level substantial or higher",
+  acr_values="http://eidas.europa.eu/LoA/high http://eidas.europa.eu/LoA/substantial"
+```
+
+`acr_values` lists every mapped value at or above the minimum, so a client can
+send the user back to the identity provider with that request. EHDS Annex II 3.1
+asks an EHR system used by health professionals for reliable identification and
+authentication of them; Implementing Regulation (EU) 2026/2099 Art. 6(3) sets
+`substantial` for cross-border exchange, and `high` from 26 March 2032.
+
+**`[auth.oidc.professional]`** names the claim that identifies the natural
+person (`claim`, default `sub`). A token is a client token when it lacks that
+claim, or, under the default `client_tokens = "sub_is_client"`, when its `sub`
+equals its `client_id` or `azp` (RFC 9068 §2.2 has `sub` name the client when
+no resource owner is involved). With the block present, a client token is
+refused on patient data with `403`, unless `acting_for_claim` names a claim the
+token carries the professional's identifier in (a dotted path reaches into a
+JSON object, such as `act.sub`). The access record then names that
+professional; see [Audit trail](audit.md#the-ehds-logging-elements-mapped).
+
+What counts as **patient data**: every API route except the definition family
+(`/definition/...`: templates, archetypes, stored-query texts), terminology,
+the aggregate counts under `/admin/report`, and the admin routes that manage
+configuration, FHIR mappings, event subscriptions, the retention policy,
+templates and stored queries. The list of exceptions is closed, so a route
+added later is judged patient data until it is listed. The health family,
+`/rest/status`, discovery and `/management` are outside the API and never
+judged.
+
+**Basic credentials** carry no assurance level and no issuer-asserted person.
+With `minimum` set a Basic request for patient data gets the same `401` step-up
+challenge, and with `[auth.oidc.professional]` set it gets the `403`; definition
+routes stay reachable with Basic.
+
+The assurance level is judged before RBAC, so a caller below the level learns
+it must step up rather than that it lacks a role. A client token acting for a
+professional is held to the same level as any other token: the `acr` it
+carries is the one judged, so a client-credentials token needs your
+authorization server to put the professional's assurance level on it.
 
 ### Two limits worth planning around
 

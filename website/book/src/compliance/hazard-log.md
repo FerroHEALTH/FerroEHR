@@ -114,18 +114,31 @@ records the caller as unknown and never fabricates one. The organisation is
 read from the same token claim the ABAC layer reads, and stays empty when
 there is no claim or the caller used Basic. The EHR comes from the resource
 the dispatch resolved, or from the request path where none exists. An AQL
-execution records each served EHR separately.
+execution records each served EHR separately. With
+`[auth.oidc.professional]` configured, a token that names no natural person is
+refused on patient data unless it is a client token acting for a named
+professional, and the record carries the acting mode (`person` or `client`)
+and that professional; with `[auth.oidc.assurance]` configured, it carries the
+assurance level the token maps to, and a token below the configured minimum is
+refused with a step-up challenge.
 
 **Shown by:**
 
 - `app/ferroehr/tests/it/audit_ehds_mapping.rs`:
   `element_a_the_accessing_organisation_is_recorded_and_rendered_in_fhir`,
   `element_b_the_person_who_accessed_is_recorded_and_rendered`,
+  `element_b_the_professional_behind_a_client_is_recorded_and_rendered`,
+  `the_assurance_level_is_recorded_and_reaches_neither_rendering`,
   `nen_7513_the_actor_roles_are_recorded_and_rendered_in_both_formats`;
 - `app/ferroehr/tests/it/audit_store.rs`:
   `access_fields_round_trip_on_both_write_paths`,
   `the_accessing_organisation_round_trips_on_both_write_paths`,
-  `the_actor_roles_round_trip_on_both_write_paths`;
+  `the_actor_roles_round_trip_on_both_write_paths`,
+  `both_inserts_persist_the_authentication_columns`;
+- `app/ferroehr-rest/tests/it/patient_data_assurance.rs`:
+  `a_token_below_the_minimum_gets_the_step_up_challenge`,
+  `a_client_token_without_acting_for_is_refused`,
+  `a_client_acting_for_a_professional_passes_and_is_recorded`;
 - `app/ferroehr-rest/src/system_log/middleware.rs`:
   `ehr_id_from_various_paths`, `object_id_from_template_paths`,
   `object_id_from_query_paths`, `object_id_from_demographic_paths`;
@@ -133,10 +146,13 @@ execution records each served EHR separately.
   `unauthenticated_request_emits_401_record`,
   `aql_execute_emits_one_access_record_per_served_ehr`.
 
-**Remains:** a shared account or an application's service credential names
-the application, not the professional behind it; whether a natural person
-stands behind a token, and at which authentication assurance level, is not
-recorded (planned, #3622).
+**Remains:** both blocks are off by default, and until the deployment
+configures `[auth.oidc.professional]` a client application's credential is
+recorded as that application, not as the professional behind it. A shared
+Basic account names the account; with either block configured, Basic is
+refused on patient data. The assurance level reaches the local store's columns only, because neither
+the DICOM nor the FHIR R4 audit format has an element for it, and ITI-81 serves
+the FHIR document.
 
 ## H3: the category of the data is not recorded
 
@@ -326,18 +342,43 @@ no identified data; the ITI-81 surface is authorised like any other.
 **Remains:** the log names patients and actions by design, so whoever holds
 ITI-81 access reads that.
 
-## H9: an emergency access to restricted data is not marked
+## H9: an emergency access to data restricted under EHDS Art. 8 is not marked
 
-**Cause:** a professional overrides a restriction in an emergency, and the
-record looks like any other access.
+**Cause:** a natural person restricts the access of health professionals to
+some of their data (EHDS Art. 8), and a professional reaches that data
+anyway because the person's vital interests require it (Art. 11(5)). Without
+a mark, the access record of that emergency looks like any other.
 
 **Effect:** EHDS Art. 9(1) includes "access provided in accordance with
-Article 11(5)" in what a patient is told about; an unmarked override hides
-that it happened.
+Article 11(5)" in what a patient is told about, and Art. 11(5) asks that such
+cases be "logged in a clear and understandable format" and be "easily
+accessible for the data subject". An unmarked emergency access hides that it
+happened.
 
-**Control:** none yet; no test.
+**Control:** a deployment names the purpose-of-use codes its callers declare
+for an emergency (`[audit] emergency_purpose_codes`, each also on
+`purpose_codes`). An access declaring one carries the emergency mark in its
+access record: the `emergency_access` column, and in the FHIR `AuditEvent` a
+`purposeOfEvent` with the HL7 v3 code `ETREAT` and the mark in plain words.
+The person's own subject-scoped ITI-81 retrieval serves that document. The
+mark lifts no restriction: an object restricted under GDPR Art. 18 is refused
+with an emergency purpose exactly as without one, and the refused attempt is
+logged with the mark.
 
-**Remains:** the override and its marking are planned (#3624).
+**Shown by:** `app/ferroehr-rest/tests/it/audit_emergency_access.rs`:
+`an_emergency_access_is_marked_and_shown_in_the_subjects_own_access_log`,
+`an_emergency_purpose_does_not_lift_a_gdpr_restriction`;
+`app/ferroehr/tests/it/audit_ehds_mapping.rs`:
+`art_11_5_the_emergency_mark_reaches_the_fhir_rendering_only`;
+`app/ferroehr/tests/it/audit_store.rs`:
+`both_inserts_persist_the_emergency_mark_and_it_cannot_be_rewritten`.
+
+**Remains:** FerroEHR does not hold the Art. 8 restriction itself, so it
+neither hides restricted data nor grants the override; the mark rests on the
+purpose the caller declares, and an emergency the caller does not declare is
+not marked. The Art. 8 restriction with its override is planned
+([#3682](https://github.com/FerroHEALTH/FerroEHR/issues/3682)). The DICOM
+syslog rendering has no purpose element and does not carry the mark.
 
 ## When the log is reviewed
 
@@ -351,3 +392,4 @@ EHDS-side risk assessment of the component.
 | Version | Date | Change |
 |---|---|---|
 | 1 | 2026-10-06 | First log, nine hazards |
+| 2 | 2026-10-07 | H9 names the EHDS Art. 8 restriction; the emergency mark and the subject-scoped retrieval are its control |

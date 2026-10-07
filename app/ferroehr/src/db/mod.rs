@@ -1538,6 +1538,228 @@ async fn guard_first_generation_database(conn: &mut PgConnection) -> Result<(), 
     Ok(())
 }
 
+// ── Erasure ──────────────────────────────────────────────────────────────────
+
+/// One database an erasure reaches, and the schemas of this build in it.
+///
+/// No openEHR spec governs this — our own design.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct DatabaseErasure {
+    /// The database's name, as the server reports it (`current_database()`).
+    pub database: String,
+    /// The domains resident in this database.
+    pub domains: Vec<Domain>,
+    /// The schemas of this build present in it: before an erasure, the ones it
+    /// would drop; after one, the ones it dropped.
+    pub schemas: Vec<&'static str>,
+}
+
+/// Every database the domains reach, with the schemas of this build each one
+/// holds, and the stored instance id.
+///
+/// No openEHR spec governs this — our own design.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct EraseReport {
+    /// One entry per database, in preparation order.
+    pub databases: Vec<DatabaseErasure>,
+    /// The instance id the clinical schema stores, if it stores one.
+    pub instance_id: Option<uuid::Uuid>,
+}
+
+impl EraseReport {
+    /// Whether no database holds a schema of this build.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.databases.iter().all(|db| db.schemas.is_empty())
+    }
+
+    /// The name of the database the clinical domain lives in.
+    #[must_use]
+    pub fn clinical_database(&self) -> Option<&str> {
+        self.databases
+            .iter()
+            .find(|db| db.domains.contains(&Domain::Clinical))
+            .map(|db| db.database.as_str())
+    }
+}
+
+/// The schemas this build creates in a database holding `domains`, in the
+/// order an erasure drops them: the domains' own, then `ext`.
+///
+/// The names are the [`domain_migrator`] literals and `ext`, never input.
+fn owned_schemas(domains: &[Domain]) -> Vec<&'static str> {
+    let mut schemas: Vec<&'static str> = domains
+        .iter()
+        .rev()
+        .map(|domain| domain_migrator(*domain).0)
+        .collect();
+    schemas.push("ext");
+    schemas
+}
+
+/// The schemas among `candidates` that exist in the connected database, in the
+/// order given.
+async fn present_schemas(
+    conn: &mut PgConnection,
+    candidates: &[&'static str],
+) -> Result<Vec<&'static str>, DbError> {
+    let names: Vec<String> = candidates.iter().map(|s| (*s).to_owned()).collect();
+    let present: Vec<String> =
+        sqlx::query_scalar("SELECT nspname::text FROM pg_namespace WHERE nspname = ANY($1)")
+            .bind(&names)
+            .fetch_all(&mut *conn)
+            .await?;
+    Ok(candidates
+        .iter()
+        .copied()
+        .filter(|schema| present.iter().any(|name| name == schema))
+        .collect())
+}
+
+/// The instance id `clinical.usage_report_instance` stores, when the relation
+/// exists and holds its row.
+async fn stored_instance_id(conn: &mut PgConnection) -> Result<Option<uuid::Uuid>, DbError> {
+    let present: bool =
+        sqlx::query_scalar("SELECT to_regclass('clinical.usage_report_instance') IS NOT NULL")
+            .fetch_one(&mut *conn)
+            .await?;
+    if !present {
+        return Ok(None);
+    }
+    let id = sqlx::query_scalar("SELECT instance_id FROM clinical.usage_report_instance")
+        .fetch_optional(&mut *conn)
+        .await?;
+    Ok(id)
+}
+
+/// Reports what [`erase_schema`] would drop, issuing no DDL and writing
+/// nothing.
+///
+/// It connects as [`apply_schema`] does, on the migration DSN for every domain
+/// in its database and on a relocated domain's own DSN otherwise. No openEHR
+/// spec governs this — our own design.
+///
+/// # Errors
+///
+/// [`DbError::DomainCannotBeRelocated`] when the layout splits a domain from
+/// the one its set depends on, and [`DbError::Sqlx`] when a connection or a
+/// catalog read fails.
+pub async fn erase_inventory(
+    settings: &DbConfig,
+    storage: &StorageConfig,
+) -> Result<EraseReport, DbError> {
+    let mut report = EraseReport {
+        databases: Vec::new(),
+        instance_id: None,
+    };
+    for group in preparation_plan(settings, storage).await? {
+        let mut conn = migration_connection(&group.dsn).await?;
+        let outcome = async {
+            let database: String = sqlx::query_scalar("SELECT current_database()::text")
+                .fetch_one(&mut conn)
+                .await?;
+            let schemas = present_schemas(&mut conn, &owned_schemas(&group.domains)).await?;
+            let instance_id = if group.domains.contains(&Domain::Clinical) {
+                stored_instance_id(&mut conn).await?
+            } else {
+                None
+            };
+            Ok::<_, DbError>((database, schemas, instance_id))
+        }
+        .await;
+        close_quietly(conn).await;
+        let (database, schemas, instance_id) = outcome?;
+        report.instance_id = report.instance_id.or(instance_id);
+        report.databases.push(DatabaseErasure {
+            database,
+            domains: group.domains,
+            schemas,
+        });
+    }
+    Ok(report)
+}
+
+/// Drops every schema this build creates, in every database the domains reach,
+/// and with them every row they hold and the stored instance id.
+///
+/// Per database, one transaction runs `DROP SCHEMA … CASCADE` for the `ext`
+/// schema and each resident domain's schema (`clinical`, `party`, `linkage`,
+/// `audit`), so a database is either erased whole or left as it was
+/// (<https://www.postgresql.org/docs/18/sql-dropschema.html>). The cascade takes
+/// the `btree_gist` extension installed in `ext`, the cold-tier partitions and
+/// the default privileges granted in those schemas. Cluster-wide objects stay:
+/// the `ferroehr_*` roles, and the database itself. A schema already absent is
+/// skipped, so a second run drops nothing and reports an empty list.
+///
+/// The returned report lists, per database, the schemas this call dropped;
+/// `instance_id` is the id that was stored before the drop. No openEHR spec
+/// governs this — our own design, for the removal of all data and settings
+/// that `docs/law/eu/cra/text.html` Annex I Part I(2)(m) asks for.
+///
+/// # Errors
+///
+/// [`DbError::DomainCannotBeRelocated`] when the layout splits a domain from
+/// the one its set depends on, and [`DbError::Sqlx`] when a connection fails,
+/// the credential does not own a schema, or a lock is not granted within 30
+/// seconds (a server still connected). A database already erased stays
+/// erased; the failing one is rolled back.
+pub async fn erase_schema(
+    settings: &DbConfig,
+    storage: &StorageConfig,
+) -> Result<EraseReport, DbError> {
+    let mut report = EraseReport {
+        databases: Vec::new(),
+        instance_id: None,
+    };
+    for group in preparation_plan(settings, storage).await? {
+        let mut conn = migration_connection(&group.dsn).await?;
+        let outcome = drop_owned_schemas(&mut conn, &group.domains).await;
+        close_quietly(conn).await;
+        let (database, schemas, instance_id) = outcome?;
+        report.instance_id = report.instance_id.or(instance_id);
+        report.databases.push(DatabaseErasure {
+            database,
+            domains: group.domains,
+            schemas,
+        });
+    }
+    Ok(report)
+}
+
+/// One database's drop, in one transaction: its name, the schemas dropped, and
+/// the instance id it stored.
+async fn drop_owned_schemas(
+    conn: &mut PgConnection,
+    domains: &[Domain],
+) -> Result<(String, Vec<&'static str>, Option<uuid::Uuid>), DbError> {
+    let mut tx = conn.begin().await?;
+    // A server still connected holds locks on what it reads; the drop fails
+    // after 30 s instead of waiting behind it
+    // (<https://www.postgresql.org/docs/18/runtime-config-client.html>).
+    sqlx::query("SET LOCAL lock_timeout = '30s'")
+        .execute(&mut *tx)
+        .await?;
+    let database: String = sqlx::query_scalar("SELECT current_database()::text")
+        .fetch_one(&mut *tx)
+        .await?;
+    let instance_id = if domains.contains(&Domain::Clinical) {
+        stored_instance_id(&mut tx).await?
+    } else {
+        None
+    };
+    let schemas = present_schemas(&mut tx, &owned_schemas(domains)).await?;
+    for schema in &schemas {
+        // The name is one of the `owned_schemas` literals, never input;
+        // DROP SCHEMA takes no bind placeholder.
+        let statement = format!("DROP SCHEMA IF EXISTS {schema} CASCADE");
+        sqlx::query(sqlx::AssertSqlSafe(statement))
+            .execute(&mut *tx)
+            .await?;
+    }
+    tx.commit().await?;
+    Ok((database, schemas, instance_id))
+}
+
 // ── Deployment posture ───────────────────────────────────────────────────────
 
 /// The cluster a pool reaches, as `pg_control_system().system_identifier`.

@@ -7,7 +7,9 @@ engine), `versioning` (change control + VERSION `signature` signing),
 `ferroehr.toml` tree), `telemetry`, `system_log` (IHE ATNA, including the
 scheduled hash-chain check `chain_check`), `support` (the release's support
 period, embedded from the changelog by `build.rs`), `privacy`,
-`licence`, `ids`, `extensions`, `banner`, `manufacturer` (the one source of
+`licence`, `ids`, `extensions`, `banner`, `decommission` (the `ferroehr db
+erase` operation: blobs first, then `db::erase_schema` drops every schema,
+behind a confirmation naming the instance), `manufacturer` (the one source of
 the manufacturer every surface names; the viewer compiles this file through
 `#[path]`, so it stays dependency-free but for `serde`), `report` (the
 redacted deployment report `ferroehr report` writes), `usage_report` (the outbound

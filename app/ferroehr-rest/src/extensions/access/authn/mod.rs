@@ -18,6 +18,10 @@
 //! [`crate::extensions::access::authz::AuthzHandle`] is wired the gate then
 //! judges the matched operation's class, denying with a `403` that carries the
 //! principal so the ATNA audit layer records it.
+//!
+//! Between the two, the `assurance` gate judges a patient-data request by the
+//! assurance level and the natural person its credential carries, and publishes
+//! what it read for the access record.
 
 #![expect(
     clippy::disallowed_types,
@@ -25,6 +29,7 @@
               decided-on claims lift into typed fields"
 )]
 
+pub(crate) mod assurance;
 mod basic;
 mod jwt;
 
@@ -43,16 +48,22 @@ use openehr_its::rest::runtime::ApiError;
 
 use crate::extensions::access::authz::AuthzHandle;
 use crate::overview::error::RestError;
+use assurance::{PatientDataGate, PatientDataRefusal};
+use ferroehr::system_log::event::ActorAuthentication;
 use jsonwebtoken::Algorithm;
 use jsonwebtoken::errors::ErrorKind;
 use jwt::JwtValidator;
 
-/// The state the [`middleware`] runs on: the authenticator plus the optional
-/// authorization handle, where `None` is authentication-only.
+/// The state the [`middleware`] runs on: the authenticator, the optional
+/// authorization handle (`None` is authentication-only) and the optional
+/// patient-data gate.
 #[derive(Clone)]
 pub(crate) struct AuthLayer {
     pub(crate) authenticator: Arc<Authenticator>,
     pub(crate) authz: Option<Arc<AuthzHandle>>,
+    /// The patient-data assurance and natural-person gate; `None` when no
+    /// bearer mechanism is configured.
+    pub(crate) patient_data: Option<Arc<PatientDataGate>>,
 }
 
 /// The authenticated caller.
@@ -429,6 +440,11 @@ impl Authenticator {
         self.config.enabled
     }
 
+    /// The authentication configuration this authenticator was built from.
+    pub(crate) fn config(&self) -> &AuthConfig {
+        &self.config
+    }
+
     /// Builds the `WWW-Authenticate` challenge advertising the enabled
     /// mechanisms.
     pub(crate) fn challenge(&self, outcome: Option<&AuthError>) -> HeaderValue {
@@ -633,7 +649,25 @@ pub(crate) async fn middleware(
 
     match auth.authenticate(req.headers()).await {
         Ok(Authenticated { principal, fresh }) => {
-            if let Some(refusal) = rbac_refusal(&layer, &req, &principal) {
+            // How the person authenticated is judged before what they may do:
+            // a step-up refusal is an authentication outcome (RFC 9470 §3).
+            let actor = match layer.patient_data.as_deref() {
+                None => ActorAuthentication::default(),
+                Some(gate) => {
+                    let matched = req
+                        .extensions()
+                        .get::<MatchedPath>()
+                        .map(MatchedPath::as_str);
+                    match gate.judge(&principal, matched) {
+                        Ok(actor) => actor,
+                        Err((refusal, actor)) => {
+                            return patient_data_refusal(gate, &principal, refusal, actor);
+                        }
+                    }
+                }
+            };
+            if let Some(mut refusal) = rbac_refusal(&layer, &req, &principal) {
+                refusal.extensions_mut().insert(actor);
                 return refusal;
             }
             req.extensions_mut().insert(principal.clone());
@@ -658,6 +692,7 @@ pub(crate) async fn middleware(
             // The outer ATNA audit layer cannot observe request-extension
             // mutations, so the principal is republished onto the response.
             resp.extensions_mut().insert(for_audit);
+            resp.extensions_mut().insert(actor);
             if fresh {
                 resp.extensions_mut().insert(FreshAuthentication);
             }
@@ -695,6 +730,58 @@ fn rbac_refusal(layer: &AuthLayer, req: &Request, principal: &Principal) -> Opti
     let mut resp = RestError(ApiError::Forbidden(reason)).into_response();
     resp.extensions_mut().insert(principal.clone());
     Some(resp)
+}
+
+/// Builds the response for a patient-data request the gate refused, attributed
+/// to the caller so the audit layer records who was refused and how they
+/// authenticated.
+///
+/// An insufficient assurance level is a `401` carrying the RFC 9470 §3 step-up
+/// challenge (`insufficient_user_authentication` with the accepted
+/// `acr_values`); a credential naming no natural person is a `403`, the
+/// authenticated-but-refused branch of the ITS-REST split, without a challenge
+/// as the RBAC refusal has none.
+fn patient_data_refusal(
+    gate: &PatientDataGate,
+    principal: &Principal,
+    refusal: PatientDataRefusal,
+    actor: ActorAuthentication,
+) -> Response {
+    let mechanism = mechanism_label(principal.method);
+    let mut resp = match refusal {
+        PatientDataRefusal::InsufficientAssurance => {
+            count_auth_failure(mechanism, "401");
+            tracing::warn!(
+                mechanism,
+                reason = "insufficient_user_authentication",
+                "patient-data request refused"
+            );
+            let mut resp = RestError(ApiError::Unauthorized(
+                "patient data requires a higher authentication assurance level".to_owned(),
+            ))
+            .into_response();
+            resp.headers_mut()
+                .insert(header::WWW_AUTHENTICATE, gate.step_up_challenge());
+            resp
+        }
+        PatientDataRefusal::NoNaturalPerson => {
+            count_auth_failure(mechanism, "403");
+            tracing::warn!(
+                mechanism,
+                reason = "no_natural_person",
+                "patient-data request refused"
+            );
+            RestError(ApiError::Forbidden(
+                "patient data requires a credential that names a natural person, or a \
+                 client credential acting for a named professional"
+                    .to_owned(),
+            ))
+            .into_response()
+        }
+    };
+    resp.extensions_mut().insert(principal.clone());
+    resp.extensions_mut().insert(actor);
+    resp
 }
 
 /// Returns the platform committer identity published for the service layer.
@@ -1183,6 +1270,7 @@ mod tests {
         let layer = AuthLayer {
             authenticator: hmac_oidc(),
             authz: None,
+            patient_data: None,
         };
         let app = axum::Router::new()
             .route("/x", axum::routing::get(|| async { "ok" }))

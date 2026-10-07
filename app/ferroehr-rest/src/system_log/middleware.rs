@@ -12,11 +12,12 @@
 //! log" (SM `master02-overview.adoc` §openEHR Platform Model). The DICOM PS3.15
 //! §A.5 rendering and the syslog transport belong to `ferroehr::system_log`.
 //!
-//! It reads three response extensions the rest of the stack sets, so no handler
+//! It reads four response extensions the rest of the stack sets, so no handler
 //! carries audit code: [`AuditOpId`] (the matched operation id, from the generic
 //! dispatch), [`AuditObject`] (the resource ids, from the `ResourceMeta` the
-//! dispatch holds) and [`Principal`] (the caller, republished by the auth
-//! middleware). Every generated operation is classified in
+//! dispatch holds), [`Principal`] (the caller, republished by the auth
+//! middleware) and [`ActorAuthentication`] (how the caller authenticated and the
+//! natural person behind the credential, from the same middleware). Every generated operation is classified in
 //! [`crate::system_log::classify`], and an id with no explicit entry fails closed
 //! to the audited default rather than being dropped; where no `ResourceMeta`
 //! exists the participant-object id comes from the request path.
@@ -25,7 +26,8 @@
 //! 110114, `EventTypeCode` 110122) unless `suppress_login_events` is on. Genuine
 //! means a real authentication event: the auth layer marks it only on a Basic
 //! verified-credential cache miss, where the credentials were actually checked.
-//! Auth rejections always emit a failure record, with a 401's caller `UNKNOWN` —
+//! Auth rejections always emit a failure record, with a refused credential's
+//! caller `UNKNOWN` (a patient-data step-up `401` carries its caller) —
 //! surveillance of failed access is the point of ATNA.
 //!
 //! Emission is non-blocking (`try_send` onto a bounded queue), so the request
@@ -49,7 +51,8 @@ use openehr_its::rest::runtime::ApiError;
 
 use ferroehr::system_log::categories::{AccessedContent, ContentIds, ResourceKind};
 use ferroehr::system_log::event::{
-    AccessDomain, AuditEvent, EmitOutcome, EventActionCode, EventOutcome, EventType, ObjectClass,
+    AccessDomain, ActorAuthentication, AuditEvent, EmitOutcome, EventActionCode, EventOutcome,
+    EventType, ObjectClass,
 };
 
 use crate::extensions::access::authn::{FreshAuthentication, Principal};
@@ -128,6 +131,24 @@ struct AccessContext {
     organisation: Option<String>,
 }
 
+/// The caller as the authentication layer published it on the response: the
+/// principal, and how it authenticated.
+#[derive(Debug, Clone, Copy)]
+struct Caller<'a> {
+    principal: Option<&'a Principal>,
+    actor: Option<&'a ActorAuthentication>,
+}
+
+impl<'a> Caller<'a> {
+    /// Reads the caller off a response.
+    fn of(resp: &'a Response) -> Self {
+        Self {
+            principal: resp.extensions().get::<Principal>(),
+            actor: resp.extensions().get::<ActorAuthentication>(),
+        }
+    }
+}
+
 /// Stamp the shared access-logging fields onto one record.
 ///
 /// The legal basis is a deployment fact rather than a request one, so it is
@@ -149,7 +170,7 @@ fn emit_served_ehr_records(
     state: &AppState,
     resp: &Response,
     op: &'static str,
-    principal: Option<&Principal>,
+    caller: Caller<'_>,
     client_ip: Option<&str>,
     timestamp: jiff::Timestamp,
     access: &AccessContext,
@@ -166,12 +187,7 @@ fn emit_served_ehr_records(
             EventOutcome::Success,
         );
         event.event_type = Some(EventType::RestOperation(op));
-        fill_common(
-            &mut event,
-            principal,
-            client_ip.map(str::to_owned),
-            timestamp,
-        );
+        fill_common(&mut event, caller, client_ip.map(str::to_owned), timestamp);
         event.ehr_id = Some(ehr_id.clone());
         event.object_id = Some(ehr_id.clone());
         event.result_count = Some(*rows);
@@ -253,13 +269,13 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
     let status = resp.status();
 
     let op = resp.extensions().get::<AuditOpId>().copied();
-    let principal = resp.extensions().get::<Principal>().cloned();
+    let caller = Caller::of(&resp);
     let object = resp.extensions().get::<AuditObject>().cloned();
 
     let access = AccessContext {
         request_id,
         purpose,
-        organisation: caller_organisation(&state, principal.as_ref()),
+        organisation: caller_organisation(&state, caller.principal),
     };
 
     let fresh_auth = resp.extensions().get::<FreshAuthentication>().is_some();
@@ -275,7 +291,7 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
         // The concrete operation is the `EventTypeCode` (DICOM PS3.15 §A.5
         // EventIdentification); the id is ours.
         event.event_type = Some(EventType::RestOperation(op));
-        fill_common(&mut event, principal.as_ref(), client_ip.clone(), timestamp);
+        fill_common(&mut event, caller, client_ip.clone(), timestamp);
         event.ehr_id = object
             .as_ref()
             .and_then(|o| o.ehr_id.clone())
@@ -308,7 +324,7 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
             &state,
             &resp,
             op,
-            principal.as_ref(),
+            caller,
             client_ip.as_deref(),
             timestamp,
             &access,
@@ -326,8 +342,9 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
             outcome_from_status(status),
         );
         event.event_type = Some(EventType::Login);
-        // A 401 has no principal, so the caller is `UNKNOWN`; a 403 has one.
-        fill_common(&mut event, principal.as_ref(), client_ip, timestamp);
+        // A refused credential has no principal, so the caller is `UNKNOWN`; a
+        // 403 and a patient-data step-up 401 carry one.
+        fill_common(&mut event, caller, client_ip, timestamp);
         let _ = state.backend().emit(event);
     } else if fresh_auth && !state.backend().suppress_login_events() {
         let mut event = AuditEvent::new(
@@ -336,7 +353,7 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
             EventOutcome::Success,
         );
         event.event_type = Some(EventType::Login);
-        fill_common(&mut event, principal.as_ref(), client_ip, timestamp);
+        fill_common(&mut event, caller, client_ip, timestamp);
         let _ = state.backend().emit(event);
     }
 
@@ -414,10 +431,11 @@ fn outcome_from_status(status: StatusCode) -> EventOutcome {
 /// configured value-if-missing.
 fn fill_common(
     event: &mut AuditEvent,
-    principal: Option<&Principal>,
+    caller: Caller<'_>,
     client_ip: Option<String>,
     timestamp: jiff::Timestamp,
 ) {
+    let principal = caller.principal;
     event.user_id = principal.map(|p| p.subject.clone()).unwrap_or_default();
     // The roles the person held (NEN 7513's role element, #3239): the RFC 9068
     // §2.2.3.1 claim carriers for a bearer, the user definition for Basic.
@@ -427,6 +445,9 @@ fn fill_common(
     // IHE BALP `OAUTHaccessTokenUse.Minimal` records; token contents are never
     // logged.
     event.token_id = principal.and_then(token_id);
+    // How the person authenticated and who that person is (EHDS Annex II 3.1
+    // and 3.2(b)), as the authentication layer judged it.
+    event.actor = caller.actor.cloned().unwrap_or_default();
     event.client_ip = client_ip;
     event.timestamp = timestamp;
 }

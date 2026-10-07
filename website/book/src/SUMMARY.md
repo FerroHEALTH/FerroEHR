@@ -64,6 +64,7 @@
   - [Admin & messaging APIs](operations-admin-apis.md)
   - [Usage report](usage-report.md)
   - [Returning to the original state](operations-reset.md)
+  - [Decommissioning](operations-decommissioning.md)
 - [Conformance](conformance.md)
 - [Performance](performance.md)
 - [Benchmarks](benchmarks.md)

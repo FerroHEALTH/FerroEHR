@@ -18,6 +18,7 @@
 //! [`AuthConfig::require_mechanism`]: a configuration a resource server cannot
 //! honour is refused at startup rather than degraded at the first request.
 
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use argon2::{Algorithm, Params, PasswordHash};
@@ -259,6 +260,45 @@ pub enum AuthConfigError {
          high-entropy material and never a human-memorizable password (RFC 8725 §3.5)"
     )]
     HmacSecretTooShort(usize, usize),
+    /// `auth.oidc.assurance.claim` is blank while the table declares levels or
+    /// a minimum.
+    #[error(
+        "auth.oidc.assurance.claim is blank: name the token claim that carries the \
+         authentication assurance level (usually `acr`, OpenID Connect Core 1.0 §2)"
+    )]
+    AssuranceClaimBlank,
+    /// `auth.oidc.assurance.minimum` is set but `levels` maps no claim value.
+    #[error(
+        "auth.oidc.assurance.minimum = {0:?} but auth.oidc.assurance.levels maps no claim \
+         value to a level: every patient-data request would be refused"
+    )]
+    AssuranceMinimumWithoutLevels(String),
+    /// No value in `auth.oidc.assurance.levels` reaches the configured minimum.
+    #[error(
+        "auth.oidc.assurance.minimum = {0:?} but no value in auth.oidc.assurance.levels maps \
+         to that level or above: every patient-data request would be refused"
+    )]
+    AssuranceMinimumUnreachable(String),
+    /// A key of `auth.oidc.assurance.levels` cannot be named in an `acr_values`
+    /// challenge parameter.
+    #[error(
+        "auth.oidc.assurance.levels key {0:?} is blank or carries whitespace, a quote, a \
+         backslash or a control character: the refusal names the accepted values in a \
+         space-separated quoted `acr_values` parameter (RFC 9470 §3, RFC 9110 §5.6.4)"
+    )]
+    AssuranceValueUnquotable(String),
+    /// `auth.oidc.professional.claim` is blank.
+    #[error(
+        "auth.oidc.professional.claim is blank: name the token claim that identifies the \
+         natural person (for example `sub`)"
+    )]
+    ProfessionalClaimBlank,
+    /// `auth.oidc.professional.acting_for_claim` is set but blank.
+    #[error(
+        "auth.oidc.professional.acting_for_claim is blank: remove it, or name the claim a \
+         client token carries the professional's identifier in"
+    )]
+    ActingForClaimBlank,
     /// A `[[auth.basic.users]]` entry carries no `username`.
     #[error("every [[auth.basic.users]] entry requires a non-blank username")]
     BasicUserWithoutUsername,
@@ -507,6 +547,12 @@ pub struct OidcConfig {
     /// the issuer returns. Successfully fetched key material keeps its own,
     /// longer lifetime and is unaffected.
     pub negative_cache_ttl_seconds: u64,
+    /// The authentication assurance level patient-data requests must carry
+    /// (`[auth.oidc.assurance]`); off by default.
+    pub assurance: AssuranceConfig,
+    /// How a token names the natural person behind it
+    /// (`[auth.oidc.professional]`); absent means tokens are not judged on it.
+    pub professional: Option<ProfessionalConfig>,
 }
 
 /// The members of a JWK Set document [`OidcConfig::validate_jwks`] judges
@@ -610,6 +656,8 @@ impl Default for OidcConfig {
             // issuer rather than one per request, short enough that recovery is
             // barely noticed.
             negative_cache_ttl_seconds: 10,
+            assurance: AssuranceConfig::default(),
+            professional: None,
         }
     }
 }
@@ -648,6 +696,10 @@ impl OidcConfig {
         }
         self.validate_algorithms()?;
         self.validate_jwks()?;
+        self.assurance.validate()?;
+        if let Some(professional) = &self.professional {
+            professional.validate()?;
+        }
         Ok(())
     }
 
@@ -756,6 +808,187 @@ impl OidcConfig {
         }
         if url.scheme() != "https" && !self.allow_insecure_issuer {
             return Err(AuthConfigError::IssuerNotHttps(issuer.to_owned()));
+        }
+        Ok(())
+    }
+}
+
+/// An electronic-identification level of assurance.
+///
+/// The three levels are the eIDAS levels of Regulation (EU) No 910/2014
+/// Art. 8(2): low, substantial and high. Implementing Regulation (EU)
+/// 2026/2099 Art. 6(3) asks for substantial, and high from 26 March 2032,
+/// when a health professional is authenticated for cross-border exchange
+/// (`docs/law/eu/cross-border-identification-2026-2099/text.html Art. 6(3)`).
+/// Ordered, so `High > Substantial > Low`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum AssuranceLevel {
+    /// eIDAS level of assurance low.
+    Low,
+    /// eIDAS level of assurance substantial.
+    Substantial,
+    /// eIDAS level of assurance high.
+    High,
+}
+
+impl AssuranceLevel {
+    /// The configuration and storage spelling (`low`, `substantial`, `high`).
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            AssuranceLevel::Low => "low",
+            AssuranceLevel::Substantial => "substantial",
+            AssuranceLevel::High => "high",
+        }
+    }
+}
+
+/// The authentication assurance level a bearer token carries, and the floor a
+/// patient-data request must meet (`[auth.oidc.assurance]`).
+///
+/// Off by default: with no `minimum` nothing is refused, and with an empty
+/// `levels` map no level is recorded. EHDS Annex II 3.1 asks an EHR system
+/// used by health professionals for "reliable mechanisms for the
+/// identification and authentication of health professionals"
+/// (`docs/law/eu/ehds/text.html Annex II 3.1`). No openEHR spec governs this —
+/// our own design/extension.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct AssuranceConfig {
+    /// The token claim carrying the authentication context class (default
+    /// `acr`, OpenID Connect Core 1.0 §2); a dotted path reaches into a JSON
+    /// object.
+    pub claim: String,
+    /// Maps each claim value the issuer emits to the level it stands for.
+    ///
+    /// A value the map does not name carries no level.
+    pub levels: BTreeMap<String, AssuranceLevel>,
+    /// The level a patient-data request must carry; unset refuses nothing.
+    pub minimum: Option<AssuranceLevel>,
+}
+
+impl Default for AssuranceConfig {
+    fn default() -> Self {
+        Self {
+            claim: "acr".to_owned(),
+            levels: BTreeMap::new(),
+            minimum: None,
+        }
+    }
+}
+
+impl AssuranceConfig {
+    /// The claim values that meet [`Self::minimum`], in the map's order.
+    ///
+    /// Empty when no minimum is set.
+    #[must_use]
+    pub fn accepted_values(&self) -> Vec<&str> {
+        let Some(minimum) = self.minimum else {
+            return Vec::new();
+        };
+        self.levels
+            .iter()
+            .filter(|(_, level)| **level >= minimum)
+            .map(|(value, _)| value.as_str())
+            .collect()
+    }
+
+    /// Validates the table at boot.
+    fn validate(&self) -> Result<(), AuthConfigError> {
+        if self.minimum.is_none() && self.levels.is_empty() {
+            return Ok(());
+        }
+        if self.claim.trim().is_empty() {
+            return Err(AuthConfigError::AssuranceClaimBlank);
+        }
+        if let Some(value) = self.levels.keys().find(|value| {
+            value.is_empty()
+                || value
+                    .chars()
+                    .any(|c| c.is_whitespace() || c.is_control() || c == '"' || c == '\\')
+        }) {
+            return Err(AuthConfigError::AssuranceValueUnquotable(value.clone()));
+        }
+        if let Some(minimum) = self.minimum {
+            if self.levels.is_empty() {
+                return Err(AuthConfigError::AssuranceMinimumWithoutLevels(
+                    minimum.as_str().to_owned(),
+                ));
+            }
+            if self.accepted_values().is_empty() {
+                return Err(AuthConfigError::AssuranceMinimumUnreachable(
+                    minimum.as_str().to_owned(),
+                ));
+            }
+        }
+        Ok(())
+    }
+}
+
+/// How a client-credentials token is told apart from a token that names a
+/// natural person (`auth.oidc.professional.client_tokens`).
+///
+/// A token that lacks [`ProfessionalConfig::claim`] names no natural person
+/// under either rule.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ClientTokenRule {
+    /// A token whose `sub` equals its `client_id` or `azp` names the client
+    /// application: RFC 9068 §2.2 has `sub` identify the client when no
+    /// resource owner is involved.
+    #[default]
+    SubIsClient,
+    /// Only a token lacking the configured claim is a client token.
+    ClaimAbsent,
+}
+
+/// How a bearer token names the natural person behind it
+/// (`[auth.oidc.professional]`).
+///
+/// Present, a patient-data request whose token names no natural person is
+/// refused, unless the token is a client token acting for a professional named
+/// in [`Self::acting_for_claim`]. EHDS Annex II 3.2(b) asks the access record
+/// for "the specific natural person or persons having accessed"
+/// (`docs/law/eu/ehds/text.html Annex II 3.2(b)`). No openEHR spec governs
+/// this — our own design/extension.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct ProfessionalConfig {
+    /// The claim identifying the natural person (default `sub`); a dotted path
+    /// reaches into a JSON object.
+    pub claim: String,
+    /// How a client-credentials token is recognised (default `sub_is_client`).
+    pub client_tokens: ClientTokenRule,
+    /// The claim a client token carries the professional's identifier in, when
+    /// the client acts for a named professional; a dotted path reaches into a
+    /// JSON object (for example `act.sub`). Unset refuses every client token
+    /// on patient data.
+    pub acting_for_claim: Option<String>,
+}
+
+impl Default for ProfessionalConfig {
+    fn default() -> Self {
+        Self {
+            claim: "sub".to_owned(),
+            client_tokens: ClientTokenRule::SubIsClient,
+            acting_for_claim: None,
+        }
+    }
+}
+
+impl ProfessionalConfig {
+    /// Validates the table at boot.
+    fn validate(&self) -> Result<(), AuthConfigError> {
+        if self.claim.trim().is_empty() {
+            return Err(AuthConfigError::ProfessionalClaimBlank);
+        }
+        if self
+            .acting_for_claim
+            .as_deref()
+            .is_some_and(|claim| claim.trim().is_empty())
+        {
+            return Err(AuthConfigError::ActingForClaimBlank);
         }
         Ok(())
     }
@@ -1285,5 +1518,164 @@ mod tests {
             ..AuthConfig::default()
         };
         assert_eq!(disabled.require_mechanism(), Ok(()));
+    }
+
+    /// An `[auth.oidc]` table whose assurance block maps the given values.
+    fn with_assurance(
+        levels: &[(&str, AssuranceLevel)],
+        minimum: Option<AssuranceLevel>,
+    ) -> AuthConfig {
+        AuthConfig {
+            oidc: Some(OidcConfig {
+                assurance: AssuranceConfig {
+                    levels: levels
+                        .iter()
+                        .map(|(value, level)| ((*value).to_owned(), *level))
+                        .collect(),
+                    minimum,
+                    ..AssuranceConfig::default()
+                },
+                ..valid_oidc()
+            }),
+            ..AuthConfig::default()
+        }
+    }
+
+    /// The default assurance block is off: no minimum, no map, nothing refused.
+    #[test]
+    fn the_assurance_block_is_off_by_default() {
+        let assurance = AssuranceConfig::default();
+        assert_eq!(assurance.claim, "acr");
+        assert!(assurance.levels.is_empty());
+        assert_eq!(assurance.minimum, None);
+        assert!(assurance.accepted_values().is_empty());
+        assert_eq!(with_assurance(&[], None).validate(), Ok(()));
+    }
+
+    /// A minimum with no mapped value would refuse every patient-data request,
+    /// so it is refused at boot instead.
+    #[test]
+    fn a_minimum_without_levels_is_a_boot_error() {
+        assert_eq!(
+            with_assurance(&[], Some(AssuranceLevel::Substantial)).validate(),
+            Err(AuthConfigError::AssuranceMinimumWithoutLevels(
+                "substantial".to_owned()
+            ))
+        );
+    }
+
+    /// A minimum no mapped value reaches is the same dead configuration.
+    #[test]
+    fn a_minimum_no_value_reaches_is_a_boot_error() {
+        assert_eq!(
+            with_assurance(
+                &[("urn:loa:low", AssuranceLevel::Low)],
+                Some(AssuranceLevel::High)
+            )
+            .validate(),
+            Err(AuthConfigError::AssuranceMinimumUnreachable(
+                "high".to_owned()
+            ))
+        );
+    }
+
+    /// RFC 9470 §3 names the accepted values in one space-separated quoted
+    /// `acr_values` parameter, so a value that cannot sit in it is refused.
+    #[test]
+    fn an_unquotable_level_value_is_a_boot_error() {
+        for bad in ["", "two words", "quo\"te", "back\\slash"] {
+            assert_eq!(
+                with_assurance(&[(bad, AssuranceLevel::High)], Some(AssuranceLevel::High))
+                    .validate(),
+                Err(AuthConfigError::AssuranceValueUnquotable(bad.to_owned())),
+                "{bad:?}"
+            );
+        }
+    }
+
+    /// A blank claim with a declared map has nothing to read the level from.
+    #[test]
+    fn a_blank_assurance_claim_is_a_boot_error() {
+        let mut cfg = with_assurance(&[("x", AssuranceLevel::High)], None);
+        if let Some(oidc) = cfg.oidc.as_mut() {
+            oidc.assurance.claim = " ".to_owned();
+        }
+        assert_eq!(cfg.validate(), Err(AuthConfigError::AssuranceClaimBlank));
+    }
+
+    /// The accepted values are those at or above the minimum, in map order.
+    #[test]
+    fn accepted_values_are_those_at_or_above_the_minimum() {
+        let cfg = with_assurance(
+            &[
+                ("loa-high", AssuranceLevel::High),
+                ("loa-low", AssuranceLevel::Low),
+                ("loa-substantial", AssuranceLevel::Substantial),
+            ],
+            Some(AssuranceLevel::Substantial),
+        );
+        assert_eq!(cfg.validate(), Ok(()));
+        let oidc = cfg.oidc.expect("oidc");
+        assert_eq!(
+            oidc.assurance.accepted_values(),
+            vec!["loa-high", "loa-substantial"]
+        );
+        assert!(AssuranceLevel::High > AssuranceLevel::Substantial);
+        assert!(AssuranceLevel::Substantial > AssuranceLevel::Low);
+    }
+
+    /// The professional block refuses blank claim names at boot.
+    #[test]
+    fn blank_professional_claims_are_boot_errors() {
+        let professional = |claim: &str, acting_for: Option<&str>| AuthConfig {
+            oidc: Some(OidcConfig {
+                professional: Some(ProfessionalConfig {
+                    claim: claim.to_owned(),
+                    acting_for_claim: acting_for.map(str::to_owned),
+                    ..ProfessionalConfig::default()
+                }),
+                ..valid_oidc()
+            }),
+            ..AuthConfig::default()
+        };
+        assert_eq!(
+            professional("", None).validate(),
+            Err(AuthConfigError::ProfessionalClaimBlank)
+        );
+        assert_eq!(
+            professional("sub", Some(" ")).validate(),
+            Err(AuthConfigError::ActingForClaimBlank)
+        );
+        assert_eq!(professional("sub", Some("act.sub")).validate(), Ok(()));
+        assert_eq!(
+            ProfessionalConfig::default().client_tokens,
+            ClientTokenRule::SubIsClient
+        );
+    }
+
+    /// Both blocks deserialize from TOML in the documented spelling.
+    #[test]
+    fn the_blocks_deserialize_from_toml() {
+        let oidc: OidcConfig = toml::from_str(
+            r#"
+            issuer = "https://idp.example"
+            audiences = ["ferroehr"]
+            [assurance]
+            minimum = "substantial"
+            [assurance.levels]
+            "http://eidas.europa.eu/LoA/substantial" = "substantial"
+            "http://eidas.europa.eu/LoA/high" = "high"
+            [professional]
+            claim = "professional_id"
+            client_tokens = "claim_absent"
+            acting_for_claim = "act.sub"
+            "#,
+        )
+        .expect("parses");
+        assert_eq!(oidc.assurance.minimum, Some(AssuranceLevel::Substantial));
+        assert_eq!(oidc.assurance.levels.len(), 2);
+        let professional = oidc.professional.expect("professional");
+        assert_eq!(professional.client_tokens, ClientTokenRule::ClaimAbsent);
+        assert_eq!(professional.acting_for_claim.as_deref(), Some("act.sub"));
     }
 }

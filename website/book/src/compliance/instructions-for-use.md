@@ -111,6 +111,7 @@ in your Helm values.
 enabled = true
 fail_mode = "closed"
 purpose_codes = ["TREAT", "ETREAT"]   # the codes you agree with your callers
+emergency_purpose_codes = ["ETREAT"]  # marks an EHDS Art. 11(5) emergency access
 legal_basis = "gdpr-art-9-2-h"
 
 [audit.store]
@@ -151,11 +152,14 @@ transport = "tls"                     # or [audit.fhir_feed] for a FHIR ARR
 - Authenticate through your OpenID Connect provider
   ([enterprise identity providers](../identity-providers.md)). Basic
   authentication is for service accounts and development.
-- The authentication assurance level of the professional, and refusing a token
-  below the level you require, are not read yet (planned,
-  [#3622](https://github.com/FerroHEALTH/FerroEHR/issues/3622)). Until then
-  your identity provider decides the assurance level, and a token issued to a
-  client application is recorded as that client, not as a person.
+- Declare the assurance level patient data requires in
+  [`[auth.oidc.assurance]`](../installation/config-auth.md#authoidcassurance-the-assurance-level-patient-data-requires),
+  mapping each `acr` value your identity provider emits to an eIDAS level, and
+  declare how a token names the natural person in
+  [`[auth.oidc.professional]`](../installation/config-auth.md#authoidcprofessional-the-natural-person-behind-a-token).
+  Both are off by default: until you configure them your identity provider
+  alone decides the assurance level, and a token issued to a client
+  application is recorded as that client, not as a person.
 - Set `[authz.rbac] ehr_access_default = "restricted"` and write the per-EHR
   access settings, or accept `open_ehr_access_default` by name with the reason
   ([per-EHR access control](../security.md#per-ehr-access-control-ehr_access)).
@@ -227,17 +231,21 @@ knows of for this release.
 - The shipped defaults favour a first boot: the `sandbox` profile, TLS off,
   the open per-EHR access default, the access log failing open. The
   `production` profile refuses them unless accepted by name.
-- No authentication assurance level is read (planned,
-  [#3622](https://github.com/FerroHEALTH/FerroEHR/issues/3622)).
-- An emergency access to restricted data in the vital interest of the patient
-  (EHDS Art. 11(5)) is recorded as an ordinary access, without an override
-  mark (planned, [#3624](https://github.com/FerroHEALTH/FerroEHR/issues/3624)).
+- No authentication assurance level is required, and no natural person is
+  asked of a token, until `[auth.oidc.assurance]` and
+  `[auth.oidc.professional]` are configured.
+- An emergency access in the vital interest of the patient (EHDS Art. 11(5))
+  is marked only when the caller declares one of
+  `[audit] emergency_purpose_codes`
+  ([the emergency mark](../audit.md#emergency-access-ehds-art-115)). The
+  mark lifts no restriction, and FerroEHR holds no EHDS Art. 8 restriction
+  today (planned, [#3682](https://github.com/FerroHEALTH/FerroEHR/issues/3682)).
 - Clinical content is not encrypted by the application at rest; encryption at
   rest is the database's and the disk's
   ([the justification](cra-risk-assessment.md#application-level-encryption-at-rest-annex-i-part-i2e)).
-- Physical deletion removes rows; it does not reach filesystem blocks, WAL,
-  replicas or backups, and no single path removes all data and settings
-  (planned, [#3642](https://github.com/FerroHEALTH/FerroEHR/issues/3642)).
+- Physical deletion and `ferroehr db erase` remove rows, schemas and blobs;
+  they do not reach filesystem blocks, WAL archives, replicas or backups
+  ([what the erase does not reach](../operations-decommissioning.md#what-the-erase-does-not-reach)).
 - Anyone with a database connection is past every API control, the access log
   included ([the database](../threat-model.md#b6--the-database)).
 - Structural validation checks structure, invariants and terminology
@@ -250,12 +258,11 @@ the risk that survives each control is in the [threat model](../threat-model.md)
 ## Taking a deployment out of service
 
 Export what you must keep ([EHR Extract](../beyond-core/messaging.md),
-[dump](../operations-admin-apis.md#dump-and-load)), physically delete the
-EHRs ([physical deletion](../operations-admin-apis.md#physical-deletion)), and
-destroy the database volumes, replicas and backups under your own procedure.
-A decommissioning page that removes all data and settings in one documented
-path is planned in
-[#3642](https://github.com/FerroHEALTH/FerroEHR/issues/3642).
+[dump](../operations-admin-apis.md#dump-and-load)), then remove all data and
+settings with `ferroehr db erase` and remove what it cannot reach (backups, WAL
+archives, replicas, the chart's Secrets and claims, the database roles and
+the configuration files) under your own procedure. The steps and the retention
+duties that come first are on [Decommissioning](../operations-decommissioning.md).
 
 ## The CRA user information (CRA Annex II)
 

@@ -52,6 +52,16 @@ pub struct AuditCoding {
     pub display: Option<String>,
 }
 
+/// A FHIR `CodeableConcept` of one coding with optional plain text: the
+/// coding a system can key on, the text a person reads.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AuditConcept {
+    /// The coding.
+    pub coding: AuditCoding,
+    /// The plain-words rendering (`CodeableConcept.text`).
+    pub text: Option<String>,
+}
+
 /// The DICOM-style action code of an audited event.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AuditAction {
@@ -109,6 +119,10 @@ pub struct AuditAgent {
     pub roles: Vec<String>,
     /// Who the agent is.
     pub who: Option<AuditWho>,
+    /// An alternative identifier of the agent (`agent.altId`): for a human,
+    /// "a user identifier text string from authentication system"
+    /// (<https://hl7.org/fhir/R4/auditevent-definitions.html#AuditEvent.agent.altId>).
+    pub alt_id: Option<String>,
     /// Whether this agent initiated the event.
     pub requestor: bool,
     /// Applicable policies (the BALP OAuth pattern records the token `jti`).
@@ -168,6 +182,11 @@ pub struct AuditRecord {
     pub outcome: AuditOutcome,
     /// Human description of a failure outcome.
     pub outcome_desc: Option<String>,
+    /// Why the event happened, where that is a fact of the event rather than
+    /// of one agent (`AuditEvent.purposeOfEvent`, 0..*): "the purposeOfUse
+    /// (reason) that was used during the event being recorded"
+    /// (<https://hl7.org/fhir/R4/auditevent-definitions.html#AuditEvent.purposeOfEvent>).
+    pub purpose_of_event: Vec<AuditConcept>,
     /// The participating agents.
     pub agents: Vec<AuditAgent>,
     /// The reporting source.
@@ -200,6 +219,13 @@ pub fn render(record: &AuditRecord) -> Result<serde_json::Value, AuditRenderErro
         .action(action_code(record.action))
         .recorded(Instant(recorded))
         .outcome(outcome_code(record.outcome))
+        .purpose_of_event(
+            record
+                .purpose_of_event
+                .iter()
+                .map(|c| Some(concept(c)))
+                .collect(),
+        )
         .agent(record.agents.iter().map(agent).map(Some).collect())
         .source(source(&record.source))
         .entity(record.entities.iter().map(entity).map(Some).collect());
@@ -325,6 +351,19 @@ fn single_concept(source: &AuditCoding) -> CodeableConcept {
     .into()
 }
 
+/// A `CodeableConcept` carrying one coding and its plain-words text.
+fn concept(source: &AuditConcept) -> CodeableConcept {
+    CodeableConceptInner {
+        id: None,
+        extension: Vec::new(),
+        coding: vec![Some(coding(&source.coding))],
+        coding_ext: Vec::new(),
+        text: source.text.clone(),
+        text_ext: None,
+    }
+    .into()
+}
+
 /// A `CodeableConcept` carrying only text: a value from a vocabulary with no
 /// published code system.
 fn text_concept(text: &str) -> CodeableConcept {
@@ -351,7 +390,7 @@ fn agent(source: &AuditAgent) -> AuditEventAgent {
         role_ext: Vec::new(),
         who: source.who.as_ref().map(who_reference),
         who_ext: None,
-        alt_id: None,
+        alt_id: source.alt_id.clone(),
         alt_id_ext: None,
         name: None,
         name_ext: None,
@@ -490,6 +529,7 @@ mod tests {
                 .expect("timestamp"),
             outcome: AuditOutcome::Success,
             outcome_desc: None,
+            purpose_of_event: Vec::new(),
             agents: vec![AuditAgent {
                 roles: vec!["clinician".to_owned()],
                 role: Some(AuditCoding {
@@ -498,6 +538,7 @@ mod tests {
                     display: Some("Destination Role ID".to_owned()),
                 }),
                 who: Some(AuditWho::Identifier("john doe".to_owned())),
+                alt_id: Some("idp-subject-1".to_owned()),
                 requestor: true,
                 policy: vec!["jti-1".to_owned()],
                 network_address: Some("10.216.24.150".to_owned()),
@@ -541,6 +582,13 @@ mod tests {
         assert_eq!(rendered["entity"][0]["query"], "ZXUuZmVycm9laHI6OnEx");
     }
 
+    /// The alternative identifier renders as FHIR R4 `agent.altId`.
+    #[test]
+    fn the_alternative_identifier_renders_as_alt_id() {
+        let rendered = render(&record()).expect("render");
+        assert_eq!(rendered["agent"][0]["altId"], "idp-subject-1");
+    }
+
     /// An agent with no participation type renders without `type`, a literal
     /// `who` renders as `Reference.reference`, and a system-less purpose code
     /// renders as a coding with a code and nothing else — the three shapes
@@ -553,6 +601,7 @@ mod tests {
             roles: Vec::new(),
             role: None,
             who: Some(AuditWho::Reference("Organization/zh-noordwest".to_owned())),
+            alt_id: None,
             requestor: false,
             policy: Vec::new(),
             network_address: None,
@@ -573,6 +622,41 @@ mod tests {
         let coding = &agent["purposeOfUse"][0]["coding"][0];
         assert_eq!(coding["code"], "TREAT");
         assert!(coding.get("system").is_none(), "no system: {coding}");
+    }
+
+    /// A purpose of the event renders as `AuditEvent.purposeOfEvent`, one
+    /// `CodeableConcept` with its coding and its plain-words text; none renders
+    /// no element.
+    #[test]
+    fn a_purpose_of_event_renders_its_coding_and_text() {
+        assert!(
+            render(&record())
+                .expect("render")
+                .get("purposeOfEvent")
+                .is_none()
+        );
+        let mut record = record();
+        record.purpose_of_event.push(AuditConcept {
+            coding: AuditCoding {
+                system: Some("http://terminology.hl7.org/CodeSystem/v3-ActReason".to_owned()),
+                code: "ETREAT".to_owned(),
+                display: Some("Emergency Treatment".to_owned()),
+            },
+            text: Some("Emergency access".to_owned()),
+        });
+        let rendered = render(&record).expect("render");
+        let concept = &rendered["purposeOfEvent"][0];
+        assert_eq!(concept["coding"][0]["code"], "ETREAT");
+        assert_eq!(
+            concept["coding"][0]["system"],
+            "http://terminology.hl7.org/CodeSystem/v3-ActReason"
+        );
+        assert_eq!(concept["text"], "Emergency access");
+        let parsed: AuditEvent = serde_json::from_value(rendered.clone()).expect("parse");
+        assert_eq!(
+            serde_json::to_value(parsed).expect("re-serialize"),
+            rendered
+        );
     }
 
     #[test]

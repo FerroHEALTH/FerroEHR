@@ -14,11 +14,21 @@
 //! The record's EHDS priority categories ([`AuditEvent::category`]) have no
 //! element in the PS3.15 §A.5 schema, so this rendering omits them; the local
 //! store and the FHIR `AuditEvent` carry them.
+//!
+//! The authentication assurance level has no element either: PS3.15 §A.5.1
+//! gives `ActiveParticipant` no assurance attribute, so only the local store
+//! carries it. The natural person behind a client application is a second
+//! `ActiveParticipant`.
+//!
+//! The emergency-access mark ([`AuditEvent::emergency_access`], EHDS
+//! Art. 11(5)) has no element either: the schema defines no purpose of use in
+//! any of its four element groups, so the local store and the FHIR
+//! `AuditEvent` carry the mark and this rendering does not.
 
 use quick_xml::events::{BytesEnd, BytesStart, BytesText, Event};
 use quick_xml::writer::Writer;
 
-use crate::system_log::event::AuditEvent;
+use crate::system_log::event::{ActingMode, AuditEvent};
 
 use crate::system_log::AuditError;
 use crate::system_log::codes::{
@@ -45,9 +55,14 @@ pub struct AuditContext {
 #[derive(Debug, Clone)]
 struct ActiveParticipant {
     user_id: String,
+    /// `AlternativeUserID` (PS3.15 §A.5.1): the authentication system's
+    /// identifier when `UserID` names the person by another one.
+    alternative_user_id: Option<String>,
     user_is_requestor: bool,
-    network_access_point_id: String,
-    role: Code,
+    network_access_point_id: Option<String>,
+    /// The participation `RoleIDCode`; `None` for a person who reached the
+    /// server through a client application, which carries the code itself.
+    role: Option<Code>,
     /// The security roles the person acted under, each a further `RoleIDCode`
     /// (PS3.15 §A.5.1 makes the element 0..*), coded in the deployment's own
     /// role vocabulary (#3239).
@@ -105,30 +120,23 @@ impl AuditMessage {
             event.user_id.clone()
         };
 
-        // The accessing organisation and the declared purpose of use stay out
-        // of this rendering: PS3.15 §A.5 gives `ActiveParticipant` no
-        // organisation attribute and defines no purpose element anywhere, and
+        // The accessing organisation, the declared purpose of use and the
+        // authentication assurance level stay out of this rendering: PS3.15
+        // §A.5 gives `ActiveParticipant` no organisation or assurance
+        // attribute and defines no purpose element anywhere, and
         // `AuditEnterpriseSiteID` names the REPORTING source's site rather
         // than the caller's organisation
         // (https://dicom.nema.org/medical/dicom/current/output/chtml/part15/sect_A.5.html).
-        let participants = vec![
-            // Source (the requesting client).
-            ActiveParticipant {
-                user_id,
-                user_is_requestor: event.user_is_requestor,
-                network_access_point_id: client_ip,
-                role: codes::ROLE_SOURCE,
-                roles: event.roles.clone(),
-            },
-            // Destination (this server).
-            ActiveParticipant {
-                user_id: nonempty(&ctx.source_id, missing),
-                user_is_requestor: false,
-                network_access_point_id: nonempty(&ctx.server_ip, missing),
-                role: codes::ROLE_DESTINATION,
-                roles: Vec::new(),
-            },
-        ];
+        let mut participants = source_participants(event, user_id, client_ip);
+        // Destination (this server).
+        participants.push(ActiveParticipant {
+            user_id: nonempty(&ctx.source_id, missing),
+            alternative_user_id: None,
+            user_is_requestor: false,
+            network_access_point_id: Some(nonempty(&ctx.server_ip, missing)),
+            role: Some(codes::ROLE_DESTINATION),
+            roles: Vec::new(),
+        });
 
         let objects = build_objects(event, subject, missing);
 
@@ -175,11 +183,18 @@ impl AuditMessage {
         for p in &self.participants {
             let mut ap = BytesStart::new("ActiveParticipant");
             ap.push_attribute(("UserID", p.user_id.as_str()));
+            if let Some(alternative) = &p.alternative_user_id {
+                ap.push_attribute(("AlternativeUserID", alternative.as_str()));
+            }
             ap.push_attribute(("UserIsRequestor", bool_str(p.user_is_requestor)));
-            ap.push_attribute(("NetworkAccessPointID", p.network_access_point_id.as_str()));
-            ap.push_attribute(("NetworkAccessPointTypeCode", NETWORK_ACCESS_POINT_IP));
+            if let Some(address) = &p.network_access_point_id {
+                ap.push_attribute(("NetworkAccessPointID", address.as_str()));
+                ap.push_attribute(("NetworkAccessPointTypeCode", NETWORK_ACCESS_POINT_IP));
+            }
             w.write_event(Event::Start(ap))?;
-            write_code(&mut w, "RoleIDCode", &p.role)?;
+            if let Some(role) = &p.role {
+                write_code(&mut w, "RoleIDCode", role)?;
+            }
             for role in &p.roles {
                 let mut c = BytesStart::new("RoleIDCode");
                 c.push_attribute(("csd-code", role.as_str()));
@@ -215,6 +230,56 @@ impl AuditMessage {
         w.write_event(Event::End(BytesEnd::new("AuditMessage")))?;
         String::from_utf8(w.into_inner()).map_err(|e| AuditError::Xml(Box::new(e)))
     }
+}
+
+/// The requesting side's `ActiveParticipant`s (PS3.15 §A.5.1).
+///
+/// A client application acting for a named professional yields two: the
+/// person as requestor with the security roles, and the application at the
+/// network address with the source role. A professional identifier other than
+/// the token subject becomes `UserID`, the subject `AlternativeUserID`.
+fn source_participants(
+    event: &AuditEvent,
+    user_id: String,
+    client_ip: String,
+) -> Vec<ActiveParticipant> {
+    let professional = event
+        .actor
+        .professional_id
+        .as_deref()
+        .filter(|id| !id.is_empty());
+    if let (Some(ActingMode::Client), Some(person)) = (event.actor.mode, professional) {
+        return vec![
+            ActiveParticipant {
+                user_id: person.to_owned(),
+                alternative_user_id: None,
+                user_is_requestor: event.user_is_requestor,
+                network_access_point_id: None,
+                role: None,
+                roles: event.roles.clone(),
+            },
+            ActiveParticipant {
+                user_id,
+                alternative_user_id: None,
+                user_is_requestor: false,
+                network_access_point_id: Some(client_ip),
+                role: Some(codes::ROLE_SOURCE),
+                roles: Vec::new(),
+            },
+        ];
+    }
+    let (user_id, alternative_user_id) = match professional {
+        Some(person) if person != user_id => (person.to_owned(), Some(user_id)),
+        _ => (user_id, None),
+    };
+    vec![ActiveParticipant {
+        user_id,
+        alternative_user_id,
+        user_is_requestor: event.user_is_requestor,
+        network_access_point_id: Some(client_ip),
+        role: Some(codes::ROLE_SOURCE),
+        roles: event.roles.clone(),
+    }]
 }
 
 /// Assemble the `ParticipantObjectIdentification` list for an event
@@ -576,5 +641,54 @@ mod tests {
         let xml = AuditMessage::build(&e, &ctx(), None).to_xml().expect("xml");
         assert!(xml.contains(r#"EventOutcomeIndicator="4""#));
         assert!(xml.contains("Operation failed"));
+    }
+
+    /// A client application acting for a named professional renders the
+    /// person as the requesting participant and the application beside it.
+    #[test]
+    fn a_client_acting_for_a_professional_renders_two_source_participants() {
+        let mut e = event(
+            EventActionCode::Read,
+            ObjectClass::Composition,
+            EventOutcome::Success,
+        );
+        e.user_id = "scheduler-app".to_owned();
+        e.actor = crate::system_log::event::ActorAuthentication {
+            mode: Some(ActingMode::Client),
+            assurance_level: Some(crate::config::auth::AssuranceLevel::High),
+            assurance_value: Some("loa-high".to_owned()),
+            professional_id: Some("prof-007".to_owned()),
+        };
+        let xml = AuditMessage::build(&e, &ctx(), None).to_xml().expect("xml");
+        assert!(
+            xml.contains(r#"<ActiveParticipant UserID="prof-007" UserIsRequestor="true">"#),
+            "{xml}"
+        );
+        assert!(
+            xml.contains(
+                r#"<ActiveParticipant UserID="scheduler-app" UserIsRequestor="false" NetworkAccessPointID="10.216.24.150""#
+            ),
+            "{xml}"
+        );
+        // PS3.15 §A.5.1 has no element for the assurance level.
+        assert!(!xml.contains("loa-high"), "{xml}");
+    }
+
+    /// A professional identifier other than the subject is `UserID`, and the
+    /// subject is `AlternativeUserID`.
+    #[test]
+    fn a_professional_identifier_renders_with_the_subject_as_alternative() {
+        let mut e = event(
+            EventActionCode::Read,
+            ObjectClass::Composition,
+            EventOutcome::Success,
+        );
+        e.actor.mode = Some(ActingMode::Person);
+        e.actor.professional_id = Some("uzi-12345".to_owned());
+        let xml = AuditMessage::build(&e, &ctx(), None).to_xml().expect("xml");
+        assert!(
+            xml.contains(r#"UserID="uzi-12345" AlternativeUserID="john doe""#),
+            "{xml}"
+        );
     }
 }
