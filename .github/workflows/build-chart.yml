@@ -23,6 +23,9 @@
 #   gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr@<digest> \
 #     -R FerroHEALTH/FerroEHR \
 #     --signer-workflow FerroHEALTH/FerroEHR/.github/workflows/build-chart.yml
+#
+# and reads the chart SBOM, the images it deploys by digest, the same way with
+# `--predicate-type https://cyclonedx.org/bom`.
 name: Build chart (reusable)
 
 on:
@@ -412,6 +415,22 @@ jobs:
           fi
           echo "packaged appVersion ${packaged}; every artifacthub.io/images tag and the packaged README at ${APP}"
 
+      # The chart's SBOM (CRA Annex I Part II(1), docs/law/eu/cra/text.html):
+      # the chart and every image it deploys, each named by the digest its tag
+      # resolves to now. Generated BEFORE the push, so an image that does not
+      # resolve stops the lane while the chart version is still unpublished;
+      # the attestation below binds the document to the pushed chart digest.
+      - name: Generate the chart SBOM
+        id: sbom
+        env:
+          PACKAGE: ${{ steps.package.outputs.path }}
+          VERSION: ${{ steps.chart.outputs.version }}
+        run: |
+          set -euo pipefail
+          out="dist/ferroehr-${VERSION}.cdx.json"
+          bash deploy/helm/chart-sbom.sh "$PACKAGE" "$out" "" "$CHART_REF"
+          echo "path=$out" >> "$GITHUB_OUTPUT"
+
       - name: Dry run — everything but the push
         if: inputs.release-tag == '' && !inputs.publish
         env:
@@ -493,6 +512,25 @@ jobs:
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
 
+      # Stored in GitHub's attestation store against the chart digest, NOT
+      # pushed to the registry: GHCR serves no referrers API, so a third writer
+      # to the shared `sha256-<hex>` fallback index is one more chance to drop
+      # the signature or the provenance the step below reads back.
+      - name: Attest the chart SBOM
+        id: attest-sbom
+        if: steps.push.outputs.digest != ''
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ env.CHART_REF }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          sbom-path: ${{ steps.sbom.outputs.path }}
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: chart-sbom
+          path: ${{ steps.sbom.outputs.path }}
+          if-no-files-found: error
+
       # Read both artifacts back, after both writers have run, because every
       # failure here is otherwise silent for weeks: a signature that does not
       # verify against this workflow's identity is worse than none; a signature
@@ -506,10 +544,11 @@ jobs:
       # the cosign signature and the SLSA provenance to BOTH still be there.
       - name: Verify the signature and the attestation both survived
         id: verify
-        if: steps.sign.outcome == 'success' && steps.attest.outcome == 'success'
+        if: steps.sign.outcome == 'success' && steps.attest.outcome == 'success' && steps.attest-sbom.outcome == 'success'
         env:
           DIGEST: ${{ steps.push.outputs.digest }}
           REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           cosign verify "${CHART_REF}@${DIGEST}" \
@@ -517,6 +556,12 @@ jobs:
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
             > /dev/null
           echo "the signature verifies against ${REPO}/.github/workflows/build-chart.yml"
+
+          # The SBOM, read back with the command verifying-releases.md teaches.
+          gh attestation verify "oci://${CHART_REF}@${DIGEST}" --repo "$REPO" \
+            --predicate-type https://cyclonedx.org/bom \
+            --signer-workflow "${REPO}/.github/workflows/build-chart.yml" > /dev/null
+          echo "the CycloneDX SBOM attestation verifies against the chart digest"
 
           # The OCI fallback tag for a subject digest: `sha256:<hex>` → `sha256-<hex>`.
           fallback="${CHART_REF}:${DIGEST/:/-}"

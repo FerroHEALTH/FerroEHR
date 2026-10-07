@@ -1187,6 +1187,10 @@ jobs:
           yq --version
       - name: Every accepted advisory has a published VEX justification
         run: bash scripts/checks/vex-advisories.sh
+      # The release pipeline's exploitability-record gate, proven on synthetic
+      # input here so a broken detector is caught before a release depends on it.
+      - name: The exploitability-record detector refuses what it claims to
+        run: bash scripts/checks/vex-coverage.sh --self-test
 
   clippy:
     name: clippy

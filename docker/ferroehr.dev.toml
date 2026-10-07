@@ -20,6 +20,10 @@
 # explicit here so the dev lanes state the posture they test).
 spec_profile = "development"
 
+# The declared posture (matches the built-in default; explicit for the same
+# reason): a sandbox must not hold real patient data.
+deployment_profile = "sandbox"
+
 [server]
 bind = "0.0.0.0:8080"
 # Permissive CORS — dev only. Production configures explicit origins.

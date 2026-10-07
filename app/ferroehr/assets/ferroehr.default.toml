@@ -30,13 +30,15 @@ spec_profile = "development"
 
 # The declared deployment posture. `sandbox` (the default) must not hold real
 # patient data and says which separations are missing on the banner, in the
-# log and on GET /rest/status; `production` refuses to start while one is
+# log and on GET /management/status; `production` refuses to start while one is
 # missing and not named in deployment_accepts (shared_credential,
 # shared_cluster, open_subject_namespace, audit_off, audit_fails_open,
-# open_ehr_access_default, migrate_on_runtime_credential, auth_off,
-# plaintext_listener; accept plaintext_listener behind a TLS-terminating
-# ingress). Our own posture; auth_off and plaintext_listener follow CRA
-# Annex I Part I(2)(d) and (e).
+# audit_syslog_udp, open_ehr_access_default, migrate_on_runtime_credential,
+# auth_off, plaintext_listener; accept plaintext_listener behind a
+# TLS-terminating ingress; a [management] port opens it too, since that
+# listener is plain HTTP on every interface). Our own posture; auth_off and
+# plaintext_listener follow CRA Annex I Part I(2)(d) and (e), audit_syslog_udp
+# EHDS Annex II 1.4.
 deployment_profile = "sandbox"   # sandbox | production
 #? deployment_accepts = ["shared_cluster"]
 
@@ -366,7 +368,7 @@ capabilities = []   # extra (HL7 base) capabilities to advertise, e.g. ["launch-
 [management]
 enabled = false
 base_path = "/management"
-#? port = 9100                # separate listener; must differ from server.bind port
+#? port = 9100                # separate listener on every interface, plain HTTP; production: plaintext_listener
 
 # The single authority for this surface: one level per endpoint, and an
 # endpoint left "off" is not mounted at all (404). Levels: off | private |
@@ -409,7 +411,7 @@ retired_key_paths = []       # e.g. ["/etc/ferroehr/signing-2025.pub.asc"]
 # ── [licence] — the commercial licence token ──────────────────────────────────
 # FerroEHR is BUSL-1.1: production use in the course of a business needs a
 # commercial licence. The server runs identically with or without the token;
-# its state is logged once at boot and reported on GET /rest/status.
+# its state is logged once at boot and reported on GET /management/status.
 [licence]
 #? file = "/etc/ferroehr/licence.asc"
 

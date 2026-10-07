@@ -84,15 +84,19 @@ audit failing open, unless each is accepted by name.
   `production_refuses_each_open_gap_and_names_the_remedy`,
   `production_refuses_the_open_access_default_and_the_open_audit_fail_mode`;
 - `app/ferroehr/tests/it/legal_marks.rs`:
-  `setting_and_lifting_a_mark_is_recorded_in_the_access_trail`.
+  `setting_and_lifting_a_mark_is_recorded_in_the_access_trail`;
+- `app/ferroehr-rest/tests/it/audit_route_coverage.rs`:
+  `every_route_writes_exactly_one_access_record` enumerates every route the
+  assembled router mounts, the extension routes included, drives each one
+  once, and asserts exactly one access record carrying its operation id. The
+  routes it exempts (the health probes, the public status and discovery
+  documents, the OpenAPI document and Swagger UI, the `OPTIONS` manifest and
+  the management surface) are listed in the test with the reason.
 
 **Remains:** the shipped `fail_mode` is `open`, so under the `sandbox`
 profile a full queue drops a record and the request succeeds
 (`fail_open_serves_request_when_channel_full` pins that behaviour). Database
-access outside the server is recorded nowhere. No test walks every route of
-the assembled router, including the extension routes, and asserts a record;
-the classification tests cover the generated operations and the end-to-end
-tests sample the families.
+access outside the server is recorded nowhere.
 
 ## H2: a record names the wrong person, organisation or patient
 
@@ -174,7 +178,8 @@ that classified it.
 **Remains:** the map is the deploying organisation's, and FerroEHR ships
 none, so an incomplete map yields `unclassified` records. Records in the
 demographic domain carry no classification, because no priority category
-lives there. The Helm values do not yet carry the map (planned, #3655).
+lives there. The Helm chart carries the map as `config.audit.categories`, empty
+by default as in the binary.
 
 ## H4: a record misstates where the data came from
 

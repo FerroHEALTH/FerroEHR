@@ -537,6 +537,77 @@ async fn a_contribution_read_is_classified_by_its_versions() {
     }
 }
 
+/// An `EHR_ACCESS` holds no priority-category data, so a query over it records
+/// `none`, as an `EHR_ACCESS` object read does (#3667).
+#[tokio::test]
+async fn an_ehr_access_query_records_none() {
+    let (_db, pool, app, _ehr) = app(map(&json!({})), Observability::default()).await;
+
+    query(&app, "SELECT a FROM EHR e CONTAINS EHR_ACCESS a").await;
+
+    let statement = classified(&pool, "query_execute_adhoc_query_body", "query").await;
+    assert_eq!(statement.categories, json!(["none"]));
+    assert_eq!(statement.basis.as_deref(), Some("resource-kind"));
+}
+
+/// The wire `DV_CODED_TEXT` of the `openehr` change type `code`.
+fn change_type(code: &str, value: &str) -> Value {
+    json!({
+        "_type": "DV_CODED_TEXT",
+        "value": value,
+        "defining_code": {
+            "_type": "CODE_PHRASE",
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+            "code_string": code
+        }
+    })
+}
+
+/// A CONTRIBUTION that deletes a COMPOSITION writes no content for it, so its
+/// record carries the categories of the version it deleted, as a single
+/// logical delete does (#3667).
+#[tokio::test]
+async fn a_contribution_delete_is_classified_by_the_version_it_deletes() {
+    let (_db, pool, app, ehr) = app(map(&json!({})), Observability::default()).await;
+    let uid = commit_version(&app, &ehr, &composition(REPORT)).await;
+    let committer = json!({ "_type": "PARTY_IDENTIFIED", "name": "category tester" });
+    let body = json!({
+        "versions": [{
+            "commit_audit": {
+                "change_type": change_type("523", "deleted"),
+                "committer": committer
+            },
+            "lifecycle_state": {
+                "_type": "DV_CODED_TEXT",
+                "value": "deleted",
+                "defining_code": {
+                    "_type": "CODE_PHRASE",
+                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+                    "code_string": "523"
+                }
+            },
+            "preceding_version_uid": { "_type": "OBJECT_VERSION_ID", "value": uid }
+        }],
+        "audit": {
+            "change_type": change_type("251", "modification"),
+            "committer": committer
+        }
+    });
+    let (status, _, text) = send(
+        &app,
+        Request::post(format!("{BASE}/ehr/{ehr}/contribution"))
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from(body.to_string()))
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "contribution delete: {text}");
+
+    let write = classified(&pool, "contribution_create", "contribution").await;
+    assert_eq!(write.categories, json!(["imaging"]));
+    assert_eq!(write.basis.as_deref(), Some("archetype"));
+}
+
 /// A tracing layer recording every span field and event field it sees.
 #[derive(Clone, Default)]
 struct Capture(Arc<Mutex<Vec<String>>>);

@@ -39,6 +39,10 @@ this page. Linux is the only published target.
 | `…tar.gz.intoto.jsonl` | the same provenance as one DSSE-wrapped in-toto statement per line |
 | `ferroehr-<tag>-<arch>-unknown-linux-gnu.cdx.json` | the CycloneDX dependency SBOM for that binary |
 | `ferroehr-<tag>.spdx.json` | the SPDX SBOM of the source tree at the release commit |
+| `ferroehr-<tag>-vulnerability-record.json` | every finding of a full scan of each image and binary, each with the OpenVEX statement that judges it ([the record](#the-exploitability-record)) |
+| `ferroehr-<tag>-trivy-reports.tar.gz` | the raw Trivy reports the record was joined from |
+| `<crate>-<crate-version>.cdx.json` | the CycloneDX SBOM of each published `openehr-*` crate |
+| `<crate>-<crate-version>.crate.sbom.sigstore.json` | the Sigstore bundle binding that SBOM to the `.crate` archive crates.io serves |
 | `docker-compose.yml` + the Keycloak and observability overlays | the quickstart stack, so a downloader never has to clone the repository |
 
 Container images and the Helm chart are published to GHCR by their own lanes and
@@ -265,26 +269,54 @@ one.
 The publishing lane refuses to overwrite a chart version that already exists,
 reads both the signature and the attestation back from the registry before
 reporting success, and checks that the `appVersion` image accepts the chart's
-rendered defaults.
+rendered defaults. It also attests the chart's SBOM, which names every
+image the chart deploys by digest
+([the SBOMs](#the-sboms-one-per-published-artefact)).
 
-## Three SBOMs, three questions
+## The SBOMs, one per published artefact
 
-A release involves three SBOM documents. They are not redundant: they describe
-different things for different readers, and both kinds of review genuinely
-happen for a clinical deployment:
+Every artefact this project publishes carries a software bill of materials, and
+each one answers a different question about a different download:
 
-| Document | Where | Format | Answers |
-|---|---|---|---|
-| `ferroehr-<tag>-<arch>-unknown-linux-gnu.cdx.json` | a release asset, one per architecture | CycloneDX 1.5 | *what is inside the binary I am about to run?* Every cargo component with a `pkg:cargo/…` purl and licence, most with checksums, and the **dependency edges**, so "is this crate direct or four levels down" is answerable rather than guessed. This is what a vulnerability scanner consumes. |
-| `ferroehr-<tag>.spdx.json` | a release asset, one per release | SPDX 2.3 | *what am I redistributing, and under what terms?* The attribution and licence-obligation view of the source tree at the release commit, the document a legal or procurement reviewer of a multi-licence redistribution asks for. |
-| the image SBOM | written onto each container image index by the builder | SPDX | *what is in the image's OS layer?* Which is what matters for `ferroehr-postgres`, built on the upstream `postgres` image. |
+| Artefact | SBOM | Where | Format | Answers |
+|---|---|---|---|---|
+| the server binary | `ferroehr-<tag>-<arch>-unknown-linux-gnu.cdx.json` | a release asset per architecture, attested against the tarball (`…tar.gz.sbom.sigstore.json`) | CycloneDX 1.5 | *what is inside the binary I am about to run?* Every cargo component with a `pkg:cargo/…` purl and licence, most with checksums, and the **dependency edges**, so "is this crate direct or four levels down" is answerable. This is what a vulnerability scanner consumes. |
+| each container image | the image SBOM | written onto each image index by the builder | SPDX | *what is in the image's OS layer?* Which is what matters for `ferroehr-postgres`, built on the upstream `postgres` image. |
+| each `openehr-*` crate | `<crate>-<crate-version>.cdx.json` | a release asset per crate, attested against the `.crate` archive crates.io serves (`<crate>-<crate-version>.crate.sbom.sigstore.json`) | CycloneDX 1.5 | *what does this library pull into my build?* The crate's normal and build dependencies; dev-dependencies are left out, as `cargo package` strips them. |
+| the Helm chart | the chart SBOM | an attestation on the chart's OCI digest in GitHub's attestation store | CycloneDX 1.5 | *which images does this chart deploy?* Each image the chart can deploy, named by repository, tag and the **digest** the tag resolved to when the chart was published, with its platforms. |
+| the source tree | `ferroehr-<tag>.spdx.json` | a release asset per release | SPDX 2.3 | *what am I redistributing, and under what terms?* The attribution and licence-obligation view of the source tree at the release commit, the document a legal or procurement reviewer of a multi-licence redistribution asks for. |
 
-CycloneDX 1.5 is the highest version the generator emits (`cargo-cyclonedx`
-accepts 1.3, 1.4 or 1.5 and defaults to 1.3, so the release lane sets it
-explicitly); it carries everything 1.6 consumers read. The repository SPDX
-document is checked at publish time for being real SPDX, naming itself
-`ferroehr`, and listing at least one package: an SBOM that answers no question
-is worse than none.
+The crate SBOMs ride the server release that ships them, so `<crate-version>`
+is the crate's own version (the crates run their own SemVer line). A crate
+version that did not change in a release is described again, against the
+archive crates.io already serves. Verify a crate SBOM against the archive you
+downloaded:
+
+```bash
+curl -sSLO https://static.crates.io/crates/openehr-rm/openehr-rm-<crate-version>.crate
+gh attestation verify openehr-rm-<crate-version>.crate \
+  -R FerroHEALTH/FerroEHR \
+  --predicate-type https://cyclonedx.org/bom \
+  --signer-workflow FerroHEALTH/FerroEHR/.github/workflows/release.yml
+```
+
+Read the chart SBOM, and verify it in the same step:
+
+```bash
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:<chart-version> \
+  -R FerroHEALTH/FerroEHR \
+  --predicate-type https://cyclonedx.org/bom \
+  --signer-workflow FerroHEALTH/FerroEHR/.github/workflows/build-chart.yml \
+  --format json --jq '.[].verificationResult.statement.predicate'
+```
+
+CycloneDX 1.5 is the highest version `cargo-cyclonedx` emits (it accepts 1.3,
+1.4 or 1.5 and defaults to 1.3, so the release lane sets it explicitly); it
+carries everything 1.6 consumers read. The release lane refuses an SBOM that
+is not the format it claims or that names another artefact: the repository
+SPDX document must name itself `ferroehr` and list at least one package, a
+crate SBOM must describe that crate at that version, and every image in the
+chart SBOM must resolve to a `sha256` digest before the chart is pushed.
 
 ## What SLSA level each artifact reaches
 
@@ -334,6 +366,11 @@ the registry index, and that is the whole registry-side story. The crates'
 source of truth is this repository: the publishing lane, the tags, and the
 public history.
 
+What this repository does attest is each crate's SBOM, against the very
+`.crate` archive crates.io serves; the crates.io leg of the release reads that
+attestation back from crates.io's own copy after publishing. See
+[the SBOMs](#the-sboms-one-per-published-artefact) for the command.
+
 ## Findings a scanner will report
 
 Run a scanner over a FerroEHR artifact and it will report findings. Every one
@@ -365,9 +402,44 @@ for the specific crate it applies to, so you do not have to take our word for it
 in prose.
 
 The published images are additionally re-scanned on a weekly schedule at the
-tag an operator actually pulls, and a fixable high-or-critical finding both
-fails that run and files a tracker issue, because a red scheduled run nobody
-looks at is not a control.
+tag an operator actually pulls. A fixable high-or-critical finding files or
+updates one tracker issue, and the issue is the alert: the scheduled run itself
+stays green, because a red scheduled run nobody looks at is not a control.
+
+### The exploitability record
+
+The scan that gates an image blocks only high and critical findings that have
+a fix. Every release therefore also scans each image (`ferroehr`,
+`ferroehr-viewer`, `ferroehr-postgres`, both platforms, at the digest the
+release pushed) and each server binary (`x86_64` and `aarch64`) with **no
+severity floor and unfixed findings included**, and publishes the result as
+two release assets:
+
+- `ferroehr-<tag>-trivy-reports.tar.gz`: the raw Trivy JSON reports, one per
+  image and platform and one per binary.
+- `ferroehr-<tag>-vulnerability-record.json`: every finding from those
+  reports, joined with the OpenVEX statement under `security/vex/` that judges
+  it. Each entry names the product (`pkg:oci/<image>` or
+  `pkg:cargo/ferroehr-server`), the vulnerability id, the package and its
+  installed version, the fixed version where one exists, the severity, and the
+  statement: its status (`not_affected`, `affected` or `fixed`), its
+  justification, impact statement or action statement, and the document it
+  comes from.
+
+The release is refused while any finding has no such statement: the record is
+checked before the images are tagged, so a refused release leaves its images
+untagged and its GitHub release a draft. The rule for a finding with a fix is
+to fix it by rebuilding, not to judge it. A statement counts only when it is a judgement:
+`under_investigation` does not, and neither does `not_affected` without a
+justification or impact statement, or `affected` without an action statement.
+
+Read what a release shipped and why:
+
+```bash
+gh release download <tag> -R FerroHEALTH/FerroEHR -p 'ferroehr-*-vulnerability-record.json'
+jq -r '.records[] | [.product, .id, .severity, .statement.status, .statement.justification] | @tsv' \
+  ferroehr-<tag>-vulnerability-record.json | sort -u
+```
 
 ## If verification fails
 

@@ -1,14 +1,14 @@
 # ferroehr
 
-Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1). A single static binary deployed with a hardened-by-default security posture: runs as a non-root, read-only-rootfs workload whose NetworkPolicy admits its serving port only, and that connects to an EXTERNAL PostgreSQL 18 as an unprivileged app role, with schema preparation on its own credential.
+Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1). A single static binary deployed with a hardened-by-default security posture: runs as a non-root, read-only-rootfs workload whose NetworkPolicy admits its serving port only, and that connects to an EXTERNAL PostgreSQL 18 as an unprivileged app role, with schema preparation on its own credential. A stock install runs the sandbox deployment profile, which must not hold real patient data; set config.deployment_profile for a production holder.
 
-![Version: 10.2.1](https://img.shields.io/badge/Version-10.2.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 4.3.4](https://img.shields.io/badge/AppVersion-4.3.4-informational?style=flat-square)
+![Version: 10.2.2](https://img.shields.io/badge/Version-10.2.2-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 4.3.4](https://img.shields.io/badge/AppVersion-4.3.4-informational?style=flat-square)
 
 FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0 at the
 API, AQL 1.1 as the query language, PostgreSQL 18-native storage, shipped as a
 single static binary. This chart deploys the server.
 
-## Before you install: three things that surprise people
+## Before you install: four things that surprise people
 
 **This chart does not deploy a database.** It expects an **external PostgreSQL
 18** (18.6 or newer) and will not start without one. Point it at your own
@@ -22,6 +22,13 @@ That is fail-closed and deliberate: the alternative is an openEHR repository
 serving patient data to anonymous callers. Configure a mechanism, or set
 `config.auth.enabled: false` for a throwaway evaluation.
 
+**A stock install runs the `sandbox` profile.** `config.deployment_profile`
+defaults to `sandbox`, the binary's default, which must not hold real patient
+data and names every missing separation on its boot banner. A deployment
+holding patient data sets `production`, which refuses to start until each
+separation is made or accepted by name; the comment above the key in
+`values.yaml` lists the ones these defaults leave open.
+
 **A secret set in the wrong place fails the render on purpose.** See
 [Secrets](#secrets): this chart refuses to put a credential in a ConfigMap
 and says so, never quietly.
@@ -33,7 +40,7 @@ to add; `helm repo add` does not apply to this chart:
 
 ```console
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 10.2.1 \
+  --version 10.2.2 \
   --namespace ferroehr --create-namespace \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=4.3.4
@@ -47,7 +54,7 @@ They are independent SemVer lines and they move independently:
 
 | What | Set with | This release |
 |---|---|---|
-| the **chart** (templates, defaults, this document) | `--version` | `10.2.1` |
+| the **chart** (templates, defaults, this document) | `--version` | `10.2.2` |
 | the **server image** | `image.tag` | `4.3.4` |
 
 `appVersion` is the image the chart defaults to; pinning `image.tag` explicitly
@@ -59,7 +66,7 @@ The chart carries two keyless Sigstore artifacts, and they answer different
 questions. A **cosign signature:** who signed this:
 
 ```console
-cosign verify ghcr.io/ferrohealth/charts/ferroehr:10.2.1 \
+cosign verify ghcr.io/ferrohealth/charts/ferroehr:10.2.2 \
   --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/publish-chart\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -67,7 +74,7 @@ cosign verify ghcr.io/ferrohealth/charts/ferroehr:10.2.1 \
 A **SLSA build provenance attestation:** what source it was built from, and how:
 
 ```console
-gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:10.2.1 \
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:10.2.2 \
   -R FerroHEALTH/FerroEHR
 gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:4.3.4 \
   -R FerroHEALTH/FerroEHR
@@ -146,7 +153,9 @@ Kubernetes: `>=1.36.0-0`
 > **server's**, not the chart's (the chart renders the `config` tree verbatim
 > into `ferroehr.toml`), and they are documented once, in the configuration
 > reference. Restating them here would fork two copies that drift. The same
-> reasoning keeps `config.*` out of `values.schema.json`.
+> reasoning keeps the server's vocabulary out of `values.schema.json`: it types
+> only the shape of the few `config.*` keys the chart branches on or ships a
+> default for.
 >
 > That also means the table is not the boundary of what you can set: **any** key
 > in the configuration reference is reachable as `config.<the.toml.path>`,
@@ -194,9 +203,12 @@ Kubernetes: `>=1.36.0-0`
 | backup.tolerations | list | `[]` | Tolerations for the dump pods. |
 | backup.ttlSecondsAfterFinished | int | `86400` | How long a finished dump's pod is kept for its logs. |
 | config.admin.enabled | bool | `false` |  |
+| config.audit.categories.archetypes | object | `{}` |  |
+| config.audit.categories.templates | object | `{}` |  |
 | config.audit.enabled | bool | `true` |  |
 | config.audit.store.enabled | bool | `true` |  |
 | config.audit.store.retention_days | int | `0` |  |
+| config.audit.store.retention_years | int | unset |  |
 | config.auth.enabled | bool | `true` |  |
 | config.authz.abac.enabled | bool | `false` |  |
 | config.authz.rbac.admin_role | string | `"ADMIN"` |  |
@@ -207,6 +219,7 @@ Kubernetes: `>=1.36.0-0`
 | config.db.migrate | string | `"apply"` |  |
 | config.db.min_connections | int | `0` |  |
 | config.db.statement_timeout_ms | int | `60000` |  |
+| config.deployment_profile | string | `"sandbox"` |  |
 | config.events.enabled | bool | `false` |  |
 | config.events.exchange | string | `"ferroehr.events"` |  |
 | config.events.tls | bool | `false` |  |

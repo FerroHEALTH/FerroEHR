@@ -104,7 +104,7 @@ requirements:
           are suitable for their intended purpose in normal use, without
           putting patient safety at risk.
         status: partial
-        issues: [3624, 3655, 3622]
+        issues: [3624, 3622]
         evidence:
           - text: The manufacturer's intended-purpose statement
             href: intended-purpose.md
@@ -113,10 +113,10 @@ requirements:
         gap: >-
           Cadasto B.V. states the intended purpose, and the hazard log assesses
           the logging component against it in normal conditions of use, each
-          hazard with its control and the test that shows it. Three hazards
-          keep open work: an emergency access to restricted data is not marked
-          (H9), the Helm values carry no category map (H3), and whether a
-          natural person stands behind a token is not recorded (H2). The
+          hazard with its control and the test that shows it. Two hazards keep
+          open work: an emergency access to restricted data is not marked (H9),
+          and whether a natural person stands behind a token is not recorded
+          (H2). The
           interoperability component's assessment is FerroBRIDGE's. The
           Regulation names no method for showing performance or safety, and no
           conformity assessment has examined either.
@@ -126,7 +126,7 @@ requirements:
           manufacturer's instructions without adversely affecting their
           characteristics and performance.
         status: partial
-        issues: [3637]
+        issues: [3678]
         evidence:
           - text: The instructions for use
             href: instructions-for-use.md
@@ -135,9 +135,13 @@ requirements:
         gap: >-
           The instructions for use set the production profile, which refuses
           to start while a separation is missing. The Helm chart and the
-          Compose files declare no profile, so an installation that follows
-          the quickstart instead of the instructions runs the sandbox posture,
-          which must not hold real personal data.
+          Compose files declare the `sandbox` profile explicitly, and the
+          chart's values say what a deployment holding patient data sets
+          instead, but an installation that follows the quickstart instead of
+          the instructions still runs the sandbox posture, which must not hold
+          real personal data; the server says so on every boot and on
+          `GET /ferroehr/rest/status`. No shipped values file boots under
+          `production` yet.
       - id: "1.3"
         summary: >-
           Interoperability, safety and security features uphold the rights of
@@ -173,8 +177,10 @@ requirements:
           The logging component works with other products through IHE ATNA:
           ITI-20 feeds, ITI-81 retrieval, ITI-19 mutual TLS. The syslog feed
           ships with UDP transport when switched on, which delivers no record
-          reliably; TLS syslog and the outbox-driven FHIR feed are the reliable
-          choices, and the instructions for use name them. FerroEHR claims no
+          reliably and encrypts none, so `deployment_profile = "production"`
+          refuses it unless `audit_syslog_udp` is accepted by name; TLS syslog
+          and the outbox-driven FHIR feed are the reliable choices, and the
+          instructions for use name them. FerroEHR claims no
           interoperability with a medical device; a device manufacturer that
           claims it carries Art. 27(1).
   - group: "2"
@@ -337,8 +343,14 @@ requirements:
           (Art. 9(2)) and a longer national floor where one applies. Access
           rights can be keyed on the template through ABAC; the category is not
           itself an authorisation attribute. Neither retention nor access
-          rights take the ORIGIN of the data into account, and the archival
-          tier moves records without expiring them.
+          rights are keyed on the ORIGIN of the data. The origins FerroEHR
+          records are the `FEEDER_AUDIT` originating-system ids a sending system
+          chooses, as free text, and data committed directly carries none, so a
+          period keyed on an origin could neither be checked against a declared
+          vocabulary, as a category is, nor reach the data without a feeder
+          audit; keying on origin first needs a register of the origins a
+          deployment recognises. The archival tier moves records without
+          expiring them.
 
 # Annex III, "Technical documentation". The elements Article 37(2) requires,
 # with the file of the documentation tree (docs/technical-documentation/) that

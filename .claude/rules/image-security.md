@@ -28,12 +28,16 @@ detection lane existed but the remediation path was tribal.
 | `image-scan.yml` | Mondays 07:13 UTC, on the PUBLISHED `:latest` refs | CVEs published after the release; files/updates ONE tracking issue — **the issue is the alert**, the run stays green (#2778) |
 | `base-image-watcher.yml` | Mondays 08:13 UTC | a newer `postgres` patch tag on the pinned major, or the pinned tag re-pointed upstream (a same-version security respin); files/updates ONE tracking issue |
 | `scripts/security/scan-images.sh` | on demand, locally | reruns the EXACT published-image scan (same `trivy.yaml`, `.trivyignore.yaml`, `security/vex/*.json`) against the published refs or a locally built candidate |
+| the release pipeline's `vulnerability-record` job (`release.yml`) | every `v*` release, before `scan-and-tag` | EVERY finding (no severity floor, unfixed included, no ignore file) on each image digest and server binary; `scripts/checks/vex-coverage.sh` refuses the release while a finding has no OpenVEX judgement under `security/vex/`; the joined record is a release asset |
 
-All four read the same three config surfaces: `trivy.yaml` (severity floor +
+The first four read the same three config surfaces: `trivy.yaml` (severity floor +
 `ignore-unfixed` + the ignore-file pointer), `.trivyignore.yaml` (per-CVE,
 path-scoped adjudications), `security/vex/*.json` (the published arguments).
 Never tune a lane by giving it its own flags — a lane that diverges from the
-shared config silently changes what the gate means.
+shared config silently changes what the gate means. The fifth is the one
+deliberate exception and says so in its step: it is the record of every
+finding rather than a gate on a subset, so it drops the floor, `ignore-unfixed`
+and the ignore file, and judges each finding against `security/vex/` alone.
 
 Platforms are explicit everywhere (#2412): the published index is dual-arch
 (`linux/amd64` + `linux/arm64`) and trivy reads ONE variant per invocation

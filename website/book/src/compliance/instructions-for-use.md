@@ -92,16 +92,17 @@ deployment_accepts = []
 The shipped default is `sandbox`, which must not hold real personal data.
 `production` refuses to start while a separation is open and not accepted by
 name in `deployment_accepts`: shared database credentials or clusters, an
-undeclared pseudonym namespace, the access log off or failing open, the open
-per-EHR access default, migrations on a runtime credential, authentication
-off, a plaintext listener on a routable address. Each refusal names the gap
+undeclared pseudonym namespace, the access log off, failing open or shipped
+over UDP syslog, the open per-EHR access default, migrations on a runtime
+credential, authentication off, a plaintext listener on a routable address
+(the separate management port included). Each refusal names the gap
 and what to change
 ([`deployment_profile`](../installation/configuration.md#deployment_profile)).
 A gap you accept by name is stated on every boot and on
 `GET /ferroehr/rest/status`. Behind a TLS-terminating ingress you accept
-`plaintext_listener` by name. The Helm chart does not set the profile for you
-(planned, [#3637](https://github.com/FerroHEALTH/FerroEHR/issues/3637)), so set
-it in your values.
+`plaintext_listener` by name. The Helm chart and the Compose files declare
+`sandbox`, the binary's default, so set `config.deployment_profile: production`
+in your Helm values.
 
 ### The access log
 
@@ -127,7 +128,8 @@ transport = "tls"                     # or [audit.fhir_feed] for a FHIR ARR
 - **Forward a copy off the box.** The local store shares the database it
   audits. Forward the log to a sink the server's own credentials cannot
   rewrite, over TLS syslog or the FHIR feed. The syslog sink ships with UDP
-  transport, which loses records silently; set `tls`
+  transport, which loses records silently; set `tls`. `production` refuses
+  UDP unless `audit_syslog_udp` is accepted by name
   ([getting the log out](../audit.md#getting-the-log-out)).
 - **Retention.** Set `[audit.store] retention_years` (or `retention_days`).
   In every EU Member State the server refuses a horizon shorter than three
@@ -272,7 +274,7 @@ path is planned in
 | 8(d). Secure decommissioning, and removing user data | [taking a deployment out of service](#taking-a-deployment-out-of-service) |
 | 8(e). Turning off automatic security updates | does not apply: FerroEHR installs no update by itself ([the justification](cra-risk-assessment.md#automatic-security-updates-annex-i-part-i2c-and-part-ii7)) |
 | 8(f). Information for an integrator | FerroEHR is not intended for integration into another product with digital elements; FerroBRIDGE meets it over the REST API |
-| 9. Where the software bill of materials is | [three SBOMs](../verifying-releases.md#three-sboms-three-questions) |
+| 9. Where the software bill of materials is | [the SBOMs](../verifying-releases.md#the-sboms-one-per-published-artefact) |
 
 The CRA user information per release is completed in
 [#3650](https://github.com/FerroHEALTH/FerroEHR/issues/3650).

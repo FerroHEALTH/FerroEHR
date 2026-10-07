@@ -28,6 +28,7 @@
 #   publish-crates.sh publish   # upload each crate in dependency order
 #   publish-crates.sh verify    # read the registry back, with retries
 #   publish-crates.sh version   # print the lockstep version
+#   publish-crates.sh list      # print the crates, one per line, in publish order
 #
 # Requires: cargo, curl, jq. `publish` additionally requires
 # CARGO_REGISTRY_TOKEN in the environment.
@@ -136,8 +137,9 @@ case "${1:-}" in
 publish) do_publish ;;
 verify) do_verify ;;
 version) manifest_version ;;
+list) printf '%s\n' "${CRATES[@]}" ;;
 *)
-  echo "publish-crates: expected 'publish', 'verify' or 'version', got '${1:-<none>}'" >&2
+  echo "publish-crates: expected 'publish', 'verify', 'version' or 'list', got '${1:-<none>}'" >&2
   exit 2
   ;;
 esac

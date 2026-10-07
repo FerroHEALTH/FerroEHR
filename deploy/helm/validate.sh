@@ -95,6 +95,7 @@ declare -a CASES=(
   "basic-auth:${CI_DIR}/basic-auth-values.yaml"
   "viewer:${CI_DIR}/viewer-values.yaml"
   "terminology:${CI_DIR}/terminology-values.yaml"
+  "audit-categories:${CI_DIR}/audit-categories-values.yaml"
 )
 
 # ── Rendered-manifest structure check (awk; there is no Python in this repo) ───
@@ -672,6 +673,8 @@ schema_gate() {
     "backup.linkage.schedule=weekly|/backup/linkage/schedule"
     "backup.audit.schedule=nightly|/backup/audit/schedule"
     "backup.backoffLimit=-1|/backup/backoffLimit"
+    "config.audit.store.retention_years=three|/config/audit/store/retention_years"
+    "config.deployment_profile=true|/config/deployment_profile"
   )
   local refused=0 probe want out
   for case in "${refusals[@]}"; do
@@ -743,6 +746,8 @@ schema_gate() {
     "config.server.future_api_key=probe"
     "config.telemetry.otlp_endpoint=http://otel-collector:4317"
     "global.imageRegistry=registry.example.com"
+    "config.deployment_profile=production"
+    "config.audit.store.retention_years=5"
   )
   local accepted=0
   for probe in "${acceptances[@]}"; do
@@ -819,6 +824,40 @@ fixture_gate() {
   rm -f "$rendered"
 }
 fixture_gate
+
+# ── The declared posture and the audit horizon reach ferroehr.toml ────────────
+# A golden records whatever the render produced; this asserts what it must
+# produce. The default render declares its deployment profile explicitly, and
+# the audit-categories overlay renders the calendar-year horizon and a category
+# map whose keys need TOML quoting (spaces, dots). The values are read from the
+# ConfigMap's ferroehr.toml, the file the server actually loads.
+rendered_toml() {
+  helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "$1" \
+    --show-only templates/configmap.yaml | yq '.data."ferroehr.toml"'
+}
+config_keys_gate() {
+  bold "── declared posture + audit horizon ─────────────────────"
+  local toml missing=0 want
+  toml="$(rendered_toml "${CI_DIR}/default-values.yaml")"
+  grep -qx 'deployment_profile = "sandbox"' <<<"$toml" \
+    || { red "  the default render does not declare deployment_profile = \"sandbox\""; missing=1; }
+  toml="$(rendered_toml "${CI_DIR}/audit-categories-values.yaml")"
+  for want in \
+    '^ *retention_years = 3(\.0)?$' \
+    '^ *sgb_v_309_controller = true$' \
+    '^ *\[audit\.categories\.templates\]$' \
+    '^ *"International Patient Summary" = \["patient-summary"\]$' \
+    '^ *\[audit\.categories\.archetypes\]$' \
+    '^ *"openEHR-EHR-COMPOSITION\.encounter\.v1" = \["none"\]$'; do
+    grep -qE "$want" <<<"$toml" || { red "  audit-categories render lacks a line matching: ${want}"; missing=1; }
+  done
+  if [[ "$missing" -eq 0 ]]; then
+    echo "  the default render declares sandbox; the audit overlay renders retention_years = 3 and a quoted category map"
+  else
+    FAIL=1
+  fi
+}
+config_keys_gate
 
 for case in "${CASES[@]}"; do
   label="${case%%:*}"

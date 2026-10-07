@@ -110,8 +110,10 @@ Read on the tree after commit `d6539d470`, before FerroEHR 4.3.5.
 - **The Helm chart's description** (`Chart.yaml`, and the chart README that
   helm-docs generates from it) says "hardened-by-default security posture"
   and lists the workload hardening, which is accurate, but does not say that
-  a stock install runs the `sandbox` profile. That changes when the chart
-  declares `deployment_profile` (planned, #3637).
+  a stock install runs the `sandbox` profile. The chart now declares
+  `config.deployment_profile: sandbox` in its values, and the chart README
+  says so under "Before you install"; the `Chart.yaml` description still does
+  not.
 
 ## Annex II 2.5, re-assessed
 

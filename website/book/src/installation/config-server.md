@@ -257,7 +257,9 @@ Native TLS termination on the main listener, off by default; deployments
 commonly terminate TLS at an ingress. `client_auth = "required"` is the IHE
 ATNA ITI-19 mutually-authenticated-node posture (see the
 [Audit trail chapter](../audit.md#node-authentication-iti-19-mutual-tls)). The
-separate-port management listener always stays plain HTTP.
+separate-port management listener always stays plain HTTP, so under
+`deployment_profile = "production"` setting `[management] port` opens the
+[`plaintext_listener`](configuration.md#deployment_profile) gap.
 
 ```toml
 [server.tls]

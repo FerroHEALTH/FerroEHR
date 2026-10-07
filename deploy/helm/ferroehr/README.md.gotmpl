@@ -8,7 +8,7 @@ FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0 at the
 API, AQL 1.1 as the query language, PostgreSQL 18-native storage, shipped as a
 single static binary. This chart deploys the server.
 
-## Before you install: three things that surprise people
+## Before you install: four things that surprise people
 
 **This chart does not deploy a database.** It expects an **external PostgreSQL
 18** (18.6 or newer) and will not start without one. Point it at your own
@@ -21,6 +21,13 @@ no `[auth.oidc]` issuer and no Basic user has nothing to authenticate against.
 That is fail-closed and deliberate: the alternative is an openEHR repository
 serving patient data to anonymous callers. Configure a mechanism, or set
 `config.auth.enabled: false` for a throwaway evaluation.
+
+**A stock install runs the `sandbox` profile.** `config.deployment_profile`
+defaults to `sandbox`, the binary's default, which must not hold real patient
+data and names every missing separation on its boot banner. A deployment
+holding patient data sets `production`, which refuses to start until each
+separation is made or accepted by name; the comment above the key in
+`values.yaml` lists the ones these defaults leave open.
 
 **A secret set in the wrong place fails the render on purpose.** See
 [Secrets](#secrets): this chart refuses to put a credential in a ConfigMap
@@ -144,7 +151,9 @@ enforces NetworkPolicy**. Check yours; several do not.
 > **server's**, not the chart's (the chart renders the `config` tree verbatim
 > into `ferroehr.toml`), and they are documented once, in the configuration
 > reference. Restating them here would fork two copies that drift. The same
-> reasoning keeps `config.*` out of `values.schema.json`.
+> reasoning keeps the server's vocabulary out of `values.schema.json`: it types
+> only the shape of the few `config.*` keys the chart branches on or ships a
+> default for.
 >
 > That also means the table is not the boundary of what you can set: **any** key
 > in the configuration reference is reachable as `config.<the.toml.path>`,

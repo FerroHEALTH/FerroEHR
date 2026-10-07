@@ -1,0 +1,36 @@
+# A German deployment that is one of the SGB V § 307 controllers, which is the
+# shape that needs the access-log horizon in calendar years: the EHDS floor
+# (three years in every Member State) and the SGB V § 309 Abs. 1 ceiling (three
+# years) leave no day count that satisfies both, so the horizon is
+# `retention_years: 3`. It also carries an EHDS priority-category map, so the
+# render and the boot check exercise `[audit.categories]` with keys that need
+# TOML quoting (a template id with spaces, archetype ids with dots).
+#
+# The identifier rules are narrowed to the German one on purpose: the shipped
+# set names NL as well, whose five-year floor would refuse a three-year horizon.
+#
+# Otherwise the production-minimal overlay: an external-Secret DSN and an OIDC
+# issuer, no key material.
+database:
+  existingSecret: ferroehr-db
+  existingSecretKey: FERROEHR__DB__URL
+
+config:
+  auth:
+    oidc:
+      issuer: https://idp.example.com/realms/ferroehr
+      audiences: [ferroehr]
+  privacy:
+    identifier_scan:
+      rules: [de-kvnr]
+  audit:
+    store:
+      retention_years: 3
+      sgb_v_309_controller: true
+    categories:
+      templates:
+        "International Patient Summary": [patient-summary]
+        "Laboratory Report": [test-results]
+      archetypes:
+        openEHR-EHR-COMPOSITION.report-result.v1: [test-results]
+        openEHR-EHR-COMPOSITION.encounter.v1: [none]

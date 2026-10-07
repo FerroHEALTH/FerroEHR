@@ -234,6 +234,14 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
     let path = req.uri().path().to_owned();
     let timestamp = jiff::Timestamp::now();
     let purpose = declared_purpose(&req, state.backend());
+    // The correlation id `SetRequestIdLayer::x_request_id` stamped on the request;
+    // the response gains it only from `PropagateRequestIdLayer`, which runs
+    // outside this layer.
+    let request_id = req
+        .headers()
+        .get("x-request-id")
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_owned);
 
     // Published for the handler's task scope so a record the SERVICE layer
     // emits by itself — a pseudonymisation boundary crossing, which no
@@ -248,14 +256,8 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
     let principal = resp.extensions().get::<Principal>().cloned();
     let object = resp.extensions().get::<AuditObject>().cloned();
 
-    // The correlation id the response carries, set by the request-id layer
-    // above this one (`SetRequestIdLayer::x_request_id`).
     let access = AccessContext {
-        request_id: resp
-            .headers()
-            .get("x-request-id")
-            .and_then(|value| value.to_str().ok())
-            .map(str::to_owned),
+        request_id,
         purpose,
         organisation: caller_organisation(&state, principal.as_ref()),
     };

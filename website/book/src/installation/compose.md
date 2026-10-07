@@ -203,7 +203,8 @@ evaluation, not for production:
   `prometheus` at `public`, and `env` and `loggers` at `admin_only`.
 - **Permissive CORS:** any origin may call the API from a browser.
 - **No TLS:** plain HTTP on port 8080.
-- **The default `sandbox` deployment profile:** the server names every
+- **The `sandbox` deployment profile, declared in the inline configuration:**
+  the binary's default, stated so the file says what it runs. The server names every
   separation it has not made on the boot banner, in the log and on
   `GET /ferroehr/rest/status`, and the viewer raises a notice saying the
   deployment must not hold real patient data. That is the quickstart telling
@@ -618,3 +619,5 @@ exports and how to consume it in production.
 
 - [Configuration reference](configuration.md) — every setting you can pass.
 - [Kubernetes & Helm](kubernetes.md) — the production deployment.
+- [Returning to the original state](../operations-reset.md): resetting the stack
+  to the configuration and empty database it shipped with.

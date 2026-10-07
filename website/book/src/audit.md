@@ -476,7 +476,9 @@ ingress keep `[server.tls]` off and enforce mTLS there instead.
 > [!WARNING]
 > The separate-port management listener (`management.port`) stays **plain HTTP**
 > even with `[server.tls]` enabled, and it binds all interfaces. Treat it as an
-> internal surface and keep it off any publicly routed port.
+> internal surface and keep it off any publicly routed port. Under
+> `deployment_profile = "production"` setting it opens the `plaintext_listener`
+> gap, so the server refuses to start unless the gap is accepted by name.
 
 Complete the posture with time synchronisation (IHE Consistent Time): run
 NTP/chrony on every node so audit timestamps align across systems.

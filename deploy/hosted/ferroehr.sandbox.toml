@@ -14,6 +14,10 @@
 # this file — the DB box's private-network connection string as
 # DATABASE_URL, mapped to db.url by the config aliases (#2716).
 
+# The public sandbox holds no real patient data and resets nightly; the
+# declaration is explicit so the posture it runs under is read from this file.
+deployment_profile = "sandbox"
+
 [server]
 # The image's own port; Caddy terminates TLS in front of it.
 bind = "0.0.0.0:8080"

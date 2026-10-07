@@ -125,7 +125,7 @@ category through the [admin marks API](../operations-admin-apis.md).
 | `enabled` | bool | `false` | Ship DICOM PS3.15 audit records to an external repository over syslog. |
 | `host` | string | `localhost` | Repository host. |
 | `port` | int | `514` | Repository port (514 for UDP, 6514 for TLS, conventionally). |
-| `transport` | enum{udp,tls} | `udp` | Syslog transport: RFC 5426 UDP or RFC 5425 TLS. Use `tls` for PHI-adjacent audit. |
+| `transport` | enum{udp,tls} | `udp` | Syslog transport: RFC 5426 UDP or RFC 5425 TLS. Use `tls` for PHI-adjacent audit. Under `deployment_profile = "production"`, `udp` on an enabled feed opens the [`audit_syslog_udp`](configuration.md#deployment_profile) gap. |
 | `tls_ca_file` | path | unset | PEM file with the repository CA to trust for the TLS transport. |
 | `tls_identity_cert_file` | path | unset | Client-certificate PEM for mutual TLS. |
 | `tls_identity_key_file` | path | unset | Client-key PEM for mutual TLS. |

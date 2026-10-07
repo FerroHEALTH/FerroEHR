@@ -29,8 +29,9 @@ use crate::system_log::categories::{QueryConstraints, ResourceKind};
 const TEMPLATE_PATH: [&str; 3] = ["archetype_details", "template_id", "value"];
 
 /// The RM classes that hold no priority-category data.
-const NO_CATEGORY_TYPES: [(&str, ResourceKind); 2] = [
+const NO_CATEGORY_TYPES: [(&str, ResourceKind); 3] = [
     ("EHR_STATUS", ResourceKind::EhrStatus),
+    ("EHR_ACCESS", ResourceKind::EhrAccess),
     ("FOLDER", ResourceKind::Folder),
 ];
 
@@ -310,5 +311,15 @@ mod tests {
         let c = constraints("SELECT e/ehr_id/value FROM EHR e", &Params::new());
         assert!(!c.reaches_content);
         assert_eq!(c.resource_kinds, BTreeSet::from([ResourceKind::Ehr]));
+    }
+
+    #[test]
+    fn an_ehr_access_query_reaches_no_content() {
+        let c = constraints("SELECT a FROM EHR e CONTAINS EHR_ACCESS a", &Params::new());
+        assert!(!c.reaches_content);
+        assert_eq!(
+            c.resource_kinds,
+            BTreeSet::from([ResourceKind::Ehr, ResourceKind::EhrAccess])
+        );
     }
 }

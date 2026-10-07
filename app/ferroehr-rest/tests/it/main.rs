@@ -33,6 +33,7 @@ mod admin_integrity_http;
 mod audit_categories;
 mod audit_e2e;
 mod audit_iti81;
+mod audit_route_coverage;
 mod authz_cedar_engine;
 mod authz_remote_pdp;
 mod authz_route_matrix;
