@@ -33,6 +33,10 @@ pub enum VerifyError {
     /// exactly one.
     #[error("signed licence block carries {0} signatures; exactly one is allowed")]
     ExtraSignatures(usize),
+    /// The signature is not a text signature (RFC 9580 §5.2.1.2, type 0x01),
+    /// the only type a cleartext-signed licence is made with.
+    #[error("licence signature is not a text signature")]
+    NotTextSignature,
     /// The signature names no issuer key.
     #[error("signature names no issuer")]
     NoIssuer,
@@ -126,6 +130,9 @@ pub fn verify(
         [one] => one,
         many => return Err(VerifyError::ExtraSignatures(many.len())),
     };
+    if signature.typ() != Some(SignatureType::Text) {
+        return Err(VerifyError::NotTextSignature);
+    }
     signed_by(primary, signature)?;
 
     let self_signature = newest_self_signature(anchor)
@@ -249,7 +256,8 @@ pub(crate) mod fixtures {
         ArmorOptions, CleartextSignedMessage, KeyType, SecretKeyParamsBuilder, SignedSecretKey,
         SubkeyParamsBuilder,
     };
-    use pgp::types::{KeyVersion, Password};
+    use pgp::packet::{SignatureConfig, SignatureType, Subpacket, SubpacketData};
+    use pgp::types::{KeyDetails as _, KeyVersion, Password, Timestamp};
     use rand::rngs::OsRng;
 
     use crate::licence::document::Licence;
@@ -331,6 +339,32 @@ pub(crate) mod fixtures {
             }
             .unwrap();
             msg.to_armored_string(ArmorOptions::default()).unwrap()
+        }
+
+        /// A token whose one signature by the primary is a binary signature
+        /// (type 0x00) over the same text, not the text signature a licence
+        /// carries.
+        pub(crate) fn token_with_binary_signature(&self, licence: &Licence) -> Token {
+            let text = licence.to_canonical_json().unwrap();
+            let mut config =
+                SignatureConfig::from_key(OsRng, &self.secret.primary_key, SignatureType::Binary)
+                    .unwrap();
+            config.hashed_subpackets = vec![
+                Subpacket::regular(SubpacketData::SignatureCreationTime(Timestamp::now())).unwrap(),
+                Subpacket::regular(SubpacketData::IssuerFingerprint(
+                    self.secret.primary_key.fingerprint(),
+                ))
+                .unwrap(),
+            ];
+            let msg = CleartextSignedMessage::new(
+                &text,
+                config,
+                &self.secret.primary_key,
+                &Password::empty(),
+            )
+            .unwrap();
+            let signed = msg.to_armored_string(ArmorOptions::default()).unwrap();
+            Token::parse(&assemble(&signed, &self.certificate_armored())).unwrap()
         }
 
         /// A token whose signed block carries two signatures by the primary.
@@ -433,6 +467,14 @@ mod tests {
         let token = issuer.token_with_two_signatures(&licence());
         let err = verify(&token, &[issuer.certificate()], date(2026, 12, 1)).unwrap_err();
         assert!(matches!(err, VerifyError::ExtraSignatures(2)), "{err}");
+    }
+
+    #[test]
+    fn a_binary_signature_over_the_same_text_is_refused() {
+        let issuer = Issuer::generate();
+        let token = issuer.token_with_binary_signature(&licence());
+        let err = verify(&token, &[issuer.certificate()], date(2026, 12, 1)).unwrap_err();
+        assert!(matches!(err, VerifyError::NotTextSignature), "{err}");
     }
 
     #[test]

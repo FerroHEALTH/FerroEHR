@@ -202,8 +202,8 @@ workflow refuses a tag that has no matching section here.
 ### Changed
 
 - **Licence tokens are verified against the licensor's two master keys.** A
-  `[licence] file` token is accepted when it carries exactly one signature,
-  made directly by one of the two embedded Cadasto B.V. keys
+  `[licence] file` token is accepted when it carries exactly one text
+  signature, made directly by one of the two embedded Cadasto B.V. keys
   (`F2D214FC30698BA65A846B2BF2EA48D4C316406D`,
   `0BCE848225EFAECA912175292DBFB014CA506311`); whether a key may sign is read
   from the embedded certificate, never from the copy the token carries. The
