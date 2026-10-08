@@ -1,0 +1,751 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Server, database &amp; telemetry - FerroEHR Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        <!-- Content-Security-Policy as a <meta> element, because GitHub Pages serves
+             static files and cannot set response headers. A meta CSP is genuinely
+             weaker than the header: `frame-ancestors`, `report-uri` and `sandbox` are
+             IGNORED in meta form (w3c CSP3 §3.3), and it applies only after the parser
+             reaches it. It still stops an injected external script or an exfiltrating
+             `connect-src`, which is the realistic risk for a docs site, so it is worth
+             having while being honest that the site cannot carry the full header set —
+             documented on the security page. `unsafe-inline` is required: mdBook emits
+             inline theme/sidebar scripts and inline styles of its own. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <!-- Self-hosted KaTeX stylesheet (fonts under katex/fonts/) — the site
+             serves no external requests, so mdbook-katex runs with no-css = true
+             and the vendored sheet is linked here. Version 0.16.4, matching the
+             KaTeX the katex-rs renderer inside mdbook-katex bundles (its
+             KATEX-VERSION file); provenance in website/book/KATEX-PROVENANCE.md. -->
+        <link rel="stylesheet" href="../katex/katex.min.css">
+
+        <meta name="description" content="User documentation for FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../css/chrome-d279d366.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/custom-79743c4e.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "rust";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "../searchindex-009cbf08.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-625c28d6.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">FerroEHR Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/src/installation/config-server.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="server-database--telemetry"><a class="header" href="#server-database--telemetry">Server, database &amp; telemetry</a></h1>
+<p>The listener and REST surface (<code>[server]</code> and its sub-tables), the PostgreSQL
+connection (<code>[db]</code>), the two observability sections (<code>[log]</code>,
+<code>[telemetry]</code>), and the usage report (<code>[usage_report]</code>). Precedence, the
+environment-name grammar, and file discovery are on the
+<a href="configuration.html">Configuration reference</a> index.</p>
+<ul>
+<li><a href="#server"><code>[server]</code></a>
+<ul>
+<li><a href="#base_path-shortening-the-rest-base-path"><code>base_path</code>: shortening the REST base path</a></li>
+<li><a href="#behind-a-path-prefixed-reverse-proxy">Behind a path-prefixed reverse proxy</a></li>
+<li><a href="#serverlimits-request-body-sizes"><code>[server.limits]</code>: request-body sizes</a></li>
+<li><a href="#serverrate_limit-per-caller-request-rates"><code>[server.rate_limit]</code>: per-caller request rates</a></li>
+<li><a href="#serverconnection-bounds-before-a-request-exists"><code>[server.connection]</code>: bounds before a request exists</a></li>
+<li><a href="#system_id-the-data-authoring-identity"><code>system_id</code>: the data-authoring identity</a></li>
+<li><a href="#servertls-native-tls-and-mutual-tls-client-authentication"><code>[server.tls]</code>: native TLS and mutual-TLS client authentication</a></li>
+<li><a href="#serveridentity"><code>[server.identity]</code></a></li>
+</ul>
+</li>
+<li><a href="#db"><code>[db]</code></a></li>
+<li><a href="#storage"><code>[storage]</code></a></li>
+<li><a href="#log"><code>[log]</code></a></li>
+<li><a href="#telemetry"><code>[telemetry]</code></a></li>
+<li><a href="#usage_report"><code>[usage_report]</code></a></li>
+</ul>
+<h2 id="server"><a class="header" href="#server"><code>[server]</code></a></h2>
+<p>The HTTP listener and REST surface.</p>
+<pre><code class="language-toml">[server]
+bind = "0.0.0.0:8080"
+base_path = "/ferroehr/rest/openehr/v1"
+max_in_flight = 256
+swagger_ui = "private"
+cors_permissive = false
+system_id = "ferroehr.local"
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>bind</code></td><td>string</td><td><code>0.0.0.0:8080</code></td><td>Socket address the API listener binds.</td></tr>
+<tr><td><code>base_path</code></td><td>string</td><td><code>/ferroehr/rest/openehr/v1</code></td><td>ITS-REST base path all API routes hang off. Shortening it is supported; see <a href="#base_path-shortening-the-rest-base-path">below</a>. The served OpenAPI document describes whatever paths this setting produces, never the defaults.</td></tr>
+<tr><td><code>max_in_flight</code></td><td>int</td><td><code>256</code></td><td>Concurrent-request admission cap (not a rate). Requests beyond it are shed immediately with <code>503</code> + <code>Retry-After</code>, never queued, so offered load beyond capacity cannot exhaust memory. <code>0</code> installs no shedding layer at all.</td></tr>
+<tr><td><code>swagger_ui</code></td><td>enum{off,admin_only,private,public}</td><td><code>private</code></td><td>Who may read the Swagger UI and the OpenAPI documents under the REST root: <code>off</code> does not mount them, <code>admin_only</code> needs the admin role, <code>private</code> needs any authenticated principal (unauthenticated is <code>401</code> with the server’s <code>WWW-Authenticate</code> challenge, so a browser prompts for the Basic credential), <code>public</code> needs nothing. The documents list the whole enabled operation surface, admin and message groups included, so <code>public</code> discloses it to anyone who can reach the port; the <a href="https://sandbox.ferroehr.eu/ferroehr/rest/swagger-ui">hosted sandbox</a> sets it deliberately. With authentication off the guard admits everyone, as the management endpoints do.</td></tr>
+<tr><td><code>cors_permissive</code></td><td>bool</td><td><code>false</code></td><td>Permissive (development) CORS. Left on, any origin may read API responses, so the server warns loudly at boot. Production configures explicit origins at the edge.</td></tr>
+<tr><td><code>system_id</code></td><td>string</td><td><code>ferroehr.local</code></td><td><strong>This deployment’s own openEHR system identifier</strong>; see <a href="#system_id-the-data-authoring-identity">below</a>. Set a stable, deployment-unique name in production (<code>FERROEHR__SERVER__SYSTEM_ID</code>).</td></tr>
+</tbody>
+</table>
+</div>
+<p>The shed sits on the clinical API subtree only, as its outermost layer: a shed
+request never reaches authentication, auditing, or the request body, and the
+always-on status, health, discovery and management routes are never shed.</p>
+<h3 id="base_path-shortening-the-rest-base-path"><a class="header" href="#base_path-shortening-the-rest-base-path"><code>base_path</code>: shortening the REST base path</a></h3>
+<p>ITS-REST leaves the API base to the deployment and fixes only the version
+segment at its end, so you may shorten <code>base_path</code>. The shape is checked at
+boot, and a value that breaks a rule stops the server with an error naming the
+key and every rule it broke:</p>
+<ul>
+<li>The first segment is <code>ferroehr</code>. <code>/ferroehrx/v1</code> and <code>/x/ferroehr/v1</code> are
+refused. This segment is not configurable away.</li>
+<li>The last segment is <code>v1</code>, the openEHR API version this server implements.
+The shortest accepted value is therefore <code>/ferroehr/v1</code>.</li>
+<li>No trailing slash, no empty segment (<code>//</code>), and every segment uses only the
+unreserved URL characters <code>A-Z a-z 0-9 - . _ ~</code>.</li>
+</ul>
+<p>The status and documentation routes hang off the <strong>REST root</strong>, which the server
+derives from <code>base_path</code> by dropping the segments that name the openEHR API: the
+trailing <code>v1</code>, plus an <code>openehr</code> segment directly before it when you spell one.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th><code>base_path</code></th><th>REST root</th><th>Status document</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/ferroehr/rest/openehr/v1</code> (default)</td><td><code>/ferroehr/rest</code></td><td><code>/ferroehr/rest/status</code></td></tr>
+<tr><td><code>/ferroehr/openehr/v1</code></td><td><code>/ferroehr</code></td><td><code>/ferroehr/status</code></td></tr>
+<tr><td><code>/ferroehr/v1</code></td><td><code>/ferroehr</code></td><td><code>/ferroehr/status</code></td></tr>
+<tr><td><code>/ferroehr/cdr/v1</code></td><td><code>/ferroehr/cdr</code></td><td><code>/ferroehr/cdr/status</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>The Swagger UI (<code>{rest root}/swagger-ui</code>), the OpenAPI documents
+(<code>{rest root}/api-docs/…</code>) and the SMART discovery document
+(<code>{rest root}/.well-known/smart-configuration</code>) move with it. The health family
+stays at the process root: <code>/health</code>, <code>/health/liveness</code>, <code>/health/readiness</code>.</p>
+<p>Set it from the environment with:</p>
+<pre><code class="language-bash">FERROEHR__SERVER__BASE_PATH=/ferroehr/v1
+</code></pre>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>The <code>ferroehr healthcheck</code> subcommand, which the published container images
+run as their Docker health check, derives its default URL from the effective
+configuration (<code>http://127.0.0.1:&lt;port&gt;&lt;REST root&gt;/status</code>), so it follows a
+shortened base path on its own. An explicit <code>FERROEHR_HEALTHCHECK_URL</code> still
+wins, for example to probe <code>/health/readiness</code>, which no base path affects.</p>
+</blockquote>
+<h3 id="behind-a-path-prefixed-reverse-proxy"><a class="header" href="#behind-a-path-prefixed-reverse-proxy">Behind a path-prefixed reverse proxy</a></h3>
+<p>A proxy that mounts the CDR under a prefix stacks that prefix on top of
+<code>base_path</code>. A proxy serving the server at <code>/cdr</code> with the default base path
+gives clients URLs like:</p>
+<pre><code class="language-text">https://cdr.example.org/cdr/ferroehr/rest/openehr/v1/definition/template/adl1.4
+</code></pre>
+<p>Two ways to shorten that. Strip the prefix at the proxy, so the server sees the
+path it serves (nginx <code>proxy_pass http://cdr:8080/;</code> with the trailing slash,
+Caddy <code>handle_path</code>, Traefik <code>StripPrefix</code>). Or shorten the base path:</p>
+<pre><code class="language-bash">FERROEHR__SERVER__BASE_PATH=/ferroehr/v1
+</code></pre>
+<p>which gives <code>https://cdr.example.org/cdr/ferroehr/v1/definition/template/adl1.4</code>.</p>
+<p>Whichever you choose, tell every client. The server builds its <code>Location</code>
+headers, its served OpenAPI paths and its SMART discovery document from its own
+<code>base_path</code>, and it cannot see a prefix the proxy adds. The
+<a href="../viewer/index.html">FerroEHR Viewer</a> has its own mirror key, <code>cdr.base_path</code>,
+which must match.</p>
+<h3 id="serverlimits-request-body-sizes"><a class="header" href="#serverlimits-request-body-sizes"><code>[server.limits]</code>: request-body sizes</a></h3>
+<pre><code class="language-toml">[server.limits]
+body_bytes = 16777216        # 16 MiB
+bulk_body_bytes = 67108864   # 64 MiB
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>body_bytes</code></td><td>int</td><td><code>16777216</code></td><td>The largest request body the ordinary clinical surface accepts, in bytes.</td></tr>
+<tr><td><code>bulk_body_bytes</code></td><td>int</td><td><code>67108864</code></td><td>The largest body the bulk routes accept: operational-template upload, <code>/message/import</code>, <code>/message/tdd</code>.</td></tr>
+</tbody>
+</table>
+</div>
+<p>A request over its tier’s limit is refused <code>413 Payload Too Large</code> with the
+standard openEHR error body. The status is not in the ITS-REST status table; it
+is admitted there as an additional, non-conflicting code, and is what
+RFC 9110 §15.5.14 defines for this refusal.</p>
+<p>The defaults are sized against the measured payloads in the vendored clinical
+corpus rather than chosen as round numbers: the clinical tier clears the
+largest operational template in that corpus several times over, and the bulk
+tier is four times the clinical one, for payloads with no published bound (a
+whole-EHR extract, a TDD batch). <strong>Raise <code>body_bytes</code> if your compositions
+embed large <code>DV_MULTIMEDIA</code> data</strong>: a base64 radiology image can exceed either
+tier on its own, and that is a deliberate operator decision rather than a
+default.</p>
+<h3 id="serverrate_limit-per-caller-request-rates"><a class="header" href="#serverrate_limit-per-caller-request-rates"><code>[server.rate_limit]</code>: per-caller request rates</a></h3>
+<pre><code class="language-toml">[server.rate_limit]
+enabled = true
+principal_per_second = 1024
+principal_burst = 2048
+address_per_second = 2048
+address_burst = 4096
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>enabled</code></td><td>bool</td><td><code>true</code></td><td>Whether rate limiting is active. Off allocates no limiter state and costs no per-request check.</td></tr>
+<tr><td><code>principal_per_second</code></td><td>int</td><td><code>1024</code></td><td>Sustained requests per second per authenticated subject, on the clinical API.</td></tr>
+<tr><td><code>principal_burst</code></td><td>int</td><td><code>2048</code></td><td>How far one principal may burst before refusal.</td></tr>
+<tr><td><code>address_per_second</code></td><td>int</td><td><code>2048</code></td><td>Sustained requests per second per client address, across the whole tree.</td></tr>
+<tr><td><code>address_burst</code></td><td>int</td><td><code>4096</code></td><td>How far one address may burst before refusal.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>This is not <code>max_in_flight</code>, and you should be able to tell them apart from
+the status alone.</strong> <code>max_in_flight</code> protects <em>capacity</em>: too many requests in
+flight at once, from anyone, and the excess is shed <code>503</code> + <code>Retry-After</code>.
+Rate limiting protects <em>fairness</em>: one caller asking too often over time,
+refused <code>429</code> + <code>Retry-After</code>. A <code>503</code> means the server is full; a <code>429</code> means
+you are asking too fast.</p>
+<p>Two tiers, because they defend different things. The <strong>address</strong> tier sits
+outside authentication, so a flood of unauthenticated requests is refused
+before it can make the server verify a signature per request; a limiter must
+not itself be the expensive path. The <strong>principal</strong> tier sits inside
+authentication, keyed on the authenticated subject, which is the only fair key
+for a clinical API: a hospital behind one NAT is a single address, so an
+address-keyed clinical limit would throttle an entire site because one client
+was busy.</p>
+<p>Both defaults sit above this implementation’s own measured whole-server
+ceiling, so neither tier can refuse a caller until it is asking for more than
+the server could have served; below that line, capacity is <code>max_in_flight</code>’s
+job. <strong>A deployment sized for more than the reference measurement environment
+should raise both in proportion.</strong></p>
+<p>Refusals carry the limiter’s own <code>Retry-After</code> and <code>x-ratelimit-*</code> headers
+alongside the openEHR error body. <code>429</code> is the status RFC 6585 §4 defines for
+this refusal, admitted by ITS-REST as an additional, non-conflicting code.</p>
+<p>The always-on health family is covered by the address tier only, deliberately:
+an orchestrator probe must never be refused because a principal-keyed bucket
+was exhausted, and probe rates are nowhere near the address ceiling.</p>
+<blockquote class="blockquote-tag blockquote-tag-tip">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M8 1.5c-2.363 0-4 1.69-4 3.75 0 .984.424 1.625.984 2.304l.214.253c.223.264.47.556.673.848.284.411.537.896.621 1.49a.75.75 0 0 1-1.484.211c-.04-.282-.163-.547-.37-.847a8.456 8.456 0 0 0-.542-.68c-.084-.1-.173-.205-.268-.32C3.201 7.75 2.5 6.766 2.5 5.25 2.5 2.31 4.863 0 8 0s5.5 2.31 5.5 5.25c0 1.516-.701 2.5-1.328 3.259-.095.115-.184.22-.268.319-.207.245-.383.453-.541.681-.208.3-.33.565-.37.847a.751.751 0 0 1-1.485-.212c.084-.593.337-1.078.621-1.489.203-.292.45-.584.673-.848.075-.088.147-.173.213-.253.561-.679.985-1.32.985-2.304 0-2.06-1.637-3.75-4-3.75ZM5.75 12h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1 0-1.5ZM6 15.25a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Z"></path></svg>Tip</p>
+<p><strong>Benchmarking this server?</strong> Turn the limiter off first, or you will measure
+it instead of the server. The project’s own measurement lanes compose an
+overlay that does exactly that, and both instruments refuse to write a record
+if the server answered any <code>429</code>.</p>
+</blockquote>
+<h3 id="serverconnection-bounds-before-a-request-exists"><a class="header" href="#serverconnection-bounds-before-a-request-exists"><code>[server.connection]</code>: bounds before a request exists</a></h3>
+<pre><code class="language-toml">[server.connection]
+header_read_timeout_secs = 10
+max_concurrent_streams = 256
+http2_keep_alive_interval_secs = 30
+http2_keep_alive_timeout_secs = 10
+</code></pre>
+<p>Every other limit on this page engages once a request has been parsed and
+dispatched: body size, the request timeout, the rate limiter, the in-flight
+shed. A client that opens a socket and then trickles request headers reaches
+none of them, while costing itself almost nothing. This table is where that is
+bounded, and HTTP/1 and HTTP/2 need different bounds because the exposure
+differs: HTTP/1 streams a request head, so it can be trickled; HTTP/2
+multiplexes streams, so the exposure is concurrency.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>header_read_timeout_secs</code></td><td>int</td><td><code>10</code></td><td>How long a connection may take to deliver a complete HTTP/1 request head, in seconds. <code>0</code> disables the bound. Applies to both listeners.</td></tr>
+<tr><td><code>max_concurrent_streams</code></td><td>int</td><td><code>256</code></td><td>The most HTTP/2 streams one connection may have open at once. Bounds the request-setup work a peer can trigger by opening and immediately cancelling streams (the “HTTP/2 Rapid Reset” amplification, CVE-2023-44487). <code>0</code> leaves the HTTP library’s own default.</td></tr>
+<tr><td><code>http2_keep_alive_interval_secs</code></td><td>int</td><td><code>30</code></td><td>Interval between HTTP/2 keep-alive PINGs, in seconds. <code>0</code> disables them, and a peer that vanishes without a FIN is then held until the operating system notices.</td></tr>
+<tr><td><code>http2_keep_alive_timeout_secs</code></td><td>int</td><td><code>10</code></td><td>How long to wait for a keep-alive PING response before closing the connection, in seconds.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="system_id-the-data-authoring-identity"><a class="header" href="#system_id-the-data-authoring-identity"><code>system_id</code>: the data-authoring identity</a></h3>
+<p><code>system_id</code> is the identifier this CDR stamps into the data it authors. It
+appears on the wire in three places:</p>
+<ul>
+<li><strong><code>EHR.system_id</code></strong>, recorded when an EHR is created. The openEHR RM
+(<code>EHR Information Model</code>, <em>EHR Identifier Allocation</em>) says the
+<code>EHR.system_id</code> “should be set to the value that would normally be used for
+locally created EHRs”: a value the deployment chooses, not a product
+constant.</li>
+<li><strong><code>AUDIT_DETAILS.system_id</code></strong> on every commit for which the client did not
+supply one through the <code>openehr-audit-details</code> header. The openEHR REST API
+requires that “when <code>system_id</code> is not provided by the client, the server
+MUST set it to its own configured system identifier”.</li>
+<li><strong><code>OBJECT_VERSION_ID.creating_system_id</code>:</strong> the middle segment of every
+version identifier the server mints
+(<code>&lt;object_id&gt;::&lt;creating_system_id&gt;::&lt;version&gt;</code>).</li>
+</ul>
+<p>Practical notes:</p>
+<ul>
+<li><strong>The value must be a legal openEHR UID:</strong> a UUID, an ISO OID, or an
+internet id (a reverse-domain / DNS-style name) per the openEHR BASE
+identification grammar. The server judges it with the same validating
+constructor its reader uses and <strong>refuses to boot</strong> on an illegal value,
+because it becomes the <code>creating_system_id</code> segment of every version
+identifier the server mints and an illegal value would produce ids the
+server’s own reader rejects. A DNS-style name like <code>cdr.hospital.example</code> is
+valid; an empty value, or one containing the <code>::</code> field separator, is not.</li>
+<li><strong>Choose it before going live and keep it stable.</strong> The value is stored with
+each EHR and each version; changing it later affects only <em>newly</em> authored
+data: existing EHR ids, audit rows and version identifiers are never
+rewritten, and previously issued <code>OBJECT_VERSION_ID</code>s stay valid.</li>
+<li><strong>Make it unique per system</strong>, so data exchanged between openEHR systems
+keeps unambiguous provenance.</li>
+<li><strong><code>system_id</code> is not <code>[server.identity]</code>.</strong> <code>system_id</code> says <em>which system
+authored the data</em>; <a href="#serveridentity"><code>[server.identity]</code></a> is the <em>display</em>
+identity of the <code>OPTIONS</code> System-Options manifest. Rebranding changes the
+manifest and nothing in stored data; changing <code>system_id</code> changes what new
+data says about its origin and leaves the manifest alone.</li>
+</ul>
+<h3 id="servertls-native-tls-and-mutual-tls-client-authentication"><a class="header" href="#servertls-native-tls-and-mutual-tls-client-authentication"><code>[server.tls]</code>: native TLS and mutual-TLS client authentication</a></h3>
+<p>Native TLS termination on the main listener, off by default; deployments
+commonly terminate TLS at an ingress. <code>client_auth = "required"</code> is the IHE
+ATNA ITI-19 mutually-authenticated-node posture (see the
+<a href="../audit.html#node-authentication-iti-19-mutual-tls">Audit trail chapter</a>). The
+separate-port management listener always stays plain HTTP.</p>
+<pre><code class="language-toml">[server.tls]
+enabled = false
+client_auth = "off"
+min_version = "1.3"
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>enabled</code></td><td>bool</td><td><code>false</code></td><td>Terminate TLS natively on the main listener.</td></tr>
+<tr><td><code>cert_file</code></td><td>path</td><td>unset</td><td>Server certificate chain (PEM). Required when enabled; a missing, unreadable or certificate-less file stops startup.</td></tr>
+<tr><td><code>key_file</code></td><td>path</td><td>unset</td><td>Server private key (PEM). Required when enabled.</td></tr>
+<tr><td><code>client_auth</code></td><td>enum{off,optional,required}</td><td><code>off</code></td><td>Client-certificate policy. <code>optional</code> verifies a certificate when one is presented and still accepts connections without; <code>required</code> rejects any client without a verified certificate at the handshake.</td></tr>
+<tr><td><code>client_ca_file</code></td><td>path</td><td>unset</td><td>The explicit CA bundle client certificates must chain to, never the web PKI. Required unless <code>client_auth = "off"</code>.</td></tr>
+<tr><td><code>min_version</code></td><td>enum{“1.3”,“1.2”}</td><td><code>"1.3"</code></td><td>The lowest TLS version this listener negotiates.</td></tr>
+</tbody>
+</table>
+</div>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p><code>min_version</code> defaults to <strong>1.3 only</strong>, following the OWASP Transport Layer
+Security Cheat Sheet: web applications must default to TLS 1.3 and may
+support TLS 1.2 for compatibility. Setting <code>"1.2"</code> enables 1.2 <em>alongside</em>
+1.3, never instead of it; pick it only for a client that genuinely cannot
+do 1.3, such as an older integration engine or a pinned Java runtime.
+TLS 1.1 and 1.0 are not selectable at all: RFC 8996 deprecates them, and
+neither this key nor the TLS library offers them.</p>
+</blockquote>
+<h3 id="serveridentity"><a class="header" href="#serveridentity"><code>[server.identity]</code></a></h3>
+<p>The System-Options manifest identity (<code>OPTIONS</code> on the API base path, e.g.
+<code>OPTIONS /ferroehr/rest/openehr/v1</code>, the System API’s one location). This is
+the deployment’s <em>display</em> identity only; the identifier stamped into authored
+data is <a href="#system_id-the-data-authoring-identity"><code>system_id</code></a>.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>solution</code></td><td>string</td><td><code>FerroEHR</code></td><td>Product name.</td></tr>
+<tr><td><code>solution_version</code></td><td>string</td><td>the build’s version</td><td>Product version.</td></tr>
+<tr><td><code>vendor</code></td><td>string</td><td><code>FerroEHR project</code></td><td>Providing organisation.</td></tr>
+<tr><td><code>restapi_specs_version</code></td><td>string</td><td>the ITS-REST release this build implements (<code>1.1.0</code>)</td><td>The openEHR REST API edition advertised.</td></tr>
+<tr><td><code>conformance_profile</code></td><td>string</td><td>the profile the build’s recorded conformance verdict earned</td><td>Advertised conformance profile.</td></tr>
+</tbody>
+</table>
+</div>
+<p>The defaults are derived from the build rather than typed into the handler, so
+the manifest never out-claims what was actually measured. Override them only to
+rebrand.</p>
+<h2 id="db"><a class="header" href="#db"><code>[db]</code></a></h2>
+<p>PostgreSQL connection.</p>
+<pre><code class="language-toml">[db]
+url = "postgres://ferroehr:ferroehr@localhost:5432/ferroehr"
+migrate = "apply"
+max_connections = 20
+min_connections = 2
+acquire_timeout_secs = 30
+statement_timeout_ms = 60000
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>url</code></td><td>secret URL</td><td><code>postgres://ferroehr:ferroehr@localhost:5432/ferroehr</code></td><td>Connection DSN. The default suits a local from-source run against a localhost PostgreSQL, and the server logs a prominent warning at boot while it is in use; <strong>production MUST set it</strong>. Credentials are redacted from every rendering. <code>DATABASE_URL</code> is a recognized lower-priority alias.</td></tr>
+<tr><td><code>url_file</code></td><td>path</td><td>unset</td><td>Read the DSN from a file instead of the key above, for a mounted secret. Preferred over the environment form in Kubernetes: an environment value is readable through <code>/proc/&lt;pid&gt;/environ</code> and inherited by every child process. At most one of the pair, where the built-in development default does not count as “set”.</td></tr>
+<tr><td><code>migrate_url</code></td><td>secret URL</td><td>unset</td><td>DSN that PREPARES the schema, used for that one boot step and then closed. Preparation spans every schema of a database at once, which no domain-scoped runtime credential can do, so a deployment separating the runtime roles names the credential that can here. It prepares every domain whose DSN reaches the SAME DATABASE — which is the whole of the separated-credential posture, where each domain has a login role of its own on one database; a domain whose DSN reaches a different database is prepared on that DSN. Which it is, is read from the server (<code>pg_control_system()</code> plus <code>current_database()</code>), never from the DSN text. Unset, it falls back to <code>url</code>. See <a href="../operations.html#which-credential-prepares-the-schema">Operations → Which credential prepares the schema</a>.</td></tr>
+<tr><td><code>migrate_url_file</code></td><td>path</td><td>unset</td><td>Read <code>migrate_url</code> from a file instead, for a mounted secret. At most one of the pair.</td></tr>
+<tr><td><code>migrate</code></td><td>enum{apply,verify}</td><td><code>apply</code></td><td>Whether the server applies its embedded migrations at boot. <code>apply</code> is what makes an empty configuration boot against an empty database. <code>verify</code> issues <strong>no DDL at all</strong>: it checks that the database already carries exactly this build’s migrations and refuses to start otherwise, so the serving DSN can authenticate as a role with no DDL rights. That check still READS every <code>_sqlx_migrations</code> table of each database, which no least-privilege role can do, so pair it with <code>migrate_url</code> above and with <code>ferroehr db migrate</code> run out of band; see <a href="../operations.html#which-credential-prepares-the-schema">Operations</a>.</td></tr>
+<tr><td><code>max_connections</code></td><td>int</td><td><code>20</code></td><td>Pool ceiling. Write-heavy deployments benefit from raising it.</td></tr>
+<tr><td><code>min_connections</code></td><td>int</td><td><code>2</code></td><td>Idle connections kept open, avoiding cold-reopen churn under variable load.</td></tr>
+<tr><td><code>acquire_timeout_secs</code></td><td>int</td><td><code>30</code></td><td>Seconds to wait for a free connection before failing.</td></tr>
+<tr><td><code>statement_timeout_ms</code></td><td>int</td><td><code>60000</code></td><td><code>statement_timeout</code> applied to every pooled connection; <code>0</code> leaves the server default.</td></tr>
+</tbody>
+</table>
+</div>
+<p><code>statement_timeout_ms</code> is the backstop the HTTP request timeout cannot be:
+answering a client by dropping the handler future does <strong>not</strong> cancel the
+statement PostgreSQL is running, so without it a handful of expensive queries
+can hold every pooled connection while every one of their callers has already
+given up. Keep it <strong>above</strong> <a href="config-integrations.html#query"><code>query.timeout_ms</code></a>
+so the AQL engine’s own typed refusal fires first and this only catches what
+the engine does not govern.</p>
+<h2 id="storage"><a class="header" href="#storage"><code>[storage]</code></a></h2>
+<p>One DSN per storage domain. Every domain always lives in its own schema
+(<code>clinical</code>, <code>party</code>, <code>linkage</code>, <code>audit</code>) and every pool carries only its own on
+its <code>search_path</code>, so no statement can reach another domain’s relations without
+naming a schema it is not granted. Setting a <code>url</code> here adds the CREDENTIAL
+separation, and — if the DSN names another host — lets the domain live in a
+database or cluster of its own.</p>
+<pre><code class="language-toml">[storage.party]
+url_file = "/run/secrets/db-party-dsn"
+
+[storage.linkage]
+url_file = "/run/secrets/db-linkage-dsn"
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>storage.clinical.url</code></td><td>secret URL</td><td>unset</td><td>DSN the clinical domain connects on (role <code>ferroehr_clinical</code>). Unset, it uses <code>db.url</code>.</td></tr>
+<tr><td><code>storage.party.url</code></td><td>secret URL</td><td>unset</td><td>DSN the party (demographic) domain connects on (role <code>ferroehr_party</code>). Unset, it uses <code>db.url</code>.</td></tr>
+<tr><td><code>storage.linkage.url</code></td><td>secret URL</td><td>unset</td><td>DSN the linkage domain connects on (role <code>ferroehr_linkage</code>) — the map from a party to the EHR whose subject it is, barred from both domains it joins and they from it. Unset, it uses <code>db.url</code>.</td></tr>
+<tr><td><code>storage.audit.url</code></td><td>secret URL</td><td>unset</td><td>DSN the audit repository is written through. Unset, it uses <code>db.url</code>.</td></tr>
+<tr><td><code>storage.&lt;domain&gt;.url_file</code></td><td>path</td><td>unset</td><td>Read that domain’s DSN from a file instead, for a mounted secret. At most one of the pair.</td></tr>
+</tbody>
+</table>
+</div>
+<p>Why a schema is not always enough: a base backup, WAL archiving and physical
+replication carry every schema of a database together
+(<a href="https://www.postgresql.org/docs/18/backup-dump.html">PostgreSQL 18, Backup and Restore</a>),
+so a separation that must survive those is a separation of databases. The Swiss
+EPDV Art. 10 Abs. 1 lit. b asks for storage “von anderen Datenbeständen getrennt”
+and the DSV Art. 4 Abs. 5 for the log to be kept “getrennt vom System, in welchem
+die Personendaten bearbeitet werden”; openEHR reads the same way for the identity
+cross-reference, which “could be located on different machines” (BASE
+<code>architecture_overview/master07-security.adoc</code> §Anonymity). No openEHR spec
+governs pools or database roles — this is our own design.</p>
+<p>What the server checks at boot:</p>
+<ul>
+<li>a runtime role that can read another domain’s relations is refused, always;</li>
+<li>two domains configured on <strong>different</strong> DSNs that turn out to authenticate as
+the <strong>same</strong> database role are refused — a separation that exists only in the
+configuration is worse than none, because it reads as one that holds;</li>
+<li>a missing domain role is a warning under <code>deployment_profile = "sandbox"</code> and a
+refusal under <code>production</code>, where there are no grants to separate anything
+with.</li>
+</ul>
+<p>One constraint on relocation: the <code>linkage</code> migration set revokes a function the
+<code>party</code> set creates, so those two domains are prepared in the same database. A
+layout that splits them is refused before anything connects, with the remedy.</p>
+<h2 id="log"><a class="header" href="#log"><code>[log]</code></a></h2>
+<pre><code class="language-toml">[log]
+format = "auto"
+filter = "info,ferroehr=info"
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>format</code></td><td>enum{auto,json,pretty}</td><td><code>auto</code></td><td>Stdout rendering. <code>auto</code> picks <code>json</code> when stdout is not a TTY and the coloured human format when it is; an explicit <code>pretty</code> forces colour even through a pipe.</td></tr>
+<tr><td><code>filter</code></td><td>string</td><td><code>info,ferroehr=info</code></td><td>Boot log-filter directives; also the value <code>/management/loggers</code> resets to. <code>RUST_LOG</code> is a recognized lower-priority alias.</td></tr>
+</tbody>
+</table>
+</div>
+<blockquote class="blockquote-tag blockquote-tag-tip">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M8 1.5c-2.363 0-4 1.69-4 3.75 0 .984.424 1.625.984 2.304l.214.253c.223.264.47.556.673.848.284.411.537.896.621 1.49a.75.75 0 0 1-1.484.211c-.04-.282-.163-.547-.37-.847a8.456 8.456 0 0 0-.542-.68c-.084-.1-.173-.205-.268-.32C3.201 7.75 2.5 6.766 2.5 5.25 2.5 2.31 4.863 0 8 0s5.5 2.31 5.5 5.25c0 1.516-.701 2.5-1.328 3.259-.095.115-.184.22-.268.319-.207.245-.383.453-.541.681-.208.3-.33.565-.37.847a.751.751 0 0 1-1.485-.212c.084-.593.337-1.078.621-1.489.203-.292.45-.584.673-.848.075-.088.147-.173.213-.253.561-.679.985-1.32.985-2.304 0-2.06-1.637-3.75-4-3.75ZM5.75 12h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1 0-1.5ZM6 15.25a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Z"></path></svg>Tip</p>
+<p>The ASCII boot banner follows the rendering that is actually installed, not the
+configured word: it prints for <code>pretty</code>, and for <code>auto</code> only when stdout is a
+terminal. Under <code>json</code>, and under <code>auto</code> off a terminal (a container, a pipe
+into a log collector) stdout is parseable JSON from the first byte.</p>
+</blockquote>
+<h2 id="telemetry"><a class="header" href="#telemetry"><code>[telemetry]</code></a></h2>
+<p>OpenTelemetry export. With <code>otlp_endpoint</code> unset the trace export layer is not
+installed at all, at zero overhead.</p>
+<pre><code class="language-toml">[telemetry]
+service_name = "ferroehr"
+environment = "dev"
+traces_sample_ratio = 1.0
+metrics_push = false
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>otlp_endpoint</code></td><td>string</td><td>unset</td><td>OTLP/gRPC collector endpoint. Unset ⇒ no trace export.</td></tr>
+<tr><td><code>service_name</code></td><td>string</td><td><code>ferroehr</code></td><td>The <code>service.name</code> resource attribute.</td></tr>
+<tr><td><code>environment</code></td><td>string</td><td><code>dev</code></td><td>The <code>deployment.environment</code> resource attribute.</td></tr>
+<tr><td><code>traces_sample_ratio</code></td><td>float</td><td><code>1.0</code></td><td>Head-sampling ratio (<code>0.1</code> is a common production start).</td></tr>
+<tr><td><code>metrics_push</code></td><td>bool</td><td><code>false</code></td><td>Also <strong>push</strong> metrics over OTLP, alongside the Prometheus pull surface. Both surfaces are fed by one meter provider, so every instrument reaches both; the push needs <code>otlp_endpoint</code> set as well.</td></tr>
+<tr><td><code>flame_file</code></td><td>path</td><td>unset</td><td>Span-timing flamegraph capture: write folded stack samples of every span to this file, and render offline with <code>inferno-flamegraph</code>. Unset ⇒ the layer is not installed. For diagnostic sessions, not a standing posture: the file grows with span traffic.</td></tr>
+</tbody>
+</table>
+</div>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>Instrument names carry no Prometheus suffix; the exporter derives one. A
+counter named <code>auth_failures</code> is scraped as <code>auth_failures_total</code>, and units
+add <code>_seconds</code>/<code>_bytes</code>. Over OTLP the unsuffixed name is what a collector
+receives.</p>
+</blockquote>
+<p>The scrape endpoint itself is not opened here; it is
+<a href="config-auth.html#management"><code>management.endpoints.prometheus</code></a>, which is <code>off</code>
+until you name a level.</p>
+<h2 id="usage_report"><a class="header" href="#usage_report"><code>[usage_report]</code></a></h2>
+<p>The daily installation report to FerroPULSE, the collector Cadasto B.V. runs.
+It is <strong>on by default</strong>, and every boot logs one line saying whether it is on.
+What a report carries, when it is sent, the network it needs and the privacy
+notice are on the <a href="../usage-report.html">Usage report</a> page.</p>
+<pre><code class="language-toml">[usage_report]
+enabled = true
+endpoint = "https://report.ferropulse.eu/v1/report"
+slow_aql_ms = 1000
+deployment = "unknown"
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>enabled</code></td><td>bool</td><td><code>true</code></td><td>Send the report. <code>false</code> sends nothing and writes nothing to the database for it. Environment: <code>FERROEHR__USAGE_REPORT__ENABLED</code>.</td></tr>
+<tr><td><code>endpoint</code></td><td>string</td><td><code>https://report.ferropulse.eu/v1/report</code></td><td>Where reports go. Must be an absolute <code>https</code> URL without credentials; plain <code>http</code> is accepted for a loopback host only. Environment: <code>FERROEHR__USAGE_REPORT__ENDPOINT</code>.</td></tr>
+<tr><td><code>slow_aql_ms</code></td><td>int</td><td><code>1000</code></td><td>Execution time in milliseconds above which an AQL query counts as slow in the daily report. At least <code>1</code>. Environment: <code>FERROEHR__USAGE_REPORT__SLOW_AQL_MS</code>.</td></tr>
+<tr><td><code>deployment</code></td><td>enum{helm,compose,binary,unknown}</td><td><code>unknown</code></td><td>How the instance was deployed, as the report states it. The Helm chart sets it to <code>helm</code>. Environment: <code>FERROEHR__USAGE_REPORT__DEPLOYMENT</code>.</td></tr>
+</tbody>
+</table>
+</div>
+<p>Under the Helm chart, set the switch with <code>usageReport.enabled</code>. The chart
+writes <code>enabled</code> and <code>deployment = "helm"</code> into the rendered file itself and
+refuses to render if either is also set under <code>config.usage_report</code>;
+<code>endpoint</code> and <code>slow_aql_ms</code> pass through <code>config.usage_report</code> unchanged.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../installation/configuration.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../installation/config-auth.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../installation/configuration.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../installation/config-auth.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../theme/mermaid-eefea253.min.js"></script>
+        <script src="../theme/mermaid-init-ccf746f1.js"></script>
+        <script src="../theme/version-picker-dddf05c1.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

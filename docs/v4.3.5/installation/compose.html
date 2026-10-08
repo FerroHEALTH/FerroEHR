@@ -1,0 +1,840 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Docker Compose - FerroEHR Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        <!-- Content-Security-Policy as a <meta> element, because GitHub Pages serves
+             static files and cannot set response headers. A meta CSP is genuinely
+             weaker than the header: `frame-ancestors`, `report-uri` and `sandbox` are
+             IGNORED in meta form (w3c CSP3 §3.3), and it applies only after the parser
+             reaches it. It still stops an injected external script or an exfiltrating
+             `connect-src`, which is the realistic risk for a docs site, so it is worth
+             having while being honest that the site cannot carry the full header set —
+             documented on the security page. `unsafe-inline` is required: mdBook emits
+             inline theme/sidebar scripts and inline styles of its own. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <!-- Self-hosted KaTeX stylesheet (fonts under katex/fonts/) — the site
+             serves no external requests, so mdbook-katex runs with no-css = true
+             and the vendored sheet is linked here. Version 0.16.4, matching the
+             KaTeX the katex-rs renderer inside mdbook-katex bundles (its
+             KATEX-VERSION file); provenance in website/book/KATEX-PROVENANCE.md. -->
+        <link rel="stylesheet" href="../katex/katex.min.css">
+
+        <meta name="description" content="User documentation for FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../css/chrome-d279d366.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/custom-79743c4e.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "rust";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "../searchindex-009cbf08.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-625c28d6.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">FerroEHR Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/src/installation/compose.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="docker-compose"><a class="header" href="#docker-compose">Docker Compose</a></h1>
+<p>Docker Compose is the quickest way to run FerroEHR together with a
+preconfigured PostgreSQL 18, for local development and evaluation. The
+quickstart is <strong>one file and zero configuration</strong>: download
+<code>docker-compose.yml</code>, run <code>docker compose up</code>, and the published images are
+pulled and started: no repository checkout, no bind mounts, no environment
+variables. This chapter describes the three published images, the services, the
+authentication posture the quickstart ships with, the optional profiles and
+overlays, and the variables that tune them. For a step-by-step first run, see
+<a href="../getting-started.html">Getting started</a>.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>This chapter applies equally to the <strong>standalone</strong> <code>docker-compose.yml</code>
+downloaded into an empty directory and to a bare <code>docker compose up</code> in a
+repository checkout — both run the published images. Building from source
+is an explicit opt-in (<code>-f docker-compose.yml -f docker-compose.dev.yml</code>) —
+see <a href="#repository-development">Repository development</a> below.</p>
+</blockquote>
+<ul>
+<li><a href="#the-three-images">The three images</a></li>
+<li><a href="#bringing-up-the-stack">Bringing up the stack</a></li>
+<li><a href="#container-engines-docker-and-podman">Container engines: Docker and Podman</a></li>
+<li><a href="#the-isolation-posture">The isolation posture</a></li>
+<li><a href="#the-quickstarts-authentication-posture">The quickstart’s authentication posture</a></li>
+<li><a href="#the-oidc-variant-keycloak-overlay">The OIDC variant (Keycloak overlay)</a></li>
+<li><a href="#the-terminology-overlay-ferroterm">The terminology overlay (FerroTERM)</a></li>
+<li><a href="#optional-services-compose-profiles">Optional services (Compose profiles)</a></li>
+<li><a href="#port-already-in-use">Port already in use?</a></li>
+<li><a href="#connecting-to-the-database">Connecting to the database</a></li>
+<li><a href="#variables-the-compose-files-read">Variables the compose files read</a></li>
+<li><a href="#repository-development">Repository development</a></li>
+<li><a href="#build-provenance">Build provenance</a></li>
+<li><a href="#observability-overlay">Observability overlay</a></li>
+<li><a href="#next">Next</a></li>
+</ul>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>The quickstart file carries the server configuration <strong>inline</strong> (a Compose
+<code>configs</code> entry with <code>content:</code>), which requires <strong>Docker Compose 2.23.1 or
+newer</strong>. Check with <code>docker compose version</code>.</p>
+</blockquote>
+<h2 id="the-three-images"><a class="header" href="#the-three-images">The three images</a></h2>
+<p>FerroEHR publishes three container images to GHCR:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Image</th><th>Contents</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ghcr.io/ferrohealth/ferroehr</code></td><td>The <code>ferroehr</code> server binary on a distroless, non-root, shell-less multi-arch base (amd64 + arm64). Configured by a mounted TOML file and/or <code>FERROEHR__*</code> environment variables.</td></tr>
+<tr><td><code>ghcr.io/ferrohealth/ferroehr-postgres</code></td><td><code>postgres:18.6</code> (with Debian security updates applied at image build) plus init scripts that pre-create the application login role, the eight <code>NOLOGIN</code> group roles (<code>ferroehr_migrator</code>, <code>ferroehr_clinical</code>, <code>ferroehr_clinical_reader</code>, and the five domain roles <code>ferroehr_clinical</code>, <code>ferroehr_party</code>, <code>ferroehr_clinical_reader</code>, <code>ferroehr_party_reader</code>, <code>ferroehr_linkage</code>), the database, the schemas (<code>clinical</code>, <code>ext</code>, <code>audit</code>) and the one extension the schema needs, <code>btree_gist</code>, so the app role never needs superuser.</td></tr>
+<tr><td><code>ghcr.io/ferrohealth/ferroehr-viewer</code></td><td>The <a href="../viewer/index.html">viewer</a>, a standalone web application that talks to the CDR strictly over ITS-REST. Optional; see the <code>viewer</code> profile below.</td></tr>
+</tbody>
+</table>
+</div>
+<p>Each image is published under several tags:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tag</th><th>Published from</th></tr>
+</thead>
+<tbody>
+<tr><td><code>X.Y.Z</code>, <code>X.Y</code></td><td>every release</td></tr>
+<tr><td><code>latest</code></td><td>the newest release</td></tr>
+<tr><td><code>main</code></td><td>every push to the default branch</td></tr>
+<tr><td><code>sha-&lt;commit&gt;</code></td><td>every push, for exact pinning</td></tr>
+</tbody>
+</table>
+</div>
+<p>The quickstart Compose file pins the <strong>exact release version it shipped with</strong>
+on all three images, so a downloaded file always runs one known-good, mutually
+compatible set; a CI guard (<code>scripts/checks/compose-image-tags.sh</code>) fails the
+build whenever those pinned tags disagree with the version being released, so
+they cannot be forgotten at a cut. To run something else, set the image
+variables in <a href="#variables-the-compose-files-read">the table below</a>.</p>
+<p>The role the server connects as in the quickstart owns the database and is a
+member of <code>ferroehr_migrator</code> and <code>ferroehr_clinical</code>, which is what lets it apply
+migrations at boot, and of <code>ferroehr_clinical</code> and <code>ferroehr_party</code>, so the
+schema separation is exercised on one credential. That single credential is
+deliberate: one container with one DSN cannot demonstrate the credential
+separation honestly.</p>
+<p>A least-privilege deployment sets <code>db.migrate = "verify"</code>, runs
+<code>ferroehr db migrate</code> out of band under the migrator DSN, and serves on a
+narrow runtime credential. It also has to name the credential that prepares
+the schema, in <code>[db] migrate_url</code>: preparation reads all five
+<code>_sqlx_migrations</code> bookkeeping tables even under <code>verify</code>, which no
+least-privilege role can do, <code>ferroehr_clinical</code> included. Unset, <code>migrate_url</code>
+falls back to <code>[db] url</code>, which is what the quickstart runs. See
+<a href="../operations.html#which-credential-prepares-the-schema">Operations → Which credential prepares the
+schema</a> and
+<a href="../operations.html#applying-migrations">Applying migrations</a>.</p>
+<p>The PostgreSQL image is <strong>init-scripts only</strong>: it creates roles, schemas and
+<code>btree_gist</code>, and bakes in no migration state. That extension is the only one
+the schema needs, and the server installs it itself at boot
+(<code>CREATE EXTENSION IF NOT EXISTS btree_gist</code>), so a plain PostgreSQL 18 with a
+superuser-capable migration credential serves just as well. The server owns the schema content
+and applies its migrations idempotently at every boot, so a fresh database
+self-provisions and a restart is a no-op.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>PostgreSQL init scripts run <strong>only when the data volume is empty</strong>. If you
+see startup notices like <code>skipping role creation (no CREATEROLE privilege)</code>
+or <code>roles absent</code>, your volume predates the image’s role setup (or you are
+running a plain <code>postgres</code> image): either recreate the volume
+(<code>docker compose down -v</code>, which <strong>destroys data</strong>) or create the group roles
+once by hand as a superuser
+(<a href="../operations.html#turning-the-schema-split-into-a-role-split">Operations</a>
+has the statements). The server runs fine either way: the
+grants are a defense-in-depth layer, not a functional requirement.</p>
+</blockquote>
+<h2 id="bringing-up-the-stack"><a class="header" href="#bringing-up-the-stack">Bringing up the stack</a></h2>
+<p>Download <code>docker-compose.yml</code> (attached to every
+<a href="https://github.com/FerroHEALTH/FerroEHR/releases/latest">release</a>) into an
+empty directory and start it:</p>
+<pre><code class="language-shell">docker compose up
+</code></pre>
+<p>This pulls and starts the two core services (no profile needed):</p>
+<ul>
+<li><strong><code>ferroehr-postgres</code>:</strong> the database image, with a named data volume, a
+<code>pg_isready</code> healthcheck, <code>pg_stat_statements</code> preloaded, and a modest tuning
+floor (shared buffers, WAL size, work memory, lz4-compressed WAL full-page
+images — which cut per-commit WAL volume roughly in half — and a larger
+<code>/dev/shm</code> than Docker’s default, which otherwise starves parallel workers).</li>
+<li><strong><code>ferroehr</code>:</strong> the server, which waits for the database to report healthy
+(<code>depends_on: condition: service_healthy</code>), then boots, migrates, and serves
+on port 8080. Its healthcheck is the binary’s own <code>healthcheck</code> subcommand,
+because the image has no shell.</li>
+</ul>
+<p>The API is then at <code>http://localhost:8080/ferroehr/rest/openehr/v1</code>, with
+Swagger UI at <code>http://localhost:8080/ferroehr/rest/swagger-ui</code> (the browser asks
+for the API credential; <code>server.swagger_ui</code> chooses who may read it).</p>
+<blockquote class="blockquote-tag blockquote-tag-important">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v9.5A1.75 1.75 0 0 1 14.25 13H8.06l-2.573 2.573A1.458 1.458 0 0 1 3 14.543V13H1.75A1.75 1.75 0 0 1 0 11.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h6.5a.25.25 0 0 0 .25-.25v-9.5a.25.25 0 0 0-.25-.25Zm7 2.25v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 9a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Important</p>
+<p><strong>Every published port binds the loopback interface by default</strong>
+(<code>127.0.0.1:HOST:CONTAINER</code>), and that is a security property rather than a
+style choice: a published port is DNAT’d by rules Docker inserts <em>ahead</em> of
+the host firewall’s own chains, so a <code>ufw deny 8080</code> does not stop a port
+published on <code>0.0.0.0</code>. To reach the stack from another machine, name the
+interface explicitly (<code>FERROEHR_BIND_HOST=0.0.0.0 docker compose up</code>, or a
+single address). The database publishes no host port at all — see
+<a href="#connecting-to-the-database">Connecting to the database</a>.</p>
+</blockquote>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>Third-party base images are pinned by digest (<code>name:tag@sha256:…</code>), not by a
+mutable tag, so a pull always resolves the exact same image. Each service also
+declares a CPU and memory ceiling (<code>deploy.resources.limits</code>), so a local
+stack cannot exhaust the host; the server’s and the database’s are overridable
+for constrained machines.</p>
+</blockquote>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p>PostgreSQL 18’s official image stores data in a major-version subdirectory,
+so the data volume mounts at <code>/var/lib/postgresql</code> (the parent), <strong>not</strong> the
+pre-18 <code>/var/lib/postgresql/data</code>. The bundled Compose file already does this
+correctly; keep the convention if you adapt it.</p>
+</blockquote>
+<h2 id="container-engines-docker-and-podman"><a class="header" href="#container-engines-docker-and-podman">Container engines: Docker and Podman</a></h2>
+<p>The quickstart runs on Docker and on Podman. Both were verified first-hand on
+2026-08-24: the core stack, the <code>viewer</code> and <code>s3</code> profiles, and both
+overlays boot to healthy under <code>podman compose</code> exactly as under
+<code>docker compose</code>, with the same commands:</p>
+<pre><code class="language-shell">podman compose up -d --wait
+</code></pre>
+<p>Podman-specific notes:</p>
+<ul>
+<li><code>podman compose</code> delegates to an external Compose provider. With Docker’s
+own Compose CLI installed (the common case on a machine that has ever run
+Docker Desktop) you get identical Compose behaviour; with the Python
+<code>podman-compose</code> package, flag coverage differs — prefer the Docker Compose
+provider.</li>
+<li>The default <code>podman machine</code> on macOS ships with 2048 MiB of memory. That
+is enough for the quickstart and both overlays, but not for building the
+server image from source inside the VM (a single spec-crate compile at
+release optimization holds more than that). If you want the
+build-from-source developer path under Podman, resize the machine first:
+<code>podman machine set --memory 8192</code>.</li>
+<li>Building from source under Podman (Buildah) is not part of the verified
+quickstart surface; the supported quickstart path is the published images.</li>
+</ul>
+<p>The repository’s own CI and measurement lanes run Docker; the compose-driven
+scripts (<code>scripts/conformance.sh</code>, the deployment probe, the UI journey
+battery) are exercised against Docker only.</p>
+<h2 id="the-isolation-posture"><a class="header" href="#the-isolation-posture">The isolation posture</a></h2>
+<p>Every service in every committed compose file drops <strong>all</strong> Linux capabilities
+and adds back only what its entrypoint provably needs, sets
+<code>no-new-privileges:true</code>, bounds its file descriptors, restarts unless stopped,
+and keeps Docker’s default seccomp profile (the posture is the <em>absence</em> of an
+<code>unconfined</code> override, so that absence is what a CI guard checks). No service is
+privileged and none mounts the Docker daemon socket.</p>
+<p>Most services additionally run a read-only root filesystem with a tmpfs for the
+paths that must be writable. Two do not, and each says why in place: the S3
+gateway writes its volume store, and the server container hits a real mutual
+exclusion rather than an oversight: Compose refuses an inline <code>config</code> in a
+read-only service, and that inline config is what makes this file standalone. A
+deployment that mounts its configuration from a file instead can add
+<code>read_only: true</code> and a tmpfs at <code>/tmp</code>. On Kubernetes the conflict does not
+arise: the configuration arrives as a mounted ConfigMap and the chart sets
+<code>readOnlyRootFilesystem: true</code>.</p>
+<h2 id="the-quickstarts-authentication-posture"><a class="header" href="#the-quickstarts-authentication-posture">The quickstart’s authentication posture</a></h2>
+<p>The server configuration travels inside the Compose file and is written for
+evaluation, not for production:</p>
+<ul>
+<li><strong>Basic auth with one user:</strong> <code>ferroehr</code> / <code>ferroehr</code> (stored as an Argon2id
+hash), carrying the <code>ADMIN</code> and <code>USER</code> roles.</li>
+<li><strong>RBAC disabled:</strong> so any authenticated caller may use every enabled
+surface, including the admin API. The <code>ADMIN</code> / <code>USER</code> / <code>READONLY</code>
+separation is switched on by setting <code>[authz.rbac] enabled = true</code> and giving
+each user an explicit <code>roles</code> list; see
+<a href="../security.html">Security</a>.</li>
+<li><strong>Admin API enabled:</strong> so the optional viewer’s panels work.</li>
+<li><strong>Management introspection enabled</strong>, with <code>info</code> and <code>metrics</code> at <code>private</code>,
+<code>prometheus</code> at <code>public</code>, and <code>env</code> and <code>loggers</code> at <code>admin_only</code>.</li>
+<li><strong>Permissive CORS:</strong> any origin may call the API from a browser.</li>
+<li><strong>No TLS:</strong> plain HTTP on port 8080.</li>
+<li><strong>The default <code>sandbox</code> deployment profile:</strong> the server names every
+separation it has not made on the boot banner, in the log and on
+<code>GET /ferroehr/rest/status</code>, and the viewer raises a notice saying the
+deployment must not hold real patient data. That is the quickstart telling
+the truth about itself, not a fault. See
+<a href="configuration.html#deployment_profile"><code>deployment_profile</code></a>.</li>
+</ul>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p>These are development credentials and development defaults. Before exposing
+a server, replace the user store (or point it at an identity provider), turn
+RBAC on, restrict CORS, close the admin API, and terminate TLS in front of the
+server. The <a href="configuration.html">configuration reference</a> and
+<a href="../security.html">Security</a> cover each of these.</p>
+</blockquote>
+<p>To change any of it without editing the Compose file, add <code>FERROEHR__*</code>
+variables to the <code>ferroehr</code> service’s <code>environment:</code> block; the environment
+layer wins over the inline file. The Basic-auth user store is the one setting
+the environment cannot express (it is an array of tables), so replacing the
+users means editing the inline config or mounting your own TOML file.</p>
+<h2 id="the-oidc-variant-keycloak-overlay"><a class="header" href="#the-oidc-variant-keycloak-overlay">The OIDC variant (Keycloak overlay)</a></h2>
+<p>A second standalone file adds a ready-made identity provider, so you can
+exercise bearer-token authentication without registering a client anywhere.
+Download <code>docker-compose.keycloak.yml</code> from the same release, beside the base
+file, and stack the two:</p>
+<pre><code class="language-shell">docker compose -f docker-compose.yml -f docker-compose.keycloak.yml up
+</code></pre>
+<p>That starts <strong>Keycloak</strong> on port 8081 with a small demo realm (<code>ferroehr</code>)
+defined inline and points the server’s bearer validation at it. Basic auth from
+the base file keeps working, so the server then advertises <code>Basic, Bearer</code>.</p>
+<p>The overlay also <strong>turns RBAC on</strong>, deliberately: an identity provider whose
+roles decide nothing is a login screen, not authorization. So the realm ships
+four users whose roles are load-bearing:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>User</th><th>Password</th><th>Realm roles</th><th>What it demonstrates</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ferroehr</code></td><td><code>ferroehr</code></td><td><code>ADMIN</code>, <code>USER</code></td><td>the full surface, admin API included</td></tr>
+<tr><td><code>clinician</code></td><td><code>clinician</code></td><td><code>USER</code></td><td>the clinical API without the admin routes</td></tr>
+<tr><td><code>auditor</code></td><td><code>auditor</code></td><td><code>USER</code>, <code>READONLY</code></td><td>reads succeed, every write is refused <code>403</code></td></tr>
+<tr><td><code>nobody</code></td><td><code>nobody</code></td><td>none</td><td>an authenticated caller with no grant</td></tr>
+</tbody>
+</table>
+</div>
+<p>One confidential client is defined (<code>ferroehr</code> /
+<code>ferroehr-quickstart-secret</code>, with the password grant enabled so a token can be
+fetched by curl). Fetch a token and call the API with it:</p>
+<pre><code class="language-shell">TOKEN=$(curl -s -d client_id=ferroehr -d client_secret=ferroehr-quickstart-secret \
+  -d username=ferroehr -d password=ferroehr -d grant_type=password \
+  http://localhost:8081/auth/realms/ferroehr/protocol/openid-connect/token \
+  | jq -r .access_token)
+
+curl -H "Authorization: Bearer $TOKEN" -X POST -i \
+  http://localhost:8080/ferroehr/rest/openehr/v1/ehr
+</code></pre>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p>The realm, the client secret and the user passwords are demo values, served
+over plain HTTP by a Keycloak in <code>start-dev</code> mode, which is also why the
+overlay sets the server’s <code>allow_insecure_issuer</code> opt-in. For a real
+deployment, drop this overlay and point <code>[auth.oidc]</code> (or
+<code>FERROEHR__AUTH__OIDC__*</code>) at your own issuer over HTTPS.</p>
+</blockquote>
+<h2 id="the-terminology-overlay-ferroterm"><a class="header" href="#the-terminology-overlay-ferroterm">The terminology overlay (FerroTERM)</a></h2>
+<p><a href="https://github.com/FerroHEALTH/FerroTERM">FerroTERM</a> is the Ferro family’s
+FHIR terminology server: R4, R4B and R5 endpoints over a precomputed index, no
+JVM, no database, one distroless image. The overlay
+<code>docker-compose.terminology.yml</code> starts it beside the CDR and switches the CDR’s
+external terminology on, so archetype value-set bindings resolve at commit and
+AQL <code>TERMINOLOGY()</code> expands through it. It also switches on the read-only
+<code>/terminology/*</code> extension API (<code>FERROEHR__TERMINOLOGY__API_ENABLED</code>, off by
+default): a term, subsumption or value-set call there for a terminology the
+bundled openEHR terminology does not carry is answered by FerroTERM, while
+listing and describing terminologies stays with the bundle:</p>
+<pre><code class="language-shell">docker compose -f docker-compose.yml -f docker-compose.terminology.yml up
+curl 'http://localhost:8090/r4b/metadata?mode=terminology'
+</code></pre>
+<p>It is an overlay rather than a profile for the same reason as the Keycloak and
+observability ones: enabling it has to change the CDR’s environment, which a
+profile cannot do. FerroTERM’s image carries its own health probe (the binary’s
+<code>healthcheck</code> subcommand, since the distroless image has no shell), and the CDR
+is declared to start only once that probe reports healthy, so <code>docker compose up --wait</code> returns with both serving.</p>
+<p>Out of the box FerroTERM serves the licence-free shaped seed this repository
+ships (two code systems and two value sets under the reserved <code>example.test</code>
+domain, the content the conformance lane binds to), mounted read-only straight
+out of the <code>ferroehr</code> image. No licensed terminology is distributed with
+FerroEHR or FerroTERM. To serve a release you hold a licence for, build its
+index once into the named volume and tell the server to open it:</p>
+<pre><code class="language-shell">FERROTERM_RF2=/path/to/SnomedCT_Release.zip \
+  docker compose -f docker-compose.yml -f docker-compose.terminology.yml \
+  --profile terminology-build run --rm ferroterm-build
+FERROTERM_INDEX=/data/index \
+  docker compose -f docker-compose.yml -f docker-compose.terminology.yml up
+</code></pre>
+<p>The archive is mounted read-only and unpacked to a tmpfs that dies with the
+build container. FerroTERM’s <a href="https://ferroterm.eu/docs/operate/loading-snomed.html">loading page</a>
+covers the other code systems and their build flags.</p>
+<p>Three things the operator owns:</p>
+<ul>
+<li><strong>The code-system licence.</strong> SNOMED CT needs an Affiliate Licence (free in
+Member countries, see <a href="https://www.snomed.org/get-snomed">snomed.org/get-snomed</a>);
+LOINC, ICD and RxNorm have their own terms. Every surface that shows SNOMED CT
+content carries the notice its licence prescribes (clause 8.3.1) and the
+release version and date.</li>
+<li><strong>Who can reach the server.</strong> The overlay publishes FerroTERM on the loopback
+interface at port 8090 (<code>FERROEHR_TERMINOLOGY_PORT</code>) so you can query it while
+developing. FerroTERM has no authentication and no rate limit of its own; a
+deployment that serves other machines puts a reverse proxy with both in front,
+or removes the <code>ports:</code> block and lets the CDR be the only caller, which is
+what the <a href="https://sandbox.ferroehr.eu">hosted sandbox</a> does.</li>
+<li><strong>FerroTERM’s licence.</strong> BUSL-1.1 from the same Licensor as FerroEHR:
+non-commercial production use is free, any other production use needs a
+commercial licence. Its README says which is which.</li>
+</ul>
+<p>The CDR keeps its shipped fail-open posture: a binding the server cannot resolve
+is accepted. <code>FERROEHR__TERMINOLOGY__EXTERNAL__FAIL_ON_ERROR=true</code> turns an
+unreachable server into a <code>422</code> refusal instead; the
+<a href="../beyond-core/terminology.html#when-the-terminology-server-cannot-answer">terminology page</a>
+explains both. A code the server resolves as outside its value set is refused
+with <code>422</code> under either posture.</p>
+<h2 id="optional-services-compose-profiles"><a class="header" href="#optional-services-compose-profiles">Optional services (Compose profiles)</a></h2>
+<p>The core services are profile-less and start on every <code>up</code>. Further services
+sit behind a <a href="https://docs.docker.com/compose/how-tos/profiles/">Compose
+profile</a> and stay down until
+you ask for them:</p>
+<ul>
+<li>
+<p><strong><code>ferroehr-viewer</code></strong> (<code>--profile viewer</code>): the
+<a href="../viewer/index.html">viewer</a> on port 3000, pointed at the server
+inside the Compose network. Start the stack with it:</p>
+<pre><code class="language-shell">docker compose --profile viewer up
+# → http://localhost:3000  (log in with ferroehr / ferroehr)
+</code></pre>
+</li>
+<li>
+<p><strong><code>seaweedfs</code></strong> and <strong><code>seaweedfs-init</code></strong> (<code>--profile s3</code>): an S3 gateway for
+large <code>DV_MULTIMEDIA</code> externalization (development and test only). Point the
+server at it and bring the profile up:</p>
+<pre><code class="language-shell">export FERROEHR__MULTIMEDIA__ENABLED=true
+export FERROEHR__MULTIMEDIA__ENDPOINT=http://seaweedfs:8333
+export FERROEHR__MULTIMEDIA__BUCKET=openehr-multimedia
+export FERROEHR__MULTIMEDIA__ALLOW_HTTP=true    # dev only; production S3 is HTTPS
+
+docker compose --profile s3 up -d --wait ferroehr seaweedfs
+</code></pre>
+<p>The compose file passes the whole <code>FERROEHR__MULTIMEDIA__*</code> set through from
+your shell, so there is no file to edit, and <code>seaweedfs-init</code> creates the
+bucket by issuing an idempotent <code>CreateBucket</code> against the gateway, which
+ships with none, and answers an S3 write into a missing bucket with
+<code>403 AccessDenied</code>, a reply that reads as a credentials problem and is not
+one. It reads the same bucket variable the server does, so the two cannot
+drift.</p>
+<p>To turn it off again, <code>unset</code> those variables (or set
+<code>FERROEHR__MULTIMEDIA__ENABLED=false</code>) and re-up: an unset variable is
+<em>removed</em> from the container’s environment rather than passed as empty, so
+the server falls back to its own default of <code>enabled = false</code>.</p>
+<p>Confirm the server took them with
+<code>curl -s -u ferroehr:ferroehr http://localhost:8080/management/env | jq .multimedia</code>
+(<code>"enabled": true</code> and a non-empty <code>endpoint</code> mean the wiring is right). In
+production, point the multimedia settings at a real, credentialed, HTTPS S3
+endpoint instead; see <a href="../beyond-core/s3-multimedia.html">S3 multimedia</a>.</p>
+</li>
+<li>
+<p><strong><code>ferroehr-backup-clinical</code>, <code>ferroehr-backup-party</code> and
+<code>ferroehr-backup-linkage</code></strong> (<code>--profile backup</code>): one <code>pg_dump</code> job per
+pseudonymisation domain, run on demand rather than started with the stack:</p>
+<pre><code class="language-shell">docker compose --profile backup run --rm ferroehr-backup-clinical
+docker compose --profile backup run --rm ferroehr-backup-party
+docker compose --profile backup run --rm ferroehr-backup-linkage
+</code></pre>
+<p>Each writes a timestamped custom-format dump into its own host directory
+(<code>FERROEHR_BACKUP_CLINICAL_DIR</code>, <code>FERROEHR_BACKUP_PARTY_DIR</code>,
+<code>FERROEHR_BACKUP_LINKAGE_DIR</code>, defaulting to <code>./backups/clinical</code>,
+<code>./backups/demographic</code> and <code>./backups/linkage</code>). Set
+<code>FERROEHR_BACKUP_USER="$(id -u):$(id -g)"</code> and the files land owned by you;
+unset, the job runs as root inside the container with one capability,
+<code>DAC_OVERRIDE</code>, which is what writing a directory it does not own actually
+requires.</p>
+<p>Three dumps rather than one is the point: a single whole-database dump holds
+the clinical record, the identities of its subjects and the map between them,
+and whoever reads that file re-identifies every record in it. This stack runs
+one login credential, so it separates the artefacts and not the authority to
+produce them; <a href="../operations.html#dump-each-domain-separately">Operations → Dump each domain
+separately</a> is the production
+procedure, including why a backup credential needs <code>BYPASSRLS</code>.</p>
+</li>
+</ul>
+<p>Two things that used to be profiles of this file are not any more. Both have to
+<em>change</em> the server’s configuration to be useful, which a profile cannot do, so
+each is a separate file instead:</p>
+<ul>
+<li><strong>OIDC / Keycloak</strong> is the <code>docker-compose.keycloak.yml</code> overlay above (and,
+in a repository checkout, a <code>keycloak</code> profile of the development override
+described below).</li>
+<li><strong>A terminology server</strong> is the <code>docker-compose.terminology.yml</code> overlay
+<a href="#the-terminology-overlay-ferroterm">above</a>, FerroTERM beside the CDR; the
+repository’s conformance stack additionally runs its own seeded server for
+the acceptance lane, see <a href="../beyond-core/terminology.html">Terminology servers</a>.</li>
+</ul>
+<h2 id="port-already-in-use"><a class="header" href="#port-already-in-use">Port already in use?</a></h2>
+<p>Every published port is a variable, so a conflict never requires editing any
+file. When <code>docker compose up</code> refuses with <code>port is already allocated</code> (or
+<code>address already in use</code>), pick a free port and pass it:</p>
+<pre><code class="language-shell">FERROEHR_PORT=8081 docker compose up
+</code></pre>
+<p>The same works for the other ports (<code>FERROEHR_VIEWER_PORT</code>,
+<code>FERROEHR_S3_PORT</code>; PostgreSQL publishes no host port — see
+<a href="#connecting-to-the-database">Connecting to the database</a>). The defaults stay
+fixed on purpose: every URL in this book assumes <code>localhost:8080</code>, and
+Docker’s automatic ephemeral-port allocation exists only when a mapping
+<a href="https://docs.docker.com/engine/network/port-publishing/">omits the host port entirely</a>
+— a server that silently moved ports would break every printed URL, so here
+you always choose the port and always know it.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p><strong>On Windows</strong> the refusal reads differently: <code>Ports are not available: exposing port TCP 127.0.0.1:8080 … bind: Only one usage of each socket address … is normally permitted</code> when another program holds the port, or
+<code>… An attempt was made to access a socket in a way forbidden by its access permissions</code> when the port sits in a Windows reserved range. The remedy is
+the same variable; to see the reserved ranges, run
+<code>netsh interface ipv4 show excludedportrange protocol=tcp</code>. (The classic
+Windows collision — a natively installed PostgreSQL service holding 5432 —
+no longer affects the quickstart, which publishes no database port.)</p>
+</blockquote>
+<h2 id="connecting-to-the-database"><a class="header" href="#connecting-to-the-database">Connecting to the database</a></h2>
+<p>The quickstart publishes no PostgreSQL host port: the server reaches the
+database over the compose network, so nothing needs one, and a published
+5432 collided with natively installed PostgreSQL (on Windows the installer
+registers an auto-started <code>postgresql-x64-*</code> service). For a psql session,
+no port is needed at all:</p>
+<pre><code class="language-shell">docker compose exec ferroehr-postgres psql -U postgres -d ferroehr
+</code></pre>
+<p>For a GUI client on the host (pgAdmin, DBeaver), add the <code>db-publish</code>
+overlay, downloaded from the same release beside the base file:</p>
+<pre><code class="language-shell">docker compose -f docker-compose.yml -f docker-compose.db-publish.yml up
+</code></pre>
+<p>It publishes <code>127.0.0.1:5432</code> (retune with <code>FERROEHR_DB_PORT</code>, widen with
+<code>FERROEHR_BIND_HOST</code> — the warning above applies).</p>
+<h2 id="variables-the-compose-files-read"><a class="header" href="#variables-the-compose-files-read">Variables the compose files read</a></h2>
+<p>Set these in your shell (or an <code>.env</code> file) to retune without editing anything:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Variable</th><th>Default</th><th>Effect</th></tr>
+</thead>
+<tbody>
+<tr><td><code>FERROEHR_IMAGE</code></td><td><code>ghcr.io/ferrohealth/ferroehr:&lt;release&gt;</code></td><td>Server image to run.</td></tr>
+<tr><td><code>FERROEHR_POSTGRES_IMAGE</code></td><td><code>ghcr.io/ferrohealth/ferroehr-postgres:&lt;release&gt;</code></td><td>Database image to run.</td></tr>
+<tr><td><code>FERROEHR_VIEWER_IMAGE</code></td><td><code>ghcr.io/ferrohealth/ferroehr-viewer:&lt;release&gt;</code></td><td>Viewer image (the <code>viewer</code> profile).</td></tr>
+<tr><td><code>FERROEHR_BIND_HOST</code></td><td><code>127.0.0.1</code></td><td>Host interface every published port binds.</td></tr>
+<tr><td><code>FERROEHR_PORT</code></td><td><code>8080</code></td><td>Host port mapped to the server.</td></tr>
+<tr><td><code>FERROEHR_VIEWER_PORT</code></td><td><code>3000</code></td><td>Host port mapped to the viewer.</td></tr>
+<tr><td><code>FERROEHR_DB_PORT</code></td><td>not published</td><td>Host port for PostgreSQL, read only by the <code>db-publish</code> overlay (default <code>5432</code> there).</td></tr>
+<tr><td><code>FERROEHR_S3_PORT</code></td><td><code>8333</code></td><td>Host port mapped to the S3 gateway (the <code>s3</code> profile).</td></tr>
+<tr><td><code>FERROEHR_BACKUP_CLINICAL_DIR</code></td><td><code>./backups/clinical</code></td><td>Host directory the clinical dump job writes to (the <code>backup</code> profile).</td></tr>
+<tr><td><code>FERROEHR_BACKUP_PARTY_DIR</code></td><td><code>./backups/party</code></td><td>Host directory the party dump job writes to.</td></tr>
+<tr><td><code>FERROEHR_BACKUP_LINKAGE_DIR</code></td><td><code>./backups/linkage</code></td><td>Host directory the linkage dump job writes to.</td></tr>
+<tr><td><code>FERROEHR_BACKUP_USER</code></td><td><code>0:0</code> (root in the container)</td><td><code>uid:gid</code> the dump jobs run as. Set it to <code>$(id -u):$(id -g)</code> and the files land owned by you.</td></tr>
+<tr><td><code>FERROEHR_CPUS</code> / <code>FERROEHR_MEM</code></td><td><code>4</code> / <code>4G</code></td><td>Server container resource ceiling.</td></tr>
+<tr><td><code>FERROEHR_DB_CPUS</code> / <code>FERROEHR_DB_MEM</code></td><td><code>4</code> / <code>4G</code></td><td>Database container resource ceiling.</td></tr>
+<tr><td><code>PG_INIT_USER</code> / <code>PG_INIT_PASSWORD</code> / <code>PG_INIT_DB</code></td><td><code>ferroehr</code></td><td>App role, password, and database created by the DB image’s init script.</td></tr>
+<tr><td><code>POSTGRES_PASSWORD</code></td><td><code>postgres</code></td><td>Bootstrap superuser password (init only).</td></tr>
+<tr><td><code>FERROEHR__LOG__FORMAT</code></td><td><code>pretty</code></td><td>Log rendering for <code>docker compose logs</code>. Set <code>json</code> for log collectors.</td></tr>
+<tr><td><code>FERROEHR__LOG__FILTER</code></td><td><code>info</code></td><td>Log level filter.</td></tr>
+<tr><td><code>FERROEHR__DB__MAX_CONNECTIONS</code></td><td><code>10</code></td><td>Server connection-pool ceiling.</td></tr>
+<tr><td><code>FERROEHR__SERVER__MAX_IN_FLIGHT</code></td><td><code>256</code></td><td>In-flight request admission cap (<code>503</code> past it; <code>0</code> disables).</td></tr>
+<tr><td><code>FERROEHR__SIGNING__ENABLED</code></td><td><code>true</code></td><td>Version signing.</td></tr>
+</tbody>
+</table>
+</div>
+<p>A commercial licence token is not a passthrough variable: mount the signed
+token file into the server container read-only and name its path with
+<code>FERROEHR__LICENCE__FILE</code> (the compose file carries a commented example beside
+<code>FERROEHR__SIGNING__ENABLED</code>). Unset, the server runs under the embedded
+non-commercial grant and reports which on <code>GET /ferroehr/rest/status</code>.</p>
+<p>The Keycloak overlay adds <code>KEYCLOAK_PORT</code> (default <code>8081</code>),
+<code>KEYCLOAK_HOSTNAME</code>, <code>KEYCLOAK_ADMIN_USER</code> and <code>KEYCLOAK_ADMIN_PASSWORD</code> (both
+<code>admin</code>); the observability overlay adds <code>GRAFANA_PORT</code> (default <code>3000</code>). The
+<code>FERROEHR__MULTIMEDIA__*</code> set is declared with no defaults on purpose, so an
+unset key reaches the server as absent rather than as an empty string.</p>
+<p>The server container is passed <code>FERROEHR__DB__URL</code> (assembled from the database
+variables), and its configuration file is the inline quickstart config,
+delivered to <code>/etc/ferroehr/ferroehr.toml</code> where the server auto-discovers it.
+Any other setting from the <a href="configuration.html">configuration reference</a> can be
+added under the <code>ferroehr</code> service’s <code>environment:</code> block and takes precedence
+over the file. Every variable uses the same <code>FERROEHR__…</code> grammar as the rest of
+that reference; a single-underscore spelling is rejected at startup, not
+ignored.</p>
+<h2 id="repository-development"><a class="header" href="#repository-development">Repository development</a></h2>
+<p>A bare <code>docker compose up</code> in a checkout runs the same published-images
+quickstart as the downloaded file. Building from the current sources is an
+explicit opt-in: the <code>docker-compose.dev.yml</code> overlay, passed as a
+<a href="https://docs.docker.com/compose/how-tos/multiple-compose-files/">second file</a>,
+switches the stack to the from-source developer posture:</p>
+<pre><code class="language-shell">docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+</code></pre>
+<p>That builds the server, database and viewer images from the current sources
+(the <code>:local</code> tags) instead of pulling published ones, and replaces the inline
+quickstart configuration with <code>docker/ferroehr.dev.toml</code>: three Basic users
+(<code>ferroehr</code>, <code>ferroehr-admin</code>, <code>ferroehr-readonly</code>, all with password
+<code>ferroehr</code>), <strong>RBAC enabled</strong> so the role separation is exercised, and trust for
+the development Keycloak realm. The override also defines a <code>keycloak</code> profile
+that imports the full development realm
+(<code>docker compose --profile keycloak up</code>).</p>
+<p>Downloaders of the standalone quickstart file never see any of this; it is
+purely a convenience for working on FerroEHR itself, and it only ever
+applies when its <code>-f</code> is passed — nothing merges it in silently.</p>
+<blockquote class="blockquote-tag blockquote-tag-tip">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M8 1.5c-2.363 0-4 1.69-4 3.75 0 .984.424 1.625.984 2.304l.214.253c.223.264.47.556.673.848.284.411.537.896.621 1.49a.75.75 0 0 1-1.484.211c-.04-.282-.163-.547-.37-.847a8.456 8.456 0 0 0-.542-.68c-.084-.1-.173-.205-.268-.32C3.201 7.75 2.5 6.766 2.5 5.25 2.5 2.31 4.863 0 8 0s5.5 2.31 5.5 5.25c0 1.516-.701 2.5-1.328 3.259-.095.115-.184.22-.268.319-.207.245-.383.453-.541.681-.208.3-.33.565-.37.847a.751.751 0 0 1-1.485-.212c.084-.593.337-1.078.621-1.489.203-.292.45-.584.673-.848.075-.088.147-.173.213-.253.561-.679.985-1.32.985-2.304 0-2.06-1.637-3.75-4-3.75ZM5.75 12h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1 0-1.5ZM6 15.25a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Z"></path></svg>Tip</p>
+<p>A cold from-source build compiles at two parallel rustc jobs by default,
+and a release-optimization compile can hold several gigabytes per job. If
+the build gets OOM-killed on a memory-constrained host (observed on a
+24 GB machine that was also running another stack), rerun it serially —
+slower, but it completes:</p>
+<pre><code class="language-shell">CARGO_BUILD_JOBS=1 docker compose -f docker-compose.yml -f docker-compose.dev.yml build
+</code></pre>
+</blockquote>
+<h2 id="build-provenance"><a class="header" href="#build-provenance">Build provenance</a></h2>
+<p>Images built by CI (and any <code>docker compose build</code> you drive from a checkout)
+embed a build SHA reported at <code>/management/info</code> and on the
+<code>ferroehr_build_info</code> metric. The build does not read <code>.git</code>; instead the SHA is
+passed as the standard <code>REVISION</code> build argument, the same value that fills the
+<code>org.opencontainers.image.revision</code> image label (CI uses the commit SHA; the
+project’s own scripts export <code>git rev-parse --short=12 HEAD</code>). The argument is
+declared by the files that carry <code>build:</code> blocks (the development override and
+the conformance stack) not by the pull-only quickstart file. When no value is
+supplied the identity falls back to the workspace version with an <code>unknown</code>
+SHA; the build never fails for lack of it.</p>
+<h2 id="observability-overlay"><a class="header" href="#observability-overlay">Observability overlay</a></h2>
+<p>A further standalone file adds a full local telemetry stack: an OTLP
+collector, Prometheus, Tempo, Loki and Grafana with a provisioned
+service-overview dashboard. Like the Keycloak overlay it travels inline, so
+downloading it beside <code>docker-compose.yml</code> is enough:</p>
+<pre><code class="language-shell">docker compose -f docker-compose.yml -f docker-compose.observability.yml up
+# Grafana → http://localhost:3000
+</code></pre>
+<p>The overlay reconfigures the server for that stack: it exports <strong>traces and
+metrics</strong> over OTLP/gRPC (<code>FERROEHR__TELEMETRY__OTLP_ENDPOINT</code> plus
+<code>FERROEHR__TELEMETRY__METRICS_PUSH=true</code>), switches stdout to JSON lines
+(<code>FERROEHR__LOG__FORMAT=json</code>), and enables the management surface on its own
+internal port 9464 with <code>info</code>, <code>metrics</code> and <code>prometheus</code> reachable there. That
+port is only published on the Compose network; Grafana’s 3000 is the sole
+published port.</p>
+<p>Metrics are <strong>pushed, not scraped</strong>, and that is a property of the bundled
+image rather than a preference: <code>grafana/otel-lgtm</code> runs Prometheus with a
+config file carrying no <code>scrape_configs</code> at all, and receives metrics over OTLP
+from its own collector. A scrape job dropped into that image is read by nothing,
+which is what an earlier version of this overlay did: every metric panel was
+empty with no error anywhere. Since one meter provider feeds both readers, the
+push carries every metric family the scrape endpoint would, and
+<code>/management/prometheus</code> stays reachable on the Compose network for anyone who
+wants to compare the two.</p>
+<p>Grafana’s port 3000 is the same one the viewer would use, but the two
+never collide by accident: the viewer only starts when you ask for the
+<code>viewer</code> profile. If you want both at once, move one of them
+(<code>FERROEHR_VIEWER_PORT=3001</code> or <code>GRAFANA_PORT=3001</code>).</p>
+<p>This is the easiest way to see the server’s metrics and traces without wiring
+up a collector by hand. See <a href="../operations.html">Operations</a> for what the server
+exports and how to consume it in production.</p>
+<h2 id="next"><a class="header" href="#next">Next</a></h2>
+<ul>
+<li><a href="configuration.html">Configuration reference</a> — every setting you can pass.</li>
+<li><a href="kubernetes.html">Kubernetes &amp; Helm</a> — the production deployment.</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../installation/codespaces.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../installation/kubernetes.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../installation/codespaces.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../installation/kubernetes.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../theme/mermaid-eefea253.min.js"></script>
+        <script src="../theme/mermaid-init-ccf746f1.js"></script>
+        <script src="../theme/version-picker-dddf05c1.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

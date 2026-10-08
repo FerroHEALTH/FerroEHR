@@ -1,0 +1,513 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>FerroEHR Viewer - FerroEHR Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        <!-- Content-Security-Policy as a <meta> element, because GitHub Pages serves
+             static files and cannot set response headers. A meta CSP is genuinely
+             weaker than the header: `frame-ancestors`, `report-uri` and `sandbox` are
+             IGNORED in meta form (w3c CSP3 §3.3), and it applies only after the parser
+             reaches it. It still stops an injected external script or an exfiltrating
+             `connect-src`, which is the realistic risk for a docs site, so it is worth
+             having while being honest that the site cannot carry the full header set —
+             documented on the security page. `unsafe-inline` is required: mdBook emits
+             inline theme/sidebar scripts and inline styles of its own. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <!-- Self-hosted KaTeX stylesheet (fonts under katex/fonts/) — the site
+             serves no external requests, so mdbook-katex runs with no-css = true
+             and the vendored sheet is linked here. Version 0.16.4, matching the
+             KaTeX the katex-rs renderer inside mdbook-katex bundles (its
+             KATEX-VERSION file); provenance in website/book/KATEX-PROVENANCE.md. -->
+        <link rel="stylesheet" href="../katex/katex.min.css">
+
+        <meta name="description" content="User documentation for FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../css/chrome-d279d366.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/custom-79743c4e.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "rust";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "../searchindex-009cbf08.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-625c28d6.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">FerroEHR Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/src/viewer/index.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="ferroehr-viewer"><a class="header" href="#ferroehr-viewer">FerroEHR Viewer</a></h1>
+<p><code>ferroehr-viewer</code> is a standalone web UI for managing an
+ITS-REST-1.1.0 CDR, this server or any other. It is a <strong>pure REST client</strong>:
+everything it does goes through the CDR’s public API (never the database),
+so what you see in the viewer is exactly what the API serves. The whole
+application is Rust (Leptos SSR + WebAssembly); there is no hand-written
+JavaScript anywhere, including its browser tests.</p>
+<ul>
+<li><a href="#running-it">Running it</a>
+<ul>
+<li><a href="#on-kubernetes">On Kubernetes</a></li>
+</ul>
+</li>
+<li><a href="#signing-in">Signing in</a>
+<ul>
+<li><a href="#the-access-drawer">The access drawer</a></li>
+<li><a href="#when-your-session-ends">When your session ends</a></li>
+</ul>
+</li>
+<li><a href="#the-deployment-profile">The deployment profile</a></li>
+<li><a href="#configuration">Configuration</a></li>
+<li><a href="#the-screens">The screens</a>
+<ul>
+<li><a href="#paging">Paging</a></li>
+</ul>
+</li>
+<li><a href="#audit-log">Audit log</a></li>
+</ul>
+<h2 id="running-it"><a class="header" href="#running-it">Running it</a></h2>
+<p>The quickstart compose ships the viewer as the <code>ferroehr-viewer</code> service on
+port 3000, behind the <code>viewer</code> <a href="../installation/compose.html">profile</a>, so it
+is opt-in and does not start with a plain <code>docker compose up</code>:</p>
+<pre><code class="language-bash">docker compose --profile viewer up
+# → http://localhost:3000  (log in with the quickstart user ferroehr/ferroehr)
+</code></pre>
+<p>Standalone, point it at any CDR:</p>
+<pre><code class="language-bash">docker run -p 3000:3000 \
+  -e FERROEHR_VIEWER__CDR__BASE_URL=https://cdr.example.org \
+  ghcr.io/ferrohealth/ferroehr-viewer
+</code></pre>
+<h3 id="on-kubernetes"><a class="header" href="#on-kubernetes">On Kubernetes</a></h3>
+<p>The Helm chart deploys the viewer as its own Deployment, Service and
+ServiceAccount, with an optional Ingress and a NetworkPolicy that confines its
+egress to the CDR and DNS: the viewer is a REST client of the CDR by mandate,
+so the chart enforces that rather than trusting it. Off by default, and off
+renders nothing:</p>
+<pre><code class="language-yaml"># values.yaml
+viewer:
+  enabled: true
+  ingress:
+    enabled: true
+    hosts:
+      - host: viewer.example.org
+        paths:
+          - path: /
+            pathType: Prefix
+  auth:
+    oidc:
+      enabled: true
+      issuer: https://keycloak.example/realms/ferroehr
+      clientId: ferroehr-viewer
+      publicBaseUrl: https://viewer.example.org
+  # the OIDC client secret is MOUNTED from a Secret you create, never env-borne
+  existingSecret: viewer-oidc
+</code></pre>
+<p>It needs no database credential and never reaches the database. <strong>Before you
+enable OIDC:</strong> a registered client whose redirect URI matches <code>publicBaseUrl</code>,
+and a Secret holding its client secret. <strong>To turn the viewer off</strong>, set
+<code>viewer.enabled: false</code> and upgrade; every viewer object is removed and the
+CDR is untouched.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>To scale the viewer past one replica, set the same <code>session.secret</code> on
+every replica: the session is a sealed cookie any key-holding replica can
+serve. Without a configured secret each replica seals with its own
+ephemeral key, and visitors get signed out whenever a request lands on
+another pod.</p>
+</blockquote>
+<h2 id="signing-in"><a class="header" href="#signing-in">Signing in</a></h2>
+<p>The sign-in page offers exactly the methods that can actually work: the
+viewer’s configured login modes intersected with the authentication
+schemes the CDR advertises (its <code>WWW-Authenticate</code> challenge). A Basic
+form is never shown against a bearer-only CDR, and vice versa. If the CDR
+cannot be reached at all, the page falls back to the viewer’s own
+configuration and renders anyway, and the outage then surfaces on the login
+attempt instead of hiding the page. Sign-in is served fully rendered and works
+with JavaScript disabled.</p>
+<p>The viewer manages no accounts of its own: it authenticates you against the
+CDR (Basic) or your identity provider (OIDC), and there are no user, role, or
+password screens to find; those live in the CDR’s configuration and in your
+IdP.</p>
+<p>The viewer ships a full dark theme (the toggle persists per browser), and every
+screen in this chapter has one, and <a href="dark-mode.html">Dark mode</a> is the gallery.
+The user menu opens the access drawer:</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/dashboard/dashboard-dark.png" alt="Dark mode"><span class="img-wrapper"><img src="img/dashboard/dashboard-dark.png" alt="Dark mode"></span></label></p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/dashboard/user-menu.png" alt="User menu"><span class="img-wrapper"><img src="img/dashboard/user-menu.png" alt="User menu"></span></label></p>
+<h3 id="the-access-drawer"><a class="header" href="#the-access-drawer">The access drawer</a></h3>
+<p>“View scopes” answers <em>what may this session do, and who says so</em>:</p>
+<ul>
+<li>the authenticated principal and how it signs in: a Basic session replays
+its CDR account (and carries no SMART scopes), an OIDC session carries an
+access token whose scopes are listed;</li>
+<li>every scope on the session rendered as its <strong>parsed grant</strong>: the
+compartment it delegates to (<code>patient</code> / <code>user</code> / <code>system</code>), the resource
+family and id pattern it reaches, and the create/read/update/delete/search
+operations it permits, with a <em>broad access</em> marker on a bare <code>*</code>;</li>
+<li>a <strong>previewer</strong>: paste any scope string, or a whole space-separated claim,
+and read the same rendering. A scope shaped like a resource scope but
+malformed explains what the grammar expected instead of quietly reading as
+nothing.</li>
+</ul>
+<p>The reading is not the viewer’s own interpretation: it parses with the same
+module the CDR’s SMART scope gate enforces with, so the two can never drift.
+Scopes <strong>narrow</strong> access and never grant it; the CDR remains the enforcer,
+and a previewed grant is an upper bound.</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/dashboard/scopes-drawer.png" alt="Access scopes"><span class="img-wrapper"><img src="img/dashboard/scopes-drawer.png" alt="Access scopes"></span></label></p>
+<h3 id="when-your-session-ends"><a class="header" href="#when-your-session-ends">When your session ends</a></h3>
+<p>A session ends when you sign out, when its idle window
+(<code>session.idle_minutes</code>) passes with no request from your browser, or when
+the CDR stops accepting the credential behind it (an expired or revoked
+token). The viewer notices on its own. Every call it makes to its backend is
+checked for a signed-out answer, and the shell re-checks the session on its
+own schedule as well, so a session that ends while a screen is open is
+detected within seconds even if you touch nothing. The authenticated screens
+then unmount and you land on the sign-in page with a notice that the session
+ended. Signing in again, with Basic or with OIDC, returns you to the page you
+were on. There is no in-between state where the header reports the CDR as
+offline while the rest of the screen still accepts input.</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/login/login-expired.png" alt="Session ended"><span class="img-wrapper"><img src="img/login/login-expired.png" alt="Session ended"></span></label></p>
+<p>The idle window slides on any authenticated request, and the shell’s own
+status poll is one, so a tab you leave open stays signed in while it is open.
+Closing the browser ends the session.</p>
+<h2 id="the-deployment-profile"><a class="header" href="#the-deployment-profile">The deployment profile</a></h2>
+<p>The header’s status chip names the profile the connected CDR declares
+(<code>deployment_profile</code> in its configuration, reported on <code>GET /rest/status</code>):
+<code>CDR UP · v&lt;server version&gt; · production</code>, or <code>· sandbox</code>. A production deployment says
+so quietly and nothing else changes. A sandbox deployment raises a persistent
+notice under the header on every authenticated screen: this deployment has
+not made the production separations and must not hold real patient data,
+followed by the separations the server reported as open (a shared database
+credential, a shared cluster, no subject pseudonym namespace, no durable audit
+trail, schema preparation on the runtime credential). The quickstart and the
+composed stacks run as <code>sandbox</code>, so the notice is what you see there; a CDR
+older than the profile reports none and the viewer claims nothing. See the
+<a href="../installation/configuration.html#deployment_profile">deployment profile</a> in
+the server configuration.</p>
+<h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
+<p>One TOML file (<code>ferroehr-viewer.toml</code>, searched in the working directory
+and <code>/etc/ferroehr/viewer.toml</code>, or pointed at with
+<code>FERROEHR_VIEWER_CONFIG</code>), with <code>FERROEHR_VIEWER__&lt;SECTION&gt;__&lt;KEY&gt;</code> environment
+overrides. Unknown keys are refused at startup, exactly as on the CDR:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Default</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>cdr.base_url</code></td><td><code>http://localhost:8080</code></td><td>The CDR origin (<code>cdr.base_path</code> is appended).</td></tr>
+<tr><td><code>cdr.base_path</code></td><td><code>/ferroehr/rest/openehr/v1</code></td><td>The CDR’s ITS-REST base path. Mirror of the CDR’s own <code>server.base_path</code>: set the same value here when a deployment <a href="../installation/config-server.html#base_path-shortening-the-rest-base-path">shortens it</a>, or the viewer calls paths the CDR does not serve. The status document, the OpenAPI documents and the SMART discovery document are derived from it by the same rule the CDR uses.</td></tr>
+<tr><td><code>cdr.request_timeout_secs</code></td><td><code>30</code></td><td>Per-request timeout toward the CDR.</td></tr>
+<tr><td><code>cdr.management_base_url</code></td><td>derived from <code>cdr.base_url</code></td><td>The CDR’s management surface, base path included; set it when the CDR serves management on its own internal listener (<code>management.port</code>) or under a renamed base path. Drives the <a href="operations.html">Operations panel</a>.</td></tr>
+<tr><td><code>auth.basic_enabled</code></td><td><code>true</code></td><td>Offer the username/password form (validated against the CDR; held server-side).</td></tr>
+<tr><td><code>auth.oidc.enabled</code></td><td><code>false</code></td><td>Offer OIDC login (authorization code + PKCE).</td></tr>
+<tr><td><code>auth.oidc.issuer</code> / <code>client_id</code> / <code>client_secret</code> (<code>_file</code>) / <code>public_base_url</code> / <code>scopes</code></td><td>—</td><td>The OIDC client registration; <code>public_base_url</code> is the viewer’s externally visible origin for the redirect URI. Enabling OIDC without issuer, client id and public base URL is a startup error.</td></tr>
+<tr><td><code>auth.oidc.resolve</code></td><td>—</td><td>A <code>host=ip:port</code> override for the issuer host, for split-horizon DNS: the viewer reaches an issuer whose canonical name only resolves inside the container network, while browsers and tokens keep the canonical URL.</td></tr>
+<tr><td><code>login.notice</code></td><td>empty</td><td>Informational text on the sign-in card, line breaks preserved. A demo or evaluation deployment states its public credentials and usage expectations here.</td></tr>
+<tr><td><code>login.links</code></td><td>empty</td><td>Links under the sign-in card, each <code>{ label, href }</code> — an API reference, a documentation page.</td></tr>
+<tr><td><code>session.idle_minutes</code></td><td><code>60</code></td><td>Session idle expiry (sliding; carried inside the sealed cookie).</td></tr>
+<tr><td><code>session.cookie_secure</code></td><td><code>true</code></td><td>On by default; set <code>false</code> only for plain-HTTP local development.</td></tr>
+<tr><td><code>session.secret</code></td><td>empty</td><td>The session-cookie sealing key: base64 of at least 64 bytes (<code>openssl rand -base64 64</code>). Every replica of a scaled deployment must hold the same value. Empty = an ephemeral per-instance key, fine for exactly one replica.</td></tr>
+<tr><td><code>session.secret_file</code></td><td>—</td><td>Path to a file holding the sealing key; wins over <code>session.secret</code>.</td></tr>
+</tbody>
+</table>
+</div>
+<p>The viewer is <strong>stateless</strong>: it has no database and keeps no local files of
+its own. Everything it shows, including how stored queries are grouped,
+which is derived from the namespace in each query’s qualified name, lives in
+the CDR and is read over ITS-REST, so nothing here needs backing up and
+every replica shows the same repository. Sessions are a <strong>sealed cookie</strong>
+(AES-256-GCM, keyed by <code>session.secret</code>), so any replica holding the key can
+serve any signed-in visitor.</p>
+<p>Login and sessions live in the viewer’s backend; the browser stores only
+the encrypted session cookie — CDR credentials and bearer tokens never reach
+it in readable form.</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/login/login.png" alt="Login"><span class="img-wrapper"><img src="img/login/login.png" alt="Login"></span></label></p>
+<h2 id="the-screens"><a class="header" href="#the-screens">The screens</a></h2>
+<ul>
+<li><strong>Dashboard:</strong> record counts, per-namespace stored-query match tiles, and a
+commit-activity trend. See <a href="queries.html">Dashboard &amp; queries</a>.</li>
+<li><strong>Templates:</strong> upload and inspect operational templates. See
+<a href="browsing.html">Templates &amp; EHR browsing</a>.</li>
+<li><strong>Queries:</strong> the point-and-click Query Builder, the raw AQL editor, and
+stored-query management. See <a href="queries.html">Dashboard &amp; queries</a>.</li>
+<li><strong>EHRs:</strong> browse EHRs, folders, compositions, version history, and the
+item tags on any of them. See <a href="browsing.html">Templates &amp; EHR browsing</a>.</li>
+<li><strong>Demographics:</strong> browse and edit the five demographic party kinds, their
+relationships, version history, and tags. See
+<a href="demographics.html">Demographics</a>.</li>
+<li><strong>FHIR:</strong> the connector’s mapping-store editor, a read-path viewer, and a
+validate-only dry-run panel; appears only when the CDR’s FHIR API is
+enabled. See <a href="fhir.html">FHIR connector admin</a>.</li>
+<li><strong>Terminology:</strong> browse the terminologies the CDR serves, define a code,
+expand a value set, and test membership or subsumption. See
+<a href="terminology.html">Terminology</a>.</li>
+<li><strong>Audit log:</strong> browse the CDR’s ATNA security audit trail (see below).</li>
+<li><strong>System:</strong> CDR status, the openEHR <strong>conformance manifest</strong> (what the
+server advertises about itself through the System API: product, vendor,
+claimed conformance profile, and the API groups it actually mounts), SMART
+discovery, repository usage, the server’s own OpenAPI documents. Pick the
+complete surface or one API family, and the choice stays in the URL, so the
+redacted runtime configuration, and a shortcut into the audit browser.
+<label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/system/system.png" alt="System"><span class="img-wrapper"><img src="img/system/system.png" alt="System"></span></label></li>
+<li><strong>Operations:</strong> dependency health, build and spec provenance, the metric
+registry, and runtime log control. Appears only when the CDR serves its
+management surface. See <a href="operations.html">Operations panel</a>.</li>
+<li><strong>Subscriptions:</strong> the event subscriptions that decide which committed
+versions the CDR publishes to a message broker. Appears only when the CDR
+serves its subscription API. See
+<a href="subscriptions.html">Event subscriptions</a>.</li>
+</ul>
+<p>Every one of them is themed twice; <a href="dark-mode.html">Dark mode</a> shows the dark
+half of the viewer screen by screen.</p>
+<h3 id="paging"><a class="header" href="#paging">Paging</a></h3>
+<p>Every listing is paged, and the page lives in the <strong>URL</strong>: a page is
+shareable and bookmarkable, a reload lands on the same rows, and the browser’s
+back and forward buttons walk the pages. The tables the viewer holds in full
+(<strong>Templates</strong>, <strong>Queries</strong>) share one footer under the table: which rows are on
+screen out of how many (<code>26–50 of 137 templates</code>), previous/next, and a
+rows-per-page choice of 25/50/100 (<code>?page=</code> and <code>?size=</code>). The AQL-backed
+listings (EHRs, an EHR’s compositions) page through <code>?offset=</code> links, and the
+audit browser through <code>?page=</code> beside its filters. Every one of these controls
+is a plain link, so paging works before the page’s WebAssembly loads, and a
+page link carries the screen’s other parameters (the tab you are on, the
+filters you set) across with it.</p>
+<h2 id="audit-log"><a class="header" href="#audit-log">Audit log</a></h2>
+<p>The <strong>Audit log</strong> screen browses the CDR’s security audit trail (who
+accessed what, with what outcome) through the standard IHE ITI-81
+retrieval (<code>GET /fhir/r4/AuditEvent</code>; see the
+<a href="../audit.html">Audit trail chapter</a>). Filter by event-time window, patient,
+principal, outcome, or action; every filter lives in the URL, so a filtered
+view is shareable and refresh-safe. Each row opens the full stored FHIR R4
+<code>AuditEvent</code> record.</p>
+<p>The audit trail is an operator surface: under role-based access control the
+screen requires the CDR’s admin role, and when the CDR’s local audit store
+is disabled the screen says so instead of erroring.</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/audit/audit.png" alt="Audit log"><span class="img-wrapper"><img src="img/audit/audit.png" alt="Audit log"></span></label></p>
+<p>Each row’s <strong>view</strong> disclosure opens the full stored <code>AuditEvent</code> record:
+exactly what the ITI-81 API serves:</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/audit/audit-record.png" alt="Audit log — the raw record"><span class="img-wrapper"><img src="img/audit/audit-record.png" alt="Audit log — the raw record"></span></label></p>
+<p>A filter that matches nothing renders a distinct empty state, so “no
+records” is always visibly different from “records you haven’t found”:</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/audit/audit-empty.png" alt="Audit log — no matches"><span class="img-wrapper"><img src="img/audit/audit-empty.png" alt="Audit log — no matches"></span></label></p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../signing/pgp.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../viewer/queries.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../signing/pgp.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../viewer/queries.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../theme/mermaid-eefea253.min.js"></script>
+        <script src="../theme/mermaid-init-ccf746f1.js"></script>
+        <script src="../theme/version-picker-dddf05c1.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

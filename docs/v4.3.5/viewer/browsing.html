@@ -1,0 +1,670 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Templates &amp; EHR browsing - FerroEHR Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        <!-- Content-Security-Policy as a <meta> element, because GitHub Pages serves
+             static files and cannot set response headers. A meta CSP is genuinely
+             weaker than the header: `frame-ancestors`, `report-uri` and `sandbox` are
+             IGNORED in meta form (w3c CSP3 §3.3), and it applies only after the parser
+             reaches it. It still stops an injected external script or an exfiltrating
+             `connect-src`, which is the realistic risk for a docs site, so it is worth
+             having while being honest that the site cannot carry the full header set —
+             documented on the security page. `unsafe-inline` is required: mdBook emits
+             inline theme/sidebar scripts and inline styles of its own. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <!-- Self-hosted KaTeX stylesheet (fonts under katex/fonts/) — the site
+             serves no external requests, so mdbook-katex runs with no-css = true
+             and the vendored sheet is linked here. Version 0.16.4, matching the
+             KaTeX the katex-rs renderer inside mdbook-katex bundles (its
+             KATEX-VERSION file); provenance in website/book/KATEX-PROVENANCE.md. -->
+        <link rel="stylesheet" href="../katex/katex.min.css">
+
+        <meta name="description" content="User documentation for FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../css/chrome-d279d366.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/custom-79743c4e.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "rust";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "../searchindex-009cbf08.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-625c28d6.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">FerroEHR Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/src/viewer/browsing.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="templates--ehr-browsing"><a class="header" href="#templates--ehr-browsing">Templates &amp; EHR browsing</a></h1>
+<p>These are the viewer’s read-and-write screens over clinical content: the
+templates the CDR validates against, and the EHRs, folders, compositions and
+contributions committed under them. Every screen here is a view of the CDR’s
+public API, so anything you change is a normal openEHR write that every other
+client sees.</p>
+<ul>
+<li><a href="#template-manager">Template Manager</a>
+<ul>
+<li><a href="#deleting-a-template">Deleting a template</a></li>
+<li><a href="#adl-2-templates">ADL 2 templates</a>
+<ul>
+<li><a href="#deleting-an-adl-2-template">Deleting an ADL 2 template</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#ehr-browser">EHR browser</a>
+<ul>
+<li><a href="#filtering-an-ehrs-compositions">Filtering an EHR’s compositions</a></li>
+<li><a href="#deleting-an-ehr">Deleting an EHR</a></li>
+<li><a href="#creating-ehrs-and-committing-compositions">Creating EHRs and committing compositions</a></li>
+<li><a href="#committing-several-changes-at-once">Committing several changes at once</a></li>
+<li><a href="#directory-editing">Directory editing</a></li>
+</ul>
+</li>
+<li><a href="#composition-viewer">Composition viewer</a>
+<ul>
+<li><a href="#tags-on-a-composition">Tags on a composition</a></li>
+<li><a href="#deleting-a-composition">Deleting a composition</a></li>
+<li><a href="#ehr-status">EHR status</a></li>
+<li><a href="#tags-on-the-ehr-status">Tags on the EHR status</a></li>
+<li><a href="#ehr-status-history">EHR status history</a></li>
+<li><a href="#tags-in-this-ehr">Tags in this EHR</a></li>
+</ul>
+</li>
+</ul>
+<h2 id="template-manager"><a class="header" href="#template-manager">Template Manager</a></h2>
+<p>Upload operational templates (the CDR’s validation diagnostics surface
+verbatim on rejection) and browse what is installed. The screen serves both
+archetype-model families, switched by the <strong>ADL 1.4</strong> / <strong>ADL 2</strong> pills under
+the title. The choice is in the URL (<code>/templates</code> is the ADL 1.4 listing and
+<code>/templates?family=adl2</code> the ADL 2 one) so either is a shareable link, and
+the filter and the paging footer work the same in both.</p>
+<p>Both families upload the same way: the button at the top right of the screen
+(<strong>Upload OPT</strong> or <strong>Upload ADL2</strong>, depending on the family you are looking
+at) opens a dialog where you either choose a file or paste the source. Both
+inputs feed one editor, so a chosen file can be read over, corrected, and
+sent from there. <strong>Upload template</strong> stays disabled until there is something
+to send, a refusal keeps the dialog open with the server’s diagnostic beside
+the source it rejected, and a successful upload closes the dialog and
+refreshes the list. Each time you open the dialog it starts empty, so a
+refused source is yours to correct while the dialog is up, and closing it
+discards the attempt.</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/templates/templates.png" alt="Templates"><span class="img-wrapper"><img src="img/templates/templates.png" alt="Templates"></span></label></p>
+<p>The template detail screen shows the <strong>path catalog</strong> (the template’s tree
+with each node’s archetype path, RM type, and constrained value sets) plus
+the raw OPT XML and a CDR-generated example composition in any supported
+format.</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/templates/template-detail.png" alt="Template detail"><span class="img-wrapper"><img src="img/templates/template-detail.png" alt="Template detail"></span></label></p>
+<p>The list filters as you type, matching a template’s id, its concept, or its
+root archetype id, and is paged by the shared footer under the table; rows on
+screen out of how many, previous/next, and 25/50/100 rows per page, all in the
+URL (see <a href="index.html#paging">Paging</a>). The filter narrows the rows; the footer
+counts what the filter left.</p>
+<p>The list also shows each template’s root <strong>archetype id</strong>, and the detail
+screen opens with an identity card (concept, version, default language,
+languages, and the template <strong>UID</strong>) read from the operational template
+itself.</p>
+<h3 id="deleting-a-template"><a class="header" href="#deleting-a-template">Deleting a template</a></h3>
+<p>When the CDR’s admin API is enabled, each list row and the detail screen
+offer <strong>Delete</strong>. It opens a confirmation dialog naming that template, and
+nothing is sent until you confirm there. The CDR refuses a template that a
+committed composition still uses; the refusal is shown with the referencing
+count, so delete or migrate those compositions first, and it likewise refuses
+a session without the ADMIN role, naming what is missing. If the admin API is
+off, no delete button is shown at all: the viewer asks the server which API
+groups it serves (the openEHR System API conformance manifest) before offering
+any of them.</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/templates/templates-admin-delete.png" alt="Template delete"><span class="img-wrapper"><img src="img/templates/templates-admin-delete.png" alt="Template delete"></span></label></p>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p>This is a physical delete of the template registration, not a versioned
+one. The server-side switch is <code>admin.enabled</code>
+(<code>FERROEHR__ADMIN__ENABLED</code>), off by default; see
+<a href="../installation/config-auth.html#admin"><code>[admin]</code></a>.</p>
+</blockquote>
+<h3 id="adl-2-templates"><a class="header" href="#adl-2-templates">ADL 2 templates</a></h3>
+<p>The <strong>ADL 2</strong> family lists the operational templates the CDR compiled from
+ADL 2 sources. An ADL 2 artefact is identified by its archetype HRID
+(<code>openEHR-EHR-COMPOSITION.vitals.v1.0.0</code>) whose trailing <code>.v1.0.0</code> is the
+artefact’s own release version, so several versions of one template appear as
+separate rows and the list shows all of them.</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/templates/templates-adl2.png" alt="ADL 2 templates"><span class="img-wrapper"><img src="img/templates/templates-adl2.png" alt="ADL 2 templates"></span></label></p>
+<p>Uploading works exactly as it does for ADL 1.4, through the same dialog; what
+differs is the artefact. The CDR ingests the ADL 2 <strong>source</strong> as plain text
+rather than an XML document, so the dialog accepts <code>.adls</code> files and the
+source you paste is sent verbatim. If the openEHR-ADL engine refuses it, its
+diagnostics (the AOM 2 rule codes with their line and column) appear in full
+under the editor as well as in the failure notification, so the source can be
+corrected in place and re-sent.</p>
+<p>Opening a row shows the artefact’s three server-side representations plus a
+derived view:</p>
+<ul>
+<li><strong>Source:</strong> the stored ADL 2 text, exactly as the CDR holds it.</li>
+<li><strong>AOM2 JSON:</strong> the same operational template as canonical JSON
+(<code>OPERATIONAL_TEMPLATE</code>), which is where the constraint structure, node ids
+and occurrences are readable.</li>
+<li><strong>Example:</strong> a composition the CDR generates from the template, in
+canonical JSON, canonical XML, FLAT or STRUCTURED.</li>
+<li><strong>Path catalog:</strong> the same expandable tree and node inspector the ADL 1.4
+detail shows, built by the viewer from the AOM2 JSON.</li>
+</ul>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/templates/template-adl2-detail.png" alt="ADL 2 template detail"><span class="img-wrapper"><img src="img/templates/template-adl2-detail.png" alt="ADL 2 template detail"></span></label></p>
+<p>The <strong>Version</strong> bar above the panes pins the Source and AOM2 JSON reads to a
+particular release version. The chips are the versions the CDR actually holds
+for that HRID family, and <em>As stored</em> returns to the artefact the link named.
+The box beside them also accepts a prefix (<code>1</code> or <code>1.0</code>) which the CDR
+resolves to the highest matching version, so <code>1</code> on a family holding 1.0.0 and
+1.1.0 shows 1.1.0. Whichever you pick lands in the URL as <code>?version=</code>, so a
+pinned view is shareable. The example is generated from the artefact the link
+named and does not follow the version bar: the CDR publishes no versioned
+example resource.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>The ADL 2 path catalog is built by the viewer itself: the CDR serves no
+Web Template representation of an ADL 2 artefact, so the viewer reads the
+AOM2 JSON and derives the same tree the ADL 1.4 detail shows. The CDR wire
+stays exactly the released REST API.</p>
+</blockquote>
+<h4 id="deleting-an-adl-2-template"><a class="header" href="#deleting-an-adl-2-template">Deleting an ADL 2 template</a></h4>
+<p>ADL 2 rows carry the same <strong>Delete</strong> affordance the ADL 1.4 rows do, and it
+behaves the same way: a confirmation dialog naming the artefact, nothing sent
+until you confirm, the refusal shown with its referencing count when a
+committed composition still uses the template, and no button at all when the
+CDR’s admin API is off.</p>
+<p>What differs is the resource underneath. An ADL 1.4 delete removes the
+template registration from the Admin API’s template store; an ADL 2 delete
+removes the whole <strong>artefact</strong> (archetype, template or OPT) from the
+definition store, which keeps no version history of it, so the deleted release
+version is simply gone. Other versions of the same HRID family are untouched:
+each is its own artefact, deleted from its own row. The route is admin-gated
+like the rest, so a session without the ADMIN role is refused with a message
+naming what is missing.</p>
+<h2 id="ehr-browser"><a class="header" href="#ehr-browser">EHR browser</a></h2>
+<p>Find an EHR by id (or browse the most recent), then work through its tabs:
+EHR status, the status version history, the folder directory, the composition
+list, contribution lookup, and the EHR’s item tags. Find-by-id is a plain
+form: it works in a browser with JavaScript disabled, and
+<code>/ehrs?find=&lt;ehr_id&gt;</code> is a shareable shortcut straight to an EHR.</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/ehrs/ehrs.png" alt="EHRs"><span class="img-wrapper"><img src="img/ehrs/ehrs.png" alt="EHRs"></span></label></p>
+<p>The EHR detail screen opens with a <strong>summary header</strong>. Its top line answers
+“whose record is this, and what may be done with it”: the <strong>subject</strong>, the
+external id and namespace the EHR status references, or an explicit “self — no
+external subject reference” when the EHR is bound to no outside identity, next
+to the <strong>queryable</strong> and <strong>modifiable</strong> badges. Below it are the EHR resource’s
+own facts: its id, the system that created it, when it was created, and the
+reference to its current EHR status. A mistyped or unknown id is reported
+there, once, instead of once per tab.</p>
+<p>The identity line and the Status tab read the <em>same</em> EHR status document, so
+they can never disagree: saving a status change updates both at once.</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/ehrs/compositions/list.png" alt="EHR detail"><span class="img-wrapper"><img src="img/ehrs/compositions/list.png" alt="EHR detail"></span></label></p>
+<h3 id="filtering-an-ehrs-compositions"><a class="header" href="#filtering-an-ehrs-compositions">Filtering an EHR’s compositions</a></h3>
+<p>The compositions tab lists the EHR’s compositions newest first, with their
+template, context start time and composer, and narrows on four filters:</p>
+<ul>
+<li><strong>Template:</strong> matches anywhere in the composition’s template id.</li>
+<li><strong>From</strong> / <strong>To:</strong> bound the composition’s context start time. Each is a
+date and covers its whole UTC day, so a From and To of the same day keeps
+everything recorded during it.</li>
+<li><strong>Composer:</strong> matches anywhere in the composer’s name.</li>
+</ul>
+<p>Every filter lives in the URL (<code>?template=</code>, <code>?from=</code>, <code>?to=</code>, <code>?composer=</code>),
+so a filtered view is a link you can share or bookmark, a reload keeps it, and
+the browser’s back button walks the filters you tried. Applying a filter starts
+again at the first page. Leave them all empty for the plain list.</p>
+<p>The filtering happens in the CDR, as one AQL query: what you type is bound as a
+query parameter, never pasted into the query text, so an id containing quotes,
+wildcards or anything else is matched literally. An empty result says whether
+the EHR holds no compositions at all or simply none that match.</p>
+<p>Clicking a composition opens it in the viewer’s <strong>Rendered</strong> clinical reading
+(below) rather than the raw document; the other views are one click away.</p>
+<h3 id="deleting-an-ehr"><a class="header" href="#deleting-an-ehr">Deleting an EHR</a></h3>
+<p>With the CDR’s admin API enabled, the EHR detail screen offers <strong>Delete EHR</strong>
+above the tabs. The confirmation dialog spells out the EHR id and what goes
+with it: this is the CDR’s <em>physical</em> delete, so every composition,
+contribution and audit record under the EHR is removed, and it cannot be
+undone. On success the viewer returns to the EHR list; a session without the
+ADMIN role is refused with a message naming what is missing. Without the
+admin API the button is not rendered at all.</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/ehrs/ehr-admin-delete.png" alt="EHR delete"><span class="img-wrapper"><img src="img/ehrs/ehr-admin-delete.png" alt="EHR delete"></span></label></p>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p>Use this for test data. It is not the openEHR logical delete: nothing
+stays readable afterwards.</p>
+</blockquote>
+<h3 id="creating-ehrs-and-committing-compositions"><a class="header" href="#creating-ehrs-and-committing-compositions">Creating EHRs and committing compositions</a></h3>
+<p>The EHRs screen can <strong>create an EHR</strong> (empty, or bound to an external
+subject: id + namespace) and find an existing one <strong>by subject id</strong> as
+well as by EHR id. The create card also takes an optional <strong>EHR id</strong>: leave
+it blank and the CDR mints one, or supply a UUID to create that exact EHR.
+A value that is not a UUID is refused before anything is sent (openEHR
+strongly recommends a UUID for a client-supplied EHR id), and an id that is
+already in use comes back as the CDR’s own conflict; nothing is silently
+overwritten.</p>
+<p>The EHR detail screen’s compositions tab includes a
+<strong>Commit composition</strong> form: paste a canonical JSON, canonical XML, or
+FLAT document (FLAT requires the template id, sent as the
+<code>openehr-template-id</code> header) and the CDR’s validation diagnostics are
+shown verbatim on rejection.</p>
+<p>The contributions tab opens with a <strong>contribution activity</strong> timeline:
+writes to this EHR per calendar day, bucketed from a wider window of the same
+contribution data the paged list below it shows.</p>
+<h3 id="committing-several-changes-at-once"><a class="header" href="#committing-several-changes-at-once">Committing several changes at once</a></h3>
+<p>Each form above commits one thing. When changes belong <em>together</em> (a new
+composition and the EHR status that goes with it) the <strong>Commit</strong> tab commits
+them as one openEHR <strong>contribution</strong>: an atomic change set. Every staged
+change is committed together, or none of them is. Nothing is written halfway.</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/ehrs/contributions/commit.png" alt="Commit staging area"><span class="img-wrapper"><img src="img/ehrs/contributions/commit.png" alt="Commit staging area"></span></label></p>
+<p>Build the change set one entry at a time. Each entry is one of three things:</p>
+<ul>
+<li><strong>Composition — create</strong>: pick the template and paste the canonical JSON
+document. This commits a brand-new composition.</li>
+<li><strong>Composition — amend</strong>: pick one of the EHR’s existing compositions. Its
+current version is loaded into the editor for you, and the change carries
+that version as the one it supersedes, so a concurrent write is refused
+rather than overwritten.</li>
+<li><strong>EHR status — modify</strong>: the EHR’s current status is loaded the same way;
+edit it and it commits as a new status version.</li>
+</ul>
+<p>The <strong>change type</strong> offered for each entry is exactly what the openEHR wire
+accepts for it: a creation for a new composition, an amendment or a
+modification for anything that supersedes an existing version. The
+<strong>contribution audit</strong> below the list carries the change set’s description
+and, optionally, a committer name; leave it blank and your viewer identity
+is used. The commit button always states what it is about to do
+(“Commit 2 changes as one contribution”).</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>Staged changes live in the open browser tab only. The viewer stores nothing
+of its own, so leaving the screen discards them, and nothing reaches the
+CDR until you press commit.</p>
+</blockquote>
+<p>On success the tab names the new contribution and every version it created,
+and links straight to the Contributions tab, where the contribution opens with
+all of its versions. On refusal nothing at all was committed: the staging list
+is left exactly as it was, and the CDR’s own diagnostic is shown verbatim so
+you can correct the offending document and commit again.</p>
+<h3 id="directory-editing"><a class="header" href="#directory-editing">Directory editing</a></h3>
+<p>The Directory tab creates the EHR’s FOLDER directory when none exists: it
+commits the empty root folder, which the tree editor then fills. There is no
+viewer-side library of folder shapes; the viewer stores nothing of its own,
+and every folder you build is an ordinary directory version the CDR owns and
+every other openEHR client can see.</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/ehrs/directory/create.png" alt="Directory create"><span class="img-wrapper"><img src="img/ehrs/directory/create.png" alt="Directory create"></span></label></p>
+<p>Once the directory exists, the tab is a full <strong>structured tree editor</strong>:
+add, rename, and remove sub-folders at any node, and attach or remove
+<code>OBJECT_REF</code> items: a picker lists the EHR’s compositions, and a manual
+form covers arbitrary references. Edits accumulate locally until the sticky
+save bar commits them as one new version (<code>If-Match</code> concurrency: a
+concurrent change never silently overwrites; a conflict banner keeps your
+unsaved edits and offers an explicit reload-or-overwrite choice). An
+advanced mode still edits the canonical JSON directly.</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/ehrs/directory/directory.png" alt="Directory"><span class="img-wrapper"><img src="img/ehrs/directory/directory.png" alt="Directory"></span></label></p>
+<p>The toolbar adds the read-side tools: <strong>version history</strong> (every directory
+version, read-only preview, one-click restore of an older tree), an <strong>At time</strong>
+lookup that resolves the directory as it stood at a chosen instant, a
+<strong>path query</strong> for one sub-folder, and the two-step <strong>directory delete</strong> (a
+logical delete: the history stays readable, and a new directory can be created
+afterwards).</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/ehrs/directory/history.png" alt="Directory history"><span class="img-wrapper"><img src="img/ehrs/directory/history.png" alt="Directory history"></span></label></p>
+<h2 id="composition-viewer"><a class="header" href="#composition-viewer">Composition viewer</a></h2>
+<p>Any composition renders in canonical JSON, canonical XML, FLAT, or
+STRUCTURED. Switch freely; the CDR converts. The version dropdown walks
+the revision history, and each version’s audit (committer, time, change
+type) is shown alongside.</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/ehrs/compositions/viewer.png" alt="Composition viewer"><span class="img-wrapper"><img src="img/ehrs/compositions/viewer.png" alt="Composition viewer"></span></label></p>
+<p>Every document pane in the viewer (the composition viewer, the EHR status
+tab, the directory raw mode, a contribution, a template’s OPT and example
+tabs) is the same viewer:</p>
+<ul>
+<li><strong>Highlighted</strong> (the default): the document exactly as the CDR returned it,
+with JSON and XML syntax highlighting. The highlighter is pure Rust, like
+everything else in the viewer; very large documents are shown unstyled
+rather than tokenized.</li>
+<li><strong>Raw</strong>: the same text with no highlighting.</li>
+<li><strong>Rendered</strong>: a template-free clinical reading of a canonical openEHR JSON
+document: RM section headings with their type and archetype node id, and
+one label/value row per <code>ELEMENT</code> (quantities with their units, coded text
+with its terminology code, a null-flavoured leaf saying so). It needs no
+operational template, so a composition whose template has since been
+removed still reads normally. The tab appears only for canonical JSON;
+bookkeeping (language, territory, category, uid) is folded away, and the raw
+views remain the complete record.</li>
+<li><strong>Copy</strong> puts the raw document text on the clipboard.</li>
+</ul>
+<p>Which view a composition opens in is part of its link: <code>?view=rendered</code>,
+<code>?view=raw</code> or <code>?view=highlighted</code> on the viewer’s URL. That is how the
+compositions tab’s rows land straight on the clinical reading, and it makes
+“open this composition the way I am looking at it” a shareable link.</p>
+<p><strong>Edit as new version</strong> opens the currently displayed canonical JSON in
+an editor and commits it as the next version (<code>If-Match</code> on the latest
+version, and a concurrent change is reported instead of overwritten).</p>
+<p>A version <strong>timeline strip</strong> walks the revision history at a glance, and
+the <strong>At time</strong> picker resolves whichever version was current at a chosen
+moment (<code>version_at_time</code>).</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/ehrs/compositions/editor.png" alt="Composition editor"><span class="img-wrapper"><img src="img/ehrs/compositions/editor.png" alt="Composition editor"></span></label></p>
+<p>A <strong>Versioned object</strong> card below the audit reads the versioned composition
+itself and the selected version directly: the versioned-object id, the owning
+EHR, when the object was first created, and (for whichever version the
+selector shows) its lifecycle state, its preceding version, the contribution
+it was committed under, whether it carries a signature, and whether it still
+carries content.</p>
+<h3 id="tags-on-a-composition"><a class="header" href="#tags-on-a-composition">Tags on a composition</a></h3>
+<p>Below the versioned-object card, <strong>Tags</strong> lists the composition’s item tags
+(free key/value markers any openEHR client can attach) and sets or deletes
+one. Three things about them are worth knowing before you use them:</p>
+<ul>
+<li><strong>The panel edits the collection it names.</strong> The line under the heading
+says which one: with the version selector on <em>Latest</em> that is the
+versioned composition’s own collection; pin a version and the panel edits
+<em>that version’s</em> tags instead. openEHR keeps the two apart (a tag belongs
+to exactly one target) so a tag set on the container is not visible on any
+version, and vice versa.</li>
+<li><strong>Saving re-sends the whole collection</strong>, because that is what the openEHR
+tag update does. The viewer reads the current tags and merges yours in, so
+nothing is lost by accident, but the tag operations carry no version check
+at all, so a tag another client added between your load and your save can
+be. Reload before editing a busy composition.</li>
+<li><strong>A tag is identified by its key and target path together</strong>, so the same key
+on two different paths is two tags; deleting addresses the key alone and
+removes both.</li>
+</ul>
+<p>A tag write is not a versioned write: it commits no contribution, mints no
+new version, and never appears in the revision history.</p>
+<h3 id="deleting-a-composition"><a class="header" href="#deleting-a-composition">Deleting a composition</a></h3>
+<p><strong>Delete composition</strong> on the viewer performs the openEHR <em>logical</em> delete of
+the composition’s latest version, with a confirmation dialog first. The CDR
+commits a deleted version on top of the current one: the composition stops
+resolving as current and leaves the EHR’s composition list, while every
+earlier version and the audit trail stay readable. It is a normal versioned
+write, so it needs no admin API, but it does need the version to still be
+the latest one: if it moved on since the screen loaded, the CDR refuses the
+delete and the message says to reload the history and retry.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>This is not the same operation as <strong>Delete EHR</strong> above, which is the CDR’s
+physical admin delete and leaves nothing readable.</p>
+</blockquote>
+<p>The EHR detail’s contributions tab lists the EHR’s contributions (id,
+commit time, committer, change type) with the by-uid lookup kept
+underneath.</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/ehrs/contributions/contributions.png" alt="Contributions"><span class="img-wrapper"><img src="img/ehrs/contributions/contributions.png" alt="Contributions"></span></label></p>
+<p>The commit form accepts canonical JSON, canonical XML, or FLAT:</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/ehrs/compositions/commit.png" alt="Commit composition"><span class="img-wrapper"><img src="img/ehrs/compositions/commit.png" alt="Commit composition"></span></label></p>
+<h3 id="ehr-status"><a class="header" href="#ehr-status">EHR status</a></h3>
+<p>The <strong>Status</strong> tab renders the EHR’s current <code>EHR_STATUS</code>: the queryable and
+modifiable flags as badges, the subject, the version the document is, and the
+full document itself. A non-queryable EHR is called out: AQL over it returns
+nothing.</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/ehrs/status/status.png" alt="EHR status"><span class="img-wrapper"><img src="img/ehrs/status/status.png" alt="EHR status"></span></label></p>
+<p>Below the document, <strong>Edit status</strong> changes the two flags and <code>other_details</code>:</p>
+<ul>
+<li>tick or untick <strong>is_queryable</strong> to include the EHR in population queries
+(AQL), and <strong>is_modifiable</strong> to allow new content to be committed to it;</li>
+<li><strong>other_details</strong> takes a canonical-JSON <code>ITEM_STRUCTURE</code> (for example an
+<code>ITEM_TREE</code>); leaving it blank removes the attribute. A value that is not a
+JSON object is refused before anything is sent.</li>
+</ul>
+<p>Saving commits a <strong>new EHR_STATUS version</strong> on top of the one the screen
+loaded, and every other attribute (the subject included) is sent back
+exactly as the CDR served it, so nothing the form does not show can be lost.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>The save is conditional on the loaded version. If another client committed a
+new status in the meantime, the CDR refuses the write and the viewer says
+so (“EHR status changed on the server”) instead of overwriting the change:
+reload the tab and reapply your edit. A rejected document keeps the CDR’s own
+diagnostic on screen, beside the form.</p>
+</blockquote>
+<h3 id="tags-on-the-ehr-status"><a class="header" href="#tags-on-the-ehr-status">Tags on the EHR status</a></h3>
+<p>The Status tab ends with its own <strong>Tags</strong> panel, the same editor as the
+composition one. It always edits the <em>versioned</em> EHR status’s collection, so a
+tag stays put when you edit the status into a new version; the status tab has
+no version selector, and a tag pinned to a superseded version would quietly
+disappear. Saving re-sends the whole collection and carries no version check,
+exactly as on a composition.</p>
+<h3 id="ehr-status-history"><a class="header" href="#ehr-status-history">EHR status history</a></h3>
+<p>The <strong>Status history</strong> tab is the versioned view of the same object: the
+<code>VERSIONED_EHR_STATUS</code> container and the selected version’s envelope facts
+(lifecycle state, preceding version, contribution, whether it is signed), the
+revision history newest-first, and a date-and-time lookup that resolves the
+version extant at that instant. Opening any row, or a resolved instant,
+shows that version’s <code>EHR_STATUS</code> document exactly as it stood at that commit.</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/ehrs/status/history.png" alt="EHR status history"><span class="img-wrapper"><img src="img/ehrs/status/history.png" alt="EHR status history"></span></label></p>
+<h3 id="tags-in-this-ehr"><a class="header" href="#tags-in-this-ehr">Tags in this EHR</a></h3>
+<p>The EHR detail’s <strong>Tags</strong> tab is the whole EHR’s tag list in one place: every
+tag on every object under it (compositions, the EHR status, the directory)
+grouped by the object it sits on. Filter by key, value or target path; the
+filter lives in the address bar, so a filtered view is shareable and
+refresh-safe, and the shared footer pages the groups.</p>
+<p>A tag names its target by identifier but not by kind, so each group’s <strong>Open</strong>
+asks the CDR which object holds that id before going there: a composition
+opens in the viewer, the EHR status and the directory open on their own tabs.
+If nothing in the EHR holds it any more (the object was deleted) the tab
+says so instead of guessing.</p>
+<p>The container form and one version of the same object appear as two groups,
+because openEHR stores them as two separate collections.</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="img/ehrs/tags/tags.png" alt="EHR tags"><span class="img-wrapper"><img src="img/ehrs/tags/tags.png" alt="EHR tags"></span></label></p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../viewer/queries.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../viewer/demographics.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../viewer/queries.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../viewer/demographics.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../theme/mermaid-eefea253.min.js"></script>
+        <script src="../theme/mermaid-init-ccf746f1.js"></script>
+        <script src="../theme/version-picker-dddf05c1.js"></script>
+
+
+
+    </div>
+    </body>
+</html>
