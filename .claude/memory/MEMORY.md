@@ -83,3 +83,4 @@
 - [Tests run in PR CI](tests-run-in-pr-ci.md) — never run nextest/cargo test locally (RAM); local = fmt/clippy/check/doc; tell every worker
 - [Cadasto hosting and certifications](cadasto-hosting-and-certifications.md) — Cadasto may host FerroEHR (operator+processor); ISO 9001/27001/NEN 7510 are org-level, never "FerroEHR certified"
 - [Push PR fixes without asking](push-pr-fixes-without-asking.md) — fixing a red PR: commit + push to its branch, no permission prompt
+- [Stacked PRs after a squash merge](stacked-prs-after-squash.md) — rebase --onto the lower PR's last commit; lease-push to the exact remote sha
