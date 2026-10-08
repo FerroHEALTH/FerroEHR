@@ -790,6 +790,17 @@ jobs:
           shared-key: containers-${{ matrix.platform }}
           save-if: "false"
 
+      # `cargo auditable` embeds the compressed dependency list in the binary's
+      # own `.dep-v0` section, which survives the strip below, so a scan of the
+      # image this binary lands in sees its Rust dependencies (#3675;
+      # https://github.com/rust-secure-code/cargo-auditable). The pin matches
+      # docker/Dockerfile and release-build.yml; the action fetches the
+      # prebuilt binary and installs curl and jq into the slim container itself.
+      - name: Install cargo-auditable
+        uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+        with:
+          tool: cargo-auditable@0.7.5
+
       - name: Build (release, native)
         # The binary is produced by the ferroehr-server package (bin name
         # `ferroehr`) since the crate consolidation; `-p ferroehr` is the
@@ -800,7 +811,7 @@ jobs:
         # slim job container (it is not). Empty/absent degrades to `unknown`.
         env:
           REVISION: ${{ github.sha }}
-        run: cargo build --release --locked -p ferroehr-server
+        run: cargo auditable build --release --locked -p ferroehr-server
 
       - name: Strip
         run: strip target/release/ferroehr
@@ -851,7 +862,8 @@ jobs:
   # ── Viewer: server binary per arch + the arch-independent site ──────────────
   # The WASM/JS/CSS site bundle is architecture-independent, so cargo-leptos
   # runs ONCE (amd64: bin + site); the arm64 job builds only the ssr binary
-  # with plain cargo. Same glibc rationale as the app binary job.
+  # with `cargo auditable`, without cargo-leptos. Same glibc rationale as the
+  # app binary job.
   viewer-binary:
     name: viewer binary (${{ matrix.platform }})
     needs: plan
@@ -894,6 +906,13 @@ jobs:
           shared-key: containers-viewer-${{ matrix.platform }}
           save-if: "false"
 
+      # The viewer binary carries its dependency list too (#3675): the same
+      # pinned `cargo auditable` as the app binary job above.
+      - name: Install cargo-auditable
+        uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+        with:
+          tool: cargo-auditable@0.7.5
+
       - name: Build the ssr server binary (release, native)
         # LEPTOS_OUTPUT_NAME must be in the COMPILER's environment: leptos's
         # HydrationScripts reads it via option_env! and appends `_bg` to the
@@ -901,10 +920,10 @@ jobs:
         # while cargo-leptos names the shipped file `<output>.wasm` — a binary
         # built without it 404s its own wasm and never hydrates (found live on
         # the published 3.20.0 image, #2164). cargo-leptos exports it for the
-        # from-source Dockerfile path; this plain cargo build must match.
+        # from-source Dockerfile path; this build without cargo-leptos must match.
         env:
           LEPTOS_OUTPUT_NAME: ferroehr-viewer
-        run: cargo build --release --locked --no-default-features --features ssr -p ferroehr-viewer
+        run: cargo auditable build --release --locked --no-default-features --features ssr -p ferroehr-viewer
 
       - name: Strip
         run: strip target/release/ferroehr-viewer
@@ -935,6 +954,11 @@ jobs:
       - name: Build the site bundle (amd64 only)
         if: matrix.platform == 'amd64'
         shell: bash
+        # cargo-leptos runs its server leg through LEPTOS_BIN_CARGO_COMMAND
+        # (cargo-leptos 0.3.7 src/config/dotenvs.rs), so that leg builds with
+        # `cargo auditable` like the step above and reuses its artifacts.
+        env:
+          LEPTOS_BIN_CARGO_COMMAND: cargo auditable
         run: |
           set -euo pipefail
           source scripts/gh/retry-net.sh

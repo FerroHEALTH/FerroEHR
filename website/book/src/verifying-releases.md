@@ -141,6 +141,20 @@ travelled with it:
 syft ferroehr -o cyclonedx-json   # the extracted binary, not the tarball
 ```
 
+From v4.3.5 on, the binaries inside the `ferroehr` and `ferroehr-viewer`
+images are built with `cargo auditable` as well, so a scan of either image
+lists the Rust dependencies of the binary it carries, and the
+[exploitability record](#the-exploitability-record) judges them per image.
+Images of earlier releases carry no such list: a scan of them sees the
+operating-system layer only, and the server's Rust dependencies are visible
+through the tarball scan and its SBOM.
+
+```bash
+# <version> is v4.3.5 or later, without the v
+trivy image --list-all-pkgs --format json ghcr.io/ferrohealth/ferroehr-viewer:<version> \
+  | jq -r '.Results[] | select(.Type == "rustbinary") | .Packages[] | "\(.Name) \(.Version)"'
+```
+
 > [!TIP]
 > `gh attestation verify` reports success by **exiting zero and printing
 > nothing** in current `gh` versions. Check the exit status in scripts rather

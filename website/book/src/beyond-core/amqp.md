@@ -145,7 +145,9 @@ inactive at boot so it holds nothing.
 > [!WARNING]
 > The broker URL carries credentials, so keep it in a secret (`url_file` reads it
 > from a mounted file) not in a plain environment file. For anything beyond a
-> local broker use TLS (`FERROEHR__EVENTS__TLS=true`, or an `amqps://` URL).
+> local broker use TLS (`FERROEHR__EVENTS__TLS=true`, or an `amqps://` URL). Under
+> `deployment_profile = "production"` the server refuses to start with the outbox
+> on a plain `amqp://` broker unless `plaintext_broker` is accepted by name.
 
 > [!NOTE]
 > Eventing is also a **cargo feature** (`events`), on in the published images and

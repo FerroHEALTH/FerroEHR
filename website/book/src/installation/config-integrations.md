@@ -56,7 +56,7 @@ default; the envelopes are PHI-free by design.
 | `url` | secret URL | `amqp://guest:guest@localhost:5672/%2f` | AMQP broker URL; credentials are redacted from every rendering. |
 | `url_file` | path | unset | Read the broker URL from a file instead, for a mounted secret. At most one of the pair, where the built-in development default does not count as "set". |
 | `exchange` | string | `ferroehr.events` | Topic exchange for the PHI-free envelope stream. |
-| `tls` | bool | `false` | Upgrade an `amqp://` URL to `amqps://` (an already-`amqps://` URL is TLS regardless). |
+| `tls` | bool | `false` | Upgrade an `amqp://` URL to `amqps://` (an already-`amqps://` URL is TLS regardless). Under `deployment_profile = "production"`, an enabled outbox that still publishes over `amqp://` opens the [`plaintext_broker`](configuration.md#deployment_profile) gap. |
 | `batch_size` | int | `128` | Rows drained per poll. |
 | `poll_interval_ms` | int | `1000` | Idle poll interval. |
 | `retention_days` | int | `7` | Published-row retention window. |
@@ -85,7 +85,7 @@ The FHIR connector: an inbound façade and an independent outbound emitter.
 | `url` | secret URL | `amqp://guest:guest@localhost:5672/%2f` | AMQP broker URL; credentials redacted. |
 | `url_file` | path | unset | Read the broker URL from a mounted file instead. At most one of the pair. |
 | `exchange` | string | `ferroehr.fhir` | Topic exchange, deliberately distinct from the events exchange, for PHI isolation. |
-| `tls` | bool | `false` | Upgrade `amqp://` to `amqps://`. |
+| `tls` | bool | `false` | Upgrade `amqp://` to `amqps://`. Under `deployment_profile = "production"`, an enabled emitter that still publishes over `amqp://` opens the [`plaintext_broker`](configuration.md#deployment_profile) gap. |
 | `batch_size` | int | `128` | Outbox rows scanned per poll. |
 | `poll_interval_ms` | int | `1000` | Idle poll interval. |
 | `publish_max_retries` | int | `3` | Per-message publish retries before backing off. |

@@ -29,7 +29,8 @@
 # is the k8s-test skill (.claude/skills/k8s-test/).
 #
 # Usage:
-#   deploy/helm/ci/boot-check.sh                       # every deployment overlay
+#   deploy/helm/ci/boot-check.sh                       # every deployment overlay:
+#                                                      # ci/ and the chart's values-*.yaml
 #   deploy/helm/ci/boot-check.sh path/to/values.yaml   # just this one
 #   FERROEHR_IMAGE=ferroehr:local deploy/helm/ci/boot-check.sh
 #
@@ -273,6 +274,9 @@ boot_one() {
        --entrypoint /usr/local/bin/ferroehr "$IMAGE" config check > "$log" 2>&1; then
     green "  ${IMAGE} accepts ${label}"
     sed 's/^/    /' "$log"
+    if grep -qx 'deployment_profile = "production"' "${cfgdir}/ferroehr.toml"; then
+      production_posture "$work" "$cfgdir" "$secdir" ${docker_env[@]+"${docker_env[@]}"} || return 1
+    fi
     rm -rf "$work"
     return 0
   fi
@@ -285,6 +289,46 @@ boot_one() {
   fi
   red "  rendered configuration kept at ${work}"
   return 1
+}
+
+# ── A production overlay must clear the server's own posture evaluation ──────
+# `config check` validates keys and values and never evaluates
+# deployment_profile = "production", which refuses at boot only after the pools
+# connect. `ferroehr report` evaluates the same posture and, with no database
+# reachable (`--network none`), falls back to the configuration alone. So this
+# judges every separation the configuration decides, and NOT the two the server
+# measures over live connections: shared_cluster (each pool's
+# pg_control_system().system_identifier) and migrate_on_runtime_credential for a
+# domain relocated to another database. Those stay the k8s-test skill's.
+production_posture() {
+  local work="$1" cfgdir="$2" secdir="$3"
+  shift 3
+  local report="${work}/report.json" refused gaps accepted
+  command -v jq >/dev/null 2>&1 || { red "  jq not found on PATH; the production posture is not judged"; return 1; }
+  if ! docker run --rm --network none \
+       -v "${cfgdir}:/etc/ferroehr:ro" \
+       -v "${secdir}:/etc/ferroehr-secrets:ro" \
+       "$@" \
+       --entrypoint /usr/local/bin/ferroehr "$IMAGE" report --output - \
+       > "$report" 2> "${work}/report.err"; then
+    red "  ${IMAGE} could not write the deployment report:"
+    sed 's/^/    /' "${work}/report.err"
+    return 1
+  fi
+  if [[ "$(jq -r '.deployment.profile' "$report")" != "production" ]]; then
+    red "  the server does not read deployment_profile as production"
+    return 1
+  fi
+  gaps="$(jq -r '.deployment.gaps | join(" ")' "$report")"
+  accepted="$(jq -r '.deployment.accepted | join(" ")' "$report")"
+  refused="$(jq -r '.deployment as $d | [$d.gaps[] | select(. as $g | $d.accepted | index($g) | not)] | join(" ")' "$report")"
+  if [[ -n "$refused" ]]; then
+    red "  production REFUSES to boot on: ${refused} (accepted: ${accepted:-none})"
+    return 1
+  fi
+  green "  production posture: open gaps [${gaps:-none}], each accepted by name"
+  echo "    not judged here: shared_cluster and a relocated domain's schema preparation,"
+  echo "    which the server measures over live database connections"
 }
 
 bold "image: ${IMAGE}"
@@ -303,7 +347,9 @@ if [[ $# -gt 0 ]]; then
 else
   # Enumerate rather than list: a values file added to ci/ is booted, or is
   # declared not-a-deployment above with a reason. Nothing is skipped silently.
-  for f in "$CI_DIR"/*-values.yaml; do
+  # The chart's own overlays (values-*.yaml beside values.yaml) ship to users,
+  # so they are deployments too.
+  for f in "$CI_DIR"/*-values.yaml "$CHART_DIR"/values-*.yaml; do
     skip=0
     for excluded in "${NOT_A_DEPLOYMENT[@]}"; do
       [[ "$(basename "$f")" == "$excluded" ]] && skip=1

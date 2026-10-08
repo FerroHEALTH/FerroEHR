@@ -2,7 +2,7 @@
 
 Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1). A single static binary deployed with a hardened-by-default security posture: runs as a non-root, read-only-rootfs workload whose NetworkPolicy admits its serving port only, and that connects to an EXTERNAL PostgreSQL 18 as an unprivileged app role, with schema preparation on its own credential. A stock install runs the sandbox deployment profile, which must not hold real patient data; set config.deployment_profile for a production holder.
 
-![Version: 10.2.2](https://img.shields.io/badge/Version-10.2.2-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 4.3.4](https://img.shields.io/badge/AppVersion-4.3.4-informational?style=flat-square)
+![Version: 10.2.3](https://img.shields.io/badge/Version-10.2.3-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 4.3.4](https://img.shields.io/badge/AppVersion-4.3.4-informational?style=flat-square)
 
 FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0 at the
 API, AQL 1.1 as the query language, PostgreSQL 18-native storage, shipped as a
@@ -27,7 +27,11 @@ defaults to `sandbox`, the binary's default, which must not hold real patient
 data and names every missing separation on its boot banner. A deployment
 holding patient data sets `production`, which refuses to start until each
 separation is made or accepted by name; the comment above the key in
-`values.yaml` lists the ones these defaults leave open.
+`values.yaml` lists the ones these defaults leave open. The chart ships
+`values-production.yaml`, an overlay that sets `production`, makes those
+separations and accepts the plaintext pod listener behind a TLS ingress by
+name; its comments name each example value to replace
+(`helm pull --untar`, then `-f ferroehr/values-production.yaml`).
 
 **A secret set in the wrong place fails the render on purpose.** See
 [Secrets](#secrets): this chart refuses to put a credential in a ConfigMap
@@ -40,7 +44,7 @@ to add; `helm repo add` does not apply to this chart:
 
 ```console
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 10.2.2 \
+  --version 10.2.3 \
   --namespace ferroehr --create-namespace \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=4.3.4
@@ -54,7 +58,7 @@ They are independent SemVer lines and they move independently:
 
 | What | Set with | This release |
 |---|---|---|
-| the **chart** (templates, defaults, this document) | `--version` | `10.2.2` |
+| the **chart** (templates, defaults, this document) | `--version` | `10.2.3` |
 | the **server image** | `image.tag` | `4.3.4` |
 
 `appVersion` is the image the chart defaults to; pinning `image.tag` explicitly
@@ -66,7 +70,7 @@ The chart carries two keyless Sigstore artifacts, and they answer different
 questions. A **cosign signature:** who signed this:
 
 ```console
-cosign verify ghcr.io/ferrohealth/charts/ferroehr:10.2.2 \
+cosign verify ghcr.io/ferrohealth/charts/ferroehr:10.2.3 \
   --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/publish-chart\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -74,7 +78,7 @@ cosign verify ghcr.io/ferrohealth/charts/ferroehr:10.2.2 \
 A **SLSA build provenance attestation:** what source it was built from, and how:
 
 ```console
-gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:10.2.2 \
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:10.2.3 \
   -R FerroHEALTH/FerroEHR
 gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:4.3.4 \
   -R FerroHEALTH/FerroEHR

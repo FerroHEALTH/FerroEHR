@@ -257,8 +257,12 @@ type StoredClassification = (
 
 /// The classification of the newest record of `operation` on `resource_class`,
 /// polled until the drain has written it.
+///
+/// The wait settles the moment the record lands and fails only at a 60-second
+/// deadline, the bound the route-coverage test gives the same drain, so a drain
+/// slowed by a loaded host delays the test instead of failing it.
 async fn classified(pool: &PgPool, operation: &str, resource_class: &str) -> Classified {
-    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    let deadline = std::time::Instant::now() + Duration::from_secs(60);
     loop {
         let found: Option<StoredClassification> = sqlx::query_as(
             "SELECT categories, category_basis, category_evidence, category_map_digest, fhir \

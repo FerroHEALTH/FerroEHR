@@ -89,11 +89,22 @@ RUN --mount=type=cache,target=/opt/tool-cache,sharing=locked \
     install -m0755 "$cache/cargo-leptos-${CARGO_LEPTOS_VERSION}" /usr/local/bin/cargo-leptos; \
     install -m0755 "$cache/wasm-bindgen-${WASM_BINDGEN_VERSION}" /usr/local/bin/wasm-bindgen; \
     install -m0755 "$cache/tailwindcss-${TAILWIND_VERSION}" /usr/local/bin/tailwindcss
+# cargo-auditable embeds the compressed dependency list in the binary's own
+# `.dep-v0` section, so a scan of this image sees the viewer's Rust
+# dependencies (#3675; https://github.com/rust-secure-code/cargo-auditable).
+# Same pin and install as docker/Dockerfile.
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    cargo install cargo-auditable --version 0.7.5 --locked
 COPY . .
 # The viewer has no provenance build.rs, so it carries no compile-time SHA env;
 # its image provenance is the OCI-standard REVISION LABEL on the shared runtime
 # stage below (docs.docker.com/build/building/best-practices).
 ENV LEPTOS_TAILWIND_VERSION=${TAILWIND_VERSION}
+# cargo-leptos builds the server binary with the command this variable names
+# instead of `cargo` (cargo-leptos 0.3.7, `bin-cargo-command`, read from the
+# environment in src/config/dotenvs.rs), so the server leg runs
+# `cargo auditable build`; the wasm leg stays plain cargo and ships no binary.
+ENV LEPTOS_BIN_CARGO_COMMAND="cargo auditable"
 # Serial-compile escape hatch for memory-constrained hosts, same knob as
 # docker/Dockerfile (cargo reads CARGO_BUILD_JOBS from the environment —
 # doc.rust-lang.org/cargo/reference/environment-variables.html). The default

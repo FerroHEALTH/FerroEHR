@@ -95,14 +95,19 @@ name in `deployment_accepts`: shared database credentials or clusters, an
 undeclared pseudonym namespace, the access log off, failing open or shipped
 over UDP syslog, the open per-EHR access default, migrations on a runtime
 credential, authentication off, a plaintext listener on a routable address
-(the separate management port included). Each refusal names the gap
+(the separate management port included), an AMQP integration publishing to a
+plain `amqp://` broker. Each refusal names the gap
 and what to change
 ([`deployment_profile`](../installation/configuration.md#deployment_profile)).
 A gap you accept by name is stated on every boot and on
 `GET /ferroehr/rest/status`. Behind a TLS-terminating ingress you accept
 `plaintext_listener` by name. The Helm chart and the Compose files declare
-`sandbox`, the binary's default, so set `config.deployment_profile: production`
-in your Helm values.
+`sandbox`, the binary's default. On Kubernetes, install with the chart's
+`values-production.yaml`. It sets `production`, makes the separations a values
+file can make, and accepts `plaintext_listener` behind a TLS ingress; separate
+database clusters come from the connection strings you give it
+([the production overlay](../installation/kubernetes.md#the-production-overlay)).
+Replace its example names with your own.
 
 ### The access log
 

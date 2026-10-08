@@ -176,6 +176,26 @@ pub enum DeploymentGap {
     /// … by encrypting relevant data … in transit". Accepting the gap by name
     /// records that a TLS-terminating ingress fronts the port.
     PlaintextListener,
+    /// An enabled AMQP integration publishes to a plaintext `amqp://` broker: the
+    /// events outbox (`events.url`) or the FHIR outbound emitter
+    /// (`fhir.outbound.url`), after the `tls` upgrade to `amqps://` is applied.
+    ///
+    /// `docs/law/eu/cra/text.html Annex I Part I(2)(e)`: products shall "protect
+    /// the confidentiality of stored, transmitted or otherwise processed data
+    /// … by encrypting relevant data … in transit". The FHIR stream carries the
+    /// mapped resource itself. Accepting the gap by name records that the path
+    /// to the broker stays on a segment the deploying organisation trusts.
+    PlaintextBroker,
+    /// The enabled RESTful-ATNA feed (`[audit.fhir_feed] url`) posts the access
+    /// records to a plain `http://` Audit Record Repository.
+    ///
+    /// `docs/law/eu/cra/text.html Annex I Part I(2)(e)`: the records name the
+    /// patient and the professional, so they are relevant data in transit.
+    PlaintextAuditFeed,
+    /// The enabled multimedia store accepts a plain-HTTP S3 endpoint
+    /// (`[multimedia] allow_http = true`), so the externalised blobs cross the
+    /// network unencrypted (`docs/law/eu/cra/text.html Annex I Part I(2)(e)`).
+    PlaintextObjectStore,
 }
 
 impl DeploymentGap {
@@ -193,6 +213,9 @@ impl DeploymentGap {
             Self::MigrateOnRuntimeCredential => "migrate_on_runtime_credential",
             Self::AuthOff => "auth_off",
             Self::PlaintextListener => "plaintext_listener",
+            Self::PlaintextBroker => "plaintext_broker",
+            Self::PlaintextAuditFeed => "plaintext_audit_feed",
+            Self::PlaintextObjectStore => "plaintext_object_store",
         }
     }
 
@@ -253,6 +276,24 @@ impl DeploymentGap {
                  [server.tls] or bind to loopback, unset [management] port so the surface shares \
                  the main listener, or accept plaintext_listener by name when a TLS-terminating \
                  ingress fronts the port or the management port is unreachable off the host"
+            }
+            Self::PlaintextBroker => {
+                "an enabled AMQP integration ([events] url or [fhir.outbound] url) publishes to a \
+                 plain amqp:// broker, so change events and FHIR resources cross the network \
+                 unencrypted; use an amqps:// URL or set tls = true in that section, or accept \
+                 plaintext_broker by name where the broker path stays on a trusted segment"
+            }
+            Self::PlaintextAuditFeed => {
+                "the enabled audit FHIR feed ([audit.fhir_feed] url) posts the access records to a \
+                 plain http:// repository, so who accessed which patient crosses the network \
+                 unencrypted; use an https:// URL, or accept plaintext_audit_feed by name where \
+                 the repository is reached on a trusted segment"
+            }
+            Self::PlaintextObjectStore => {
+                "the enabled multimedia store allows a plain-HTTP S3 endpoint ([multimedia] \
+                 allow_http = true), so the externalised clinical blobs cross the network \
+                 unencrypted; use an https:// endpoint and unset allow_http, or accept \
+                 plaintext_object_store by name where the store is reached on a trusted segment"
             }
         }
     }
@@ -382,6 +423,22 @@ impl DeploymentPosture {
         if plaintext_main || plaintext_management {
             gaps.push(DeploymentGap::PlaintextListener);
         }
+        let plaintext_events =
+            config.events.enabled && is_plaintext_amqp(&config.events.effective_url());
+        let plaintext_fhir = config.fhir.outbound.enabled
+            && is_plaintext_amqp(&config.fhir.outbound.effective_url());
+        if plaintext_events || plaintext_fhir {
+            gaps.push(DeploymentGap::PlaintextBroker);
+        }
+        if config.audit.enabled
+            && config.audit.fhir_feed.enabled
+            && is_plaintext_http(config.audit.fhir_feed.url.expose())
+        {
+            gaps.push(DeploymentGap::PlaintextAuditFeed);
+        }
+        if config.multimedia.enabled && config.multimedia.allow_http {
+            gaps.push(DeploymentGap::PlaintextObjectStore);
+        }
         let accepted = gaps
             .iter()
             .copied()
@@ -427,6 +484,22 @@ impl DeploymentPosture {
         }
         out
     }
+}
+
+/// Whether a broker URL names the plaintext `amqp` scheme.
+///
+/// The scheme is compared case-insensitively (RFC 3986 §3.1); a URL without a
+/// scheme names no transport and is not read as a gap.
+fn is_plaintext_amqp(url: &str) -> bool {
+    url.split_once("://")
+        .is_some_and(|(scheme, _)| scheme.eq_ignore_ascii_case("amqp"))
+}
+
+/// Whether a URL names the plaintext `http` scheme, compared case-insensitively
+/// (RFC 3986 §3.1).
+fn is_plaintext_http(url: &str) -> bool {
+    url.split_once("://")
+        .is_some_and(|(scheme, _)| scheme.eq_ignore_ascii_case("http"))
 }
 
 #[cfg(test)]
@@ -635,6 +708,9 @@ mod tests {
             DeploymentGap::MigrateOnRuntimeCredential,
             DeploymentGap::AuthOff,
             DeploymentGap::PlaintextListener,
+            DeploymentGap::PlaintextBroker,
+            DeploymentGap::PlaintextAuditFeed,
+            DeploymentGap::PlaintextObjectStore,
         ] {
             assert_eq!(
                 serde_json::to_string(&gap).ok(),
@@ -926,5 +1002,172 @@ mod tests {
         let accepted = DeploymentPosture::evaluate(&config, &distinct_clusters());
         assert!(accepted.permits_boot());
         assert_eq!(accepted.accepted, [DeploymentGap::PlaintextListener]);
+    }
+
+    /// A separated `production` configuration with one AMQP integration set:
+    /// the FHIR outbound emitter when `fhir`, the events outbox otherwise.
+    fn with_broker(fhir: bool, enabled: bool, url: &str, tls: bool) -> FerroEhrConfig {
+        let mut config = production(separated());
+        if fhir {
+            config.fhir.outbound.enabled = enabled;
+            config.fhir.outbound.url = SecretUrl::new(url);
+            config.fhir.outbound.tls = tls;
+        } else {
+            config.events.enabled = enabled;
+            config.events.url = SecretUrl::new(url);
+            config.events.tls = tls;
+        }
+        config
+    }
+
+    /// `production` refuses an enabled events outbox or FHIR outbound emitter on
+    /// a plaintext `amqp://` broker, passes `amqps://`, the `tls` upgrade and a
+    /// disabled integration, and boots once `plaintext_broker` is accepted by
+    /// name (CRA Annex I Part I(2)(e)).
+    #[test]
+    fn production_refuses_a_plaintext_amqp_broker_unless_accepted_by_name() {
+        const PLAIN: &str = "amqp://u:p@broker.internal:5672/%2f";
+        const SHOUTED: &str = "AMQP://u:p@broker.internal:5672/%2f";
+        const ENCRYPTED: &str = "amqps://u:p@broker.internal:5671/%2f";
+        for fhir in [false, true] {
+            for url in [PLAIN, SHOUTED] {
+                let posture = DeploymentPosture::evaluate(
+                    &with_broker(fhir, true, url, false),
+                    &distinct_clusters(),
+                );
+                assert_eq!(
+                    posture.gaps,
+                    [DeploymentGap::PlaintextBroker],
+                    "fhir={fhir} {url}"
+                );
+                assert!(!posture.permits_boot(), "fhir={fhir} {url}");
+                let message = posture.refusal_message();
+                assert!(message.contains("plaintext_broker"), "{message}");
+                assert!(
+                    message.contains(DeploymentGap::PlaintextBroker.describe()),
+                    "{message}"
+                );
+            }
+
+            let encrypted = DeploymentPosture::evaluate(
+                &with_broker(fhir, true, ENCRYPTED, false),
+                &distinct_clusters(),
+            );
+            assert!(
+                encrypted.gaps.is_empty(),
+                "fhir={fhir}: amqps is no gap: {encrypted:?}"
+            );
+
+            let upgraded = DeploymentPosture::evaluate(
+                &with_broker(fhir, true, PLAIN, true),
+                &distinct_clusters(),
+            );
+            assert!(
+                upgraded.gaps.is_empty(),
+                "fhir={fhir}: tls = true publishes over amqps: {upgraded:?}"
+            );
+
+            let off = DeploymentPosture::evaluate(
+                &with_broker(fhir, false, PLAIN, false),
+                &distinct_clusters(),
+            );
+            assert!(
+                off.gaps.is_empty(),
+                "fhir={fhir}: a disabled integration publishes nothing: {off:?}"
+            );
+
+            let config = FerroEhrConfig {
+                deployment_accepts: vec![DeploymentGap::PlaintextBroker],
+                ..with_broker(fhir, true, PLAIN, false)
+            };
+            let accepted = DeploymentPosture::evaluate(&config, &distinct_clusters());
+            assert!(accepted.permits_boot(), "fhir={fhir}");
+            assert_eq!(accepted.accepted, [DeploymentGap::PlaintextBroker]);
+            assert_eq!(
+                accepted.gaps,
+                [DeploymentGap::PlaintextBroker],
+                "accepting hides nothing"
+            );
+
+            let config = FerroEhrConfig {
+                deployment_accepts: vec![DeploymentGap::PlaintextListener],
+                ..with_broker(fhir, true, PLAIN, false)
+            };
+            assert!(
+                !DeploymentPosture::evaluate(&config, &distinct_clusters()).permits_boot(),
+                "accepting the listener gap does not accept the broker one"
+            );
+        }
+    }
+
+    /// `production` refuses an enabled audit FHIR feed on a plain `http://` URL and
+    /// an enabled multimedia store with `allow_http`, passes `https://` and a
+    /// disabled section, and boots once each gap is accepted by name (CRA Annex I
+    /// Part I(2)(e)).
+    #[test]
+    fn production_refuses_a_plaintext_audit_feed_and_object_store_unless_accepted() {
+        let feed = |enabled: bool, url: &str| {
+            let mut config = production(separated());
+            config.audit.fhir_feed.enabled = enabled;
+            config.audit.fhir_feed.url = SecretUrl::new(url);
+            config
+        };
+        for url in ["http://arr.internal/fhir", "HTTP://arr.internal/fhir"] {
+            let posture = DeploymentPosture::evaluate(&feed(true, url), &distinct_clusters());
+            assert_eq!(posture.gaps, [DeploymentGap::PlaintextAuditFeed], "{url}");
+            assert!(!posture.permits_boot(), "{url}");
+            assert!(
+                posture.refusal_message().contains("plaintext_audit_feed"),
+                "{url}"
+            );
+        }
+        let tls = DeploymentPosture::evaluate(
+            &feed(true, "https://arr.internal/fhir"),
+            &distinct_clusters(),
+        );
+        assert!(tls.gaps.is_empty(), "https is no gap: {tls:?}");
+        let off = DeploymentPosture::evaluate(
+            &feed(false, "http://arr.internal/fhir"),
+            &distinct_clusters(),
+        );
+        assert!(
+            off.gaps.is_empty(),
+            "a disabled feed sends nothing: {off:?}"
+        );
+        let accepted = FerroEhrConfig {
+            deployment_accepts: vec![DeploymentGap::PlaintextAuditFeed],
+            ..feed(true, "http://arr.internal/fhir")
+        };
+        assert!(DeploymentPosture::evaluate(&accepted, &distinct_clusters()).permits_boot());
+
+        let store = |enabled: bool, allow_http: bool| {
+            let mut config = production(separated());
+            config.multimedia.enabled = enabled;
+            config.multimedia.allow_http = allow_http;
+            config
+        };
+        let posture = DeploymentPosture::evaluate(&store(true, true), &distinct_clusters());
+        assert_eq!(posture.gaps, [DeploymentGap::PlaintextObjectStore]);
+        assert!(!posture.permits_boot());
+        assert!(
+            posture
+                .refusal_message()
+                .contains(DeploymentGap::PlaintextObjectStore.describe())
+        );
+        assert!(
+            DeploymentPosture::evaluate(&store(true, false), &distinct_clusters())
+                .gaps
+                .is_empty()
+        );
+        assert!(
+            DeploymentPosture::evaluate(&store(false, true), &distinct_clusters())
+                .gaps
+                .is_empty()
+        );
+        let accepted = FerroEhrConfig {
+            deployment_accepts: vec![DeploymentGap::PlaintextObjectStore],
+            ..store(true, true)
+        };
+        assert!(DeploymentPosture::evaluate(&accepted, &distinct_clusters()).permits_boot());
     }
 }

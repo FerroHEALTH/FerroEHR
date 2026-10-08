@@ -99,7 +99,7 @@ on three levels (high, medium, low).
 |---|---|---|---|---|---|
 | C1 | An unauthenticated caller reads or writes clinical data | high | low under the intended purpose; high when `auth.enabled = false` is misused under `sandbox` or accepted by name under `production` | authentication on by default with a boot refusal when no mechanism is configured; `production` refuses `auth.enabled = false` unless `auth_off` is accepted by name; per-request authorisation | (b), (d) |
 | C2 | An authenticated caller reaches EHRs outside their remit | high | medium: the shipped `EHR_ACCESS` default is `open`, which `production` refuses unless accepted by name | RBAC, ABAC, per-EHR `EHR_ACCESS`; every access recorded | (d), (l) |
-| C3 | Data in transit is read or altered on the network | high | low behind a TLS ingress or with the server's TLS; high on a plaintext listener | rustls TLS 1.3 and mutual TLS, off by default; `production` refuses a plaintext main listener on a routable address, a separate plain-HTTP management listener, and a UDP syslog audit feed, unless `plaintext_listener` or `audit_syslog_udp` is accepted by name; a boot warning on a plaintext routable bind | (e) |
+| C3 | Data in transit is read or altered on the network | high | low behind a TLS ingress or with the server's TLS; high on a plaintext listener | rustls TLS 1.3 and mutual TLS, off by default; `production` refuses a plaintext main listener on a routable address, a separate plain-HTTP management listener, a UDP syslog audit feed, and an AMQP integration on a plaintext `amqp://` broker, unless `plaintext_listener`, `audit_syslog_udp` or `plaintext_broker` is accepted by name; a boot warning on a plaintext routable bind | (e) |
 | C4 | Someone with a database connection reads, rewrites or deletes data, bypassing the API | high | depends on the deploying organisation's database protection | least-privilege roles per domain; append-only versions; version signatures verified on read; the hash-chained access log | (e), (f) |
 | C5 | An access happens and the log does not show it, or the log is altered | high | low with `fail_mode = "closed"` and an off-box sink; medium with the shipped `fail_mode = "open"` | refusals always recorded; `production` refuses audit off and audit failing open unless accepted; the hash chain | (f), (l) |
 | C6 | A national identifier or identifying content leaks into the clinical record, telemetry or a report | high | low | the identifier scanner in `strict` mode; log sanitising; reports with no identifiers | (e), (g) |
@@ -135,25 +135,26 @@ evidence only) and the open work.
 - **Applies:** yes.
 - **How:** `cargo deny` fails the build on any RustSec advisory and on yanked
   crates, with each accepted advisory dated and reasoned in `deny.toml`. Each
-  image is scanned by Trivy before it is tagged, so only a passing digest gets
-  a tag, and the published images are re-scanned weekly. Every release also
-  scans each image and server binary with no severity floor and unfixed
-  findings included, joins every finding with its OpenVEX statement, and is
-  refused, before any image is tagged, while a finding has none; the joined
-  record and the raw reports are release assets. The Rust advisory statements
-  are checked against the resolved dependency graph.
+  of the three images is scanned by Trivy by its pushed digest, on both
+  platforms, before it is tagged, so only a passing digest gets a tag, and the
+  published images are re-scanned weekly. Every shipped binary, in the release
+  tarballs and in the images, is built with `cargo auditable`, so it carries
+  its Rust dependency list and an image scan sees the crate graph. Every
+  release also scans each image and server binary with no severity floor and
+  unfixed findings included, joins every finding with its OpenVEX statement,
+  and is refused, before any image is tagged, while a finding has none; the
+  joined record and the raw reports are release assets. The Rust advisory
+  statements are checked against the resolved dependency graph.
 - **Evidence:** `deny.toml`; `trivy.yaml`; `.github/workflows/scan-and-tag.yml`;
   `.github/workflows/image-scan.yml`; `security/vex/`;
   `scripts/checks/vex-reachability.sh`; `scripts/checks/vex-coverage.sh`;
   `.github/workflows/release.yml` (`vulnerability-record`);
   [the exploitability record](../verifying-releases.md#the-exploitability-record).
-- **Status:** partial. Every finding of the full scan carries a judgement or
-  the release does not ship. The image binaries are built without
-  `cargo auditable`, so the image scans do not see the Rust dependency graph;
-  the server binary's graph is covered by the scan of the release tarballs,
-  and the viewer binary's by no scan. The CRA does not define "known".
-- **Open:** the image binaries built with `cargo auditable`, so each image
-  scan sees its Rust dependencies (#3675).
+- **Status:** met. Every finding of the full scan carries a judgement or the
+  release does not ship, and the scan reads the Rust dependencies of the
+  server and viewer binaries from the binaries themselves (#3674, #3675). The
+  CRA does not define "known".
+- **Open:** none.
 
 ### (b) Secure by default, and reset to the original state
 
@@ -204,12 +205,13 @@ reset the product to its original state"
   in force sets a ceiling. These must change, and `production` refuses them:
   `authz.rbac.ehr_access_default = "open"`, `audit.fail_mode = "open"`, an
   empty `privacy.subject_namespaces`, one database credential for every
-  domain, and `db.migrate = "apply"` on the runtime credential. Two may be
+  domain, and `db.migrate = "apply"` on the runtime credential. Three may be
   accepted by name when the deployment closes them outside the server:
-  `plaintext_listener`, when a TLS-terminating ingress fronts the port, and
-  `shared_cluster`, when one PostgreSQL cluster holds the domains in separate
-  schemas under separate roles. The usage report is on by default; it carries
-  no health data ([outbound data flows](#outbound-data-flows-annex-i-part-i2g)).
+  `plaintext_listener`, when a TLS-terminating ingress fronts the port,
+  `plaintext_broker`, when the path to the AMQP broker stays on a trusted
+  segment, and `shared_cluster`, when one PostgreSQL cluster holds the domains
+  in separate schemas under separate roles. The usage report is on by
+  default; it carries no health data ([outbound data flows](#outbound-data-flows-annex-i-part-i2g)).
 - **Reset:** the book documents returning an instance to its original state,
   configuration and database, for Docker Compose, Kubernetes and a single
   binary. The deployment probe harness runs the Compose procedure and reads
@@ -324,9 +326,15 @@ transit by state of the art mechanisms, and by using other technical means"
   in plain HTTP, so setting it opens the same gap
   (`production_refuses_a_plain_management_listener_on_its_own_port`), and a
   syslog audit feed over UDP opens `audit_syslog_udp`
-  (`production_refuses_a_udp_audit_syslog_unless_accepted_by_name`).
-- **Open:** `production` does not refuse the AMQP integration on a plaintext
-  `amqp://` URL (#3676).
+  (`production_refuses_a_udp_audit_syslog_unless_accepted_by_name`). An
+  enabled change-event outbox or FHIR outbound emitter publishing to a plain
+  `amqp://` broker opens `plaintext_broker` (#3676,
+  `production_refuses_a_plaintext_amqp_broker_unless_accepted_by_name`).
+  An enabled audit FHIR feed on an `http://` URL opens `plaintext_audit_feed`,
+  and an enabled multimedia store with `allow_http` opens
+  `plaintext_object_store` (#3689,
+  `production_refuses_a_plaintext_audit_feed_and_object_store_unless_accepted`).
+- **Open:** none.
 
 ### (f) Integrity, and reporting corruptions
 
@@ -646,4 +654,4 @@ vulnerabilities and third-party information arrive. It is revised:
 | Version | Date | Change |
 |---|---|---|
 | 1 | 2026-10-06 | First assessment, from the CRA Annex I audit of #3611 |
-| 2 | 2026-10-07 | (a): the per-release exploitability record (#3636); (b): the declared profile in the chart and the Compose files, the reasons for `sandbox` and the shipped defaults a production holder keeps, and the reset procedure (#3637); Part II(1): SBOMs for the crates and the chart (#3643); the declared security-relevant paths and their release gate (#3649); (m): the erase command and the decommissioning page (#3642) |
+| 2 | 2026-10-07 | (a): the per-release exploitability record (#3636), the viewer image scanned before it is tagged (#3674) and every release binary and image binary built with `cargo auditable` (#3675); (b): the declared profile in the chart and the Compose files, the reasons for `sandbox` and the shipped defaults a production holder keeps, and the reset procedure (#3637); Part II(1): SBOMs for the crates and the chart (#3643); the declared security-relevant paths and their release gate (#3649); (m): the erase command and the decommissioning page (#3642); (e): a plaintext `amqp://` broker refused under `production` (#3676); (e): a plain `http://` audit FHIR feed and a multimedia store with `allow_http` refused under `production` (#3689) |
