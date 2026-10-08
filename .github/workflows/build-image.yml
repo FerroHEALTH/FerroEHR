@@ -228,3 +228,6 @@ jobs:
           subject-name: ${{ inputs.image }}
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
+          # No artifact-metadata storage record: the org uses no linked-artifacts
+          # view, and the record would need an artifact-metadata: write grant.
+          create-storage-record: false
