@@ -225,9 +225,32 @@ jobs:
             echo
             echo "Cadasto B.V. handles vulnerabilities in this release until the end of $end (Regulation (EU) 2024/2847 Art 13(8) and (19)). The security update for a release in its support period ships in the newest release; see [SECURITY.md](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions)."
           } >> release-notes.md
+          # CRA Art 13(18): the Annex II information and instructions to the
+          # user, in the book the docs-freeze leg cuts for this tag.
+          url="$(bash scripts/checks/release-notes.sh --url "$TAG")"
+          {
+            echo
+            echo "### Information and instructions to the user (CRA Annex II)"
+            echo
+            echo "[CRA information and instructions to the user for $TAG]($url): the manufacturer, the vulnerability contact, the support period, secure use, updates and decommissioning (Regulation (EU) 2024/2847 Art 13(18) and Annex II)."
+          } >> release-notes.md
           echo "Release notes for $VERSION:"; cat release-notes.md
         env:
+          TAG: ${{ steps.tag.outputs.tag }}
           VERSION: ${{ steps.tag.outputs.version }}
+
+      # A release whose notes do not link its CRA user information, or do not
+      # state its support period, is refused before anything is built.
+      - name: The release notes carry the CRA user information and the support period
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          bash scripts/checks/release-notes.sh --self-test
+          if ! bash scripts/checks/release-notes.sh release-notes.md "$TAG"; then
+            echo "::error::The release notes for $TAG do not carry the CRA Annex II user information link or the support period (Regulation (EU) 2024/2847 Art 13(18) and (19))." >&2
+            exit 1
+          fi
 
       # The hand-edited pin sites, every one of them, at the commit being
       # released. Each of these guards exists because its site shipped stale

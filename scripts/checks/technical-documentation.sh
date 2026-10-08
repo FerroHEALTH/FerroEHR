@@ -36,6 +36,7 @@ guard_no_args "$@"
 TREE="docs/technical-documentation"
 SHEET="website/book/src/compliance/information-sheet.md"
 IFU="website/book/src/compliance/instructions-for-use.md"
+USERINFO="website/book/src/compliance/cra-user-information.md"
 # The logging component, as docs/architecture.md lists it. Keep the two lists
 # equal: a module added there is added here in the same change.
 LOGGING_PATHS=(
@@ -77,8 +78,10 @@ for path in "$TREE"/*.md; do
   done < <(grep -oE '\]\([^)]+\)' "$path" | sed -E 's/^\]\((.*)\)$/\1/')
 done
 
-# The accompanying documents exist, and the information sheet carries every
-# point of EHDS Art. 38(2).
+# The accompanying documents exist, the information sheet carries every point
+# of EHDS Art. 38(2), and the CRA user information every point of Annex II
+# (CRA Art. 13(18), Annex VII 1(d); docs/law/eu/cra/text.html), in order
+# and with every lettered sub-point of point 8.
 [[ -f "$IFU" ]] || report "$IFU does not exist"
 if [[ -f "$SHEET" ]]; then
   for point in a b c d e; do
@@ -86,6 +89,15 @@ if [[ -f "$SHEET" ]]; then
   done
 else
   report "$SHEET does not exist"
+fi
+if [[ -f "$USERINFO" ]]; then
+  # Headings in document order: "## 1. ", ..., "## 8. ", "### 8(a) ", ..., "## 9. ".
+  found="$(grep -oE '^(## [1-9]\. |### 8\([a-f]\) )' "$USERINFO" | tr -d '# .' | paste -sd, -)"
+  want="1,2,3,4,5,6,7,8,8(a),8(b),8(c),8(d),8(e),8(f),9"
+  [[ "$found" == "$want" ]] \
+    || report "$USERINFO must carry Annex II points $want as headings, in that order (found: ${found:-none})"
+else
+  report "$USERINFO does not exist"
 fi
 
 # Change control: a change to the logging component since <ref> comes with a

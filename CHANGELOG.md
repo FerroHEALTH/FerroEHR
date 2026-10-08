@@ -61,6 +61,17 @@ workflow refuses a tag that has no matching section here.
   CRA Annex II user information mapped point by point). The release lane
   attaches both, cut from the tag, to each GitHub release
   (`scripts/release/accompanying-documents.sh`).
+- **The CRA information and instructions to the user, linked from every
+  release's notes** (#3650). The new book page *CRA information and
+  instructions to the user* carries each point of CRA Annex II in order (the
+  manufacturer, the vulnerability contact, identification, intended purpose
+  and security properties, the risks, the declaration of conformity, the
+  support period, the instructions of point 8(a) to (f) and the SBOMs), each
+  with its source. The release notes link the copy frozen for the tag, and
+  the release lane refuses notes without that link or the support period
+  (`scripts/checks/release-notes.sh`, CRA Art. 13(18)). *Rust crates* gains
+  the information for integrators of the `openehr-*` crates that point 8(f)
+  asks for.
 - **The technical documentation of EHDS Art. 37 and CRA Annex VII** (#3616)
   is kept in `docs/technical-documentation/`, one file per Annex III element
   and per CRA Annex VII point that adds one, each citing its evidence. A

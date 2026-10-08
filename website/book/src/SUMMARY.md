@@ -81,6 +81,7 @@
   - [Information sheet](compliance/information-sheet.md)
   - [Instructions for use](compliance/instructions-for-use.md)
   - [Cyber Resilience Act](compliance/cra.md)
+  - [CRA information and instructions to the user](compliance/cra-user-information.md)
   - [Complaints, incidents and vulnerabilities](compliance/post-market.md)
   - [Intended purpose](compliance/intended-purpose.md)
   - [CRA risk assessment](compliance/cra-risk-assessment.md)
