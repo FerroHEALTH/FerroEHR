@@ -107,7 +107,7 @@ on three levels (high, medium, low).
 | C8 | The service is made unavailable | high (clinical availability) | medium: an authorised caller holding resources is not defended against | admission limit with `503` shedding; rate limits; body, header and statement limits; replicas and a disruption budget | (h) |
 | C9 | A vulnerable component ships in a release | high | medium | `cargo deny` advisories gate; image scan before tagging; weekly re-scan; Dependabot; VEX for argued findings | (a) |
 | C10 | A tampered artefact reaches a deployment | high | low | SLSA Build L3 provenance; SBOM attestations; signed tags; immutable releases; a signed chart | (f) |
-| C11 | Data stays recoverable after the organisation removes it | medium | high: deletion removes rows and nothing more | physical delete of EHRs; no all-data removal yet | (m) |
+| C11 | Data stays recoverable after the organisation removes it | medium | medium: the erase removes every schema and blob, and backups, WAL, replicas and the media stay the organisation's to remove | physical delete of EHRs; `ferroehr db erase` for all data and settings; the decommissioning page | (m) |
 | C12 | An outbound integration sends more than its purpose needs, or to the wrong place | medium | low: every integration is off by default | the flows table below | (g), (i) |
 
 ## Annex I Part I(1): the level of cybersecurity
@@ -475,19 +475,27 @@ permanent basis all data and settings and, where such data can be transferred
 to other products or systems, ensure that this is done in a secure manner"
 
 - **Applies:** yes.
-- **How:** `DELETE {base}/admin/ehr/{ehr_id}` and `DELETE {base}/admin/ehr/all`
-  remove EHRs with every version, the linkage row and orphaned multimedia;
-  template and stored-query deletes exist. Transfer runs over the
-  authenticated API and `{base}/admin/dump`, over TLS when the deployment
-  enables it.
-- **Evidence:** [physical deletion](../operations-admin-apis.md#physical-deletion);
+- **How:** `ferroehr db erase --confirm <instance>` removes all data and
+  settings in one operation: every multimedia blob, then the five schemas with
+  every domain, the access log, the stored settings and the instance id. Run
+  without `--confirm` it erases nothing and prints what it would remove and the
+  value that confirms it. `DELETE {base}/admin/ehr/{ehr_id}` and
+  `DELETE {base}/admin/ehr/all` remove single EHRs with every version, the
+  linkage row and orphaned multimedia; template and stored-query deletes
+  exist. Transfer runs over the authenticated API and `{base}/admin/dump`,
+  over TLS when the deployment enables it.
+- **Evidence:** `app/ferroehr/src/decommission.rs`;
+  `app/ferroehr/tests/it/decommission.rs`;
+  [decommissioning](../operations-decommissioning.md);
+  [physical deletion](../operations-admin-apis.md#physical-deletion);
   [dump and load](../operations-admin-apis.md#dump-and-load).
-- **Status:** partial. Party physical deletion has no REST route; the access
-  log, the configuration and the instance id have no removal path; deletion
-  leaves filesystem blocks, WAL, replicas and backups; no decommissioning
-  instructions exist.
-- **Open:** one documented path that removes all data and settings, and a
-  decommissioning page (planned, #3642).
+- **Status:** met, shipped in #3642. The decommissioning page lists what the
+  erase cannot reach and the deploying organisation removes: backups, WAL
+  archives and replicas, the chart's Secrets and claims, the database roles,
+  configuration files, and the data held by systems the instance sent to.
+  Sanitising the physical media is the organisation's. A single party has no
+  physical delete over REST, because the openEHR Admin API defines none; the
+  page says so and names the alternatives.
 
 ## Requirements and limbs that do not apply
 
@@ -615,6 +623,7 @@ each product of a series in conformity as its design changes.
 - `app/ferroehr/src/versioning/signature` version signing
 - `app/ferroehr/src/versioning/integrity.rs` the integrity check of stored versions
 - `app/ferroehr/src/privacy` the pseudonymisation boundary
+- `app/ferroehr/src/decommission.rs` the erase of all data and settings
 - `docker/Dockerfile` the server image
 - `docker/viewer/Dockerfile` the viewer image
 - `docker/postgres/Dockerfile` the database image
@@ -637,4 +646,4 @@ vulnerabilities and third-party information arrive. It is revised:
 | Version | Date | Change |
 |---|---|---|
 | 1 | 2026-10-06 | First assessment, from the CRA Annex I audit of #3611 |
-| 2 | 2026-10-07 | (a): the per-release exploitability record (#3636); (b): the declared profile in the chart and the Compose files, the reasons for `sandbox` and the shipped defaults a production holder keeps, and the reset procedure (#3637); Part II(1): SBOMs for the crates and the chart (#3643); the declared security-relevant paths and their release gate (#3649) |
+| 2 | 2026-10-07 | (a): the per-release exploitability record (#3636); (b): the declared profile in the chart and the Compose files, the reasons for `sandbox` and the shipped defaults a production holder keeps, and the reset procedure (#3637); Part II(1): SBOMs for the crates and the chart (#3643); the declared security-relevant paths and their release gate (#3649); (m): the erase command and the decommissioning page (#3642) |

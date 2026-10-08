@@ -27,6 +27,7 @@ use ferroehr::config::deployment::{DatabaseFacts, DeploymentPosture, DeploymentP
 use ferroehr::config::management::EndpointLevels;
 use ferroehr::config::management::ManagementConfig;
 use ferroehr::db::domain::{Domain, DomainPools};
+use ferroehr::decommission::{Decommission, Erasure};
 use ferroehr::manufacturer::MANUFACTURER;
 use ferroehr::report::Report;
 use ferroehr::support::{SupportPeriod, today_utc};
@@ -103,7 +104,8 @@ pub enum Command {
         #[command(subcommand)]
         cmd: ConfigCmd,
     },
-    /// Database schema utilities (apply / verify the migrations, then exit).
+    /// Database schema utilities (apply or verify the migrations, or erase the
+    /// instance), then exit.
     Db {
         /// Which schema utility to run.
         #[command(subcommand)]
@@ -144,6 +146,19 @@ pub enum DbCmd {
     /// Verify, without issuing any DDL, that the database carries exactly this
     /// build's migrations; exit 0 when it does, 1 otherwise.
     Verify,
+    /// Permanently erase every piece of data and every setting this instance
+    /// stores: the multimedia blobs, then every schema the migrations create.
+    ///
+    /// Without `--confirm` it erases nothing: it prints what it would erase and
+    /// the value `--confirm` must carry, and exits 1. Run it with every server
+    /// stopped; the DSN must own the schemas.
+    Erase {
+        /// The instance to erase, as the run without `--confirm` prints it: the
+        /// stored instance id, or the clinical database's name when the
+        /// database stores no instance id.
+        #[arg(long, value_name = "INSTANCE")]
+        confirm: Option<String>,
+    },
 }
 
 /// The report `ferroehr usage-report --print` renders.
@@ -254,7 +269,7 @@ pub async fn write_report(
     Ok(())
 }
 
-/// `ferroehr db migrate` / `ferroehr db verify` — the out-of-band schema step.
+/// `ferroehr db migrate` / `verify` / `erase` — the out-of-band schema steps.
 async fn run_db(
     cmd: &DbCmd,
     config_path: Option<&Path>,
@@ -271,7 +286,7 @@ async fn run_db(
     let telemetry =
         telemetry::init(&telemetry_config, &build_info).context("initialising telemetry")?;
 
-    // Both subcommands read the schema on the migration DSN
+    // Every subcommand reads the schema on the migration DSN
     // (`[db].migrate_url`, falling back to `[db].url`), which is the
     // credential that can reach every schema when the runtime ones each hold
     // one pseudonymisation domain.
@@ -280,9 +295,92 @@ async fn run_db(
             .await
             .context("applying migrations"),
         DbCmd::Verify => verify_schema_and_isolation(&config).await,
+        DbCmd::Erase { confirm } => erase_instance(&config, confirm.as_deref()).await,
     };
     telemetry.shutdown().await;
     outcome
+}
+
+/// `ferroehr db erase`: without a confirmation, prints what an erasure would
+/// remove and fails; with one, erases and prints what it removed.
+///
+/// # Errors
+/// The dry run (nothing erased), a confirmation that does not name this
+/// instance, an unreachable blob store, or a database failure.
+#[expect(
+    clippy::print_stdout,
+    reason = "the db erase subcommand's PURPOSE is console output \
+              (.claude/rules/reliability.md §tools)"
+)]
+async fn erase_instance(
+    config: &ferroehr::config::FerroEhrConfig,
+    confirm: Option<&str>,
+) -> anyhow::Result<()> {
+    let decommission = Decommission::from_config(config)?;
+    let Some(confirm) = confirm else {
+        let inventory = decommission.inventory().await?;
+        if inventory.is_empty() {
+            println!("nothing to erase: no database holds a FerroEHR schema and no blob is stored");
+            return Ok(());
+        }
+        println!("`ferroehr db erase --confirm` would permanently delete:");
+        if let Some(blobs) = &inventory.blobs {
+            println!(
+                "  {} multimedia blob(s) in bucket `{}`",
+                blobs.objects, blobs.bucket
+            );
+        }
+        for database in &inventory.databases.databases {
+            println!(
+                "  database `{}`: schemas {}",
+                database.database,
+                schema_list(&database.schemas)
+            );
+        }
+        match inventory.databases.instance_id {
+            Some(id) => println!("instance id: {id}"),
+            None => println!("instance id: none stored"),
+        }
+        let token = inventory
+            .confirmation()
+            .context("no database holds the clinical domain")?;
+        println!("to erase, run: ferroehr db erase --confirm {token}");
+        anyhow::bail!("dry run: nothing was erased");
+    };
+    match decommission.erase(confirm).await? {
+        Erasure::NothingToErase => {
+            println!("nothing to erase: no database holds a FerroEHR schema and no blob is stored");
+        }
+        Erasure::Erased {
+            databases,
+            blobs_deleted,
+        } => {
+            if let Some(count) = blobs_deleted {
+                println!("deleted {count} multimedia blob(s)");
+            }
+            for database in &databases {
+                println!(
+                    "database `{}`: dropped schemas {}",
+                    database.database,
+                    schema_list(&database.schemas)
+                );
+            }
+            println!(
+                "erased. The database roles, the databases themselves, backups, WAL archives, \
+                 replicas and configuration files are not touched by this command"
+            );
+        }
+    }
+    Ok(())
+}
+
+/// `a, b, c`, or `none`.
+fn schema_list(schemas: &[&str]) -> String {
+    if schemas.is_empty() {
+        "none".to_owned()
+    } else {
+        schemas.join(", ")
+    }
 }
 
 /// `ferroehr usage-report --print`: assembles the report this instance would

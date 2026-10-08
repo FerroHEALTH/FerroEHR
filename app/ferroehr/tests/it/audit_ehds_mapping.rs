@@ -30,8 +30,10 @@
 
 use jiff::Timestamp;
 
+use ferroehr::config::auth::AssuranceLevel;
 use ferroehr::system_log::event::{
-    AccessDomain, AuditEvent, EventActionCode, EventOutcome, EventType, ObjectClass,
+    AccessDomain, ActingMode, ActorAuthentication, AuditEvent, EventActionCode, EventOutcome,
+    EventType, ObjectClass,
 };
 use ferroehr::system_log::fhir;
 use ferroehr::system_log::message::{AuditContext, AuditMessage};
@@ -107,6 +109,66 @@ fn element_b_the_person_who_accessed_is_recorded_and_rendered() {
         json.contains("dr.jansen"),
         "the accessing person must reach the FHIR agent: {json}"
     );
+}
+
+/// (b) for a client application acting for a named professional: the
+/// professional is the requesting participant in both renderings, and the
+/// application stands beside it as a non-requesting one.
+#[test]
+fn element_b_the_professional_behind_a_client_is_recorded_and_rendered() {
+    let mut event = access_event();
+    "scheduler-app".clone_into(&mut event.user_id);
+    event.actor = ActorAuthentication {
+        mode: Some(ActingMode::Client),
+        assurance_level: Some(AssuranceLevel::Substantial),
+        assurance_value: Some("loa-substantial".to_owned()),
+        professional_id: Some("dr.jansen".to_owned()),
+    };
+    let (xml, _json) = renderings(&event);
+    assert!(
+        xml.contains(r#"UserID="dr.jansen" UserIsRequestor="true""#),
+        "the professional is the requesting DICOM participant: {xml}"
+    );
+    assert!(
+        xml.contains(r#"UserID="scheduler-app" UserIsRequestor="false""#),
+        "the client application is a further DICOM participant: {xml}"
+    );
+    let agents = fhir_agents(&event);
+    let who = |agent: &serde_json::Value| {
+        agent
+            .pointer("/who/identifier/value")
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_owned)
+    };
+    let person = agents
+        .iter()
+        .find(|a| who(a).as_deref() == Some("dr.jansen"))
+        .expect("the professional is a FHIR agent");
+    assert_eq!(person.get("requestor"), Some(&serde_json::json!(true)));
+    let client = agents
+        .iter()
+        .find(|a| who(a).as_deref() == Some("scheduler-app"))
+        .expect("the client application is a FHIR agent");
+    assert_eq!(client.get("requestor"), Some(&serde_json::json!(false)));
+}
+
+/// Annex II 3.1: the authentication assurance level is recorded on the event,
+/// and neither rendering carries it, because neither format defines an
+/// element for it (DICOM PS3.15 §A.5.1 `ActiveParticipant`; FHIR R4
+/// `AuditEvent.agent.policy` is the authorizing policy, not a level).
+#[test]
+fn the_assurance_level_is_recorded_and_reaches_neither_rendering() {
+    let mut event = access_event();
+    event.actor = ActorAuthentication {
+        mode: Some(ActingMode::Person),
+        assurance_level: Some(AssuranceLevel::High),
+        assurance_value: Some("urn:loa:assurance-high".to_owned()),
+        professional_id: Some("dr.jansen".to_owned()),
+    };
+    assert_eq!(event.actor.assurance_level, Some(AssuranceLevel::High));
+    let (xml, json) = renderings(&event);
+    assert!(!xml.contains("assurance-high"), "{xml}");
+    assert!(!json.contains("assurance-high"), "{json}");
 }
 
 /// (d) "the time and date of access".
@@ -383,5 +445,34 @@ fn nen_7513_the_actor_roles_are_recorded_and_rendered_in_both_formats() {
         agents[0]["role"].as_array().is_none_or(Vec::is_empty),
         "an unknown role set renders as absent: {}",
         agents[0]
+    );
+}
+
+/// EHDS Art. 11(5): an emergency access "shall be logged in a clear and
+/// understandable format and shall be easily accessible for the data subject"
+/// (`docs/law/eu/ehds/text.html Art. 11(5)`). The FHIR rendering carries the
+/// mark as `purposeOfEvent` with a fixed coding and plain-words text; the DICOM
+/// schema has no purpose element, so the mark is absent there and that absence
+/// is pinned.
+#[test]
+fn art_11_5_the_emergency_mark_reaches_the_fhir_rendering_only() {
+    let mut event = access_event();
+    event.purpose = Some("ETREAT".to_owned());
+    event.emergency_access = true;
+
+    let rendered =
+        fhir::to_fhir(&event, &ctx(), Some("patient-42")).expect("the FHIR rendering builds");
+    let concept = &rendered["purposeOfEvent"][0];
+    assert_eq!(concept["coding"][0]["code"], "ETREAT", "{rendered}");
+    assert_eq!(
+        concept["coding"][0]["system"],
+        "http://terminology.hl7.org/CodeSystem/v3-ActReason"
+    );
+    assert_eq!(concept["text"], fhir::EMERGENCY_ACCESS_TEXT);
+
+    let (xml, _) = renderings(&event);
+    assert!(
+        !xml.contains("ETREAT") && !xml.contains("PurposeOfUse") && !xml.contains("Emergency"),
+        "the DICOM schema defines no purpose element: {xml}"
     );
 }

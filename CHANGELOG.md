@@ -224,6 +224,43 @@ workflow refuses a tag that has no matching section here.
   A release that changes one of them since the previous release is refused
   until the assessment gains a revision row.
 
+- **`ferroehr db erase` permanently removes all data and settings of an
+  instance** (#3642; CRA Annex I Part I(2)(m), Annex II point 8(d)). It deletes
+  every multimedia blob FerroEHR wrote, then drops the `ext`, `clinical`,
+  `party`, `linkage` and `audit` schemas, one transaction per database. Without
+  `--confirm` it is a dry run that prints what it would remove and the value
+  that confirms it (the stored instance id, or the clinical database's name). A
+  wrong value or an unreachable blob store refuses before anything is touched,
+  and a rerun after success is a no-op. The new *Decommissioning* page covers
+  the retention duties before erasing and what the command cannot reach:
+  backups, WAL archives, replicas, the chart's Secrets and claims, database
+  roles, configuration files and media remanence.
+- **Patient-data requests can require an authentication assurance level and a
+  natural person** (#3622; EHDS Annex II 3.1 and 3.2). `[auth.oidc.assurance]`
+  maps the token's `acr` (or another claim) to the eIDAS levels low,
+  substantial and high; with `minimum` set, a patient-data request below it is
+  refused with `401` and an RFC 9470 `insufficient_user_authentication`
+  challenge naming the accepted `acr_values`. `[auth.oidc.professional]` names
+  the claim identifying the natural person; a client token is then refused on
+  patient data with `403` unless `acting_for_claim` names the professional it
+  acts for. Basic credentials are refused on patient data when either block is
+  set. The access record gains the acting mode, the assurance level and its raw
+  value, and the professional's identifier (audit migration 0009); the FHIR
+  AuditEvent and the DICOM message render the professional as the requesting
+  participant and the client application as a second one, and neither format
+  can carry the assurance level. Both blocks are off by default.
+
+- **An emergency access is marked in the access record** (#3624; EHDS Art.
+  11(5)). `[audit] emergency_purpose_codes` names the agreed purpose-of-use
+  codes that declare an access necessary to protect the vital interests of the
+  patient; an access declaring one carries `emergency_access` in its record
+  (audit migration 0010) and, on the FHIR AuditEvent, a `purposeOfEvent` with
+  HL7 v3 `ETREAT` and a plain-words text, so the patient's subject-scoped
+  ITI-81 retrieval shows it. Each code must also be on `purpose_codes`, or the
+  server refuses to start. The mark lifts no restriction: a GDPR Art. 18
+  restricted object is refused with an emergency purpose exactly as without
+  one. The DICOM syslog message has no purpose element and does not carry it.
+
 ### Changed
 
 - **`deployment_profile = "production"` refuses two more plaintext paths unless
@@ -347,6 +384,9 @@ workflow refuses a tag that has no matching section here.
   trail's `request_id` column was empty on every record, because the id was
   read from the response before the request-id layer copied it there; it is
   now read from the request and equals the `x-request-id` the client received.
+- **`FERROEHR__AUDIT__PURPOSE_CODES` is read as a comma-separated list**
+  (#3624). The environment form was refused as a string, so the purpose codes
+  could only be set in the TOML file.
 
 ### Security
 

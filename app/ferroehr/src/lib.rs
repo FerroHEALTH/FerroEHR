@@ -44,6 +44,7 @@ pub mod aql;
 pub mod banner;
 pub mod config;
 pub mod db;
+pub mod decommission;
 pub mod extensions;
 pub mod ids;
 pub mod licence;

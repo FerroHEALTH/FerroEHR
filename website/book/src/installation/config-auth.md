@@ -135,6 +135,50 @@ per incoming request, so callers get fast `401`s instead of slow ones. Keep the
 negative TTL short: it is also how long recovery takes to be noticed after the
 provider comes back.
 
+### `[auth.oidc.assurance]`: the assurance level patient data requires
+
+Off by default. What it refuses and the `401` challenge it sends are described
+in [Security](../security.md#assurance-level-and-the-natural-person-on-patient-data).
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `claim` | string | `acr` | The token claim carrying the authentication context class; a dotted path reaches into a JSON object. |
+| `levels` | table of string → `low` \| `substantial` \| `high` | empty | Maps each value your identity provider puts in `claim` to an eIDAS level of assurance. A value the table does not name carries no level. File-only: the keys are usually URIs. |
+| `minimum` | `low` \| `substantial` \| `high` | unset | The level a patient-data request must carry. Unset refuses nothing. |
+
+```toml
+[auth.oidc.assurance]
+minimum = "substantial"
+
+[auth.oidc.assurance.levels]
+"http://eidas.europa.eu/LoA/substantial" = "substantial"
+"http://eidas.europa.eu/LoA/high" = "high"
+```
+
+Boot refuses a `minimum` with an empty `levels` table or with no value mapped at
+or above it (every patient-data request would be refused), a blank `claim`
+beside a declared table, and a `levels` value that is blank or carries
+whitespace, a quote or a backslash, because the refusal names the accepted
+values in one quoted, space-separated `acr_values` parameter (RFC 9470 §3).
+
+### `[auth.oidc.professional]`: the natural person behind a token
+
+Absent by default, and tokens are then not judged on it. Present, a
+patient-data request whose token names no natural person is refused with `403`,
+unless it is a client token acting for a named professional.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `claim` | string | `sub` | The claim identifying the natural person; a dotted path reaches into a JSON object. A token lacking it is a client token. |
+| `client_tokens` | `sub_is_client` \| `claim_absent` | `sub_is_client` | How else a client-credentials token is recognised. `sub_is_client` also treats a token whose `sub` equals its `client_id` or `azp` as a client token (RFC 9068 §2.2); `claim_absent` relies on the missing claim alone. |
+| `acting_for_claim` | string | unset | The claim a client token carries the professional's identifier in, such as `act.sub`. Unset refuses every client token on patient data. |
+
+The access record then carries the acting mode and the professional; see
+[Audit trail](../audit.md#the-ehds-logging-elements-mapped). Both tables are
+reachable from the environment too (`FERROEHR__AUTH__OIDC__ASSURANCE__MINIMUM`,
+`FERROEHR__AUTH__OIDC__PROFESSIONAL__ACTING_FOR_CLAIM`), except the `levels`
+map.
+
 ## `[authz]`
 
 Role-based (RBAC) and attribute-based (ABAC) authorization. The full evaluation

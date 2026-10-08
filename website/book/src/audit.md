@@ -87,6 +87,7 @@ Each record additionally carries:
 | `domain` | The pseudonymisation domain read: `ehr`, `demographic`, `linkage`, or `system` for an operation that touches no domain. |
 | `organisation` | The organisation the caller acted for, read from the access token's `[authz.abac] organization_claim` — the same claim the ABAC layer decides on, so no second setting can name a different one. The recording does not depend on that layer being switched on. A Basic-authenticated caller and an unconfigured claim both leave it empty. |
 | `purpose` | The purpose of use the caller declared in the `x-purpose-of-use` header, when the deployment accepts it. |
+| `emergency_access` | `true` when the declared purpose is one of `[audit] emergency_purpose_codes`: an [emergency access](#emergency-access-ehds-art-115) (EHDS Art. 11(5)). |
 | `legal_basis` | The basis the deployment processes under, from `[audit] legal_basis`. |
 | `result_count` | How many records the operation served. |
 | `request_id` | The `x-request-id` correlation id the response carried. |
@@ -109,7 +110,7 @@ lives in the record:
 
 | NEN 7513 asks for | FerroEHR records it as |
 |---|---|
-| The identity of the person who accessed the record | `principal` — the authenticated Basic username or OAuth `sub`; an unattributable denial is recorded as unattributed, never under a fabricated identity |
+| The identity of the person who accessed the record | `principal` — the authenticated Basic username or OAuth `sub`; an unattributable denial is recorded as unattributed, never under a fabricated identity. With `[auth.oidc.professional]` configured, `professional_id` names the natural person when the token names a client application |
 | The identity of the patient whose record was accessed | `patient_id` — the resolved EHR subject, which under the pseudonymisation boundary is an opaque pseudonym |
 | Which record, or which part of it | `resource_class` + `resource_id`: the version uid, party uid or EHR id the operation touched |
 | The date and time | `recorded_at`, the event time; `stored_at` is when the row was persisted |
@@ -140,7 +141,7 @@ the authority and the wording below is a paraphrase.
 | Annex II 3.2 | Access-event field | DICOM PS3.15 | FHIR `AuditEvent` | State |
 |---|---|---|---|---|
 | (a) the healthcare provider or other individuals having accessed | `organisation` | — (no such attribute) | a second `agent` with `who` referencing `Organization/…` | Recorded |
-| (b) the specific natural person or persons having accessed | `principal` (+ `token_id`, `client_ip`) | `ActiveParticipant/@UserID` | `agent.who` | Recorded |
+| (b) the specific natural person or persons having accessed | `principal` (+ `token_id`, `client_ip`), and with `[auth.oidc.professional]` configured `professional_id` + `acting_mode` | `ActiveParticipant/@UserID` (the professional; a client application acting for one is a second, non-requesting participant; the token subject is `@AlternativeUserID` when it differs) | `agent.who` (the same split: the professional as requestor, the client application as a second agent; the token subject as `agent.altId` when it differs) | Recorded |
 | (c) the categories of data accessed | `categories` + `category_basis` + `category_evidence` + `category_map_digest`, classified through the `[audit.categories]` map (beside `resource_class`, `domain` and `result_count`) | none (no such element) | an `entity` named "categories of the data accessed", with one `detail` per category, the basis, each piece of evidence and the map digest | Recorded |
 | (d) the time and date of access | `recorded_at` | `EventIdentification/@EventDateTime` | `recorded` | Recorded |
 | (e) the origin or origins of data | `origins` + `origin_count` (the `FEEDER_AUDIT` originating systems of the served version bodies, or the server that created them, derived at commit onto `version.origins`) | — (no such element) | one `entity` per origin, named "origin of the served data" | Recorded |
@@ -161,6 +162,35 @@ rendering carries nothing: PS3.15 §A.5 defines no organisation attribute on
 site rather than the caller's organisation. Where no claim is configured or the
 caller authenticated with Basic, the field stays empty rather than being
 guessed.
+
+Element (b) asks for a **natural person**, and a bearer token can name a client
+application instead. With [`[auth.oidc.professional]`](security.md#assurance-level-and-the-natural-person-on-patient-data)
+configured, every record says which it was and who stood behind it:
+
+| Field | Meaning | DICOM PS3.15 | FHIR `AuditEvent` |
+|---|---|---|---|
+| `acting_mode` | `person` when the token names a natural person, `client` when it names a client application | the participant split below | the agent split below |
+| `professional_id` | the natural person: the person's own claim, or the professional a client token acts for | `ActiveParticipant/@UserID` of the requesting participant | `agent.who` of the requesting agent |
+| `principal` | the token subject, as before: the client application in `client` mode | a second `ActiveParticipant` with `UserIsRequestor="false"` and the network address; `@AlternativeUserID` in `person` mode when it differs from the professional | a second `agent` with `requestor: false` and the network address; `agent.altId` in `person` mode when it differs |
+| `assurance_level` | the eIDAS level (`low`, `substantial`, `high`) the token's assurance claim maps to under `[auth.oidc.assurance]` | none (no such attribute) | none (no such element) |
+| `assurance_value` | the raw claim value the level was read from, usually `acr` | none | none |
+
+The assurance level is the one value neither export carries.
+[PS3.15 §A.5](https://dicom.nema.org/medical/dicom/current/output/chtml/part15/sect_A.5.html)
+gives `ActiveParticipant` no assurance attribute. FHIR R4 has no element for it
+either: `agent.policy` holds the
+["policy or plan that authorized the activity"](https://hl7.org/fhir/R4/auditevent-definitions.html#AuditEvent.agent.policy),
+which a level of assurance is not, and BALP already uses it for the token
+`jti`. The level and its raw value therefore live in the local store's columns only;
+ITI-81 serves the FHIR document, so it does not return them either. The syslog feed carries the DICOM message, so it has the same
+gap. Unlike the FHIR document, these columns are outside the tamper-evidence
+digest; the append-only trigger still refuses any change to them.
+
+Without `[auth.oidc.professional]` the mode and the professional stay empty and
+(b) is answered by `principal`, which names a client application when the token
+names no person. Without `[auth.oidc.assurance] levels` the level stays empty;
+the raw value is still recorded when the token carries the claim. A Basic
+credential records none of the four.
 
 Element (c) asks for the **priority category** of the data, in the sense of
 Art. 14(1): patient summaries, electronic prescriptions, electronic
@@ -246,6 +276,55 @@ The common specifications the regulation's Article 36 provides for have not
 been adopted. When they are, this mapping is re-verified against them rather
 than assumed to still hold; see the
 [EHDS readiness page](compliance/ehds-readiness.md).
+
+### Emergency access (EHDS Art. 11(5))
+
+A natural person may restrict health professionals' access to parts of their
+data (EHDS Art. 8). Art. 11(5) lets a professional reach restricted data where
+the person's vital interests require it, and requires such cases to be "logged
+in a clear and understandable format" and "easily accessible for the data
+subject". Art. 9(1) counts these accesses among the ones the person is told
+about.
+
+You name the purpose codes your callers declare for an emergency in
+`[audit] emergency_purpose_codes`. Each one must also be on
+`[audit] purpose_codes`; the server refuses to start otherwise. An access
+whose declared purpose is one of them carries the emergency mark:
+
+- **The stored record:** the `emergency_access` column is `true`. It is
+  `false` for every other access and for records written before the column
+  existed.
+- **The FHIR `AuditEvent`:** a
+  [`purposeOfEvent`](https://hl7.org/fhir/R4/auditevent-definitions.html#AuditEvent.purposeOfEvent)
+  with the HL7 v3 `ActReason` code `ETREAT` ("Emergency Treatment", system
+  `http://terminology.hl7.org/CodeSystem/v3-ActReason`) and the mark in plain
+  words as its text: "Emergency access: declared as necessary to protect the
+  vital interests of the patient (Regulation (EU) 2025/327 Art. 11(5))". The
+  declared code stays on `agent.purposeOfUse`. A patient portal keys on the
+  `ETREAT` coding and shows the text.
+- **The DICOM syslog feed:** no mark. The PS3.15 schema has no purpose
+  element.
+
+The person reads their own log, the marked accesses included, through the
+[subject-scoped ITI-81 retrieval](#retrieving-audit-records-iti-81).
+
+```toml
+[audit]
+purpose_codes = ["TREAT", "ETREAT"]
+emergency_purpose_codes = ["ETREAT"]
+```
+
+The mark records the declaration and lifts no restriction. A composition or
+EHR restricted under GDPR Art. 18 stays refused with an emergency purpose,
+because Art. 18(2) admits processing only with consent, for legal claims, for
+the rights of another person or for an important public interest, and the
+person's own vital interests are not on that list. The refused attempt is
+still logged with the mark. FerroEHR does not hold an EHDS Art. 8 restriction
+today, so it neither hides restricted data from a professional nor grants the
+override: that is the Member State's access service or your own system, and
+the restriction itself is planned in
+[#3682](https://github.com/FerroHEALTH/FerroEHR/issues/3682). An emergency the
+caller does not declare is not marked.
 
 ### Retention, and who chooses it
 
@@ -430,7 +509,9 @@ unscoped retrieval is **admin-only**; a caller holding the configured
 `authz.rbac.subject_audit_role` reads it **scoped to one subject**, `patient`
 required, and is refused with a `403` that names the parameter when it omits
 it. Reading a subject's log is itself recorded as an access naming that
-subject and the record count served. The surface answers `404` when the local
+subject and the record count served. An
+[emergency access](#emergency-access-ehds-art-115) in the subject's log
+carries its mark as `purposeOfEvent`. The surface answers `404` when the local
 store is disabled.
 
 ```bash

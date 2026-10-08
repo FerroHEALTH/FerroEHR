@@ -110,6 +110,8 @@ pub(super) const LIST_KEYS: &[&str] = &[
     "smart.endpoints.capabilities",
     "signing.retired_key_paths",
     "privacy.subject_namespaces",
+    "audit.purpose_codes",
+    "audit.emergency_purpose_codes",
     "privacy.identifier_scan.rules",
     "privacy.identifier_scan.patterns",
     "demographic.identifier_protection.schemes",

@@ -111,6 +111,8 @@ struct SenderInner {
     /// any), and the legal basis it processes under.
     purpose_header: String,
     purpose_codes: Vec<String>,
+    /// The purpose codes that mark an access as an emergency access.
+    emergency_purpose_codes: Vec<String>,
     legal_basis: Option<String>,
     /// The compiled `[audit.categories]` map every record is classified through.
     categories: crate::system_log::categories::CategoryMap,
@@ -183,6 +185,22 @@ impl AuditSender {
                 || self.inner.purpose_codes.iter().any(|known| known == code))
     }
 
+    /// Whether `purpose` is one of `[audit] emergency_purpose_codes`, the
+    /// codes that mark an access as declared in the vital interest of the data
+    /// subject (`docs/law/eu/ehds/text.html Art. 11(5)`).
+    ///
+    /// `None`, an empty list, and a code off the list are all `false`: the
+    /// mark is never inferred, only read off a declared, agreed code.
+    #[must_use]
+    pub fn is_emergency_purpose(&self, purpose: Option<&str>) -> bool {
+        purpose.is_some_and(|code| {
+            self.inner
+                .emergency_purpose_codes
+                .iter()
+                .any(|known| known == code)
+        })
+    }
+
     /// The legal basis this deployment records on every access event.
     #[must_use]
     pub fn legal_basis(&self) -> Option<&str> {
@@ -205,9 +223,12 @@ impl AuditSender {
     /// the store recovers), but the operation must not be reported as having
     /// been audited.
     ///
-    /// Every record is stamped with the digest of the category map in force.
+    /// Every record is stamped with the digest of the category map in force,
+    /// and with the emergency mark when its declared purpose is one of
+    /// `[audit] emergency_purpose_codes`.
     pub fn emit(&self, mut event: AuditEvent) -> EmitOutcome {
         event.category_map_digest = Some(self.inner.categories.digest());
+        event.emergency_access = self.is_emergency_purpose(event.purpose.as_deref());
         crate::telemetry::metrics::metrics()
             .atna_audit_emitted
             .add(1, &[]);
@@ -449,6 +470,7 @@ pub async fn start(
             suppress_login_events: config.suppress_login_events,
             purpose_header: config.purpose_header.to_ascii_lowercase(),
             purpose_codes: config.purpose_codes.clone(),
+            emergency_purpose_codes: config.emergency_purpose_codes.clone(),
             legal_basis: config.legal_basis.clone(),
             categories,
             fail_mode: config.fail_mode,
@@ -940,6 +962,7 @@ mod tests {
                 suppress_login_events: true,
                 purpose_header: "x-purpose-of-use".to_owned(),
                 purpose_codes: Vec::new(),
+                emergency_purpose_codes: vec!["ETREAT".to_owned()],
                 legal_basis: None,
                 categories: crate::system_log::categories::CategoryMap::default(),
                 fail_mode,
@@ -980,6 +1003,17 @@ mod tests {
         // operation is rejected: no un-audited PHI access.
         let sender = bare_sender(FailMode::Closed, 8, false);
         assert_eq!(sender.emit(event()), EmitOutcome::Rejected);
+    }
+
+    /// Only a declared code on `emergency_purpose_codes` marks an access; an
+    /// absent purpose and any other code never do (EHDS Art. 11(5)).
+    #[tokio::test]
+    async fn only_a_configured_emergency_code_marks_an_access() {
+        let sender = bare_sender(FailMode::Open, 8, true);
+        assert!(sender.is_emergency_purpose(Some("ETREAT")));
+        assert!(!sender.is_emergency_purpose(Some("TREAT")));
+        assert!(!sender.is_emergency_purpose(Some("etreat")));
+        assert!(!sender.is_emergency_purpose(None));
     }
 
     #[tokio::test]

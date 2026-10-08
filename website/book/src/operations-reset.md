@@ -24,7 +24,8 @@ the next boot starts as a fresh install.
 A reset does not reach anything outside the instance. Your logical dumps, WAL
 archives, volume snapshots, log collector and any external Audit Record
 Repository still hold what they held. Deleting those is a separate decision
-with the same retention duties.
+with the same retention duties. To take the instance out of service for good
+instead of starting it again, follow [Decommissioning](operations-decommissioning.md).
 
 The reset has two halves, and you need both:
 

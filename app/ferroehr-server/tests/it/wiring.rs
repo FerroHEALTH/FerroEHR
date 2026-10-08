@@ -195,6 +195,28 @@ fn usage_report_print_parses_and_requires_print() -> Result<(), clap::Error> {
     Ok(())
 }
 
+/// `ferroehr db erase` parses without a confirmation (the dry run) and with
+/// one; the confirmation is a value, never a bare flag.
+#[test]
+fn db_erase_parses_as_a_dry_run_or_with_a_confirmation() -> Result<(), clap::Error> {
+    let dry = Cli::try_parse_from(["ferroehr", "db", "erase"])?;
+    assert!(
+        format!("{dry:?}").contains("Erase { confirm: None }"),
+        "no --confirm is the dry run: {dry:?}"
+    );
+    let id = "0b5e3c1e-6f4a-4d1b-9a43-2b7c5f1d8e90";
+    let confirmed = Cli::try_parse_from(["ferroehr", "db", "erase", "--confirm", id])?;
+    assert!(
+        format!("{confirmed:?}").contains(&format!("Erase {{ confirm: Some({id:?}) }}")),
+        "the confirmation is carried verbatim: {confirmed:?}"
+    );
+    assert!(
+        Cli::try_parse_from(["ferroehr", "db", "erase", "--confirm"]).is_err(),
+        "--confirm without the instance it names must not parse"
+    );
+    Ok(())
+}
+
 /// An unknown subcommand is rejected rather than silently falling through to
 /// the serve path.
 #[test]

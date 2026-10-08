@@ -28,9 +28,33 @@ use jiff_sqlx::Timestamp;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
+use crate::config::auth::AssuranceLevel;
 use crate::system_log::AuditError;
 use crate::system_log::codes::AtnaAction;
-use crate::system_log::event::{AuditEvent, EventType, ObjectClass};
+use crate::system_log::event::{ActingMode, AuditEvent, EventType, ObjectClass};
+
+/// The single-record insert, returning the stored row id.
+const INSERT_ONE: &str = "INSERT INTO audit.audit_event (recorded_at, action, outcome, \
+     event_code, operation, principal, organisation, patient_id, resource_class, resource_id, \
+     client_ip, token_id, domain, purpose, legal_basis, result_count, request_id, fhir, roles, \
+     origins, origin_count, categories, category_basis, category_evidence, category_map_digest, \
+     acting_mode, assurance_level, assurance_value, professional_id, emergency_access) \
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, \
+     $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30) \
+     RETURNING id";
+
+/// The batched insert: one row per element of the parallel column arrays.
+const INSERT_BATCH: &str = "INSERT INTO audit.audit_event (recorded_at, action, outcome, \
+     event_code, operation, principal, organisation, patient_id, resource_class, resource_id, \
+     client_ip, token_id, domain, purpose, legal_basis, result_count, request_id, fhir, roles, \
+     origins, origin_count, categories, category_basis, category_evidence, category_map_digest, \
+     acting_mode, assurance_level, assurance_value, professional_id, emergency_access) \
+     SELECT * FROM UNNEST($1::timestamptz[], $2::text[], $3::smallint[], $4::text[], \
+     $5::text[], $6::text[], $7::text[], $8::text[], $9::text[], $10::text[], $11::text[], \
+     $12::text[], $13::text[], $14::text[], $15::text[], $16::bigint[], $17::text[], \
+     $18::jsonb[], $19::jsonb[], $20::jsonb[], $21::bigint[], $22::jsonb[], $23::text[], \
+     $24::jsonb[], $25::text[], $26::text[], $27::text[], $28::text[], $29::text[], \
+     $30::boolean[])";
 
 /// The PG-backed Audit Record Repository (the `store` sink).
 #[derive(Debug, Clone)]
@@ -61,45 +85,41 @@ impl AuditStore {
         fhir: &serde_json::Value,
     ) -> Result<Uuid, AuditError> {
         let outcome = outcome_smallint(event);
-        sqlx::query(
-            "INSERT INTO audit.audit_event (recorded_at, action, outcome, event_code, \
-             operation, principal, organisation, patient_id, resource_class, resource_id, \
-             client_ip, token_id, domain, purpose, legal_basis, result_count, \
-             request_id, fhir, roles, origins, origin_count, categories, category_basis, \
-             category_evidence, category_map_digest) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, \
-             $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25) \
-             RETURNING id",
-        )
-        .bind(Timestamp::from(event.timestamp))
-        .bind(action_str(event))
-        .bind(outcome)
-        .bind(event_code(event))
-        .bind(operation(event))
-        .bind(nonempty_opt(&event.user_id))
-        .bind(event.organisation.as_deref())
-        .bind(subject)
-        .bind(resource_class(event.object))
-        .bind(event.object_id.as_deref())
-        .bind(event.client_ip.as_deref())
-        .bind(event.token_id.as_deref())
-        .bind(event.domain.as_str())
-        .bind(event.purpose.as_deref())
-        .bind(event.legal_basis.as_deref())
-        .bind(result_count(event))
-        .bind(event.request_id.as_deref())
-        .bind(fhir.clone())
-        .bind(roles_json(event))
-        .bind(origins_json(event))
-        .bind(origin_count(event))
-        .bind(categories_json(event))
-        .bind(category_basis(event))
-        .bind(category_evidence_json(event))
-        .bind(category_map_digest(event))
-        .fetch_one(&self.pool)
-        .await?
-        .try_get::<Uuid, _>("id")
-        .map_err(AuditError::Store)
+        sqlx::query(INSERT_ONE)
+            .bind(Timestamp::from(event.timestamp))
+            .bind(action_str(event))
+            .bind(outcome)
+            .bind(event_code(event))
+            .bind(operation(event))
+            .bind(nonempty_opt(&event.user_id))
+            .bind(event.organisation.as_deref())
+            .bind(subject)
+            .bind(resource_class(event.object))
+            .bind(event.object_id.as_deref())
+            .bind(event.client_ip.as_deref())
+            .bind(event.token_id.as_deref())
+            .bind(event.domain.as_str())
+            .bind(event.purpose.as_deref())
+            .bind(event.legal_basis.as_deref())
+            .bind(result_count(event))
+            .bind(event.request_id.as_deref())
+            .bind(fhir.clone())
+            .bind(roles_json(event))
+            .bind(origins_json(event))
+            .bind(origin_count(event))
+            .bind(categories_json(event))
+            .bind(category_basis(event))
+            .bind(category_evidence_json(event))
+            .bind(category_map_digest(event))
+            .bind(event.actor.mode.map(ActingMode::as_str))
+            .bind(event.actor.assurance_level.map(AssuranceLevel::as_str))
+            .bind(event.actor.assurance_value.as_deref())
+            .bind(event.actor.professional_id.as_deref())
+            .bind(event.emergency_access)
+            .fetch_one(&self.pool)
+            .await?
+            .try_get::<Uuid, _>("id")
+            .map_err(AuditError::Store)
     }
 
     /// Persist a whole drained batch in ONE multi-row `INSERT` (UNNEST over
@@ -144,6 +164,8 @@ impl AuditStore {
         let mut origins: Vec<Option<serde_json::Value>> = Vec::with_capacity(records.len());
         let mut origin_counts: Vec<Option<i64>> = Vec::with_capacity(records.len());
         let mut classified = CategoryColumns::with_capacity(records.len());
+        let mut actors = ActorColumns::with_capacity(records.len());
+        let mut emergency: Vec<bool> = Vec::with_capacity(records.len());
         for (event, subject, fhir) in records {
             let Some(fhir) = fhir else {
                 continue;
@@ -170,49 +192,45 @@ impl AuditStore {
             origins.push(origins_json(event));
             origin_counts.push(origin_count(event));
             classified.push(event);
+            actors.push(event);
+            emergency.push(event.emergency_access);
         }
         if fhir_docs.is_empty() {
             return Ok(());
         }
-        sqlx::query(
-            "INSERT INTO audit.audit_event (recorded_at, action, outcome, event_code, \
-             operation, principal, organisation, patient_id, resource_class, resource_id, \
-             client_ip, token_id, domain, purpose, legal_basis, result_count, \
-             request_id, fhir, roles, origins, origin_count, categories, category_basis, \
-             category_evidence, category_map_digest) \
-             SELECT * FROM UNNEST($1::timestamptz[], $2::text[], $3::smallint[], $4::text[], \
-             $5::text[], $6::text[], $7::text[], $8::text[], $9::text[], $10::text[], \
-             $11::text[], $12::text[], $13::text[], $14::text[], $15::text[], \
-             $16::bigint[], $17::text[], $18::jsonb[], $19::jsonb[], $20::jsonb[], \
-             $21::bigint[], $22::jsonb[], $23::text[], $24::jsonb[], $25::text[])",
-        )
-        .bind(recorded_at)
-        .bind(actions)
-        .bind(outcomes)
-        .bind(event_codes)
-        .bind(operations)
-        .bind(principals)
-        .bind(organisations)
-        .bind(patient_ids)
-        .bind(resource_classes)
-        .bind(resource_ids)
-        .bind(client_ips)
-        .bind(token_ids)
-        .bind(domains)
-        .bind(purposes)
-        .bind(legal_bases)
-        .bind(result_counts)
-        .bind(request_ids)
-        .bind(fhir_docs)
-        .bind(roles)
-        .bind(origins)
-        .bind(origin_counts)
-        .bind(classified.categories)
-        .bind(classified.bases)
-        .bind(classified.evidence)
-        .bind(classified.digests)
-        .execute(&self.pool)
-        .await?;
+        sqlx::query(INSERT_BATCH)
+            .bind(recorded_at)
+            .bind(actions)
+            .bind(outcomes)
+            .bind(event_codes)
+            .bind(operations)
+            .bind(principals)
+            .bind(organisations)
+            .bind(patient_ids)
+            .bind(resource_classes)
+            .bind(resource_ids)
+            .bind(client_ips)
+            .bind(token_ids)
+            .bind(domains)
+            .bind(purposes)
+            .bind(legal_bases)
+            .bind(result_counts)
+            .bind(request_ids)
+            .bind(fhir_docs)
+            .bind(roles)
+            .bind(origins)
+            .bind(origin_counts)
+            .bind(classified.categories)
+            .bind(classified.bases)
+            .bind(classified.evidence)
+            .bind(classified.digests)
+            .bind(actors.modes)
+            .bind(actors.levels)
+            .bind(actors.values)
+            .bind(actors.professionals)
+            .bind(emergency)
+            .execute(&self.pool)
+            .await?;
         Ok(())
     }
 
@@ -575,6 +593,34 @@ fn origin_count(event: &AuditEvent) -> Option<i64> {
     event
         .origin_count
         .map(|count| i64::try_from(count).unwrap_or(i64::MAX))
+}
+
+/// The four authentication columns of a batched insert, one entry per record.
+struct ActorColumns<'a> {
+    modes: Vec<Option<&'static str>>,
+    levels: Vec<Option<&'static str>>,
+    values: Vec<Option<&'a str>>,
+    professionals: Vec<Option<&'a str>>,
+}
+
+impl<'a> ActorColumns<'a> {
+    fn with_capacity(capacity: usize) -> Self {
+        Self {
+            modes: Vec::with_capacity(capacity),
+            levels: Vec::with_capacity(capacity),
+            values: Vec::with_capacity(capacity),
+            professionals: Vec::with_capacity(capacity),
+        }
+    }
+
+    fn push(&mut self, event: &'a AuditEvent) {
+        self.modes.push(event.actor.mode.map(ActingMode::as_str));
+        self.levels
+            .push(event.actor.assurance_level.map(AssuranceLevel::as_str));
+        self.values.push(event.actor.assurance_value.as_deref());
+        self.professionals
+            .push(event.actor.professional_id.as_deref());
+    }
 }
 
 /// The four classification columns of a batched insert, one entry per record.

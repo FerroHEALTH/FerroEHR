@@ -526,3 +526,159 @@ async fn the_access_trail_refuses_rewriting_deletion_and_truncation() {
         .expect("count");
     assert_eq!(survives, 1, "the record survived every attempt");
 }
+
+/// The access record's authentication columns (EHDS Annex II 3.1 and 3.2(b),
+/// `docs/law/eu/ehds/text.html Annex II 3`): the single and the batched insert
+/// persist the acting mode, the assurance level and raw value, and the
+/// professional; an event that establishes none of them stores NULLs; and the
+/// chain verifies over records carrying them.
+#[tokio::test]
+async fn both_inserts_persist_the_authentication_columns() {
+    use ferroehr::config::auth::AssuranceLevel;
+    use ferroehr::system_log::event::{ActingMode, ActorAuthentication};
+
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let store = AuditStore::new(pool.clone());
+
+    let mut client = read_event("2026-07-10T10:00:00Z".parse().unwrap());
+    "scheduler-app".clone_into(&mut client.user_id);
+    client.actor = ActorAuthentication {
+        mode: Some(ActingMode::Client),
+        assurance_level: Some(AssuranceLevel::High),
+        assurance_value: Some("http://eidas.europa.eu/LoA/high".to_owned()),
+        professional_id: Some("prof-007".to_owned()),
+    };
+    let rendered = fhir::to_fhir(&client, &ctx(), None).expect("render");
+    store
+        .insert(&client, None, &rendered)
+        .await
+        .expect("insert");
+
+    let mut person = read_event("2026-07-10T10:00:01Z".parse().unwrap());
+    person.actor = ActorAuthentication {
+        mode: Some(ActingMode::Person),
+        assurance_level: Some(AssuranceLevel::Substantial),
+        assurance_value: Some("loa-substantial".to_owned()),
+        professional_id: Some("alice".to_owned()),
+    };
+    let plain = read_event("2026-07-10T10:00:02Z".parse().unwrap());
+    let records = vec![
+        (
+            person.clone(),
+            None,
+            Some(fhir::to_fhir(&person, &ctx(), None).expect("render")),
+        ),
+        (
+            plain.clone(),
+            None,
+            Some(fhir::to_fhir(&plain, &ctx(), None).expect("render")),
+        ),
+    ];
+    store.insert_batch(&records).await.expect("batch insert");
+
+    let rows = sqlx::query(
+        "SELECT acting_mode, assurance_level, assurance_value, professional_id \
+         FROM audit.audit_event ORDER BY chain_seq",
+    )
+    .fetch_all(&pool)
+    .await
+    .expect("rows");
+    let columns: Vec<[Option<String>; 4]> = rows
+        .iter()
+        .map(|row| {
+            [
+                row.get("acting_mode"),
+                row.get("assurance_level"),
+                row.get("assurance_value"),
+                row.get("professional_id"),
+            ]
+        })
+        .collect();
+    assert_eq!(
+        columns,
+        vec![
+            [
+                Some("client".to_owned()),
+                Some("high".to_owned()),
+                Some("http://eidas.europa.eu/LoA/high".to_owned()),
+                Some("prof-007".to_owned()),
+            ],
+            [
+                Some("person".to_owned()),
+                Some("substantial".to_owned()),
+                Some("loa-substantial".to_owned()),
+                Some("alice".to_owned()),
+            ],
+            [None, None, None, None],
+        ]
+    );
+
+    let findings: Vec<String> =
+        sqlx::query_scalar("SELECT finding FROM audit.verify_audit_chain()")
+            .fetch_all(&pool)
+            .await
+            .expect("verify");
+    assert!(findings.is_empty(), "{findings:?}");
+}
+
+/// The emergency-access mark (EHDS Art. 11(5), `docs/law/eu/ehds/text.html
+/// Art. 11(5)`): both inserts persist it, an unmarked record stores `false`,
+/// the append-only trigger refuses flipping it afterwards, and the chain
+/// verifies over marked records.
+#[tokio::test]
+async fn both_inserts_persist_the_emergency_mark_and_it_cannot_be_rewritten() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let store = AuditStore::new(pool.clone());
+
+    let mut single = read_event("2026-07-10T11:00:00Z".parse().unwrap());
+    single.purpose = Some("ETREAT".to_owned());
+    single.emergency_access = true;
+    let rendered = fhir::to_fhir(&single, &ctx(), None).expect("render");
+    store
+        .insert(&single, None, &rendered)
+        .await
+        .expect("insert");
+
+    let mut marked = read_event("2026-07-10T11:00:01Z".parse().unwrap());
+    marked.purpose = Some("ETREAT".to_owned());
+    marked.emergency_access = true;
+    let mut plain = read_event("2026-07-10T11:00:02Z".parse().unwrap());
+    plain.purpose = Some("TREAT".to_owned());
+    let records = vec![
+        (
+            marked.clone(),
+            None,
+            Some(fhir::to_fhir(&marked, &ctx(), None).expect("render")),
+        ),
+        (
+            plain.clone(),
+            None,
+            Some(fhir::to_fhir(&plain, &ctx(), None).expect("render")),
+        ),
+    ];
+    store.insert_batch(&records).await.expect("batch insert");
+
+    let marks: Vec<bool> =
+        sqlx::query_scalar("SELECT emergency_access FROM audit.audit_event ORDER BY chain_seq")
+            .fetch_all(&pool)
+            .await
+            .expect("rows");
+    assert_eq!(marks, vec![true, true, false]);
+
+    let rewrite = sqlx::query(
+        "UPDATE audit.audit_event SET emergency_access = NOT emergency_access \
+         WHERE purpose = 'TREAT'",
+    )
+    .execute(&pool)
+    .await;
+    assert!(rewrite.is_err(), "the mark is append-only: {rewrite:?}");
+
+    let findings: Vec<String> =
+        sqlx::query_scalar("SELECT finding FROM audit.verify_audit_chain()")
+            .fetch_all(&pool)
+            .await
+            .expect("verify");
+    assert!(findings.is_empty(), "{findings:?}");
+}

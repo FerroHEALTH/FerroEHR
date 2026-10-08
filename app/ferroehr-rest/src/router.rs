@@ -97,6 +97,11 @@ pub fn router(state: AppState, authenticator: Arc<Authenticator>) -> Router {
         authn::AuthLayer {
             authenticator: Arc::clone(&authenticator),
             authz: state.authz(),
+            patient_data: authn::assurance::PatientDataGate::new(
+                authenticator.config(),
+                &cfg.server.base_path,
+            )
+            .map(Arc::new),
         },
         authn::middleware,
     ));

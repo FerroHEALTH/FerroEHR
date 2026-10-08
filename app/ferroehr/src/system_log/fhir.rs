@@ -29,6 +29,20 @@
 //!   `UserAgentTypes#UserOauthAgent` carrying the token `jti` in
 //!   `agent.policy` (`IHE.BasicAudit.OAUTHaccessTokenUse.Minimal` — minimal
 //!   by design: never the token itself).
+//! - The natural person (EHDS Annex II 3.2(b)): a client application acting
+//!   for a named professional renders as two agents, the person as requestor
+//!   and the application beside it; a professional identifier other than the
+//!   token subject is `who`, with the subject as `agent.altId`.
+//! - The authentication assurance level has no FHIR R4 `AuditEvent` element:
+//!   `agent.policy` is the "policy or plan that authorized the activity"
+//!   (<https://hl7.org/fhir/R4/auditevent-definitions.html#AuditEvent.agent.policy>),
+//!   which a level of assurance is not, so the level lives in the store's
+//!   columns only.
+//! - The emergency-access mark (EHDS Art. 11(5)): `purposeOfEvent`, "the
+//!   purposeOfUse (reason) that was used during the event being recorded"
+//!   (<https://hl7.org/fhir/R4/auditevent-definitions.html#AuditEvent.purposeOfEvent>),
+//!   carries the HL7 v3 `ActReason` code `ETREAT` with the mark in plain words
+//!   as its text, beside the declared code on `agent.purposeOfUse`.
 //!
 //! `meta.profile` claims the matching BALP profile only when the record
 //! actually satisfies it (the BALP `RESTful` profiles fix `outcome` = `0`, so
@@ -36,12 +50,14 @@
 //! resolved patient entity).
 
 use ferroehr_ext::fhir::audit::{
-    AuditAction, AuditAgent, AuditCoding, AuditEntityRef, AuditOutcome, AuditRecord,
+    AuditAction, AuditAgent, AuditCoding, AuditConcept, AuditEntityRef, AuditOutcome, AuditRecord,
     AuditSourceRef, AuditWho,
 };
 
 use crate::system_log::AuditError;
-use crate::system_log::event::{AuditEvent, EventActionCode, EventOutcome, EventType, ObjectClass};
+use crate::system_log::event::{
+    ActingMode, AuditEvent, EventActionCode, EventOutcome, EventType, ObjectClass,
+};
 use crate::system_log::message::AuditContext;
 
 // ── Code systems (FHIR R4 / IHE BALP fixed bindings) ──────────────────────────
@@ -62,6 +78,10 @@ pub const SYS_SECURITY_SOURCE_TYPE: &str =
 /// IHE BALP `UserAgentTypes` code system (`UserOauthAgent`).
 pub const SYS_BALP_USER_AGENT_TYPES: &str =
     "https://profiles.ihe.net/ITI/BALP/CodeSystem/UserAgentTypes";
+/// The HL7 v3 `ActReason` code system, home of the `PurposeOfUse` codes the
+/// FHIR R4 `AuditEvent.purposeOfEvent` binding draws on.
+pub const SYS_V3_ACT_REASON: &str = "http://terminology.hl7.org/CodeSystem/v3-ActReason";
+
 /// The system for ITS-REST operation-id subtype codings.
 ///
 /// NOTE: no external code system governs openEHR REST operations — our own
@@ -123,6 +143,7 @@ pub fn to_fhir(
             EventOutcome::Success => None,
             _ => Some("Operation failed".to_owned()),
         },
+        purpose_of_event: emergency_purpose(event),
         agents: build_agents(event, ctx, missing),
         source: AuditSourceRef {
             site: nonempty_opt(&ctx.enterprise_site_id),
@@ -191,43 +212,18 @@ fn build_agents(event: &AuditEvent, ctx: &AuditContext, missing: &str) -> Vec<Au
         )
     };
 
-    let user = nonempty(&event.user_id, missing);
-    let client_ip = event
-        .client_ip
-        .clone()
-        .unwrap_or_else(|| missing.to_owned());
-
-    let mut agents = vec![
-        // The requesting client, carrying the authenticated user identity
-        // (the FHIR twin of the DICOM source ActiveParticipant) and the
-        // purpose it declared: FHIR R4 puts `purposeOfUse` on the agent
-        // (<https://hl7.org/fhir/R4/auditevent.html>), and the requestor is
-        // the agent whose purpose it is.
-        AuditAgent {
-            role: Some(client_role),
-            // The roles the person held, as `agent.role` (0..*): "the
-            // security role that the user was acting under"
-            // (<https://hl7.org/fhir/R4/auditevent-definitions.html#AuditEvent.agent.role>),
-            // the NEN 7513 role element. The deployment's own vocabulary, so
-            // text without a code system.
-            roles: event.roles.clone(),
-            who: Some(AuditWho::Identifier(user)),
-            requestor: true,
-            policy: Vec::new(),
-            network_address: Some(client_ip),
-            purpose_of_use: purpose_codings(event),
-        },
-        // This server.
-        AuditAgent {
-            role: Some(server_role),
-            roles: Vec::new(),
-            who: Some(AuditWho::Identifier(nonempty(&ctx.source_id, missing))),
-            requestor: false,
-            policy: Vec::new(),
-            network_address: Some(nonempty(&ctx.server_ip, missing)),
-            purpose_of_use: Vec::new(),
-        },
-    ];
+    let mut agents = requesting_agents(event, client_role, missing);
+    // This server.
+    agents.push(AuditAgent {
+        role: Some(server_role),
+        roles: Vec::new(),
+        who: Some(AuditWho::Identifier(nonempty(&ctx.source_id, missing))),
+        alt_id: None,
+        requestor: false,
+        policy: Vec::new(),
+        network_address: Some(nonempty(&ctx.server_ip, missing)),
+        purpose_of_use: Vec::new(),
+    });
 
     if let Some(organisation) = event.organisation.as_deref().filter(|s| !s.is_empty()) {
         // The organisation the caller acted for, as a second participant:
@@ -240,6 +236,7 @@ fn build_agents(event: &AuditEvent, ctx: &AuditContext, missing: &str) -> Vec<Au
             role: None,
             roles: Vec::new(),
             who: Some(AuditWho::Reference(format!("Organization/{organisation}"))),
+            alt_id: None,
             requestor: false,
             policy: Vec::new(),
             network_address: None,
@@ -258,6 +255,7 @@ fn build_agents(event: &AuditEvent, ctx: &AuditContext, missing: &str) -> Vec<Au
             )),
             roles: Vec::new(),
             who: None,
+            alt_id: None,
             requestor: true,
             policy: vec![jti.to_owned()],
             network_address: None,
@@ -266,6 +264,79 @@ fn build_agents(event: &AuditEvent, ctx: &AuditContext, missing: &str) -> Vec<Au
     }
 
     agents
+}
+
+/// The requesting side's agents.
+///
+/// A client application acting for a named professional yields two: the person
+/// as requestor with the security roles and the purpose, and the application
+/// as a non-requesting participant at the network address (FHIR R4
+/// `agent.requestor`, "whether user is initiator",
+/// <https://hl7.org/fhir/R4/auditevent-definitions.html#AuditEvent.agent.requestor>).
+/// Otherwise one requesting client carries the authenticated user identity
+/// (the FHIR twin of the DICOM source `ActiveParticipant`); a professional
+/// identifier other than the token subject names the person there, with the
+/// subject as the authentication system's identifier, `agent.altId`.
+fn requesting_agents(
+    event: &AuditEvent,
+    client_role: AuditCoding,
+    missing: &str,
+) -> Vec<AuditAgent> {
+    let user = nonempty(&event.user_id, missing);
+    let client_ip = event
+        .client_ip
+        .clone()
+        .unwrap_or_else(|| missing.to_owned());
+    let professional = event
+        .actor
+        .professional_id
+        .as_deref()
+        .filter(|id| !id.is_empty());
+    if let (Some(ActingMode::Client), Some(person)) = (event.actor.mode, professional) {
+        return vec![
+            AuditAgent {
+                role: None,
+                roles: event.roles.clone(),
+                who: Some(AuditWho::Identifier(person.to_owned())),
+                alt_id: None,
+                requestor: true,
+                policy: Vec::new(),
+                network_address: None,
+                purpose_of_use: purpose_codings(event),
+            },
+            AuditAgent {
+                role: Some(client_role),
+                roles: Vec::new(),
+                who: Some(AuditWho::Identifier(user)),
+                alt_id: None,
+                requestor: false,
+                policy: Vec::new(),
+                network_address: Some(client_ip),
+                purpose_of_use: Vec::new(),
+            },
+        ];
+    }
+    let (who, alt_id) = match professional {
+        Some(person) if person != user => (person.to_owned(), Some(user)),
+        _ => (user, None),
+    };
+    vec![AuditAgent {
+        role: Some(client_role),
+        // The roles the person held, as `agent.role` (0..*): "the security role
+        // that the user was acting under"
+        // (<https://hl7.org/fhir/R4/auditevent-definitions.html#AuditEvent.agent.role>),
+        // the NEN 7513 role element. The deployment's own vocabulary, so text
+        // without a code system. FHIR R4 puts `purposeOfUse` on the agent
+        // (<https://hl7.org/fhir/R4/auditevent.html>), and the requestor is the
+        // agent whose purpose it is.
+        roles: event.roles.clone(),
+        who: Some(AuditWho::Identifier(who)),
+        alt_id,
+        requestor: true,
+        policy: Vec::new(),
+        network_address: Some(client_ip),
+        purpose_of_use: purpose_codings(event),
+    }]
 }
 
 /// The declared purpose of use as `agent.purposeOfUse` codings.
@@ -286,6 +357,29 @@ fn purpose_codings(event: &AuditEvent) -> Vec<AuditCoding> {
             display: None,
         })
         .collect()
+}
+
+/// The plain-words text of the emergency-access mark, the line a
+/// patient-facing view of the access log shows.
+pub const EMERGENCY_ACCESS_TEXT: &str = "Emergency access: declared as necessary to protect \
+     the vital interests of the patient (Regulation (EU) 2025/327 Art. 11(5))";
+
+/// The emergency-access mark as `AuditEvent.purposeOfEvent`: the fixed HL7 v3
+/// `ETREAT` coding a patient-facing view keys on, with the mark in plain words.
+///
+/// Empty for an access without the mark. The declared code itself stays on
+/// `agent.purposeOfUse`.
+fn emergency_purpose(event: &AuditEvent) -> Vec<AuditConcept> {
+    if !event.emergency_access {
+        return Vec::new();
+    }
+    // NOTE: `ETREAT` (http://terminology.hl7.org/CodeSystem/v3-ActReason) over `BTG`: the mark
+    // records care declared for an emergent condition and overrides no access control, which is
+    // what `BTG` would claim.
+    vec![AuditConcept {
+        coding: coding(SYS_V3_ACT_REASON, "ETREAT", "Emergency Treatment"),
+        text: Some(EMERGENCY_ACCESS_TEXT.to_owned()),
+    }]
 }
 
 /// The entity list: the patient (when resolved), the touched data object
@@ -494,6 +588,8 @@ fn nonempty_opt(value: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::auth::AssuranceLevel;
+    use crate::system_log::event::ActorAuthentication;
     use base64::Engine;
     use jiff::Timestamp;
 
@@ -696,6 +792,87 @@ mod tests {
         }));
     }
 
+    /// A client application acting for a named professional renders as two
+    /// agents: the person as requestor, the application beside it.
+    #[test]
+    fn a_client_acting_for_a_professional_renders_two_agents() {
+        let mut e = event(
+            EventActionCode::Read,
+            ObjectClass::Composition,
+            EventOutcome::Success,
+        );
+        e.user_id = "scheduler-app".to_owned();
+        e.roles = vec!["CLINICIAN".to_owned()];
+        e.actor = ActorAuthentication {
+            mode: Some(ActingMode::Client),
+            assurance_level: Some(AssuranceLevel::Substantial),
+            assurance_value: Some("loa-substantial".to_owned()),
+            professional_id: Some("prof-007".to_owned()),
+        };
+        let v = json(&e, Some("patient-42"));
+        let agents = v["agent"].as_array().expect("agents");
+        assert_eq!(agents.len(), 3, "{v}");
+        assert_eq!(agents[0]["who"]["identifier"]["value"], "prof-007");
+        assert_eq!(agents[0]["requestor"], true);
+        assert_eq!(agents[0]["role"][0]["text"], "CLINICIAN");
+        assert!(agents[0].get("type").is_none(), "{v}");
+        assert_eq!(agents[1]["who"]["identifier"]["value"], "scheduler-app");
+        assert_eq!(agents[1]["requestor"], false);
+        assert_eq!(agents[1]["network"]["address"], "10.216.24.150");
+        assert_eq!(agents[1]["type"]["coding"][0]["code"], "110152");
+        // The server stays the last fixed participant.
+        assert_eq!(agents[2]["who"]["identifier"]["value"], "ferroehr");
+        // No FHIR R4 AuditEvent element carries the assurance level.
+        let rendered = v.to_string();
+        assert!(!rendered.contains("loa-substantial"), "{rendered}");
+        assert!(!rendered.contains("substantial"), "{rendered}");
+    }
+
+    /// A professional identifier other than the token subject names the
+    /// person, and the subject becomes the authentication system's `altId`.
+    #[test]
+    fn a_person_with_a_professional_identifier_carries_the_subject_as_alt_id() {
+        let mut e = event(
+            EventActionCode::Read,
+            ObjectClass::Composition,
+            EventOutcome::Success,
+        );
+        e.actor = ActorAuthentication {
+            mode: Some(ActingMode::Person),
+            professional_id: Some("uzi-12345".to_owned()),
+            ..ActorAuthentication::default()
+        };
+        let v = json(&e, Some("patient-42"));
+        let agents = v["agent"].as_array().expect("agents");
+        assert_eq!(agents.len(), 2, "{v}");
+        assert_eq!(agents[0]["who"]["identifier"]["value"], "uzi-12345");
+        assert_eq!(agents[0]["altId"], "john doe");
+        assert_eq!(agents[0]["requestor"], true);
+
+        // The same identifier as the subject adds nothing.
+        e.actor.professional_id = Some("john doe".to_owned());
+        let v = json(&e, Some("patient-42"));
+        assert_eq!(v["agent"][0]["who"]["identifier"]["value"], "john doe");
+        assert!(v["agent"][0].get("altId").is_none(), "{v}");
+    }
+
+    /// A client token naming no professional renders as before: one requesting
+    /// client agent, never an invented person.
+    #[test]
+    fn a_client_without_a_professional_renders_the_client_alone() {
+        let mut e = event(
+            EventActionCode::Read,
+            ObjectClass::Template,
+            EventOutcome::Success,
+        );
+        e.actor.mode = Some(ActingMode::Client);
+        let v = json(&e, None);
+        let agents = v["agent"].as_array().expect("agents");
+        assert_eq!(agents.len(), 2, "{v}");
+        assert_eq!(agents[0]["who"]["identifier"]["value"], "john doe");
+        assert_eq!(agents[0]["requestor"], true);
+    }
+
     #[test]
     fn login_record_is_user_authentication() {
         let mut e = event(
@@ -742,5 +919,30 @@ mod tests {
         assert_eq!(json(&e, None)["recorded"], "2026-07-06T12:00:00.123456789Z");
         e.timestamp = "2026-07-06T12:00:00.5Z".parse::<Timestamp>().unwrap();
         assert_eq!(json(&e, None)["recorded"], "2026-07-06T12:00:00.5Z");
+    }
+
+    /// The emergency mark (EHDS Art. 11(5)) renders as `purposeOfEvent` with
+    /// the fixed `ETREAT` coding and the plain-words text; an unmarked access
+    /// renders no `purposeOfEvent`, whatever purpose it declared.
+    #[test]
+    fn the_emergency_mark_renders_as_purpose_of_event() {
+        let mut e = event(
+            EventActionCode::Read,
+            ObjectClass::Composition,
+            EventOutcome::Success,
+        );
+        e.purpose = Some("ETREAT".to_owned());
+        assert!(json(&e, None).get("purposeOfEvent").is_none());
+
+        e.emergency_access = true;
+        let rendered = json(&e, None);
+        let concept = &rendered["purposeOfEvent"][0];
+        assert_eq!(concept["coding"][0]["system"], SYS_V3_ACT_REASON);
+        assert_eq!(concept["coding"][0]["code"], "ETREAT");
+        assert_eq!(concept["text"], EMERGENCY_ACCESS_TEXT);
+        assert_eq!(
+            rendered["agent"][0]["purposeOfUse"][0]["coding"][0]["code"], "ETREAT",
+            "the declared code stays on the requesting agent"
+        );
     }
 }

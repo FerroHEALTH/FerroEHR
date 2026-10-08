@@ -174,8 +174,18 @@ impl FerroEhrConfig {
     /// Where a floor and a ceiling contradict each other in years, no horizon
     /// satisfies both and the refusal says so; where only the day rounding
     /// leaves no day count between them, the refusal names `retention_years`.
+    /// Every emergency purpose code must also be an agreed purpose code.
     fn validate_audit(&self, errors: &mut Vec<ConfigError>) {
         use crate::system_log::config::{Retention, RetentionBound};
+        for code in &self.audit.emergency_purpose_codes {
+            if !self.audit.purpose_codes.contains(code) {
+                errors.push(ConfigError::semantic(format!(
+                    "audit.emergency_purpose_codes names {code:?}, which is not on \
+                     audit.purpose_codes; an emergency code must be one of the purpose codes \
+                     this deployment agrees with its callers, so add it there"
+                )));
+            }
+        }
         let store = &self.audit.store;
         match store.retention_years {
             Some(0) => errors.push(ConfigError::semantic(
@@ -1251,6 +1261,40 @@ mod tests {
 
     // ── 2. Mapping ────────────────────────────────────────────────────────────
 
+    /// The assurance and professional blocks are reachable from the env grammar
+    /// (the `levels` map is file-only: its keys are issuer URIs).
+    #[test]
+    fn env_mapping_reaches_the_assurance_and_professional_blocks() {
+        let c = assemble_ok(
+            None,
+            &env(&[
+                ("FERROEHR__AUTH__OIDC__ISSUER", "https://idp"),
+                ("FERROEHR__AUTH__OIDC__ASSURANCE__CLAIM", "loa"),
+                ("FERROEHR__AUTH__OIDC__ASSURANCE__MINIMUM", "high"),
+                ("FERROEHR__AUTH__OIDC__PROFESSIONAL__CLAIM", "uzi"),
+                (
+                    "FERROEHR__AUTH__OIDC__PROFESSIONAL__CLIENT_TOKENS",
+                    "claim_absent",
+                ),
+                (
+                    "FERROEHR__AUTH__OIDC__PROFESSIONAL__ACTING_FOR_CLAIM",
+                    "act.sub",
+                ),
+            ]),
+            &[],
+        );
+        let oidc = c.auth.oidc.expect("oidc table materialised from env");
+        assert_eq!(oidc.assurance.claim, "loa");
+        assert_eq!(oidc.assurance.minimum, Some(auth::AssuranceLevel::High));
+        let professional = oidc.professional.expect("professional table from env");
+        assert_eq!(professional.claim, "uzi");
+        assert_eq!(
+            professional.client_tokens,
+            auth::ClientTokenRule::ClaimAbsent
+        );
+        assert_eq!(professional.acting_for_claim.as_deref(), Some("act.sub"));
+    }
+
     #[test]
     fn env_mapping_scalars_maps_and_lists() {
         let c = assemble_ok(
@@ -1919,6 +1963,51 @@ mod tests {
             .expect("a well-formed privacy section validates");
     }
 
+    /// Both purpose lists of `[audit]` are reachable from the environment, and
+    /// an emergency code that is an agreed purpose code validates.
+    #[test]
+    fn the_audit_purpose_lists_map_from_the_environment() {
+        let c = assemble_ok(
+            None,
+            &env(&[
+                ("FERROEHR__AUDIT__PURPOSE_CODES", "TREAT,ETREAT"),
+                ("FERROEHR__AUDIT__EMERGENCY_PURPOSE_CODES", "ETREAT"),
+            ]),
+            &[],
+        );
+        assert_eq!(
+            c.audit.purpose_codes,
+            vec!["TREAT".to_owned(), "ETREAT".to_owned()]
+        );
+        assert_eq!(c.audit.emergency_purpose_codes, vec!["ETREAT".to_owned()]);
+        c.validate()
+            .expect("an emergency code on the purpose list validates");
+    }
+
+    /// An emergency purpose code that is not an agreed purpose code is a boot
+    /// error naming the code, including when no purpose list is configured.
+    #[test]
+    fn an_emergency_code_outside_the_purpose_codes_is_refused() {
+        let mut config = FerroEhrConfig::default();
+        config.audit.emergency_purpose_codes = vec!["ETREAT".to_owned()];
+        let text = config
+            .validate()
+            .expect_err("no purpose list agrees ETREAT")
+            .to_string();
+        assert!(
+            text.contains("\"ETREAT\"") && text.contains("audit.purpose_codes"),
+            "{text}"
+        );
+
+        config.audit.purpose_codes = vec!["TREAT".to_owned()];
+        config
+            .validate()
+            .expect_err("TREAT alone does not agree ETREAT");
+
+        config.audit.purpose_codes.push("ETREAT".to_owned());
+        config.validate().expect("ETREAT is agreed");
+    }
+
     /// The `[usage_report]` section maps from the environment, the switch
     /// turns it off, and a plain-HTTP collector off loopback is refused.
     #[test]
@@ -2269,6 +2358,14 @@ mod tests {
                 "auth.oidc",
                 accepted_fields::<auth::OidcConfig>("auth.oidc"),
             ),
+            (
+                "auth.oidc.assurance",
+                accepted_fields::<auth::AssuranceConfig>("auth.oidc.assurance"),
+            ),
+            (
+                "auth.oidc.professional",
+                accepted_fields::<auth::ProfessionalConfig>("auth.oidc.professional"),
+            ),
             ("db", accepted_fields::<crate::db::DbConfig>("db")),
             (
                 "signing",
@@ -2284,9 +2381,14 @@ mod tests {
         let missing: Vec<String> = sections
             .iter()
             .flat_map(|(section, fields)| {
+                // A sub-table field is declared by its own `[section.field]`
+                // header, exactly as the serialized-field walk accepts one.
                 fields
                     .iter()
-                    .filter(|f| !template_declares(f))
+                    .filter(move |f| {
+                        !template_declares(f)
+                            && !DEFAULT_TEMPLATE.contains(&format!("[{section}.{f}]"))
+                    })
                     .map(move |f| format!("{section}.{f}"))
             })
             .collect();
