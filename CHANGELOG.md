@@ -428,6 +428,25 @@ workflow refuses a tag that has no matching section here.
   image built from source, are built with `cargo auditable`, so an image scan
   and the release's exploitability record see the Rust graph. The OpenVEX
   statement for RUSTSEC-2023-0071 now covers the viewer image.
+- **The `ferroehr-postgres` image drops GnuPG and the Go `gosu`** (#3673).
+  GnuPG and the libraries only it uses (gnupg, gpg, gpg-agent, gpgsm,
+  gpgconf, dirmngr, pinentry-curses, libgnutls30t64, libp11-kit0, libtasn1-6,
+  libksba8, libassuan9, libnpth0t64) served upstream's build-time key import
+  alone. `gosu` is now a shell wrapper over util-linux `setpriv` under the same
+  name, so the upstream entrypoint runs unchanged and the image carries no Go
+  binary and no Go standard-library findings; the 22 gosu exceptions in
+  `.trivyignore.yaml` and `postgres-gosu.openvex.json` are gone. The base is
+  re-pinned to the 2026-10-06 respin of `postgres:18.6`.
+- **Every operating-system finding in the three images carries an OpenVEX
+  judgement** (#3673): `ferroehr-os.openvex.json` (25 statements for the
+  distroless `ferroehr` and `ferroehr-viewer` images) and
+  `postgres-os.openvex.json` (101 for `ferroehr-postgres`), each argued from
+  what the shipped programs load and import. Seven are `affected`, with an
+  action statement: CVE-2026-8674 (a long resolver search domain) in all three
+  images, and three libxml2 and two glibc JISX0213 findings any database login
+  reaches through PostgreSQL's XML functions, which FerroEHR itself never
+  calls. The release's exploitability record now has a judgement for every
+  finding.
 
 ## [4.3.4] - 2026-10-06
 

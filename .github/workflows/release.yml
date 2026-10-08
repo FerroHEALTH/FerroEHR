@@ -1012,8 +1012,9 @@ jobs:
         org.opencontainers.image.base.digest=sha256:e792ab3d241a468a4fd7519ddbbebe66b49b5f365771716ea688ad40b6c6f1c2
 
   # ── PostgreSQL image (multi-arch) ───────────────────────────────────────────
-  # One RUN layer (the Debian security upgrade, #2408) on top of postgres:18.6,
-  # so the non-native platform needs QEMU — the reusable lane sets it up.
+  # One RUN layer (the Debian security upgrade, #2408, and the GnuPG purge,
+  # #3673) on top of postgres:18.6, so the non-native platform needs QEMU —
+  # the reusable lane sets it up.
   postgres-image:
     name: postgres image
     needs: plan
@@ -1023,7 +1024,8 @@ jobs:
       id-token: write # Sigstore, for the signed attestations
       attestations: write # store them against this repository
     # The reusable SLSA Build L3 lane. QEMU: the one RUN layer (the Debian
-    # security upgrade, #2408) executes on the non-native platform.
+    # security upgrade, #2408, and the GnuPG purge, #3673) executes on the
+    # non-native platform.
     uses: ./.github/workflows/build-image.yml
     with:
       image: ghcr.io/ferrohealth/ferroehr-postgres
@@ -1042,7 +1044,7 @@ jobs:
         org.opencontainers.image.authors=Cadasto B.V. <https://www.cadasto.com/contact/>
         org.opencontainers.image.licenses=BUSL-1.1 AND PostgreSQL
         org.opencontainers.image.base.name=postgres:18.6
-        org.opencontainers.image.base.digest=sha256:5a5a84b19854a9ffaa54082c166ff4ec27473a361e496e5ea167f298f2da9722
+        org.opencontainers.image.base.digest=sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336
 
   # ── The gate that makes the pushed digests referencable ─────────────────────
   # The same reusable pair containers.yml uses, so the main lane and the

@@ -12,7 +12,7 @@
 #   * the PINNED TAG RE-POINTED upstream (a same-version respin — how
 #     docker-library ships base refreshes between PG releases; our build-time
 #     apt upgrade covers Debian packages, but a respin also carries rebuilt
-#     bundled binaries like gosu, which apt cannot touch).
+#     non-Debian files such as the entrypoint scripts, which apt cannot touch).
 #
 # The other bases (the distroless runtime, the rust build image) are
 # deliberately out of scope: their tags move near-weekly (pure noise), their

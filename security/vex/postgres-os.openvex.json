@@ -1,0 +1,2309 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://ferroehr.eu/vex/postgres-os-packages",
+  "author": "Cadasto B.V.",
+  "role": "vendor",
+  "timestamp": "2026-10-08T00:00:00Z",
+  "version": 1,
+  "tooling": "hand-authored; see security/vex/README.md",
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-6653"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libxml2"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "Debian lists this use-after-free in xmlParseInternalSubset as present in trixie's libxml2 (2.9.14 based; Debian security tracker, CVE-2026-6653) and marks it no-dsa. PostgreSQL parses a document's internal DTD subset whenever text is cast to xml or passed to XMLPARSE, so a session can reach it. libxml2 is linked into the PostgreSQL server, and every database session can reach it without any privilege, through a cast to xml, XMLPARSE, XMLSERIALIZE, xpath() and XMLTABLE. FerroEHR's server sends none of these (its schemas have no xml column and it parses openEHR XML in Rust), so the exposure is a database login used outside FerroEHR: an administrator's session, a reporting tool, or a stolen credential. A backend that crashes makes the postmaster restart every session.",
+      "action_statement": "Grant database logins only to the FerroEHR roles and to administrators, and keep the database port reachable only from the FerroEHR server and administration hosts (the chart's NetworkPolicy and the compose network do this). Give any other tool that needs SQL access its own role and treat it as able to stop the database. The fix arrives with Debian's next libxml2 update for trixie, which the image's security-upgrade layer installs on the first release build after Debian publishes it."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-86138"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libxml2"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The integer overflow is in xmlDictAddQString, which the parser calls for every prefixed (namespaced) name, so PostgreSQL's xml input and XPath functions reach it; Debian lists trixie as vulnerable (Debian security tracker, CVE-2026-86138). libxml2 is linked into the PostgreSQL server, and every database session can reach it without any privilege, through a cast to xml, XMLPARSE, XMLSERIALIZE, xpath() and XMLTABLE. FerroEHR's server sends none of these (its schemas have no xml column and it parses openEHR XML in Rust), so the exposure is a database login used outside FerroEHR: an administrator's session, a reporting tool, or a stolen credential. A backend that crashes makes the postmaster restart every session.",
+      "action_statement": "Grant database logins only to the FerroEHR roles and to administrators, and keep the database port reachable only from the FerroEHR server and administration hosts (the chart's NetworkPolicy and the compose network do this). Give any other tool that needs SQL access its own role and treat it as able to stop the database. The fix arrives with Debian's next libxml2 update for trixie, which the image's security-upgrade layer installs on the first release build after Debian publishes it."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-86143"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libxml2"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The missing overflow check is in libxml2's output buffer writer, which PostgreSQL's XMLSERIALIZE (INDENT) and xml output paths use through xmlSaveToBuffer and xmlNodeDump; Debian lists trixie as vulnerable (Debian security tracker, CVE-2026-86143). libxml2 is linked into the PostgreSQL server, and every database session can reach it without any privilege, through a cast to xml, XMLPARSE, XMLSERIALIZE, xpath() and XMLTABLE. FerroEHR's server sends none of these (its schemas have no xml column and it parses openEHR XML in Rust), so the exposure is a database login used outside FerroEHR: an administrator's session, a reporting tool, or a stolen credential. A backend that crashes makes the postmaster restart every session.",
+      "action_statement": "Grant database logins only to the FerroEHR roles and to administrators, and keep the database port reachable only from the FerroEHR server and administration hosts (the chart's NetworkPolicy and the compose network do this). Give any other tool that needs SQL access its own role and treat it as able to stop the database. The fix arrives with Debian's next libxml2 update for trixie, which the image's security-upgrade layer installs on the first release build after Debian publishes it."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-77117"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6"
+            },
+            {
+              "@id": "pkg:deb/debian/locales"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The defect is glibc's SHIFT_JISX0213 converter. libxml2, linked into the PostgreSQL server, decodes a document from the encoding its XML declaration names through glibc iconv: on this image, XMLPARSE of a document declaring encoding=\"EUC-JISX0213\" loads glibc's JISX0213 converter into the backend. Input that splits a two-code-point character across the output buffer makes the converter repeat without progress, so the backend hangs. libxml2 is linked into the PostgreSQL server, and every database session can reach it without any privilege, through a cast to xml, XMLPARSE, XMLSERIALIZE, xpath() and XMLTABLE. FerroEHR's server sends none of these (its schemas have no xml column and it parses openEHR XML in Rust), so the exposure is a database login used outside FerroEHR: an administrator's session, a reporting tool, or a stolen credential. A backend that crashes makes the postmaster restart every session.",
+      "action_statement": "Grant database logins only to the FerroEHR roles and to administrators, and keep the database port reachable only from the FerroEHR server and administration hosts (the chart's NetworkPolicy and the compose network do this). A backend that stays busy in XML parsing and does not answer pg_cancel_backend is ended with pg_terminate_backend or, failing that, from the host. The fix arrives with Debian's next glibc update for trixie, which the image's security-upgrade layer installs on the first release build after Debian publishes it."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-80489"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6"
+            },
+            {
+              "@id": "pkg:deb/debian/locales"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The defect is glibc's EUC_JISX0213 converter. libxml2, linked into the PostgreSQL server, decodes a document from the encoding its XML declaration names through glibc iconv: on this image, XMLPARSE of a document declaring encoding=\"EUC-JISX0213\" loads glibc's JISX0213 converter into the backend. Input that splits a two-code-point character across the output buffer makes the converter repeat without progress, so the backend hangs. libxml2 is linked into the PostgreSQL server, and every database session can reach it without any privilege, through a cast to xml, XMLPARSE, XMLSERIALIZE, xpath() and XMLTABLE. FerroEHR's server sends none of these (its schemas have no xml column and it parses openEHR XML in Rust), so the exposure is a database login used outside FerroEHR: an administrator's session, a reporting tool, or a stolen credential. A backend that crashes makes the postmaster restart every session.",
+      "action_statement": "Grant database logins only to the FerroEHR roles and to administrators, and keep the database port reachable only from the FerroEHR server and administration hosts (the chart's NetworkPolicy and the compose network do this). A backend that stays busy in XML parsing and does not answer pg_cancel_backend is ended with pg_terminate_backend or, failing that, from the host. The fix arrives with Debian's next glibc update for trixie, which the image's security-upgrade layer installs on the first release build after Debian publishes it."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-8674"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6"
+            },
+            {
+              "@id": "pkg:deb/debian/locales"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The PostgreSQL server resolves names through getaddrinfo (imported by postgres, libldap, libkrb5 and libxml2) whenever the operator configures one: a host name in pg_hba.conf or listen_addresses, log_hostname, an LDAP or Kerberos server, a dblink or postgres_fdw connection. The first lookup initialises the stub resolver from the container's /etc/resolv.conf, and a search domain of about 200 characters there aborts that process (glibc advisory GLIBC-SA-2026-0021). The configuration FerroEHR ships resolves no names (listen_addresses='*' binds without a lookup, pg_hba.conf matches addresses), but an operator's configuration can, so the image is affected.",
+      "action_statement": "Keep the resolver configuration the container receives under the operator's control: the container runtime writes /etc/resolv.conf from the node or cluster DNS settings, so take search domains from configuration you administer rather than from DHCP or VPN data, and do not set LOCALDOMAIN in the database container. Prefer IP addresses in pg_hba.conf. Debian marks the fix no-dsa for trixie; the image's security-upgrade layer installs it on the first release build after Debian publishes it."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-86137"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libxml2"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The image's libxml2 is Debian's 2.12.7+dfsg+really2.9.14 package, which is upstream libxml2 2.9.14 under a higher version number (Debian security tracker, CVE-2026-6653: from 2.12.7+dfsg-1 the version was reverted to a 2.9.14 based one). The out-of-bounds read in xmlFAParsePosCharGroup was introduced in libxml2 2.15.3; Debian marks its 2.9.14 package for bookworm not-affected for that reason (Debian security tracker, CVE-2026-86137), and the trixie package carries the same 2.9.14 code."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-86139"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libxml2"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The image's libxml2 is Debian's 2.12.7+dfsg+really2.9.14 package, which is upstream libxml2 2.9.14 under a higher version number (Debian security tracker, CVE-2026-6653: from 2.12.7+dfsg-1 the version was reverted to a 2.9.14 based one). The integer overflow in xmlURIEscapeStr was introduced in libxml2 2.13.0; Debian marks its 2.9.14 package for bookworm not-affected for that reason (Debian security tracker, CVE-2026-86139), and the trixie package carries the same 2.9.14 code."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-86141"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libxml2"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The image's libxml2 is Debian's 2.12.7+dfsg+really2.9.14 package, which is upstream libxml2 2.9.14 under a higher version number (Debian security tracker, CVE-2026-6653: from 2.12.7+dfsg-1 the version was reverted to a 2.9.14 based one). The NULL dereference in xmlRegNewParserCtxt was introduced by the CVE-2026-86137 fix, which a 2.9.14 code base does not have; Debian marks its 2.9.14 package for bookworm not-affected for that reason (Debian security tracker, CVE-2026-86141)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-11979"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libxml2"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The overflow is in the xmlcatalog command-line utility's --shell mode. xmlcatalog ships in libxml2-utils, which this image does not install; the libxml2 library package contains no copy of the utility."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-74860"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libxml2"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The double free is in libxml2's Python bindings (the SAX attributeDecl callback of the Python module). The image installs no Python and no python3-libxml2 package, so the bindings are not present."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-76781"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libxml2"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The NULL dereference is in XML catalog parsing. libxml2 reads catalogs only from its default external-entity loader; PostgreSQL replaces that loader with xmlPgEntityLoader, which returns an empty string for every external resource (src/backend/utils/adt/xml.c, PostgreSQL 18.6), so no catalog is ever opened. The image has no /etc/xml catalog either."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-86140"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libxml2"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The overflow is in xmlSnprintfElements, which libxml2 calls only while validating an element against a DTD content model. PostgreSQL parses with XML_PARSE_NOENT, XML_PARSE_DTDATTR and XML_PARSE_NOBLANKS (src/backend/utils/adt/xml.c, PostgreSQL 18.6): it applies DTD attribute defaults but never requests validation (no XML_PARSE_DTDVALID, no xmlValidate* call), so the function is not reached."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-86142"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libxml2"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The overflow is in libxml2's XPointer evaluator (xmlXPtrEval). PostgreSQL's xpath(), xpath_exists() and XMLTABLE evaluate XPath 1.0 through xmlXPathCompile and xmlXPathCompiledEval on a plain XPath context (src/backend/utils/adt/xml.c, PostgreSQL 18.6) and never create an XPointer context, and XInclude, the other caller, is never run (see CVE-2026-86144)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-86144"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libxml2"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The flaw is in XInclude processing (xmlXIncludeProcess, xmlXIncludeProcessTree). PostgreSQL never calls either function and does not pass XML_PARSE_XINCLUDE (src/backend/utils/adt/xml.c, PostgreSQL 18.6). The only other XInclude user in the image is libxslt in the contrib xml2 module, an untrusted extension that is not created in any database and that only a superuser could create."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2015-9019"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libxslt1.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "libxslt is loaded only by pgxml.so, the contrib xml2 module. That extension is created in no database: FerroEHR does not use it, and as an untrusted extension only a superuser can create it. The PostgreSQL server itself does not link libxslt, so no stylesheet is ever parsed or applied."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-10911"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libxslt1.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "libxslt is loaded only by pgxml.so, the contrib xml2 module. That extension is created in no database: FerroEHR does not use it, and as an untrusted extension only a superuser can create it. The PostgreSQL server itself does not link libxslt, so no stylesheet is ever parsed or applied."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-11731"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libxslt1.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "libxslt is loaded only by pgxml.so, the contrib xml2 module. That extension is created in no database: FerroEHR does not use it, and as an untrusted extension only a superuser can create it. The PostgreSQL server itself does not link libxslt, so no stylesheet is ever parsed or applied."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2010-4756"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6"
+            },
+            {
+              "@id": "pkg:deb/debian/locales"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "The CPU and memory exhaustion needs a crafted pattern passed to glibc glob(). The postgres binary does not import glob; in the server process the only caller is libgssapi_krb5, which globs its own fixed mechanism-configuration path (/etc/gss/mech.d). bash, which runs the entrypoint, matches patterns with its own code. No pattern an attacker supplies reaches glob()."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2018-20796"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6"
+            },
+            {
+              "@id": "pkg:deb/debian/locales"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "The uncontrolled recursion needs a crafted pattern passed to glibc regcomp and regexec. PostgreSQL has its own regular-expression engine (src/backend/regex) and the postgres binary imports neither function; in the server process only libkrb5 calls them, for auth_to_local rules in the root-owned krb5.conf, which the image does not configure. No pattern an attacker supplies reaches glibc's matcher."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2019-9192"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6"
+            },
+            {
+              "@id": "pkg:deb/debian/locales"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "The uncontrolled recursion needs a crafted pattern passed to glibc regcomp and regexec. PostgreSQL has its own regular-expression engine (src/backend/regex) and the postgres binary imports neither function; in the server process only libkrb5 calls them, for auth_to_local rules in the root-owned krb5.conf, which the image does not configure. No pattern an attacker supplies reaches glibc's matcher."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2019-1010022"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6"
+            },
+            {
+              "@id": "pkg:deb/debian/locales"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "glibc upstream (sourceware bug 22850) and Debian do not treat this as a vulnerability: it describes a way to defeat the stack protector after an attacker already holds a stack buffer overflow in the process. It is not a fault an input can trigger; an attacker who has such an overflow in this image's processes is answered by that overflow's own statement or fix."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2019-1010023"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6"
+            },
+            {
+              "@id": "pkg:deb/debian/locales"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The issue needs ldd to be run on an attacker-supplied ELF file. Nothing in this image runs ldd: the entrypoint, initdb, psql and the server never invoke it, and no deployment path gives anyone an interactive shell in the container."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2019-1010024"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6"
+            },
+            {
+              "@id": "pkg:deb/debian/locales"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "glibc upstream (sourceware bug 22852) and Debian do not treat this as a vulnerability: the reuse of cached thread stacks and heaps can make addresses easier to guess, which matters only to an attacker who already holds a memory-corruption primitive in the process. No input to this image triggers it on its own."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2019-1010025"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6"
+            },
+            {
+              "@id": "pkg:deb/debian/locales"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "glibc upstream (sourceware bug 22853) and Debian do not treat this as a vulnerability; the glibc position is that an ASLR bypass is not a vulnerability by itself. Guessing a pthread heap address helps only an attacker who already holds a memory-corruption primitive, and the PostgreSQL server is a multi-process server that creates few threads."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-18374"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6"
+            },
+            {
+              "@id": "pkg:deb/debian/locales"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "The overflow needs an attacker-controlled fopen mode string using the ,ccs= extension. Every fopen in postgres, psql, libpq, libxml2, ICU, libldap, libkrb5 and libpam passes a mode string written in the caller's source; none takes a mode, or a ccs= value, from input."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-19499"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6"
+            },
+            {
+              "@id": "pkg:deb/debian/locales"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The overflow is in strfmon and strfmon_l. Neither the postgres or psql binaries nor any library they load imports either function: PostgreSQL formats the money type with its own code (cash_out)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-19542"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6"
+            },
+            {
+              "@id": "pkg:deb/debian/locales"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The out-of-bounds write is in tdelete. Neither the postgres or psql binaries nor any library they load imports tdelete or tsearch (PostgreSQL's text search is its own code), so the function is never called."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-5435"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6"
+            },
+            {
+              "@id": "pkg:deb/debian/locales"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The flaw is in ns_printrr, ns_printrrf and fp_nquery, debugging functions which the glibc advisory says are not in the code path of the DNS resolver. No binary or library in the image imports them; libresolv only defines them."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-6238"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6"
+            },
+            {
+              "@id": "pkg:deb/debian/locales"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The flaw is in ns_printrr, ns_printrrf and fp_nquery, debugging functions which the glibc advisory says are not in the code path of the DNS resolver. No binary or library in the image imports them; libresolv only defines them."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-6368"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6"
+            },
+            {
+              "@id": "pkg:deb/debian/locales"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The flaw is in wordexp. Neither the postgres or psql binaries nor any library they load imports wordexp, and bash and dash expand words with their own code."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-6791"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6"
+            },
+            {
+              "@id": "pkg:deb/debian/locales"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The flaw is in wordexp. Neither the postgres or psql binaries nor any library they load imports wordexp, and bash and dash expand words with their own code."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-86805"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6"
+            },
+            {
+              "@id": "pkg:deb/debian/locales"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The flaw is in the dynamic loader's handling of $ORIGIN in DT_RPATH or DT_RUNPATH for setuid and setgid (AT_SECURE) programs. None of the image's setuid programs (chage, chfn, chsh, expiry, gpasswd, mount, newgrp, passwd, su, umount, unix_chkpwd) carries a DT_RPATH or DT_RUNPATH, and every deployment runs the container with no-new-privileges, under which the kernel grants no setuid elevation."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-95818"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6"
+            },
+            {
+              "@id": "pkg:deb/debian/locales"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The flaw is in the dynamic loader's handling of $ORIGIN in DT_RPATH or DT_RUNPATH for setuid and setgid (AT_SECURE) programs. None of the image's setuid programs (chage, chfn, chsh, expiry, gpasswd, mount, newgrp, passwd, su, umount, unix_chkpwd) carries a DT_RPATH or DT_RUNPATH, and every deployment runs the container with no-new-privileges, under which the kernel grants no setuid elevation."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-89092"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6"
+            },
+            {
+              "@id": "pkg:deb/debian/locales"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The stack overflow is in the nscd daemon. The nscd package is not installed in this image, so the daemon is not present."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97399"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6"
+            },
+            {
+              "@id": "pkg:deb/debian/locales"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The over-read is in the strncasecmp variant optimised for POWER8. The image is published for linux/amd64 and linux/arm64 only, whose glibc builds do not contain that variant."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-95619"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/gcc-14-base"
+            },
+            {
+              "@id": "pkg:deb/debian/libgcc-s1"
+            },
+            {
+              "@id": "pkg:deb/debian/libstdc++6"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The overflow is in the aligned operator new path that rounds the size before calling C11 aligned_alloc. libstdc++ prefers posix_memalign where it exists (libsupc++/new_opa.cc, GCC 14.2.0), and on GNU/Linux it does: the shipped libstdc++.so.6 imports posix_memalign and not aligned_alloc, and the upstream fix states that posix_memalign targets are not affected."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-102010"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/gcc-14-base"
+            },
+            {
+              "@id": "pkg:deb/debian/libgcc-s1"
+            },
+            {
+              "@id": "pkg:deb/debian/libstdc++6"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The use-after-free is in erase_if of the policy-based binary heap, a header-only template (include/ext/pb_ds/detail/binary_heap_/erase_fn_imps.hpp, per the GCC fix for PR127656). It is compiled into a program only when that program uses __gnu_pbds; libstdc++.so.6 does not contain it, and the C++ code in this image (ICU and LLVM) does not use the policy-based data structures."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27171"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/zlib1g"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The infinite loop is in zlib's crc32_combine64 and crc32_combine_gen64. Nothing in the image calls them: postgres, libxml2, libLLVM and the PostgreSQL modules that link zlib import no crc32_combine function, and zlib's own deflate and inflate do not use it. PostgreSQL computes its checksums with its own CRC-32C."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-85091"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/zlib1g"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The overflow is in gz_vacate, part of the non-blocking gzwrite support introduced in zlib 1.3.1.2 (commit 81cc0be, as the Debian security tracker entry for CVE-2026-85091 records). The image's zlib1g is 1.3.1, which predates that code."
+    },
+    {
+      "vulnerability": {
+        "name": "TEMP-1147318-639065"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/liblzma5"
+            },
+            {
+              "@id": "pkg:deb/debian/xz-utils"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The invalid write (GHSA-5qpq-xqfv-j9pg) needs a .lzma, .lz or MicroLZMA decoder to be reinitialised after an allocation failure; .xz and raw decoders are not affected. In the running image liblzma is loaded by libxml2, which uses it only to read compressed files, and by libsystemd, which uses the .xz decoder for journal files. PostgreSQL parses XML from memory and replaces libxml2's file loader, and uses libsystemd only for sd_notify, so no affected decoder is ever initialised."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2024-7883"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libllvm19"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The leak is in code that LLVM generates for the Armv8-M Cortex-M Security Extensions (CMSE). libLLVM is loaded here only by PostgreSQL's JIT provider (llvmjit.so), which compiles for the host CPU, an x86-64 or Armv8-A processor; it never targets an M-profile core, so the CMSE code path is never taken."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-13573"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libllvm19"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "libLLVM is loaded only by PostgreSQL's JIT provider, llvmjit.so. The IR it compiles is built by PostgreSQL from query plans, and the only bitcode it reads is the image's own root-owned llvmjit_types.bc and the inlining bitcode under /usr/lib/postgresql/18/lib/bitcode; no LLVM command-line tool is installed. No IR or bitcode an attacker writes reaches LLVM's readers. The report is a crash in StringMap::insert while an LLVM command-line tool reads crafted IR; Debian records it as a crash in a CLI tool with no security impact (Debian security tracker, CVE-2026-13573)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-13574"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libllvm19"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "libLLVM is loaded only by PostgreSQL's JIT provider, llvmjit.so. The IR it compiles is built by PostgreSQL from query plans, and the only bitcode it reads is the image's own root-owned llvmjit_types.bc and the inlining bitcode under /usr/lib/postgresql/18/lib/bitcode; no LLVM command-line tool is installed. No IR or bitcode an attacker writes reaches LLVM's readers. The report is a crash in GCRelocateInst::getBasePtr while an LLVM command-line tool reads crafted bitcode; Debian records it as a crash in a CLI tool with no security impact (Debian security tracker, CVE-2026-13574), and PostgreSQL emits no garbage-collection statepoints."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2013-4392"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libsystemd0"
+            },
+            {
+              "@id": "pkg:deb/debian/libudev1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "libsystemd0 and libudev1 are client libraries; the systemd package with its daemons is not installed, and PostgreSQL uses libsystemd only for sd_notify. The race is in systemd's own handling of file permissions and SELinux labels, which is daemon code."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-15059"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libsystemd0"
+            },
+            {
+              "@id": "pkg:deb/debian/libudev1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "libsystemd0 and libudev1 are client libraries; the systemd package with its daemons is not installed, and PostgreSQL uses libsystemd only for sd_notify. The flaw is in systemd-oomd's IPC API."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-16742"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libsystemd0"
+            },
+            {
+              "@id": "pkg:deb/debian/libudev1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "libsystemd0 and libudev1 are client libraries; the systemd package with its daemons is not installed, and PostgreSQL uses libsystemd only for sd_notify. The flaw is in systemd-homed."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-40228"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libsystemd0"
+            },
+            {
+              "@id": "pkg:deb/debian/libudev1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "libsystemd0 and libudev1 are client libraries; the systemd package with its daemons is not installed, and PostgreSQL uses libsystemd only for sd_notify. The flaw is in systemd-journald's wall forwarding."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2023-31437"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libsystemd0"
+            },
+            {
+              "@id": "pkg:deb/debian/libudev1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The reports concern tampering with sealed (FSS) journal files so that journalctl's verification misses it; the vendor disputes them. Nothing in the image reads or verifies a journal file: the systemd package (journald, journalctl) is not installed and PostgreSQL uses libsystemd only for sd_notify, so the library's sd-journal code is never called."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2023-31438"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libsystemd0"
+            },
+            {
+              "@id": "pkg:deb/debian/libudev1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The reports concern tampering with sealed (FSS) journal files so that journalctl's verification misses it; the vendor disputes them. Nothing in the image reads or verifies a journal file: the systemd package (journald, journalctl) is not installed and PostgreSQL uses libsystemd only for sd_notify, so the library's sd-journal code is never called."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2023-31439"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libsystemd0"
+            },
+            {
+              "@id": "pkg:deb/debian/libudev1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The reports concern tampering with sealed (FSS) journal files so that journalctl's verification misses it; the vendor disputes them. Nothing in the image reads or verifies a journal file: the systemd package (journald, journalctl) is not installed and PostgreSQL uses libsystemd only for sd_notify, so the library's sd-journal code is never called."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2015-3276"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libldap2"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in libldap's Mozilla NSS TLS backend (tls_m.c). Debian builds OpenLDAP without NSS (Debian security tracker, CVE-2015-3276), so that code is not in the shipped libldap2."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2017-14159"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libldap2"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "slapd and its modules ship in the slapd package, which is not installed; libldap2 is the client library only. The flaw is in slapd's PID file handling."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2017-17740"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libldap2"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "slapd and its modules ship in the slapd package, which is not installed; libldap2 is the client library only. The flaw is in slapd's nops module."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-22185"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libldap2"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The underflow is in mdb_load, an LMDB command-line tool. lmdb-utils is not installed and libldap2 contains no copy of mdb_load."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2020-15719"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libldap2"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The flaw is in libldap's certificate host-name check. The PostgreSQL server uses libldap only for the ldap authentication method in pg_hba.conf and for LDAP service lookups; the configuration FerroEHR ships uses neither (pg_hba.conf authenticates with trust on the local socket and scram-sha-256 over TCP), so no LDAP TLS session is opened."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2018-5709"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The overflow is in kadmin's database dump code (kadmin/dbutil). The image ships only the Kerberos client libraries; krb5-admin-server and libkadm5srv are not installed."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-11850"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The underflow is in the KDC's LDAP database plugin (plugins/kdb/ldap). krb5-kdc-ldap is not installed; the image ships only the Kerberos client libraries."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2024-26458"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The leak is in lib/rpc/pmap_rmt.c, which is built into libgssrpc. libgssrpc is not installed in this image, and postgres does not link it."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2024-26461"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The leak is in GSS-API message wrapping (k5sealv3.c), which runs only on an established GSS security context. The configuration FerroEHR ships has no gss or hostgssenc line in pg_hba.conf and no server keytab (krb_server_keyfile), so the server never establishes a GSS context and never wraps a message."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2018-6829"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgcrypt20"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "No program the image runs uses libgcrypt: postgres and its modules do not link it (PostgreSQL's cryptography is OpenSSL), GnuPG is removed from the image, and libsystemd opens it only to seal journal files, which nothing here does. The finding concerns libgcrypt's ElGamal encryption."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2024-2236"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgcrypt20"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "No program the image runs uses libgcrypt: postgres and its modules do not link it (PostgreSQL's cryptography is OpenSSL), GnuPG is removed from the image, and libsystemd opens it only to seal journal files, which nothing here does. The finding concerns libgcrypt's RSA decryption timing."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2021-45346"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libsqlite3-0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "SQLite is linked here only by liblastlog2, the util-linux login-accounting library. Nothing in the image runs login, su or lastlog2, and PostgreSQL does not link SQLite, so no SQLite database, changeset or ZIP archive is ever opened."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-70873"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libsqlite3-0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "SQLite is linked here only by liblastlog2, the util-linux login-accounting library. Nothing in the image runs login, su or lastlog2, and PostgreSQL does not link SQLite, so no SQLite database, changeset or ZIP archive is ever opened."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-50812"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libsqlite3-0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "SQLite is linked here only by liblastlog2, the util-linux login-accounting library. Nothing in the image runs login, su or lastlog2, and PostgreSQL does not link SQLite, so no SQLite database, changeset or ZIP archive is ever opened."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-50813"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libsqlite3-0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "SQLite is linked here only by liblastlog2, the util-linux login-accounting library. Nothing in the image runs login, su or lastlog2, and PostgreSQL does not link SQLite, so no SQLite database, changeset or ZIP archive is ever opened."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2005-2541"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/tar"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The finding is in GNU tar or its rmt helper. Nothing in the image runs tar: not the entrypoint, initdb, psql or the server."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-18477"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/tar"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The finding is in GNU tar or its rmt helper. Nothing in the image runs tar: not the entrypoint, initdb, psql or the server."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-18508"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/tar"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The finding is in GNU tar or its rmt helper. Nothing in the image runs tar: not the entrypoint, initdb, psql or the server."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-5704"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/tar"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The finding is in GNU tar or its rmt helper. Nothing in the image runs tar: not the entrypoint, initdb, psql or the server."
+    },
+    {
+      "vulnerability": {
+        "name": "TEMP-0290435-0B57B5"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/tar"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The finding is in GNU tar or its rmt helper. Nothing in the image runs tar: not the entrypoint, initdb, psql or the server."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2017-18018"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/coreutils"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The race needs chown or chgrp run with -R and -L. The only chown the image runs is the entrypoint's `find \"$PGDATA\" ! -user postgres -exec chown postgres '{}' +` (and the same for the socket and WAL directories), which passes neither option."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-5278"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/coreutils"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Nothing in the image runs this tool: the entrypoint uses only mkdir, chmod, find, chown and bash builtins, and the server runs no coreutils program. The flaw is in sort's key parsing."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56391"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/coreutils"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Nothing in the image runs this tool: the entrypoint uses only mkdir, chmod, find, chown and bash builtins, and the server runs no coreutils program. The flaw is in uniq -w."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56392"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/coreutils"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Nothing in the image runs this tool: the entrypoint uses only mkdir, chmod, find, chown and bash builtins, and the server runs no coreutils program. The flaw is in unexpand -t."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-53910"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/diffutils"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The overflow is in the diff3 tool. Nothing in the image runs diff3: not the entrypoint, initdb, psql or the server."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42250"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libbz2-1.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The off-by-one is in the bzip2recover utility. bzip2recover ships in the bzip2 package, which is not installed; libbz2-1.0 contains only the library."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-54369"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libacl1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The symlink traversal is in libacl's pathname functions (acl_get_file, acl_set_file, acl_extended_file, acl_delete_def_file) when a privileged caller processes an attacker-controlled path. None of the programs the image runs calls them: postgres does not link libacl, and the commands the root entrypoint runs on the data directory (mkdir, chmod, find, chown) do not link it either."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-54370"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libacl1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The race is in the getfacl and setfacl utilities. They ship in the acl package, which is not installed; libacl1 contains only the library, and no program in the image calls its ACL functions."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-54371"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libattr1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The traversal is in the getfattr and setfattr utilities. They ship in the attr package, which is not installed; libattr1 contains only the library."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-54411"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libpam-modules"
+            },
+            {
+              "@id": "pkg:deb/debian/libpam-modules-bin"
+            },
+            {
+              "@id": "pkg:deb/debian/libpam-runtime"
+            },
+            {
+              "@id": "pkg:deb/debian/libpam0g"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The timing leak is in the pam_userdb module. No PAM stack in /etc/pam.d names pam_userdb, and PostgreSQL uses PAM only for the pam authentication method, which the pg_hba.conf FerroEHR ships does not use."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2022-0563"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/bsdutils"
+            },
+            {
+              "@id": "pkg:deb/debian/libblkid1"
+            },
+            {
+              "@id": "pkg:deb/debian/liblastlog2-2"
+            },
+            {
+              "@id": "pkg:deb/debian/libmount1"
+            },
+            {
+              "@id": "pkg:deb/debian/libsmartcols1"
+            },
+            {
+              "@id": "pkg:deb/debian/libuuid1"
+            },
+            {
+              "@id": "pkg:deb/debian/login"
+            },
+            {
+              "@id": "pkg:deb/debian/mount"
+            },
+            {
+              "@id": "pkg:deb/debian/util-linux"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in util-linux's own chfn and chsh when built with readline. Debian builds util-linux with --disable-chfn-chsh and ships chfn and chsh from src:shadow instead (Debian security tracker, CVE-2022-0563), so the vulnerable programs are not present."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-3184"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/bsdutils"
+            },
+            {
+              "@id": "pkg:deb/debian/libblkid1"
+            },
+            {
+              "@id": "pkg:deb/debian/liblastlog2-2"
+            },
+            {
+              "@id": "pkg:deb/debian/libmount1"
+            },
+            {
+              "@id": "pkg:deb/debian/libsmartcols1"
+            },
+            {
+              "@id": "pkg:deb/debian/libuuid1"
+            },
+            {
+              "@id": "pkg:deb/debian/login"
+            },
+            {
+              "@id": "pkg:deb/debian/mount"
+            },
+            {
+              "@id": "pkg:deb/debian/util-linux"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The flaw is in login(1) invoked with -h, where it canonicalises the remote host name before setting PAM_RHOST. Nothing in the image runs login: the container starts the entrypoint and the PostgreSQL server, and no deployment path offers a login session."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-76642"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/bsdutils"
+            },
+            {
+              "@id": "pkg:deb/debian/libblkid1"
+            },
+            {
+              "@id": "pkg:deb/debian/liblastlog2-2"
+            },
+            {
+              "@id": "pkg:deb/debian/libmount1"
+            },
+            {
+              "@id": "pkg:deb/debian/libsmartcols1"
+            },
+            {
+              "@id": "pkg:deb/debian/libuuid1"
+            },
+            {
+              "@id": "pkg:deb/debian/login"
+            },
+            {
+              "@id": "pkg:deb/debian/mount"
+            },
+            {
+              "@id": "pkg:deb/debian/util-linux"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The flaw is in mount(8) and its X-mount options, reached by an unprivileged user through the setuid mount and an fstab entry that authorises it. The image's /etc/fstab has no entries and nothing in the image runs mount; every deployment runs the container with no-new-privileges (so the setuid bit grants nothing) and without CAP_SYS_ADMIN."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78409"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/bsdutils"
+            },
+            {
+              "@id": "pkg:deb/debian/libblkid1"
+            },
+            {
+              "@id": "pkg:deb/debian/liblastlog2-2"
+            },
+            {
+              "@id": "pkg:deb/debian/libmount1"
+            },
+            {
+              "@id": "pkg:deb/debian/libsmartcols1"
+            },
+            {
+              "@id": "pkg:deb/debian/libuuid1"
+            },
+            {
+              "@id": "pkg:deb/debian/login"
+            },
+            {
+              "@id": "pkg:deb/debian/mount"
+            },
+            {
+              "@id": "pkg:deb/debian/util-linux"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The flaw is in mount(8) and its X-mount options, reached by an unprivileged user through the setuid mount and an fstab entry that authorises it. The image's /etc/fstab has no entries and nothing in the image runs mount; every deployment runs the container with no-new-privileges (so the setuid bit grants nothing) and without CAP_SYS_ADMIN."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78410"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/bsdutils"
+            },
+            {
+              "@id": "pkg:deb/debian/libblkid1"
+            },
+            {
+              "@id": "pkg:deb/debian/liblastlog2-2"
+            },
+            {
+              "@id": "pkg:deb/debian/libmount1"
+            },
+            {
+              "@id": "pkg:deb/debian/libsmartcols1"
+            },
+            {
+              "@id": "pkg:deb/debian/libuuid1"
+            },
+            {
+              "@id": "pkg:deb/debian/login"
+            },
+            {
+              "@id": "pkg:deb/debian/mount"
+            },
+            {
+              "@id": "pkg:deb/debian/util-linux"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The flaw is in mount(8) and its X-mount options, reached by an unprivileged user through the setuid mount and an fstab entry that authorises it. The image's /etc/fstab has no entries and nothing in the image runs mount; every deployment runs the container with no-new-privileges (so the setuid bit grants nothing) and without CAP_SYS_ADMIN."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78408"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/bsdutils"
+            },
+            {
+              "@id": "pkg:deb/debian/libblkid1"
+            },
+            {
+              "@id": "pkg:deb/debian/liblastlog2-2"
+            },
+            {
+              "@id": "pkg:deb/debian/libmount1"
+            },
+            {
+              "@id": "pkg:deb/debian/libsmartcols1"
+            },
+            {
+              "@id": "pkg:deb/debian/libuuid1"
+            },
+            {
+              "@id": "pkg:deb/debian/login"
+            },
+            {
+              "@id": "pkg:deb/debian/mount"
+            },
+            {
+              "@id": "pkg:deb/debian/util-linux"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The leak is in nsenter --join-cgroup run by a privileged operator. Nothing in the image runs nsenter, and the deployments drop CAP_SYS_ADMIN, without which nsenter cannot enter another namespace."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2007-5686"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/login.defs"
+            },
+            {
+              "@id": "pkg:deb/debian/passwd"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The record concerns the initscripts of rPath Linux 1, which set loose permissions on /var/log/btmp. That rPath code is not part of Debian's shadow packages or any other package in this image, and nothing in the image writes /var/log/btmp."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2024-56433"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/login.defs"
+            },
+            {
+              "@id": "pkg:deb/debian/passwd"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The default subordinate-ID ranges matter only when useradd allocates them and newuidmap or newgidmap applies them. The image's only account creation happened at build time, uidmap (newuidmap, newgidmap) is not installed, and nothing at run time creates users."
+    },
+    {
+      "vulnerability": {
+        "name": "TEMP-0628843-DBAD28"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/login.defs"
+            },
+            {
+              "@id": "pkg:deb/debian/passwd"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Debian files this note under CVE-2005-4890, a terminal-injection weakness of su and similar tools. Nothing in the image runs su: the entrypoint drops privileges with setpriv, and no deployment path offers an interactive terminal session."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2011-3374"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/apt"
+            },
+            {
+              "@id": "pkg:deb/debian/libapt-pkg7.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in apt-key's keyring validation. apt 3.0 no longer ships apt-key; /usr/bin/apt-key is absent from this image."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2011-4116"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libperl5.40"
+            },
+            {
+              "@id": "pkg:deb/debian/perl"
+            },
+            {
+              "@id": "pkg:deb/debian/perl-base"
+            },
+            {
+              "@id": "pkg:deb/debian/perl-modules-5.40"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Perl is in the image because postgresql-common's maintenance scripts need it. None of them runs in this container: the entrypoint starts initdb, pg_ctl and postgres directly, PL/Perl is not installed, and the server runs no Perl. The finding is in File::Temp."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-15534"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libperl5.40"
+            },
+            {
+              "@id": "pkg:deb/debian/perl"
+            },
+            {
+              "@id": "pkg:deb/debian/perl-base"
+            },
+            {
+              "@id": "pkg:deb/debian/perl-modules-5.40"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Perl is in the image because postgresql-common's maintenance scripts need it. None of them runs in this container: the entrypoint starts initdb, pg_ctl and postgres directly, PL/Perl is not installed, and the server runs no Perl. The finding is in the Perl regular-expression engine."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-82560"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libperl5.40"
+            },
+            {
+              "@id": "pkg:deb/debian/perl"
+            },
+            {
+              "@id": "pkg:deb/debian/perl-base"
+            },
+            {
+              "@id": "pkg:deb/debian/perl-modules-5.40"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Perl is in the image because postgresql-common's maintenance scripts need it. None of them runs in this container: the entrypoint starts initdb, pg_ctl and postgres directly, PL/Perl is not installed, and the server runs no Perl. The finding is in Pod::Text."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-9538"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libperl5.40"
+            },
+            {
+              "@id": "pkg:deb/debian/perl"
+            },
+            {
+              "@id": "pkg:deb/debian/perl-base"
+            },
+            {
+              "@id": "pkg:deb/debian/perl-modules-5.40"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Perl is in the image because postgresql-common's maintenance scripts need it. None of them runs in this container: the entrypoint starts initdb, pg_ctl and postgres directly, PL/Perl is not installed, and the server runs no Perl. The finding is in Archive::Tar."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-6141"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libncursesw6"
+            },
+            {
+              "@id": "pkg:deb/debian/libtinfo6"
+            },
+            {
+              "@id": "pkg:deb/debian/ncurses-base"
+            },
+            {
+              "@id": "pkg:deb/debian/ncurses-bin"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "The overflow is in postprocess_termcap, run when ncurses compiles a termcap description (tic, infocmp, or a TERMCAP value). The only ncurses user at run time is psql, which the entrypoint runs non-interactively with the image's own environment to apply the init scripts; nothing an attacker supplies becomes a terminal description."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-69720"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libncursesw6"
+            },
+            {
+              "@id": "pkg:deb/debian/libtinfo6"
+            },
+            {
+              "@id": "pkg:deb/debian/ncurses-base"
+            },
+            {
+              "@id": "pkg:deb/debian/ncurses-bin"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The overflow is in analyze_string in the infocmp command-line tool (progs/infocmp.c), not in the ncurses libraries. Nothing in the image runs infocmp."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-102473"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/dash"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "The flaws need crafted patterns or printf escapes fed to dash. /bin/sh runs here only for the gosu wrapper, with the entrypoint's fixed arguments, and for commands the server runs from settings only a superuser can change (archive_command, restore_command), which receive file names PostgreSQL generates. Debian rates both as negligible."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-102474"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/dash"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "The flaws need crafted patterns or printf escapes fed to dash. /bin/sh runs here only for the gosu wrapper, with the entrypoint's fixed arguments, and for commands the server runs from settings only a superuser can change (archive_command, restore_command), which receive file names PostgreSQL generates. Debian rates both as negligible."
+    },
+    {
+      "vulnerability": {
+        "name": "TEMP-0841856-B18BAF"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/bash"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Debian ties this note to CVE-2016-7543: bash started with a real user id different from its effective one does not drop privileges to the real user. bash runs here only as the entrypoint, first as root and then through gosu, a setpriv wrapper that sets the real and effective ids to the same postgres user, so bash never starts with differing ids."
+    },
+    {
+      "vulnerability": {
+        "name": "TEMP-0517018-A83CE6"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/sysvinit-utils"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Debian's note concerns the no-root option of the Debian expert installer. No installer code is in this image; sysvinit-utils provides only utilities the entrypoint does not use."
+    }
+  ]
+}
