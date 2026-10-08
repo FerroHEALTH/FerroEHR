@@ -562,7 +562,7 @@ deploys, and listed on
 
 ```shell
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 11.0.0 --set database.existingSecret=my-db-secret
+  --version 11.0.1 --set database.existingSecret=my-db-secret
 ```
 
 There is no HTTP chart repository, so `helm repo add` does not apply — OCI is the

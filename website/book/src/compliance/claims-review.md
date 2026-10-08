@@ -122,7 +122,7 @@ removes the in-tree FHIR connector (#3080) and moves the deployment gaps off
 the public status document (#3671), so those two facts were checked in every
 text in scope.
 
-### Changed
+### Changed on 2026-10-08
 
 | # | Text | Claim | Art. 28 | Finding | Now reads |
 |---|---|---|---|---|---|
@@ -132,7 +132,7 @@ text in scope.
 | 4 | Book, [instructions for use](instructions-for-use.md), limitations | none on FHIR | (b) | an operator of an earlier release may rely on the removed connector | FerroEHR maps no FHIR resources, and `[fhir]` is refused at boot |
 | 5 | Book, [information sheet](information-sheet.md), (e) | the standards table | (b) | omitted the FHIR terminology operations and RFC 9470, which this release uses | both listed |
 
-### Read and kept
+### Read and kept on 2026-10-08
 
 - **The README's integration list and the book's
   [Beyond the core](../beyond-core/index.md)**: both state that FHIR R4 mapping
@@ -143,7 +143,7 @@ text in scope.
 - **The Helm chart's description**: it now says a stock install runs the
   `sandbox` profile (#3637), which closes the item left open on 2026-10-06.
 
-### Left open
+### Left open on 2026-10-08
 
 Nothing.
 

@@ -216,7 +216,7 @@ workflow refuses a tag that has no matching section here.
 - **The Helm chart carries the access-log category map and the calendar-year
   horizon** (#3655): `config.audit.categories` (empty `templates` and
   `archetypes`, as in the binary) and `config.audit.store.retention_years`
-  (unset) in `values.yaml`, typed by shape in `values.schema.json`. Chart 11.0.0.
+  (unset) in `values.yaml`, typed by shape in `values.schema.json`. Chart 11.0.1.
 - **The Helm chart and the Compose files declare the deployment profile**
   (#3637): `config.deployment_profile: sandbox`, with a comment listing what
   `production` refuses under the chart defaults, and
@@ -445,7 +445,7 @@ workflow refuses a tag that has no matching section here.
   - the `org.fhir.rest` service of the SMART discovery document;
   - the viewer's FHIR screen and its sidebar entry;
   - the Helm values `config.fhir.*` and `secrets.fhirOutboundUrl` (chart
-    version 11.0.0), the `fhir` deploy-probe family, the
+    version 11.0.1), the `fhir` deploy-probe family, the
     `fhir-r4-connector` and `fhir-mapping-store` rows of the conformance
     statement, and the book pages *FHIR connectors* and *FHIR connector*
     (the EHDS priority-category table moves to *EHDS readiness*).

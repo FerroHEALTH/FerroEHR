@@ -23,7 +23,7 @@ metadata:
     kubernetes.io/description: >-
       Ingress for the CDR: only the API port (and the management port when enabled), but from EVERY source — this policy narrows ports, NOT sources (networkPolicy.ingressAllowAll=true). Set networkPolicy.ingressFrom for a PHI workload.
   labels:
-    helm.sh/chart: ferroehr-11.0.0
+    helm.sh/chart: ferroehr-11.0.1
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "4.3.6"
@@ -60,7 +60,7 @@ metadata:
     kubernetes.io/description: >-
       Ingress for FerroTERM: only its HTTP port, and only from the CDR's pods. Egress admits DNS only.
   labels:
-    helm.sh/chart: ferroehr-11.0.0
+    helm.sh/chart: ferroehr-11.0.1
     app.kubernetes.io/name: ferroehr-terminology
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "4.3.6"
@@ -116,7 +116,7 @@ metadata:
     kubernetes.io/description: >-
       Keeps the CDR available during voluntary disruption (node drains, cluster upgrades). AlwaysAllow lets a drain evict already-unhealthy pods rather than waiting for them to recover.
   labels:
-    helm.sh/chart: ferroehr-11.0.0
+    helm.sh/chart: ferroehr-11.0.1
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "4.3.6"
@@ -137,7 +137,7 @@ kind: ServiceAccount
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-11.0.0
+    helm.sh/chart: ferroehr-11.0.1
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "4.3.6"
@@ -152,7 +152,7 @@ kind: ServiceAccount
 metadata:
   name: ferroehr-terminology
   labels:
-    helm.sh/chart: ferroehr-11.0.0
+    helm.sh/chart: ferroehr-11.0.1
     app.kubernetes.io/name: ferroehr-terminology
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "4.3.6"
@@ -181,7 +181,7 @@ kind: Secret
 metadata:
   name: ferroehr-env
   labels:
-    helm.sh/chart: ferroehr-11.0.0
+    helm.sh/chart: ferroehr-11.0.1
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "4.3.6"
@@ -198,7 +198,7 @@ kind: ConfigMap
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-11.0.0
+    helm.sh/chart: ferroehr-11.0.1
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "4.3.6"
@@ -340,7 +340,7 @@ metadata:
     kubernetes.io/description: >-
       Synthetic, licence-free FHIR code systems and value sets under the reserved example.test domain, mounted read-only as FerroTERM's code-system directory. Replace it with terminology.codeSystems.existingConfigMap to serve your own.
   labels:
-    helm.sh/chart: ferroehr-11.0.0
+    helm.sh/chart: ferroehr-11.0.1
     app.kubernetes.io/name: ferroehr-terminology
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "4.3.6"
@@ -468,7 +468,7 @@ kind: Service
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-11.0.0
+    helm.sh/chart: ferroehr-11.0.1
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "4.3.6"
@@ -498,7 +498,7 @@ metadata:
     kubernetes.io/description: >-
       In-cluster address for FerroTERM. Reached by the CDR alone — no Ingress is rendered for it, because a published FHIR terminology endpoint serves $expand and $lookup to every client that can reach it.
   labels:
-    helm.sh/chart: ferroehr-11.0.0
+    helm.sh/chart: ferroehr-11.0.1
     app.kubernetes.io/name: ferroehr-terminology
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "4.3.6"
@@ -524,7 +524,7 @@ metadata:
     kubernetes.io/description: >-
       The FerroEHR CDR itself: a stateless openEHR ITS-REST API server against an EXTERNAL PostgreSQL 18. It stores nothing locally, so a pod is disposable; readiness reports the database and its schema, liveness does not.
   labels:
-    helm.sh/chart: ferroehr-11.0.0
+    helm.sh/chart: ferroehr-11.0.1
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "4.3.6"
@@ -720,7 +720,7 @@ metadata:
     kubernetes.io/description: >-
       FerroTERM, the FHIR terminology server the CDR resolves bindings against. It serves a read-only index and the shaped code-system directory; it holds no clinical data and reaches nothing outbound.
   labels:
-    helm.sh/chart: ferroehr-11.0.0
+    helm.sh/chart: ferroehr-11.0.1
     app.kubernetes.io/name: ferroehr-terminology
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "4.3.6"
