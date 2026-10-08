@@ -1,0 +1,629 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Terminology servers - FerroEHR Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        <!-- Content-Security-Policy as a <meta> element, because GitHub Pages serves
+             static files and cannot set response headers. A meta CSP is genuinely
+             weaker than the header: `frame-ancestors`, `report-uri` and `sandbox` are
+             IGNORED in meta form (w3c CSP3 §3.3), and it applies only after the parser
+             reaches it. It still stops an injected external script or an exfiltrating
+             `connect-src`, which is the realistic risk for a docs site, so it is worth
+             having while being honest that the site cannot carry the full header set —
+             documented on the security page. `unsafe-inline` is required: mdBook emits
+             inline theme/sidebar scripts and inline styles of its own. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <!-- Self-hosted KaTeX stylesheet (fonts under katex/fonts/) — the site
+             serves no external requests, so mdbook-katex runs with no-css = true
+             and the vendored sheet is linked here. Version 0.16.4, matching the
+             KaTeX the katex-rs renderer inside mdbook-katex bundles (its
+             KATEX-VERSION file); provenance in website/book/KATEX-PROVENANCE.md. -->
+        <link rel="stylesheet" href="../katex/katex.min.css">
+
+        <meta name="description" content="User documentation for FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../css/chrome-d279d366.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/custom-79743c4e.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "rust";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "../searchindex-291401ab.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-e0689922.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">FerroEHR Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/src/beyond-core/terminology.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="terminology-servers"><a class="header" href="#terminology-servers">Terminology servers</a></h1>
+<p>openEHR records carry coded values: a diagnosis, a route of administration, a
+laboratory unit. Some codes come from openEHR’s own terminology; others must be
+checked against an external code system such as SNOMED CT or LOINC. FerroEHR
+serves the bundled openEHR terminology in-process, and can additionally validate
+coded values against any number of external FHIR terminology servers at once.</p>
+<ul>
+<li><a href="#the-bundled-openehr-terminology">The bundled openEHR terminology</a>
+<ul>
+<li><a href="#exposing-the-lookups-over-rest">Exposing the lookups over REST</a></li>
+</ul>
+</li>
+<li><a href="#external-fhir-terminology-servers">External FHIR terminology servers</a>
+<ul>
+<li><a href="#what-it-changes-at-commit-time">What it changes at commit time</a></li>
+<li><a href="#what-it-changes-when-an-adl-2-archetype-is-uploaded">What it changes when an ADL 2 archetype is uploaded</a></li>
+<li><a href="#which-fhir-operation-is-used">Which FHIR operation is used</a></li>
+<li><a href="#several-terminology-servers-at-once">Several terminology servers at once</a></li>
+<li><a href="#authenticating-to-a-server">Authenticating to a server</a></li>
+<li><a href="#when-the-terminology-server-cannot-answer">When the terminology server cannot answer</a></li>
+</ul>
+</li>
+<li><a href="#ferroterm-beside-the-cdr">FerroTERM beside the CDR</a>
+<ul>
+<li><a href="#snomed-ct-on-a-public-sandbox">SNOMED CT on a public sandbox</a></li>
+<li><a href="#loinc-on-the-sandbox">LOINC on the sandbox</a></li>
+</ul>
+</li>
+<li><a href="#running-one-locally-development-and-ci">Running one locally (development and CI)</a></li>
+<li><a href="#on-kubernetes">On Kubernetes</a></li>
+<li><a href="#terminology-in-aql">Terminology in AQL</a></li>
+</ul>
+<h2 id="the-bundled-openehr-terminology"><a class="header" href="#the-bundled-openehr-terminology">The bundled openEHR terminology</a></h2>
+<p>The server ships the openEHR terminology bundle (Terminology 3.1.0) and uses it
+by default, with no configuration and no external dependency. It answers the
+questions the platform needs while validating and querying: which terminologies
+exist, whether a code belongs to one, what a term’s rubric is, whether one code
+subsumes another, and whether a code is a member of a value set.</p>
+<p>Enumeration is always the bundle’s job. A lookup or a membership test goes to the
+bundle when the bundle knows that terminology, and only otherwise to a
+configured external server.</p>
+<h3 id="exposing-the-lookups-over-rest"><a class="header" href="#exposing-the-lookups-over-rest">Exposing the lookups over REST</a></h3>
+<p>You can also expose these lookups over a small read-only REST surface. It is a
+FerroEHR extension (no openEHR REST contract defines a terminology API) and it
+is <strong>off by default</strong>; while disabled, every route answers <code>404</code> as if it were
+not mounted. Turn it on with <code>FERROEHR__TERMINOLOGY__API_ENABLED=true</code> and it
+serves:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Method</th><th>Path</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>GET</code></td><td><code>/terminology</code></td><td>list terminologies</td></tr>
+<tr><td><code>GET</code></td><td><code>/terminology/{terminology_id}</code></td><td>describe one terminology</td></tr>
+<tr><td><code>GET</code></td><td><code>/terminology/{terminology_id}/term/{code}</code></td><td>look up a term</td></tr>
+<tr><td><code>GET</code></td><td><code>/terminology/{terminology_id}/subsumes?ref_code=&amp;candidate=</code></td><td>subsumption test</td></tr>
+<tr><td><code>GET</code></td><td><code>/terminology/{terminology_id}/value_set/{value_set_id}</code></td><td>get a value set</td></tr>
+<tr><td><code>GET</code></td><td><code>/terminology/{terminology_id}/value_set/{value_set_id}/validate?candidate_code=&amp;at_date=</code></td><td>test membership</td></tr>
+</tbody>
+</table>
+</div>
+<p>All paths are relative to the API base path, <code>/ferroehr/rest/openehr/v1</code>. An
+unknown terminology or value set is a <code>404</code>; a missing required query parameter
+is a <code>400</code>.</p>
+<h2 id="external-fhir-terminology-servers"><a class="header" href="#external-fhir-terminology-servers">External FHIR terminology servers</a></h2>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p><strong>The CDR is only ever a client of the terminology server.</strong> FerroEHR does not
+implement one: you run a FHIR terminology server and point the CDR at it by
+URL. The one that ships with the product is
+<a href="#ferroterm-beside-the-cdr">FerroTERM</a>, started by the quickstart’s
+terminology overlay; any other server speaking the FHIR terminology
+operations (Ontoserver, Snowstorm, HAPI FHIR) works the same way.</p>
+</blockquote>
+<p>External terminology is off by default, and while it is off nothing is
+requested: validation uses the in-process bundle alone. The keys live under
+<code>[terminology.external]</code>; the full table, including timeouts, caching, OAuth2
+and mutual TLS, is on
+<a href="../installation/config-integrations.html#terminology">Integrations</a>. The minimum
+is a master switch and one provider:</p>
+<pre><code class="language-toml">[terminology.external]
+enabled = true
+
+[terminology.external.providers.default]
+type = "fhir"
+url = "https://tx.example.org/fhir"
+</code></pre>
+<p>Enabling the section with no provider configured is a <strong>boot error</strong>, not a
+silent fall back to the bundle. So is an empty provider URL, an
+<code>oauth2_client</code> naming no configured client, and half a mutual-TLS identity:
+a control you configured either works or the server refuses to start.</p>
+<h3 id="what-it-changes-at-commit-time"><a class="header" href="#what-it-changes-at-commit-time">What it changes at commit time</a></h3>
+<p>The mechanism is openEHR’s own <strong>archetype constraint binding</strong>. Where a
+template binds an archetype constraint code (an <code>ac</code> code) to a query against an
+external terminology, the specification puts the resolver <em>outside</em> the CDR: the
+archetype holds an identifier for a query, and the query itself is defined in the
+terminology server.</p>
+<p>With external terminology enabled, committing a composition resolves those
+bindings for every bound coded value the instance actually carries, against the
+server the binding’s terminology routes to:</p>
+<ul>
+<li>The code <strong>is</strong> in the value set → the commit proceeds.</li>
+<li>The code is <strong>not</strong> in the value set → <code>422</code>, naming the path, the code, and
+the bound query. That is a real constraint violation, so <code>fail_on_error</code> does
+not change it.</li>
+<li>The value set <strong>could not be resolved</strong> → <code>fail_on_error</code> decides, see
+<a href="#when-the-terminology-server-cannot-answer">below</a>.</li>
+</ul>
+<p>Only bound external queries leave the process. openEHR and the bundle’s own
+local terminologies are still answered in-process.</p>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p>The composition’s <code>terminology_id</code> travels verbatim as the FHIR <code>system</code>
+parameter, and no openEHR specification defines a mapping between
+<code>terminology_id</code> values (<code>SNOMED-CT</code>) and FHIR system URIs
+(<code>http://snomed.info/sct</code>). If your archetypes and your terminology server
+disagree on that spelling, align them in the terminology-server configuration.
+The CDR does not rewrite the value.</p>
+</blockquote>
+<h3 id="what-it-changes-when-an-adl-2-archetype-is-uploaded"><a class="header" href="#what-it-changes-when-an-adl-2-archetype-is-uploaded">What it changes when an ADL 2 archetype is uploaded</a></h3>
+<p>An ADL 2 archetype’s <code>term_bindings</code> are checked too (AOM2 validity rule
+VETDF). A binding target is a URI in the IHTSDO model, <code>…/id/&lt;code&gt;</code>, and the
+CDR takes it apart before asking: <code>http://snomed.info/id/50121007</code> (or the
+<code>snomedct.info</code> host the ADL 2 specification’s own examples use) is asked as
+<code>system=http://snomed.info/sct</code>, <code>code=50121007</code>, per the SNOMED CT URI Standard;
+<code>http://loinc.org/id/LA6742-6</code> as <code>system=http://loinc.org</code>; any other <code>…/id/…</code>
+URI as the URI before <code>/id/</code>. The outer binding key (<code>SNOMED-CT</code>, <code>Snomed</code>,
+<code>LOINC</code>, however the author spelled it) only picks the provider. The server’s
+answer then decides:</p>
+<ul>
+<li>the code <strong>exists</strong> → accepted;</li>
+<li>the code system is served and the code is <strong>not in it</strong> → <code>422</code>, naming the
+rule, the binding and the code;</li>
+<li>the code system is <strong>not served</strong> by the terminology server (or the server
+cannot say) → accepted with a warning in the log. AOM2 puts it this way:
+codes for inaccessible terminologies “should be flagged with a warning
+indicating that no verification was possible”, so a CDR wired at a server
+that carries only LOINC still stores archetypes with SNOMED CT bindings.</li>
+</ul>
+<p>The same rule holds with no external terminology server configured at all:
+nothing is asked and nothing is refused.</p>
+<h3 id="which-fhir-operation-is-used"><a class="header" href="#which-fhir-operation-is-used">Which FHIR operation is used</a></h3>
+<p>Membership is tested with <code>ValueSet/$validate-code</code> by default: one direct
+yes/no with the least payload. A server that does not offer it can be switched to
+<code>$expand</code> plus a membership test with <code>operation = "expand"</code> on that provider.
+This is a per-provider configuration choice, not an automatic fallback: the
+server does not retry a failed <code>$validate-code</code> as an <code>$expand</code>, so set the
+operation your server actually supports.</p>
+<p>Responses are cached per provider (decoded, not raw), so a burst of commits
+validating the same codes does not become one HTTPS round trip per code. A
+response that is not a valid FHIR resource is treated as an upstream fault rather
+than partially read, and takes the same path as an unreachable server.</p>
+<h3 id="several-terminology-servers-at-once"><a class="header" href="#several-terminology-servers-at-once">Several terminology servers at once</a></h3>
+<p>Real deployments bind to more than one terminology: SNOMED CT from one server,
+LOINC or a national code system from another. <strong>Every</strong> entry under
+<code>[terminology.external.providers]</code> is materialised at startup, and
+<code>[terminology.external.routes]</code> decides which one answers each call:</p>
+<pre><code class="language-toml">[terminology.external]
+enabled = true
+
+[terminology.external.providers.snomed]
+type = "fhir"
+url = "https://snomed.example.org/fhir"
+
+[terminology.external.providers.loinc]
+type = "fhir"
+url = "https://loinc.example.org/fhir"
+
+# Terminology id or system URI -&gt; provider name.
+[terminology.external.routes]
+"SNOMED-CT" = "snomed"
+"http://snomed.info/sct" = "snomed"
+"http://loinc.org" = "loinc"
+</code></pre>
+<p>Selection is deliberately mechanical, so you can predict which server answers:</p>
+<ol>
+<li>The caller offers candidate keys in priority order: a terminology id, a
+system URI, a value-set URL, the AQL service flavour.</li>
+<li>The first candidate with a route entry wins. Keys are matched
+<strong>case-insensitively and whole-string</strong>, never as a prefix.</li>
+<li>Otherwise the provider named <code>default</code> answers, or, when exactly one
+provider is configured, that one.</li>
+<li>With two or more providers and no <code>default</code>, an unrouted terminology has no
+server at all, and the call falls back to local behaviour.</li>
+</ol>
+<p>Step 4 is a useful way to make routing mistakes loud instead of silent: add a
+<code>default</code> only when you genuinely want a catch-all server. A route naming a
+provider that does not exist fails at <strong>startup</strong>, never at request time.</p>
+<p>Routing applies everywhere terminology is consulted: the <code>/terminology/*</code>
+extension API, AQL <code>TERMINOLOGY(…)</code> resolution, and the commit-time binding
+checks above.</p>
+<h3 id="authenticating-to-a-server"><a class="header" href="#authenticating-to-a-server">Authenticating to a server</a></h3>
+<p>A provider that needs a bearer token references a client-credentials client by
+name; the token is cached and renewed shortly before it expires. The client
+secret should come from a mounted file rather than an inline value;
+<code>client_secret_file</code> under
+<code>[terminology.external.oauth2_clients.&lt;name&gt;]</code>. A provider that authenticates
+with a certificate instead gets its mutual-TLS identity <strong>per provider</strong>, because
+the certificate is issued by that server’s PKI. Both are configured on
+<a href="../installation/config-integrations.html#authenticating-to-a-terminology-server">Integrations</a>.</p>
+<p>There is no option to disable certificate verification. Server-certificate and
+hostname verification are always on; a private-PKI trust bundle changes <em>which</em>
+anchors are trusted, never <em>whether</em> the server is verified.</p>
+<h3 id="when-the-terminology-server-cannot-answer"><a class="header" href="#when-the-terminology-server-cannot-answer">When the terminology server cannot answer</a></h3>
+<p><code>fail_on_error</code> decides what happens when a bound value set cannot be resolved at
+all, whether the server is unreachable, answers an error, or does not know the
+value set:</p>
+<ul>
+<li><code>false</code> (the default, <em>fail-open</em>): the composition is accepted and a warning
+is logged. The availability of an external service does not block clinical
+writes.</li>
+<li><code>true</code> (<em>fail-closed</em>): the composition is rejected with a validation error
+naming the unresolved binding.</li>
+</ul>
+<p>A code that <em>is</em> resolved and turns out not to be a member is a different
+matter: that is a constraint violation and is rejected under either setting.</p>
+<p>Pick deliberately. Fail-closed means commits stop while your terminology server
+is down; fail-open means they are accepted unvalidated. There is no third option
+that gives you both.</p>
+<h2 id="ferroterm-beside-the-cdr"><a class="header" href="#ferroterm-beside-the-cdr">FerroTERM beside the CDR</a></h2>
+<p><a href="https://github.com/FerroHEALTH/FerroTERM">FerroTERM</a> is the terminology server
+FerroEHR ships with: the <code>docker-compose.terminology.yml</code> overlay of the
+quickstart starts it beside the CDR and points <code>[terminology.external]</code> at
+<code>http://ferroterm:8080/r4b</code>, the <a href="../installation/compose.html#the-terminology-overlay-ferroterm">compose page</a>
+has the commands. The hosted sandbox at <a href="https://sandbox.ferroehr.eu">https://sandbox.ferroehr.eu</a> runs the
+same pair on one machine, so the coded-text binding you see resolving there is a
+real round trip to a real terminology server.</p>
+<p>What the sandbox shows, and how it is arranged:</p>
+<ul>
+<li><strong>The server is not on the public surface.</strong> FerroTERM answers on the
+sandbox’s private compose network alone; there is no route to it at
+<code>sandbox.ferroehr.eu</code>, its own browser UI is off, and the CDR is its only
+caller. You exercise it through the CDR: commit a composition against the
+<code>cnf.tpl.dv_coded_text_binding_sct</code> template with a code inside its bound
+value set and it is accepted, with a code outside it and the answer is <code>422</code>;
+the <code>/terminology/*</code> routes look codes up; AQL <code>TERMINOLOGY()</code> expands a value
+set into a <code>MATCHES</code> operand.</li>
+<li><strong>Fail-open</strong>, the shipped default: a binding the server cannot resolve is
+accepted. The sandbox declares this posture and the register entry that
+records why neither posture is spec-mandated (AMB-172).</li>
+<li><strong>The content is the shaped seed</strong>: two code systems and two value sets under
+the reserved <code>example.test</code> domain, with no licensed terminology in them.</li>
+</ul>
+<h3 id="snomed-ct-on-a-public-sandbox"><a class="header" href="#snomed-ct-on-a-public-sandbox">SNOMED CT on a public sandbox</a></h3>
+<p>Serving SNOMED CT to the public is a licensed activity, and the arrangement
+above is what the SNOMED CT Affiliate Licence Agreement (April 2023,
+<a href="https://www.snomed.org/get-snomed">snomed.org/get-snomed</a>) asks for. Clause 2.2.4
+permits systems “made available to the general public for accessing and/or
+retrieving any part of the International Release and/or data encoded using the
+foregoing”, provided users “are not able to extract any substantial portion of
+SNOMED CT” and no fee is charged for access. Clause 2.7 requires “reasonable
+measures to ensure that the International Release (and any part of it) cannot be
+accessed or downloaded from the Licensee’s systems except by authorised users”.
+A raw FHIR terminology endpoint open to anonymous callers would let anyone walk
+a code system or expand large value sets; per-code operations through the CDR,
+behind its rate limit, do not.</p>
+<p>The sandbox serves the <strong>SNOMED CT International Edition, release 20260901</strong>
+(<code>http://snomed.info/sct/900000000000207008/version/20260901</code>), loaded by the
+operator under their Affiliate Licence from an index built off the machine. The
+International Edition rather than a national one: it needs the Affiliate Licence
+alone (a Member’s national release also needs an agreement with that Member), its
+English displays fit an international audience, and it is the lighter of the two.
+Every surface showing that content carries the notice the licence prescribes:</p>
+<blockquote>
+<p>This material includes SNOMED Clinical Terms® (SNOMED CT®) which is used by
+permission of the International Health Terminology Standards Development
+Organisation (IHTSDO). All rights reserved. SNOMED CT®, was originally created
+by The College of American Pathologists. “SNOMED” and “SNOMED CT” are
+registered trademarks of the IHTSDO.</p>
+</blockquote>
+<p>No SNOMED CT content is in this repository, in any image, or in CI; the index
+exists only on the sandbox machine. This is a description of the arrangement,
+not legal advice: the licence text is the authority and the Member’s conditions
+apply in each territory.</p>
+<h3 id="loinc-on-the-sandbox"><a class="header" href="#loinc-on-the-sandbox">LOINC on the sandbox</a></h3>
+<p>The sandbox also serves <strong>LOINC version 2.83</strong> (<code>http://loinc.org</code>), from an
+index built the same way. The LOINC licence
+(<a href="https://loinc.org/license">loinc.org/license</a>) grants use and distribution
+“for any commercial or non-commercial purpose” without fees and names “online
+terminology services” among the permitted products, on three conditions this
+deployment meets: the notice below is available where the service’s terms are
+stated, every LOINC code is shown with one of its LOINC display names (the FHIR
+operations return the long common name), and the version is stated. Where a
+LOINC record carries a third-party copyright notice of its own, that notice
+travels with the record.</p>
+<blockquote>
+<p>This material contains content from LOINC (http://loinc.org). LOINC is
+copyright © Regenstrief Institute, Inc. and the Logical Observation
+Identifiers Names and Codes (LOINC) Committee and is available at no cost
+under the license at http://loinc.org/license. LOINC® is a registered United
+States trademark of Regenstrief Institute, Inc.</p>
+</blockquote>
+<p>Neither index is in the repository, an image or CI; both exist only on the
+sandbox machine, beside the licence-free shaped seed the compose profile ships.</p>
+<h2 id="running-one-locally-development-and-ci"><a class="header" href="#running-one-locally-development-and-ci">Running one locally (development and CI)</a></h2>
+<p>The quickest local terminology server is the quickstart’s
+<a href="../installation/compose.html#the-terminology-overlay-ferroterm">terminology overlay</a>:
+FerroTERM beside the CDR, the shaped seed served, the CDR wired, one command
+and no checkout. The conformance lane still runs its own server: from a
+checkout of the repository, the conformance stack can start a HAPI FHIR JPA
+server beside the CDR, seeded with the same synthetic code systems and value
+sets over its FHIR API (the lane moves to FerroTERM under #3085):</p>
+<pre><code class="language-bash">docker compose -p ferroehr-cnf --project-directory . --profile terminology \
+  -f docker/sut-ferroehr.yml -f docker/sut-terminology.yml up -d --wait ferroehr
+</code></pre>
+<p>The profile starts the terminology server (host port <code>8090</code> by default,
+<code>FERROEHR_TERMINOLOGY_PORT</code>) plus a one-shot seeding container that uploads the
+fixtures over the server’s own FHIR API and verifies <code>$validate-code</code> and
+<code>$expand</code> before exiting, so a misconfigured server fails there rather than
+inside a later run. The overlay file is what points the CDR at it, by switching
+on the <code>[terminology.external]</code> providers the development configuration already
+carries in the disabled state.</p>
+<p>None of this touches the downloadable quickstart Compose file on its own, which
+uses the in-process openEHR terminology only; the terminology overlay is the
+opt-in that adds FerroTERM to it.</p>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p>The seeded content is synthetic and lives under the reserved <code>example.test</code>
+domain: one hierarchical code system shaped like SNOMED CT and one shaped like
+LOINC, each with an enumerated value set. It carries no licensed terminology
+content. Point the providers at a real server, and for SNOMED CT hold the
+appropriate licence, for anything beyond experimentation.</p>
+</blockquote>
+<p>The terminology container mounts no volume, so its seeded content lives inside
+the container only: re-create it and the seed is gone. Re-run the profile (or
+just the seeding container) afterwards.</p>
+<blockquote class="blockquote-tag blockquote-tag-tip">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M8 1.5c-2.363 0-4 1.69-4 3.75 0 .984.424 1.625.984 2.304l.214.253c.223.264.47.556.673.848.284.411.537.896.621 1.49a.75.75 0 0 1-1.484.211c-.04-.282-.163-.547-.37-.847a8.456 8.456 0 0 0-.542-.68c-.084-.1-.173-.205-.268-.32C3.201 7.75 2.5 6.766 2.5 5.25 2.5 2.31 4.863 0 8 0s5.5 2.31 5.5 5.25c0 1.516-.701 2.5-1.328 3.259-.095.115-.184.22-.268.319-.207.245-.383.453-.541.681-.208.3-.33.565-.37.847a.751.751 0 0 1-1.485-.212c.084-.593.337-1.078.621-1.489.203-.292.45-.584.673-.848.075-.088.147-.173.213-.253.561-.679.985-1.32.985-2.304 0-2.06-1.637-3.75-4-3.75ZM5.75 12h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1 0-1.5ZM6 15.25a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Z"></path></svg>Tip</p>
+<p>Seeding your own server is the same shape: upload the CodeSystem and ValueSet
+resources your templates reference over plain FHIR REST (<code>PUT</code> to
+<code>/fhir/CodeSystem/&lt;id&gt;</code> and <code>/fhir/ValueSet/&lt;id&gt;</code>). A FHIR terminology server
+starts empty, and a value set it does not hold is an unresolved binding, which
+your <code>fail_on_error</code> setting then decides the fate of.</p>
+</blockquote>
+<h2 id="on-kubernetes"><a class="header" href="#on-kubernetes">On Kubernetes</a></h2>
+<p>Providers and routes are maps, so they are supplied as chart values rather than
+environment variables; the <code>config</code> passthrough renders them verbatim into the
+server’s configuration file
+(<a href="../installation/kubernetes.html#any-server-setting-is-reachable">Any server setting is reachable</a>):</p>
+<pre><code class="language-yaml"># values.yaml
+config:
+  terminology:
+    api_enabled: true
+    external:
+      enabled: true
+      fail_on_error: true      # fail-closed: an unresolvable binding rejects the commit
+      providers:
+        default:
+          type: fhir
+          url: https://tx.example.org/fhir
+secrets:
+  # only when a provider uses OAuth2; keyed by client name
+  terminologyOauth2ClientSecrets: {}
+</code></pre>
+<p><strong>Before you enable it:</strong> a reachable terminology server, a decision on
+<code>fail_on_error</code>, and (if the chart’s default-deny egress policy is on) an
+egress rule that admits the server, or every call fails as a timeout.
+<strong>To turn it off</strong>, set <code>config.terminology.external.enabled: false</code>; validation
+falls back to the in-process bundle and no external call is made.</p>
+<h2 id="terminology-in-aql"><a class="header" href="#terminology-in-aql">Terminology in AQL</a></h2>
+<p>Query authors can constrain a match to a value set with the AQL <code>TERMINOLOGY()</code>
+function: <code>TERMINOLOGY('expand', …)</code> resolves a value set and merges its codes
+into a <code>matches</code> list at query-analysis time, so the planner sees an ordinary
+value list. A <code>terminology://…</code> operand in a <code>matches</code> list is expanded the same
+way. See <a href="../querying-aql.html">Querying with AQL</a> for the query surface.</p>
+<p>Operations with no defined comparison semantics in AQL are typed rejections
+rather than silent wrong answers.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../beyond-core/demographics.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../beyond-core/amqp.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../beyond-core/demographics.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../beyond-core/amqp.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../theme/mermaid-eefea253.min.js"></script>
+        <script src="../theme/mermaid-init-ccf746f1.js"></script>
+        <script src="../theme/version-picker-dddf05c1.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

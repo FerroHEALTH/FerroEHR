@@ -1,0 +1,869 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Threat model - FerroEHR Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        <!-- Content-Security-Policy as a <meta> element, because GitHub Pages serves
+             static files and cannot set response headers. A meta CSP is genuinely
+             weaker than the header: `frame-ancestors`, `report-uri` and `sandbox` are
+             IGNORED in meta form (w3c CSP3 §3.3), and it applies only after the parser
+             reaches it. It still stops an injected external script or an exfiltrating
+             `connect-src`, which is the realistic risk for a docs site, so it is worth
+             having while being honest that the site cannot carry the full header set —
+             documented on the security page. `unsafe-inline` is required: mdBook emits
+             inline theme/sidebar scripts and inline styles of its own. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <!-- Self-hosted KaTeX stylesheet (fonts under katex/fonts/) — the site
+             serves no external requests, so mdbook-katex runs with no-css = true
+             and the vendored sheet is linked here. Version 0.16.4, matching the
+             KaTeX the katex-rs renderer inside mdbook-katex bundles (its
+             KATEX-VERSION file); provenance in website/book/KATEX-PROVENANCE.md. -->
+        <link rel="stylesheet" href="katex/katex.min.css">
+
+        <meta name="description" content="User documentation for FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-e96d0476.css">
+        <link rel="stylesheet" href="css/chrome-d279d366.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom-79743c4e.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "rust";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "searchindex-291401ab.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-e0689922.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">FerroEHR Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/src/threat-model.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="threat-model"><a class="header" href="#threat-model">Threat model</a></h1>
+<p>This chapter says what FerroEHR defends against, how, and (more usefully)
+<strong>what remains true after the control has done its job</strong>. It exists because the
+parts of this system that actually protect patient data are the parts no
+external specification governs: openEHR’s REST specification makes
+authentication a <code>SHOULD</code> and mandates no scheme, and the Service Model places
+authorization out of band, so only the 401-versus-403 split is
+specification-grounded. Everything finer is this project’s own design, and a
+design nobody has written down asks every deployer to reconstruct it privately.</p>
+<ul>
+<li><a href="#what-this-is-and-what-it-is-not">What this is, and what it is not</a></li>
+<li><a href="#assets">Assets</a></li>
+<li><a href="#actors">Actors</a></li>
+<li><a href="#trust-boundaries">Trust boundaries</a>
+<ul>
+<li><a href="#b1--network-and-protocol">B1 — Network and protocol</a></li>
+<li><a href="#b2--authentication">B2 — Authentication</a></li>
+<li><a href="#b3--authorization">B3 — Authorization</a></li>
+<li><a href="#b4--content-validation-and-outbound-calls">B4 — Content validation and outbound calls</a></li>
+<li><a href="#b5--instance-separation">B5 — Instance separation</a></li>
+<li><a href="#b6--the-database">B6 — The database</a></li>
+<li><a href="#b7--the-audit-trail">B7 — The audit trail</a></li>
+<li><a href="#b8--the-supply-chain">B8 — The supply chain</a></li>
+</ul>
+</li>
+<li><a href="#what-each-database-credential-can-reach">What each database credential can reach</a>
+<ul>
+<li><a href="#backup-artefacts">Backup artefacts</a></li>
+</ul>
+</li>
+<li><a href="#re-identification">Re-identification</a>
+<ul>
+<li><a href="#an-identifier-written-into-clinical-content">An identifier written into clinical content</a></li>
+<li><a href="#content-that-identifies-without-carrying-an-identifier">Content that identifies without carrying an identifier</a></li>
+<li><a href="#the-map-that-rejoins-the-two-domains">The map that rejoins the two domains</a></li>
+<li><a href="#the-sealed-identifier-and-its-lookup-digest">The sealed identifier and its lookup digest</a></li>
+<li><a href="#the-subject-pseudonym">The subject pseudonym</a></li>
+<li><a href="#the-audit-trail-as-a-re-identification-surface">The audit trail as a re-identification surface</a></li>
+</ul>
+</li>
+<li><a href="#what-is-explicitly-not-defended-against">What is explicitly NOT defended against</a></li>
+<li><a href="#reporting-a-finding">Reporting a finding</a></li>
+</ul>
+<h2 id="what-this-is-and-what-it-is-not"><a class="header" href="#what-this-is-and-what-it-is-not">What this is, and what it is not</a></h2>
+<p>This is an <strong>attack-surface and trust-boundary analysis with named residual
+risk</strong>. Boundaries are enumerated, the control at each is stated, and the risk
+that survives the control is stated beside it.</p>
+<p>It is <strong>not</strong> a certification, an audit report, or an assurance case in the
+formal sense, and it does not make FerroEHR compliant with anything. It is also
+not a substitute for your own analysis: your deployment introduces boundaries
+this document cannot see: your identity provider’s token policy, your
+network, your operators, your backups. The value here is that you do not have
+to reverse-engineer <em>our</em> half of it from configuration prose.</p>
+<p>Read it alongside <a href="security.html">Security</a> (how each control is
+configured), <a href="audit.html">Audit trail</a> (what is recorded),
+<a href="verifying-releases.html">Verifying releases</a> (establishing what you are running),
+<a href="operations.html">Operations</a> (the deployment surface) and
+<a href="installation/kubernetes-hardening.html">Cluster hardening</a> (what the platform
+owes).</p>
+<p><strong>Where this document and the code disagree, the code is right and this
+document is a defect.</strong> Report it.</p>
+<h2 id="assets"><a class="header" href="#assets">Assets</a></h2>
+<p>What an attacker wants, in the order the loss hurts:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Asset</th><th>Where it lives</th><th>Why it matters</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Clinical payload:</strong> compositions, EHR status, folders</td><td>the <code>clinical</code> schema’s <code>node</code> and <code>version</code> tables, archival partitions included</td><td>this is PHI; disclosure is the primary harm and it is not undoable</td></tr>
+<tr><td><strong>Demographic parties and their identifiers</strong></td><td>the <code>party</code> schema, archival partitions included, with protected national identifiers sealed in <code>national_identifier</code></td><td>who the people are, held apart from what is recorded about them</td></tr>
+<tr><td><strong>The EHR id / subject cross-reference</strong></td><td><code>linkage.subject_ehr</code></td><td>the additional information that re-attributes a pseudonymised record to a person; on its own it names neither</td></tr>
+<tr><td><strong>The audit trail</strong></td><td>the <code>audit</code> schema, plus any configured forwarding sink</td><td>it is the evidence that everything else happened; an attacker who can edit it can make an access disappear</td></tr>
+<tr><td><strong>Version history and its integrity</strong></td><td><code>version</code>, <code>vo_head</code>, <code>contribution</code>, attestations</td><td>an openEHR record’s value is that it is <em>append-only and attributable</em>; a silently rewritten prior version is worse than a deleted one</td></tr>
+<tr><td><strong>Signing keys</strong></td><td>the configured signing key material for commit attestation</td><td>forging an attestation forges provenance of clinical content</td></tr>
+<tr><td><strong>Bearer credentials and password hashes</strong></td><td>tokens in flight; Argon2id PHC hashes at rest</td><td>a stolen token is an authenticated clinical caller until it expires</td></tr>
+<tr><td><strong>Instance separation</strong></td><td>one instance, one database, one set of domain roles per organisation</td><td>two organisations sharing one instance is a breach of both at once</td></tr>
+<tr><td><strong>Availability</strong></td><td>the whole stack</td><td>a CDR that is down is a clinical system that is down; denial of service is a patient-safety issue here, not an inconvenience</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="actors"><a class="header" href="#actors">Actors</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Actor</th><th>Reaches</th><th>Assumed capability</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Unauthenticated caller</strong></td><td>the listening port</td><td>can send arbitrary bytes, replay anything observed, and probe every route</td></tr>
+<tr><td><strong>Authenticated clinical caller</strong></td><td>the openEHR API within their grants</td><td>holds a valid token; may be a legitimate user acting outside their remit, or a compromised client</td></tr>
+<tr><td><strong>Admin / management caller</strong></td><td>the admin, management and messaging surfaces</td><td>can delete physically, archive, dump and load; the most dangerous <em>authorized</em> actor</td></tr>
+<tr><td><strong>Database</strong></td><td>everything stored</td><td>trusted for confidentiality, but assumed to be a place where a mistake is permanent</td></tr>
+<tr><td><strong>Terminology server (FHIR R4B)</strong></td><td>called out to at validation and commit time</td><td>operator-configured; semi-trusted: it answers our questions and can lie</td></tr>
+<tr><td><strong>Object store (S3)</strong></td><td>called out to for multimedia</td><td>operator-configured; semi-trusted, and its responses are parsed</td></tr>
+<tr><td><strong>Message broker (AMQP)</strong></td><td>receives change events</td><td>operator-configured; a sink for data, so a confidentiality boundary</td></tr>
+<tr><td><strong>Identity provider</strong></td><td>issues the tokens everything else believes</td><td>fully trusted by construction; if it is compromised, no control below it holds</td></tr>
+<tr><td><strong>Cluster / host operator</strong></td><td>the process, its memory, its filesystem, its secrets</td><td>fully trusted; outside the software’s reach</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="trust-boundaries"><a class="header" href="#trust-boundaries">Trust boundaries</a></h2>
+<pre class="mermaid">flowchart LR
+  subgraph Untrusted
+    U[Unauthenticated caller]
+    C[Clinical client]
+    A[Admin client]
+  end
+  subgraph Deployment["Deployment boundary (operator-controlled)"]
+    subgraph Server["FerroEHR process"]
+      B1["B1 network + protocol"]
+      B2["B2 authentication"]
+      B3["B3 authorization&lt;br/&gt;EHR_ACCESS - RBAC - ABAC - SMART"]
+      B4["B4 content validation"]
+      B5["B5 instance separation"]
+    end
+    DB[("B6 PostgreSQL")]
+    AUD[("B7 audit store")]
+  end
+  subgraph External["Semi-trusted peers"]
+    IDP[Identity provider]
+    TS[Terminology server]
+    S3[Object store]
+    MQ[Message broker]
+  end
+  U --&gt; B1
+  C --&gt; B1
+  A --&gt; B1
+  B1 --&gt; B2
+  B2 --&gt; B3
+  B3 --&gt; B4
+  B4 --&gt; B5
+  B5 --&gt; DB
+  B5 --&gt; AUD
+  B2 -.verifies tokens from.-&gt; IDP
+  B4 -.asks.-&gt; TS
+  B4 -.stores blobs.-&gt; S3
+  B5 -.publishes.-&gt; MQ
+</pre>
+
+<p>Each boundary below names the control that holds and the risk that remains.</p>
+<h3 id="b1--network-and-protocol"><a class="header" href="#b1--network-and-protocol">B1 — Network and protocol</a></h3>
+<p><strong>Control.</strong> TLS terminates either at the server (<code>rustls</code>, TLS 1.3 by default)
+or in front of it. Connection-level bounds apply before a request even exists (an
+HTTP/1 header-read timeout, an HTTP/2 stream cap with keep-alive PINGs); request
+bodies are size-limited, requests are timed out, concurrency is capped by an
+admission limit, and a two-tier <code>tower_governor</code> rate limit is <strong>on by
+default</strong>. Panics are caught and become a clean <code>500</code> rather than a dropped
+connection, and release builds run with overflow checks on so an arithmetic
+mistake is a loud panic rather than a silently wrong number. Response security
+headers are set. Every parser that reads attacker-controlled bytes (canonical
+JSON, canonical XML, AQL, ADL, OPT 1.4 templates, the simplified formats, and
+the identifier types) has a libFuzzer harness, built on the pull-request path
+and fuzzed on a nightly campaign, and a crash is fixed in the crate, never in
+the harness.</p>
+<p><strong>Residual risk.</strong></p>
+<ul>
+<li><strong>Fuzzing finds crashes; it does not prove their absence.</strong> The harnesses
+cover the parsers we identified as reachable. A parser reached by a path we
+did not enumerate is not covered by anything.</li>
+<li><strong>Rate limiting is per-process.</strong> A multi-replica deployment behind a load
+balancer divides the effective limit by the replica count; it is not a
+distributed limiter. The shipped defaults are also deliberately generous:
+they sit above this implementation’s own measured whole-server ceiling, so the
+limiter refuses abuse rather than shaping normal load.</li>
+<li><strong>Algorithmic complexity in query execution is not bounded by the limiter.</strong>
+A syntactically small AQL query can be an expensive one. Statement timeouts at
+the database are the backstop, and they are the operator’s to set.</li>
+<li><strong>TLS termination in front of the server is the operator’s</strong>; nothing in the
+software can tell whether the hop behind the proxy is encrypted.</li>
+</ul>
+<h3 id="b2--authentication"><a class="header" href="#b2--authentication">B2 — Authentication</a></h3>
+<p><strong>Control.</strong> Two mechanisms: HTTP Basic against Argon2id PHC hashes with a
+verified-credential cache, and OAuth2/OIDC bearer tokens validated against the
+issuer. Configuration is validated <strong>at boot</strong>, not on the first request: a
+mandatory audience list, an <code>https</code> issuer, an algorithm set bound to its key
+source (with <code>none</code> refused outright and two competing key sources refused as a
+contradiction), an HMAC entropy floor, and the OWASP Argon2id parameter floor. A
+malformed <code>Authorization</code> header is a <code>400</code>, not a <code>401</code>: the server never read
+a credential. An unreachable issuer is a <code>503</code>, never a silent pass. A <code>401</code> body
+names no reason, so it is not an oracle for expired-versus-forged.</p>
+<p><strong>Residual risk.</strong></p>
+<ul>
+<li><strong>A valid token is a valid caller.</strong> FerroEHR verifies signature, audience,
+issuer and expiry; it does not and cannot know whether the human behind the
+token is who the token says. Token theft is defended against by your identity
+provider’s lifetimes and binding, not by us.</li>
+<li><strong>There is no token binding, no proof-of-possession and no replay window.</strong> A
+bearer token replayed from another network location is accepted.</li>
+<li><strong>The identity provider is unconditionally trusted.</strong> A compromised issuer,
+or an attacker who can mint tokens with the right audience, defeats every
+authorization stage below, all of which read their inputs from claims.</li>
+<li><strong>Basic authentication has no session, no lockout and no second factor.</strong> It
+is intended for machine callers and small deployments; the Argon2id cost is
+the only brake on offline cracking if a hash leaks.</li>
+</ul>
+<h3 id="b3--authorization"><a class="header" href="#b3--authorization">B3 — Authorization</a></h3>
+<p><strong>Control.</strong> Five stages, each of which can only <em>narrow</em> what the previous one
+allowed, which is what makes an optional stage safe to leave off:</p>
+<ol>
+<li><strong>Authentication</strong> produces a principal or a typed refusal.</li>
+<li><strong><code>EHR_ACCESS</code></strong> is always on and unconditional, from the openEHR Reference
+Model’s own gateway clause.</li>
+<li><strong>RBAC</strong> checks the coarse operation class (public, clinical, or admin)
+against roles taken from the RFC 9068 claim carriers. An OAuth2
+scope is deliberately not treated as a role. The read-only restriction
+overrides any grant. (The <code>/management/*</code> surface is <em>not</em> in this
+classification: it is governed endpoint-by-endpoint by its own configuration,
+and an endpoint you do not name is not mounted at all.)</li>
+<li><strong>ABAC</strong> (off by default) evaluates subject and resource attributes through
+embedded Cedar or an external policy decision point, fanning multi-valued
+attributes out as a cartesian product with all-must-permit and short-circuit
+deny.</li>
+<li><strong>SMART scopes</strong> (off by default) are AND-composed onto the ABAC decision.</li>
+</ol>
+<p>Deny-by-default throughout, and <strong>fail-closed in both senses</strong>: no stage permits
+by omission (an unconfigured resource kind on the external PDP denies, and the
+missing rule is a boot error), and a stage that cannot <em>decide</em> is never read as
+a decision: an unreachable issuer is <code>503</code>, a policy server answering <code>5xx</code> or a
+Cedar policy that errors during evaluation is a fail-closed <code>500</code>. Silence is
+never consent, and a broken control never looks like a policy outcome.</p>
+<p><strong>Residual risk.</strong></p>
+<ul>
+<li><strong>Coarse by default.</strong> With ABAC off (the default) authorization is
+role-level and <code>EHR_ACCESS</code>-level. Any authenticated clinical caller can reach
+any EHR that <code>EHR_ACCESS</code> does not restrict. If your model is “a clinician may
+read only their own patients”, that is ABAC, and you must turn it on and write
+the policy.</li>
+<li><strong>Policy is only as good as the attributes.</strong> Every decision is made from
+claims the identity provider asserted. A wrong <code>organization</code> claim produces a
+correct decision on a false premise.</li>
+<li><strong>The external PDP is a network dependency in the request path.</strong> Fail-closed
+means an outage is an outage: correct, and an availability risk you should
+size.</li>
+<li><strong>Authorization is enforced at the API.</strong> Anything with a direct database
+connection is past it entirely; see B6.</li>
+<li><strong>A legitimate caller acting outside their remit is not prevented, only
+recorded.</strong> That is what the audit trail is for, and detection is not
+prevention.</li>
+</ul>
+<h3 id="b4--content-validation-and-outbound-calls"><a class="header" href="#b4--content-validation-and-outbound-calls">B4 — Content validation and outbound calls</a></h3>
+<p><strong>Control.</strong> Committed content is validated against the operational template
+(the WebTemplate walker), the Reference Model’s own invariants (machine-derived
+from the specification’s meta-model rather than hand-written) and terminology
+bindings. Canonical JSON is read by a <strong>strict</strong> reader that refuses undeclared
+and duplicate keys. Outbound terminology, object-store and broker calls go only
+to operator-configured endpoints. The one outbound call that is on by default is
+the <a href="usage-report.html">usage report</a> to <code>report.ferropulse.eu</code>, which
+<code>[usage_report] enabled = false</code> switches off; it sends a fixed set of fields
+and reads nothing from the answer beyond its status code.</p>
+<p><strong>Residual risk.</strong></p>
+<ul>
+<li><strong>The terminology server is trusted to answer honestly.</strong> A compromised or
+misconfigured one can permit a code that should have been refused. It is a
+correctness boundary, and a clinical-safety one.</li>
+<li><strong>A response parsed from a semi-trusted peer is still parsed.</strong> A terminology
+answer, an object-store response and a broker message are all parsed by the
+server, so a compromised endpoint reaches a parser rather than only a
+validator. The object-store path once carried an XML parser version with
+denial-of-service advisories the client-facing canonical-XML codec did not
+share; both are now on the patched version, and the only pre-fix copy left in
+the build reaches it through the flamegraph renderer, which writes SVG and
+parses nothing. That argument is published as a machine-readable
+<a href="https://github.com/FerroHEALTH/FerroEHR/tree/main/security/vex">VEX document</a>
+rather than left in a comment. Read the current documents for the current
+position: they name the versions, and they are regenerated from the gate.</li>
+<li><strong>Multimedia blobs are stored, not inspected.</strong> FerroEHR is not an antivirus
+and does not pretend to be; a malicious blob is delivered faithfully to
+whatever opens it.</li>
+<li><strong>Validation does not make content true.</strong> A well-formed composition asserting
+a clinically wrong fact is stored, correctly.</li>
+</ul>
+<h3 id="b5--instance-separation"><a class="header" href="#b5--instance-separation">B5 — Instance separation</a></h3>
+<p><strong>Control.</strong> One instance serves one organisation: one database, one set of
+domain roles. There is no tenant column, no row policy and no session setting
+to get wrong, because there is nothing inside the instance to separate. That is
+also where openEHR puts the boundary — BASE <code>architecture_overview</code>
+<code>master06-design_of_the_ehr.adoc</code> §The EHR System calls a system “a distinct
+logical repository corresponding to an organisational entity that is <em>legally
+responsible</em>” for the data and “distinct from any underlying virtualisation
+infrastructure or cloud computing facility, which may house multiple logical
+EHR systems in a multi-tenant fashion”.</p>
+<p><strong>Residual risk.</strong></p>
+<ul>
+<li><strong>Separation is now a deployment property, so a deployment mistake is the
+whole risk.</strong> Two organisations pointed at one instance share everything;
+nothing in the software will catch it, because there is no longer a tenant
+for it to compare against. The compensating control is that the mistake is
+visible in the deployment, not buried in a session variable.</li>
+<li><strong>Instance separation does not separate resources by itself.</strong> Two instances
+on one node still compete for CPU, connections and disk unless the platform
+bounds them.</li>
+<li><strong><code>system_id</code> must differ per instance.</strong> It “becomes embedded in the version
+identifiers of committed – and possibly signed – content” and “cannot
+easily be changed afterwards” (§System Identity), so two instances sharing
+one value mint version identifiers that cannot tell the responsible parties
+apart.</li>
+</ul>
+<h3 id="b6--the-database"><a class="header" href="#b6--the-database">B6 — The database</a></h3>
+<p><strong>Control.</strong> The application connects with least-privilege roles, one per
+pseudonymisation domain, and the schema is prepared by a separate credential
+that is not any of them
+(<a href="#what-each-database-credential-can-reach">what each credential reaches</a>). <code>FORCE ROW LEVEL SECURITY</code>
+means even a table owner is subject to the policies. Version history is
+temporal (<code>PRIMARY KEY … WITHOUT OVERLAPS</code>) rather than overwritten, so a prior
+version is a row that exists, not one that was replaced. Every write emits a
+contribution and an audit record in the same transaction.</p>
+<p><strong>Residual risk.</strong></p>
+<ul>
+<li><strong>Anyone with a database connection is past every control in B1–B5.</strong> That is
+the single largest residual risk in this system, and it is inherent: FerroEHR
+enforces authorization at the API. Protect the credentials and the network
+path accordingly.</li>
+<li><strong>Encryption at rest is the operator’s.</strong> FerroEHR does not encrypt clinical
+payload before it reaches PostgreSQL; the payload is queryable JSONB, which is
+what makes AQL possible and is incompatible with application-level encryption
+of the same fields.</li>
+<li><strong>A superuser can rewrite history.</strong> The temporal design makes accidental
+overwrite structurally hard; it does not defend against someone with <code>UPDATE</code>
+on the tables. The audit chain (B7) is the detection layer.</li>
+<li><strong>Backups carry PHI with none of these controls.</strong> A restored dump is a
+complete copy of the schemas it covers. Which schemas that is, and what two
+dumps are worth together, is
+<a href="#backup-artefacts">Backup artefacts</a> below.</li>
+</ul>
+<h3 id="b7--the-audit-trail"><a class="header" href="#b7--the-audit-trail">B7 — The audit trail</a></h3>
+<p><strong>Control.</strong> Every access is recorded in both official renderings (DICOM PS3.15
+and FHIR R4 <code>AuditEvent</code>/BALP) into a local Audit Record Repository, on by
+default, with optional syslog and ATX:FHIR-Feed forwarding. Refusals (<code>401</code>,
+<code>403</code>, and the <code>400</code> a malformed credential header earns) are always recorded,
+and an unattributable denial is recorded as unattributed rather than under a
+fabricated subject. Records are <strong>hash-chained</strong>, so
+<code>SELECT * FROM audit.verify_audit_chain()</code> names any record that was altered
+or removed, and the server runs that verification itself on a schedule
+(<a href="audit.html#tamper-evidence">tamper evidence</a>). ITI-81 is the retrieval side; ITI-19 mutual TLS is available for
+node authentication.</p>
+<p><strong>Residual risk.</strong></p>
+<ul>
+<li><strong>Tamper <em>evidence</em>, not tamper <em>proof</em>.</strong> The chain proves alteration
+happened; it does not prevent it. An attacker with write access to the audit
+schema can rewrite the chain from the point of compromise forward, which is
+precisely why forwarding to an off-box sink matters, and why the sink should
+not be writable by the same identity.</li>
+<li><strong>A local repository shares the blast radius of the thing it audits.</strong> If the
+database is lost, so is the local audit trail.</li>
+<li><strong>The trail records what the server saw.</strong> A read performed directly against
+the database appears nowhere in it.</li>
+<li><strong>Audit records are themselves sensitive.</strong> They name patients, subjects and
+actions; ITI-81 retrieval is a PHI-disclosure surface and is authorized like
+any other.</li>
+</ul>
+<h3 id="b8--the-supply-chain"><a class="header" href="#b8--the-supply-chain">B8 — The supply chain</a></h3>
+<p><strong>Control.</strong> Releases are built by a reusable workflow that satisfies SLSA v1.0
+Build L3, signed through Sigstore with a signer identity a consumer can pin,
+carrying a CycloneDX dependency SBOM, a SPDX repository SBOM, in-toto
+provenance and a plain <code>sha256sum</code>; the verification procedure is
+<a href="verifying-releases.html">Verifying releases</a>. The release is created as a draft
+and only published once its full asset set is present, because a published
+release is immutable. Container base images are digest-pinned, and the published
+images are re-scanned weekly at the tag an operator actually pulls, with a
+fixable high-or-critical finding both failing the run and filing an issue. Every
+action is pinned to a commit SHA, workflows are audited by <code>zizmor</code> on every pull
+request, and accepted advisories carry published VEX justifications. Commits and
+tags are signed and the tags are protected by a ruleset.</p>
+<p><strong>Residual risk.</strong></p>
+<ul>
+<li><strong>Provenance proves <em>where</em> an artifact was built, not that the source was
+good.</strong> Build L3 says these bytes came from this workflow at this commit. It
+says nothing about what that commit contained.</li>
+<li><strong>The build is not hermetic and not reproducible.</strong> Those are separate SLSA
+tracks this project does not address. A dependency resolved at build time is
+trusted to be what the lock file names.</li>
+<li><strong>Review capacity is one person.</strong> No second human is structurally required
+between an idea and a released binary; the mitigation is machine enforcement
+and it is honestly recorded in
+<a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/GOVERNANCE.md">GOVERNANCE.md</a>.</li>
+<li><strong>Fixes ship in the newest release only.</strong> Each release is supported for
+five years, and a fix for it arrives as a newer release; there is no
+maintenance branch to backport to. See
+<a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions">SECURITY.md</a>.</li>
+</ul>
+<h2 id="what-each-database-credential-can-reach"><a class="header" href="#what-each-database-credential-can-reach">What each database credential can reach</a></h2>
+<p>Every control from B1 to B5 is enforced at the API, so a database credential
+is past all of them. What one credential holds is therefore the boundary that
+survives a leaked connection string, and it is a property of the grants rather
+than of the server’s routing. The migrations under
+<code>app/ferroehr/migrations/</code> apply those grants, revoke each domain from the
+roles that do not own it, and make every domain role <code>NOINHERIT</code> and a member
+of no other, so a privilege cannot arrive through a membership.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Credential</th><th>Reaches</th><th>Cannot reach</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ferroehr_clinical</code></td><td><code>clinical</code>, archival partitions included, with <code>SELECT</code>, <code>INSERT</code>, <code>UPDATE</code> and <code>DELETE</code>; the <code>ext.posture</code> stamp; <code>USAGE</code> on <code>ext</code>; in <code>audit</code>, record an event, stamp it forwarded, run the retention reaper and verify the chain</td><td><code>party</code> and <code>linkage</code>, revoked explicitly and in both directions</td></tr>
+<tr><td><code>ferroehr_clinical_reader</code></td><td><code>SELECT</code> on <code>clinical</code>; <code>USAGE</code> on <code>ext</code>; read the <code>audit</code> repository and verify the chain</td><td>the same two schemas</td></tr>
+<tr><td><code>ferroehr_party</code></td><td><code>party</code>, archival partitions included, with <code>SELECT</code>, <code>INSERT</code>, <code>UPDATE</code> and <code>DELETE</code>, the sealed <code>national_identifier</code> rows included; <code>EXECUTE</code> on <code>party.resolve_national_identifier</code></td><td><code>clinical</code> and <code>linkage</code>, revoked explicitly and in both directions</td></tr>
+<tr><td><code>ferroehr_party_reader</code></td><td><code>SELECT</code> on <code>party</code>. On <code>national_identifier</code> the table-level grant is revoked and re-granted column by column, so it reads <code>id</code>, <code>party_id</code>, <code>scheme</code> and <code>created_at</code> and never <code>lookup_digest</code>, <code>nonce</code> or <code>ciphertext</code></td><td><code>clinical</code> and <code>linkage</code></td></tr>
+<tr><td><code>ferroehr_linkage</code></td><td><code>linkage.subject_ehr</code> with <code>SELECT</code>, <code>INSERT</code> and <code>UPDATE</code>; <code>EXECUTE</code> on <code>linkage.erase_ehr</code>; <code>USAGE</code> on <code>ext</code></td><td><code>clinical</code>, <code>party</code>, and <code>party.resolve_national_identifier</code> by its own revoke. It holds no <code>DELETE</code> anywhere, so the only rows it can remove are the ones the definer function deletes for an erased EHR, one EHR id at a time</td></tr>
+<tr><td>The schema-preparation credential (<code>[db] migrate_url</code>, normally a member of <code>ferroehr_migrator</code>)</td><td>every schema: it issues the DDL of all five migration sets and reads all five <code>_sqlx_migrations</code> tables, and it owns the objects it created</td><td>nothing. The server opens it for that one boot step and closes it again, so no pool is held on it and no request is served through it</td></tr>
+</tbody>
+</table>
+</div>
+<p>The <code>audit</code> schema is granted to the clinical pair (<code>ferroehr_clinical</code> records an
+event, stamps it forwarded, runs the retention reaper and verifies the chain;
+<code>ferroehr_clinical_reader</code> reads it).
+The local Audit Record Repository is written on the clinical pool, so a login
+role that is a member of <code>ferroehr_clinical</code> alone writes its own access log. The
+audit trail is not a pseudonymisation domain: the demographic and linkage
+roles hold no privilege there, and the trail carries record identifiers, never
+a subject’s data.</p>
+<p>The five domain roles are checked at every boot. The server reads the
+catalogue for every table, partitioned table, view, materialized view, foreign
+table, sequence and function each of them can reach in a domain it does not
+own, and refuses to serve when it finds one, naming the role, the object kind
+and the object. A role that does not exist is skipped rather than failed,
+because role provisioning is a deployment step and the migrations create the
+roles only where the migrator holds <code>CREATEROLE</code>. <code>ferroehr db verify</code> runs
+the same check from outside the deployment.</p>
+<p><strong>Residual risk.</strong></p>
+<ul>
+<li><strong>The grants are only a boundary once the credentials are separated.</strong> With
+every <code>[storage.&lt;domain&gt;] url</code> unset, all four pools
+authenticate as <code>[db] url</code> and the split is a schema split. The
+<code>shared_credential</code> gap of <code>deployment_profile</code> is what names that.</li>
+<li><strong>A login role can be a member of several domain roles.</strong> The compose stacks
+do exactly that, deliberately, and say so. The boot self-check measures the
+group roles, so it reports a boundary that a membership then crosses.</li>
+<li><strong>A superuser holds everything</strong>, and so does the role that owns the
+objects. Neither is a runtime credential, and neither is constrained by any
+of the above.</li>
+</ul>
+<h3 id="backup-artefacts"><a class="header" href="#backup-artefacts">Backup artefacts</a></h3>
+<p>A dump leaves the database with none of the grants attached, so the chart takes
+one per domain rather than one per cluster: <code>clinical</code> with <code>ext</code> and <code>audit</code>;
+<code>party</code>; <code>linkage</code> on its own. Each job authenticates as its own read-only
+role, because every domain role is revoked from the other domains and a dump
+taken through a runtime credential would be silently partial. Each writes to
+its own claim, and the chart refuses to render when two domains name the same
+one.</p>
+<p><strong>Residual risk.</strong></p>
+<ul>
+<li><strong>Each dump is plaintext of its own domain.</strong> The clinical one holds every
+composition. The demographic one holds every party and the sealed identifier
+columns with them, which stay sealed only while
+<code>[demographic.identifier_protection] key</code> lives somewhere the dump does not.</li>
+<li><strong>Two dumps together are worth more than twice one.</strong> <code>demographic</code> beside
+<code>linkage</code> says which person holds which record id; add the clinical dump and
+the record is re-identified. Who may read each claim is the control, and it
+is yours.</li>
+<li><strong>A cluster-wide artefact spans all three.</strong> A physical base backup and an
+instance-wide point-in-time recovery are bridges no grant closes. That is
+the <code>shared_cluster</code> gap, and running the three domains on one cluster
+accepts it by name.</li>
+<li><strong>Nothing prunes old dumps, and no network policy of ours selects the dump
+pods.</strong></li>
+</ul>
+<h2 id="re-identification"><a class="header" href="#re-identification">Re-identification</a></h2>
+<p>Pseudonymisation is worth what the paths back are worth. These are the ones
+this system has.</p>
+<h3 id="an-identifier-written-into-clinical-content"><a class="header" href="#an-identifier-written-into-clinical-content">An identifier written into clinical content</a></h3>
+<p><strong>Control.</strong> A data-minimisation pass reads the canonical JSON of every
+clinical commit body before it is stored. <code>EHR_STATUS.subject.external_ref</code>
+must name a declared pseudonym namespace and carry a UUID once
+<code>[privacy] subject_namespaces</code> is set. A <code>PARTY_IDENTIFIED</code> or <code>PARTY_RELATED</code>
+carrying <code>identifiers</code>, and a <code>PARTY_RELATED</code> carrying a <code>name</code>, are refused
+unless the deployment opts in. An identifier scanner reads every string leaf
+against the active rules: eight ship, one per issuing register that publishes a
+check digit (<code>ch-ahvn13</code>, <code>ch-epd-pid</code>, <code>de-kvnr</code>, <code>fi-hetu</code>, <code>gb-nhs-number</code>,
+<code>nl-bsn</code>, <code>no-fodselsnummer</code>, <code>se-personnummer</code>), all active by default in <code>strict</code> mode, and a deployment
+adds regular expressions for the kinds no build can ship a rule for. The two
+write paths that replay content verbatim, EHR-Extract import and the admin
+archive load, are scanned too: they store what they receive, so a body
+carrying an identifier can only be refused. The database keeps its own line.
+Once the namespaces are declared the server stamps <code>ehr.posture</code>, and a
+trigger on <code>ehr</code> refuses a <code>subject_id</code> that is not a UUID, whichever session
+writes it.</p>
+<p><strong>Residual risk.</strong></p>
+<ul>
+<li><strong>A checksum rule matches a number, not a person.</strong> A name, a street
+address, a date of birth and a local record number with no check digit pass
+every shipped rule.</li>
+<li><strong><code>subject_namespaces</code> is empty by default</strong>, and with it empty the subject
+rule and the database trigger are both out of force. The
+<code>open_subject_namespace</code> gap of <code>deployment_profile</code> is what names that.</li>
+<li><strong>A finding names the RM path and the rule, never the value.</strong> That is
+deliberate, and it means a refusal tells an operator where to look rather
+than what was there.</li>
+</ul>
+<h3 id="content-that-identifies-without-carrying-an-identifier"><a class="header" href="#content-that-identifies-without-carrying-an-identifier">Content that identifies without carrying an identifier</a></h3>
+<p><strong>Control.</strong> None in the query engine. Clinical content is keyed by an opaque
+subject pseudonym, and AQL returns the rows it was asked for.</p>
+<p><strong>Residual risk.</strong> A rare diagnosis with an admission date and a place of
+treatment identifies a person with no identifier field involved. Small-cell
+suppression applies to the <a href="querying-aql.html#cohort-queries-across-the-pseudonymisation-boundary">cohort query</a>
+only: a cohort result serving fewer distinct EHRs than
+<code>cohort.small_cell_threshold</code> has its rows withheld and is marked suppressed.
+An ordinary AQL execution takes no threshold at all, so nothing counts how
+small a population a plain <code>POST /query/aql</code> returned. For that surface, who
+may run AQL, for what purpose, and over which EHRs are the controls, and they
+are configuration rather than arithmetic.</p>
+<h3 id="the-map-that-rejoins-the-two-domains"><a class="header" href="#the-map-that-rejoins-the-two-domains">The map that rejoins the two domains</a></h3>
+<p><strong>Control.</strong> <code>linkage.subject_ehr</code> holds a party id, an EHR id, the subject
+identifier the clinical side carries, the SM’s own association metadata and a
+validity period. No name, no address and no plaintext attribute, because a
+row here is already the additional information that re-attributes a record.
+Its role is barred from both domains it joins and both of them from it. The
+one crossing, <code>resolve_ehr_for_identity</code>, runs in the application over two
+pools, so no single statement performs the join and no credential could issue
+one. Each resolve, link, merge and split writes a <code>linkage</code>-domain access
+event naming the actor, the declared purpose of use and whether anything
+matched, and that event deliberately does not name the EHR that came back.
+<code>link_as_subject</code> derives the subject pseudonym server-side and writes it onto
+<code>EHR_STATUS</code> itself, so no caller-supplied value becomes a subject reference
+on that path. A merge or a split closes a period rather than deleting a row,
+and the temporal key admits one mapping in force per party. Erasure is the one
+exception, and the role still cannot delete: <code>linkage.erase_ehr</code> is a
+<code>SECURITY DEFINER</code> function that removes the rows naming one erased EHR, which
+the admin delete calls once the clinical delete has committed.</p>
+<p><strong>Residual risk.</strong></p>
+<ul>
+<li><strong>The crossing exists, and an actor entitled to call it re-identifies a
+record.</strong> That is its purpose. The access log records who did it; recording
+is not prevention.</li>
+<li><strong>Nothing populates the map.</strong> What it holds is what a consumer wrote, so a
+deployment that never calls <code>link</code> has no map and no crossing, and one that
+writes it from a batch job has whatever that job decided.</li>
+<li><strong>A miss is as informative as a hit.</strong> Asking whether this deployment holds
+a record for a person is itself a disclosure, which is why the miss is
+recorded too.</li>
+</ul>
+<h3 id="the-sealed-identifier-and-its-lookup-digest"><a class="header" href="#the-sealed-identifier-and-its-lookup-digest">The sealed identifier and its lookup digest</a></h3>
+<p><strong>Control.</strong> A protected national identifier leaves the versioned body and
+lives in <code>demographic.national_identifier</code> under AES-256-GCM with a fresh
+96-bit nonce per record, with the scheme code bound in as
+associated data so a ciphertext moved between either fails to open. Beside it
+is an HMAC-SHA-256 digest under a separate subkey, which is what lets equality
+lookup work without the plaintext ever reaching the database. Both subkeys are
+derived per domain from one configured root key. The resolve
+function is <code>SECURITY DEFINER</code>, <code>PUBLIC</code> is revoked from it, and only
+<code>ferroehr_party</code> may execute it. Every resolution records an access
+event naming the scheme and whether it matched, never the value. The scheme
+registry is a closed set: an identifier whose scheme nobody registered cannot
+be stored as a protected one at all.</p>
+<p><strong>Residual risk.</strong></p>
+<ul>
+<li><strong>The root key is the whole control.</strong> Held beside a dump, the ciphertext
+opens and the digest can be recomputed over a nine-digit space in seconds.
+It belongs in a secret store, not next to the backup.</li>
+<li><strong>Protection is off by default</strong>, and an identifier whose type the
+deployment did not list is left in the versioned body exactly as written.</li>
+<li><strong>Rotating the key is a re-encryption</strong>, not an edit, because every record
+is sealed under a subkey derived from it.</li>
+</ul>
+<h3 id="the-subject-pseudonym"><a class="header" href="#the-subject-pseudonym">The subject pseudonym</a></h3>
+<p><strong>Control.</strong> <code>mint_subject_pseudonym</code> derives the value from the party id
+under the linkage key domain, in the first declared pseudonym
+namespace. No caller input enters it, so the same party yields the same
+pseudonym and a national identifier cannot become a subject
+reference through that path.</p>
+<p><strong>Residual risk.</strong> A stable per-subject identifier across the whole clinical
+store is what makes it an EHR, and it is also a linkage key. Anyone holding
+the clinical domain can gather every record of one subject, without knowing
+who the subject is. Across instances the derivation differs with the root key,
+so the same person in two instances is two pseudonyms.</p>
+<h3 id="the-audit-trail-as-a-re-identification-surface"><a class="header" href="#the-audit-trail-as-a-re-identification-surface">The audit trail as a re-identification surface</a></h3>
+<p><strong>Control.</strong> Access records live in <code>audit</code>, outside all three domains, and
+retrieval is the admin-gated ITI-81 route. A <code>linkage</code> event names the party
+and the purpose, not the EHR that was returned, so the trail is not a second
+copy of the map.</p>
+<p><strong>Residual risk.</strong> The records name subjects, actors, organisations, roles and
+what they read, which is sensitive in its own right and is a disclosure
+surface like any other. Retention makes it durable on purpose: where one of
+the deployment’s active identifier rules names a jurisdiction with a
+registered retention floor, a shorter <code>audit.store.retention_days</code> is a boot
+error rather than a silent trim. The Netherlands is the one registered floor
+today, at 1830 days.</p>
+<h2 id="what-is-explicitly-not-defended-against"><a class="header" href="#what-is-explicitly-not-defended-against">What is explicitly NOT defended against</a></h2>
+<p>Silence is never coverage, so these are stated rather than left to inference.</p>
+<ul>
+<li><strong>A compromised identity provider.</strong> Everything downstream reads claims it
+asserted.</li>
+<li><strong>A compromised host, container runtime, or cluster operator.</strong> Process memory
+holds decrypted PHI and key material by necessity.</li>
+<li><strong>Anyone with direct database credentials.</strong></li>
+<li><strong>A malicious maintainer, or a compromise of the maintainer’s account or
+signing key.</strong> The bus factor is one; see
+<a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/MAINTAINERS.md">MAINTAINERS.md</a>.</li>
+<li><strong>Physical access, side channels, and speculative-execution attacks.</strong></li>
+<li><strong>Traffic analysis.</strong> Request sizes, timings and error-code patterns can leak
+the existence of records; nothing pads or delays.</li>
+<li><strong>A legitimate user’s authorized misuse</strong>, beyond recording it.</li>
+<li><strong>Denial of service by a resource-holding authorized caller:</strong> an expensive
+query, a large commit, a slow client. The rate limiter is on but coarse and
+per-process; database statement timeouts and container limits are the
+operator’s.</li>
+<li><strong>Data remanence.</strong> Physical deletion removes rows; it does not scrub
+filesystem blocks, WAL segments, replicas or backups.</li>
+<li><strong>Clinical correctness.</strong> FerroEHR validates structure, invariants and
+terminology bindings. It does not know whether a recorded fact is true, and
+no control here is a substitute for clinical governance.</li>
+</ul>
+<h2 id="reporting-a-finding"><a class="header" href="#reporting-a-finding">Reporting a finding</a></h2>
+<p>If you believe a control is weaker than stated here, or a residual risk is
+missing, that is a valid security report, including when the defect is in this
+document rather than in the code. Follow
+<a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md">SECURITY.md</a>:
+report privately, never as a public issue.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="verifying-releases.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="security/dpia.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="verifying-releases.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="security/dpia.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-09f2665d.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="theme/mermaid-eefea253.min.js"></script>
+        <script src="theme/mermaid-init-ccf746f1.js"></script>
+        <script src="theme/version-picker-dddf05c1.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

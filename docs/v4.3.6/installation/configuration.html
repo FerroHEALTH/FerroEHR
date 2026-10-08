@@ -1,0 +1,581 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Configuration reference - FerroEHR Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        <!-- Content-Security-Policy as a <meta> element, because GitHub Pages serves
+             static files and cannot set response headers. A meta CSP is genuinely
+             weaker than the header: `frame-ancestors`, `report-uri` and `sandbox` are
+             IGNORED in meta form (w3c CSP3 §3.3), and it applies only after the parser
+             reaches it. It still stops an injected external script or an exfiltrating
+             `connect-src`, which is the realistic risk for a docs site, so it is worth
+             having while being honest that the site cannot carry the full header set —
+             documented on the security page. `unsafe-inline` is required: mdBook emits
+             inline theme/sidebar scripts and inline styles of its own. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <!-- Self-hosted KaTeX stylesheet (fonts under katex/fonts/) — the site
+             serves no external requests, so mdbook-katex runs with no-css = true
+             and the vendored sheet is linked here. Version 0.16.4, matching the
+             KaTeX the katex-rs renderer inside mdbook-katex bundles (its
+             KATEX-VERSION file); provenance in website/book/KATEX-PROVENANCE.md. -->
+        <link rel="stylesheet" href="../katex/katex.min.css">
+
+        <meta name="description" content="User documentation for FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../css/chrome-d279d366.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/custom-79743c4e.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "rust";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "../searchindex-291401ab.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-e0689922.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">FerroEHR Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/src/installation/configuration.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="configuration-reference"><a class="header" href="#configuration-reference">Configuration reference</a></h1>
+<p>FerroEHR is configured by <strong>one file, <code>ferroehr.toml</code></strong>, whose sections cover
+the entire server, with <code>FERROEHR_*</code> environment variables (and repeatable
+<code>--set</code> flags) as per-key overrides on top. This page is the entry point: the
+quickstart, how configuration loads and how environment names map onto the
+file, the one key that selects the openEHR specification generation set, and a
+map of which page documents which section.</p>
+<ul>
+<li><a href="#quickstart">Quickstart</a></li>
+<li><a href="#how-configuration-loads">How configuration loads</a>
+<ul>
+<li><a href="#the-environment-variable-mapping">The environment-variable mapping</a></li>
+<li><a href="#file-discovery">File discovery</a></li>
+<li><a href="#strict-validation">Strict validation</a></li>
+</ul>
+</li>
+<li><a href="#spec_profile"><code>spec_profile</code></a>
+<ul>
+<li><a href="#why-it-is-one-key-and-not-three">Why it is one key and not three</a></li>
+<li><a href="#seeing-which-profile-is-active">Seeing which profile is active</a></li>
+<li><a href="#what-changes-on-the-wire">What changes on the wire</a></li>
+<li><a href="#changing-the-profile-on-an-existing-deployment">Changing the profile on an existing deployment</a></li>
+</ul>
+</li>
+<li><a href="#deployment_profile"><code>deployment_profile</code></a></li>
+<li><a href="#where-each-section-is-documented">Where each section is documented</a></li>
+</ul>
+<h2 id="quickstart"><a class="header" href="#quickstart">Quickstart</a></h2>
+<p>Generate an annotated template, edit it, and run:</p>
+<pre><code class="language-bash"># Write a fully-commented ferroehr.toml with every key at its default.
+ferroehr config default &gt; ferroehr.toml
+
+# Edit it — at minimum set db.url and an auth mechanism.
+$EDITOR ferroehr.toml
+
+# Validate without touching the database, then run.
+ferroehr config check --config ferroehr.toml
+ferroehr --config ferroehr.toml
+</code></pre>
+<p>A server started with <strong>no file and no environment</strong> still boots, with one
+exception you will hit immediately: authentication is on by default and a
+server with no mechanism configured refuses to start. See
+<a href="config-cli.html#zero-config-boot-and-the-production-checklist">Zero-config boot and the production checklist</a>.</p>
+<h2 id="how-configuration-loads"><a class="header" href="#how-configuration-loads">How configuration loads</a></h2>
+<p>Configuration is assembled once at boot from four layers, lowest precedence to
+highest:</p>
+<ol>
+<li><strong>Built-in defaults:</strong> the values in the tables on the section pages.</li>
+<li><strong>The config file:</strong> <code>ferroehr.toml</code> (see <a href="#file-discovery">file discovery</a>).</li>
+<li><strong><code>FERROEHR_*</code> environment variables:</strong> override individual keys.</li>
+<li><strong><code>--set key=value</code> CLI flags</strong> (repeatable), which win over everything.</li>
+</ol>
+<p>Some conventional names sit <em>below</em> their <code>FERROEHR_</code> forms within layer 3:</p>
+<ul>
+<li><code>DATABASE_URL</code> → <code>db.url</code>, and <code>RUST_LOG</code> → <code>log.filter</code>.</li>
+<li><code>PORT</code> → a <code>0.0.0.0:&lt;PORT&gt;</code> value for <code>server.bind</code> (the port container
+platforms such as Vercel, Cloud Run and Heroku inject and route traffic
+to).</li>
+<li>The <a href="https://www.postgresql.org/docs/current/libpq-envars.html">libpq environment set</a>
+(<code>PGHOST</code>, <code>PGUSER</code>, <code>PGPASSWORD</code>, <code>PGDATABASE</code>, <code>PGPORT</code>, <code>PGSSLMODE</code>),
+which managed-Postgres integrations such as Neon inject: when <code>PGHOST</code> is
+set and no URL form is, the server assembles the DSN from them. An
+explicit <code>DATABASE_URL</code> beats the assembled form, and <code>FERROEHR__DB__URL</code>
+beats both.</li>
+</ul>
+<p>Nothing else has a non-<code>FERROEHR_</code> name.</p>
+<h3 id="the-environment-variable-mapping"><a class="header" href="#the-environment-variable-mapping">The environment-variable mapping</a></h3>
+<p>Every key has one mechanical environment spelling: <strong><code>FERROEHR</code> + the TOML
+path, upper-cased, with a double underscore (<code>__</code>) between every segment,
+including after the <code>FERROEHR</code> prefix.</strong> A single underscore only ever appears
+<em>inside</em> a key word.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>TOML</th><th>Environment variable</th></tr>
+</thead>
+<tbody>
+<tr><td><code>[db] max_connections = 20</code></td><td><code>FERROEHR__DB__MAX_CONNECTIONS=20</code></td></tr>
+<tr><td><code>[auth.oidc] issuer = "…"</code></td><td><code>FERROEHR__AUTH__OIDC__ISSUER=…</code></td></tr>
+<tr><td><code>[management.endpoints] env = "off"</code></td><td><code>FERROEHR__MANAGEMENT__ENDPOINTS__ENV=off</code></td></tr>
+<tr><td><code>[terminology.external.providers.default] url = "…"</code></td><td><code>FERROEHR__TERMINOLOGY__EXTERNAL__PROVIDERS__DEFAULT__URL=…</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>Scalars are typed automatically (bool / int / float, else string).
+<strong>List-typed keys take comma-separated values</strong>
+(<code>FERROEHR__AUTH__OIDC__AUDIENCES=ferroehr,other</code>). Map-keyed tables are
+reachable too: the map key is just another segment
+(<code>FERROEHR__TERMINOLOGY__EXTERNAL__PROVIDERS__SNOMED__URL</code>). Arrays of tables (the
+Basic-auth user store) are <strong>file-only</strong>, because the environment grammar has
+no way to spell an array index.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>Enum values are lowercase / <code>snake_case</code> tokens, exactly as the tables show.
+Secret-typed keys are redacted everywhere the configuration is rendered (the
+<code>/management/env</code> snapshot, <code>GET {base}/admin/config</code>, <code>ferroehr config check</code>, <code>ferroehr report</code>, logs), and a secret-URL key shows its host and path
+with the embedded credentials masked. Each secret, and each database and
+broker URL, has a <code>*_file</code> sibling that reads the value from a
+file, for Kubernetes and Docker secret mounts. Setting a key and its <code>*_file</code>
+sibling at once is a boot error.</p>
+</blockquote>
+<h3 id="file-discovery"><a class="header" href="#file-discovery">File discovery</a></h3>
+<p>The first of these that exists is loaded (later layers still override its
+values):</p>
+<ol>
+<li><code>--config &lt;path&gt;</code>,</li>
+<li><code>FERROEHR_CONFIG=&lt;path&gt;</code>,</li>
+<li><code>./ferroehr.toml</code> (current directory),</li>
+<li><code>/etc/ferroehr/ferroehr.toml</code>.</li>
+</ol>
+<p>An explicitly pointed-at file (1–2) is fatal if absent; the search-order files
+(3–4) are simply skipped when absent, but fatal if present and unreadable or
+unparseable.</p>
+<h3 id="strict-validation"><a class="header" href="#strict-validation">Strict validation</a></h3>
+<p>Configuration is validated at boot (and by <code>ferroehr config check</code>), and the
+server refuses to start on any error:</p>
+<ul>
+<li><strong>Unknown keys are rejected:</strong> in the file, with the offending line number
+and a did-you-mean suggestion, and in the <code>FERROEHR_</code> environment namespace.
+A variable in that namespace that is neither a known section nor one of the
+reserved non-configuration names is a boot error, so a misspelled security
+key can never be silently ignored. A single-underscore near miss
+(<code>FERROEHR_DB_URL</code>) is reported with the exact uniform spelling it should
+have had.</li>
+<li><strong>Type errors are boot errors</strong>, naming the key and what was expected.</li>
+<li><strong>Semantic errors are aggregated:</strong> one pass reports every problem at once,
+so a broken configuration is fixed in a single iteration.</li>
+</ul>
+<h2 id="spec_profile"><a class="header" href="#spec_profile"><code>spec_profile</code></a></h2>
+<pre><code class="language-toml"># The openEHR specification generation set the server runs.
+spec_profile = "development"   # or "stable"
+</code></pre>
+<p>openEHR publishes released specification versions and keeps developing the
+next ones. FerroEHR generates <strong>both</strong>, and this key decides which set the
+running server serves.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Value</th><th>RM</th><th>BASE</th><th>LANG</th><th>Choose it when</th></tr>
+</thead>
+<tbody>
+<tr><td><code>development</code> <em>(default)</em></td><td>1.2.0</td><td>1.3.0</td><td>1.1.0</td><td>You want the generations this build is developed against. This is the default for every deployment that does not set the key.</td></tr>
+<tr><td><code>stable</code></td><td>1.1.0</td><td>1.2.0</td><td>1.0.0</td><td>Your governance requires running on released openEHR specifications only.</td></tr>
+</tbody>
+</table>
+</div>
+<p>Environment form: <code>FERROEHR__SPEC_PROFILE=stable</code>. The key is a top-level
+scalar, not a section; there is no <code>[spec_profile]</code> table.</p>
+<h3 id="why-it-is-one-key-and-not-three"><a class="header" href="#why-it-is-one-key-and-not-three">Why it is one key and not three</a></h3>
+<p>The components’ generations are modelled against each other, not
+independently: RM 1.1.0’s own machine-readable model declares that it includes
+BASE 1.2.0. Letting you pick RM 1.1.0 with BASE 1.3.0 would offer a
+combination openEHR never published, so the profile is a single coupled choice
+and incoherent sets are unrepresentable.</p>
+<h3 id="seeing-which-profile-is-active"><a class="header" href="#seeing-which-profile-is-active">Seeing which profile is active</a></h3>
+<p>The profile is reported in two places, so it is never a guess:</p>
+<ul>
+<li>the <strong>boot banner</strong>, on every start, alongside the RM version it serves;</li>
+<li><strong><code>GET /management/info</code></strong>, which names the active profile with the RM and
+BASE generations it selects, next to the build provenance.</li>
+</ul>
+<h3 id="what-changes-on-the-wire"><a class="header" href="#what-changes-on-the-wire">What changes on the wire</a></h3>
+<p>The profile is an <strong>acceptance boundary</strong>, and it is exact in both directions.</p>
+<p>Under <code>stable</code>, a query that addresses specification surface the released
+generations do not define is <strong>refused with a typed error naming the active
+profile</strong>: an AQL <code>FROM</code> class or a path attribute RM 1.1.0 does not declare
+is rejected at planning time rather than answered as though it existed.</p>
+<p>Released surface the development line later dropped <strong>stays accepted</strong> under
+<code>stable</code>, which is the half most implementations get wrong. A demographic
+party carrying the RM 1.1.0 <code>PARTY.reverse_relationships</code> attribute is read
+and accepted under <code>stable</code>; <code>development</code> refuses it as an undeclared key,
+because RM 1.2.0 removed it. The attribute is derived data the server
+recomputes from <code>relationships</code>, so the copy you send is validated and then
+dropped rather than stored.</p>
+<p>Reading a stored object is bounded the same way. Every commit records whether
+the released generations can express the body it accepted, and under <code>stable</code>
+a stored version they cannot is <strong>refused with <code>409 Conflict</code></strong> naming the
+active profile, the version, and the remedy; never served under a generation
+set that does not define it, and never rewritten to fit one. Under
+<code>development</code> the same object reads normally. This is FerroEHR’s own
+extension: no openEHR specification governs runtime version selection, so the
+status follows HTTP itself (RFC 9110 §15.5.10, a conflict with the current
+state of the target resource, whose resolution the response describes).</p>
+<p><strong>Queries take the same refusal wherever they serve a version body.</strong> AQL is
+gated in two places, and they answer different questions. At <em>planning</em> time the
+query text is checked: a <code>FROM</code> class or path attribute the released generations
+do not declare is rejected. At <em>result assembly</em> the projection is checked: a
+whole-object projection (<code>SELECT c FROM EHR e CONTAINS COMPOSITION c</code>) returns
+stored version bodies, so if any row of the page comes from a version the
+released generations cannot express, the whole query answers <code>409 Conflict</code>
+naming that version. The row is never quietly dropped from the result set
+instead: a <code>RESULT_SET</code> is columns and rows of values with nowhere to explain a
+missing row, so silently eliding one would be an answer you could not tell from
+“no such data”.</p>
+<p>A <strong>leaf projection</strong> over the very same rows (<code>SELECT c/name/value FROM EHR e CONTAINS COMPOSITION c</code>) still answers <code>200</code>. It serves data values rather than
+version bodies, over paths the planning gate has already bounded to the released
+generation’s declared surface. That is the honest boundary: the profile is an
+acceptance boundary on what is served as an openEHR object, not a content filter
+over the values inside one.</p>
+<p>Under <code>development</code> none of this applies and it costs nothing: the assembly
+gate returns before it touches the database.</p>
+<p>The exact additive delta between the two generation sets is pinned in the
+build, so a future openEHR re-vendoring cannot silently widen or narrow what a
+profile accepts.</p>
+<h3 id="changing-the-profile-on-an-existing-deployment"><a class="header" href="#changing-the-profile-on-an-existing-deployment">Changing the profile on an existing deployment</a></h3>
+<p>Treat the profile as a deployment commitment. Both directions are defined, but
+they are not symmetric:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Direction</th><th>Supported?</th><th>Why</th></tr>
+</thead>
+<tbody>
+<tr><td><code>stable</code> → <code>development</code></td><td><strong>Always safe</strong></td><td>openEHR minor releases are additive by the Foundation’s own release strategy, so every object stored under the released generations is valid under the development ones.</td></tr>
+<tr><td><code>development</code> → <code>stable</code></td><td><strong>Only for data that never used a development-only construct</strong></td><td>There is no down-conversion. An object that did use one becomes unreadable (<code>409</code>, not a silently degraded body) until you switch back.</td></tr>
+</tbody>
+</table>
+</div>
+<p>If you need to stay on released specifications, choose <code>stable</code> on day one
+rather than migrating into it later. Silently rewriting stored clinical
+content to fit an older generation would be data loss disguised as a setting,
+so no tool does it.</p>
+<p>Objects committed before this stamp existed, and objects written by the
+verbatim-replay paths (EHR-Extract import, archive load), carry no recorded
+answer; they are assessed at read instead, which costs one extra parse per
+read of such an object and only under <code>stable</code>. Nothing is written back: a
+read stays a read.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>No openEHR specification governs runtime version selection; this key is
+FerroEHR’s own design. What the specifications do govern is the
+compatibility direction it relies on: minor releases within a major line are
+additive supersets.</p>
+</blockquote>
+<h2 id="deployment_profile"><a class="header" href="#deployment_profile"><code>deployment_profile</code></a></h2>
+<pre><code class="language-toml"># The declared posture: what this deployment may hold.
+deployment_profile = "sandbox"   # or "production"
+deployment_accepts = []          # production only: gaps run without, by name
+</code></pre>
+<p>Every separation FerroEHR can make is a configuration key an operator can leave
+unset, and a deployment that has made none of them looks, from its own logs and
+its own API, like one that has made all of them. This key gives the server a
+declared posture and makes the two impossible to confuse.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Value</th><th>Asserts</th><th>On boot</th></tr>
+</thead>
+<tbody>
+<tr><td><code>sandbox</code> <em>(default)</em></td><td>Nothing; the deployment must not hold real personal data</td><td>Says which separations are missing: a red notice on the banner, one <code>warn</code> line per gap with the structured field <code>posture = "deployment"</code>, and the same list on <code>GET /ferroehr/rest/status</code> under <code>deployment</code></td></tr>
+<tr><td><code>production</code></td><td>Every separation below holds, or is accepted by name in <code>deployment_accepts</code></td><td>Refuses to start otherwise, naming each open gap, what it found and what to change</td></tr>
+</tbody>
+</table>
+</div>
+<p>The separations, each a real property the server checks rather than a box
+ticked by being present:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Gap token</th><th>What <code>production</code> requires</th></tr>
+</thead>
+<tbody>
+<tr><td><code>shared_credential</code></td><td><code>[storage.party] url</code> and <code>[storage.linkage] url</code> set, so the domains connect on their own database roles</td></tr>
+<tr><td><code>shared_cluster</code></td><td>The four pools reach four different PostgreSQL clusters, read from <code>pg_control_system().system_identifier</code> on each pool, never from the DSN text. The audit pool counts: Swiss law keeps the access log on a system separate from the one processing the data</td></tr>
+<tr><td><code>open_subject_namespace</code></td><td><code>[privacy] subject_namespaces</code> declared, so an <code>EHR_STATUS</code> subject is an opaque pseudonym</td></tr>
+<tr><td><code>audit_off</code></td><td><code>[audit]</code> enabled with a durable sink (the local store, syslog or the FHIR feed)</td></tr>
+<tr><td><code>audit_fails_open</code></td><td><code>[audit] fail_mode = "closed"</code>, so an operation whose access record cannot be taken is refused instead of succeeding unlogged</td></tr>
+<tr><td><code>audit_syslog_udp</code></td><td><code>[audit.syslog] transport = "tls"</code> (RFC 5425) whenever the syslog feed is on, so the access log reaches the repository encrypted and with delivery confirmation (EHDS Annex II 1.4). A deployment whose UDP path stays on a trusted segment, with the local store or the FHIR feed holding the durable copy, accepts <code>audit_syslog_udp</code> by name</td></tr>
+<tr><td><code>open_ehr_access_default</code></td><td><code>[authz.rbac] ehr_access_default = "restricted"</code>, so an EHR carrying no <code>ACCESS_CONTROL_SETTINGS</code> is reachable only by an admin. The shipped default is <code>open</code></td></tr>
+<tr><td><code>migrate_on_runtime_credential</code></td><td><code>[db] migrate_url</code> set, or <code>migrate = "verify"</code>, so no credential that serves requests can alter the schema. Evaluated per domain database: a domain relocated to a database of its own is prepared on that domain’s runtime DSN</td></tr>
+<tr><td><code>auth_off</code></td><td><code>[auth] enabled = true</code>, so no request is served unauthenticated (CRA Annex I Part I(2)(d))</td></tr>
+<tr><td><code>plaintext_listener</code></td><td><code>[server.tls]</code> enabled, or <code>[server] bind</code> on a loopback address, so data does not cross the network in clear (CRA Annex I Part I(2)(e)). A deployment behind a TLS-terminating ingress accepts <code>plaintext_listener</code> by name, which records that the ingress carries the encryption. A bind whose host is a DNS name or empty counts as routable. The gap also opens when <code>[management] port</code> is set on an enabled management surface: that listener binds every interface and never speaks TLS, so unset the port (the surface then shares the main listener) or accept the gap by name where the port is unreachable off the host</td></tr>
+<tr><td><code>plaintext_broker</code></td><td>An <code>amqps://</code> broker URL, or <code>tls = true</code>, on the enabled change-event outbox (<code>[events]</code>), so change events do not cross the network in clear (CRA Annex I Part I(2)(e)). A deployment whose broker path stays on a segment it trusts accepts <code>plaintext_broker</code> by name</td></tr>
+<tr><td><code>plaintext_audit_feed</code></td><td>An <code>https://</code> URL for an enabled audit FHIR feed (<code>[audit.fhir_feed] url</code>), so the access records, which name the patient and the professional, do not cross the network in clear (CRA Annex I Part I(2)(e)). A deployment whose repository is reached on a segment it trusts accepts <code>plaintext_audit_feed</code> by name</td></tr>
+<tr><td><code>plaintext_object_store</code></td><td><code>[multimedia] allow_http = false</code> on an enabled multimedia store, so the externalised clinical blobs travel over an <code>https://</code> endpoint (CRA Annex I Part I(2)(e)). A deployment whose object store is reached on a segment it trusts accepts <code>plaintext_object_store</code> by name</td></tr>
+</tbody>
+</table>
+</div>
+<p>An accepted gap is stated on every boot and on <code>/management/status</code>; it can be run,
+not hidden. Environment form: <code>FERROEHR__DEPLOYMENT_PROFILE=production</code>,
+<code>FERROEHR__DEPLOYMENT_ACCEPTS=shared_cluster</code>. There is no <code>research</code> value:
+the key controls rigour, not purpose, and a secondary-use platform under an
+EHDS data permit runs on real patient data at production rigour whatever it is
+for.</p>
+<p><strong>This is FerroEHR’s own posture, not a legal requirement.</strong> GDPR Art. 4(5)
+asks that the additional information needed to re-identify a person be “kept
+separately and … subject to technical and organisational measures”, not that it
+sit on a separate server; one cluster with separated schemas and roles is a
+defensible reading. Two clusters are materially stronger, because a superuser,
+an instance-wide point-in-time recovery and a single compromise are bridges no
+grant can close, and that is a choice a deployment should make deliberately
+rather than inherit from a quickstart. See
+<a href="../compliance/index.html#the-pseudonymisation-boundary">Compliance</a>.</p>
+<h2 id="where-each-section-is-documented"><a class="header" href="#where-each-section-is-documented">Where each section is documented</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Section</th><th>What it covers</th><th>Page</th></tr>
+</thead>
+<tbody>
+<tr><td><code>[server]</code>, <code>[server.limits]</code>, <code>[server.rate_limit]</code>, <code>[server.connection]</code>, <code>[server.tls]</code>, <code>[server.identity]</code></td><td>The HTTP listener, request limits, rate limiting, connection bounds, TLS, the deployment’s own identity</td><td><a href="config-server.html">Server, database &amp; telemetry</a></td></tr>
+<tr><td><code>[db]</code></td><td>PostgreSQL connection, pool, migrations</td><td><a href="config-server.html">Server, database &amp; telemetry</a></td></tr>
+<tr><td><code>[log]</code>, <code>[telemetry]</code></td><td>Log rendering and OpenTelemetry export</td><td><a href="config-server.html">Server, database &amp; telemetry</a></td></tr>
+<tr><td><code>[usage_report]</code></td><td>The daily installation report to FerroPULSE, on by default; what it sends is on the <a href="../usage-report.html">Usage report</a> page</td><td><a href="config-server.html#usage_report">Server, database &amp; telemetry</a></td></tr>
+<tr><td><code>[auth]</code>, <code>[authz]</code></td><td>Authentication (Basic, OAuth2/OIDC) and RBAC/ABAC</td><td><a href="config-auth.html">Authentication &amp; access</a></td></tr>
+<tr><td><code>[admin]</code>, <code>[management]</code></td><td>The ADMIN API group and the ops-introspection surface</td><td><a href="config-auth.html">Authentication &amp; access</a></td></tr>
+<tr><td><code>[smart]</code></td><td>SMART App Launch discovery and scope enforcement</td><td><a href="config-auth.html">Authentication &amp; access</a></td></tr>
+<tr><td><code>[signing]</code></td><td>VERSION signing and read-time verification</td><td><a href="config-auth.html">Authentication &amp; access</a></td></tr>
+<tr><td><code>[licence]</code></td><td>The commercial licence token</td><td><a href="config-auth.html">Authentication &amp; access</a></td></tr>
+<tr><td><code>[query]</code></td><td>AQL execution budgets and result ceilings</td><td><a href="config-integrations.html">Integrations</a></td></tr>
+<tr><td><code>[events]</code></td><td>Change eventing</td><td><a href="config-integrations.html">Integrations</a></td></tr>
+<tr><td><code>[terminology]</code>, <code>[multimedia]</code></td><td>External terminology servers, multimedia externalization</td><td><a href="config-integrations.html">Integrations</a></td></tr>
+<tr><td><code>[audit]</code>, <code>[audit.store]</code>, <code>[audit.syslog]</code>, <code>[audit.fhir_feed]</code></td><td>The IHE ATNA audit trail and its sinks</td><td><a href="config-audit.html">Audit</a></td></tr>
+<tr><td><code>[privacy]</code>, <code>[privacy.identifier_scan]</code></td><td>What the clinical side refuses to hold: the subject reference, identified parties, the identifier scanner</td><td><a href="config-privacy.html">Privacy &amp; data minimisation</a></td></tr>
+<tr><td><code>[cohort]</code>, <code>[cohort.predicates]</code></td><td>Cross-domain cohort queries: the demographic predicate allow-list, the small-cell floor, the cohort ceiling</td><td><a href="config-privacy.html">Privacy &amp; data minimisation</a></td></tr>
+<tr><td><code>[demographic.identifier_protection]</code></td><td>Sealing national identifiers in the demographic domain, and the key that opens them</td><td><a href="config-privacy.html">Privacy &amp; data minimisation</a></td></tr>
+<tr><td>—</td><td>The CLI, the production checklist, file-versus-environment guidance</td><td><a href="config-cli.html">CLI &amp; production checklist</a></td></tr>
+</tbody>
+</table>
+</div>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../installation/from-source.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../installation/config-server.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../installation/from-source.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../installation/config-server.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../theme/mermaid-eefea253.min.js"></script>
+        <script src="../theme/mermaid-init-ccf746f1.js"></script>
+        <script src="../theme/version-picker-dddf05c1.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

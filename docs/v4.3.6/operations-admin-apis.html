@@ -1,0 +1,927 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Admin &amp; messaging APIs - FerroEHR Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        <!-- Content-Security-Policy as a <meta> element, because GitHub Pages serves
+             static files and cannot set response headers. A meta CSP is genuinely
+             weaker than the header: `frame-ancestors`, `report-uri` and `sandbox` are
+             IGNORED in meta form (w3c CSP3 §3.3), and it applies only after the parser
+             reaches it. It still stops an injected external script or an exfiltrating
+             `connect-src`, which is the realistic risk for a docs site, so it is worth
+             having while being honest that the site cannot carry the full header set —
+             documented on the security page. `unsafe-inline` is required: mdBook emits
+             inline theme/sidebar scripts and inline styles of its own. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <!-- Self-hosted KaTeX stylesheet (fonts under katex/fonts/) — the site
+             serves no external requests, so mdbook-katex runs with no-css = true
+             and the vendored sheet is linked here. Version 0.16.4, matching the
+             KaTeX the katex-rs renderer inside mdbook-katex bundles (its
+             KATEX-VERSION file); provenance in website/book/KATEX-PROVENANCE.md. -->
+        <link rel="stylesheet" href="katex/katex.min.css">
+
+        <meta name="description" content="User documentation for FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-e96d0476.css">
+        <link rel="stylesheet" href="css/chrome-d279d366.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom-79743c4e.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "rust";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "searchindex-291401ab.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-e0689922.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">FerroEHR Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/src/operations-admin-apis.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="admin--messaging-apis"><a class="header" href="#admin--messaging-apis">Admin &amp; messaging APIs</a></h1>
+<p>Two groups of routes sit beside the clinical API for operators rather than for
+clinical clients: the <strong>admin API</strong>, which physically deletes, reports on, and
+moves repository content, and the <strong>messaging API</strong>, which exports and imports
+whole records as openEHR EHR Extracts and accepts documents in the
+template-data (TDD) form. This page is the operator’s reference for both:
+every path, what gates it, what it accepts, and every status code it answers.</p>
+<ul>
+<li><a href="#where-these-routes-live-and-what-gates-them">Where these routes live, and what gates them</a></li>
+<li><a href="#physical-deletion">Physical deletion</a></li>
+<li><a href="#the-activity-report">The activity report</a></li>
+<li><a href="#archiving">Archiving</a></li>
+<li><a href="#legal-marks-restriction-objection-and-retention">Legal marks: restriction, objection and retention</a></li>
+<li><a href="#storage-integrity">Storage integrity</a>
+<ul>
+<li><a href="#verifying-a-whole-large-repository">Verifying a whole large repository</a></li>
+<li><a href="#repairing-what-the-sweep-found">Repairing what the sweep found</a></li>
+</ul>
+</li>
+<li><a href="#dump-and-load">Dump and load</a>
+<ul>
+<li><a href="#post-baseadmindump"><code>POST {base}/admin/dump</code></a></li>
+<li><a href="#post-baseadminload"><code>POST {base}/admin/load</code></a></li>
+<li><a href="#refusals">Refusals</a></li>
+</ul>
+</li>
+<li><a href="#ehr-extract-and-tdd-import">EHR Extract and TDD import</a>
+<ul>
+<li><a href="#ehr-extract">EHR Extract</a></li>
+<li><a href="#tdd-import">TDD import</a></li>
+</ul>
+</li>
+<li><a href="#other-routes-under-baseadmin">Other routes under <code>{base}/admin</code></a></li>
+</ul>
+<h2 id="where-these-routes-live-and-what-gates-them"><a class="header" href="#where-these-routes-live-and-what-gates-them">Where these routes live, and what gates them</a></h2>
+<p>Both groups are mounted under the API base path, so every path below is
+relative to it. With the default <code>server.base_path</code>, <code>{base}</code> reads
+<code>/ferroehr/rest/openehr/v1</code>, and <code>{base}/admin/dump</code> is
+<code>/ferroehr/rest/openehr/v1/admin/dump</code>.</p>
+<p>The two groups are gated differently, and the difference matters
+operationally:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Group</th><th>Switch</th><th>Authorization class</th><th>While switched off</th></tr>
+</thead>
+<tbody>
+<tr><td><code>{base}/admin/…</code></td><td><code>admin.enabled</code> (<code>FERROEHR__ADMIN__ENABLED</code>), default <code>false</code></td><td>admin: the configured <code>authz.rbac.admin_role</code> (<code>ADMIN</code> by default)</td><td>every route answers <strong>405 Method Not Allowed</strong> with an <strong>empty</strong> <code>Allow</code> header: the resource exists but currently serves no method</td></tr>
+<tr><td><code>{base}/message/…</code></td><td>none (always mounted)</td><td>ordinary clinical, exactly like the composition API</td><td>n/a</td></tr>
+</tbody>
+</table>
+</div>
+<p>Two consequences worth planning around:</p>
+<ul>
+<li><strong>The messaging routes are not admin-gated.</strong> They read and write the same
+clinical content the composition API does, so they carry the same ordinary
+authentication and the same coarse clinical class. A principal holding the
+configured read-only role (<code>authz.rbac.readonly_role</code>, <code>READONLY</code> by
+default) is refused <strong>403</strong> on every messaging <em>import</em>, before the body is
+read; the exports stay available to it.</li>
+<li><strong>RBAC has to be on for the admin role to mean anything.</strong> With
+<code>authz.rbac.enabled = false</code> (the posture the Compose quickstart ships)
+authentication is the only gate, so <em>any</em> authenticated caller reaches every
+enabled admin route. Turn RBAC on before enabling the admin API anywhere
+that is not a laptop.</li>
+</ul>
+<p>While the admin API is enabled, the server also advertises <code>/admin</code> in the
+<code>OPTIONS</code> conformance manifest it serves at the API base-path root; with the
+API off, that entry is absent.</p>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p><code>DELETE {base}/admin/ehr/all</code> with no parameter empties the repository. There
+is no confirmation step and no undo. Keep <code>admin.enabled</code> off unless a
+workflow needs it, and gate the admin role tightly.</p>
+</blockquote>
+<h2 id="physical-deletion"><a class="header" href="#physical-deletion">Physical deletion</a></h2>
+<p>Normal openEHR deletes are <em>logical</em>: the version history is retained. The
+admin API is the exception: <strong>physical, irreversible</strong> removal, for legal
+erasure requests and test-data cleanup.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Route</th><th>Success</th><th>Refusals</th></tr>
+</thead>
+<tbody>
+<tr><td><code>DELETE {base}/admin/ehr/{ehr_id}</code></td><td><strong>204</strong>: the EHR and every resource it owns (compositions, <code>EHR_STATUS</code>, item tags, contributions, and all their historical versions) are physically gone</td><td><strong>400</strong> malformed id (rejected before any deletion), <strong>404</strong> no EHR with that id</td></tr>
+<tr><td><code>DELETE {base}/admin/ehr/all</code></td><td><strong>204</strong>: bulk delete</td><td><strong>400</strong> any id in the list is not a well-formed UUID; the whole request is refused before anything is deleted</td></tr>
+<tr><td><code>DELETE {base}/admin/template/{template_id}</code></td><td><strong>204</strong></td><td><strong>404</strong> unknown template, <strong>409</strong> a committed version still references it</td></tr>
+<tr><td><code>DELETE {base}/admin/query/{qualified_query_name}/{version}</code></td><td><strong>204</strong></td><td><strong>404</strong> unknown name, or a known name with no such version</td></tr>
+<tr><td><code>GET {base}/admin/config</code></td><td><strong>200</strong>: the effective configuration as a redacted JSON tree</td><td>—</td></tr>
+</tbody>
+</table>
+</div>
+<p>Every route additionally answers <strong>401</strong> unauthenticated, <strong>403</strong> for an
+authenticated caller outside the admin class, and <strong>405</strong> while the group is
+switched off.</p>
+<p><strong>What an EHR delete reaches</strong>, in the order it runs: one clinical
+transaction removes the EHR row and, through the foreign-key graph, its
+versions over both storage tiers, their nodes, attestations, contributions,
+commit audits, item tags, folder memberships, the restriction and retention
+marks, the multimedia blob references and every pending change event of the
+EHR; an erasure tombstone is appended to the change-event stream in the same
+transaction, so a consumer that derived anything from the EHR is told to
+delete it (GDPR Art. 19). The cross-reference row that names the EHR’s subject
+is then erased in the linkage domain, and the externalized multimedia blobs no
+surviving version still references are removed from the object store.</p>
+<p><strong>A party delete announces itself the same way.</strong> The SM
+<code>physical_party_delete</code> operation, which this release exposes on the service
+layer and on no REST route, writes one erasure tombstone on the party domain’s
+own outbox before its transaction commits, naming the party and every
+<code>PARTY_RELATIONSHIP</code> erased with it. A consumer of the party stream has no
+other way to learn the identity is gone.</p>
+<p><strong>What it keeps:</strong> the audit records naming the <code>ehr_id</code>. Art. 17(3)(b)
+withholds erasure where processing is necessary for compliance with a legal
+obligation, and the national access-logging periods are that obligation. Data
+outside the running database (backups, replicas, exports) is reached by your
+own rotation, not by this call.</p>
+<p>Details that decide behaviour:</p>
+<ul>
+<li><strong>The bulk delete’s parameter is optional, and its absence means
+everything.</strong> <code>DELETE {base}/admin/ehr/all</code> with no <code>ehr_id</code> deletes every
+EHR on the server. To delete a subset, pass <code>?ehr_id=&lt;uuid&gt;</code>, repeatable
+(<code>?ehr_id=a&amp;ehr_id=b</code>) or comma-separated (<code>?ehr_id=a,b</code>); blank entries are
+dropped. An id that names no EHR deletes nothing and is not an error, so the
+bulk route has no <code>404</code>.</li>
+<li><strong>Deleting a template never orphans clinical data.</strong> The <strong>409</strong> is a
+deliberate guard: while any stored composition was committed against the
+template, the delete is refused and the message says how many committed
+versions still hold the reference. Delete those compositions first.</li>
+<li><strong>A stored-query delete removes exactly one <code>(name, version)</code> row.</strong> The
+query’s other versions survive.</li>
+<li><strong>The config view is redacted structurally, not by key name.</strong> Passwords and
+password hashes, HMAC and signing-key secrets and S3 secret keys render as
+<code>***</code>; every URL that can carry credentials (database, AMQP, the FHIR audit
+feed, terminology servers and their token endpoints, the remote policy
+server, the OTLP collector, the object store, the usage-report endpoint)
+keeps its host and path and masks the embedded credentials
+(<code>postgres://***@host:5432/db</code>). The OIDC issuer and the SMART URLs are
+refused at boot when they carry credentials, so they render as set. Non-secret
+identifiers (usernames, roles, an OIDC issuer) stay visible. Redaction is
+a property of the configuration’s secret types, so no secret value can reach
+this response.</li>
+</ul>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>The template delete, the stored-query delete and the config view are FerroEHR
+extensions: the openEHR admin API defines only the two EHR deletes. They
+share the same switch and the same authorization as those deletes.</p>
+</blockquote>
+<h2 id="the-activity-report"><a class="header" href="#the-activity-report">The activity report</a></h2>
+<p>Four <strong>read-only</strong> counters over the repository’s change history, behind the
+same switch and role as the deletes.</p>
+<p>Every route takes two query parameters:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Required</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>a_service</code></td><td>yes</td><td>the service whose versioned content to report on: one of <code>Admin</code>, <code>Definitions</code>, <code>Ehr</code>, <code>Ehr_index</code>, <code>Demographic</code>, <code>Message</code>, <code>Query</code>, <code>System_log</code>, matched case-insensitively</td></tr>
+<tr><td><code>time_interval</code></td><td>no</td><td><code>&lt;lower&gt;/&lt;upper&gt;</code>, two ISO 8601 date-times matched <strong>inclusively</strong> against each commit time</td></tr>
+</tbody>
+</table>
+</div>
+<p>Either bound may be left empty for an open interval
+(<code>?time_interval=2026-01-01T00:00:00Z/</code>); an absent parameter reports over all
+time. A service that holds no versioned content reports an empty list or <code>0</code>
+rather than failing.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Route</th><th><strong>200</strong> body</th></tr>
+</thead>
+<tbody>
+<tr><td><code>GET {base}/admin/report/contribution</code></td><td>the matching CONTRIBUTION ids as a JSON array, ordered by commit time then id</td></tr>
+<tr><td><code>GET {base}/admin/report/contribution/count</code></td><td>how many there are, as a bare JSON number</td></tr>
+<tr><td><code>GET {base}/admin/report/versioned_composition/count</code></td><td>how many distinct COMPOSITION version containers had a version committed in the interval</td></tr>
+<tr><td><code>GET {base}/admin/report/composition_version/count</code></td><td>how many individual COMPOSITION versions were committed in the interval</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>400</strong> covers an absent <code>a_service</code>, one that names no known service, a
+<code>time_interval</code> that is not <code>&lt;lower&gt;/&lt;upper&gt;</code>, a bound that is not a valid ISO
+8601 date-time, and an interval bounded on <strong>both</strong> sides whose lower bound is
+after its upper bound: that is not an interval, and answering it with the
+empty result it would select would hand back a truthful-looking count for a
+window nobody asked for. Equal bounds are a legitimate single-instant interval
+and are reported normally.</p>
+<h2 id="archiving"><a class="header" href="#archiving">Archiving</a></h2>
+<p>Four routes that move a selected set of records to the server’s cold storage
+tier and back, behind the same switch and role. Archiving is <strong>not</strong> a delete:
+the archived records stay fully readable through the normal API, with their
+whole revision history intact.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Route</th><th>Body</th><th>Success</th></tr>
+</thead>
+<tbody>
+<tr><td><code>POST {base}/admin/archive/ehrs</code></td><td><code>{"ehr_ids": ["…"]}</code></td><td><strong>204</strong>: every named EHR and all its versioned content is archived</td></tr>
+<tr><td><code>POST {base}/admin/archive/parties</code></td><td><code>{"party_ids": ["…"]}</code></td><td><strong>204</strong>: every named demographic party is archived</td></tr>
+<tr><td><code>POST {base}/admin/archive/ehrs/restore</code></td><td><code>{"ehr_ids": ["…"]}</code></td><td><strong>204</strong>: every named EHR’s archived content is back in the primary tier</td></tr>
+<tr><td><code>POST {base}/admin/archive/parties/restore</code></td><td><code>{"party_ids": ["…"]}</code></td><td><strong>204</strong>: every named party’s archived content is back in the primary tier</td></tr>
+</tbody>
+</table>
+</div>
+<p>All four are <strong>all-or-nothing and idempotent</strong>: a body of the wrong shape or a
+malformed id is <strong>400</strong> and an id that names nothing is <strong>404</strong>, in both cases
+before anything is moved; re-archiving an already-archived record, or restoring
+one that is not archived, changes nothing. An empty list succeeds and moves
+nothing. A body sent without <code>Content-Type: application/json</code> is <strong>415</strong>. A
+party that is currently archived is still found by its restore call (the
+existence check spans both tiers) so an archived party is never reported
+missing.</p>
+<p>A party’s <code>PARTY_RELATIONSHIP</code>s are <strong>not</strong> carried along: each is an
+independently addressable versioned object, archived in its own right.</p>
+<p>What “cold storage tier” means here: the archived rows are physically moved out
+of the primary tables into a separate schema in the same database, so the
+tables and indexes that serve everyday traffic shrink by exactly what was
+archived: no extra tablespace, volume, or external service to operate. Reads
+of unarchived records never touch the cold tier; a read that addresses an
+archived record is served from it. Writing to an archived record brings it
+back to the primary tier first, so a versioned object is never split across
+tiers; a physical delete clears both tiers; and <code>{base}/admin/dump</code> still
+exports archived content.</p>
+<p>Two consequences to plan for:</p>
+<ul>
+<li><strong>AQL queries see the primary tier only</strong>, so an archived record stops
+appearing in query results; that is exactly what shedding the query tables’
+rows and indexes buys you. Everything addressed by id (an EHR, a
+composition, a folder, a party, a version, a revision history) keeps working
+as before. Restoring puts the record back in query results.</li>
+<li><strong>There are three ways back, and only one of them is deliberate.</strong> The
+<code>…/restore</code> routes above reverse a whole set on request; a write to an
+archived record thaws just that record as a side effect, whichever route the
+write came in on; and a physical delete removes it from both tiers. Query
+visibility is the effect to plan around, and the restore routes are how you
+get it back.</li>
+</ul>
+<h2 id="legal-marks-restriction-objection-and-retention"><a class="header" href="#legal-marks-restriction-objection-and-retention">Legal marks: restriction, objection and retention</a></h2>
+<p>Eight routes behind the same switch and role, carrying the three marks the law
+asks a repository to hold beside its clinical content. None of them deletes
+anything.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Route</th><th>Body or parameter</th><th>Success</th></tr>
+</thead>
+<tbody>
+<tr><td><code>POST {base}/admin/restriction</code></td><td><code>{"ehr_id": "…", "vo_id": "…"?, "ground": "…", "note": "…"?}</code></td><td><strong>204</strong>: the restriction is recorded and in force</td></tr>
+<tr><td><code>GET {base}/admin/restriction</code></td><td><code>?ehr_id=…</code></td><td><strong>200</strong>: the register, newest request first, lifts included</td></tr>
+<tr><td><code>POST {base}/admin/restriction/lift</code></td><td><code>{"ehr_id": "…", "vo_id": "…"?}</code></td><td><strong>204</strong>: every in-force restriction at that grain is lifted</td></tr>
+<tr><td><code>POST {base}/admin/research-objection</code></td><td><code>{"ehr_id": "…", "objected": true, "ground": "…"?}</code></td><td><strong>204</strong>: the objection, its override, or its withdrawal is recorded</td></tr>
+<tr><td><code>PUT {base}/admin/retention/policy</code></td><td><code>{"kind": "…", "jurisdiction": "…", "category": "…"?, "period": "…", "anchor": "…", "source": "…"}</code></td><td><strong>204</strong>: the period is declared, keyed on one EHDS priority category when <code>category</code> is set</td></tr>
+<tr><td><code>GET {base}/admin/retention/policy</code></td><td>—</td><td><strong>200</strong>: the whole retention register, each period with its <code>category</code> (<code>null</code> for every object of the kind)</td></tr>
+<tr><td><code>PUT {base}/admin/retention/anchor</code></td><td><code>{"ehr_id": "…", "jurisdiction": "…", "anchored_at": "…"?, "hold_at": "…"?, "hold_ground": "…"?}</code></td><td><strong>204</strong>: the EHR’s anchor and any whole-record hold</td></tr>
+<tr><td><code>POST {base}/admin/retention/hold</code></td><td><code>{"vo_id": "…", "held": true}</code></td><td><strong>204</strong>: the per-object exemption is placed or released</td></tr>
+<tr><td><code>GET {base}/admin/retention/due</code></td><td><code>?limit=100</code></td><td><strong>200</strong>: what has run out, oldest first, per period and category, with the due and held object counts</td></tr>
+</tbody>
+</table>
+</div>
+<p>A body of the wrong shape or a malformed id is <strong>400</strong>, an id that names nothing
+is <strong>404</strong>, and a body without <code>Content-Type: application/json</code> is <strong>415</strong>, in
+each case before anything is recorded. Setting or lifting a mark is an access
+record of its own.</p>
+<p>A <code>category</code> is spelled as <code>[audit.categories]</code> spells it (<code>patient-summary</code>,
+<code>eprescription</code>, <code>edispensation</code>, <code>imaging</code>, <code>test-results</code>, <code>discharge-report</code>,
+<code>national:&lt;code&gt;</code> or <code>none</code>; an unknown spelling is <strong>400</strong>), which serves EHDS
+Annex II 3.4: retention periods that take the categories of the data into
+account. The server mirrors the map into the register at every boot. A period
+keyed on a category lists the objects the map places in it; an object the map
+cannot classify is listed under the longest period configured for its kind,
+and a category row with no object is left out of <code>due</code>. A period with no
+category lists every object of its kind, as before.</p>
+<p>Restricting a record changes what every other route answers: reads of a
+restricted object become <strong>403</strong>, it leaves AQL results at every scope, exports
+skip it and the event stream withholds it, and writes to it are refused. On a
+write the restriction is the LAST gate: content validation answers <strong>422</strong> and
+the preconditions that run before the commit transaction, a non-modifiable EHR
+or a second directory, answer <strong>409</strong>, while the mark is read inside the
+transaction. A malformed write to a restricted object therefore answers 422
+rather than 403. Both refuse the write and neither changes what is stored, so
+read the register itself to learn whether a restriction is in force. What
+each mark means, which provision it serves and what the deploying organisation
+still has to decide are on <a href="compliance/retention.html">Retention, restriction and
+objection</a>.</p>
+<h2 id="storage-integrity"><a class="header" href="#storage-integrity">Storage integrity</a></h2>
+<p>Two routes that check the stored data against itself and repair what they
+find, behind the same switch and role. FerroEHR stores every version’s content twice: once as the
+materialized document a point read serves, and once as the decomposed rows the
+AQL engine queries. A commit writes both in the same transaction, so they
+always agree; anything that changes one of them behind the server’s back
+breaks that agreement.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Route</th><th><strong>200</strong> body</th></tr>
+</thead>
+<tbody>
+<tr><td><code>POST {base}/admin/integrity/verify</code></td><td>the sweep report</td></tr>
+<tr><td><code>POST {base}/admin/integrity/rebuild-nodes</code></td><td>the rebuild report</td></tr>
+</tbody>
+</table>
+</div>
+<p>The sweep covers <strong>both pseudonymisation domains</strong>, clinical and demographic,
+in one pass. Every finding names the domain it came from, so a report can never
+describe half the store while looking like it described all of it. It re-derives
+every stored version from its decomposed rows and compares the result with the
+stored document, then decomposes that document again and compares the rows it
+would write, which is what catches rows an older release left in a shape this
+one no longer produces. It reads the archived tier as well, takes
+no lock, and runs outside the request path of any clinical call, so it is safe
+to run on a live server. It is also a full scan of what it covers, so schedule
+it rather than calling it per request.</p>
+<p>Four optional query parameters narrow the scan, and they compose. Both routes
+take the same set:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Effect</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ehr_id</code></td><td>cover only versions belonging to that EHR</td></tr>
+<tr><td><code>vo_id</code></td><td>cover only versions of that versioned object</td></tr>
+<tr><td><code>sys_version</code></td><td>cover only that version of it; the ordinal is per-object, so it needs <code>vo_id</code> and is a <strong>400</strong> on its own</td></tr>
+<tr><td><code>committed_since</code></td><td>cover only versions whose validity begins at or after that RFC 3339 instant</td></tr>
+</tbody>
+</table>
+</div>
+<p>Use them. Verifying one record after a support incident, or everything written
+since a known point, costs a fraction of a full repository scan.</p>
+<h3 id="verifying-a-whole-large-repository"><a class="header" href="#verifying-a-whole-large-repository">Verifying a whole large repository</a></h3>
+<p>By default the route computes the whole report before it answers, so it has to
+finish inside the server’s 30-second request timeout. Send
+<code>Accept: application/x-ndjson</code> and it streams the same sweep instead, writing
+each finding as it is made. Nothing bounds that response, so this is how you
+verify a repository too large to scope:</p>
+<pre><code class="language-bash">curl -sN -X POST \
+  -H 'Accept: application/x-ndjson' \
+  "$BASE/admin/integrity/verify"
+</code></pre>
+<p>The body is one JSON object per line, each carrying a <code>type</code>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th><code>type</code></th><th>When</th><th>Carries</th></tr>
+</thead>
+<tbody>
+<tr><td><code>mismatch</code></td><td>as each disagreement is found</td><td>the same five fields the report’s <code>mismatches</code> entries carry, <code>domain</code> included</td></tr>
+<tr><td><code>progress</code></td><td>once per page of versions read</td><td>the counts so far</td></tr>
+<tr><td><code>summary</code></td><td>once, at the end</td><td>the final counts and <code>elapsed_ms</code></td></tr>
+<tr><td><code>error</code></td><td>instead of <code>summary</code>, if the sweep failed part-way</td><td>a short message; the detail is in the server log</td></tr>
+</tbody>
+</table>
+</div>
+<p>Two consequences are worth planning around. The status code is sent before the
+work is done, so a sweep that fails half-way still answered <code>200</code>: read to the
+end and check that the last line is a <code>summary</code>, not an <code>error</code>. And the stream
+carries no reporting cap, so every mismatch reaches you rather than the first
+thousand.</p>
+<p>The stream has to be asked for by name. A request sending <code>*/*</code>, or no <code>Accept</code>
+at all, gets the aggregated document below, unchanged.</p>
+<pre><code class="language-json">{
+  "versions_checked": 128,
+  "versions_with_body": 126,
+  "versions_without_body": 2,
+  "mismatch_count": 1,
+  "mismatches": [
+    {
+      "domain": "clinical",
+      "vo_id": "8849182c-82ad-4088-a07f-48ead4180515",
+      "sys_version": 2,
+      "kind": "COMPOSITION",
+      "defect": "content_differs"
+    }
+  ],
+  "truncated": false,
+  "elapsed_ms": 431
+}
+</code></pre>
+<p><code>domain</code> is <code>clinical</code> or <code>demographic</code>, naming the schema the damaged version
+lives in. It is also what the repair below uses to reach it.</p>
+<p><code>defect</code> is one of five values:</p>
+<ul>
+<li><code>content_differs</code>: both copies exist and hold different content.</li>
+<li><code>nodes_missing</code>: the version has a stored document but no decomposed rows.</li>
+<li><code>nodes_unreadable</code>: the decomposed rows exist but no longer form one tree.</li>
+<li><code>unexpected_nodes</code>: the version is a logical delete, which stores no
+document, yet decomposed rows exist for it.</li>
+<li><code>stale_decomposition</code>: the rows hold exactly the stored document, but not in
+the shape this version of the server decomposes it into. An older release
+wrote them. The content is intact and every read serves it correctly; what is
+stale is the index over it, so a query that depends on the current shape does
+not reach this version until the repair below rewrites its rows.</li>
+</ul>
+<p><code>mismatch_count</code> is the full count. <code>mismatches</code> is capped at 1000 entries and
+<code>truncated</code> says whether the cap was reached; every mismatch is logged at
+<code>warn</code> level with its identifiers whatever the cap does, so a truncated report
+never loses a finding. The log line and the response carry identifiers only,
+never content.</p>
+<p>A finding is <strong>not</strong> a request failure: the sweep ran and is telling you what
+it saw, so the status stays <strong>200</strong> and the report is the body. Check
+<code>mismatch_count</code>, not the status code.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>This is the companion check to <a href="signing/digest.html">digest signing</a>. A stored
+digest covers the document a point read serves; it says nothing about the
+decomposed rows, which no read-path check recomputes. Together the two cover
+both copies.</p>
+</blockquote>
+<h3 id="repairing-what-the-sweep-found"><a class="header" href="#repairing-what-the-sweep-found">Repairing what the sweep found</a></h3>
+<p>The sweep is the diagnosis. <code>POST {base}/admin/integrity/rebuild-nodes</code> is the
+repair: it re-derives the decomposed rows of every damaged version from that
+version’s stored document, one transaction per version.</p>
+<pre><code class="language-bash">curl -s -X POST "$BASE/admin/integrity/rebuild-nodes?ehr_id=$EHR_ID"
+</code></pre>
+<p>It runs the same sweep first and writes only the versions that sweep reports
+damaged, so a run over healthy data writes nothing at all. The scope
+parameters are the same four, so a repair can be as narrow as one version:</p>
+<pre><code class="language-bash">curl -s -X POST \
+  "$BASE/admin/integrity/rebuild-nodes?vo_id=$VO_ID&amp;sys_version=2"
+</code></pre>
+<p>Which copy wins is not a choice the route makes. The stored document is the
+version’s canonical serialized form, the bytes a point read serves and the
+bytes a digest was taken over; the decomposed rows are an index derived from
+it. So the repair only ever runs in that direction, and a version whose
+<strong>document</strong> is the damaged copy is refused rather than having the damage
+copied into the index.</p>
+<p>Each version is repaired inside one transaction: the document is read under a
+row lock, decomposed, the old rows deleted, the new set inserted, and the
+version re-derived from what was just written and compared with the document
+before the commit. Anything that fails rolls that transaction back, so the
+version’s rows are left exactly as they were. One refusal never stops the run
+that found it.</p>
+<p>An archived object is thawed for the repair and re-archived in the same
+transaction, marker and all, because a write to a versioned object always
+happens in the primary tier.</p>
+<p>A logically deleted version stores no document, so it rebuilds to no rows,
+which is the repair for <code>unexpected_nodes</code>.</p>
+<p>The same route is the upgrade step after a release that changes how content is
+decomposed. Rows written by the older release hold the right content, so
+nothing is damaged, but they are the wrong shape for the new one and the sweep
+reports them <code>stale_decomposition</code>. Rebuilding writes them again from the
+stored document, which is all the upgrade is. Run it unscoped once and the next
+sweep is clean:</p>
+<pre><code class="language-bash">curl -s -X POST "$BASE/admin/integrity/rebuild-nodes"
+</code></pre>
+<p>The changelog names the affected object type at each such release.</p>
+<pre><code class="language-json">{
+  "versions_checked": 128,
+  "versions_damaged": 2,
+  "versions_rebuilt": 1,
+  "versions_refused": 1,
+  "records": [
+    {
+      "domain": "clinical",
+      "vo_id": "8849182c-82ad-4088-a07f-48ead4180515",
+      "sys_version": 2,
+      "kind": "COMPOSITION",
+      "defect": "content_differs",
+      "outcome": "rebuilt",
+      "node_rows": 41
+    },
+    {
+      "domain": "demographic",
+      "vo_id": "1f0b7d64-6b2a-4a1f-9f0e-6b1d2a3c4d5e",
+      "sys_version": 1,
+      "kind": "PERSON",
+      "defect": "content_differs",
+      "outcome": "refused",
+      "reason": "the stored body does not decompose: ..."
+    }
+  ],
+  "truncated": false,
+  "elapsed_ms": 812
+}
+</code></pre>
+<p><code>defect</code> is the sweep verdict that selected the version, from the five values
+above. <code>outcome</code> is <code>rebuilt</code>, carrying the <code>node_rows</code> the version now has, or
+<code>refused</code>, carrying the <code>reason</code>. <code>records</code> is capped at 1000 entries with
+<code>truncated</code> saying whether the cap was reached; every record is logged at
+<code>info</code> level with its identifiers whatever the cap does.</p>
+<p>A refusal is <strong>not</strong> a request failure, so the status stays <strong>200</strong>. Check
+<code>versions_refused</code>: anything above zero means a stored document is itself
+damaged, and that is a restore-from-backup question rather than a rebuild one.</p>
+<p>Unlike the sweep, this route writes, so a server in read-only mode refuses it.</p>
+<h2 id="dump-and-load"><a class="header" href="#dump-and-load">Dump and load</a></h2>
+<p>Two routes that move the whole repository to and from an archive on the
+<strong>server’s</strong> file system, behind the same switch and role. Both answer <strong>200</strong>
+with a JSON array of per-entity failure reports; an <strong>empty</strong> array means
+everything succeeded.</p>
+<h3 id="post-baseadmindump"><a class="header" href="#post-baseadmindump"><code>POST {base}/admin/dump</code></a></h3>
+<p>Writes an archive of every EHR <strong>and of every standalone demographic
+container</strong>: the parties and party relationships that live outside any EHR.
+The body is <code>{"file_sys_loc": "…"}</code> plus the optional export settings:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Field</th><th>Values</th><th>Default</th></tr>
+</thead>
+<tbody>
+<tr><td><code>logical_format</code></td><td><code>openehr_canonical_json</code> or <code>openehr_canonical_xml</code></td><td>canonical JSON</td></tr>
+<tr><td><code>compression_format</code></td><td><code>zip</code> or <code>7z</code> (omit for loose files)</td><td>uncompressed</td></tr>
+<tr><td><code>segment_split_size</code></td><td>segment size in kb (a positive integer)</td><td><code>1024</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><code>logical_format</code> chooses how the clinical <strong>content</strong> is serialized, not how
+the archive is packaged:</p>
+<ul>
+<li><code>openehr_canonical_json</code> (the default) keeps each version’s content inline
+in the segment files, exactly as this server stores it.</li>
+<li><code>openehr_canonical_xml</code> writes each version to its own
+<code>versions/&lt;version_uid&gt;.xml</code> entry instead: a complete <code>ORIGINAL_VERSION</code>
+document under the openEHR-published <code>&lt;version&gt;</code> root, ready to hand to any
+tool that reads canonical openEHR XML.</li>
+</ul>
+<p>The archive is a directory holding a <code>manifest.json</code>, one or more
+<code>segment-NNNN.json</code> files, and a <code>blobs/</code> subdirectory for any externalized
+multimedia. When the repository holds standalone demographic containers, the
+archive additionally carries a <code>demographic-commons.json</code> (their shared
+audits and contributions) and one or more <code>demographic-NNNN.json</code> segments,
+one record per party or relationship, in the same version-record shape the
+EHR segments use. With <code>compression_format</code> set, those same entries are
+packed into a single <code>archive.zip</code> or <code>archive.7z</code> inside the location
+instead. The
+archive’s own bookkeeping (the manifest and the segment skeleton) stays JSON
+in both logical formats, because openEHR publishes no XML document form for
+it.</p>
+<h3 id="post-baseadminload"><a class="header" href="#post-baseadminload"><code>POST {base}/admin/load</code></a></h3>
+<p>Populates the repository from an archive. It takes the location and nothing
+else: the container (loose files, a single <code>archive.zip</code>, or a single
+<code>archive.7z</code>) is detected from what the location holds, and the logical format
+is read from the archive’s own manifest, so a load never has to be told how
+the dump was written. Archives written before the demographic wave existed
+simply carry no demographic entries and load unchanged.</p>
+<p>The repository being loaded into <strong>need not be empty</strong>. An EHR whose id is
+already present is reported and skipped rather than failing the load, so the
+response array names each one; and a standalone demographic container that
+already exists is reported the same way, under its own kind (<code>PERSON</code>,
+<code>ORGANISATION</code>, <code>GROUP</code>, <code>AGENT</code>, <code>ROLE</code>, or <code>PARTY_RELATIONSHIP</code>) as the
+<code>entity_type</code>:</p>
+<pre><code class="language-json">[ { "entity_type": "EHR",
+    "entity_id": "7d44b88c-4199-4bad-97dc-d78268e01398",
+    "dump_status": false,
+    "error": "an EHR with this id already exists" } ]
+</code></pre>
+<p>Both directions are lossless: a dump and a load reproduce every record,
+whichever format and container you choose.</p>
+<h3 id="refusals"><a class="header" href="#refusals">Refusals</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Status</th><th>When</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>400</strong></td><td>a missing or blank <code>file_sys_loc</code>; a format value outside the lists above; a non-positive <code>segment_split_size</code>; an <code>encoding</code> field (the openEHR service model declares that enumeration with no members, so no value a client could send names one); on load, an archive carrying externalized multimedia this server has no store for</td></tr>
+<tr><td><strong>415</strong></td><td>the request <code>Content-Type</code> is not <code>application/json</code></td></tr>
+<tr><td><strong>500</strong></td><td>a location that holds <strong>no</strong> archive, and one holding an archive that is corrupt (a mangled or truncated container, manifest, or segment) are the same fact and answer the same way: the service model’s single <code>file_not_writable</code> error for these operations. Nothing is loaded either way. On dump, the same status covers a location, segment, payload entry or manifest that could not be created or written</td></tr>
+</tbody>
+</table>
+</div>
+<p>A single unreadable <code>versions/*.xml</code> entry is <em>not</em> in that family: it belongs
+to one EHR, so that EHR is reported in the response array and skipped whole
+while the rest of the archive loads.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>The activity report, the archive routes and the dump/load pair are FerroEHR
+extensions: the openEHR <em>service model</em> defines these operations, but the
+released REST API surfaces no endpoint for them, so their URLs are our own.
+The two <code>…/restore</code> routes go one step further: the service model declares
+the archive calls and no un-archive counterpart, so both the operation and its
+URL are ours. They gate no openEHR conformance claim; see
+<a href="conformance.html">Conformance</a>.</p>
+</blockquote>
+<h2 id="ehr-extract-and-tdd-import"><a class="header" href="#ehr-extract-and-tdd-import">EHR Extract and TDD import</a></h2>
+<p>Six routes under <code>{base}/message</code> that move whole records between systems and
+accept documents in the template-data form. Unlike the admin extensions above,
+these are <strong>not</strong> admin-gated; see
+<a href="#where-these-routes-live-and-what-gates-them">the gate table</a>.</p>
+<h3 id="ehr-extract"><a class="header" href="#ehr-extract">EHR Extract</a></h3>
+<ul>
+<li><code>GET {base}/message/export/{ehr_id}</code>: export one whole EHR. <strong>200</strong> with a
+JSON array holding one <code>EXTRACT</code> that carries every versioned object of the
+EHR, latest versions only. <strong>400</strong> if <code>ehr_id</code> is not a well-formed
+identifier, which is refused before any lookup; <strong>404</strong> if the EHR does not
+exist; <strong>406</strong> if <code>Accept</code> cannot be satisfied (the extract list is JSON
+only).</li>
+<li><code>POST {base}/message/export</code> with an <code>EXTRACT_SPEC</code> body — export by
+specification. <strong>200</strong> with one <code>EXTRACT</code> per manifest entity, in manifest
+order. The manifest must name at least one entity, and each entity must
+name its record by <code>ehr_id</code> or <code>subject_id</code>, otherwise <strong>400</strong>; an
+identifier that names nothing is <strong>404</strong>. <code>extract_type</code> must be one of the
+extract-content-type codes the openEHR Reference Model names
+(<code>openehr-ehr</code>, <code>openehr-demographic</code>, <code>openehr-synchronisation</code>,
+<code>openehr-generic</code>, <code>generic-emr</code>) or the catch-all <code>other</code>; anything else
+is <strong>400</strong>, as is a selection this service does not support (search
+criteria, an unsupported commit-time interval). This route is classified as
+a <strong>read</strong>: it selects over held versions and commits nothing, exactly like
+the ad-hoc AQL <code>POST</code>.</li>
+<li><code>POST {base}/message/import</code> with an <code>EXTRACT</code> body — clone a whole EHR. Add
+<code>?ehr_id=&lt;uuid&gt;</code> to fix the identifier the clone lands under; leave it off
+and the source identifier the extract carries is re-used. <strong>201</strong> with
+<code>{"uid": "&lt;ehr_id&gt;"}</code>, so a caller that supplied no id still learns what was
+created. The extract must carry an <code>EHR_STATUS</code> (<strong>400</strong>), and the target
+must not already exist: <strong>409</strong>, which also covers an imported <code>EHR_STATUS</code>
+naming a subject another EHR already holds.</li>
+<li><code>POST {base}/message/import/{ehr_id}</code> with an <code>EXTRACT</code> body — add the
+extract’s content to an <strong>existing</strong> EHR as new versions. <strong>204</strong>. <strong>404</strong>
+if the EHR does not exist; <strong>409</strong> if the EHR already holds an <code>EHR_STATUS</code>
+or <code>EHR_ACCESS</code> under a different object id, or the imported status names
+another EHR’s subject; <strong>422</strong> if a version in the extract is semantically
+invalid (template, RM-invariant or terminology validation).</li>
+</ul>
+<p>All four accept either <code>application/json</code> or <code>application/xml</code> bodies; any
+other <code>Content-Type</code> is <strong>415</strong>.</p>
+<h3 id="tdd-import"><a class="header" href="#tdd-import">TDD import</a></h3>
+<ul>
+<li><code>POST {base}/message/tdd/{ehr_id}</code> with an <code>application/xml</code> body — import
+one Template Data Document. It is converted against the operational template
+its root names and committed through the ordinary validated composition
+path, so <strong>201</strong> with <code>{"uid": "&lt;version_uid&gt;"}</code>. The template must already
+be uploaded through the definition API (<strong>404</strong> otherwise, as for an unknown
+EHR); a root that is not in the template-data namespace, carries no template
+id, or does not conform to the template is <strong>400</strong>; a document that is not
+well-formed XML (or a produced composition that fails validation at
+commit) is <strong>422</strong>. A body sent as anything but <code>application/xml</code> is
+<strong>415</strong>.</li>
+<li><code>POST {base}/message/tdd/{ehr_id}/batch</code> with a JSON array of TDD documents
+— import several at once. <strong>201</strong> with the created version ids in input
+order. The batch is <strong>all-or-nothing</strong>: every document is converted before
+any is committed, so one bad document rejects the whole batch and commits
+nothing. An <strong>empty</strong> array is a fulfilled no-op (<strong>200</strong> with <code>[]</code>, since
+nothing was created) but the target EHR is checked for every batch, the
+empty one included, so an unknown one is <strong>404</strong> whatever the batch holds.
+The batch has no limit on how many documents it may carry; the only bound is
+the server-wide request-body limit, which answers <strong>413</strong> when exceeded.</li>
+</ul>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>The whole <code>{base}/message</code> group is a FerroEHR extension: the openEHR service
+model defines a Message component, but the released REST API publishes no
+message, extract, or TDD endpoint at all. These URLs are our own and gate no
+openEHR conformance claim; see <a href="conformance.html">Conformance</a>. For the
+workflow-level view (what an extract is good for and how to drive an
+import) see <a href="beyond-core/messaging.html">EHR Extract &amp; messaging</a>.</p>
+</blockquote>
+<h2 id="other-routes-under-baseadmin"><a class="header" href="#other-routes-under-baseadmin">Other routes under <code>{base}/admin</code></a></h2>
+<p>One further family shares the <code>/admin</code> path prefix but <strong>not</strong> the
+<code>admin.enabled</code> switch: it has its own, and answers <strong>404</strong> (not <code>405</code>) while
+that switch is off, because the group is simply not serving:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Routes</th><th>Own switch</th><th>Documented in</th></tr>
+</thead>
+<tbody>
+<tr><td><code>{base}/admin/event_subscription…</code></td><td><code>events.admin_api</code></td><td><a href="beyond-core/amqp.html">Change events (AMQP)</a></td></tr>
+</tbody>
+</table>
+</div>
+<p>They are still admin-class routes for authorization, so the same <strong>401</strong> /
+<strong>403</strong> split applies.</p>
+<p>For everything else an operator needs (migrations, health probes, the
+management surface, observability and upgrades) see
+<a href="operations.html">Operations</a>.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="operations.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="usage-report.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="operations.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="usage-report.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-09f2665d.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="theme/mermaid-eefea253.min.js"></script>
+        <script src="theme/mermaid-init-ccf746f1.js"></script>
+        <script src="theme/version-picker-dddf05c1.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

@@ -1,0 +1,1247 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Kubernetes &amp; Helm - FerroEHR Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        <!-- Content-Security-Policy as a <meta> element, because GitHub Pages serves
+             static files and cannot set response headers. A meta CSP is genuinely
+             weaker than the header: `frame-ancestors`, `report-uri` and `sandbox` are
+             IGNORED in meta form (w3c CSP3 §3.3), and it applies only after the parser
+             reaches it. It still stops an injected external script or an exfiltrating
+             `connect-src`, which is the realistic risk for a docs site, so it is worth
+             having while being honest that the site cannot carry the full header set —
+             documented on the security page. `unsafe-inline` is required: mdBook emits
+             inline theme/sidebar scripts and inline styles of its own. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <!-- Self-hosted KaTeX stylesheet (fonts under katex/fonts/) — the site
+             serves no external requests, so mdbook-katex runs with no-css = true
+             and the vendored sheet is linked here. Version 0.16.4, matching the
+             KaTeX the katex-rs renderer inside mdbook-katex bundles (its
+             KATEX-VERSION file); provenance in website/book/KATEX-PROVENANCE.md. -->
+        <link rel="stylesheet" href="../katex/katex.min.css">
+
+        <meta name="description" content="User documentation for FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../css/chrome-d279d366.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/custom-79743c4e.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "rust";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "../searchindex-291401ab.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-e0689922.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">FerroEHR Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/src/installation/kubernetes.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="kubernetes--helm"><a class="header" href="#kubernetes--helm">Kubernetes &amp; Helm</a></h1>
+<p>The <code>ferroehr</code> Helm chart deploys FerroEHR as a hardened, production-shaped
+Kubernetes workload (non-root, read-only root filesystem, a NetworkPolicy that
+admits its serving port only, its own user namespace) against an <strong>external</strong>
+PostgreSQL 18. This chapter
+covers installing it, verifying what you installed, the database role model it
+expects, the security posture it pins, the health probes, the optional
+integrations, and upgrades.</p>
+<ul>
+<li><a href="#installing">Installing</a>
+<ul>
+<li><a href="#pin-two-versions-not-one">Pin two versions, not one</a></li>
+<li><a href="#verifying-what-you-installed">Verifying what you installed</a></li>
+<li><a href="#your-values-file-is-checked-before-anything-is-applied">Your values file is checked before anything is applied</a></li>
+</ul>
+</li>
+<li><a href="#configuration-one-key-one-file">Configuration: one key, one file</a>
+<ul>
+<li><a href="#the-deployment-profile-and-the-access-log">The deployment profile and the access log</a></li>
+<li><a href="#the-production-overlay">The production overlay</a></li>
+</ul>
+</li>
+<li><a href="#database-roles--who-runs-migrations">Database roles — who runs migrations</a></li>
+<li><a href="#secrets-and-mounted-config">Secrets and mounted config</a></li>
+<li><a href="#security-posture">Security posture</a></li>
+<li><a href="#health-probes">Health probes</a></li>
+<li><a href="#authentication-is-required-and-the-chart-says-so-before-it-installs">Authentication is required, and the chart says so before it installs</a></li>
+<li><a href="#optional-integrations">Optional integrations</a>
+<ul>
+<li><a href="#any-server-setting-is-reachable">Any server setting is reachable</a></li>
+<li><a href="#the-common-switches">The common switches</a></li>
+<li><a href="#ferroehr-viewer-a-second-workload-off-by-default">FerroEHR Viewer (a second workload, off by default)</a></li>
+<li><a href="#ferroterm-a-terminology-server-beside-the-cdr-off-by-default">FerroTERM (a terminology server beside the CDR, off by default)</a></li>
+<li><a href="#per-domain-backups-one-cronjob-per-domain-off-by-default">Per-domain backups (one CronJob per domain, off by default)</a></li>
+</ul>
+</li>
+<li><a href="#staying-available-while-things-move">Staying available while things move</a></li>
+<li><a href="#upgrades">Upgrades</a>
+<ul>
+<li><a href="#check-your-values-before-you-deploy-them">Check your values before you deploy them</a></li>
+</ul>
+</li>
+</ul>
+<blockquote class="blockquote-tag blockquote-tag-important">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v9.5A1.75 1.75 0 0 1 14.25 13H8.06l-2.573 2.573A1.458 1.458 0 0 1 3 14.543V13H1.75A1.75 1.75 0 0 1 0 11.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h6.5a.25.25 0 0 0 .25-.25v-9.5a.25.25 0 0 0-.25-.25Zm7 2.25v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 9a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Important</p>
+<p><strong>The chart requires Kubernetes 1.36 or newer</strong> (<code>kubeVersion: "&gt;=1.36.0-0"</code>).
+That is a compatibility floor, not a support opinion: 1.36 is the release where
+the newest field the chart renders (<code>hostUsers</code>, which gives every pod its own
+user namespace) became stable, so nothing has to be version-gated into silence.
+Your nodes must be Linux with containerd 2.0 or newer, or CRI-O 1.25 or newer;
+without that support the pod does not start, which is the loud failure rather
+than a silent downgrade. Set <code>hostUsers: true</code> to opt out and share the host’s
+user namespace. What the user namespace buys is in
+<a href="./kubernetes-hardening.html">Cluster hardening</a>.</p>
+</blockquote>
+<blockquote class="blockquote-tag blockquote-tag-important">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v9.5A1.75 1.75 0 0 1 14.25 13H8.06l-2.573 2.573A1.458 1.458 0 0 1 3 14.543V13H1.75A1.75 1.75 0 0 1 0 11.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h6.5a.25.25 0 0 0 .25-.25v-9.5a.25.25 0 0 0-.25-.25Zm7 2.25v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 9a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Important</p>
+<p>There is <strong>no in-chart PostgreSQL</strong>. A CDR stores PHI, so its database must be
+an externally managed, backed-up, point-in-time-recoverable PostgreSQL 18 (a
+managed service or an operator-run cluster). The chart carries only the
+connection string, preferably from an existing Secret.</p>
+</blockquote>
+<h2 id="installing"><a class="header" href="#installing">Installing</a></h2>
+<p>The chart is published to GHCR as an <strong>OCI artifact</strong>, beside the images it
+deploys. Create a Secret holding the app-role connection string, then install:</p>
+<pre><code class="language-shell">kubectl create namespace ferroehr
+kubectl -n ferroehr create secret generic ferroehr-db \
+  --from-literal=FERROEHR__DB__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
+
+helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
+  --version 11.0.1 -n ferroehr \
+  --set database.existingSecret=ferroehr-db \
+  --set image.tag=4.3.6
+</code></pre>
+<blockquote class="blockquote-tag blockquote-tag-important">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v9.5A1.75 1.75 0 0 1 14.25 13H8.06l-2.573 2.573A1.458 1.458 0 0 1 3 14.543V13H1.75A1.75 1.75 0 0 1 0 11.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h6.5a.25.25 0 0 0 .25-.25v-9.5a.25.25 0 0 0-.25-.25Zm7 2.25v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 9a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Important</p>
+<p><strong><code>helm repo add</code> does not work for this chart, and never will.</strong> There is no
+HTTP chart repository and no <code>index.yaml</code>: OCI is the only publication path, so
+that there is exactly one place a chart version can exist. Every command takes
+the <code>oci://</code> reference above. Helm has treated OCI registries as first-class
+since 3.8, so the cost of this choice is real but narrow: a client older than
+Helm 3.8 cannot install this chart at all.</p>
+</blockquote>
+<p><code>helm show</code>, <code>helm pull</code>, <code>helm template</code> and <code>helm upgrade</code> all take the same
+reference. To read the chart’s metadata without installing it:</p>
+<pre><code class="language-shell">helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 11.0.1
+</code></pre>
+<h3 id="pin-two-versions-not-one"><a class="header" href="#pin-two-versions-not-one">Pin two versions, not one</a></h3>
+<p><strong>The chart version and the image tag move independently, and this is the thing
+people get wrong first.</strong> <code>--version</code> selects the <em>chart</em> (its templates and
+values schema); <code>image.tag</code> selects the <em>server binary</em>. The chart’s <code>appVersion</code>
+is only the default for the second, and it names the release the chart was cut
+against.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th>Selects</th><th>Pin with</th><th>Line</th></tr>
+</thead>
+<tbody>
+<tr><td>Chart version</td><td>templates, values schema, defaults</td><td><code>--version 11.0.1</code></td><td>SemVer over the chart’s own contract</td></tr>
+<tr><td>Image tag</td><td>the server binary</td><td><code>--set image.tag=4.3.6</code> (or <code>image.digest</code>)</td><td>the application’s SemVer line</td></tr>
+</tbody>
+</table>
+</div>
+<p>Always pin the image to an immutable version or, better, a <code>@sha256</code> digest,
+never <code>latest</code>. Pin the two deliberately: the <code>config</code> tree is passed through to
+the server, so a key the chart’s defaults carry and your chosen image does not know
+is a boot refusal (<code>unknown configuration key …</code>), which presents as
+<code>CrashLoopBackOff</code>. A chart version is never republished with different content
+(the publish lane refuses to overwrite one) so a pinned chart version is a fixed
+artifact.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>A published chart version being immutable is a property of that refusal, not of
+the registry: an OCI tag is mutable, and <code>helm push</code> over an existing one would
+silently replace it. That is why a correction always ships as a new chart
+version, and why the <code>6.0.3</code> → <code>6.0.4</code> bump exists: the chart’s <code>appVersion</code>
+moved to a new release while its own version had already been published.</p>
+</blockquote>
+<h3 id="verifying-what-you-installed"><a class="header" href="#verifying-what-you-installed">Verifying what you installed</a></h3>
+<p>Everything published here is signed <strong>keyless</strong> through
+<a href="https://docs.sigstore.dev/">Sigstore</a>, bound to this repository’s build
+identity, so every claim is checkable rather than asserted. Two different
+artifacts answer two different questions, and you can ask both.</p>
+<p><strong>Who signed this chart:</strong> a <a href="https://docs.sigstore.dev/cosign/">cosign</a>
+signature over the chart’s digest:</p>
+<pre><code class="language-shell">cosign verify ghcr.io/ferrohealth/charts/ferroehr:&lt;chart-version&gt; \
+  --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/build-chart\.yml@' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+</code></pre>
+<p>Both flags matter. Without them <code>cosign verify</code> would accept a signature from
+<em>any</em> identity in the transparency log; with them you are requiring that this
+repository’s chart-publishing workflow, authenticated by GitHub’s OIDC issuer,
+is what signed the bytes you pulled.</p>
+<p><strong>What it was built from:</strong> a SLSA build provenance attestation:</p>
+<pre><code class="language-shell"># the chart
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:&lt;chart-version&gt; -R FerroHEALTH/FerroEHR
+# the image it deploys
+gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:&lt;tag&gt; -R FerroHEALTH/FerroEHR
+</code></pre>
+<p>The publish lane reads both back from the registry before it reports success, so
+a run that produced only one of them fails instead of going green.</p>
+<blockquote class="blockquote-tag blockquote-tag-important">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v9.5A1.75 1.75 0 0 1 14.25 13H8.06l-2.573 2.573A1.458 1.458 0 0 1 3 14.543V13H1.75A1.75 1.75 0 0 1 0 11.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h6.5a.25.25 0 0 0 .25-.25v-9.5a.25.25 0 0 0-.25-.25Zm7 2.25v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 9a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Important</p>
+<p>Both commands verify what the publishing lanes produce now. A published
+artifact is never replaced, so if one you pinned answers <code>HTTP 404: Not Found</code>
+it carries no attestation, which is the honest state rather than a verification
+failure, and the fix is to pin a current version. Image signing landed during
+the <code>3.17.4</code> cycle, so image tags from before it have nothing to
+verify.</p>
+</blockquote>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p><code>helm install --verify</code> and <code>helm verify</code> do <strong>not</strong> apply: they check a PGP
+<code>.prov</code> file, and this chart ships none. That is deliberate: a <code>.prov</code> needs a
+long-lived private key in CI, which is the exact thing this project’s publishing
+lanes are built to avoid (the crates.io lane uses OIDC Trusted Publishing and
+holds no token at all). The two keyless commands above are what replace it:
+nothing to leak, and the same trust root as the images.</p>
+</blockquote>
+<h3 id="your-values-file-is-checked-before-anything-is-applied"><a class="header" href="#your-values-file-is-checked-before-anything-is-applied">Your values file is checked before anything is applied</a></h3>
+<p>The chart ships a <code>values.schema.json</code>, so <code>helm install</code>, <code>helm upgrade</code>, <code>helm lint</code> and <code>helm template</code> <strong>refuse</strong> a values file that misspells one of the
+chart’s own keys, gets a type wrong, or names a value outside the permitted set,
+rather than rendering and silently ignoring it:</p>
+<pre><code class="language-text">Error: values don't meet the specifications of the schema(s) in the following chart(s):
+ferroehr:
+- at '/image/pullPolicy': value must be one of 'Always', 'IfNotPresent', 'Never'
+</code></pre>
+<p><strong>The <code>config:</code> tree is deliberately exempt.</strong> Those keys are the <em>server’s</em>
+(see the <a href="configuration.html">configuration reference</a>), the binary validates them
+at boot, and copying that vocabulary into the chart’s schema would fork it: a
+new configuration key would then be rejected by the chart until someone
+remembered to widen the schema. So a mistake under <code>config:</code> is reported when the
+pod starts, not when the chart renders; <code>--skip-schema-validation</code> disables the
+check entirely if you ever need to bypass it.</p>
+<p>The chart is also listed on <strong><a href="https://artifacthub.io/packages/helm/ferroehr/ferroehr">Artifact
+Hub</a></strong>, which renders the
+chart’s metadata plus a security report over the four images the chart’s own
+metadata lists: the server, the optional viewer, the backup jobs’ <code>pg_dump</code>
+image, and FerroTERM.</p>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p>Between releases the chart’s <code>config</code> defaults track development and can be
+<strong>ahead of <code>appVersion</code>’s image</strong>. Check the pairing before you install, with
+the image itself as the authority:</p>
+<pre><code class="language-shell">helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 11.0.1 \
+  -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
+  | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' &gt; /tmp/ferroehr.toml
+docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
+  -e FERROEHR__DB__URL=postgres://u:p@db:5432/ferroehr \
+  --entrypoint /usr/local/bin/ferroehr ghcr.io/ferrohealth/ferroehr:&lt;tag&gt; config check
+</code></pre>
+<p>Exit 0 means the image accepts the rendered configuration. A reported unknown
+key means the image is older than the chart’s defaults: use a newer tag, or set
+that key to <code>null</code> for this deployment. A <em>published</em> chart is checked this way
+before it is published: the publish lane refuses to ship a chart whose defaults
+its own <code>appVersion</code> image rejects, and it repeats the check against every values
+overlay the chart carries, so this matters mainly when you install from a
+checkout of <code>main</code>, or pin an image older than the chart.</p>
+</blockquote>
+<p>That install alone <strong>boots but answers <code>401</code> to everything</strong>, deliberately:
+<code>config.auth.enabled</code> is on and no mechanism is configured yet, and a server that
+authenticates nothing is not a safe default. Add a <code>config.auth.oidc</code> issuer or
+a <code>config.auth.basic.users</code> entry before expecting a request to succeed.</p>
+<h2 id="configuration-one-key-one-file"><a class="header" href="#configuration-one-key-one-file">Configuration: one key, one file</a></h2>
+<p>The chart carries the server’s whole configuration under one key, <strong><code>config</code></strong>,
+rendered into a <code>ferroehr.toml</code> ConfigMap mounted at
+<code>/etc/ferroehr/ferroehr.toml</code>. Its keys are therefore exactly the TOML keys of
+the <a href="configuration.html">configuration reference</a> (<code>config.server.bind</code>,
+<code>config.authz.rbac.enabled</code>, <code>config.spec_profile</code>, and so on) so anything
+that reference documents can be set without waiting for a bespoke chart key.</p>
+<p><strong>Secret-bearing keys are the one exception: a credential never reaches that
+ConfigMap.</strong> A ConfigMap is not a sensitive object: it is readable with namespace
+read, quoted wholesale into issues and support tickets, collected by backup tooling
+that skips Secrets, and not covered by Secret encryption at rest. The chart
+therefore classifies every key it renders and takes one of two actions.</p>
+<p><strong>A secret the chart routes:</strong> <code>auth.oidc.hmac_secret</code>, <code>signing.key_passphrase</code>,
+<code>multimedia.secret_access_key</code>, a Basic user’s <code>password_hash</code>, a terminology
+<code>client_secret</code>, and the three URL-shaped ones (<code>db.url</code>, <code>events.url</code>,
+<code>audit.fhir_feed.url</code>) has a <code>secrets:</code> key of its own, so
+a value under <code>config:</code> is a mistake and fails the render, naming the key that
+belongs there:</p>
+<pre><code class="language-text">Error: execution error at (ferroehr/templates/deployment.yaml:…):
+  refusing to render a secret into the ConfigMap (a ConfigMap is not a sensitive object …):
+  - config.auth.oidc.hmac_secret: set `secrets.authOidcHmacSecret` instead
+</code></pre>
+<p><strong>A secret the chart cannot route</strong> moves the <strong>whole rendered <code>ferroehr.toml</code> into
+the chart’s Secret, and no ConfigMap is created at all</strong>, the safe direction,
+taken automatically. <strong>No key reaches that branch today</strong>: every credential the
+server models now has either a <code>*_file</code> sibling or a Secret-borne environment
+route. The branch exists for the next one that does not, so that a secret key
+added upstream fails safe instead of landing in a ConfigMap. When it is taken, the
+install notes say which object your release used, and the configuration is read
+with:</p>
+<pre><code class="language-shell">kubectl -n ferroehr get secret ferroehr-config \
+  -o jsonpath='{.data.ferroehr\.toml}' | base64 -d
+</code></pre>
+<p>Classification is by <strong>name shape</strong>, not by a list of today’s keys: any key whose
+name carries <code>password</code>, <code>passphrase</code>, <code>secret</code>, <code>credential</code>, <code>private_key</code>,
+<code>api_key</code> or a trailing <code>token</code> is treated as a credential unless it ends in
+<code>_file</code>, <code>_path</code> or <code>_dir</code> (those hold a path), and the four URL-shaped secrets are
+matched by path, because <code>url</code> carries no shape a classifier can see. That is what
+makes a secret key added to the server’s configuration tree in a future release
+move to the Secret rather than leak silently. <code>extraEnv</code> is the escape hatch for
+anything neither <code>config:</code> nor <code>secrets:</code> surfaces.</p>
+<h3 id="the-deployment-profile-and-the-access-log"><a class="header" href="#the-deployment-profile-and-the-access-log">The deployment profile and the access log</a></h3>
+<p>The chart’s values declare three keys with the binary’s own defaults, so a
+rendered <code>ferroehr.toml</code> always says what it runs:</p>
+<ul>
+<li><strong><code>config.deployment_profile: sandbox</code>:</strong> a stock install must not hold real
+patient data: the server names every separation it has not made on its boot
+banner and on <code>/management/status</code>, and reports the profile on
+<code>GET /ferroehr/rest/status</code>. A deployment holding patient data sets
+<code>production</code>, which refuses to start while a separation is missing and not
+named in <code>config.deployment_accepts</code>. The chart defaults leave several open:
+one DSN for every domain, an empty <code>config.privacy.subject_namespaces</code>, the
+server’s <code>open</code> defaults for <code>config.audit.fail_mode</code> and
+<code>config.authz.rbac.ehr_access_default</code>, <code>config.db.migrate: apply</code> on the
+runtime credential, and a plaintext listener behind the ingress; see <a href="configuration.html#deployment_profile"><code>deployment_profile</code></a>.
+The chart’s <a href="#the-production-overlay">production overlay</a> closes them and
+accepts the plaintext listener by name.</li>
+<li><strong><code>config.audit.store.retention_years</code>:</strong> unset. Set it in place of
+<code>config.audit.store.retention_days</code> when the horizon must be exact in
+calendar years, such as <code>3</code> for a German SGB V § 309 controller with
+<code>config.audit.store.sgb_v_309_controller: true</code>.</li>
+<li><strong><code>config.audit.categories</code>:</strong> an empty <code>templates</code> and <code>archetypes</code> map,
+which records every access as <code>unclassified</code>. Map your templates and root
+archetypes to their EHDS priority categories; the keys are template ids and
+archetype ids, so quote a template id that contains spaces:</li>
+</ul>
+<pre><code class="language-yaml">config:
+  audit:
+    categories:
+      templates:
+        "International Patient Summary": [patient-summary]
+      archetypes:
+        openEHR-EHR-COMPOSITION.report-result.v1: [test-results]
+</code></pre>
+<p>The <a href="config-audit.html">Audit</a> page has the category vocabulary and the
+retention floors and ceilings the server enforces at boot.</p>
+<h3 id="the-production-overlay"><a class="header" href="#the-production-overlay">The production overlay</a></h3>
+<p>The chart ships <code>values-production.yaml</code> beside <code>values.yaml</code>. Layered over
+the defaults, it runs <code>config.deployment_profile: production</code> with every
+separation that profile checks made, except one it accepts by name:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Gap</th><th>In the overlay</th></tr>
+</thead>
+<tbody>
+<tr><td><code>shared_credential</code></td><td>the clinical, party and linkage domains each read their own Secret (<code>database.existingSecret</code>, <code>database.party.existingSecret</code>, <code>database.linkage.existingSecret</code>), and the audit domain reads <code>database.audit.existingSecret</code></td></tr>
+<tr><td><code>shared_cluster</code></td><td>yours to make: the server compares the cluster each domain pool reaches, so point the four DSNs at four PostgreSQL clusters, or add <code>shared_cluster</code> to <code>config.deployment_accepts</code> as a recorded decision</td></tr>
+<tr><td><code>migrate_on_runtime_credential</code></td><td><code>config.db.migrate: verify</code>, with <code>migrations.job.enabled</code> preparing the schema on <code>database.migrateExistingSecret</code></td></tr>
+<tr><td><code>open_subject_namespace</code></td><td><code>config.privacy.subject_namespaces</code> declared</td></tr>
+<tr><td><code>audit_off</code>, <code>audit_fails_open</code>, <code>audit_syslog_udp</code></td><td>the audit trail on with its local store, <code>config.audit.fail_mode: closed</code>, no UDP syslog sink</td></tr>
+<tr><td><code>open_ehr_access_default</code></td><td><code>config.authz.rbac.ehr_access_default: restricted</code></td></tr>
+<tr><td><code>auth_off</code></td><td>OIDC authentication on</td></tr>
+<tr><td><code>plaintext_broker</code></td><td>no AMQP integration on</td></tr>
+<tr><td><code>plaintext_audit_feed</code>, <code>plaintext_object_store</code></td><td>the audit FHIR feed and the multimedia store off; an <code>https://</code> URL for either when you turn it on</td></tr>
+<tr><td><code>plaintext_listener</code></td><td>accepted by name: TLS ends at the Ingress (<code>ingress.tls</code>), the pod listens in plain HTTP, and the NetworkPolicy admits only the ingress controller’s namespace (<code>networkPolicy.ingressFrom</code>, with <code>networkPolicy.ingressAllowAll: false</code>)</td></tr>
+</tbody>
+</table>
+</div>
+<p>Every Secret name, the identity provider, the pseudonym namespace, the host,
+the TLS Secret and the ingress controller’s namespace in it are examples.
+Replace them in a values file of your own and pass both:</p>
+<pre><code class="language-shell">helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 11.0.1 --untar
+helm install ferroehr ./ferroehr -n ferroehr \
+  -f ./ferroehr/values-production.yaml -f my-site-values.yaml
+</code></pre>
+<p>A name you forget to replace fails loudly: a Secret that does not exist keeps
+the pod from starting, and the server refuses to start under <code>production</code>
+while a separation is open, naming each gap and its remedy. The chart’s
+validation renders the overlay and asserts each separation above, and its
+boot check has the server evaluate the posture from the rendered
+configuration. Neither reaches a database, so <code>shared_cluster</code> is first judged
+when the pod starts against yours.</p>
+<h2 id="database-roles--who-runs-migrations"><a class="header" href="#database-roles--who-runs-migrations">Database roles — who runs migrations</a></h2>
+<p>The chart expects a PostgreSQL role model in which the runtime pod is never a
+superuser. Four roles cover the single-domain posture:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Role</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td>owner</td><td>owns the database (provisioning only)</td></tr>
+<tr><td><code>ferroehr_migrator</code></td><td>runs the append-only schema migrations</td></tr>
+<tr><td><code>ferroehr_clinical</code></td><td>day-to-day reads and writes; <strong>the running pod connects as this</strong></td></tr>
+<tr><td><code>ferroehr_clinical_reader</code></td><td>read-only, for replicas and reporting</td></tr>
+</tbody>
+</table>
+</div>
+<p>Migrations are DDL, so whoever applies them can rewrite the schema. Two flows,
+and <code>config.db.migrate</code> is where you choose:</p>
+<ul>
+<li><strong>(a) The pod migrates itself</strong> (<code>config.db.migrate: apply</code>, the default).
+Simplest for single-tenant or small deployments, and the runtime DSN must
+then be a member of <code>ferroehr_migrator</code>, so the serving process holds DDL
+rights on the clinical schema for its whole life.</li>
+<li><strong>(b) A separate migration step</strong> (<code>config.db.migrate: verify</code>) under a
+migrator DSN, with the pods on a narrow runtime DSN. The server issues no DDL
+at all and refuses to boot against a database that has not been migrated to
+its build, so the two versions cannot race the schema. Recommended for
+production. It needs <code>database.migrateExistingSecret</code> as well, for the reason
+the paragraph further down gives: <code>verify</code> reads all five bookkeeping tables,
+which a narrow runtime role cannot do.</li>
+</ul>
+<p>Set <code>migrations.job.enabled</code> and the chart runs (b) for you as a
+<code>pre-install,pre-upgrade</code> hook <code>Job</code> that runs <code>ferroehr db migrate</code>. Helm creates
+it before the Deployment and waits for it, so a failed migration fails the release
+rather than rolling pods against a schema that was never applied. The Job
+authenticates from its <strong>own</strong> Secret (deliberately a different credential from
+<code>database.existingSecret</code>) and rendering is refused if you enable it without one:</p>
+<pre><code class="language-yaml">database:
+  existingSecret: ferroehr-db                 # postgres://ferroehr_clinical:…
+  migrateExistingSecret: ferroehr-db-migrator # postgres://ferroehr_migrator:…
+migrations:
+  job:
+    enabled: true
+    existingSecret: ferroehr-db-migrator      # the same credential, its own Secret mount
+config:
+  db:
+    migrate: verify
+</code></pre>
+<p>The demographic and linkage domains take their own credentials the same way,
+and that is what turns the schema separation into a credential separation. One
+more goes with them, because no runtime credential can prepare the schema:</p>
+<pre><code class="language-yaml">database:
+  existingSecret: ferroehr-db             # postgres://ferroehr_clinical:…
+  party:
+    existingSecret: ferroehr-db-party     # postgres://ferroehr_party:…
+  linkage:
+    existingSecret: ferroehr-db-linkage   # postgres://ferroehr_linkage:…
+  migrateExistingSecret: ferroehr-db-migrator        # postgres://ferroehr_migrator:…
+</code></pre>
+<p>All four are mounted as files, so no DSN enters the pod’s environment. Unset
+the demographic and linkage ones and those two pools share the first, which is
+the schema-only posture, still separated and still verified at boot. Creating
+the five domain
+roles is a database step the chart cannot do for you;
+<a href="../operations.html#turning-the-schema-split-into-a-role-split">Operations</a> has
+the statements and what <code>ferroehr db verify</code> reports.</p>
+<p><code>database.migrateExistingSecret</code> is what the pod prepares the schema with, and
+it is required as soon as <code>database.existingSecret</code> is anything narrower than a
+credential reaching every schema. Preparation spans them all at once: the DDL
+of all five migration sets under <code>config.db.migrate: apply</code>, all five
+<code>_sqlx_migrations</code> bookkeeping tables under <code>verify</code>. So <strong><code>verify</code> is not the
+exception</strong>, and this is not only about the domain roles. <code>ferroehr_clinical</code> holds
+one pseudonymisation domain, <code>ferroehr_clinical</code> holds the clinical schemas, and
+neither can read the <code>demographic</code> or <code>linkage</code> bookkeeping at all; without
+this value the pod is refused on the first set it cannot read and does not
+start. It is normally the same credential
+<code>migrations.job.existingSecret</code> carries; the Job needs its own copy because it
+runs before the Deployment exists. Unset, preparation falls back to
+<code>database.existingSecret</code>, which is what a single-credential install has
+always done.</p>
+<p>Give the migrator DSN a short <code>lock_timeout</code>
+(<code>?options=-c%20lock_timeout%3D5s</code>) so DDL blocked behind live traffic fails
+fast instead of queueing; <code>migrations.job.activeDeadlineSeconds</code> is the hard
+ceiling on the step either way. <code>migrations.runByMigratorRole</code> remains an
+informational marker surfaced in the install notes, which also tell you when
+the Job is enabled but <code>config.db.migrate</code> is still <code>apply</code>, a combination
+that buys nothing, because the server would migrate itself anyway.</p>
+<p>You can check the posture from outside the cluster at any time: <code>ferroehr db verify</code> exits 0 only when the database carries exactly that build’s migrations,
+and issues no DDL doing it.</p>
+<h2 id="secrets-and-mounted-config"><a class="header" href="#secrets-and-mounted-config">Secrets and mounted config</a></h2>
+<p>Some material is file-shaped rather than a value: ABAC policy files, ATNA TLS
+certificates, terminology-server client certificates, a JWKS blob, the PGP
+signing key, and a commercial licence token. Supply these under <code>config.files</code>,
+whose entries the chart mounts read-only from a Secret at <code>/etc/ferroehr/&lt;key&gt;</code>
+(and which is deliberately <em>not</em> part of the rendered TOML); point the matching
+in-TOML <code>*_file</code> / <code>*_path</code> key at the mounted path. A commercial licence goes
+the same way: put the token the licensor issued under <code>config.files</code> as
+<code>licence.asc</code> and set <code>config.licence.file</code> to <code>/etc/ferroehr/licence.asc</code>;
+<code>GET /ferroehr/rest/status</code> then reports <code>licence.use = "commercial"</code>. Without
+it the pod runs under the <code>non-commercial</code> grant every build embeds (see
+<a href="../licensing.html#installing-a-commercial-licence">Licensing &amp; legal</a>). Secret-bearing scalar values go under
+<code>secrets:</code>: <code>authOidcHmacSecret</code>, <code>signingKeyPassphrase</code>, <code>eventsUrl</code>,
+<code>auditFhirFeedUrl</code>, <code>basicUserPasswordHashes</code>,
+<code>multimediaAccessKeyId</code>, <code>multimediaSecretAccessKey</code>,
+<code>terminologyOauth2ClientSecrets</code>, and the database DSN comes from
+<code>database.existingSecret</code> (key <code>database.existingSecretKey</code>, default
+<code>FERROEHR__DB__URL</code>). None of these ever reach the ConfigMap, and all but two are
+delivered as mounted files rather than environment values.</p>
+<p>How a secret reaches the process differs by whether the configuration key has a
+<code>*_file</code> sibling, and the difference is a security one: an environment variable
+is readable through <code>/proc/&lt;pid&gt;/environ</code> and is inherited by every child
+process, so the <a href="https://cheatsheetseries.owasp.org/cheatsheets/Kubernetes_Security_Cheat_Sheet.html">OWASP Kubernetes Security Cheat
+Sheet</a>
+asks for a read-only volume instead.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Secret</th><th>How the chart delivers it</th></tr>
+</thead>
+<tbody>
+<tr><td>the database DSN</td><td>mounted at <code>/etc/ferroehr-secrets/db.url</code>, reached through <code>FERROEHR__DB__URL_FILE</code>, projected from <code>database.existingSecret</code> when you supply one, so <strong>the credential that reaches patient data never enters the pod’s environment</strong></td></tr>
+<tr><td><code>secrets.authOidcHmacSecret</code></td><td>mounted at <code>/etc/ferroehr-secrets/auth.oidc.hmac_secret</code>; only the path is env</td></tr>
+<tr><td><code>secrets.signingKeyPassphrase</code></td><td>mounted at <code>/etc/ferroehr-secrets/signing.key_passphrase</code></td></tr>
+<tr><td><code>secrets.multimediaSecretAccessKey</code></td><td>mounted at <code>/etc/ferroehr-secrets/multimedia.secret_access_key</code></td></tr>
+<tr><td><code>secrets.basicUserPasswordHashes</code> (per username)</td><td>mounted at <code>/etc/ferroehr-secrets/auth.basic.users.&lt;username&gt;.password_hash</code>; the chart injects the matching <code>password_hash_file</code></td></tr>
+<tr><td><code>secrets.terminologyOauth2ClientSecrets</code> (per client)</td><td>mounted at <code>/etc/ferroehr-secrets/terminology.external.oauth2_clients.&lt;name&gt;.client_secret</code>; the chart injects the matching <code>client_secret_file</code></td></tr>
+<tr><td><code>secrets.eventsUrl</code></td><td>mounted at <code>/etc/ferroehr-secrets/events.url</code></td></tr>
+<tr><td><code>secrets.auditFhirFeedUrl</code></td><td>env; <code>audit.fhir_feed.url</code> is the only credential-bearing key with no <code>*_file</code> sibling</td></tr>
+<tr><td><code>secrets.multimediaAccessKeyId</code></td><td>env; an access key <em>id</em> is not secret (it is reported unredacted by the management surface’s <code>env</code> endpoint)</td></tr>
+</tbody>
+</table>
+</div>
+<p>The mount is read-only, <code>0440</code>, owned <code>root:65532</code> so the non-root process reads
+it through the group bit, and it is deliberately <strong>not</strong> a <code>subPath</code> mount,
+because a <code>subPath</code>-mounted Secret never receives updates and a rotation would
+not propagate.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>A Basic user’s Argon2id hash is delivered as a mounted file like the others: put
+it in <code>secrets.basicUserPasswordHashes</code> under the username, and declare only the
+<code>username</code> and <code>roles</code> under <code>config.auth.basic.users</code>. Setting <code>password_hash</code>
+under <code>config:</code> is refused, and the error names the key that carries it. An
+Argon2id hash is not a plaintext password, but it is an offline cracking target,
+which is what the boot-time OWASP parameter floor exists to make expensive.</p>
+</blockquote>
+<h2 id="security-posture"><a class="header" href="#security-posture">Security posture</a></h2>
+<p>The chart pins the following, and its render gate holds it: the Restricted fields
+are asserted per container for every workload in the render, the two isolation
+settings are asserted to agree across a release’s workloads, and the golden
+renders pin the exact bytes so a changed default fails a diff.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Field</th><th>Value</th></tr>
+</thead>
+<tbody>
+<tr><td><code>runAsNonRoot</code></td><td><code>true</code> (uid/gid 65532, the distroless <code>nonroot</code> user)</td></tr>
+<tr><td><code>readOnlyRootFilesystem</code></td><td><code>true</code> (a writable <code>emptyDir</code> is mounted at <code>/tmp</code>)</td></tr>
+<tr><td><code>allowPrivilegeEscalation</code></td><td><code>false</code></td></tr>
+<tr><td><code>capabilities.drop</code></td><td><code>[ALL]</code></td></tr>
+<tr><td><code>seccompProfile.type</code></td><td><code>RuntimeDefault</code> (pod and container)</td></tr>
+<tr><td><code>hostUsers</code></td><td><code>false</code>; the pod gets its own user namespace</td></tr>
+<tr><td><code>supplementalGroupsPolicy</code></td><td><code>Strict</code>; only the groups the manifest names</td></tr>
+<tr><td>ServiceAccount token</td><td>not mounted (the workload never calls the K8s API)</td></tr>
+<tr><td><code>enableServiceLinks</code></td><td><code>false</code> (see below; not a preference)</td></tr>
+<tr><td>NetworkPolicy</td><td>ports narrowed to the API (and management) port; <strong>sources admitted unless you narrow them</strong> with <code>networkPolicy.ingressFrom</code>; set <code>networkPolicy.ingressAllowAll: false</code> to have the chart refuse the open state (see <a href="hardening-network-policy.html#ingress-ports-are-narrowed-sources-are-yours">§Ingress</a>)</td></tr>
+</tbody>
+</table>
+</div>
+<p>The whole set satisfies the Pod Security <strong>Restricted</strong> profile, and the
+<a href="./kubernetes-hardening.html">deployment probe harness</a> reads it back off a running
+pod rather than off the rendered manifest: the container runtime’s own spec for
+the security context, the API server for admission, the EndpointSlice for
+readiness.</p>
+<p>Satisfying the profile and <strong>enforcing</strong> it are different things, and only one of
+them is yours to do. Enforcement comes from a label on the namespace, which a
+chart cannot set for a namespace it does not own, so label it, or the posture
+above is a convention nothing checks and nothing fails when a future change
+regresses it:</p>
+<pre><code class="language-shell">kubectl label --overwrite namespace ferroehr \
+  pod-security.kubernetes.io/enforce=restricted \
+  pod-security.kubernetes.io/enforce-version=latest
+</code></pre>
+<p>With the label in place the API server refuses a non-compliant pod outright
+(<a href="https://kubernetes.io/docs/concepts/security/pod-security-admission/">Pod Security
+Admission</a>),
+which is a stronger guarantee than any check the chart can make about itself.
+The install notes print this as a prerequisite for the same reason.</p>
+<p><code>enableServiceLinks: false</code> is load-bearing, not hygiene. The kubelet injects a
+<a href="https://kubernetes.io/docs/concepts/services-networking/service/#environment-variables">set of Service link environment
+variables</a>
+for every Service in the namespace, and for a Service named <code>ferroehr*</code> those
+land inside the server’s reserved <code>FERROEHR_</code> namespace, whose strict boot-time
+sweep rejects unknown variables and refuses to start. Leaving service links on
+makes every install crash-loop.</p>
+<p>Egress restriction is opt-in (<code>networkPolicy.egress.enabled</code>) because egress
+targets (the database, broker, terminology server) are deployment-specific;
+when you enable it the chart always admits DNS and you add rules for the rest.
+In the default posture the server’s only outbound traffic is DNS and PostgreSQL,
+so those two rules suffice; each integration you switch on adds a target, and a
+blocked one can fail silently. The full destination table is in
+<a href="./hardening-network-policy.html#egress-deny-by-default-and-what-it-breaks">Namespaces, network &amp; policy</a>.</p>
+<p>Two limits worth stating plainly. First, with <code>networkPolicy.ingressFrom</code> empty
+the rendered ingress rule carries no <code>from</code> selector, and a rule without <code>from</code>
+admits <strong>every</strong> source, other namespaces included. Only the port list is
+narrowed in that state, so set <code>ingressFrom</code> to your ingress controller for a PHI
+workload, and set <code>networkPolicy.ingressAllowAll: false</code> if an open ingress rule
+must never render at all; the full treatment is
+<a href="hardening-network-policy.html#ingress-ports-are-narrowed-sources-are-yours">§Ingress</a>.
+The viewer’s own policy carries the same pair under <code>viewer.networkPolicy</code>.
+Second, a NetworkPolicy is only as real as the CNI that implements it:
+on a cluster whose network plugin does not enforce NetworkPolicy the object is
+documentation rather than a control, and nothing in Kubernetes reports that.
+Confirm it by attempting a connection the policy should refuse.</p>
+<p>The database-side controls (TLS with <code>sslmode=verify-full</code>, pgaudit, at-rest
+encryption, WAL archiving / PITR) belong to whoever provisions PostgreSQL; the
+chart references them but cannot enforce them. See
+<a href="../operations.html">Operations</a>.</p>
+<h2 id="health-probes"><a class="header" href="#health-probes">Health probes</a></h2>
+<p>All three probes use the always-on, unauthenticated, PHI-free health routes on the
+main HTTP port. They need no configuration at all: no management surface, no
+access level, nothing to forget:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Probe</th><th>Route</th><th>Contract</th></tr>
+</thead>
+<tbody>
+<tr><td>liveness</td><td><code>/health/liveness</code></td><td>200 while the process is up; touches no dependency</td></tr>
+<tr><td>readiness</td><td><code>/health/readiness</code></td><td>200 (UP/DEGRADED) or 503 (DOWN): checks the database ping, migrations applied, the audit sender and the event outbox, each bounded at one second</td></tr>
+<tr><td>startup</td><td><code>/health/liveness</code></td><td>the same constant, with a long failure threshold, so a slow first boot is not killed mid-migration</td></tr>
+</tbody>
+</table>
+</div>
+<p>That split is deliberate: a database outage must fail <em>readiness</em> (the pod stops
+receiving traffic) and never liveness (which would restart the container in a
+loop).</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>There is no <code>exec</code> probe option. One existed and was removed: it ran the
+binary’s <code>healthcheck</code> subcommand, which defaults to the openEHR status
+document rather than a health route, so <strong>readiness never touched the
+database</strong> and a pod with a dead database reported Ready and took clinical
+traffic. <code>ferroehr healthcheck --url …</code> is still useful by hand; it is not what
+a readiness probe should run.</p>
+</blockquote>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p><strong>Migrations run only at boot, so a replaced or wiped database leaves the pods
+NotReady until something migrates it.</strong> Readiness reports
+<code>"migrations": {"status":"DOWN","detail":"core schema tables missing (migrations not applied)"}</code> while <code>"db"</code> reads <code>UP</code>: the pod reaches PostgreSQL, finds no
+schema, and does not migrate again, because migration is a startup step.
+Liveness keeps passing (correctly: the process is healthy), so the kubelet never
+restarts the container and the Deployment sits with no ready replicas and no
+error in the logs after the first one:</p>
+<pre><code class="language-shell">kubectl -n ferroehr get pods                      # Running, not READY
+curl -s http://ferroehr:8080/health/readiness     # 503, "migrations" DOWN, "db" UP
+kubectl -n ferroehr rollout restart deploy/ferroehr
+</code></pre>
+<p>The check re-tests the schema on every probe, so a pod recovers on its own within
+one <code>probes.readiness.periodSeconds</code> of the schema existing; an untouched pod
+returns to ready, with no restart, once anything else has migrated. What needs
+the restart is the case where the only thing that would migrate is the pod
+itself.</p>
+<p>That is what makes the interaction with flow (b) load-bearing: when migrations
+run out of band, the migration step must complete <em>before</em> the Deployment rolls,
+or the first pods sit unready waiting for a schema. <code>migrations.job.enabled</code>
+does exactly that, as a hook Helm waits on. Durable storage is the other
+half: an <code>emptyDir</code>-backed or otherwise disposable PostgreSQL puts a clinical
+repository one node eviction away from this state.</p>
+<p>One recovery path does <strong>not</strong> self-heal, and it is worth knowing before you try
+it: restoring or dropping <em>part</em> of the schema set. A restore that brings back
+some of a domain’s relations without its migration bookkeeping makes the next
+migration run fail permanently with <code>relation "version" already exists</code>: the
+pod crash-loops, and restarting it retries the same failure. Recreate the whole
+database rather than one schema.</p>
+</blockquote>
+<p>The management surface is independent of the probes and stays ops-only
+(<code>/management/info</code>, <code>/prometheus</code>, <code>/metrics</code>, <code>/env</code>, <code>/loggers</code>,
+<code>/flamegraph</code>). Unlike the bare binary, the chart ships
+<code>config.management.enabled: true</code> with <strong>every endpoint off</strong>, so nothing is
+exposed until you opt one in. Set
+<code>config.management.endpoints.prometheus: public</code> plus <code>metrics.enabled=true</code>
+to add the <code>prometheus.io/*</code> scrape annotations; set <code>config.management.port</code>
+to serve the surface on its own internal listener, so <code>/management</code> is never
+reachable on the clinical API port. The health probes stay on the main port
+regardless of all of this, and the install notes warn you if you add the scrape
+annotations while the endpoint is still <code>off</code>.</p>
+<p>Those annotations are honoured by a Prometheus that discovers targets in its own
+scrape configuration. An <strong>operator-managed</strong> Prometheus
+(kube-prometheus-stack) ignores them and selects targets through
+<a href="https://prometheus-operator.dev/docs/developer/getting-started/">ServiceMonitor</a>
+objects instead, so set <code>metrics.serviceMonitor.enabled=true</code> there;
+<code>metrics.serviceMonitor.labels</code> is where the label your Prometheus’
+<code>serviceMonitorSelector</code> matches on goes. It needs the <code>monitoring.coreos.com</code>
+CRDs installed first, or the install fails on an unknown kind.</p>
+<h2 id="authentication-is-required-and-the-chart-says-so-before-it-installs"><a class="header" href="#authentication-is-required-and-the-chart-says-so-before-it-installs">Authentication is required, and the chart says so before it installs</a></h2>
+<p><code>config.auth.enabled</code> defaults to <strong>true</strong>, and the server requires at least one
+mechanism with it: a <code>401</code> challenge has to name a scheme the server actually
+implements (<a href="https://www.rfc-editor.org/rfc/rfc9110#section-11.6.1">RFC 9110 §11.6.1</a>),
+so it exits rather than run as an openEHR API that can only refuse every request.</p>
+<p>The chart therefore <strong>refuses to render</strong> a values file that enables
+authentication without configuring one, so <code>helm install</code> stops with an
+actionable error instead of reporting success and crash-looping:</p>
+<pre><code class="language-text">Error: execution error at (ferroehr/templates/deployment.yaml:...):
+config.auth.enabled is true but no authentication mechanism is configured...
+</code></pre>
+<p>Pick one:</p>
+<pre><code class="language-yaml">config:
+  auth:
+    oidc:
+      issuer: https://keycloak.example.org/realms/ferroehr
+      audiences: [ferroehr]
+</code></pre>
+<p>or Basic auth, whose password hashes go in <code>secrets.basicUserPasswordHashes</code>
+while the username and roles stay under <code>config.auth.basic.users</code>.</p>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p><code>config.auth.enabled: false</code> makes the chart render, and serves <strong>every</strong>
+request unauthenticated. On a repository holding patient data that is a
+development-only choice; the chart makes you state it explicitly rather than
+reaching it by omission.</p>
+</blockquote>
+<h2 id="optional-integrations"><a class="header" href="#optional-integrations">Optional integrations</a></h2>
+<h3 id="any-server-setting-is-reachable"><a class="header" href="#any-server-setting-is-reachable">Any server setting is reachable</a></h3>
+<p>The chart renders its <code>config</code> tree <strong>verbatim</strong> into <code>ferroehr.toml</code>. So
+<code>config.&lt;the.toml.path&gt;</code> sets <em>any</em> key in the
+<a href="configuration.html">configuration reference</a>, including keys this page and
+<code>values.yaml</code> never mention. There is no allow-list to extend and no chart
+release to wait for:</p>
+<pre><code class="language-yaml"># values.yaml — [query] plan_cache_capacity, which values.yaml never names
+config:
+  query:
+    plan_cache_capacity: 512
+</code></pre>
+<pre><code class="language-shell">helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
+  --version 11.0.1 -n ferroehr --reuse-values \
+  --set config.query.plan_cache_capacity=512
+</code></pre>
+<p>Turning something off is the same edit in reverse: remove the key (or set the
+integration’s <code>enabled</code> back to <code>false</code>) and upgrade. The tables below are a
+curated starting point for the switches most deployments want; they are not
+the boundary of what the chart supports.</p>
+<p>Two things make this safe to rely on:</p>
+<ul>
+<li><strong>A typo is a boot refusal, not a silent default.</strong> The server sweeps its
+configuration strictly and rejects an unknown key with a did-you-mean, so a
+misspelled path fails loudly at startup instead of quietly doing nothing.
+Check before you deploy with the schema and boot gates described under
+<a href="#check-your-values-before-you-deploy-them">Check your values before you deploy them</a>.</li>
+<li><strong>Credentials do not belong in this tree.</strong> <code>config</code> becomes a mounted
+file; secrets have their own routes (<code>secrets.*</code>, <code>existingSecret</code>, and the
+<code>*_file</code> key siblings); see
+<a href="#secrets-and-mounted-config">Secrets and mounted config</a>.</li>
+</ul>
+<h3 id="the-common-switches"><a class="header" href="#the-common-switches">The common switches</a></h3>
+<p>Every switch below lives in the chart’s <code>config</code> tree, so its key <em>is</em> the
+TOML key from the <a href="configuration.html">configuration reference</a>. Most are <strong>off
+by default</strong>; the ones that ship on are marked, and enabling any of the others
+is an explicit, auditable decision:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Integration</th><th>Chart key</th><th>Default</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>Specification generation</td><td><code>config.spec_profile</code></td><td><code>development</code></td><td>One coupled choice; <code>stable</code> runs the released generations.</td></tr>
+<tr><td>ADMIN API</td><td><code>config.admin.enabled</code></td><td>off</td><td>Physical, irreversible delete. Gate behind admin RBAC.</td></tr>
+<tr><td>Terminology extension API</td><td><code>config.terminology.api_enabled</code></td><td>off</td><td>404 when off.</td></tr>
+<tr><td>Event-subscription API</td><td><code>config.events.admin_api</code></td><td>off</td><td>Admin CRUD over event filters.</td></tr>
+<tr><td>OAuth2/OIDC auth</td><td><code>config.auth.oidc.issuer</code></td><td>unset</td><td>Prefer JWKS/discovery over the HS256 <code>secrets.authOidcHmacSecret</code>.</td></tr>
+<tr><td>RBAC</td><td><code>config.authz.rbac.enabled</code></td><td><strong>on</strong></td><td>The coarse role gate (active while <code>config.auth.enabled</code>).</td></tr>
+<tr><td>ABAC</td><td><code>config.authz.abac.enabled</code></td><td>off</td><td>Cedar (policies via a <code>config.files</code> mount) or a remote policy decision point.</td></tr>
+<tr><td>Eventing → AMQP</td><td><code>config.events.enabled</code></td><td>off</td><td>Envelopes are <strong>PHI-free</strong> by design. Use <code>config.events.tls: true</code>; URL via <code>secrets.eventsUrl</code>.</td></tr>
+<tr><td>S3 multimedia</td><td><code>config.multimedia.enabled</code></td><td>off</td><td>⚠ Offloaded blobs are PHI. Private, encrypted, HTTPS bucket; keys via <code>secrets.multimediaAccessKeyId</code> and <code>secrets.multimediaSecretAccessKey</code>.</td></tr>
+<tr><td>External terminology</td><td><code>config.terminology.external.enabled</code></td><td>off</td><td>FHIR terminology server; the provider map is more <code>config.terminology.external.providers</code> keys. To run one in the cluster instead, use <code>terminology.enabled</code> (<a href="#ferroterm-a-terminology-server-beside-the-cdr-off-by-default">FerroTERM</a>), which sets these keys for you.</td></tr>
+<tr><td>ATNA audit trail</td><td><code>config.audit.enabled</code></td><td><strong>on</strong></td><td>On with the local store only; forwarding (<code>config.audit.syslog</code>, <code>config.audit.fhir_feed</code>) is opt-in per sink.</td></tr>
+<tr><td>Version signing</td><td><code>config.signing.enabled</code></td><td><strong>on</strong> (<code>config.signing.mode: digest</code>)</td><td><code>pgp</code> mode needs a <code>config.files</code> key plus <code>secrets.signingKeyPassphrase</code>, and fails closed at boot without a usable key.</td></tr>
+<tr><td>OTLP telemetry</td><td><code>config.telemetry.otlp_endpoint</code></td><td>unset</td><td>Setting the endpoint is all it takes; unset means the OpenTelemetry layer is not installed at all (zero overhead). With <code>networkPolicy.egress.enabled</code>, add a rule for the collector, since a blocked exporter drops spans without an error.</td></tr>
+</tbody>
+</table>
+</div>
+<p>Full detail on each is in <a href="../beyond-core/index.html">Beyond the core</a>,
+<a href="../security.html">Security</a>, and <a href="../operations.html">Operations</a>.</p>
+<h3 id="ferroehr-viewer-a-second-workload-off-by-default"><a class="header" href="#ferroehr-viewer-a-second-workload-off-by-default">FerroEHR Viewer (a second workload, off by default)</a></h3>
+<p><code>viewer.enabled</code> renders a second Deployment and Service for the Leptos viewer
+beside the CDR, from its own image
+(<code>viewer.image.repository</code>, tagged <code>appVersion</code> by default so the two move
+together). It is off by default: the viewer is a separate product surface with
+its own attack surface, and a CDR is complete without it.</p>
+<p>Three properties are worth knowing before you switch it on:</p>
+<ul>
+<li><strong>It reaches the CDR strictly over the REST API</strong>, which
+<code>viewer.networkPolicy.enabled</code> (on by default) <em>enforces</em> rather than
+assumes: the viewer’s egress admits the CDR Service, DNS and outbound HTTPS
+for an identity provider, and nothing else. It holds no database credential.</li>
+<li><strong>It is a human-facing web UI</strong>, so <code>viewer.ingress.enabled</code> is the normal way
+to reach it, and <code>viewer.auth.oidc.enabled</code> with an issuer, client id and
+<code>viewer.auth.oidc.publicBaseUrl</code> is how you keep a person who should not see
+PHI out of it. Its client secret comes from <code>viewer.existingSecret</code>, mounted
+as a file exactly as the server’s DSN is.</li>
+<li><strong><code>viewer.replicaCount</code> is 1 deliberately.</strong> The viewer holds session state
+in process, so a second replica needs sticky sessions at the ingress or users
+are logged out on a reroute.</li>
+</ul>
+<p>The viewer carries the same security context as the server, and the chart’s
+render gate holds it to the same Restricted profile and the same pod-isolation
+settings: a release whose two workloads disagreed about <code>hostUsers</code> would be a
+posture nobody could state in one sentence. The deployment probe harness then
+reads that back off the <em>running</em> viewer container, exactly as it does for the
+server: its uid, its empty capability bounding set, its read-only root and its
+seccomp filter come from the container runtime’s own spec, its admission from an
+<code>enforce=restricted</code> namespace, and its login page from an HTTP request made
+inside the cluster through the viewer Service, so the second workload is never
+vouched for by the first. What that run does <strong>not</strong> establish is stated in its
+own record: the viewer’s OIDC path, the screens behind a session, and whether a
+CNI enforces the viewer’s NetworkPolicy. Its screens are documented in the
+<a href="../viewer/index.html">viewer</a> chapter.</p>
+<h3 id="ferroterm-a-terminology-server-beside-the-cdr-off-by-default"><a class="header" href="#ferroterm-a-terminology-server-beside-the-cdr-off-by-default">FerroTERM (a terminology server beside the CDR, off by default)</a></h3>
+<p><a href="https://github.com/FerroHEALTH/FerroTERM">FerroTERM</a> is the Ferro family’s
+FHIR terminology server: R4, R4B and R5 endpoints over a precomputed index, no
+JVM, no database, one distroless image. <code>terminology.enabled</code> renders it as a
+third workload beside the CDR and the viewer, and points the CDR at it, so
+archetype value-set bindings resolve at commit and AQL <code>TERMINOLOGY()</code> expands
+through it. The CDR’s own <code>/terminology/*</code> extension routes are a separate
+switch: they answer only with <code>config.terminology.api_enabled=true</code>, which is
+<code>false</code> by default, and return <code>404</code> otherwise whether or not FerroTERM is
+running. It is the Helm equivalent of the
+<a href="compose.html#the-terminology-overlay-ferroterm">compose terminology overlay</a>.</p>
+<pre><code class="language-shell">helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
+  --version 11.0.1 -n ferroehr --reuse-values \
+  --set terminology.enabled=true
+</code></pre>
+<p>That renders a Deployment, a ClusterIP Service, its own ServiceAccount, a
+ConfigMap holding the code systems, and a NetworkPolicy. It also writes three
+things into the CDR’s <code>ferroehr.toml</code>: <code>config.terminology.external.enabled</code>,
+<code>config.terminology.external.fail_on_error</code> from <code>terminology.failOnError</code>, and
+the <code>default</code> provider at the Service address.</p>
+<p>Because the chart writes those three, a values file that contradicts any of them
+is refused at render rather than silently overwritten. Four shapes are refused
+while <code>terminology.wireCdr</code> is on:</p>
+<ul>
+<li><strong><code>config.terminology.external.providers.default</code></strong> — two answers to “which
+server resolves a binding” is how resolution ends up pointed somewhere nobody
+chose.</li>
+<li><strong><code>config.terminology.external.enabled: false</code></strong> — the rendered
+<code>ferroehr.toml</code> would say the opposite of your values file.</li>
+<li><strong><code>config.terminology.external.fail_on_error</code></strong> disagreeing with
+<code>terminology.failOnError</code> — same reason, for the posture that decides whether
+an unresolvable binding is a <code>422</code>.</li>
+<li><strong>a provider of your own with no <code>config.terminology.external.routes</code> entry
+naming it</strong> — an unmatched terminology falls back to the provider called
+<code>default</code>, which the wiring has just taken, so an unrouted provider is
+configuration that renders, boots and is never called.</li>
+</ul>
+<p>Set <code>terminology.wireCdr=false</code> to keep your own provider and run FerroTERM
+unwired. A second provider under any other name is fine at any time, with a
+<code>routes</code> entry pointing at it:</p>
+<pre><code class="language-yaml">config:
+  terminology:
+    external:
+      providers:
+        tx:
+          type: fhir
+          url: https://tx.example.com/fhir
+      routes:
+        "http://loinc.org": tx
+</code></pre>
+<p><strong>No Ingress is rendered, and no value renders one.</strong> The CDR is the only
+caller, which is the posture the <a href="https://sandbox.ferroehr.eu">hosted sandbox</a>
+runs and what the SNOMED CT Affiliate Licence asks of a public deployment:
+clause 2.2.4 permits a public system to serve SNOMED-encoded data provided users
+cannot extract a substantial portion of the release and no fee is charged, and
+clause 2.7 requires measures so the release cannot be downloaded except by
+authorised users. A published FHIR terminology endpoint answers <code>$expand</code> and
+<code>$lookup</code> to every client that reaches it, and FerroTERM has neither
+authentication nor a rate limit of its own. Its NetworkPolicy is therefore the
+one in this chart that narrows sources by default: ingress admits the CDR’s pods
+on the terminology port and nothing else, egress admits DNS.
+<code>terminology.networkPolicy.extraIngressFrom</code> adds a peer you decide to admit.
+<strong>No boolean opens this port</strong> the way <code>networkPolicy.ingressAllowAll</code> opens the
+CDR’s — and a peer you add is admitted exactly as written, which includes
+admitting everything: a <code>namespaceSelector: {}</code> selects every namespace in the
+cluster (networking/v1: “if present but empty, it selects all namespaces”). The
+values schema therefore refuses an empty peer, and an empty <code>podSelector</code> or
+<code>namespaceSelector</code> inside one, so reaching that state takes labels you chose
+rather than a blank.</p>
+<p><strong>Out of the box it serves the shaped seed</strong>, which is synthetic content under
+the reserved <code>example.test</code> domain: two code systems and two value sets, the
+same content the conformance lane binds to. The chart carries those files and
+mounts them as a ConfigMap, so a fresh install from the registry serves
+terminology with no repository checkout.
+<code>terminology.codeSystems.existingConfigMap</code> swaps in a ConfigMap of your own FHIR
+JSON. No licensed terminology ships with FerroEHR or FerroTERM. One caveat with
+a ConfigMap of your own: the pod’s rollout annotation hashes the chart’s own seed
+files and the NAME you gave, not the contents of an object the chart does not
+own, so editing that ConfigMap updates the volume while the running pods keep
+serving what they read at boot. Restart the workload after such an edit
+(<code>kubectl rollout restart deployment/ferroehr-terminology</code>).</p>
+<p><strong>A real release is an index you build off-cluster.</strong> Run
+<code>ferroterm-build --rf2 &lt;release.zip&gt; --out &lt;dir&gt;</code> on a machine that holds the
+archive, put the output on a PersistentVolume, and name that claim in
+<code>terminology.index.persistentVolumeClaim</code>. The chart mounts it <strong>read-only</strong> at
+<code>terminology.index.mountPath</code> and sets <code>FERROTERM_INDEX</code>; with no claim named,
+the variable is absent and the seed is served alone. The chart provisions no
+storage and renders no build Job, for the same reason it provisions no database:
+unpacking a licensed archive is a step whose licence terms are yours, not a step
+a chart should start on its own.</p>
+<p>Naming a claim also switches this Deployment to <code>strategy: Recreate</code>. A rolling
+update creates the replacement pod before the outgoing one goes away, and a
+<code>ReadWriteOnce</code> volume can only be attached by one node, so the new pod would
+sit Pending on the attachment while <code>kubectl</code> reported a progressing rollout.
+Recreate stops the old pods first, which costs a short terminology outage at
+every upgrade and finishes. If your index volume is <code>ReadOnlyMany</code>, override it
+with <code>terminology.strategy={type: RollingUpdate}</code>. FerroTERM’s
+<a href="https://ferroterm.eu/docs/operate/loading-snomed.html">loading page</a> covers the
+other code systems and their build flags. Size the memory limit for the edition
+before you mount it: <code>terminology.resources</code> ships a 1536Mi limit, and the same
+FerroTERM page states the resident size of each edition, which the limit must
+cover.</p>
+<p><strong>The fail posture is the CDR’s shipped one.</strong> <code>terminology.failOnError</code>
+defaults to <code>false</code>, so a binding the server cannot resolve is accepted; <code>true</code>
+turns an unreachable terminology server into a <code>422</code> refusal. The
+<a href="../beyond-core/terminology.html#when-the-terminology-server-cannot-answer">terminology page</a>
+explains both. A code the server resolves as outside its value set is refused
+with <code>422</code> under either posture.</p>
+<p><strong>FerroTERM’s licence.</strong> BUSL-1.1 from the same Licensor as FerroEHR:
+non-commercial production use is free, any other production use needs a
+commercial licence. Its README says which is which. The licence for whatever
+code systems you load is separate and yours to hold; SNOMED CT needs an
+Affiliate Licence (free in Member countries, see
+<a href="https://www.snomed.org/get-snomed">snomed.org/get-snomed</a>), and every surface
+showing its content carries the notice clause 8.3.1 prescribes plus the release
+version and date.</p>
+<p><strong>More than one replica needs two other keys.</strong> <code>terminology.replicaCount</code> is a
+throughput choice — each replica loads its own copy of the index, so watch the
+memory limit — and above 1 the pods spread one per node by default, the same
+soft constraint the CDR gets. Turn <code>terminology.podDisruptionBudget.enabled</code> on
+with it: without a budget a node drain may take every terminology replica at
+once, and the CDR’s own budget does not cover these pods. It is off by default
+because the shipped replica count is 1 and a budget over a single pod blocks the
+drain it exists to survive.</p>
+<p>FerroTERM carries the same security context as the CDR and the viewer, and the
+chart’s render gate holds all three to the same Restricted profile. The
+deployment probe harness reads this workload back off a running cluster too: its
+applied runtime posture, the shaped seed reaching the process from the ConfigMap
+volume, a refusal on the terminology port from a pod the policy does not name,
+and the CDR resolving a bound code through the Service. Its image is
+pinned by digest in <code>terminology.image.digest</code> and moves on FerroTERM’s own
+release line, so it does not follow <code>appVersion</code> the way the viewer image does.
+Because that digest is set, <code>terminology.image.tag</code> alone deploys nothing: the
+digest wins, and a tag pointing anywhere else is refused at render rather than
+ignored. Clear the digest to deploy by tag.</p>
+<h3 id="per-domain-backups-one-cronjob-per-domain-off-by-default"><a class="header" href="#per-domain-backups-one-cronjob-per-domain-off-by-default">Per-domain backups (one CronJob per domain, off by default)</a></h3>
+<p><code>backup.enabled</code> renders one CronJob per pseudonymisation domain:
+<code>backup.clinical.schedule</code> dumps the clinical schemas, <code>backup.party.schedule</code>
+dumps the identities, <code>backup.linkage.schedule</code> dumps the party-to-EHR map, and
+each writes to its own existing claim (<code>backup.clinical.persistentVolumeClaim</code>,
+<code>backup.party.persistentVolumeClaim</code>,
+<code>backup.linkage.persistentVolumeClaim</code>).
+The image is <code>backup.image.repository</code>, which carries <code>pg_dump</code>.</p>
+<p><strong>A fourth job renders for the audit domain when <code>database.audit.existingSecret</code>
+gives it a database of its own.</strong> While the trail shares the clinical database
+the clinical dump names its schema and nothing more is needed; once it is
+somewhere else, that dump cannot reach it and nothing else would take it, so
+<code>backup.audit.schedule</code>, <code>backup.audit.existingSecret</code> and
+<code>backup.audit.persistentVolumeClaim</code> become required the same way the other
+three are, and the clinical dump stops naming the <code>audit</code> schema.</p>
+<p>The chart refuses to render rather than let the separation collapse quietly: a
+missing claim is an error naming the value, and naming the <strong>same</strong> claim for
+any two domains is an error too, because one volume holding two of them — the
+clinical record, the identities, or the map that joins them — is the state
+per-domain backups exist to prevent.</p>
+<p>Each job needs <strong>its own backup credential</strong>, named by
+<code>backup.clinical.existingSecret</code>, <code>backup.party.existingSecret</code>,
+<code>backup.linkage.existingSecret</code> and, when it renders,
+<code>backup.audit.existingSecret</code>, and
+the render is refused without them. It cannot be the pool’s credential: each
+domain’s runtime role is revoked from the other domains, so a dump taken through
+one would be silently partial. Give each domain a read-only role on that
+domain’s schema alone. Every job reads its DSN from a mounted file, never an
+environment variable.</p>
+<p>The chart provisions no storage. Create the claims yourself, and give them
+different access control; that part no chart can do for you. The restore
+procedure, and the <code>ferroehr db verify</code> gate that judges it, are on the
+<a href="../operations.html">Operating</a> page.</p>
+<h2 id="staying-available-while-things-move"><a class="header" href="#staying-available-while-things-move">Staying available while things move</a></h2>
+<p>Four defaults keep the API serving through the events that routinely interrupt
+it. None needs configuring; each is listed because the reason matters when you
+tune it.</p>
+<p><strong>Replicas land on different nodes.</strong> With nothing telling the scheduler
+otherwise, two replicas can share one node and one node failure is a total
+outage. The chart ships a soft spread constraint (<code>maxSkew: 1</code> over
+<code>kubernetes.io/hostname</code>, <code>whenUnsatisfiable: ScheduleAnyway</code>) so replicas
+prefer separate nodes but a single-node or full cluster still schedules them
+rather than leaving a pod <code>Pending</code>. Setting <code>topologySpreadConstraints</code>
+<strong>replaces</strong> it wholesale, so give the complete constraint including its own
+<code>labelSelector</code>; add a <code>topology.kubernetes.io/zone</code> entry if your cluster spans
+zones.</p>
+<p><strong>A terminating pod stops receiving requests before it shuts down.</strong> Deleting a
+pod removes it from the EndpointSlice and sends <code>SIGTERM</code> <em>concurrently</em>, and
+the removal still has to propagate to every node. <code>preStopSleepSeconds</code> (default
+5) holds the container for that window first. It uses the native <code>sleep</code> hook
+action rather than an <code>exec</code> hook, because the image ships no shell to run one.</p>
+<p><strong>A node drain does not hang on unhealthy pods.</strong> The PodDisruptionBudget sets
+<code>podDisruptionBudget.unhealthyPodEvictionPolicy: AlwaysAllow</code>, the
+<a href="https://kubernetes.io/docs/concepts/workloads/pods/disruptions/">documented recommendation</a>.
+The API default, <code>IfHealthyBudget</code>, makes a drain wait for pods to become
+healthy, which never completes when they are unhealthy <em>because</em> of the drain.</p>
+<p><strong>A migration interrupted by a drain is not counted as a failure.</strong> The
+migration Job carries a <code>podFailurePolicy</code> that ignores pod failures caused by
+disruption, so ordinary cluster maintenance during a release cannot exhaust
+<code>migrations.job.backoffLimit</code> and fail the upgrade with no migration error
+anywhere in the logs.</p>
+<p>Two more are available and off by default. <code>service.trafficDistribution: PreferSameZone</code> keeps traffic inside the caller’s zone, for lower latency and
+inter-zone cost, at the price of even load, so measure before setting it. And
+<code>autoscaling.behavior</code> passes scaling policies straight through; the documented
+defaults already scale up immediately and wait out a five-minute stabilization
+window before scaling down, so change it only to be <em>more</em> conservative.</p>
+<h2 id="upgrades"><a class="header" href="#upgrades">Upgrades</a></h2>
+<p>Migrations are <strong>append-only</strong> (a schema change is a new file, never an edit to
+an applied one) so a rolling upgrade stays compatible with the previous schema
+during the window where both versions run: additive DDL first, destructive
+changes in a later release once all pods are on the new version. Keep
+<code>replicaCount</code> at two or more (or <code>autoscaling.enabled</code>) and the default
+PodDisruptionBudget so upgrades and node drains never fully interrupt the API;
+the default <code>terminationGracePeriodSeconds</code> covers the binary’s shutdown drain.
+Roll back by re-pinning the prior image tag or digest.</p>
+<p>A change anywhere under <code>config</code>, <code>config.files</code> or <code>secrets</code> changes the
+<code>checksum/config</code> pod annotation, so <code>helm upgrade</code> rolls the pods for a
+configuration-only change too, including a rotated secret or an edited ABAC
+policy, both of which are read at boot and would otherwise reach the volume while
+every running pod kept using the old value.</p>
+<p><code>helm uninstall</code> removes everything the chart created; the chart declares no
+PersistentVolumeClaim, so nothing is left behind; your database, and the Secret
+holding its DSN, are yours and survive.</p>
+<p>Preview an upgrade against what you have installed with
+<code>helm diff</code>, or render the new chart version and read it:</p>
+<pre><code class="language-shell">helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 11.0.1 \
+  -n ferroehr -f my-values.yaml | less
+</code></pre>
+<p>Working from a checkout instead, <code>deploy/helm/validate.sh</code> runs the chart’s full
+render gate: the helm-version pin, lint, YAML validity, the structural
+Restricted-profile and selector-immutability gates, the secret-leak gate, the
+values-schema probes, and the golden-render diff. It is the same gate CI runs on
+every change to the chart, so a local run and a pull request agree by
+construction.</p>
+<h3 id="check-your-values-before-you-deploy-them"><a class="header" href="#check-your-values-before-you-deploy-them">Check your values before you deploy them</a></h3>
+<p>A render that lints is not a deployment that boots. <code>validate.sh</code> never runs the
+server, so it cannot see a configuration the server refuses: a missing
+authentication mechanism, an HMAC secret under the 32-byte floor, a password
+hash that is not a real Argon2id PHC string, SMART enabled without its public
+base URL. Every one of those renders perfectly and crash-loops the pod. The
+script prints exactly which properties it does not check, on success as well as
+on failure, so a green run is not mistaken for a working deployment.</p>
+<p>The check that closes that gap runs the image against your rendered
+configuration:</p>
+<pre><code class="language-shell">FERROEHR_IMAGE=ghcr.io/ferrohealth/ferroehr:4.3.6 \
+  deploy/helm/ci/boot-check.sh my-values.yaml
+</code></pre>
+<p>It renders the chart, mounts the ConfigMap and the Secret exactly as the
+Deployment does (with their real values, not placeholders) replays the
+declared environment, and runs <code>ferroehr config check</code> inside the image. Point
+<code>FERROEHR_IMAGE</code> at the tag you intend to deploy: the answer is specific to that
+image, since a key your values carry may be newer than the server that has to
+read it.</p>
+<p>It validates configuration only; it opens no socket, so it cannot tell you the
+issuer resolves, the broker is reachable or the database accepts the DSN. CI
+runs the same script over every values overlay the chart ships.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../installation/compose.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../installation/kubernetes-hardening.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../installation/compose.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../installation/kubernetes-hardening.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../theme/mermaid-eefea253.min.js"></script>
+        <script src="../theme/mermaid-init-ccf746f1.js"></script>
+        <script src="../theme/version-picker-dddf05c1.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

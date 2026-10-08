@@ -1,0 +1,952 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>CRA risk assessment - FerroEHR Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        <!-- Content-Security-Policy as a <meta> element, because GitHub Pages serves
+             static files and cannot set response headers. A meta CSP is genuinely
+             weaker than the header: `frame-ancestors`, `report-uri` and `sandbox` are
+             IGNORED in meta form (w3c CSP3 §3.3), and it applies only after the parser
+             reaches it. It still stops an injected external script or an exfiltrating
+             `connect-src`, which is the realistic risk for a docs site, so it is worth
+             having while being honest that the site cannot carry the full header set —
+             documented on the security page. `unsafe-inline` is required: mdBook emits
+             inline theme/sidebar scripts and inline styles of its own. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <!-- Self-hosted KaTeX stylesheet (fonts under katex/fonts/) — the site
+             serves no external requests, so mdbook-katex runs with no-css = true
+             and the vendored sheet is linked here. Version 0.16.4, matching the
+             KaTeX the katex-rs renderer inside mdbook-katex bundles (its
+             KATEX-VERSION file); provenance in website/book/KATEX-PROVENANCE.md. -->
+        <link rel="stylesheet" href="../katex/katex.min.css">
+
+        <meta name="description" content="User documentation for FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../css/chrome-d279d366.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/custom-79743c4e.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "rust";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "../searchindex-291401ab.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-e0689922.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">FerroEHR Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/src/compliance/cra-risk-assessment.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="cra-risk-assessment"><a class="header" href="#cra-risk-assessment">CRA risk assessment</a></h1>
+<p>This page is the cybersecurity risk assessment Cadasto B.V., the manufacturer
+of each tagged FerroEHR release, keeps under the Cyber Resilience Act
+(Regulation (EU) 2024/2847). CRA Art. 13(2) has the manufacturer “undertake an
+assessment of the cybersecurity risks associated with a product with digital
+elements and take the outcome of that assessment into account during the
+planning, design, development, production, delivery and maintenance phases”.
+Art. 13(3) says what the assessment holds: “an analysis of cybersecurity risks
+based on the intended purpose and reasonably foreseeable use, as well as the
+conditions of use”, and an indication of “whether and, if so in what manner,
+the security requirements set out in Part I, point (2), of Annex I are
+applicable to the relevant product with digital elements and how those
+requirements are implemented”, and of how Part I point (1) and the
+vulnerability handling of Part II are applied. Where a requirement does not
+apply, Art. 13(4) asks for “a clear justification to that effect” in the
+technical documentation. The assessment is point 3 of the technical
+documentation of CRA Annex VII.</p>
+<p>The page is versioned with the release: this book is frozen with every release
+at <code>/docs/vX.Y.Z/</code>, so each release’s documentation carries the assessment
+that applied to it. The statuses below are those of revision 2 of the
+assessment, 2026-10-07 (the table at the end lists the revisions).</p>
+<ul>
+<li><a href="#scope-and-dates">Scope and dates</a></li>
+<li><a href="#the-basis-intended-purpose-use-and-environment">The basis: intended purpose, use and environment</a></li>
+<li><a href="#how-the-risks-were-analysed">How the risks were analysed</a></li>
+<li><a href="#annex-i-part-i1-the-level-of-cybersecurity">Annex I Part I(1): the level of cybersecurity</a></li>
+<li><a href="#annex-i-part-i2-point-by-point">Annex I Part I(2), point by point</a>
+<ul>
+<li><a href="#a-no-known-exploitable-vulnerabilities">(a) No known exploitable vulnerabilities</a></li>
+<li><a href="#b-secure-by-default-and-reset-to-the-original-state">(b) Secure by default, and reset to the original state</a></li>
+<li><a href="#c-security-updates-automatic-updates-notification-and-postponement">(c) Security updates, automatic updates, notification and postponement</a></li>
+<li><a href="#d-protection-from-unauthorised-access-and-reporting-it">(d) Protection from unauthorised access, and reporting it</a></li>
+<li><a href="#e-confidentiality-of-stored-transmitted-and-processed-data">(e) Confidentiality of stored, transmitted and processed data</a></li>
+<li><a href="#f-integrity-and-reporting-corruptions">(f) Integrity, and reporting corruptions</a></li>
+<li><a href="#g-data-minimisation">(g) Data minimisation</a></li>
+<li><a href="#h-availability-also-after-an-incident">(h) Availability, also after an incident</a></li>
+<li><a href="#i-minimal-impact-on-other-devices-and-networks">(i) Minimal impact on other devices and networks</a></li>
+<li><a href="#j-limited-attack-surface">(j) Limited attack surface</a></li>
+<li><a href="#k-exploitation-mitigation">(k) Exploitation mitigation</a></li>
+<li><a href="#l-recording-and-monitoring-with-an-opt-out">(l) Recording and monitoring, with an opt-out</a></li>
+<li><a href="#m-secure-removal-of-all-data-and-settings-and-secure-transfer">(m) Secure removal of all data and settings, and secure transfer</a></li>
+</ul>
+</li>
+<li><a href="#requirements-and-limbs-that-do-not-apply">Requirements and limbs that do not apply</a>
+<ul>
+<li><a href="#automatic-security-updates-annex-i-part-i2c-and-part-ii7">Automatic security updates (Annex I Part I(2)(c) and Part II(7))</a></li>
+<li><a href="#application-level-encryption-at-rest-annex-i-part-i2e">Application-level encryption at rest (Annex I Part I(2)(e))</a></li>
+<li><a href="#configuration-integrity-annex-i-part-i2f">Configuration integrity (Annex I Part I(2)(f))</a></li>
+</ul>
+</li>
+<li><a href="#outbound-data-flows-annex-i-part-i2g">Outbound data flows (Annex I Part I(2)(g))</a></li>
+<li><a href="#annex-i-part-ii-vulnerability-handling">Annex I Part II: vulnerability handling</a></li>
+<li><a href="#security-relevant-paths">Security-relevant paths</a></li>
+<li><a href="#revisions">Revisions</a></li>
+</ul>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p>Every quotation is from the Official Journal text vendored in the repository
+at
+<a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/law/eu/cra/text.html"><code>docs/law/eu/cra/text.html</code></a>
+(<a href="https://eur-lex.europa.eu/eli/reg/2024/2847/oj">EUR-Lex</a>); none of its
+three corrigenda touches Article 13 or the Annexes cited here. EHDS
+Art. 104 amends CRA Art. 13(4) and inserts Art. 32(5a); those changes are
+read from <code>docs/law/eu/ehds/text.html</code>. No conformity assessment has been
+carried out and no EU declaration of conformity exists. A status on this
+page describes the evidence the repository holds, never conformity.</p>
+</blockquote>
+<h2 id="scope-and-dates"><a class="header" href="#scope-and-dates">Scope and dates</a></h2>
+<ul>
+<li><strong>The products assessed.</strong> Each tagged release: the <code>ferroehr</code> binaries, the
+<code>ferroehr</code>, <code>ferroehr-viewer</code> and <code>ferroehr-postgres</code> images, the Helm chart
+and the source archive. The nine <code>openehr-*</code> crates published on crates.io
+under Apache-2.0 are products of their own; this page covers them only where
+a row says so.</li>
+<li><strong>Who the requirements bind.</strong> Annex I Part I sets properties of the product,
+which the manufacturer ensures (CRA Art. 6(a), Art. 13(1)). Part II sets
+the manufacturer’s processes; its chapeau reads “Manufacturers of products
+with digital elements shall:”. A deploying organisation that runs an
+unmodified release is the addressee of neither.</li>
+<li><strong>When.</strong> Annex I, Art. 13 and Art. 32 apply from 11 December 2027; Art. 14
+from 11 September 2026 (CRA Art. 71(2)). The assessment runs now so that
+the gaps are closed before that date.</li>
+<li><strong>The EHDS route.</strong> Cadasto B.V. declares FerroEHR with FerroBRIDGE as an EHR
+system. For such a product, CRA Art. 32(5a), inserted by EHDS Art. 104(3),
+routes the Annex I conformity through the EHDS Chapter III procedure, and
+CRA Art. 13(4) as EHDS Art. 104(1) replaces it lets this assessment “be part
+of the risk assessment required by those Union legal acts”. The
+<a href="hazard-log.html">hazard log</a> is that EHDS-side assessment for the logging
+component, and the <a href="technical-documentation.html">technical documentation</a>
+carries both.</li>
+</ul>
+<h2 id="the-basis-intended-purpose-use-and-environment"><a class="header" href="#the-basis-intended-purpose-use-and-environment">The basis: intended purpose, use and environment</a></h2>
+<p>The <a href="intended-purpose.html">intended-purpose statement</a> is the basis Art. 13(3)
+asks for. In one paragraph: FerroEHR stores, versions and queries the
+structured health records of one healthcare provider, serves them to that
+provider’s clinical applications through the openEHR REST API and AQL, and
+records every access. It runs one instance per organisation, self-hosted by
+the organisation or hosted by Cadasto B.V. as a service, on a PostgreSQL 18
+cluster provisioned for that instance, behind TLS, with users in the
+organisation’s identity provider. Its foreseeable misuse (the <code>sandbox</code>
+profile holding real data, authentication off, a plaintext listener, several
+organisations in one instance) is listed on that page with what the product
+does against each.</p>
+<p><strong>The assets</strong> are those of the <a href="../threat-model.html#assets">threat model</a>:
+the clinical payload, the demographic parties and their identifiers, the
+EHR-to-subject link, the access log, the version history, the signing keys,
+the credentials, instance separation and availability.</p>
+<p><strong>The expected time in use</strong> is longer than five years, so the support period
+of each release is five years from the month it is published (CRA Art. 13(8);
+<a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions"><code>SECURITY.md</code></a>
+carries the reasoning, which is Annex VII point 4).</p>
+<h2 id="how-the-risks-were-analysed"><a class="header" href="#how-the-risks-were-analysed">How the risks were analysed</a></h2>
+<p>CRA Art. 3(37) defines a cybersecurity risk as “the potential for loss or
+disruption caused by an incident”, “expressed as a combination of the magnitude
+of such loss or disruption and the likelihood of occurrence of the incident”.
+The analysis starts from the <a href="../threat-model.html">threat model</a>, which walks
+eight trust boundaries (B1 to B8) and states the control and the residual risk
+at each. The register below rates each risk on the intended purpose and the
+shipped controls: the magnitude by the asset it reaches, the likelihood by
+what an actor needs to cause it. The ratings are the manufacturer’s judgement,
+on three levels (high, medium, low).</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>#</th><th>Risk</th><th>Magnitude</th><th>Likelihood with the shipped controls</th><th>Controls</th><th>Annex I Part I(2)</th></tr>
+</thead>
+<tbody>
+<tr><td>C1</td><td>An unauthenticated caller reads or writes clinical data</td><td>high</td><td>low under the intended purpose; high when <code>auth.enabled = false</code> is misused under <code>sandbox</code> or accepted by name under <code>production</code></td><td>authentication on by default with a boot refusal when no mechanism is configured; <code>production</code> refuses <code>auth.enabled = false</code> unless <code>auth_off</code> is accepted by name; per-request authorisation</td><td>(b), (d)</td></tr>
+<tr><td>C2</td><td>An authenticated caller reaches EHRs outside their remit</td><td>high</td><td>medium: the shipped <code>EHR_ACCESS</code> default is <code>open</code>, which <code>production</code> refuses unless accepted by name</td><td>RBAC, ABAC, per-EHR <code>EHR_ACCESS</code>; every access recorded</td><td>(d), (l)</td></tr>
+<tr><td>C3</td><td>Data in transit is read or altered on the network</td><td>high</td><td>low behind a TLS ingress or with the server’s TLS; high on a plaintext listener</td><td>rustls TLS 1.3 and mutual TLS, off by default; <code>production</code> refuses a plaintext main listener on a routable address, a separate plain-HTTP management listener, a UDP syslog audit feed, and an AMQP integration on a plaintext <code>amqp://</code> broker, unless <code>plaintext_listener</code>, <code>audit_syslog_udp</code> or <code>plaintext_broker</code> is accepted by name; a boot warning on a plaintext routable bind</td><td>(e)</td></tr>
+<tr><td>C4</td><td>Someone with a database connection reads, rewrites or deletes data, bypassing the API</td><td>high</td><td>depends on the deploying organisation’s database protection</td><td>least-privilege roles per domain; append-only versions; version signatures verified on read; the hash-chained access log</td><td>(e), (f)</td></tr>
+<tr><td>C5</td><td>An access happens and the log does not show it, or the log is altered</td><td>high</td><td>low with <code>fail_mode = "closed"</code> and an off-box sink; medium with the shipped <code>fail_mode = "open"</code></td><td>refusals always recorded; <code>production</code> refuses audit off and audit failing open unless accepted; the hash chain</td><td>(f), (l)</td></tr>
+<tr><td>C6</td><td>A national identifier or identifying content leaks into the clinical record, telemetry or a report</td><td>high</td><td>low</td><td>the identifier scanner in <code>strict</code> mode; log sanitising; reports with no identifiers</td><td>(e), (g)</td></tr>
+<tr><td>C7</td><td>A malformed or hostile payload crashes or corrupts the server</td><td>medium</td><td>low</td><td>memory-safe Rust with <code>unsafe</code> forbidden; overflow checks in release; fuzzed parsers; caught panics</td><td>(j), (k)</td></tr>
+<tr><td>C8</td><td>The service is made unavailable</td><td>high (clinical availability)</td><td>medium: an authorised caller holding resources is not defended against</td><td>admission limit with <code>503</code> shedding; rate limits; body, header and statement limits; replicas and a disruption budget</td><td>(h)</td></tr>
+<tr><td>C9</td><td>A vulnerable component ships in a release</td><td>high</td><td>medium</td><td><code>cargo deny</code> advisories gate; image scan before tagging; weekly re-scan; Dependabot; VEX for argued findings</td><td>(a)</td></tr>
+<tr><td>C10</td><td>A tampered artefact reaches a deployment</td><td>high</td><td>low</td><td>SLSA Build L3 provenance; SBOM attestations; signed tags; immutable releases; a signed chart</td><td>(f)</td></tr>
+<tr><td>C11</td><td>Data stays recoverable after the organisation removes it</td><td>medium</td><td>medium: the erase removes every schema and blob, and backups, WAL, replicas and the media stay the organisation’s to remove</td><td>physical delete of EHRs; <code>ferroehr db erase</code> for all data and settings; the decommissioning page</td><td>(m)</td></tr>
+<tr><td>C12</td><td>An outbound integration sends more than its purpose needs, or to the wrong place</td><td>medium</td><td>low: every integration is off by default</td><td>the flows table below</td><td>(g), (i)</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="annex-i-part-i1-the-level-of-cybersecurity"><a class="header" href="#annex-i-part-i1-the-level-of-cybersecurity">Annex I Part I(1): the level of cybersecurity</a></h2>
+<p>“Products with digital elements shall be designed, developed and produced in
+such a way that they ensure an appropriate level of cybersecurity based on the
+risks.” The manufacturer applies it through the register above: each risk has
+a control, and each control is traced to a point of Part I(2) below. The text
+names no measures, so the level is set against the risks of a clinical data
+repository holding special-category data, where disclosure cannot be undone
+and unavailability is a patient-safety matter.</p>
+<h2 id="annex-i-part-i2-point-by-point"><a class="header" href="#annex-i-part-i2-point-by-point">Annex I Part I(2), point by point</a></h2>
+<p>The chapeau reads: “On the basis of the cybersecurity risk assessment referred
+to in Article 13(2) and where applicable, products with digital elements
+shall:”. Each entry gives the requirement, whether it applies, how FerroEHR
+implements it, the evidence, the status (met, partial or gap, describing the
+evidence only) and the open work.</p>
+<h3 id="a-no-known-exploitable-vulnerabilities"><a class="header" href="#a-no-known-exploitable-vulnerabilities">(a) No known exploitable vulnerabilities</a></h3>
+<p>“be made available on the market without known exploitable vulnerabilities”</p>
+<ul>
+<li><strong>Applies:</strong> yes.</li>
+<li><strong>How:</strong> <code>cargo deny</code> fails the build on any RustSec advisory and on yanked
+crates, with each accepted advisory dated and reasoned in <code>deny.toml</code>. Each
+of the three images is scanned by Trivy by its pushed digest, on both
+platforms, before it is tagged, so only a passing digest gets a tag, and the
+published images are re-scanned weekly. Every shipped binary, in the release
+tarballs and in the images, is built with <code>cargo auditable</code>, so it carries
+its Rust dependency list and an image scan sees the crate graph. Every
+release also scans each image and server binary with no severity floor and
+unfixed findings included, joins every finding with its OpenVEX statement,
+and is refused, before any image is tagged, while a finding has none; the
+joined record and the raw reports are release assets. The Rust advisory
+statements are checked against the resolved dependency graph.</li>
+<li><strong>Evidence:</strong> <code>deny.toml</code>; <code>trivy.yaml</code>; <code>.github/workflows/scan-and-tag.yml</code>;
+<code>.github/workflows/image-scan.yml</code>; <code>security/vex/</code>;
+<code>scripts/checks/vex-reachability.sh</code>; <code>scripts/checks/vex-coverage.sh</code>;
+<code>.github/workflows/release.yml</code> (<code>vulnerability-record</code>);
+<a href="../verifying-releases.html#the-exploitability-record">the exploitability record</a>.</li>
+<li><strong>Status:</strong> partial. Every finding of the full scan carries a judgement or the
+release does not ship, and the scan reads the Rust dependencies of the
+server and viewer binaries from the binaries themselves (#3674, #3675). The
+CRA does not define “known”. Seven OS findings are judged <code>affected</code> and
+have no upstream fix: CVE-2026-8674 (a long resolver search domain) in all
+three images, and three libxml2 and two glibc JISX0213 findings in the
+<code>ferroehr-postgres</code> image that a database login reaches through
+PostgreSQL’s XML functions, which FerroEHR itself never calls (#3673).
+Each carries an action statement in <code>security/vex/</code>.</li>
+<li><strong>Open:</strong> the seven <code>affected</code> findings (#3708), until Debian ships fixes that a
+rebuild picks up; each such rebuild is a security-only patch with its
+advisory.</li>
+</ul>
+<h3 id="b-secure-by-default-and-reset-to-the-original-state"><a class="header" href="#b-secure-by-default-and-reset-to-the-original-state">(b) Secure by default, and reset to the original state</a></h3>
+<p>“be made available on the market with a secure by default configuration,
+unless otherwise agreed between manufacturer and business user in relation to
+a tailor-made product with digital elements, including the possibility to
+reset the product to its original state”</p>
+<ul>
+<li><strong>Applies:</strong> yes. The tailor-made carve-out does not: a public release is
+not a tailor-made product agreed with a business user.</li>
+<li><strong>How:</strong> authentication on, with a boot refusal when no mechanism is
+configured; RBAC on; the admin and management surfaces off; every
+integration off; Swagger UI <code>private</code>; the rate limiter on; version signing
+on; the identifier scanner <code>strict</code>. Weak settings are refused at boot: an
+<code>alg: none</code> token, a non-HTTPS issuer, a short HMAC secret, an Argon2id hash
+below the floor. The chart runs non-root with a read-only root filesystem,
+all capabilities dropped, <code>RuntimeDefault</code> seccomp and an ingress
+NetworkPolicy, and its validation fails a render that loses any of them.</li>
+<li><strong>Evidence:</strong> <code>app/ferroehr/assets/ferroehr.default.toml</code>;
+<code>app/ferroehr/src/config/auth.rs</code>; <code>app/ferroehr/src/config/deployment.rs</code>;
+<code>deploy/helm/ferroehr/values.yaml</code> (<code>config.deployment_profile</code>);
+<code>docker-compose.yml</code>; <code>deploy/helm/validate.sh</code>;
+<code>scripts/deploy-probes/reset.sh</code>;
+<a href="../installation/hardening-workload.html">the workload</a>;
+<a href="../operations-reset.html">returning to the original state</a>.</li>
+<li><strong>Why <code>sandbox</code> is the default:</strong> the binary, the chart and the Compose
+files all ship and declare <code>deployment_profile = "sandbox"</code>. A <code>production</code>
+default would refuse to start until the deployment has separate database
+credentials per domain, a declared subject namespace, a closed audit fail
+mode and a schema-preparation credential of its own, none of which a first
+boot, an evaluation or the quickstart has. An installation that cannot start
+invites accepting every gap by name only to make it start, which records a
+choice nobody made deliberately. A <code>sandbox</code> makes no such choice for the
+operator and stays loud instead: it names every open separation on the boot
+banner, in the log and on <code>/management/status</code>, and
+<code>GET /ferroehr/rest/status</code> reports the profile, so a sandbox cannot pass for
+a production instance. It also means no existing deployment changes
+behaviour by upgrading. The instructions for a deployment holding patient
+data are to set <code>production</code>, which refuses every open separation that is
+not accepted by name.</li>
+<li><strong>Which shipped defaults a production holder keeps:</strong> these are secure as
+shipped and <code>production</code> raises nothing about them: authentication on,
+RBAC on, the admin API and every management endpoint off, Swagger UI
+<code>private</code>, the rate limiter on, version signing on in <code>digest</code> mode with
+read-time verification <code>strict</code>, the identifier scanner <code>strict</code> over every
+shipped rule, and the audit trail on with the local store and
+<code>retention_days = 0</code>, which the server refuses at boot where a jurisdiction
+in force sets a ceiling. These must change, and <code>production</code> refuses them:
+<code>authz.rbac.ehr_access_default = "open"</code>, <code>audit.fail_mode = "open"</code>, an
+empty <code>privacy.subject_namespaces</code>, one database credential for every
+domain, and <code>db.migrate = "apply"</code> on the runtime credential. Three may be
+accepted by name when the deployment closes them outside the server:
+<code>plaintext_listener</code>, when a TLS-terminating ingress fronts the port,
+<code>plaintext_broker</code>, when the path to the AMQP broker stays on a trusted
+segment, and <code>shared_cluster</code>, when one PostgreSQL cluster holds the domains
+in separate schemas under separate roles. The usage report is on by
+default; it carries no health data (<a href="#outbound-data-flows-annex-i-part-i2g">outbound data flows</a>).</li>
+<li><strong>Reset:</strong> the book documents returning an instance to its original state,
+configuration and database, for Docker Compose, Kubernetes and a single
+binary. The deployment probe harnesses run the Compose and the Helm
+procedures and read the outcome back: the database volume or the database is
+gone, an EHR written before the reset is not found, the reinstalled server
+migrates the empty database (<code>P-K8S-RESET-*</code>), and the Compose server reports
+the shipped configuration (<code>P-RESET-*</code>).</li>
+<li><strong>Status:</strong> partial. The shipped profile is <code>sandbox</code>, so a deployment
+holding patient data is secure only after it sets <code>production</code> and closes
+the five refused defaults above. The single-binary reset is documented
+and not exercised by a probe; its database step is the one the Helm probe
+runs.</li>
+<li><strong>Open:</strong> none for the reset.</li>
+</ul>
+<h3 id="c-security-updates-automatic-updates-notification-and-postponement"><a class="header" href="#c-security-updates-automatic-updates-notification-and-postponement">(c) Security updates, automatic updates, notification and postponement</a></h3>
+<p>“ensure that vulnerabilities can be addressed through security updates,
+including, where applicable, through automatic security updates that are
+installed within an appropriate timeframe enabled as a default setting, with
+a clear and easy-to-use opt-out mechanism, through the notification of
+available updates to users, and the option to temporarily postpone them”</p>
+<ul>
+<li><strong>Applies:</strong> the security-update limb, yes. The automatic-update limb, no:
+see <a href="#automatic-security-updates-annex-i-part-i2c-and-part-ii7">the justification</a>.
+The notification limb, yes: the sentence does not place it under “where
+applicable”, and this assessment reads it as applying. Postponement is
+inherent, because the deploying organisation decides when to upgrade.</li>
+<li><strong>How:</strong> a fix ships in the next tagged release, as a security-only patch
+unless a recorded reason makes that infeasible; there are no backports
+(CRA Art. 13(10)). Users learn of it through the GitHub release, its notes,
+the security advisory and the <code>### Security</code> changelog section; the release
+feed (<code>https://github.com/FerroHEALTH/FerroEHR/releases.atom</code>) and the
+advisory listing
+(<code>GET https://api.github.com/repos/FerroHEALTH/FerroEHR/security-advisories</code>)
+are the subscription route <code>SECURITY.md</code> names. The running server states
+its support period (five years from the month of its release date) on the
+boot banner, in <code>ferroehr --version</code>, on <code>GET /management/info</code> and on
+<code>GET {rest root}/status</code> as <code>support.status</code>, and once the period has ended
+it logs a warning at boot and once a day (Art. 13(19)).</li>
+<li><strong>No in-product update check.</strong> The server does not contact anyone to learn
+of a newer release. The point names “the notification of available updates
+to users” and is silent on whether the product itself must deliver it.
+FerroEHR has no end-user interface of its own: its users are the deploying
+organisation’s operators and the applications that call its API, and an
+update reaches a deployment only through the operators’ change control. The
+notice goes to them through the feed and the advisory listing. A check from
+the server would add an outbound connection from every instance holding
+special-category data, would fail wherever the organisation blocks egress
+(as the chart’s egress policy lets it), and would reach the operators only
+as a log line.</li>
+<li><strong>Evidence:</strong> <a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions"><code>SECURITY.md</code></a>;
+<code>app/ferroehr/src/support.rs</code>; <code>app/ferroehr/src/banner.rs</code>
+(<code>banner_states_the_support_period</code>);
+<a href="../operations.html#how-long-the-version-you-pinned-is-supported">how long a version is supported</a>;
+<a href="../operations.html#upgrades">upgrades</a>.</li>
+<li><strong>Status:</strong> met for the security-update and notification limbs, with the
+notice delivered outside the product as stated above.</li>
+<li><strong>Open:</strong> none.</li>
+</ul>
+<h3 id="d-protection-from-unauthorised-access-and-reporting-it"><a class="header" href="#d-protection-from-unauthorised-access-and-reporting-it">(d) Protection from unauthorised access, and reporting it</a></h3>
+<p>“ensure protection from unauthorised access by appropriate control mechanisms,
+including but not limited to authentication, identity or access management
+systems, and report on possible unauthorised access”</p>
+<ul>
+<li><strong>Applies:</strong> yes. The list is open (“including but not limited to”); the duty
+is appropriate mechanisms.</li>
+<li><strong>How:</strong> Basic (Argon2id) and OIDC bearer authentication; RBAC, Cedar or
+remote ABAC, and per-EHR <code>EHR_ACCESS</code>; an ABAC block that is enabled but
+cannot be built aborts boot. Every refused access (<code>401</code>, <code>403</code>) is recorded
+in the access log and counted in the <code>auth_failures</code> metric.</li>
+<li><strong>Evidence:</strong> <code>app/ferroehr-rest/src/extensions/access/</code>;
+<code>app/ferroehr-rest/src/system_log/middleware.rs</code>;
+<code>app/ferroehr/src/telemetry/metrics.rs</code>;
+<a href="../security.html#authentication">authentication</a>,
+<a href="../security.html#authorization">authorization</a>;
+<code>app/ferroehr/src/config/deployment.rs</code>
+(<code>production_refuses_auth_off_unless_accepted_by_name</code>);
+<a href="../installation/configuration.html#deployment_profile">deployment profile</a>.</li>
+<li><strong>Status:</strong> met. Reporting is met. <code>production</code> refuses
+<code>auth.enabled = false</code> at boot unless <code>auth_off</code> is accepted by name, and an
+accepted gap is stated on every boot. The shipped <code>sandbox</code> profile accepts
+it, which (b) records.</li>
+<li><strong>Open:</strong> none beyond (b).</li>
+</ul>
+<h3 id="e-confidentiality-of-stored-transmitted-and-processed-data"><a class="header" href="#e-confidentiality-of-stored-transmitted-and-processed-data">(e) Confidentiality of stored, transmitted and processed data</a></h3>
+<p>“protect the confidentiality of stored, transmitted or otherwise processed
+data, personal or other, such as by encrypting relevant data at rest or in
+transit by state of the art mechanisms, and by using other technical means”</p>
+<ul>
+<li><strong>Applies:</strong> yes. The means are a menu (“such as”); application-level
+encryption at rest of the clinical payload is not used, with
+<a href="#application-level-encryption-at-rest-annex-i-part-i2e">the justification</a>.</li>
+<li><strong>How:</strong> in transit, rustls with TLS 1.3 by default and mutual TLS, or a
+TLS-terminating ingress; integrations offer TLS (<code>amqps</code>, syslog over TLS,
+HTTPS-only S3 by default). At rest, protected national identifiers sealed
+under AES-256-GCM with a keyed lookup digest. Other technical means: three
+pseudonymisation domains on separate credentials, checked by <code>production</code>;
+secrets that never render; log sanitising.</li>
+<li><strong>Evidence:</strong> <code>[server.tls]</code> in <code>ferroehr.default.toml</code>;
+<a href="../threat-model.html#b1--network-and-protocol">B1</a>,
+<a href="../threat-model.html#b6--the-database">B6</a>,
+<a href="../threat-model.html#the-sealed-identifier-and-its-lookup-digest">the sealed identifier</a>,
+<a href="../operations.html#tls-and-database-security">TLS and database security</a>.</li>
+<li><strong>Status:</strong> partial. The shipped transport default is plaintext, the AMQP
+and syslog integrations default to plaintext when switched on, and
+identifier sealing is off by default. <code>production</code> refuses a plaintext main
+listener on a routable address unless <code>plaintext_listener</code> is accepted by
+name, and a loopback bind is exempt; a deployment behind a TLS-terminating
+ingress accepts the gap by name, because the ingress carries the encryption
+(<code>app/ferroehr/src/config/deployment.rs</code>,
+<code>production_refuses_a_routable_plaintext_listener_and_exempts_loopback</code>).
+The separate management listener (<code>management.port</code>) binds every interface
+in plain HTTP, so setting it opens the same gap
+(<code>production_refuses_a_plain_management_listener_on_its_own_port</code>), and a
+syslog audit feed over UDP opens <code>audit_syslog_udp</code>
+(<code>production_refuses_a_udp_audit_syslog_unless_accepted_by_name</code>). An
+enabled change-event outbox publishing to a plain <code>amqp://</code> broker opens
+<code>plaintext_broker</code> (#3676,
+<code>production_refuses_a_plaintext_amqp_broker_unless_accepted_by_name</code>).
+An enabled audit FHIR feed on an <code>http://</code> URL opens <code>plaintext_audit_feed</code>,
+and an enabled multimedia store with <code>allow_http</code> opens
+<code>plaintext_object_store</code> (#3689,
+<code>production_refuses_a_plaintext_audit_feed_and_object_store_unless_accepted</code>).</li>
+<li><strong>Open:</strong> none.</li>
+</ul>
+<h3 id="f-integrity-and-reporting-corruptions"><a class="header" href="#f-integrity-and-reporting-corruptions">(f) Integrity, and reporting corruptions</a></h3>
+<p>“protect the integrity of stored, transmitted or otherwise processed data,
+personal or other, commands, programs and configuration against any
+manipulation or modification not authorised by the user, and report on
+corruptions”</p>
+<ul>
+<li><strong>Applies:</strong> yes, to data, programs and configuration. The configuration
+limb is split with the deploying organisation, with
+<a href="#configuration-integrity-annex-i-part-i2f">the justification</a>.</li>
+<li><strong>How:</strong> data: immutable versions, each signed (digest or OpenPGP) and
+verified on read in <code>strict</code> mode by default; the access log is
+hash-chained in the database, and <code>UPDATE</code>, <code>DELETE</code> and <code>TRUNCATE</code> on it are
+refused. Programs: SLSA Build L3 provenance and SBOM attestations, cosign on
+the chart, signed tags, immutable releases, a read-only root filesystem.
+Configuration: unknown keys and unknown <code>FERROEHR__</code> variables are refused
+at boot.</li>
+<li><strong>Evidence:</strong> <code>app/ferroehr/src/versioning/integrity.rs</code>;
+<code>app/ferroehr/migrations/audit/0003_tamper_chain.sql</code>;
+<code>app/ferroehr/src/system_log/chain_check.rs</code>;
+<code>app/ferroehr/tests/it/audit_chain.rs</code>
+(<code>the_chain_check_reports_a_tampered_record_on_the_health_surface</code>);
+<code>app/ferroehr/src/config/strict.rs</code>;
+<a href="../audit.html#tamper-evidence">tamper evidence</a>;
+<a href="../verifying-releases.html">verifying releases</a>.</li>
+<li><strong>Status:</strong> met. A signature failure on read is refused and logged. The
+server verifies the access-log chain one minute after boot and then every
+<code>[audit.store] verify_interval_seconds</code> (default <code>86400</code>; <code>0</code> turns it off).
+A finding is logged at <code>ERROR</code>, counted in <code>atna_audit_chain_findings</code> with
+<code>kind</code> <code>damage</code> or <code>unverifiable</code>, and shown by the <code>audit_chain</code> indicator
+on <code>GET /health/readiness</code> (<code>DOWN</code> when damaged, <code>DEGRADED</code> when
+unverifiable), which never flips readiness. Each replica runs its own check.
+A deployment that sets the interval to <code>0</code> reports a corruption only when
+an operator runs <code>audit.verify_audit_chain()</code>.</li>
+<li><strong>Open:</strong> none.</li>
+</ul>
+<h3 id="g-data-minimisation"><a class="header" href="#g-data-minimisation">(g) Data minimisation</a></h3>
+<p>“process only data, personal or other, that are adequate, relevant and limited
+to what is necessary in relation to the intended purpose of the product with
+digital elements (data minimisation)”</p>
+<ul>
+<li><strong>Applies:</strong> yes, measured against the <a href="intended-purpose.html">intended purpose</a>.</li>
+<li><strong>How:</strong> the clinical record carries pseudonymous subject references; the
+identifier scanner refuses national identifiers in clinical content; the
+identity, the link and the access log sit in their own domains; telemetry
+carries no identified data; the access-log category classification never
+reaches spans, logs or metrics; <code>ferroehr report</code> identifies no person.</li>
+<li><strong>Evidence:</strong> <code>app/ferroehr/src/privacy/</code>;
+<code>app/ferroehr/src/telemetry/log_sanitize.rs</code>;
+<a href="../installation/config-privacy.html">privacy and data minimisation</a>;
+<a href="../security.html#the-pseudonymisation-boundary">the pseudonymisation boundary</a>.</li>
+<li><strong>Status:</strong> met for the processing the intended purpose needs; each outbound
+flow is justified in <a href="#outbound-data-flows-annex-i-part-i2g">the flows table</a>.</li>
+</ul>
+<h3 id="h-availability-also-after-an-incident"><a class="header" href="#h-availability-also-after-an-incident">(h) Availability, also after an incident</a></h3>
+<p>“protect the availability of essential and basic functions, also after an
+incident, including through resilience and mitigation measures against
+denial-of-service attacks”</p>
+<ul>
+<li><strong>Applies:</strong> yes. The measures named are an open list.</li>
+<li><strong>How:</strong> an admission limit sheds load with <code>503</code> and <code>Retry-After</code>; per
+principal and per address rate limits, on by default; body limits, header
+read timeouts, HTTP/2 stream caps, statement and query timeouts and a
+result-row cap; panics caught; two replicas, a disruption budget and
+topology spread in the chart; backup and point-in-time recovery documented.</li>
+<li><strong>Evidence:</strong> <code>app/ferroehr-rest/src/overload.rs</code>;
+<code>app/ferroehr-rest/src/rate_limit.rs</code>; <code>app/ferroehr-rest/src/limits.rs</code>;
+<a href="../security.html#request-limits-and-rate-limiting">request limits</a>;
+<a href="../operations.html#backup-and-point-in-time-recovery">backup and recovery</a>.</li>
+<li><strong>Status:</strong> met. The residual risk is stated in the threat model: an
+authorised caller holding resources is not defended against, and the limiter
+is per process.</li>
+</ul>
+<h3 id="i-minimal-impact-on-other-devices-and-networks"><a class="header" href="#i-minimal-impact-on-other-devices-and-networks">(i) Minimal impact on other devices and networks</a></h3>
+<p>“minimise the negative impact by the products themselves or connected devices
+on the availability of services provided by other devices or networks”</p>
+<ul>
+<li><strong>Applies:</strong> yes.</li>
+<li><strong>How:</strong> every outbound integration is off by default and bounded when on
+(retry limits, batch sizes, poll intervals, connect and request timeouts).
+The usage report sends at most one start report per ten minutes per instance
+and one daily report, each at most 64 KiB. A default-deny egress policy is
+available in the chart.</li>
+<li><strong>Evidence:</strong> <code>ferroehr.default.toml</code>; <code>deploy/helm/ferroehr/values.yaml</code>
+(<code>networkPolicy.egress</code>); <a href="../usage-report.html#when-a-report-is-sent">usage report</a>.</li>
+<li><strong>Status:</strong> met.</li>
+</ul>
+<h3 id="j-limited-attack-surface"><a class="header" href="#j-limited-attack-surface">(j) Limited attack surface</a></h3>
+<p>“be designed, developed and produced to limit attack surfaces, including
+external interfaces”</p>
+<ul>
+<li><strong>Applies:</strong> yes.</li>
+<li><strong>How:</strong> optional surfaces are off by default (admin, management, SMART,
+multimedia, events, the terminology API); Swagger UI is <code>private</code>;
+optional integrations are compiled behind features; the runtime images are
+distroless <code>nonroot</code> with no shell; the chart installs an ingress
+NetworkPolicy.</li>
+<li><strong>Evidence:</strong> <code>docker/Dockerfile</code>; <code>docker/viewer/Dockerfile</code>;
+<a href="../security.html#operational-surfaces-what-is-reachable-and-by-whom">operational surfaces</a>.</li>
+<li><strong>Status:</strong> met.</li>
+</ul>
+<h3 id="k-exploitation-mitigation"><a class="header" href="#k-exploitation-mitigation">(k) Exploitation mitigation</a></h3>
+<p>“be designed, developed and produced to reduce the impact of an incident using
+appropriate exploitation mitigation mechanisms and techniques”</p>
+<ul>
+<li><strong>Applies:</strong> yes.</li>
+<li><strong>How:</strong> Rust with <code>unsafe_code = "forbid"</code> across the workspace and
+<code>overflow-checks = true</code> in release builds; a non-root UID, no shell, a
+read-only root filesystem, all capabilities dropped, <code>RuntimeDefault</code>
+seccomp and user namespaces; database credentials split so one leaked DSN
+reaches one domain.</li>
+<li><strong>Evidence:</strong> <code>Cargo.toml</code> (<code>[workspace.lints.rust]</code>, <code>[profile.release]</code>);
+<a href="../installation/hardening-workload.html">the workload</a>;
+<a href="../installation/hardening-detection-response.html">secrets, detection and response</a>.</li>
+<li><strong>Status:</strong> met.</li>
+</ul>
+<h3 id="l-recording-and-monitoring-with-an-opt-out"><a class="header" href="#l-recording-and-monitoring-with-an-opt-out">(l) Recording and monitoring, with an opt-out</a></h3>
+<p>“provide security related information by recording and monitoring relevant
+internal activity, including the access to or modification of data, services
+or functions, with an opt-out mechanism for the user”</p>
+<ul>
+<li><strong>Applies:</strong> yes.</li>
+<li><strong>How:</strong> the access log records every API access, every record a read or a
+query served, and every refusal, in DICOM PS3.15 and FHIR <code>AuditEvent</code>
+form, with syslog and FHIR-feed sinks and ITI-81 retrieval; metrics and
+traces cover the rest. The opt-out is <code>[audit] enabled</code> and
+<code>[audit.store] enabled</code>; <code>production</code> refuses audit off unless accepted by
+name.</li>
+<li><strong>Evidence:</strong> <code>app/ferroehr/src/system_log/</code>;
+<code>app/ferroehr-rest/src/system_log/</code>; <a href="../audit.html">audit trail</a>;
+<a href="../operations.html#observability">observability</a>.</li>
+<li><strong>Status:</strong> met. A deploying organisation may owe the log under the EHDS or
+national law, so whether it may use the opt-out is outside the CRA.</li>
+</ul>
+<h3 id="m-secure-removal-of-all-data-and-settings-and-secure-transfer"><a class="header" href="#m-secure-removal-of-all-data-and-settings-and-secure-transfer">(m) Secure removal of all data and settings, and secure transfer</a></h3>
+<p>“provide the possibility for users to securely and easily remove on a
+permanent basis all data and settings and, where such data can be transferred
+to other products or systems, ensure that this is done in a secure manner”</p>
+<ul>
+<li><strong>Applies:</strong> yes.</li>
+<li><strong>How:</strong> <code>ferroehr db erase --confirm &lt;instance&gt;</code> removes all data and
+settings in one operation: every multimedia blob, then the five schemas with
+every domain, the access log, the stored settings and the instance id. Run
+without <code>--confirm</code> it erases nothing and prints what it would remove and the
+value that confirms it. <code>DELETE {base}/admin/ehr/{ehr_id}</code> and
+<code>DELETE {base}/admin/ehr/all</code> remove single EHRs with every version, the
+linkage row and orphaned multimedia; template and stored-query deletes
+exist. Transfer runs over the authenticated API and <code>{base}/admin/dump</code>,
+over TLS when the deployment enables it.</li>
+<li><strong>Evidence:</strong> <code>app/ferroehr/src/decommission.rs</code>;
+<code>app/ferroehr/tests/it/decommission.rs</code>;
+<a href="../operations-decommissioning.html">decommissioning</a>;
+<a href="../operations-admin-apis.html#physical-deletion">physical deletion</a>;
+<a href="../operations-admin-apis.html#dump-and-load">dump and load</a>.</li>
+<li><strong>Status:</strong> met, shipped in #3642. The decommissioning page lists what the
+erase cannot reach and the deploying organisation removes: backups, WAL
+archives and replicas, the chart’s Secrets and claims, the database roles,
+configuration files, and the data held by systems the instance sent to.
+Sanitising the physical media is the organisation’s. A single party has no
+physical delete over REST, because the openEHR Admin API defines none; the
+page says so and names the alternatives.</li>
+</ul>
+<h2 id="requirements-and-limbs-that-do-not-apply"><a class="header" href="#requirements-and-limbs-that-do-not-apply">Requirements and limbs that do not apply</a></h2>
+<p>CRA Art. 13(4): “Where certain essential cybersecurity requirements are not
+applicable to the product with digital elements, the manufacturer shall include
+a clear justification to that effect in that technical documentation.”</p>
+<h3 id="automatic-security-updates-annex-i-part-i2c-and-part-ii7"><a class="header" href="#automatic-security-updates-annex-i-part-i2c-and-part-ii7">Automatic security updates (Annex I Part I(2)(c) and Part II(7))</a></h3>
+<p>Part I(2)(c) asks for automatic security updates “where applicable”, and Part
+II(7) for distribution “where applicable for security updates, in an automatic
+manner”. Neither applies to FerroEHR:</p>
+<ul>
+<li>FerroEHR is a clinical server run under its operator’s change control: the
+deploying organisation for a self-hosted instance, Cadasto B.V. for an
+instance it hosts as a service. An upgrade can carry a database migration
+that the operator schedules, backs up for and verifies, so in both cases
+the operator applies an update, never the product by itself.</li>
+<li>A clinical data repository is a system whose unavailability is a
+patient-safety matter (threat model, asset “Availability”). An update the
+manufacturer installs on its own schedule would restart the service and
+migrate the schema at a moment no clinician or operator chose.</li>
+<li>The operator controls the host, the cluster, the image registry it pulls
+from and the network. FerroEHR has no channel of its own into a deployment,
+and adding one would be an inbound path into a system holding
+special-category data, against (j). Where Cadasto B.V. hosts an instance,
+it applies updates as that instance’s operator under its own change
+control, not through the product.</li>
+<li>Updates are distributed securely by other means: signed, immutable releases
+with provenance, digest-pinned images, the moving <code>&lt;major&gt;.&lt;minor&gt;</code> tags an
+organisation can follow with its own tooling, and the advisory that tells it
+to.</li>
+</ul>
+<p>So the automatic-installation limb and the opt-out that goes with it do not
+apply, and CRA Annex II point 8(e) (how to turn automatic installation off)
+has nothing to describe. The notification limb still applies (#3639).</p>
+<h3 id="application-level-encryption-at-rest-annex-i-part-i2e"><a class="header" href="#application-level-encryption-at-rest-annex-i-part-i2e">Application-level encryption at rest (Annex I Part I(2)(e))</a></h3>
+<p>Part I(2)(e) names encryption at rest as one of the means (“such as”). FerroEHR
+does not encrypt the clinical payload before it reaches PostgreSQL:</p>
+<ul>
+<li>The payload is stored as canonical openEHR JSON that AQL queries inside;
+encrypting those fields in the application would make them unqueryable,
+which defeats the intended purpose.</li>
+<li>Encryption at rest is provided where the data is stored: at the volume or
+disk layer, which the deploying organisation provisions
+(<a href="../operations.html#tls-and-database-security">TLS and database security</a>).</li>
+<li>The fields whose disclosure re-identifies a person directly, the protected
+national identifiers, are sealed in the application (AES-256-GCM), because
+they are looked up by digest and never queried by content.</li>
+<li>Confidentiality at rest is further carried by “other technical means”: the
+separated domains and credentials, and least-privilege roles.</li>
+</ul>
+<h3 id="configuration-integrity-annex-i-part-i2f"><a class="header" href="#configuration-integrity-annex-i-part-i2f">Configuration integrity (Annex I Part I(2)(f))</a></h3>
+<p>Part I(2)(f) lists “configuration” among what must be protected against
+modification “not authorised by the user”. FerroEHR protects the configuration
+it reads: unknown keys and unknown <code>FERROEHR__</code> variables stop the boot, secrets
+are read from mounted files, and the effective configuration is printed
+redacted on demand. It does not sign or checksum its configuration file. The
+file lives on the deploying organisation’s host or in its Kubernetes secrets
+and config maps, under that organisation’s access control, and whoever can
+change it there is, by the organisation’s own decision, a user authorised to
+configure the product. Protecting it against other modification is the
+platform’s job (<a href="../installation/hardening-detection-response.html">secrets, detection and response</a>).</p>
+<h2 id="outbound-data-flows-annex-i-part-i2g"><a class="header" href="#outbound-data-flows-annex-i-part-i2g">Outbound data flows (Annex I Part I(2)(g))</a></h2>
+<p>Every connection FerroEHR opens on its own initiative, with what it carries
+and why. The database connections are the product’s own storage and are not
+listed.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Flow</th><th>Default</th><th>Carries</th><th>Purpose, against the intended purpose</th></tr>
+</thead>
+<tbody>
+<tr><td>Usage report to <code>report.ferropulse.eu</code></td><td>on</td><td>instance id, version, commit, specification profile, licence grant type, deployment method, uptime, database health, PostgreSQL major version, CPU and memory ranges, and daily performance aggregates (<a href="../usage-report.html#what-a-report-contains">fields</a>)</td><td>Not part of the clinical purpose: it serves the manufacturer’s view of which versions, licence types and deployment sizes run. It carries no health data and no data from a request; the collector refuses an unknown member; the body is at most 64 KiB; <code>ferroehr usage-report --print</code> shows it before it is sent; one switch turns it off. Cadasto B.V. decided on 2026-10-06 to keep it on by default and accepts the residual risk, after an adjudication that read ePrivacy Art. 5(3) as requiring prior consent (<a href="../usage-report.html#privacy-notice">privacy notice</a>)</td></tr>
+<tr><td>OIDC discovery and keys from the configured issuer</td><td>when OIDC is configured</td><td>the issuer’s well-known URL; no request data</td><td>verifying the tokens the provider’s identity provider issues</td></tr>
+<tr><td>Remote policy decision point (<code>[authz.abac.remote]</code>)</td><td>off</td><td>the attributes of the request being decided</td><td>the authorisation decision the deployment delegates to its own policy service</td></tr>
+<tr><td>Terminology server (<code>[terminology.external]</code>)</td><td>off</td><td>codes and value-set references to validate, expand or subsume</td><td>validating terminology bindings on write and expanding <code>TERMINOLOGY()</code> in AQL</td></tr>
+<tr><td>Change events over AMQP (<code>[events]</code>)</td><td>off</td><td>commit notifications, free of PHI by default</td><td>telling the provider’s other systems that a record changed</td></tr>
+<tr><td>Multimedia to S3 (<code>[multimedia]</code>)</td><td>off</td><td><code>DV_MULTIMEDIA</code> bytes above a size threshold, keyed by content hash</td><td>storing large attachments of the record outside the database</td></tr>
+<tr><td>Access log to syslog (<code>[audit.syslog]</code>) and to a FHIR feed (<code>[audit.fhir_feed]</code>)</td><td>off</td><td>access records</td><td>an off-box copy of the access log, which the threat model asks for</td></tr>
+<tr><td>Traces and metrics over OTLP (<code>telemetry.otlp_endpoint</code>)</td><td>off</td><td>spans and metrics, with identified data sanitised out</td><td>operating the instance</td></tr>
+</tbody>
+</table>
+</div>
+<p>Each integration except the usage report carries only what its purpose in the
+provider’s deployment needs, and only to a destination the deploying
+organisation configures.</p>
+<h2 id="annex-i-part-ii-vulnerability-handling"><a class="header" href="#annex-i-part-ii-vulnerability-handling">Annex I Part II: vulnerability handling</a></h2>
+<p>Part II binds Cadasto B.V. These are processes, carried out partly through the
+repository’s tooling; none is a property of the software a deployment runs.
+The manufacturer’s policy is the same for every FerroHEALTH product and is
+published in the FerroHEALTH book
+(<a href="https://ferrohealth.eu/docs/security.html">security</a>,
+<a href="https://ferrohealth.eu/docs/post-market.html">post-market</a>); the steps bound
+to FerroEHR’s repository are <code>docs/post-market.md</code>.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Point</th><th>How the manufacturer applies it</th><th>Status</th><th>Tracker</th></tr>
+</thead>
+<tbody>
+<tr><td>(1) Identify components; SBOM</td><td>an SBOM per published artefact: CycloneDX of the cargo graph per binary, SPDX per image, SPDX of the repository, CycloneDX per <code>openehr-*</code> crate attested against its <code>.crate</code> archive, and CycloneDX per chart version naming its images by digest, explained in <a href="../verifying-releases.html#the-sboms-one-per-published-artefact">the SBOMs</a>; vulnerabilities in VEX, <code>deny.toml</code>, the changelog and each release’s exploitability record</td><td>met</td><td>shipped, #3643</td></tr>
+<tr><td>(2) Remediate without delay; security updates apart from functionality</td><td>acknowledgement in 5 and assessment in 10 working days; a fix ships as a security-only patch unless the release notes record why that is infeasible (the FerroHEALTH security policy, linked from <code>SECURITY.md</code>)</td><td>met as policy from this change on</td><td>shipped, #3644</td></tr>
+<tr><td>(3) Regular security tests and reviews</td><td>daily fuzzing of seven parsers, CodeQL, OpenSSF Scorecard, clippy with the reliability lints, <code>cargo deny</code>, image scans, conformance runs, the deploy probe</td><td>met</td><td>none</td></tr>
+<tr><td>(4) Disclose fixed vulnerabilities</td><td>a GitHub security advisory for every fixed vulnerability, with CVSS, affected and fixed versions and remediation, and the criteria for a delay (the FerroHEALTH security policy, <code>SECURITY.md</code>, <code>docs/post-market.md</code>); no advisory has been published yet</td><td>partial: the commitment is written, the record starts with the next fix</td><td>shipped, #3645</td></tr>
+<tr><td>(5) Coordinated vulnerability disclosure</td><td>the FerroHEALTH security policy, with FerroEHR’s reporting routes and scope in <code>SECURITY.md</code> and <code>security.txt</code></td><td>met</td><td>none</td></tr>
+<tr><td>(6) Share vulnerability information; a contact address</td><td>GitHub private reporting and <code>info@cadasto.com</code>; component vulnerabilities reported upstream and recorded in a register</td><td>met as policy from this change on</td><td>shipped, #3646, #3648</td></tr>
+<tr><td>(7) Distribute updates securely</td><td>provenance, attestations, signed tags, immutable releases, digest-pinned and scanned images, crates.io Trusted Publishing; the automatic limb does not apply (<a href="#automatic-security-updates-annex-i-part-i2c-and-part-ii7">above</a>)</td><td>met</td><td>none</td></tr>
+<tr><td>(8) Disseminate updates without delay, free of charge, with advisories</td><td>public, immutable releases and moving tags; advisories under (4); whether “free of charge” holds for every commercial licence is a point for counsel</td><td>partial</td><td>shipped, #3645; counsel’s answer open, #3647</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="security-relevant-paths"><a class="header" href="#security-relevant-paths">Security-relevant paths</a></h2>
+<p>These are the paths of the repository that hold an asset or a control of the
+register above. A release that changes any of them since the previous release
+is refused unless this page gains a row in its Revisions table:
+<code>scripts/checks/cra-risk-assessment.sh --since &lt;previous tag&gt;</code> runs in the
+release lane, and the same script refuses a declared path that no longer
+exists, so the list cannot rot. CRA Art. 13(14) asks for procedures that keep
+each product of a series in conformity as its design changes.</p>
+<!-- security-relevant-paths:start -->
+<ul>
+<li><code>app/ferroehr-rest/src/extensions/access</code> authentication and the RBAC/ABAC enforcement point</li>
+<li><code>app/ferroehr-rest/src/smart</code> SMART scope enforcement</li>
+<li><code>app/ferroehr/src/config/auth.rs</code> the authentication configuration</li>
+<li><code>app/ferroehr/src/config/authz.rs</code> the authorization configuration</li>
+<li><code>app/ferroehr/src/config/deployment.rs</code> the deployment profiles and their refusals</li>
+<li><code>app/ferroehr/src/system_log</code> the access log and the audit chain</li>
+<li><code>app/ferroehr-rest/src/system_log</code> the audit middleware</li>
+<li><code>app/ferroehr/migrations/audit</code> the audit store</li>
+<li><code>app/ferroehr/src/versioning/signature</code> version signing</li>
+<li><code>app/ferroehr/src/versioning/integrity.rs</code> the integrity check of stored versions</li>
+<li><code>app/ferroehr/src/privacy</code> the pseudonymisation boundary</li>
+<li><code>app/ferroehr/src/decommission.rs</code> the erase of all data and settings</li>
+<li><code>docker/Dockerfile</code> the server image</li>
+<li><code>docker/viewer/Dockerfile</code> the viewer image</li>
+<li><code>docker/postgres/Dockerfile</code> the database image</li>
+<li><code>deploy/helm/ferroehr/templates</code> the chart’s security contexts and policies</li>
+<li><code>deploy/helm/ferroehr/values.yaml</code> the chart’s shipped defaults</li>
+</ul>
+<!-- security-relevant-paths:end -->
+<h2 id="revisions"><a class="header" href="#revisions">Revisions</a></h2>
+<p>CRA Art. 13(3) has the assessment “updated as appropriate during a support
+period”, and Art. 13(7) has the manufacturer update it “where applicable” as
+vulnerabilities and third-party information arrive. It is revised:</p>
+<ul>
+<li>with every release whose changes touch an asset or a control in the register
+(the <a href="#security-relevant-paths">security-relevant paths</a>, gated at release,
+#3649);</li>
+<li>when a vulnerability or an incident shows a risk the register does not name;</li>
+<li>when the <a href="intended-purpose.html">intended purpose</a> changes.</li>
+</ul>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Version</th><th>Date</th><th>Change</th></tr>
+</thead>
+<tbody>
+<tr><td>1</td><td>2026-10-06</td><td>First assessment, from the CRA Annex I audit of #3611</td></tr>
+<tr><td>2</td><td>2026-10-07</td><td>(a): the per-release exploitability record (#3636), the viewer image scanned before it is tagged (#3674) and every release binary and image binary built with <code>cargo auditable</code> (#3675); (b): the declared profile in the chart and the Compose files, the reasons for <code>sandbox</code> and the shipped defaults a production holder keeps, and the reset procedure (#3637); Part II(1): SBOMs for the crates and the chart (#3643); the declared security-relevant paths and their release gate (#3649); (m): the erase command and the decommissioning page (#3642); (e): a plaintext <code>amqp://</code> broker refused under <code>production</code> (#3676); (e): a plain <code>http://</code> audit FHIR feed and a multimedia store with <code>allow_http</code> refused under <code>production</code> (#3689); (b): the Helm reset run by the Kubernetes probe harness (#3677)</td></tr>
+<tr><td>3</td><td>2026-10-08</td><td>Part II: the manufacturer’s vulnerability-handling and post-market policy is cited from the FerroHEALTH book, where it moved for every FerroHEALTH product; the measures are unchanged (#3701)</td></tr>
+<tr><td>4</td><td>2026-10-08</td><td>Reviewed for release 4.3.6 against the security-relevant paths changed since 4.3.5: the outbound FHIR emitter and its AMQP flow are gone with the in-tree connector (#3080), so the outbound-flow table names change events alone on AMQP; (a): the <code>ferroehr-postgres</code> image drops GnuPG and <code>gosu</code>, and every operating-system finding of the three images carries an OpenVEX judgement in <code>security/vex/</code> (#3673)</td></tr>
+</tbody>
+</table>
+</div>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../compliance/intended-purpose.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../compliance/hazard-log.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../compliance/intended-purpose.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../compliance/hazard-log.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../theme/mermaid-eefea253.min.js"></script>
+        <script src="../theme/mermaid-init-ccf746f1.js"></script>
+        <script src="../theme/version-picker-dddf05c1.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

@@ -1,0 +1,690 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Secrets, detection &amp; response - FerroEHR Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        <!-- Content-Security-Policy as a <meta> element, because GitHub Pages serves
+             static files and cannot set response headers. A meta CSP is genuinely
+             weaker than the header: `frame-ancestors`, `report-uri` and `sandbox` are
+             IGNORED in meta form (w3c CSP3 §3.3), and it applies only after the parser
+             reaches it. It still stops an injected external script or an exfiltrating
+             `connect-src`, which is the realistic risk for a docs site, so it is worth
+             having while being honest that the site cannot carry the full header set —
+             documented on the security page. `unsafe-inline` is required: mdBook emits
+             inline theme/sidebar scripts and inline styles of its own. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <!-- Self-hosted KaTeX stylesheet (fonts under katex/fonts/) — the site
+             serves no external requests, so mdbook-katex runs with no-css = true
+             and the vendored sheet is linked here. Version 0.16.4, matching the
+             KaTeX the katex-rs renderer inside mdbook-katex bundles (its
+             KATEX-VERSION file); provenance in website/book/KATEX-PROVENANCE.md. -->
+        <link rel="stylesheet" href="../katex/katex.min.css">
+
+        <meta name="description" content="User documentation for FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../css/chrome-d279d366.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/custom-79743c4e.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "rust";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "../searchindex-291401ab.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-e0689922.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">FerroEHR Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/src/installation/hardening-detection-response.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="secrets-detection--response"><a class="header" href="#secrets-detection--response">Secrets, detection &amp; response</a></h1>
+<p>What this deployment’s Secrets actually contain, how to notice a compromise on a
+shell-less image, what to do when you have one, and where a managed control plane
+takes controls out of your hands.</p>
+<ul>
+<li><a href="#secrets-at-rest-and-what-ours-contain">Secrets at rest, and what ours contain</a></li>
+<li><a href="#runtime-detection-on-a-shell-less-image">Runtime detection on a shell-less image</a></li>
+<li><a href="#replica-deviation-and-the-outbound-inventory">Replica deviation and the outbound inventory</a></li>
+<li><a href="#breach-containment-and-rotating-credentials">Breach containment and rotating credentials</a>
+<ul>
+<li><a href="#rotating-each-credential">Rotating each credential</a></li>
+<li><a href="#rotating-the-version-signing-key">Rotating the version signing key</a></li>
+</ul>
+</li>
+<li><a href="#logging-two-streams-that-are-not-interchangeable">Logging: two streams that are not interchangeable</a></li>
+<li><a href="#on-a-managed-control-plane">On a managed control plane</a></li>
+</ul>
+<h2 id="secrets-at-rest-and-what-ours-contain"><a class="header" href="#secrets-at-rest-and-what-ours-contain">Secrets at rest, and what ours contain</a></h2>
+<p><strong>Operator’s:</strong> encryption at rest is an API-server flag
+(<code>--encryption-provider-config</code>), and <strong>Kubernetes does not encrypt Secrets by
+default</strong>. A <code>Secret</code> is base64-encoded, which is an encoding and not a
+protection: without that configuration, everything below sits readable in etcd,
+which is why <a href="hardening-cluster.html#etcd-and-what-our-secrets-contain">the etcd
+section</a> is the other half
+of this one.</p>
+<p><strong>The useful half is ours: exactly what this deployment’s Secrets contain</strong>, so
+you can judge the exposure rather than reading “secrets” generically.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Secret content</th><th>Present when</th><th>What it gets an attacker</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>The database DSN</strong></td><td>always</td><td><strong>direct read/write access to all patient data</strong>, bypassing the API, its authorization and its audit trail entirely</td></tr>
+<tr><td>A Basic user’s Argon2id hash</td><td><code>secrets.basicUserPasswordHashes</code></td><td>an offline cracking target, not a usable password</td></tr>
+<tr><td>The OIDC HMAC secret</td><td><code>secrets.authOidcHmacSecret</code> (HS256 development setups)</td><td>the ability to <strong>mint valid tokens</strong> for any user and role</td></tr>
+<tr><td>The version-signing passphrase (plus the PGP key via <code>config.files</code>)</td><td><code>config.signing.mode: pgp</code></td><td>the ability to forge version signatures, breaking the integrity guarantee</td></tr>
+<tr><td>A terminology <code>client_secret</code></td><td><code>secrets.terminologyOauth2ClientSecrets</code></td><td>access to that terminology server as this client</td></tr>
+<tr><td>The AMQP broker URL</td><td><code>secrets.eventsUrl</code></td><td>access to the change-event stream, which is PHI-free by design</td></tr>
+<tr><td>The audit repository URL</td><td><code>secrets.auditFhirFeedUrl</code></td><td>the ability to read or forge audit records at the repository</td></tr>
+<tr><td>S3 credentials</td><td><code>secrets.multimediaSecretAccessKey</code> (with <code>secrets.multimediaAccessKeyId</code>)</td><td>offloaded <code>DV_MULTIMEDIA</code> blobs, which <strong>are PHI</strong></td></tr>
+<tr><td>The viewer’s OIDC client secret</td><td><code>viewer.existingSecret</code>, when the viewer is enabled</td><td>the ability to impersonate the viewer at your identity provider</td></tr>
+</tbody>
+</table>
+</div>
+<p>The rendered <code>ferroehr.toml</code> itself is <strong>not</strong> in that list, and that is worth
+stating because it used to be: while a Basic user’s hash had nowhere secure to go,
+configuring one moved the whole configuration file into a Secret. Every credential
+the server models now has either a <code>*_file</code> sibling or a Secret-borne environment
+route, so no key takes that branch today; the chart keeps it only so that a
+secret key added upstream tomorrow fails safe instead of landing in a ConfigMap.</p>
+<p>The first row is the one that matters most, and it has a property worth naming:
+<strong>the DSN is a bearer credential.</strong> Any process that can read it can use it, from
+anywhere the database is reachable: there is no binding to the workload that was
+issued it. That is the same gap named under <a href="hardening-network-policy.html#service-mesh-a-recorded-decision">service
+mesh</a> (workload
+identity), reached from the other direction, and the mitigation is the same: a
+credential that is short-lived and issued to a workload identity rather than a
+long-lived password in an object.</p>
+<p><strong>Enable encryption at rest</strong> with an
+<a href="https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/"><code>EncryptionConfiguration</code></a>
+on every API server. Prefer a KMS provider over <code>aescbc</code>/<code>secretbox</code> with a local
+key: a key sitting in a file on the control-plane node is protected by the same
+boundary as the etcd data it encrypts. On a managed cluster this is usually one
+setting (envelope encryption with the provider’s KMS); check whether it is on,
+because it generally is not by default. Existing Secrets are only re-encrypted
+when rewritten, so follow the documented <code>kubectl get secrets --all-namespaces -o json | kubectl replace -f -</code> step, or the encryption applies to new writes only.</p>
+<p><strong>Or remove them from etcd entirely.</strong> Every secret this chart carries has a
+<code>*_file</code> route or an <code>existingSecret</code> route, so no code change is needed to source
+them from a secret manager:</p>
+<ul>
+<li><strong>A CSI driver</strong> (<a href="https://secrets-store-csi-driver.sigs.k8s.io/">Secrets Store CSI
+Driver</a> with the Vault, AWS,
+Azure or GCP provider) mounts the value as a file. Point <code>extraVolumes</code> and
+<code>extraVolumeMounts</code> at it and set the matching <code>*_file</code> configuration key;
+<code>config.auth.oidc.hmac_secret_file</code>, <code>config.signing.key_passphrase_file</code>,
+<code>config.multimedia.secret_access_key_file</code>, a terminology client’s
+<code>client_secret_file</code>. Nothing reaches a Kubernetes Secret at all.</li>
+<li><strong>An operator that syncs into a Secret</strong> (External Secrets Operator, Vault
+Agent Injector) still lands in etcd, so it buys rotation rather than removal:
+worth having, but pair it with encryption at rest.</li>
+<li><strong>The DSN</strong> is mounted too, from <code>database.existingSecret</code>, so a
+CSI-provided Secret carries it like any other. What a mount does <strong>not</strong> fix is
+that the DSN remains a <em>bearer</em> credential: cloud IAM database authentication is
+the route that removes the standing password (the DSN then carries a short-lived
+token), and <code>serviceAccount.annotations</code> exists for the IRSA or Workload
+Identity binding that needs.</li>
+<li><strong><code>config.audit.fhir_feed.url</code></strong> is the only credential-bearing key with no
+<code>*_file</code> sibling, so it is the one value still passed as an environment
+variable.</li>
+</ul>
+<p><strong>Finding exposed secrets</strong> is already covered in CI rather than left to an
+operator: Trivy’s <code>secret</code> scanner runs over the whole tree and over every
+published image, so a credential committed to the repository or baked into a layer
+fails a job. The deliberate development credentials were checked against it and are
+not flagged, so nothing is exempted to make it pass.</p>
+<p>The volume-versus-environment half of this control (mounting secrets as read-only
+files rather than passing them as environment variables) is
+<a href="kubernetes.html#secrets-and-mounted-config">covered on the Kubernetes page</a> and is
+already the chart’s behaviour for every secret whose configuration key has a
+<code>*_file</code> sibling.</p>
+<h2 id="runtime-detection-on-a-shell-less-image"><a class="header" href="#runtime-detection-on-a-shell-less-image">Runtime detection on a shell-less image</a></h2>
+<p><strong>Operator’s tooling</strong> (Falco, Tetragon, or a managed equivalent), but the signals
+are unusually high-confidence here, and that is what makes it worth more than a
+recommendation.</p>
+<p>The runtime image is <strong>distroless and shell-less</strong>. There is no <code>sh</code>, no <code>bash</code>,
+no <code>curl</code>, no package manager, and the container runs one process. So the usual
+heuristics stop being heuristics:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Signal</th><th>Why it is unambiguous for this image</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Any <code>execve</code> of anything other than <code>/usr/local/bin/ferroehr</code></strong></td><td>the image contains no other executable to run, so a second process means one arrived from outside</td></tr>
+<tr><td><strong>A shell process in the container</strong></td><td>impossible under normal operation; there is no shell in the filesystem</td></tr>
+<tr><td><strong>A write outside <code>/tmp</code></strong></td><td>the root filesystem is read-only and <code>/tmp</code> is the only declared writable mount</td></tr>
+<tr><td><strong>An outbound connection to anything not in the egress table</strong></td><td>the <a href="hardening-network-policy.html#egress-deny-by-default-and-what-it-breaks">inventory</a> is complete and small</td></tr>
+<tr><td><strong>Any attempt to load a kernel module, mount, or change namespaces</strong></td><td>the capability bounding set is empty, so these cannot succeed, but an <em>attempt</em> is still a signal</td></tr>
+</tbody>
+</table>
+</div>
+<p>A starter Falco rule set exploiting exactly that:</p>
+<pre><code class="language-yaml">- macro: ferroehr_container
+  condition: container.image.repository endswith "/ferroehr"
+
+- rule: FerroEHR unexpected process
+  desc: Any process other than the server binary in a shell-less image
+  condition: spawned_process and ferroehr_container and proc.exepath != "/usr/local/bin/ferroehr"
+  output: Unexpected process in FerroEHR container (proc=%proc.exepath parent=%proc.pname container=%container.id)
+  priority: CRITICAL
+
+- rule: FerroEHR write outside tmp
+  desc: The root filesystem is read-only; /tmp is the only writable mount
+  condition: open_write and ferroehr_container and not fd.name startswith "/tmp/"
+  output: Write outside /tmp in FerroEHR container (file=%fd.name proc=%proc.exepath container=%container.id)
+  priority: CRITICAL
+
+- rule: FerroEHR unexpected outbound connection
+  desc: Outbound to a destination outside the configured inventory
+  condition: &gt;
+    outbound and ferroehr_container and
+    not fd.sport in (53) and not fd.sport in (5432, 4317, 4318, 443, 5671, 5672, 6514)
+  output: Unexpected egress from FerroEHR container (dest=%fd.rip:%fd.rport proc=%proc.exepath)
+  priority: WARNING
+</code></pre>
+<p>Tune the port list to the destinations you actually enabled; the point of the
+third rule is that the list is short enough to be worth writing. The macro matches
+the viewer’s image too, whose only expected process is its own server binary.</p>
+<p><strong>What each layer sees, and cannot.</strong> The syscall layer sees process execution,
+file writes and raw connections (a compromise of the <em>container</em>) but it has no
+idea which patient’s record was read, because to it every request is bytes on an
+established socket. The <strong>ATNA audit trail</strong> sees exactly that: which subject
+accessed which EHR, through which operation, under which authenticated identity:
+but it is emitted <em>by</em> the application, so a compromise deep enough to control the
+process can stop or falsify it. They are complementary and neither substitutes:
+runtime detection is how you learn the process is not itself any more; the audit
+trail is how you answer what was accessed while it still was. Forwarding audit
+records <strong>off-box</strong> to an external repository (<code>config.audit.syslog</code>,
+<code>config.audit.fhir_feed</code>) is what keeps the second answer available after the
+first alarm.</p>
+<h2 id="replica-deviation-and-the-outbound-inventory"><a class="header" href="#replica-deviation-and-the-outbound-inventory">Replica deviation and the outbound inventory</a></h2>
+<p><strong>Operator’s practice, from material the server already publishes:</strong> which makes
+it more actionable here than the generic advice.</p>
+<p>Replicas of this Deployment are interchangeable: same image, same configuration,
+traffic distributed by the Service. So a metric that differs <em>per pod</em> is a signal,
+and the Prometheus surface is already per-pod (each pod is its own scrape target).
+Worth alerting on a divergence between pods rather than on an absolute value:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Comparison across pods</th><th>What a deviation suggests</th></tr>
+</thead>
+<tbody>
+<tr><td>request rate per pod</td><td>a load-balancing fault, or one pod being addressed directly, bypassing the Service</td></tr>
+<tr><td>error ratio (5xx over total) per pod</td><td>a pod-local fault: a broken database connection, an exhausted pool, a failing dependency one pod reaches and others do not</td></tr>
+<tr><td>tail latency per pod</td><td>a throttled pod (CPU limit), a noisy neighbour, or a degraded node</td></tr>
+<tr><td>authentication-failure rate per pod</td><td>credential stuffing aimed at one endpoint, or a token-validation path failing on one pod (an unreachable JWKS endpoint)</td></tr>
+<tr><td>resident memory slope per pod</td><td>a leak or an unbounded working set on one replica only</td></tr>
+<tr><td>database pool acquire-wait per pod</td><td>that pod’s pool is starved while others are not</td></tr>
+</tbody>
+</table>
+</div>
+<p>The management surface’s <code>prometheus</code> endpoint (opened with
+<code>config.management.endpoints.prometheus</code>) is the source, and
+<code>metrics.serviceMonitor.enabled</code> is how an operator-managed Prometheus discovers
+it. Two things worth knowing: the ATNA audit trail gives a second, independent
+view (an access pattern that deviates per pod is visible there at
+patient-and-operation granularity) and a pod that fails readiness leaves the
+Service, so “one pod has zero traffic” can mean it is unready rather than
+unreachable.</p>
+<p><strong>The outbound inventory</strong> the traffic half of this control asks for is the
+<a href="hardening-network-policy.html#egress-deny-by-default-and-what-it-breaks">egress table</a>,
+derived from the configuration tree. In the chart’s default posture, read from node
+conntrack on a running pod, the complete set is <strong>two destinations</strong>: TCP 5432 to
+the database and UDP 53 to cluster DNS. Nothing else. That is what makes a
+deny-by-default egress policy tractable: the base allowance is two rules, and
+every addition is a named, configured endpoint rather than an open range. Compare
+live traffic against the policy periodically: a connection the policy permits and
+nothing makes is a rule to remove.</p>
+<h2 id="breach-containment-and-rotating-credentials"><a class="header" href="#breach-containment-and-rotating-credentials">Breach containment and rotating credentials</a></h2>
+<p><strong>Scaling to zero is a clinical-safety decision, and it should be made before you
+need it.</strong> <code>kubectl scale deploy/ferroehr --replicas=0</code> is the Kubernetes-native
+containment action, and for this workload it means <strong>clinical access stops
+immediately</strong>: no reads, no commits, for everyone. That is the point during a
+breach, and it is also an outage of a system clinicians may be depending on at
+that moment. Decide in advance who is authorized to make that call.</p>
+<p>What scaling to zero <strong>does</strong>:</p>
+<ul>
+<li>stops all new requests, including whatever the attacker is doing through the API;</li>
+<li>leaves the database untouched: it is external, so its data, its contents and
+its own access controls are unaffected;</li>
+<li>preserves the pod’s evidence only <strong>partially</strong>: scaling to zero terminates the
+pods, so anything in memory is gone. To preserve a pod for forensics, cordon its
+node and remove the pod from the Service by editing its labels instead; the
+ReplicaSet then creates a replacement while the original keeps running,
+detached from traffic.</li>
+</ul>
+<p>What it does <strong>not</strong> do:</p>
+<ul>
+<li><strong>it does not undo committed data.</strong> openEHR change control is append-only, so a
+malicious commit is a new version, not an overwrite. The prior version is still
+there and still retrievable.</li>
+<li><strong>it does not stop an attacker who has the DSN.</strong> The database is reachable
+independently of these pods; a leaked DSN is used from anywhere the database
+admits, which is why rotating it (below), not scaling, is the containment
+action for that particular compromise.</li>
+<li><strong>it does not truncate the audit trail.</strong> Records already written to the local
+store, or already forwarded to an external repository, survive. Records still in
+the outbox at termination are drained during the grace period, so a scale-to-zero
+loses less than an abrupt kill; forwarding to an external repository
+(<code>config.audit.syslog</code>, <code>config.audit.fhir_feed</code>) is what makes the trail
+survive the pods entirely.</li>
+</ul>
+<h3 id="rotating-each-credential"><a class="header" href="#rotating-each-credential">Rotating each credential</a></h3>
+<p>Every secret except two is a mounted file, so rotation is: update the Secret, then
+<strong>restart the pods</strong>. The restart is not optional: configuration is read at boot,
+and Kubernetes propagating a new Secret into the volume does not make a running
+process re-read it:</p>
+<pre><code class="language-shell">kubectl -n ferroehr create secret generic ferroehr-db \
+  --from-literal=FERROEHR__DB__URL='postgres://…new…' --dry-run=client -o yaml \
+  | kubectl apply -f -
+kubectl -n ferroehr rollout restart deploy/ferroehr
+</code></pre>
+<p>(A rotation you make through <code>helm upgrade</code> needs no explicit restart: any change
+under <code>config</code>, <code>config.files</code> or <code>secrets</code> moves the <code>checksum/config</code> pod
+annotation and rolls the Deployment by itself.)</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Credential</th><th>Rotation</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>Database DSN</td><td>update the Secret, then <code>rollout restart</code></td><td>rotate the <strong>database</strong> password too, or the old one still works; <code>maxUnavailable: 0</code> keeps the old pods serving on the old credential until the new ones are ready, so grant both briefly or accept a gap</td></tr>
+<tr><td>OIDC HMAC secret</td><td>update, then restart</td><td>invalidates every token signed with the old secret; prefer JWKS or discovery, where the issuer rotates for you and no secret lives here</td></tr>
+<tr><td>Terminology <code>client_secret</code></td><td>update, then restart</td><td>rotate at the identity provider in the same window</td></tr>
+<tr><td>AMQP broker URLs</td><td>update, then restart</td><td>the credential is inside the URL</td></tr>
+<tr><td>S3 credentials</td><td>update, then restart</td><td>or remove them entirely with IRSA or Workload Identity</td></tr>
+<tr><td>Audit repository URL</td><td>update, then restart</td><td>still an environment value (no <code>*_file</code> sibling)</td></tr>
+<tr><td>Basic user password hash</td><td>update, then restart</td><td>rotate the password and re-hash at the OWASP Argon2id floor, which the server checks at boot</td></tr>
+<tr><td>Viewer OIDC client secret</td><td>update, then restart the viewer</td><td>rotate at the identity provider in the same window</td></tr>
+<tr><td><strong>Version signing key</strong></td><td><strong>read the next section first</strong></td><td>rotate the signing <em>subkey</em>, not the certificate</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="rotating-the-version-signing-key"><a class="header" href="#rotating-the-version-signing-key">Rotating the version signing key</a></h3>
+<p>In the default <code>digest</code> mode there is no key: the version signature is a hash of
+the canonical form, recomputed at read time. Nothing to rotate, and nothing
+breaks.</p>
+<p>In <code>pgp</code> mode there are two mechanisms, and the first is the one to reach for.</p>
+<p><strong>The ordinary path: rotate the signing subkey.</strong> OpenPGP is built for this. A
+certificate is a primary key plus its subkeys (<a href="https://www.rfc-editor.org/rfc/rfc9580.html">RFC 9580
+§10.1</a>), the primary key certifies
+while a subkey signs, and rotating means issuing a <em>new signing subkey</em> on the
+same certificate. The retired subkey stays in the certificate, so every version
+it signed keeps verifying, with no configuration change, no second key file,
+and no window where history is unreadable. It is also the only path that keeps
+the primary key’s identity intact; replacing a primary key discards everything
+that has ever been said about it.</p>
+<pre><code class="language-console"># add a fresh signing subkey to the existing certificate
+gpg --quick-add-key &lt;FINGERPRINT&gt; ed25519 sign 1y
+# revoke or expire the previous one, then re-export BOTH halves
+gpg --export-secret-keys --armor &lt;FINGERPRINT&gt; &gt; signing.asc
+</code></pre>
+<p>Update the mounted Secret and roll the pods. The server signs with the newest
+signing-capable subkey and verifies against every subkey the certificate carries,
+so the switch is invisible to readers.</p>
+<p><strong>The exception: a whole certificate is replaced.</strong> A compromised primary key,
+an organisational change, or migrating from a different signer means a genuinely
+new certificate, and then the old one must be retained, because a stored
+signature carries no key identifier and a version signature is an immutable
+committed fact that cannot be re-issued. Keep the retired <strong>public</strong> key:</p>
+<pre><code class="language-toml">[signing]
+mode = "pgp"
+key_path = "/etc/ferroehr/signing.asc"                  # the new certificate
+retired_key_paths = ["/etc/ferroehr/signing-2025.pub.asc"]   # public, verify-only
+</code></pre>
+<p>Under Helm these are <code>config.signing.key_path</code> and
+<code>config.signing.retired_key_paths</code>, with both files mounted through
+<code>config.files</code>.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>Retired entries are <strong>public</strong> keys, which is what makes the safety property
+structural rather than a promise: no secret key is loaded for them, so a
+retired certificate can verify and can never sign again. Verification does not
+become permissive either: a signature matching neither the active certificate
+nor any retired one still fails, and tampered content still fails.</p>
+</blockquote>
+<p>This is the same mechanism Debian uses for its archive: <code>debian-archive-keyring</code>
+ships current <em>and</em> retired keys so packages signed under an older key stay
+verifiable (<a href="https://ftp-master.debian.org/keys.html">Debian archive keys</a>).</p>
+<p><strong>What neither mechanism covers.</strong> Key <em>expiry</em> and <em>revocation</em> are a different
+problem: a strict verifier arguably should accept a signature made while the key
+was valid and reject one made after, and nothing in a detached signature proves
+<em>when</em> it was made. Solving that needs trusted timestamps (RFC 3161), the
+approach <a href="https://docs.sigstore.dev/about/security/">Sigstore</a> takes with
+short-lived keys and a timestamp authority. FerroEHR does not implement it, so
+treat an expired signing key as a certificate replacement and use
+<code>config.signing.retired_key_paths</code>.</p>
+<p>If you are mid-rotation and need reads to keep working before either mechanism
+is in place, <code>config.signing.verify_on_read: warn</code> downgrades a verification
+failure from a 5xx to a logged and metered event
+(<code>version_signature_invalid_total{verdict="pgp_invalid"}</code>). That is a deliberate,
+recorded reduction in an integrity guarantee, not a setting to leave on.</p>
+<h2 id="logging-two-streams-that-are-not-interchangeable"><a class="header" href="#logging-two-streams-that-are-not-interchangeable">Logging: two streams that are not interchangeable</a></h2>
+<p><strong>Container logging is ours, and already the right shape.</strong> The server writes to
+stdout and stderr and never to a file inside the container, which is both the
+<a href="https://kubernetes.io/docs/concepts/cluster-administration/logging/">Kubernetes logging
+architecture</a>’s
+expectation and a requirement of <code>readOnlyRootFilesystem: true</code>: there is nowhere
+to write a log file. Set <code>config.log.format: json</code> (the chart’s default) for a
+collector; <code>pretty</code> is for a terminal.</p>
+<p><strong>The distinction that matters, because getting it wrong loses the accountability
+record:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th>Application log</th><th>ATNA audit trail</th></tr>
+</thead>
+<tbody>
+<tr><td>Purpose</td><td>diagnostics: what the process is doing</td><td><strong>accountability</strong>: who accessed which patient’s record</td></tr>
+<tr><td>Destination</td><td>stdout/stderr → node → your collector</td><td>its own store in the database, plus optional forwarding to an external repository</td></tr>
+<tr><td>Format</td><td>JSON lines, ours</td><td>DICOM PS3.15 plus FHIR <code>AuditEvent</code> (IHE BALP), standardised</td></tr>
+<tr><td>Retrieval</td><td>your log tool</td><td>the ITI-81 FHIR <code>AuditEvent</code> search endpoint</td></tr>
+<tr><td>Retention</td><td>your collector’s policy</td><td><code>config.audit.store.retention_days</code> (<code>0</code> keeps forever)</td></tr>
+<tr><td>May it be sampled or dropped?</td><td><strong>yes</strong>, it is diagnostics</td><td><strong>no</strong></td></tr>
+</tbody>
+</table>
+</div>
+<blockquote class="blockquote-tag blockquote-tag-important">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v9.5A1.75 1.75 0 0 1 14.25 13H8.06l-2.573 2.573A1.458 1.458 0 0 1 3 14.543V13H1.75A1.75 1.75 0 0 1 0 11.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h6.5a.25.25 0 0 0 .25-.25v-9.5a.25.25 0 0 0-.25-.25Zm7 2.25v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 9a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Important</p>
+<p><strong>Do not treat the audit trail as “logs”.</strong> A collector configured to sample a
+noisy stream, or to drop under volume, is a reasonable policy for diagnostics and
+a compliance failure for the audit trail: it silently discards the record of who
+read which patient’s data. The two travel by different paths precisely so that
+one can be lossy: the audit trail does not go through stdout at all. If you also
+ship audit records to your log platform for convenience, that copy is a
+convenience, not the record.</p>
+</blockquote>
+<p>The audit trail’s own failure behaviour is configurable, and the default is worth
+knowing rather than inheriting: <strong><code>config.audit.fail_mode</code> defaults to <code>open</code></strong>, so
+an operation whose audit record cannot be written still proceeds, and the failure
+is metered rather than refused. <code>closed</code> answers <code>503</code> instead, the stronger
+compliance posture, and one that turns an audit outage into a clinical outage.
+Which is correct depends on whether your regulatory position can tolerate an
+unaudited access more or less than a refused one; it is a policy choice either way,
+and the shipped default chooses availability.</p>
+<p><strong>Cluster API audit logging is the operator’s.</strong> Enable it on the API server with
+an audit policy (<code>None</code> / <code>Metadata</code> / <code>Request</code> / <code>RequestResponse</code> per rule).
+<code>Metadata</code> for most resources with <code>Request</code>-level detail for Secret and RBAC
+changes is a reasonable starting shape. Two things worth alerting on specifically:
+<strong>authorization failures</strong> (<code>Forbidden</code> responses, a principal probing what it can
+reach), and any read of Secrets in this namespace by a principal that is not the
+kubelet, since that is what reading the DSN looks like from the API side.</p>
+<p><strong>Kubernetes <code>Events</code> are a third source</strong>, and distinct from both: they are the
+cluster’s account of what happened to your objects, they expire (typically an
+hour), and they are where this chart’s failures show up first:
+<code>Readiness probe failed: HTTP probe failed with statuscode: 503</code> when a dependency
+is down, <code>FailedCreate … violates PodSecurity "restricted:latest"</code> when a pod spec
+regresses under enforcement, <code>Unhealthy</code> and <code>Killing</code> during a rollout. Check
+<code>kubectl get events --sort-by=.lastTimestamp</code> before the application log when a pod
+will not start: the reason is usually there, and it is usually not in the log,
+because the container never ran.</p>
+<h2 id="on-a-managed-control-plane"><a class="header" href="#on-a-managed-control-plane">On a managed control plane</a></h2>
+<p>On EKS, GKE, AKS or an equivalent, <strong>several controls in this audit stop being
+yours</strong>: you cannot set API-server flags, reach etcd, or configure kubelet
+authentication. In exchange you inherit the provider’s defaults, which may be
+stronger or weaker than this sheet assumes, and which you should verify rather
+than assume.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Control</th><th>On a managed cluster</th></tr>
+</thead>
+<tbody>
+<tr><td>Host hardening, node OS patching</td><td>provider’s, though <strong>node images and upgrades are usually still yours to trigger</strong></td></tr>
+<tr><td>API-server flags, authorization mode</td><td>provider’s (RBAC is on by default everywhere mainstream)</td></tr>
+<tr><td>etcd access + encryption at rest</td><td>provider’s, but <strong>envelope encryption with your own KMS key is usually opt-in</strong>, and it is the control <a href="#secrets-at-rest-and-what-ours-contain">our Secrets need</a></td></tr>
+<tr><td>Kubelet authentication</td><td>provider’s</td></tr>
+<tr><td>Control-plane audit logging</td><td>provider’s to enable, <strong>often off or short-retention by default</strong>, and usually billed</td></tr>
+<tr><td>User namespaces (<code>hostUsers: false</code>)</td><td>depends on the <strong>node image’s</strong> runtime version, which is why the pod fails loudly rather than downgrading</td></tr>
+<tr><td>Pod Security Admission</td><td>yours (namespace labels)</td></tr>
+<tr><td>NetworkPolicy</td><td>yours to write; <strong>enforcement depends on the CNI</strong></td></tr>
+<tr><td>Everything the chart sets</td><td>unchanged: it is a workload</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Check the CNI before relying on the shipped NetworkPolicy.</strong> This is the item
+that varies most and fails most silently: a NetworkPolicy on a cluster whose
+network plugin does not enforce it is an object the API accepts, stores and
+displays, with no effect and no warning. Provider defaults differ, versions change
+them, and some require enabling enforcement at cluster creation, which cannot be
+changed afterwards on some platforms. Do not read your provider’s documentation
+and conclude; <strong>test it</strong>:</p>
+<pre><code class="language-shell">kubectl create namespace ferroehr-probe
+kubectl -n ferroehr-probe run probe --image=busybox:1.37 --restart=Never --command -- sleep 600
+kubectl -n ferroehr-probe exec probe -- nc -w3 -z &lt;ferroehr-pod-ip&gt; 5432   # must fail
+kubectl -n ferroehr-probe exec probe -- nc -w3 -z &lt;ferroehr-pod-ip&gt; 8080   # must succeed
+</code></pre>
+<p>If the first command succeeds, the policy is decoration and every claim in this
+section that rests on it is void for your cluster. This is also the reason the
+project’s own deployment probe harness declares NetworkPolicy enforcement as
+something it does <strong>not</strong> exercise: a green result on one cluster’s CNI would say
+nothing about yours.</p>
+<p>Provider audit tooling exists: for EKS,
+<a href="https://github.com/aws-samples/hardeneks">hardeneks</a> is the commonly cited one.
+<strong>We have not run it</strong>, so it is named as a starting point rather than a
+recommendation: treat its output as input to the same ownership question this
+section asks, not as a verdict.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../installation/hardening-network-policy.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../installation/from-source.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../installation/hardening-network-policy.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../installation/from-source.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../theme/mermaid-eefea253.min.js"></script>
+        <script src="../theme/mermaid-init-ccf746f1.js"></script>
+        <script src="../theme/version-picker-dddf05c1.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

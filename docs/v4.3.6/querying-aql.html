@@ -1,0 +1,746 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Querying with AQL - FerroEHR Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        <!-- Content-Security-Policy as a <meta> element, because GitHub Pages serves
+             static files and cannot set response headers. A meta CSP is genuinely
+             weaker than the header: `frame-ancestors`, `report-uri` and `sandbox` are
+             IGNORED in meta form (w3c CSP3 §3.3), and it applies only after the parser
+             reaches it. It still stops an injected external script or an exfiltrating
+             `connect-src`, which is the realistic risk for a docs site, so it is worth
+             having while being honest that the site cannot carry the full header set —
+             documented on the security page. `unsafe-inline` is required: mdBook emits
+             inline theme/sidebar scripts and inline styles of its own. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <!-- Self-hosted KaTeX stylesheet (fonts under katex/fonts/) — the site
+             serves no external requests, so mdbook-katex runs with no-css = true
+             and the vendored sheet is linked here. Version 0.16.4, matching the
+             KaTeX the katex-rs renderer inside mdbook-katex bundles (its
+             KATEX-VERSION file); provenance in website/book/KATEX-PROVENANCE.md. -->
+        <link rel="stylesheet" href="katex/katex.min.css">
+
+        <meta name="description" content="User documentation for FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-e96d0476.css">
+        <link rel="stylesheet" href="css/chrome-d279d366.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom-79743c4e.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "rust";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "searchindex-291401ab.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-e0689922.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">FerroEHR Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/src/querying-aql.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="querying-with-aql"><a class="header" href="#querying-with-aql">Querying with AQL</a></h1>
+<p>The <strong>Archetype Query Language (AQL 1.1)</strong> is how you read data out of FerroEHR.
+Instead of querying hidden database tables, you query the clinical model
+directly: you name the RM types and archetypes you want, express structural
+nesting with <code>CONTAINS</code>, and select values by their path within an archetype. The
+same query runs unchanged on any conformant openEHR system. This chapter is a
+practical walkthrough: the language, how to run queries over HTTP, parameters,
+stored queries, version scope, terminology, pagination and limits, and the
+supported feature envelope.</p>
+<ul>
+<li><a href="#the-shape-of-a-query">The shape of a query</a></li>
+<li><a href="#running-a-query-over-http">Running a query over HTTP</a>
+<ul>
+<li><a href="#scoping-to-an-ehr">Scoping to an EHR</a></li>
+</ul>
+</li>
+<li><a href="#the-result-set">The result set</a></li>
+<li><a href="#parameters">Parameters</a></li>
+<li><a href="#stored-queries">Stored queries</a></li>
+<li><a href="#cohort-queries-across-the-pseudonymisation-boundary">Cohort queries across the pseudonymisation boundary</a></li>
+<li><a href="#version-scope-latest_version-and-all_versions">Version scope: LATEST_VERSION and ALL_VERSIONS</a></li>
+<li><a href="#terminology-in-queries">Terminology in queries</a></li>
+<li><a href="#pagination-and-limits">Pagination and limits</a>
+<ul>
+<li><a href="#always-order-a-query-you-intend-to-page">Always order a query you intend to page</a></li>
+</ul>
+</li>
+<li><a href="#what-is-supported">What is supported</a>
+<ul>
+<li><a href="#what-is-refused-and-why">What is refused, and why</a></li>
+<li><a href="#the-specification-generation-is-an-acceptance-boundary">The specification generation is an acceptance boundary</a></li>
+</ul>
+</li>
+</ul>
+<h2 id="the-shape-of-a-query"><a class="header" href="#the-shape-of-a-query">The shape of a query</a></h2>
+<p>An AQL statement has the familiar <code>SELECT … FROM … WHERE … ORDER BY</code> skeleton,
+but the “tables” are RM types and the “columns” are archetype paths:</p>
+<pre><code class="language-text">SELECT
+    c/name/value AS composition_name,
+    o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude AS systolic
+FROM EHR e
+    CONTAINS COMPOSITION c
+        CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2]
+WHERE o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude &gt; 140
+ORDER BY systolic DESC
+</code></pre>
+<ul>
+<li><strong><code>FROM</code></strong> binds variables to RM types (<code>EHR e</code>, <code>COMPOSITION c</code>,
+<code>OBSERVATION o</code>). A type can be constrained by archetype id in square brackets
+(<code>OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2]</code>). Naming a
+<strong>parent</strong> archetype also returns data recorded under its specialisations, as
+openEHR requires: for ADL 1.4 identifiers the specialisation is the
+hyphen-extended concept (<code>…blood_pressure</code> matches <code>…blood_pressure-cuff</code>),
+and for ADL 2 identifiers (where the hyphen carries no such meaning) the
+lineage is read from the ADL 2 archetypes and templates you have uploaded, so
+the parent matches every stored specialisation of it whatever its concept is
+named. In both cases the major version is a hard boundary: <code>.v1</code> never matches
+<code>.v2</code> data.</li>
+<li><strong><code>CONTAINS</code></strong> expresses structural containment: “an EHR that contains a
+composition that contains a blood-pressure observation”. Chains can nest
+several deep, and combine with <code>AND</code>, <code>OR</code>, and <code>NOT</code>. Folder containment
+follows the RM’s reference model: <code>FOLDER f CONTAINS COMPOSITION c</code> matches
+the compositions a folder’s <code>items</code> reference, transitively over the
+folder’s sub-tree, and <code>FOLDER f1 CONTAINS FOLDER f2</code> matches strict
+sub-folders plus the folders of a versioned folder the <code>items</code> reference —
+one reference hop, so a chain of references is expressed by chaining
+<code>CONTAINS</code>. A pair the RM defines no containment relationship for (say
+<code>COMPOSITION CONTAINS COMPOSITION</code>) is refused with a typed error.</li>
+<li><strong><code>SELECT</code></strong> projects values by path. Paths use archetype node ids (<code>at0004</code>)
+and RM attribute names (<code>value/magnitude</code>); <code>AS</code> names a column.</li>
+<li><strong><code>WHERE</code></strong> filters on typed leaf values, with comparisons, <code>EXISTS</code>, <code>LIKE</code>,
+<code>MATCHES</code>, and boolean combinators. Comparisons over multi-valued paths use
+any-match semantics: when a path matches several nodes or several elements of
+a list attribute (<code>links</code>, <code>participations</code>, <code>identifiers</code>, …), the
+predicate holds if <strong>any</strong> matched value satisfies it (the AQL specification
+is silent here; any-match is this engine’s documented convention,
+deterministic and index-friendly). Projecting a path that crosses a
+list-valued attribute returns every match as one JSON array cell, and <code>null</code>
+where nothing matches.</li>
+<li><strong><code>ORDER BY</code></strong>, <strong><code>LIMIT</code></strong>, and <strong><code>OFFSET</code></strong> behave as you expect; quantities
+order by their openEHR magnitude semantics.</li>
+<li><strong>Date/time comparisons accept reduced precision</strong> on both sides: openEHR
+admits partial values (<code>2019</code>, <code>1985-06</code>), and the engine compares them by
+flooring to the first instant they contain (a partial date assumes the first
+month/day, a partial time assumes zero). A comparison value that is not an
+ISO 8601 date/time at all is refused with a 400.</li>
+</ul>
+<h2 id="running-a-query-over-http"><a class="header" href="#running-a-query-over-http">Running a query over HTTP</a></h2>
+<p>The query API lives under the base path at <code>/query/aql</code>. The simplest form is a
+<code>POST</code> with a JSON body:</p>
+<pre><code class="language-shell">curl -u ferroehr:ferroehr \
+  -H 'Content-Type: application/json' \
+  -d '{"q":"SELECT e/ehr_id/value FROM EHR e"}' \
+  http://localhost:8080/ferroehr/rest/openehr/v1/query/aql
+</code></pre>
+<p>The body fields are:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Field</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>q</code></td><td>The AQL text (<strong>required</strong>).</td></tr>
+<tr><td><code>offset</code></td><td>Rows to skip (default 0).</td></tr>
+<tr><td><code>fetch</code></td><td>Maximum rows to return.</td></tr>
+<tr><td><code>query_parameters</code></td><td>An object of named parameter values (see below).</td></tr>
+</tbody>
+</table>
+</div>
+<p>There is also a <code>GET /query/aql</code> form taking <code>q</code>, <code>offset</code>, <code>fetch</code>, an optional
+<code>ehr_id</code>, and <code>query_parameters</code> as query-string parameters, convenient for
+simple, cacheable reads.</p>
+<p><code>offset</code>, <code>fetch</code>, <code>ehr_id</code> and named parameters are accepted in the query string
+on the <code>POST</code> forms too. A value supplied in <strong>both</strong> the body and the URL must
+agree; a disagreement is a <strong>400 Bad Request</strong> rather than a silent choice
+between them.</p>
+<p>The query API is <strong>JSON only</strong> (<code>Accept: application/json</code>).</p>
+<h3 id="scoping-to-an-ehr"><a class="header" href="#scoping-to-an-ehr">Scoping to an EHR</a></h3>
+<p>You can restrict a query to one EHR without writing the constraint into the AQL:
+pass an <code>ehr_id</code> query-string parameter, or the <code>openehr-ehr-id</code> request header.
+Both forms work on <strong>every</strong> execution endpoint: ad-hoc and stored, <code>GET</code> and
+<code>POST</code> alike. (<code>openEHR-EHR-id</code> is the deprecated spelling of the same header and
+still resolves, HTTP header names being case-insensitive.)</p>
+<p>If a request carries <strong>both</strong> forms they must name the <strong>same</strong> EHR; a request
+whose parameter and header name <strong>different</strong> EHRs is self-contradictory and is
+rejected with a <strong>400 Bad Request</strong>. So is a request repeating the header with
+two different values. An empty header value counts as “not supplied” and
+conflicts with nothing.</p>
+<p>The id must exist: a <strong>malformed</strong> id is a <strong>400</strong>, and a well-formed id that
+matches <strong>no EHR</strong> is an honest <strong>404 Not Found</strong> rather than an empty result
+set, so a typo cannot masquerade as “no data”.</p>
+<h2 id="the-result-set"><a class="header" href="#the-result-set">The result set</a></h2>
+<p>A query returns a <code>RESULT_SET</code>: a description of the columns and an array of row
+tuples.</p>
+<pre><code class="language-json">{
+  "meta": {
+    "_type": "RESULTSET",
+    "_schema_version": "1.0.0",
+    "_created": "…",
+    "_executed_aql": "SELECT e/ehr_id/value FROM EHR e"
+  },
+  "q": "SELECT e/ehr_id/value FROM EHR e",
+  "columns": [
+    { "name": "#0", "path": "/ehr_id/value" }
+  ],
+  "rows": [
+    [ "7d44b88c-4199-4bad-9764-5da0e2a97441" ],
+    [ "b1e2c3d4-5678-90ab-cdef-1234567890ab" ]
+  ]
+}
+</code></pre>
+<p>Each entry in <code>columns</code> names the column (the <code>AS</code> alias, or <code>#&lt;index&gt;</code> when you
+did not alias it) and its <code>path</code>. Each row in <code>rows</code> is an array of cells, one
+per column in column order. A cell can be a scalar or a full RM object (for
+example <code>{"_type":"DV_TEXT","value":"Labs"}</code>) depending on what you selected. A
+stored-query execution additionally carries the query’s <code>name</code>.</p>
+<p>The <code>meta</code> block’s <code>_executed_aql</code> field is the AQL the server actually ran, with
+your named parameters substituted in as literals. Paste it straight back into an
+ad-hoc query when debugging a parameterised call. The top-level <code>q</code> keeps the
+text exactly as you submitted it, and <code>_created</code> stamps when this response was
+produced.</p>
+<p>Query responses carry a weak <strong><code>ETag</code></strong> that is a content digest of the result
+set: two runs returning identical results carry the identical tag, so a client
+can cheaply detect “nothing changed” between polls. The digest deliberately
+covers the query, the executed AQL, the columns and the rows, and <strong>not</strong> the
+per-response <code>_created</code> stamp, so an unchanged result does not mint a new tag
+every second.</p>
+<h2 id="parameters"><a class="header" href="#parameters">Parameters</a></h2>
+<p>Parameterise a query with named placeholders (a name preceded by a dollar sign)
+and supply the values in <code>query_parameters</code>. This is the safe way to inject
+values, with no string concatenation:</p>
+<pre><code class="language-shell">curl -u ferroehr:ferroehr -H 'Content-Type: application/json' -d '{
+  "q": "SELECT c FROM EHR e CONTAINS COMPOSITION c WHERE c/name/value = $name",
+  "query_parameters": { "name": "Vital signs" }
+}' http://localhost:8080/ferroehr/rest/openehr/v1/query/aql
+</code></pre>
+<p>On the URL, each parameter can also be its <strong>own query-string key</strong>, which is
+the form the openEHR request documentation shows and is usually easier to build
+by hand:</p>
+<pre><code class="language-shell">curl -u ferroehr:ferroehr --get \
+  --data-urlencode 'q=SELECT c FROM EHR e CONTAINS COMPOSITION c WHERE c/name/value = $name' \
+  --data-urlencode 'name=Vital signs' \
+  http://localhost:8080/ferroehr/rest/openehr/v1/query/aql
+</code></pre>
+<p>Three details about the URL form: the leading <code>$</code> is optional (<code>$name</code> and <code>name</code>
+bind the same parameter); a value that parses as a JSON scalar binds as that type
+(<code>36</code> as a number, <code>true</code> as a boolean) while everything else binds as text; and
+the reserved keys <code>q</code>, <code>offset</code>, <code>fetch</code>, <code>ehr_id</code> and <code>query_parameters</code> are
+request controls, never parameters. Where the same name appears both as its own
+key and inside <code>query_parameters</code>, the named key wins.</p>
+<h2 id="stored-queries"><a class="header" href="#stored-queries">Stored queries</a></h2>
+<p>You can register a query once, under a qualified name and version, and execute it
+by name later. Storing is done through the definition API with the AQL as a
+plain-text body; executing is done through the query API.</p>
+<pre><code class="language-shell"># Store a query as org.example::bp_over, version 1.0.0
+curl -u ferroehr:ferroehr -X PUT -i \
+  -H 'Content-Type: text/plain' \
+  --data-binary 'SELECT o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude FROM EHR e CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2]' \
+  http://localhost:8080/ferroehr/rest/openehr/v1/definition/query/org.example::bp_over/1.0.0
+
+# List and fetch stored queries
+curl -u ferroehr:ferroehr \
+  http://localhost:8080/ferroehr/rest/openehr/v1/definition/query/org.example::bp_over
+
+# Execute it
+curl -u ferroehr:ferroehr \
+  http://localhost:8080/ferroehr/rest/openehr/v1/query/org.example::bp_over/1.0.0
+</code></pre>
+<p><strong>Storing.</strong> Both store forms answer <strong>200 OK</strong> with an empty body and a
+<code>Location</code> header naming exactly the version that was written:</p>
+<ul>
+<li><code>PUT /definition/query/{name}/{version}</code> stores at that exact SemVer. The pair
+is immutable (re-storing an existing <code>(name, version)</code> is a <strong>409 Conflict</strong>,
+never an overwrite) and a partial or malformed version segment is a <strong>400</strong>.</li>
+<li><code>PUT /definition/query/{name}</code> (no version) stores or updates at the default
+version <code>1.0.0</code>.</li>
+</ul>
+<p>The body must be <code>text/plain</code>: declaring another media type is a <strong>415</strong>, and an
+absent <code>Content-Type</code> reads as the plain-text body. The AQL is parsed at store
+time, so a syntactically invalid query is rejected <strong>400</strong>; the server never
+stores a query it cannot execute. An optional <code>query_type</code> parameter names the
+formalism, default <code>AQL</code> (case-insensitive); anything else is rejected <strong>400</strong>
+with an honest “unsupported formalism” message rather than a misleading “invalid
+AQL”.</p>
+<p><strong>Naming.</strong> The qualified name is <code>[{namespace}::]{query-name}</code>, and the
+three-part <code>{namespace}::{formalism}::{query-name}</code> form is recognised as well.
+The namespace is optional: a bare name is stored under the assumed namespace
+<code>misc</code>, so <code>my_compositions</code> and <code>misc::my_compositions</code> are the same query and
+listings show the qualified form. Identity is case-insensitive while the casing
+you stored is preserved. The query-name <code>aql</code> is <strong>reserved</strong> (case-insensitive; it would collide with
+the ad-hoc <code>/query/aql</code> route) and is rejected with a
+<strong>400</strong>.</p>
+<p><strong>Reading and executing.</strong></p>
+<ul>
+<li><code>GET /definition/query/{name}</code> lists the queries under that name as a prefix
+pattern; <code>GET /definition/query</code> (no name at all) lists every stored query, a
+FerroEHR convenience, since the openEHR API defines only the named form.</li>
+<li><code>GET /definition/query/{name}/{version}</code> fetches one, by exact SemVer or by
+prefix (<code>1</code>, <code>1.0</code> → the highest matching stored version).</li>
+<li><code>GET|POST /query/{name}</code> executes the <strong>latest</strong> version;
+<code>GET|POST /query/{name}/{version}</code> executes that version, again by exact SemVer
+or prefix. Both take the same <code>offset</code>, <code>fetch</code>, <code>ehr_id</code> and named parameters
+as ad-hoc queries; a <code>POST</code> body of <code>{}</code> executes a parameterless stored query.</li>
+</ul>
+<p>Deleting a stored query is an admin operation; see
+<a href="operations-admin-apis.html">Admin &amp; messaging APIs</a>.</p>
+<h2 id="cohort-queries-across-the-pseudonymisation-boundary"><a class="header" href="#cohort-queries-across-the-pseudonymisation-boundary">Cohort queries across the pseudonymisation boundary</a></h2>
+<p>Some questions are about a population rather than a patient: the blood pressures
+of everyone in a city, the medication history of an age band, the readmissions
+of the people one organisation cares for. Answering them normally means someone
+producing a list of patient identifiers first, which is exactly the disclosure
+the split between clinical and demographic storage exists to avoid.</p>
+<p><code>POST /query/cohort</code> answers them without producing that list. It is a FerroEHR
+extension — no openEHR spec governs it: AQL is defined over the clinical domain
+and has no demographic source, and ITS-REST publishes an ad-hoc and a stored
+query and nothing else.</p>
+<p><strong>How it runs.</strong> Three steps, each on its own database credential:</p>
+<ol>
+<li>A predicate from the deployment’s allow-list selects <strong>parties</strong> in the
+demographic domain. It reads one archetype leaf and returns identifiers,
+nothing else — no name, address or national identifier leaves that domain.</li>
+<li>The linkage domain resolves those parties to the <strong>EHRs</strong> they are the
+subject of. Identifiers in, identifiers out.</li>
+<li>Your AQL runs on the clinical pool, scoped to exactly those EHRs.</li>
+</ol>
+<p>The three statements never meet. With <code>[storage.party] url</code> and <code>[storage.linkage] url</code>
+set, each pool authenticates as a role revoked from the other two, and the
+server refuses to boot if one can read across. You never receive a party
+identifier: the response carries what your AQL projected, plus counts.</p>
+<p><strong>The allow-list.</strong> A cohort predicate can only name something the deployment
+declared, under <code>[cohort.predicates]</code> — the surface is off until at least one is
+bound, and the route answers <code>404</code> until then. Five keys are bindable:
+<code>city</code>, <code>postcode_area</code>, <code>sex</code>, <code>age_band</code> and <code>organisation</code>. Each binding
+names the archetype of the leaf’s nearest archetyped ancestor, the leaf’s
+at-code, and how a value is matched. See
+<a href="installation/config-privacy.html#cohort">Privacy &amp; data minimisation</a> for the
+keys and their defaults.</p>
+<p><strong>Running one.</strong></p>
+<pre><code class="language-shell">curl -u ferroehr:ferroehr -X POST \
+  -H 'Content-Type: application/json' \
+  -d '{
+        "q": "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c",
+        "cohort": [{ "name": "city", "value": "Groningen" }],
+        "purpose": "secondary-use",
+        "fetch": 100
+      }' \
+  http://localhost:8080/ferroehr/rest/openehr/v1/query/cohort
+</code></pre>
+<p><code>q</code>, <code>offset</code>, <code>fetch</code> and <code>query_parameters</code> mean what they mean on the ad-hoc
+body. There is no <code>ehr_id</code>: the cohort <strong>is</strong> the scope, and supplying one is a
+<code>400</code>. Several <code>cohort</code> entries <strong>intersect</strong> — city <em>and</em> sex, not city <em>or</em>
+sex.</p>
+<p>The response is an ordinary <code>RESULT_SET</code> with one extra block:</p>
+<pre><code class="language-json">{
+  "meta": {
+    "_type": "RESULTSET",
+    "cohort": {
+      "size": 412,
+      "served_ehrs": 388,
+      "suppressed": false,
+      "definition": "9f2c…"
+    }
+  },
+  "rows": [["8849fd1e-…::local::1"]]
+}
+</code></pre>
+<p><code>size</code> is how many EHRs the cohort resolved to, <code>served_ehrs</code> how many the rows
+actually came from, and <code>definition</code> a SHA-256 digest of the predicate list —
+the cohort’s identity, carrying none of its values.</p>
+<p><strong>Small-cell suppression.</strong> A result set narrow enough to name one person
+re-identifies that person out of content you hold no individual entitlement to.
+When fewer EHRs are served than <code>cohort.small_cell_threshold</code> (default <code>5</code>), the
+rows are withheld and <code>suppressed</code> is <code>true</code>. The response says so rather than
+looking like an empty cohort: a caller who cannot tell the two apart will keep
+widening the predicate until the boundary leaks. Set the threshold to <code>0</code> to
+disable suppression.</p>
+<p><strong>The access record.</strong> Every execution — suppressed and failed ones included —
+records one <code>linkage</code>-domain access event naming the cohort by its digest, the
+purpose you declared, and how many EHRs were served. A crossing of this boundary
+that nobody can reconstruct afterwards is what the access log exists to prevent.
+The predicate values are never recorded: they <em>are</em> the cohort, and a trail
+carrying them would be a second copy of it.</p>
+<p><strong>Limits.</strong> A predicate matching more than <code>cohort.max_cohort_size</code> parties
+(default <code>100000</code>) is refused <code>422</code> rather than truncated — a silently shortened
+cohort is a wrong denominator with nothing on the wire to say so. An unbound
+predicate name, a malformed age band (the form is <code>&lt;min&gt;-&lt;max&gt;</code> whole years,
+both inclusive) or a request with no predicate at all is a <code>400</code>. An empty
+cohort runs no AQL and answers an empty result set.</p>
+<p><strong>Measured.</strong> The committed record <code>docs/benchmarks/cohort/record.json</code>
+in the repository (produced by the ignored <code>cohort_bench</code> test, not by the
+conformance instrument) measures the whole call, predicate to result set, over
+a corpus of 100 000 parties, each the subject of one EHR holding one
+composition, seeded through the service API, with the database in a local
+container. Selecting one composition path per EHR:</p>
+<p>{{#include ../generated/cohort-bench.md}}</p>
+<p>The difference between the statement times and the wall clock is result
+assembly and the access records. Both statements run on indexes (<code>idx_dem_node_archetype</code> on the demographic side, the current-version
+and EHR indexes on the clinical side); no sequential scan appears in any of the
+recorded plans. The record names the commit it was measured at; a re-run
+replaces it rather than appending.</p>
+<h2 id="version-scope-latest_version-and-all_versions"><a class="header" href="#version-scope-latest_version-and-all_versions">Version scope: LATEST_VERSION and ALL_VERSIONS</a></h2>
+<p>By default a query sees the <strong>latest</strong> version of each object. FerroEHR also
+supports querying the <strong>entire version history</strong>, a capability many CDRs lack.
+Wrap a source in <code>VERSION</code> and choose the scope:</p>
+<pre><code class="language-text">SELECT v/commit_audit/time_committed, c/name/value
+FROM EHR e
+    CONTAINS VERSION v[ALL_VERSIONS]
+        CONTAINS COMPOSITION c
+</code></pre>
+<p><code>LATEST_VERSION</code> (the default) reads only current trunk versions;
+<code>ALL_VERSIONS</code> reads across history (including branch versions, where a version
+tree has any) so you can see how a record changed over time. A version
+predicate on <code>commit_audit/time_committed</code> reads the trunk version current at
+that instant. The <code>VERSION</code> variable also exposes commit metadata: the audit, the
+committed time, and the version uid.</p>
+<h2 id="terminology-in-queries"><a class="header" href="#terminology-in-queries">Terminology in queries</a></h2>
+<p>Value filters can be backed by terminology in three ways:</p>
+<ul>
+<li><code>TERMINOLOGY('expand', …)</code> as (or inside) a <code>matches</code> operand expands a value
+set so a coded field matches any code in it, rather than listing codes by
+hand;</li>
+<li><code>TERMINOLOGY('validate'|'subsumes', …) = true</code> as a boolean condition
+evaluates a code-membership or subsumption test once per query;</li>
+<li>a terminology URI operand (<code>matches { terminology://… }</code>) expands the set the
+URI identifies.</li>
+</ul>
+<p>These require a terminology source; if external terminology is not configured,
+the in-process openEHR bundle is used. See
+<a href="beyond-core/terminology.html">Terminology servers</a> for wiring an external FHIR
+terminology server.</p>
+<p>Two rejections to expect here: only <code>expand</code> may stand as a <code>matches</code> operand
+(the other operations have no value-list meaning), and only <code>validate</code> and
+<code>subsumes</code> have boolean semantics, so <code>TERMINOLOGY('lookup', …) = true</code> is
+refused rather than guessed at. A value set the configured server does not know
+is a <strong>400</strong> naming it; a terminology server that fails mid-query is a <strong>500</strong>,
+kept distinct from a bad query on purpose.</p>
+<h2 id="pagination-and-limits"><a class="header" href="#pagination-and-limits">Pagination and limits</a></h2>
+<p>Combine <code>LIMIT</code>/<code>OFFSET</code> in the AQL with the <code>fetch</code>/<code>offset</code> request parameters
+to page through large result sets. Three bounds interact, and it is worth knowing
+which one you hit:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Bound</th><th>Where it comes from</th><th>Effect</th></tr>
+</thead>
+<tbody>
+<tr><td><code>LIMIT</code>/<code>OFFSET</code>, or <code>fetch</code>/<code>offset</code></td><td>your query or request</td><td>Exactly the window you asked for.</td></tr>
+<tr><td><a href="installation/config-integrations.html#query"><code>query.max_result_rows</code></a></td><td>server config, default <code>10000</code></td><td>The largest page one execution serves: the page of a query nothing else bounds, and the maximum a <code>LIMIT</code> or <code>fetch</code> may ask for. <code>0</code> means unbounded.</td></tr>
+<tr><td><a href="installation/config-integrations.html#query"><code>query.timeout_ms</code></a></td><td>server config, default <code>30000</code></td><td>Per-query database execution budget. <strong>On by default</strong>; <code>0</code> disables it.</td></tr>
+</tbody>
+</table>
+</div>
+<p>A query that exceeds the time budget returns <strong>408 Request Timeout</strong>; narrow it
+(add archetype constraints, an <code>ehr_id</code> scope, or a <code>WHERE</code> filter) rather than
+retrying it unchanged. A <code>LIMIT</code> or <code>fetch</code> larger than the row ceiling returns
+<strong>400 Bad Request</strong> naming the ceiling; the page is never silently shortened,
+because a client paging with its own <code>fetch</code> as the stride would skip rows
+without noticing. Page with <code>offset</code> and a <code>fetch</code> at or below the ceiling. A
+result that stops at the ceiling without either bound set is the default page:
+page explicitly to read past it.</p>
+<h3 id="always-order-a-query-you-intend-to-page"><a class="header" href="#always-order-a-query-you-intend-to-page">Always order a query you intend to page</a></h3>
+<p><code>OFFSET</code> skips rows of a result, and without <code>ORDER BY</code> a result has no defined
+row order. Two requests for consecutive pages can then repeat a row or miss one
+entirely, and nothing in the response says so. Give any query you page an
+<code>ORDER BY</code> on something unique, such as <code>c/uid/value</code>.</p>
+<p>Ordering also changes what paging costs, in the direction that helps you. An
+ordered query sorts the whole matched set to answer any page, so the first page
+already pays most of the work and a deep page costs little more than a shallow
+one. An unordered query skips rows one at a time, so its cost grows with the
+offset, from almost nothing on page one. Either way what dominates is how much
+your <code>FROM</code>/<code>CONTAINS</code> matched, not how deep you paged.</p>
+<p>One more reason to order a paged query, if the deployment runs attribute-based
+authorization: the authorization decision is made over every EHR and template
+the query would touch, not over the page it served, so that set is collected
+whatever the page size. An ordered query pays nothing extra for it, because it
+was producing the whole matched set anyway. An unordered page that looks cheap
+carries the whole collection on top of it. Narrow the query, and order it.</p>
+<blockquote class="blockquote-tag blockquote-tag-tip">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M8 1.5c-2.363 0-4 1.69-4 3.75 0 .984.424 1.625.984 2.304l.214.253c.223.264.47.556.673.848.284.411.537.896.621 1.49a.75.75 0 0 1-1.484.211c-.04-.282-.163-.547-.37-.847a8.456 8.456 0 0 0-.542-.68c-.084-.1-.173-.205-.268-.32C3.201 7.75 2.5 6.766 2.5 5.25 2.5 2.31 4.863 0 8 0s5.5 2.31 5.5 5.25c0 1.516-.701 2.5-1.328 3.259-.095.115-.184.22-.268.319-.207.245-.383.453-.541.681-.208.3-.33.565-.37.847a.751.751 0 0 1-1.485-.212c.084-.593.337-1.078.621-1.489.203-.292.45-.584.673-.848.075-.088.147-.173.213-.253.561-.679.985-1.32.985-2.304 0-2.06-1.637-3.75-4-3.75ZM5.75 12h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1 0-1.5ZM6 15.25a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Z"></path></svg>Tip</p>
+<p>The more specific your <code>FROM</code>/<code>CONTAINS</code> (name the archetype, scope by
+<code>ehr_id</code>), the faster the query: those constraints map to indexed columns,
+while broad “everything that contains anything” queries do the most work.
+Repeated identical query text reuses a cached plan, so parameterising a
+recurring query beats rewriting its literals.</p>
+</blockquote>
+<h2 id="what-is-supported"><a class="header" href="#what-is-supported">What is supported</a></h2>
+<p>FerroEHR implements the core AQL 1.1 envelope and rejects out-of-envelope
+constructs with an explicit, typed error rather than silently returning wrong
+results. Supported today includes:</p>
+<ul>
+<li><code>SELECT</code> of paths, literals, aliases, <code>DISTINCT</code>, and the aggregates <code>COUNT</code>
+(including <code>COUNT(DISTINCT)</code>), <code>MIN</code>, <code>MAX</code>, <code>SUM</code>, <code>AVG</code>. <code>MIN</code> and <code>MAX</code>
+order their operand by type (a quantity by its openEHR magnitude, a date/time
+chronologically, text lexically) so they work over non-numeric leaves;</li>
+<li><code>FROM</code> over <code>EHR</code>, <code>VERSION</code> (<code>LATEST_VERSION</code> / <code>ALL_VERSIONS</code>), and the RM
+structure classes, with archetype and name predicates;</li>
+<li><code>CONTAINS</code> trees with <code>AND</code>, <code>OR</code>, and <code>NOT CONTAINS</code>;</li>
+<li><code>WHERE</code> comparisons on typed leaves (with openEHR magnitude ordering for
+quantities), <code>EXISTS</code>, <code>LIKE</code>, <code>MATCHES</code> value lists, and range predicates;</li>
+<li><code>ORDER BY</code> typed leaves, <code>LIMIT</code>/<code>OFFSET</code>, <code>TOP n</code>, named query parameters,
+and the <code>ehr_id</code>, <code>offset</code>, and <code>fetch</code> request parameters;</li>
+<li>the single-row functions: <code>LENGTH</code>, <code>SUBSTRING</code>, <code>POSITION</code>, the string
+<code>CONTAINS</code>, <code>CONCAT</code>/<code>CONCAT_WS</code>, <code>ABS</code>, <code>MOD</code>, <code>CEIL</code>, <code>FLOOR</code>, <code>ROUND</code>, and
+<code>CURRENT_DATE</code>/<code>CURRENT_TIME</code>/<code>CURRENT_DATE_TIME</code>/<code>NOW</code>/<code>CURRENT_TIMEZONE</code>;</li>
+<li>terminology-backed <code>TERMINOLOGY()</code> operands and terminology-URI <code>matches</code>
+operands (see above).</li>
+</ul>
+<h3 id="what-is-refused-and-why"><a class="header" href="#what-is-refused-and-why">What is refused, and why</a></h3>
+<p>Every refusal below is a typed error naming the construct, so you never get a
+silently incorrect answer:</p>
+<ul>
+<li><strong>Demographic sources.</strong> <code>FROM PARTY</code>/<code>ROLE</code>/<code>ACTOR</code> and the other demographic
+classes are out of the query engine’s scope; the demographic API serves them
+directly.</li>
+<li><strong><code>TOP … BACKWARD</code>.</strong> <code>TOP</code> is deprecated as of AQL 1.1.0 and the direction
+variant is not implemented; the error carries the specification’s own rewrite
+(<code>ORDER BY &lt;path&gt; DESC LIMIT n</code>). <code>TOP</code> and <code>LIMIT</code> in one query are also
+refused; pick one.</li>
+<li><strong>Regex and <code>OR</code> node predicates.</strong> <code>[{/…/}]</code> is archetype-definition syntax,
+not AQL value matching, and a disjunctive node predicate is outside the
+accepted subset.</li>
+<li><strong>Branch version addressing.</strong> A version predicate may address trunk versions;
+reading branch content is done by scoping <code>ALL_VERSIONS</code>, not by naming a
+branch.</li>
+<li><strong><code>SELECT DISTINCT</code> ordered by an unselected expression.</strong> De-duplication and
+sorting by something the projection dropped have no defined meaning together;
+sort by a selected column.</li>
+<li><strong>Analysis failures</strong>, which are precise: an unknown RM
+class or attribute, an unbound <code>$parameter</code>, a duplicate <code>FROM</code> variable name,
+<code>LIMIT 0</code>, a negative <code>OFFSET</code>, wrong function arity, <code>SUM</code>/<code>AVG</code> over a
+non-numeric path, and an <code>archetype_node_id</code> criterion that is neither an
+archetype identifier nor a node code. Variable names are case-insensitive, as
+the specification requires.</li>
+</ul>
+<h3 id="the-specification-generation-is-an-acceptance-boundary"><a class="header" href="#the-specification-generation-is-an-acceptance-boundary">The specification generation is an acceptance boundary</a></h3>
+<p>Which Reference Model classes and attributes a query may name depends on the
+deployment’s <a href="installation/configuration.html#spec_profile"><code>spec_profile</code></a>. On the
+default <code>development</code> profile the query surface is the full RM 1.2.0 model. On
+<code>stable</code> (RM 1.1.0), a <code>FROM</code> class or a path attribute that only a newer
+generation defines is refused with <strong>400 Bad Request</strong>, and the message names
+both the offending class or attribute and the active profile. A server of that
+generation would answer “unknown”, so returning rows instead would silently
+overclaim the profile the deployment advertises.</p>
+<p>Nothing else about querying changes with the profile: paths, predicates, and the
+result-set shape are identical.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="using-the-api/content-negotiation.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="templates-validation.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="using-the-api/content-negotiation.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="templates-validation.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-09f2665d.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="theme/mermaid-eefea253.min.js"></script>
+        <script src="theme/mermaid-init-ccf746f1.js"></script>
+        <script src="theme/version-picker-dddf05c1.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

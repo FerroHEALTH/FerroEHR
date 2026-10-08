@@ -1,0 +1,598 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>CRA information and instructions to the user - FerroEHR Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        <!-- Content-Security-Policy as a <meta> element, because GitHub Pages serves
+             static files and cannot set response headers. A meta CSP is genuinely
+             weaker than the header: `frame-ancestors`, `report-uri` and `sandbox` are
+             IGNORED in meta form (w3c CSP3 §3.3), and it applies only after the parser
+             reaches it. It still stops an injected external script or an exfiltrating
+             `connect-src`, which is the realistic risk for a docs site, so it is worth
+             having while being honest that the site cannot carry the full header set —
+             documented on the security page. `unsafe-inline` is required: mdBook emits
+             inline theme/sidebar scripts and inline styles of its own. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <!-- Self-hosted KaTeX stylesheet (fonts under katex/fonts/) — the site
+             serves no external requests, so mdbook-katex runs with no-css = true
+             and the vendored sheet is linked here. Version 0.16.4, matching the
+             KaTeX the katex-rs renderer inside mdbook-katex bundles (its
+             KATEX-VERSION file); provenance in website/book/KATEX-PROVENANCE.md. -->
+        <link rel="stylesheet" href="../katex/katex.min.css">
+
+        <meta name="description" content="User documentation for FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../css/chrome-d279d366.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/custom-79743c4e.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "rust";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "../searchindex-291401ab.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-e0689922.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">FerroEHR Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/src/compliance/cra-user-information.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="cra-information-and-instructions-to-the-user"><a class="header" href="#cra-information-and-instructions-to-the-user">CRA information and instructions to the user</a></h1>
+<p>The Cyber Resilience Act (CRA, Regulation (EU) 2024/2847) has each product
+“accompanied by the information and instructions to the user set out in Annex
+II, in paper or electronic form” (CRA Art. 13(18)). This page carries that
+information for FerroEHR, point by point in the order of Annex II. Each
+section quotes what the point asks and gives FerroEHR’s information for it,
+with the source the information is kept in.</p>
+<p>Annex II opens: “At minimum, the product with digital elements shall be
+accompanied by:”. The product is each tagged FerroEHR release, as Cadasto B.V.
+places it on the market: the <code>ferroehr</code> binaries, the <code>ferroehr</code>,
+<code>ferroehr-viewer</code> and <code>ferroehr-postgres</code> container images, the Helm chart and
+the source archive (<a href="cra.html#the-manufacturer-and-the-product">the manufacturer and the product</a>).</p>
+<ul>
+<li><a href="#which-copy-to-read">Which copy to read</a></li>
+<li><a href="#1-the-manufacturer">1. The manufacturer</a></li>
+<li><a href="#2-the-single-point-of-contact-for-vulnerabilities">2. The single point of contact for vulnerabilities</a></li>
+<li><a href="#3-name-type-and-unique-identification">3. Name, type and unique identification</a></li>
+<li><a href="#4-intended-purpose-security-environment-essential-functionalities-and-security-properties">4. Intended purpose, security environment, essential functionalities and security properties</a></li>
+<li><a href="#5-circumstances-that-may-lead-to-significant-cybersecurity-risks">5. Circumstances that may lead to significant cybersecurity risks</a></li>
+<li><a href="#6-the-eu-declaration-of-conformity">6. The EU declaration of conformity</a></li>
+<li><a href="#7-technical-security-support-and-the-end-of-the-support-period">7. Technical security support and the end of the support period</a></li>
+<li><a href="#8-detailed-instructions">8. Detailed instructions</a>
+<ul>
+<li><a href="#8a-secure-use-from-commissioning-on">8(a) Secure use from commissioning on</a></li>
+<li><a href="#8b-how-changes-to-the-product-can-affect-the-security-of-data">8(b) How changes to the product can affect the security of data</a></li>
+<li><a href="#8c-installing-security-relevant-updates">8(c) Installing security-relevant updates</a></li>
+<li><a href="#8d-secure-decommissioning-and-removing-user-data">8(d) Secure decommissioning, and removing user data</a></li>
+<li><a href="#8e-turning-off-automatic-installation-of-security-updates">8(e) Turning off automatic installation of security updates</a></li>
+<li><a href="#8f-information-for-an-integrator">8(f) Information for an integrator</a></li>
+</ul>
+</li>
+<li><a href="#9-the-software-bill-of-materials">9. The software bill of materials</a></li>
+<li><a href="#related">Related</a></li>
+</ul>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p>The quotations are from the Official Journal text vendored in the repository
+at
+<a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/law/eu/cra/text.html"><code>docs/law/eu/cra/text.html</code></a>
+(<a href="https://eur-lex.europa.eu/eli/reg/2024/2847/oj">EUR-Lex</a>). No conformity
+assessment has been carried out, no EU declaration of conformity exists and
+FerroEHR carries no CE marking. This page gives the information Annex II
+lists; it does not say that FerroEHR, or a deployment of it, meets the
+Regulation.</p>
+</blockquote>
+<h2 id="which-copy-to-read"><a class="header" href="#which-copy-to-read">Which copy to read</a></h2>
+<p>This book is frozen with every release, so the copy of this page that belongs
+to release <code>vX.Y.Z</code> is
+<code>https://ferroehr.eu/docs/vX.Y.Z/compliance/cra-user-information.html</code>. The
+notes of each GitHub release link that copy, and the release lane refuses to
+publish a release whose notes do not. The copy at <code>/docs/dev/</code> describes the
+code on <code>main</code>, which is not a release.</p>
+<p>CRA Art. 13(18) has information provided online kept “accessible,
+user-friendly and available online for at least 10 years after the product
+with digital elements has been placed on the market or for the support
+period, whichever is longer”. A frozen book version is never rebuilt or
+deleted, and each release tag, which carries the page’s source, is protected
+against deletion (<a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#repository-security-settings--the-posture-of-record"><code>SECURITY.md</code></a>).</p>
+<p>The information is written in English. Art. 13(18) asks for “a language which
+can be easily understood by users and market surveillance authorities”. No
+translation is published; a market surveillance authority that needs one asks
+the single point of contact below.</p>
+<h2 id="1-the-manufacturer"><a class="header" href="#1-the-manufacturer">1. The manufacturer</a></h2>
+<p>“the name, registered trade name or registered trademark of the manufacturer,
+and the postal address, the email address or other digital contact as well
+as, where available, the website at which the manufacturer can be contacted;”</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th></th></tr>
+</thead>
+<tbody>
+<tr><td>Manufacturer</td><td>Cadasto B.V.</td></tr>
+<tr><td>Postal address</td><td>Comeniusstraat 2d, 1817 MS Alkmaar, The Netherlands</td></tr>
+<tr><td>Email</td><td><a href="mailto:info@cadasto.com">info@cadasto.com</a></td></tr>
+<tr><td>Website</td><td><a href="https://www.cadasto.com/contact/">https://www.cadasto.com/contact/</a></td></tr>
+</tbody>
+</table>
+</div>
+<p>The source of these details is <code>app/ferroehr/src/manufacturer.rs</code>, the one
+place they are written in the code. The running server reads them from there
+for its startup banner, <code>ferroehr --version</code> and <code>GET /management/info</code>, the
+viewer shows them on every screen, and the container images carry them in the
+<code>eu.ferroehr.image.manufacturer</code> label
+(<a href="../operations.html#the-manufacturer-and-the-deployment-report">the manufacturer and the deployment report</a>).
+The <a href="information-sheet.html#a-the-manufacturer">information sheet</a> repeats them.
+Cadasto B.V. is the manufacturer of every FerroHEALTH product, and the
+FerroHEALTH book describes it once for all of them:
+<a href="https://ferrohealth.eu/docs/manufacturer.html">The manufacturer</a>.</p>
+<h2 id="2-the-single-point-of-contact-for-vulnerabilities"><a class="header" href="#2-the-single-point-of-contact-for-vulnerabilities">2. The single point of contact for vulnerabilities</a></h2>
+<p>“the single point of contact where information about vulnerabilities of the
+product with digital elements can be reported and received, and where the
+manufacturer’s policy on coordinated vulnerability disclosure can be found;”</p>
+<ul>
+<li><strong>Report a vulnerability</strong> to <a href="mailto:info@cadasto.com">info@cadasto.com</a>,
+with “FerroEHR vulnerability” in the subject, or through
+<a href="https://github.com/FerroHEALTH/FerroEHR/security/advisories/new">GitHub private vulnerability reporting</a>.
+Both reach the same people and the same procedure. Do not open a public
+issue.</li>
+<li><strong>Receive information about vulnerabilities</strong> from the GitHub security
+advisories of the repository, published with the release that fixes each
+one and readable by machine through
+<code>GET https://api.github.com/repos/FerroHEALTH/FerroEHR/security-advisories</code>.</li>
+<li><strong>The coordinated vulnerability disclosure policy</strong> is the manufacturer’s,
+shared by every FerroHEALTH product: the response times, the agreed
+disclosure date, the safe harbour, the credit and what each advisory
+carries are on
+<a href="https://ferrohealth.eu/docs/security.html">Security</a> in the FerroHEALTH
+book. What is particular to FerroEHR, the reporting routes and the scope, is
+<a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#reporting-a-vulnerability"><code>SECURITY.md</code> § Reporting a vulnerability</a>,
+also published as
+<a href="https://ferroehr.eu/.well-known/security.txt"><code>security.txt</code></a> under RFC 9116.</li>
+</ul>
+<h2 id="3-name-type-and-unique-identification"><a class="header" href="#3-name-type-and-unique-identification">3. Name, type and unique identification</a></h2>
+<p>“name and type and any additional information enabling the unique
+identification of the product with digital elements;”</p>
+<ul>
+<li><strong>Name:</strong> FerroEHR.</li>
+<li><strong>Type:</strong> software. A clinical data repository server that stores, versions
+and queries openEHR health records over the openEHR REST API and AQL.</li>
+<li><strong>Version:</strong> the release tag <code>vX.Y.Z</code>. The running server prints it in
+<code>ferroehr --version</code> and returns it as <code>server_version</code> on
+<code>GET /ferroehr/rest/status</code>; <code>ferroehr report</code> adds the commit and the build
+date (<a href="../installation/config-cli.html#ferroehr-report"><code>ferroehr report</code></a>).</li>
+<li><strong>The artefacts of a version:</strong> the release assets carry a checksum and a
+signed build provenance each, and the container images are identified by
+digest, with the version and the commit in their
+<code>org.opencontainers.image.version</code> and <code>org.opencontainers.image.revision</code>
+labels (<a href="../verifying-releases.html">verifying releases</a>).</li>
+<li><strong>Release date:</strong> the date on the release’s heading in the
+<a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/CHANGELOG.md">changelog</a>,
+<code>## [X.Y.Z] - YYYY-MM-DD</code>
+(<a href="information-sheet.html#b-name-version-and-release-date">information sheet, (b)</a>).</li>
+</ul>
+<h2 id="4-intended-purpose-security-environment-essential-functionalities-and-security-properties"><a class="header" href="#4-intended-purpose-security-environment-essential-functionalities-and-security-properties">4. Intended purpose, security environment, essential functionalities and security properties</a></h2>
+<p>“the intended purpose of the product with digital elements, including the
+security environment provided by the manufacturer, as well as the product’s
+essential functionalities and information about the security properties;”</p>
+<ul>
+<li><strong>Intended purpose:</strong> FerroEHR stores, versions and queries the structured
+health records of one healthcare provider, serves them to that provider’s
+clinical applications through the openEHR REST API and AQL, and records
+every access to them. FerroEHR’s part of the statement, with the data it is
+designed to process, is the <a href="intended-purpose.html">intended purpose</a>; the
+statement for the EHR system FerroEHR forms with FerroBRIDGE, with its
+users, is in the FerroHEALTH book
+(<a href="https://ferrohealth.eu/docs/ehds/intended-purpose.html">intended purpose</a>).</li>
+<li><strong>Security environment:</strong> what FerroEHR relies on and does not provide
+itself: TLS termination, an OpenID Connect identity provider, protection of
+the database, a hardened platform and off-box copies of the access log
+(<a href="intended-purpose.html#the-security-environment-ferroehr-assumes">the security environment FerroEHR assumes</a>).</li>
+<li><strong>Essential functionalities:</strong> listed in the intended-purpose statement
+(<a href="intended-purpose.html#what-ferroehr-is-for">what FerroEHR is for</a>).</li>
+<li><strong>Security properties:</strong> each point of CRA Annex I Part I(2), with how
+FerroEHR implements it and the evidence, is in the
+<a href="cra-risk-assessment.html#annex-i-part-i2-point-by-point">CRA risk assessment</a>.
+The controls themselves are described on <a href="../security.html">Security</a>, and the
+risk that remains at each trust boundary in the
+<a href="../threat-model.html">threat model</a>.</li>
+</ul>
+<h2 id="5-circumstances-that-may-lead-to-significant-cybersecurity-risks"><a class="header" href="#5-circumstances-that-may-lead-to-significant-cybersecurity-risks">5. Circumstances that may lead to significant cybersecurity risks</a></h2>
+<p>“any known or foreseeable circumstance, related to the use of the product with
+digital elements in accordance with its intended purpose or under conditions
+of reasonably foreseeable misuse, which may lead to significant cybersecurity
+risks;”</p>
+<ul>
+<li><strong>Use in accordance with the intended purpose:</strong> the risk register of the
+<a href="cra-risk-assessment.html#how-the-risks-were-analysed">CRA risk assessment</a>
+rates each risk with the shipped controls, and the
+<a href="instructions-for-use.html#limitations-you-should-know">limitations you should know</a>
+name the ones that matter before you rely on FerroEHR, among them the shipped
+defaults that favour a first boot and the reach of anyone with a database
+connection.</li>
+<li><strong>Reasonably foreseeable misuse:</strong> the
+<a href="intended-purpose.html#reasonably-foreseeable-use-and-misuse">foreseeable misuse table</a>
+lists each case (real patient data under the <code>sandbox</code> profile,
+authentication off, a plaintext listener, several organisations in one
+instance, a release run after its support period, and others), what
+FerroEHR does against it, and what remains.</li>
+<li><strong>What is not defended against:</strong> the
+<a href="../threat-model.html#what-is-explicitly-not-defended-against">threat model</a>
+lists it.</li>
+</ul>
+<h2 id="6-the-eu-declaration-of-conformity"><a class="header" href="#6-the-eu-declaration-of-conformity">6. The EU declaration of conformity</a></h2>
+<p>“where applicable, the internet address at which the EU declaration of
+conformity can be accessed;”</p>
+<p>No EU declaration of conformity has been drawn up, so there is no address to
+give. The declaration and the CE marking apply from 11 December 2027 (CRA
+Art. 71(2)). For FerroEHR, which Cadasto B.V. declares with FerroBRIDGE as an
+EHR system under the EHDS, the CRA asks for one declaration covering both
+acts (CRA Art. 28(3)). When it exists, it is published as an asset of each GitHub
+release it covers and as a page of the book frozen for that release, and this
+section gives its address. The record of the declaration is
+<a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/technical-documentation/annex-iii-6-declaration-of-conformity.md"><code>annex-iii-6-declaration-of-conformity.md</code></a>
+in the technical documentation.</p>
+<h2 id="7-technical-security-support-and-the-end-of-the-support-period"><a class="header" href="#7-technical-security-support-and-the-end-of-the-support-period">7. Technical security support and the end of the support period</a></h2>
+<p>“the type of technical security support offered by the manufacturer and the
+end-date of the support period during which users can expect vulnerabilities
+to be handled and to receive security updates;”</p>
+<ul>
+<li><strong>The support period</strong> of a release is five years from the month it is
+published. <strong>Its end date</strong>, month and year, is printed in the “Support
+period” section of that release’s notes, and the running server states it on
+its boot banner, in <code>ferroehr --version</code>, under <code>support</code> in
+<code>GET /management/info</code> and as <code>support.status</code> in
+<code>GET /ferroehr/rest/status</code>
+(<a href="../operations.html#how-long-the-version-you-pinned-is-supported">how long the version you pinned is supported</a>).</li>
+<li><strong>The type of support:</strong> Cadasto B.V. handles vulnerabilities in a release
+during its support period, and the security update ships in the newest
+release, as a security-only patch where that is technically feasible. There
+are no maintenance branches, no long-term-support line and no backports
+(CRA Art. 13(10)). Every fixed vulnerability gets a GitHub security advisory
+with its severity, the affected and fixed versions, and what to do.</li>
+<li><strong>The source:</strong>
+<a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions"><code>SECURITY.md</code> § Supported versions</a>,
+which also gives the periods of the Helm chart and the <code>openehr-*</code> crates,
+and the reasoning in the technical documentation
+(<a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/technical-documentation/cra-annex-vii-4-support-period.md"><code>cra-annex-vii-4-support-period.md</code></a>).</li>
+</ul>
+<h2 id="8-detailed-instructions"><a class="header" href="#8-detailed-instructions">8. Detailed instructions</a></h2>
+<p>“detailed instructions or an internet address referring to such detailed
+instructions and information on:”</p>
+<p>The detailed instructions are the <a href="instructions-for-use.html">instructions for use</a>
+of the same release, which this book carries and which ride each GitHub
+release as <code>ferroehr-vX.Y.Z-instructions-for-use.md</code>. Each point below names
+the part that answers it.</p>
+<h3 id="8a-secure-use-from-commissioning-on"><a class="header" href="#8a-secure-use-from-commissioning-on">8(a) Secure use from commissioning on</a></h3>
+<p>“the necessary measures during initial commissioning and throughout the
+lifetime of the product with digital elements to ensure its secure use;”</p>
+<ul>
+<li><strong>Commissioning:</strong> check what you pulled
+(<a href="../verifying-releases.html">verifying releases</a>), install
+(<a href="instructions-for-use.html#installing">installing</a>), set the deployment
+profile to <code>production</code> and configure the access log, authentication and the
+pseudonymisation boundary
+(<a href="instructions-for-use.html#configuring-a-deployment-in-the-european-union">configuring a deployment in the European Union</a>),
+then walk the <a href="../security/go-live-checklist.html">go-live checklist</a> before
+the instance holds real patient data.</li>
+<li><strong>Throughout its lifetime:</strong> the maintenance tasks and how often each falls
+due, from applying security updates to testing backups and acting on an
+access-log chain finding
+(<a href="instructions-for-use.html#maintenance-and-how-often">maintenance, and how often</a>).</li>
+</ul>
+<h3 id="8b-how-changes-to-the-product-can-affect-the-security-of-data"><a class="header" href="#8b-how-changes-to-the-product-can-affect-the-security-of-data">8(b) How changes to the product can affect the security of data</a></h3>
+<p>“how changes to the product with digital elements can affect the security of
+data;”</p>
+<ul>
+<li><strong>Configuration.</strong> The shipped defaults favour a first boot: the <code>sandbox</code>
+profile, TLS off, the open per-EHR access default and the access log failing
+open. The <code>production</code> profile refuses to start while one of the
+separations it checks is open and not accepted by name, and a gap you accept
+by name is stated on every boot and on <code>GET /management/status</code>
+(<a href="../installation/configuration.html#deployment_profile"><code>deployment_profile</code></a>).
+A configuration change that opens such a gap shows there.</li>
+<li><strong>Integrations.</strong> Every outbound integration is off by default. Turning one
+on sends data to another system, and the
+<a href="cra-risk-assessment.html#outbound-data-flows-annex-i-part-i2g">outbound data flows</a>
+table says what each one sends and where.</li>
+<li><strong>Upgrades.</strong> A release can carry database migrations. They are append-only,
+and a rolling upgrade stays compatible with the previous schema for the
+window in which both versions run; take a backup first
+(<a href="../operations.html#upgrades">upgrades</a>).</li>
+<li><strong>Changes to the source.</strong> A binary or image built from modified source is
+not a Cadasto B.V. release: its build provenance and signatures do not
+verify, and the risk assessment of the release does not describe it.
+Whether an organisation that modifies the source and puts the result into
+service becomes a manufacturer itself is a question for counsel
+(<a href="https://ferrohealth.eu/docs/cra.html">the CRA, the manufacturer side</a>).</li>
+</ul>
+<h3 id="8c-installing-security-relevant-updates"><a class="header" href="#8c-installing-security-relevant-updates">8(c) Installing security-relevant updates</a></h3>
+<p>“how security-relevant updates can be installed;”</p>
+<p>Subscribe to the release feed
+(<code>https://github.com/FerroHEALTH/FerroEHR/releases.atom</code>) and poll the
+security advisories; the server does not look for newer releases itself.
+Verify the new release (<a href="../verifying-releases.html">verifying releases</a>), take
+a backup, then deploy it by digest and let it apply its migrations
+(<a href="../operations.html#upgrades">upgrades</a>). On Kubernetes that is a
+<code>helm upgrade</code> to the chart version that ships the new release
+(<a href="../installation/kubernetes.html#upgrades">Kubernetes &amp; Helm, upgrades</a>).</p>
+<h3 id="8d-secure-decommissioning-and-removing-user-data"><a class="header" href="#8d-secure-decommissioning-and-removing-user-data">8(d) Secure decommissioning, and removing user data</a></h3>
+<p>“the secure decommissioning of the product with digital elements, including
+information on how user data can be securely removed;”</p>
+<p><a href="../operations-decommissioning.html">Decommissioning</a> takes an instance out of
+service: what to export and keep first, <code>ferroehr db erase</code> with its dry run
+and confirmation, which removes the multimedia blobs and every schema with all
+data and settings, and what the erase cannot reach and you remove yourself
+(backups, WAL archives, replicas, the chart’s Secrets and claims, the database
+roles, configuration files, the data held by systems the instance sent to, and
+the physical media). The command and the page are the deliverables of
+<a href="https://github.com/FerroHEALTH/FerroEHR/issues/3642">#3642</a>. To start again
+from an empty instance of the same release, follow
+<a href="../operations-reset.html">returning to the original state</a>.</p>
+<h3 id="8e-turning-off-automatic-installation-of-security-updates"><a class="header" href="#8e-turning-off-automatic-installation-of-security-updates">8(e) Turning off automatic installation of security updates</a></h3>
+<p>“how the default setting enabling the automatic installation of security
+updates, as required by Part I, point (2)(c), of Annex I, can be turned off;”</p>
+<p>FerroEHR installs no update by itself, so there is no such default setting to
+turn off. Annex I Part I(2)(c) asks for automatic security updates “where
+applicable”, and the risk assessment records why the limb does not apply to
+FerroEHR: it is a clinical server run under its operator’s change control, an
+upgrade can carry a database migration the operator schedules and backs up
+for, an update installed on the manufacturer’s schedule would restart the
+service at a moment no clinician or operator chose, and a channel into the
+deployment for the manufacturer would be an inbound path into a system holding
+special-category data
+(<a href="cra-risk-assessment.html#automatic-security-updates-annex-i-part-i2c-and-part-ii7">the justification</a>).
+The operator installs each update as described in 8(c).</p>
+<h3 id="8f-information-for-an-integrator"><a class="header" href="#8f-information-for-an-integrator">8(f) Information for an integrator</a></h3>
+<p>“where the product with digital elements is intended for integration into
+other products with digital elements, the information necessary for the
+integrator to comply with the essential cybersecurity requirements set out in
+Annex I and the documentation requirements set out in Annex VII.”</p>
+<p>The FerroEHR server, its images and its chart are not intended for
+integration into another product with digital elements. Other software
+connects to a running instance over the openEHR REST API, as FerroBRIDGE does.</p>
+<p>The nine <code>openehr-*</code> crates published on crates.io are libraries intended for
+integration into other products, and each is a product of its own. The
+information for their integrators is on
+<a href="../crates.html#information-for-integrators-cra-annex-ii-point-8f">Rust crates § Information for integrators</a>.</p>
+<h2 id="9-the-software-bill-of-materials"><a class="header" href="#9-the-software-bill-of-materials">9. The software bill of materials</a></h2>
+<p>“If the manufacturer decides to make available the software bill of materials
+to the user, information on where the software bill of materials can be
+accessed.”</p>
+<p>Cadasto B.V. makes the software bills of materials available. Each release
+publishes a CycloneDX SBOM per server binary, an SPDX SBOM of the source tree,
+an SBOM on each container image, a CycloneDX SBOM per <code>openehr-*</code> crate and an
+SBOM attested on the Helm chart. Where each one is and how to verify it is in
+<a href="../verifying-releases.html#the-sboms-one-per-published-artefact">the SBOMs, one per published artefact</a>.</p>
+<h2 id="related"><a class="header" href="#related">Related</a></h2>
+<ul>
+<li><a href="cra.html">Cyber Resilience Act</a>: the manufacturer, what applies from when,
+and the questions for counsel.</li>
+<li><a href="instructions-for-use.html">Instructions for use</a> and the
+<a href="information-sheet.html">information sheet</a>: the documents that accompany each
+release under the EHDS.</li>
+<li><a href="post-market.html">Complaints, incidents and vulnerabilities</a>: the reporting
+channels and procedures.</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../compliance/cra.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../compliance/post-market.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../compliance/cra.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../compliance/post-market.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../theme/mermaid-eefea253.min.js"></script>
+        <script src="../theme/mermaid-init-ccf746f1.js"></script>
+        <script src="../theme/version-picker-dddf05c1.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

@@ -1,0 +1,556 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Conformance - FerroEHR Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        <!-- Content-Security-Policy as a <meta> element, because GitHub Pages serves
+             static files and cannot set response headers. A meta CSP is genuinely
+             weaker than the header: `frame-ancestors`, `report-uri` and `sandbox` are
+             IGNORED in meta form (w3c CSP3 §3.3), and it applies only after the parser
+             reaches it. It still stops an injected external script or an exfiltrating
+             `connect-src`, which is the realistic risk for a docs site, so it is worth
+             having while being honest that the site cannot carry the full header set —
+             documented on the security page. `unsafe-inline` is required: mdBook emits
+             inline theme/sidebar scripts and inline styles of its own. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <!-- Self-hosted KaTeX stylesheet (fonts under katex/fonts/) — the site
+             serves no external requests, so mdbook-katex runs with no-css = true
+             and the vendored sheet is linked here. Version 0.16.4, matching the
+             KaTeX the katex-rs renderer inside mdbook-katex bundles (its
+             KATEX-VERSION file); provenance in website/book/KATEX-PROVENANCE.md. -->
+        <link rel="stylesheet" href="katex/katex.min.css">
+
+        <meta name="description" content="User documentation for FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-e96d0476.css">
+        <link rel="stylesheet" href="css/chrome-d279d366.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom-79743c4e.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "rust";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "searchindex-291401ab.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-e0689922.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">FerroEHR Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/src/conformance.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="conformance"><a class="header" href="#conformance">Conformance</a></h1>
+<p>FerroEHR makes a measured claim: it is an openEHR-spec-conformant Clinical Data
+Repository, and that claim is backed by a test run you can reproduce. This
+chapter explains what conformance means here, how to run the suite (against
+this server, against another CDR, or against any deployed endpoint you point it
+at) and how to read the artefacts it produces: the report, the
+statement, the certificate, and the cross-server comparison matrix.</p>
+<ul>
+<li><a href="#what-is-measured">What is measured</a></li>
+<li><a href="#the-current-result">The current result</a></li>
+<li><a href="#any-server-can-be-assessed">Any server can be assessed</a></li>
+<li><a href="#running-the-suite-yourself">Running the suite yourself</a>
+<ul>
+<li><a href="#the-postures-a-run-covers">The postures a run covers</a></li>
+</ul>
+</li>
+<li><a href="#reading-the-artefacts">Reading the artefacts</a>
+<ul>
+<li><a href="#the-machine-records">The machine records</a></li>
+<li><a href="#the-conformance-report">The conformance report</a></li>
+<li><a href="#the-conformance-statement">The conformance statement</a></li>
+<li><a href="#the-conformance-certificate">The conformance certificate</a></li>
+<li><a href="#the-comparison-matrix">The comparison matrix</a></li>
+</ul>
+</li>
+<li><a href="#what-conformance-does-not-cover">What conformance does not cover</a></li>
+</ul>
+<h2 id="what-is-measured"><a class="header" href="#what-is-measured">What is measured</a></h2>
+<p>Conformance is checked by <strong><a href="https://github.com/rubentalstra/Veredictum">Veredictum</a></strong>,
+an independent CNF 2.0 reference runner developed as its own project and
+consumed here at a pinned version. It is a data-driven
+interpreter over a committed, machine-readable catalogue authored from the openEHR
+Conformance framework itself: protocol-neutral case cores anchored on the official
+platform test schedule (case ids follow the schedule’s own naming, e.g.
+<code>I_EHR_SERVICE.create_ehr-main</code>), per-operation bindings mapping every outcome to
+its cited wire expectation, closed vocabularies for outcomes/selectors/captures, a
+provenance-stamped corpus (the official openEHR Robot data sets re-adjudicated to
+spec-text-only evidence), and a typed ambiguity register; a specification silence
+is never resolved privately. Every expectation traces to specification text, never
+to any server’s observed behaviour. The catalogue spans the schedule’s chapters:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Chapter</th><th>Scope</th></tr>
+</thead>
+<tbody>
+<tr><td>EHR / EHR_STATUS</td><td>EHR service and status operations</td></tr>
+<tr><td>COMPOSITION / CONTRIBUTION / DIRECTORY</td><td>Clinical content, change sets, folder trees</td></tr>
+<tr><td>DEFINITION</td><td>ADL 1.4 + ADL 2 template and stored-query provisioning</td></tr>
+<tr><td>QUERY</td><td>AQL query execution with committed result-set grounds</td></tr>
+<tr><td>CONTENT</td><td>Reference-Model and archetype-constraint accept/reject tables</td></tr>
+<tr><td>DEMOGRAPHIC / ADMIN / MESSAGING</td><td>Party, admin, and messaging services</td></tr>
+<tr><td>SYSTEM</td><td>The <code>OPTIONS</code> capability/conformance manifest</td></tr>
+<tr><td>SF</td><td>Simplified formats — FLAT and STRUCTURED commit/read, context, examples</td></tr>
+<tr><td>SEC / SIG</td><td>Authenticated access, authorization separation, audit accountability, and version signing in both depths</td></tr>
+<tr><td>SMART</td><td>SMART App Launch discovery and resource-scope enforcement</td></tr>
+<tr><td>PERF</td><td>The measured performance classes (<a href="performance.html">Performance</a>)</td></tr>
+</tbody>
+</table>
+</div>
+<p>The run is what turns cases into a claim. <strong>Verdicts are computed, never
+asserted</strong>: a pure function rolls per-case outcomes up through the
+capability→tier matrix from the CNF Profiles book into Core / Standard / Options /
+SEC-BASIC profile verdicts, honouring the party statement’s declared capabilities
+and option selections. A case whose wire does not exist on the technology profile,
+or whose ground a shared server cannot establish, is recorded as <em>not applicable
+with a machine-readable citation</em> rather than silently omitted.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>The runner publishes a JSON Schema for every artefact family it writes, so a
+consumer can validate a record without trusting the tool that produced it. The
+instrument is built from the currently pinned specifications (AQL 1.1.0,
+Terminology 3.1.0, ITS-REST 1.1.0, and the Reference Model generation the
+system under test runs, for FerroEHR the default <code>development</code> profile,
+RM 1.2.0; the composed stack takes the profile from configuration, so a
+<code>stable</code>-profile run is the same catalogue against the released generation).
+The upstream Robot suites are reference material; their official data fixtures
+enter the corpus only as provenance-stamped re-adjudications.</p>
+</blockquote>
+<h2 id="the-current-result"><a class="header" href="#the-current-result">The current result</a></h2>
+<p>The whole conformance story in one picture: every capability of the claims
+matrix, grouped by profile tier, colored AND glyph-marked by the evidence its
+cases produced (both charts are generated from the committed runner artefacts and
+regenerate-and-diff guarded in CI; no number on them is hand-typed):</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="conformance-assets/conformance-heat-grid.svg" alt="Capability conformance heat grid"><span class="img-wrapper"><img src="conformance-assets/conformance-heat-grid.svg" alt="Capability conformance heat grid"></span></label></p>
+<p>The same run broken down two levels deep: a header per schedule chapter with its
+total, then one bar per <strong>band</strong>, the surface a case actually exercises (EHR
+resource, EHR_STATUS, COMPOSITION, …), with the exact outcome counts printed
+beside every row. Every band the taxonomy declares is drawn, so one with no case
+for this run shows as an explicit <code>no cases</code> row rather than disappearing, and a
+hatched segment marks cited-N/A so it reads as neither a pass nor a failure:</p>
+<p><label class="checkbox-label"><input class="checkbox-img" type="checkbox"><img src="conformance-assets/conformance-chapter-bars.svg" alt="Schedule outcomes by chapter and band"><span class="img-wrapper"><img src="conformance-assets/conformance-chapter-bars.svg" alt="Schedule outcomes by chapter and band"></span></label></p>
+<p>The published run against FerroEHR reports:</p>
+<!-- Generated at build time from docs/conformance/ferroehr/results.json by
+     scripts/render/conformance-stats.sh — never hand-type numbers here (CI:
+     scripts/checks/conformance-numbers.sh). -->
+<p>{{#include ../generated/conformance-stats.md}}</p>
+<p>Cases that did not execute are not-applicable with a machine-readable citation (an
+unrealized wire on this technology profile, an undeclared option branch, or a
+ground a shared server cannot establish), never silent omissions. Options
+aggregates optional capabilities under the Profiles book’s “any passes” rule.</p>
+<h2 id="any-server-can-be-assessed"><a class="header" href="#any-server-can-be-assessed">Any server can be assessed</a></h2>
+<p>The runner is deliberately not tied to FerroEHR — it is a separate project with
+its own release line, so the instrument and the system it judges do not share a
+build. It assesses <strong>any openEHR CDR reachable over HTTP</strong> and emits the same
+artefact set for each system under test, into its own directory:</p>
+<ul>
+<li><strong>FerroEHR</strong> (the default): the composed stack built from the current sources.
+This is the project’s own gate: the committed artefacts are regenerated and
+diff-checked, so a change that moves a verdict cannot land quietly.</li>
+<li><strong>EHRbase:</strong> <code>CONF_SUT=ehrbase</code> composes the official <code>ehrbase/ehrbase</code> image
+(with its companion PostgreSQL) on fresh volumes and runs the same catalogue
+with EHRbase’s own committed party set. Its measured artefacts feed the
+<a href="comparison.html">comparison page</a>.</li>
+<li><strong>Bring your own endpoint:</strong> point the runner at any deployed CDR by URL and
+credentials, with its own party set: an <em>ixit</em> naming the instances and
+credential environment variables, and a <em>statement</em> (the ICS) declaring the
+capabilities and ambiguity-register options the vendor claims. Option branches
+the ICS does not declare are excused as not-applicable with a citation, in the
+ISO/IEC 9646 tradition of test selection. No code or adapter is needed; a
+target is a configuration entry.</li>
+</ul>
+<p>The ixit is also where a deployment declares the facts no openEHR operation
+exposes, each of which switches on the cases that depend on it:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Declaration</th><th>What it tells the runner</th></tr>
+</thead>
+<tbody>
+<tr><td><code>environment</code></td><td>The hardware, cores, memory, storage and topology a measured run happened on — mandatory for a performance run</td></tr>
+<tr><td><code>containers</code></td><td>The composed containers, enabling database-side attribution and deterministic maintenance settling</td></tr>
+<tr><td><code>system_id</code></td><td>The identifier the server stamps into commit audits and the version ids it mints</td></tr>
+<tr><td><code>dump_location</code></td><td>A path on the server’s own file system the admin dump/load operations may use</td></tr>
+<tr><td><code>signing</code></td><td>The version-signing mode the deployment realizes (digest or openPGP)</td></tr>
+<tr><td><code>smart</code></td><td>That the deployment runs the SMART resource-server role, and which test issuer it trusts</td></tr>
+<tr><td><code>terminology</code></td><td>The terminology query servers it is wired to, the namespaces each answers for, and what it does with a bound value set it cannot resolve</td></tr>
+</tbody>
+</table>
+</div>
+<p>A party that declares none of these has the dependent cases recorded
+not-applicable rather than checked against a guess.</p>
+<p>That silence has a cost, and the pipeline makes it visible before a run. The
+instrument’s ixit schema also defines parameters per instance (the
+<code>administrative</code> posture of a principal, an instance’s own <code>signing</code>,
+<code>terminology</code> or <code>spec_profile</code> when it differs from the party’s), and an
+absent one is undeclared, never a default: every case that requires it is
+guarded out. <code>scripts/checks/ixit-declarations.sh</code> reads that parameter set
+from the pinned schema itself and refuses to run the catalogue while an
+instance leaves one undeclared, unless <code>ixit-undeclared.json</code> beside the ixit
+records why that instance leaves it so (an unauthenticated instance has no
+principal to be administrative, for example). A pin bump that introduces a
+parameter therefore fails the pipeline until the party declares or adjudicates
+it, instead of quietly losing the cases it guards.</p>
+<h2 id="running-the-suite-yourself"><a class="header" href="#running-the-suite-yourself">Running the suite yourself</a></h2>
+<p>The suite runs against a real, deployed server (the same container image and
+stack a deployment uses) so the wire under test is always the production
+artefact, never a re-wired in-process stub. From a checkout with Docker
+available:</p>
+<pre><code class="language-bash"># our server, from the current sources (the default)
+bash scripts/conformance.sh
+
+# EHRbase, from the official images
+CONF_SUT=ehrbase bash scripts/conformance.sh
+
+# any deployed CDR, by URL (credentials via the SUT_* variables the
+# ixit references)
+CONF_SUT=byo CONF_BASE_URL=https://your-host/ferroehr/rest/openehr/v1 \
+  SUT_USER=user SUT_PASS=password bash scripts/conformance.sh
+</code></pre>
+<p>The script brings up the selected stack on fresh volumes (for <code>byo</code> it manages
+nothing), executes the committed catalogue, computes the verdicts through the pure
+pipeline, and writes the artefacts to <code>docs/conformance/&lt;sut-name&gt;/</code> before
+tearing the stack down.</p>
+<p>Useful knobs: a case-id filter as the first argument, <code>CONF_IXIT</code> /
+<code>CONF_STATEMENT</code> for a custom party set, <code>CONF_OUT</code> for a different artefact root,
+<code>CONF_NO_COMPOSE</code> to run against an already-deployed stack, <code>SKIP_BUILD</code> to
+compose a published image instead of building from source, and the runner’s own
+<code>verdicts</code> subcommand to recompute the documents from a previous <code>results.json</code>
+without re-running.</p>
+<h3 id="the-postures-a-run-covers"><a class="header" href="#the-postures-a-run-covers">The postures a run covers</a></h3>
+<p>Some behaviour exists only in a particular server configuration. Rather than
+splitting those into separate runs whose records would have to be merged by hand
+(which is exactly how a claim stops being reproducible) the pipeline brings up
+<strong>two deployments of the same image</strong> and covers both postures in the <strong>one</strong>
+committed record:</p>
+<ul>
+<li>the <strong>primary</strong> deployment runs the SMART resource-server role with fail-closed
+scopes and a trusted test issuer, digest version signing, and an external FHIR
+terminology server in the <strong>fail-open</strong> posture;</li>
+<li>a <strong>second</strong> deployment, in its own compose project on remapped ports, runs
+<strong>openPGP</strong> version signing and the <strong>fail-closed</strong> terminology posture.</li>
+</ul>
+<p>The reason is the same in both cases: a running server realizes exactly one
+signing depth and exactly one unresolvable-value-set behaviour, so testing both
+claims means running both deployments. The ixit declares the second one as its own
+instance, and the cases that check those properties address it by name.</p>
+<p>Two consequences worth knowing:</p>
+<ul>
+<li><strong>SMART is the standard posture.</strong> The SMART discovery
+document, the resource-scope grammar, and the fail-closed <code>403</code> are executable
+cases in the same record as everything else, driven by principals presenting
+minted Bearer tokens with the roles and resource scopes each case needs. The
+tokens are signed by a committed test issuer: public test key material for the
+harness, never usable for anything else. A system under test whose ixit declares
+no SMART block (EHRbase) records those cases not-applicable with the citation
+instead.</li>
+<li><strong>External terminology is part of the standard posture too.</strong> An archetype can
+constrain a coded element to a value set only an external terminology query
+server can resolve, so the pipeline composes a real FHIR R4B server beside the
+CDR, seeded with synthetic test code systems and value sets. That covers the
+terminology-routed surface — AQL <code>TERMINOLOGY()</code> resolved through the routed
+server, and commit-time validation of a bound value set, accepted for a member
+code and refused for a non-member. What a deployment does when the value set
+cannot be resolved <em>at all</em> is not decided by any openEHR text, so it is a
+declared posture rather than a verdict; both branches execute, one per
+deployment.</li>
+</ul>
+<p>A measured performance or stress run adds one more posture: rate limiting is
+turned off for the duration, because the instruments deliberately offer load past
+the server’s knee and a throttled request would measure the limiter instead of the
+server. Both instruments refuse to write a record if the server answered any
+<code>429</code>, so a measurement can never be silently limiter-shaped.</p>
+<h2 id="reading-the-artefacts"><a class="header" href="#reading-the-artefacts">Reading the artefacts</a></h2>
+<p>A run writes machine records and three human-readable documents to
+<code>docs/conformance/&lt;sut-name&gt;/</code>. Each has a distinct job.</p>
+<h3 id="the-machine-records"><a class="header" href="#the-machine-records">The machine records</a></h3>
+<p><code>results.json</code> is the party results record: one outcome per case with its
+rows-driven coverage, failing step and reason where applicable, and the excusing
+citation for every not-applicable entry, alongside the system-under-test identity,
+the runner’s verification-pack status, the technology profile, and the ixit
+digest. <code>verdicts.json</code> is the computed verdict report, and
+<code>run-exceptions.json</code> registers anything the interpreter itself could not cover.
+Every other artefact (the three documents, the badges, the charts) is generated
+from these; nothing downstream is hand-edited.</p>
+<h3 id="the-conformance-report"><a class="header" href="#the-conformance-report">The conformance report</a></h3>
+<p><code>CONFORMANCE_REPORT.md</code> is the honest, scoped record of <em>this run</em>: the system
+under test, the outcome counts, the per-capability evidence rollup, the
+machine-computed profile verdicts, and every not-applicable entry with its
+excusing citation. Read this when you want to know exactly what happened and why
+any case did not run.</p>
+<h3 id="the-conformance-statement"><a class="header" href="#the-conformance-statement">The conformance statement</a></h3>
+<p><code>CONFORMANCE_STATEMENT.md</code> is the concise, generated claim: the supported
+specification versions, the declared external data formats (JSON and XML), and the
+profile results. Every line is a pure function of the machine verdicts, so the
+statement can never claim more than the run proves.</p>
+<h3 id="the-conformance-certificate"><a class="header" href="#the-conformance-certificate">The conformance certificate</a></h3>
+<p><code>CONFORMANCE_CERTIFICATE.md</code> follows the structure of the openEHR conformance
+certificate template: the system under test, the scope of test, and a
+per-capability profile report showing which capabilities are required in each
+profile, what each was verified against, and whether each passed. The
+<strong>Realization</strong> column separates capabilities verified over released ITS-REST
+operations from any verified over routes a product serves of its own design — the
+latter never gate an openEHR profile tier. Where the certificate carries a
+measured run, its <strong>Workload Coverage</strong> table additionally shows which claimed
+capabilities the hospital-simulation load actually exercised; a capability the
+simulation does not reach must carry an adjudicated exclusion, printed with its
+reason, and the runner’s validation gate refuses an artefact tree that leaves such
+a row undecided. It is emitted for <strong>every</strong> assessed system — FerroEHR, EHRbase,
+or your own — and always identifies itself as a framework assessment with the
+claim computed from the attached run; it is never an official openEHR
+certification. This is the document to hand to a procurement or evaluation
+reviewer who wants the capability-by-capability picture.</p>
+<h3 id="the-comparison-matrix"><a class="header" href="#the-comparison-matrix">The comparison matrix</a></h3>
+<p>The multi-system record is fully generated from the two committed
+results/verdicts sets (ours and EHRbase’s): profile verdicts, the
+capability-by-capability evidence matrix, and failure tables in both directions:
+measured numbers only, no editorial adjustment, both directions always published.
+It renders as the <a href="comparison.html">comparison page</a>.</p>
+<blockquote class="blockquote-tag blockquote-tag-tip">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M8 1.5c-2.363 0-4 1.69-4 3.75 0 .984.424 1.625.984 2.304l.214.253c.223.264.47.556.673.848.284.411.537.896.621 1.49a.75.75 0 0 1-1.484.211c-.04-.282-.163-.547-.37-.847a8.456 8.456 0 0 0-.542-.68c-.084-.1-.173-.205-.268-.32C3.201 7.75 2.5 6.766 2.5 5.25 2.5 2.31 4.863 0 8 0s5.5 2.31 5.5 5.25c0 1.516-.701 2.5-1.328 3.259-.095.115-.184.22-.268.319-.207.245-.383.453-.541.681-.208.3-.33.565-.37.847a.751.751 0 0 1-1.485-.212c.084-.593.337-1.078.621-1.489.203-.292.45-.584.673-.848.075-.088.147-.173.213-.253.561-.679.985-1.32.985-2.304 0-2.06-1.637-3.75-4-3.75ZM5.75 12h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1 0-1.5ZM6 15.25a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Z"></path></svg>Tip</p>
+<p>The conformance badges in the project README are generated from the same run
+and carry the measured amounts (per-profile capability counts, the overall
+driven-case count, the earned performance class). A badge can never show a pass
+unless the machine verdict does, so a green badge is a claim you can
+immediately reproduce with <code>scripts/conformance.sh</code>.</p>
+</blockquote>
+<h2 id="what-conformance-does-not-cover"><a class="header" href="#what-conformance-does-not-cover">What conformance does not cover</a></h2>
+<p>The catalogue measures the openEHR platform surface, including the simplified
+(FLAT/STRUCTURED) formats chapter of the ITS-REST specification. It deliberately
+does not stand in for a performance benchmark: durations recorded during the
+functional run are telemetry only, and the measured classes own that claim
+(<a href="performance.html">Performance</a>).</p>
+<p>The other honest boundary is the gap between openEHR’s <em>service</em> model and its
+<em>released</em> REST wire. Several service operations were never surfaced as
+endpoints (listing an EHR’s contributions, counting stored templates or queries,
+deleting a template or a stored query) so a case that addresses one has no wire
+to drive on this technology profile. Those cases are excused through the
+schedule’s typed ambiguity register, with the citation printed in the report, and
+reported as an explicit scope exclusion on the certificate; never a silent pass
+and never an unavoidable failure. FerroEHR does serve routes of its own design
+for several of them (see
+<a href="operations-admin-apis.html">Admin &amp; messaging APIs</a> and the archetype routes in
+<a href="templates-validation.html">Templates &amp; validation</a>); those are marked
+<code>extension</code> on the certificate and never gate an openEHR profile tier.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="operations-decommissioning.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="performance.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="operations-decommissioning.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="performance.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-09f2665d.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="theme/mermaid-eefea253.min.js"></script>
+        <script src="theme/mermaid-init-ccf746f1.js"></script>
+        <script src="theme/version-picker-dddf05c1.js"></script>
+
+
+
+    </div>
+    </body>
+</html>
