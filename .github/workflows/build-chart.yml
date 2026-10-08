@@ -511,6 +511,9 @@ jobs:
           subject-name: ${{ env.CHART_REF }}
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
+          # No artifact-metadata storage record: the org uses no linked-artifacts
+          # view, and the record would need an artifact-metadata: write grant.
+          create-storage-record: false
 
       # Stored in GitHub's attestation store against the chart digest, NOT
       # pushed to the registry: GHCR serves no referrers API, so a third writer
