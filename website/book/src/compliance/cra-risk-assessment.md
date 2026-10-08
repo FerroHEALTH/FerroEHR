@@ -599,14 +599,19 @@ organisation configures.
 
 Part II binds Cadasto B.V. These are processes, carried out partly through the
 repository's tooling; none is a property of the software a deployment runs.
+The manufacturer's policy is the same for every FerroHEALTH product and is
+published in the FerroHEALTH book
+([security](https://ferrohealth.eu/docs/security.html),
+[post-market](https://ferrohealth.eu/docs/post-market.html)); the steps bound
+to FerroEHR's repository are `docs/post-market.md`.
 
 | Point | How the manufacturer applies it | Status | Tracker |
 |---|---|---|---|
 | (1) Identify components; SBOM | an SBOM per published artefact: CycloneDX of the cargo graph per binary, SPDX per image, SPDX of the repository, CycloneDX per `openehr-*` crate attested against its `.crate` archive, and CycloneDX per chart version naming its images by digest, explained in [the SBOMs](../verifying-releases.md#the-sboms-one-per-published-artefact); vulnerabilities in VEX, `deny.toml`, the changelog and each release's exploitability record | met | shipped, #3643 |
-| (2) Remediate without delay; security updates apart from functionality | acknowledgement in 5 and assessment in 10 working days; a fix ships as a security-only patch unless the release notes record why that is infeasible (`SECURITY.md`) | met as policy from this change on | shipped, #3644 |
+| (2) Remediate without delay; security updates apart from functionality | acknowledgement in 5 and assessment in 10 working days; a fix ships as a security-only patch unless the release notes record why that is infeasible (the FerroHEALTH security policy, linked from `SECURITY.md`) | met as policy from this change on | shipped, #3644 |
 | (3) Regular security tests and reviews | daily fuzzing of seven parsers, CodeQL, OpenSSF Scorecard, clippy with the reliability lints, `cargo deny`, image scans, conformance runs, the deploy probe | met | none |
-| (4) Disclose fixed vulnerabilities | a GitHub security advisory for every fixed vulnerability, with CVSS, affected and fixed versions and remediation, and the criteria for a delay (`SECURITY.md`, `docs/post-market.md`); no advisory has been published yet | partial: the commitment is written, the record starts with the next fix | shipped, #3645 |
-| (5) Coordinated vulnerability disclosure | `SECURITY.md` and `security.txt` | met | none |
+| (4) Disclose fixed vulnerabilities | a GitHub security advisory for every fixed vulnerability, with CVSS, affected and fixed versions and remediation, and the criteria for a delay (the FerroHEALTH security policy, `SECURITY.md`, `docs/post-market.md`); no advisory has been published yet | partial: the commitment is written, the record starts with the next fix | shipped, #3645 |
+| (5) Coordinated vulnerability disclosure | the FerroHEALTH security policy, with FerroEHR's reporting routes and scope in `SECURITY.md` and `security.txt` | met | none |
 | (6) Share vulnerability information; a contact address | GitHub private reporting and `info@cadasto.com`; component vulnerabilities reported upstream and recorded in a register | met as policy from this change on | shipped, #3646, #3648 |
 | (7) Distribute updates securely | provenance, attestations, signed tags, immutable releases, digest-pinned and scanned images, crates.io Trusted Publishing; the automatic limb does not apply ([above](#automatic-security-updates-annex-i-part-i2c-and-part-ii7)) | met | none |
 | (8) Disseminate updates without delay, free of charge, with advisories | public, immutable releases and moving tags; advisories under (4); whether "free of charge" holds for every commercial licence is a point for counsel | partial | shipped, #3645; counsel's answer open, #3647 |
@@ -657,3 +662,4 @@ vulnerabilities and third-party information arrive. It is revised:
 |---|---|---|
 | 1 | 2026-10-06 | First assessment, from the CRA Annex I audit of #3611 |
 | 2 | 2026-10-07 | (a): the per-release exploitability record (#3636), the viewer image scanned before it is tagged (#3674) and every release binary and image binary built with `cargo auditable` (#3675); (b): the declared profile in the chart and the Compose files, the reasons for `sandbox` and the shipped defaults a production holder keeps, and the reset procedure (#3637); Part II(1): SBOMs for the crates and the chart (#3643); the declared security-relevant paths and their release gate (#3649); (m): the erase command and the decommissioning page (#3642); (e): a plaintext `amqp://` broker refused under `production` (#3676); (e): a plain `http://` audit FHIR feed and a multimedia store with `allow_http` refused under `production` (#3689); (b): the Helm reset run by the Kubernetes probe harness (#3677) |
+| 3 | 2026-10-08 | Part II: the manufacturer's vulnerability-handling and post-market policy is cited from the FerroHEALTH book, where it moved for every FerroHEALTH product; the measures are unchanged (#3701) |

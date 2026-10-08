@@ -66,6 +66,9 @@ viewer shows them on every screen, and the container images carry them in the
 `eu.ferroehr.image.manufacturer` label
 ([the manufacturer and the deployment report](../operations.md#the-manufacturer-and-the-deployment-report)).
 The [information sheet](information-sheet.md#a-the-manufacturer) repeats them.
+Cadasto B.V. is the manufacturer of every FerroHEALTH product, and the
+FerroHEALTH book describes it once for all of them:
+[The manufacturer](https://ferrohealth.eu/docs/manufacturer.html).
 
 ## 2. The single point of contact for vulnerabilities
 
@@ -81,12 +84,15 @@ manufacturer's policy on coordinated vulnerability disclosure can be found;"
 - **Receive information about vulnerabilities** from the GitHub security
   advisories of the repository, published with the release that fixes each
   one and readable by machine through
-  `GET https://api.github.com/repos/FerroHEALTH/FerroEHR/security-advisories`
-  ([security advisories](post-market.md#security-advisories)).
-- **The coordinated vulnerability disclosure policy** is
-  [`SECURITY.md` § Reporting a vulnerability](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#reporting-a-vulnerability):
-  the response times, the agreed disclosure date, the safe harbour and the
-  credit. It is also published as
+  `GET https://api.github.com/repos/FerroHEALTH/FerroEHR/security-advisories`.
+- **The coordinated vulnerability disclosure policy** is the manufacturer's,
+  shared by every FerroHEALTH product: the response times, the agreed
+  disclosure date, the safe harbour, the credit and what each advisory
+  carries are on
+  [Security](https://ferrohealth.eu/docs/security.html) in the FerroHEALTH
+  book. What is particular to FerroEHR, the reporting routes and the scope, is
+  [`SECURITY.md` § Reporting a vulnerability](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#reporting-a-vulnerability),
+  also published as
   [`security.txt`](https://ferroehr.eu/.well-known/security.txt) under RFC 9116.
 
 ## 3. Name, type and unique identification
@@ -120,8 +126,11 @@ essential functionalities and information about the security properties;"
 - **Intended purpose:** FerroEHR stores, versions and queries the structured
   health records of one healthcare provider, serves them to that provider's
   clinical applications through the openEHR REST API and AQL, and records
-  every access to them. The full statement, with its users and the data it is
-  designed to process, is the [intended purpose](intended-purpose.md).
+  every access to them. FerroEHR's part of the statement, with the data it is
+  designed to process, is the [intended purpose](intended-purpose.md); the
+  statement for the EHR system FerroEHR forms with FerroBRIDGE, with its
+  users, is in the FerroHEALTH book
+  ([intended purpose](https://ferrohealth.eu/docs/ehds/intended-purpose.html)).
 - **Security environment:** what FerroEHR relies on and does not provide
   itself: TLS termination, an OpenID Connect identity provider, protection of
   the database, a hardened platform and off-box copies of the access log
@@ -252,7 +261,7 @@ data;"
   verify, and the risk assessment of the release does not describe it.
   Whether an organisation that modifies the source and puts the result into
   service becomes a manufacturer itself is a question for counsel
-  ([who the CRA binds](cra.md#who-the-cra-binds-in-a-self-hosted-deployment)).
+  ([the CRA, the manufacturer side](https://ferrohealth.eu/docs/cra.html)).
 
 ### 8(c) Installing security-relevant updates
 

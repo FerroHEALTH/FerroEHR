@@ -69,8 +69,9 @@ evidence, and what is missing.
    - **text silent**: the act does not address the topic the product has a
      control for.
 4. **Cross-check the published pages.** Every row of the act's section in
-   `website/book/src/compliance/index.md` and
-   `shared-responsibility.md`, and every `Control:` line on an issue citing
+   `website/book/src/compliance/index.md`, the shared-responsibility tables
+   of the FerroHEALTH book (`https://ferrohealth.eu/docs/ehds/shared-responsibility.html`,
+   source in the FerroHEALTH/FerroHEALTH repository), and every `Control:` line on an issue citing
    the act, is checked against the checklist: a row citing an article whose
    addressee is not the deployment, a "shipped" beside an open issue, a
    "compliant"/"certified" wording, a provision that reaches software and

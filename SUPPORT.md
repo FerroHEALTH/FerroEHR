@@ -90,7 +90,8 @@ volunteers, with no warranty. Read the [LICENSE](LICENSE), which says exactly
 that in the language that binds.
 Everything above describes what the project *intends* to do, and the intent is
 sincere; none of it is a contractual commitment, and only the security-report
-windows in SECURITY.md are stated as promises at all.
+windows of the manufacturer's [security policy](https://ferrohealth.eu/docs/security.html),
+which SECURITY.md links, are stated as promises at all.
 
 Only the newest release receives fixes ([SECURITY.md § Supported
 versions](SECURITY.md#supported-versions)). The manufacturer's duties under

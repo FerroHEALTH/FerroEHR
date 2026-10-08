@@ -101,8 +101,8 @@ language of that Member State, and Art. 37(4) sets 30 days from the request,
 risk". The request goes to Cadasto B.V.'s single point of contact,
 info@cadasto.com. Cadasto B.V. commissions the translation of the parts the
 request names, sends it within the deadline, and keeps the request and the
-answer outside the repository, as for any
-[request from an authority](../post-market.md#a-request-from-an-authority). EHDS
+answer outside the repository, as for any request from an authority
+(<https://ferrohealth.eu/docs/post-market.html>). EHDS
 Art. 30(3) second subparagraph adds the source code on a reasoned request: the
 source of every release is public at its tag.
 
@@ -125,3 +125,4 @@ source of every release is public at its tag.
 |---|---|---|
 | 2026-10-06 | before 4.3.5 | First version of the tree (#3616) |
 | 2026-10-08 | 4.3.6 | The in-tree FHIR connector is removed (#3080); the ITI-81 `GET /fhir/r4/AuditEvent` route is unchanged and is now the only route in `ferroehr-rest::extensions::fhir` |
+| 2026-10-08 | 4.3.6 | The family-level documentation moved to the FerroHEALTH book at <https://ferrohealth.eu/docs/> (#3701): the statement of intended purpose for the EHR system, the shared responsibility, the post-market procedure and the manufacturer side of the CRA; 1(a) and the vulnerability-handling policy of CRA Annex VII 2 now cite it beside FerroEHR's own pages |

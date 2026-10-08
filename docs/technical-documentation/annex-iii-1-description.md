@@ -12,11 +12,15 @@ beside the EHDS points they repeat. Book pages are cited from
 
 "its intended purpose, and the date and version of the EHR system"
 
-- **Intended purpose:** the manufacturer's statement,
+- **Intended purpose:** the manufacturer's statement for the EHR system
+  FerroEHR forms with FerroBRIDGE, published in the FerroHEALTH book at
+  <https://ferrohealth.eu/docs/ehds/intended-purpose.html> (its version 1, of
+  2026-10-06, was first published in this repository's book), and FerroEHR's
+  part of it,
   [`compliance/intended-purpose.md`](../../website/book/src/compliance/intended-purpose.md),
-  statement version 1 of 2026-10-06. A change to it is a new statement version
-  named in the release notes, and a substantial modification under CRA
-  Art. 3(30).
+  frozen with each release. A change to the intended purpose is a new
+  statement version named in the release notes, and a substantial
+  modification under CRA Art. 3(30).
 - **Version:** the tag `vX.Y.Z` of the release, the workspace `version` in
   `Cargo.toml`, and what the running server reports in `ferroehr --version`
   and on `GET /management/info`.

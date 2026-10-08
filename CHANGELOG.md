@@ -289,6 +289,21 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **The family-level documentation moved to the FerroHEALTH book** (#3701), at
+  <https://ferrohealth.eu/docs/>: the manufacturer, the security policy shared
+  by every FerroHEALTH product (response times, disclosure, advisories,
+  security-only patches, CRA Art. 14 reporting, cessation of operations), the
+  post-market procedure, the manufacturer side of the CRA, the intended purpose
+  and the shared responsibility of the EHR system FerroEHR forms with
+  FerroBRIDGE, licensing and trademarks, and how the products fit together.
+  The book pages *Complaints, incidents and vulnerabilities*, *Cyber Resilience
+  Act*, *Intended purpose*, *Shared responsibility* and *Licensing & legal* keep
+  their addresses and now carry only FerroEHR's own facts, with a link to the
+  family page. `SECURITY.md` keeps FerroEHR's supported versions, its reporting
+  routes and scope, and the repository's security settings. The information
+  sheet, the instructions for use, the EHDS readiness and technical
+  documentation pages, the CRA risk assessment and the Annex II user
+  information stay in this book.
 - **`deployment_profile = "production"` refuses two more plaintext paths unless
   each is accepted by name.** A syslog audit feed with `transport = "udp"` opens
   the new `audit_syslog_udp` gap (#3669, EHDS Annex II 1.4): set

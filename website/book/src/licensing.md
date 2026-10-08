@@ -1,35 +1,24 @@
 # Licensing & legal
 
-This page is the complete licensing picture for FerroEHR: what the project's own
-code is licensed under, which third-party material ships inside the repository
-and the container images, and the trademark and lineage acknowledgments. It is a
-summary for evaluators and deployers, not legal advice.
+The licence policy of the FerroHEALTH products is written once, in the
+FerroHEALTH book: what the Business Source License 1.1 allows without asking
+anyone, when you need a commercial licence, the Change Date to the Apache
+License 2.0, how to arrange a commercial licence, and the FerroHEALTH
+trademarks. Read it at
+[Licensing and trademarks](https://ferrohealth.eu/docs/licensing.html).
+[`LICENSE`](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSE) in this
+repository is the authority for FerroEHR and names the Licensor, the Licensed
+Work, the Additional Use Grant and the Change Date.
+
+This page keeps what is particular to FerroEHR: installing a commercial
+licence in the server, which FerroEHR crates carry which licence, the
+third-party material this repository and its images ship, the
+machine-readable licensing, and FerroEHR's lineage. It is a summary for
+evaluators and deployers, not legal advice.
 
 <!-- toc -->
 
-## Do you need a commercial licence?
-
-FerroEHR is source-available under the Business Source License 1.1, which is
-not an OSI-approved open-source licence.
-[`LICENSE`](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSE) is the
-authority and names the Licensor, the Licensed Work, the Additional Use Grant
-and the Change Date; this table is the same boundary in the order people ask
-about it, and the sections below give the full text of each rule.
-
-| What you are doing | What you need | Why |
-|---|---|---|
-| Reading, building, modifying or redistributing the source | Free | The licence grants it without a fee and without asking anyone. |
-| Development, testing, evaluation, prototyping | Free | All non-production use is granted. |
-| Production use for Non-Commercial Purposes | Free | Personal use, academic or scientific research, teaching, and use by a non-profit organisation or public body that is not in the course of a business, does not deliver a service for payment, and is not for commercial advantage. |
-| A hospital, clinic or care provider running it for its patients | Commercial licence | Delivering health care, or any other service for payment, is production use outside the grant. |
-| A vendor or integrator, or any company running it in production | Commercial licence | Production use in the course of a business is outside the grant. |
-| Offering it, or a work derived from it, to third parties as a hosted, managed or embedded service | Commercial licence | Excluded from the grant in every case, whoever you are. |
-| Selling, sublicensing or otherwise distributing it for a fee | Commercial licence | Excluded from the grant in every case, whoever you are. |
-
-The last two rows hold whatever else you are: they need a commercial licence
-even for an organisation the rows above would otherwise leave free.
-
-### Installing a commercial licence
+## Installing a commercial licence
 
 A commercial licence is a signed token file the licensor issues to you. Place
 it where the server can read it and point `[licence] file` (or
@@ -40,21 +29,11 @@ The server behaves identically under either; identifiers it mints carry a
 few bits derived from the licence id in place of random bits, so a record
 states which grant it was written under, and nothing else.
 
-Each version becomes Apache License 2.0 four years after that version is
-published. A commercial licence is arranged with Cadasto B.V., the Licensor,
-which handles the business side of FerroEHR: write to
+A commercial licence is arranged with Cadasto B.V., the Licensor: write to
 [info@cadasto.com](mailto:info@cadasto.com) or use
 <https://www.cadasto.com/contact/>. Technical questions go to the maintainer
 named in
 [`MAINTAINERS.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/MAINTAINERS.md).
-
-The nine `openehr-*` crates on crates.io are a separate question. The five
-generated model crates and the `openehr-its` wire layer are Apache-2.0, so any
-Rust project can use them without a licence conversation; the three
-hand-written engines carry the same Business Source License as the
-application. Full detail is under
-[FerroEHR's own code](#ferroehrs-own-code-the-business-source-license-11)
-below.
 
 ## FerroEHR's own code: the Business Source License 1.1
 
@@ -71,40 +50,8 @@ is a credit rather than a holder statement.
 
 FerroEHR is source-available. The Business Source License 1.1 is not an
 OSI-approved open-source licence, and this project does not claim that it is.
-
-**What the licence allows without asking anyone.** You can read the source,
-build it, modify it, and redistribute it without a fee. All non-production use
-is permitted: development, testing, evaluation and prototyping. Production use
-is permitted for Non-Commercial Purposes, which the licence defines as
-personal use, academic or scientific research, teaching, and use by a
-non-profit organisation or public body that is not in the course of a
-business, does not deliver a service for payment, and is not for commercial
-advantage.
-
-**What needs a commercial licence from the Licensor.** Any other production
-use, including the delivery of health care or any other service for payment.
-A hospital, clinic or care provider running FerroEHR for its patients needs a
-commercial licence, and so does a vendor, integrator or any company running it
-in production. Two uses need one in every case, whoever you are:
-
-- offering FerroEHR, or a work derived from it, to third parties as a hosted,
-  managed or embedded service, meaning a service through which anyone other
-  than you and your affiliates stores, manages or queries health data held by
-  it;
-- selling, sublicensing or otherwise distributing FerroEHR for a fee, on its
-  own or as a component of another product.
-
-Companies and care providers building on FerroEHR are wanted here, and the
-commercial licence is the normal path for them. The Licensor arranges it and
-handles every other business or licensing question: write to
-[info@cadasto.com](mailto:info@cadasto.com) or use
-<https://www.cadasto.com/contact/>. The maintainer named in
-[`MAINTAINERS.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/MAINTAINERS.md),
-Ruben Talstra (`@rubentalstra` on GitHub), handles the technical side: code,
-review, releases, issues and security reports.
-
-**The Change Date.** Each version becomes available under the Apache License
-2.0, its Change License, four years after that version is published.
+Each version becomes available under the Apache License 2.0, its Change
+License, four years after that version is published.
 
 **What the change does not affect.** Releases v3.0.0 through v4.0.17 stay under
 the MIT terms they were published with, and so do the `openehr-*` crate
@@ -122,12 +69,14 @@ project under Apache-2.0, and the conformance pipeline here consumes it at a
 pinned version. The vendored test corpora this repository still carries keep
 their upstream terms exactly as the table below states.
 
-**Six of the nine published `openehr-*` spec crates are the exception: they
-are Apache-2.0, not BUSL-1.1.** `openehr-base`, `openehr-rm`, `openehr-am`,
-`openehr-lang` and `openehr-term` are the generated openEHR model, published on
-crates.io under the licence of the openEHR machine-readable artifacts they are
-generated from, so any Rust project can use them, in proprietary and hosted
-products included, with no commercial licence involved. They embed
+## The published `openehr-*` crates
+
+**Six of the nine published `openehr-*` spec crates are Apache-2.0, not
+BUSL-1.1**, so any Rust project can use them, in proprietary and hosted
+products included, with no commercial licence involved. `openehr-base`,
+`openehr-rm`, `openehr-am`, `openehr-lang` and `openehr-term` are the
+generated openEHR model, published on crates.io under the licence of the
+openEHR machine-readable artifacts they are generated from. They embed
 openEHR-derived material (specification documentation text in the generated doc
 comments), which is Apache-2.0 as well; their generated files name the openEHR
 Foundation as a second copyright holder. `openehr-term` also embeds the official
@@ -327,6 +276,10 @@ committed CLI configuration for review. It is analysis-only by design and gates
 no merge; `cargo deny` is the gate.
 
 ## Trademarks and lineage
+
+The trademarks of the FerroHEALTH family are on
+[Licensing and trademarks](https://ferrohealth.eu/docs/licensing.html) in the
+FerroHEALTH book.
 
 - **openEHR®** is the registered trademark of the
   [openEHR Foundation](https://www.openehr.org/). FerroEHR is an independent

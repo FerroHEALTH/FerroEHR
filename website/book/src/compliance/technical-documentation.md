@@ -42,7 +42,7 @@ Documented in [`annex-iii-1-description.md`](https://github.com/FerroHEALTH/Ferr
 
 | # | Element | State | Material | Notes |
 |---|---|---|---|---|
-| 1(a) | Intended purpose, date and version. | Available | [what exists](intended-purpose.md) | The statement of intended purpose is versioned with the book, which is frozen per release; the version and release date are each release's tag and changelog heading. |
+| 1(a) | Intended purpose, date and version. | Available | [what exists](intended-purpose.md) | FerroEHR's part of the statement of intended purpose is versioned with the book, which is frozen per release; the version and release date are each release's tag and changelog heading. The statement for the EHR system as a whole is in the FerroHEALTH book (<https://ferrohealth.eu/docs/ehds/intended-purpose.html>). |
 | 1(b) | The categories of personal electronic health data it processes. | Available | [what exists](intended-purpose.md#the-data-ferroehr-is-designed-to-process) | — |
 | 1(c) | How it interacts with hardware or software that is not part of it. | Available | [what exists](../beyond-core/index.md) | — |
 | 1(d) | Versions of relevant software or firmware, and update requirements. | Available | [what exists](../operations.md#upgrades) | — |
@@ -157,6 +157,6 @@ system covered is placed on the market (Article 30(3)).
 ## Related
 
 - [EHDS readiness](ehds-readiness.md): the status per Annex II requirement.
-- [Cyber Resilience Act](cra.md): the CRA position.
-- [Shared responsibility](shared-responsibility.md): which duties belong to
-  the deployment.
+- [Cyber Resilience Act](cra.md): FerroEHR's CRA position.
+- [Shared responsibility](https://ferrohealth.eu/docs/ehds/shared-responsibility.html),
+  in the FerroHEALTH book: which duties belong to the deployment.

@@ -283,7 +283,7 @@ release.
 | 1. The manufacturer's name, postal address, email and website | [information sheet, (a)](information-sheet.md#a-the-manufacturer) |
 | 2. The single point of contact for vulnerabilities, and the coordinated vulnerability disclosure policy | [`SECURITY.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#reporting-a-vulnerability) |
 | 3. Name, type and unique identification | [information sheet, (b)](information-sheet.md#b-name-version-and-release-date) |
-| 4. Intended purpose, the security environment, the essential functionalities and the security properties | [intended purpose](intended-purpose.md), [security](../security.md) |
+| 4. Intended purpose, the security environment, the essential functionalities and the security properties | [intended purpose](intended-purpose.md), [security](../security.md), and the statement for the EHR system at <https://ferrohealth.eu/docs/ehds/intended-purpose.html> |
 | 5. Circumstances that may lead to significant cybersecurity risks | [limitations](#limitations-you-should-know), [foreseeable misuse](intended-purpose.md#reasonably-foreseeable-use-and-misuse) |
 | 6. The internet address of the EU declaration of conformity | none exists ([technical documentation](technical-documentation.md#declaration-of-conformity)) |
 | 7. The technical security support, and the end date of the support period | [`SECURITY.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions), and the release notes |
@@ -299,4 +299,6 @@ release.
 
 Questions, complaints and serious incidents go to Cadasto B.V. at
 [info@cadasto.com](mailto:info@cadasto.com)
-([complaints, incidents and vulnerabilities](post-market.md)).
+([complaints, incidents and vulnerabilities](post-market.md)). The
+manufacturer's post-market procedure, which handles them for every
+FerroHEALTH product, is at <https://ferrohealth.eu/docs/post-market.html>.

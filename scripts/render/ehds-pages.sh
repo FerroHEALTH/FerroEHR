@@ -88,7 +88,11 @@ system it declares is FerroEHR and FerroBRIDGE together: FerroEHR ships the
 European logging software component, FerroBRIDGE the European
 interoperability software component. This page states, requirement by
 requirement, what FerroEHR provides today, and names FerroBRIDGE where a
-requirement is its part.
+requirement is its part. The documentation of the EHR system as a whole, its
+intended purpose and the split of duties with the deploying organisation, is
+in the FerroHEALTH book
+([intended purpose](https://ferrohealth.eu/docs/ehds/intended-purpose.html),
+[shared responsibility](https://ferrohealth.eu/docs/ehds/shared-responsibility.html)).
 
 <!-- toc -->
 
@@ -213,7 +217,9 @@ FerroEHR is also a product with digital elements under Regulation (EU)
 2024/2847. Its reporting duties apply now, and from 11 December 2027 the CRA's
 essential requirements are assessed through this Regulation's Chapter III
 procedure, in one technical documentation set and one declaration. The
-[Cyber Resilience Act](cra.md) page states the position.
+[Cyber Resilience Act](cra.md) page states FerroEHR's position, and the
+FerroHEALTH book states the manufacturer's
+([the CRA](https://ferrohealth.eu/docs/cra.html)).
 
 ## Related
 
@@ -222,8 +228,9 @@ procedure, in one technical documentation set and one declaration. The
 - [Information sheet](information-sheet.md) and
   [instructions for use](instructions-for-use.md): what accompanies each
   release (Article 30(1)(d), Article 38).
-- [Shared responsibility](shared-responsibility.md): which duties the
-  software can carry and which belong to the deployment.
+- [Shared responsibility](https://ferrohealth.eu/docs/ehds/shared-responsibility.html),
+  in the FerroHEALTH book: which duties the software can carry and which
+  belong to the deployment.
 - [Control matrix](control-matrix.md): the legal controls the tracker
   declares, generated from the tracker.
 FOOTER
@@ -350,9 +357,9 @@ system covered is placed on the market (Article 30(3)).
 ## Related
 
 - [EHDS readiness](ehds-readiness.md): the status per Annex II requirement.
-- [Cyber Resilience Act](cra.md): the CRA position.
-- [Shared responsibility](shared-responsibility.md): which duties belong to
-  the deployment.
+- [Cyber Resilience Act](cra.md): FerroEHR's CRA position.
+- [Shared responsibility](https://ferrohealth.eu/docs/ehds/shared-responsibility.html),
+  in the FerroHEALTH book: which duties belong to the deployment.
 REST
 }
 

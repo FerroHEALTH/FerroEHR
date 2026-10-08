@@ -2,8 +2,9 @@
 #
 # Kept in the landing site so it is served at https://ferroehr.eu/.well-known/security.txt
 # — the location a researcher or a scanner looks first, without needing to find
-# the repository. The full policy, including the response commitments, the safe
-# harbour and the credit policy, is in SECURITY.md and linked below.
+# the repository. FerroEHR's policy is SECURITY.md, linked below; the response
+# commitments, the safe harbour and the credit policy it points to are the
+# manufacturer's, at https://ferrohealth.eu/docs/security.html.
 #
 # Expires MUST be refreshed before the date below (RFC 9116 §2.5.5: a stale file
 # is to be treated as invalid). The release procedure is where to do it.
