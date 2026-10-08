@@ -101,9 +101,10 @@ probes_original_state() {
   uncovered "the usage report after a reset" \
     "the shipped quickstart sends it; this run keeps FERROEHR__USAGE_REPORT__ENABLED=false
      so a probe sends nothing, which is the one override the reset leaves in place."
-  uncovered "the Kubernetes and single-binary reset procedures" \
-    "the book documents DROP DATABASE … WITH (FORCE) and a reinstall of the chart;
-     no probe drops an external database or reinstalls a release."
+  uncovered "the single-binary reset procedure" \
+    "the Helm procedure runs in scripts/deploy-probe-k8s.sh (P-K8S-RESET-*); the
+     single binary's DROP DATABASE and restart are the same database step with no
+     release around it, and no probe runs a bare binary."
 }
 
 # The decommissioning family: the book's erase procedure

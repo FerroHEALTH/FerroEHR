@@ -214,14 +214,17 @@ reset the product to its original state"
   default; it carries no health data ([outbound data flows](#outbound-data-flows-annex-i-part-i2g)).
 - **Reset:** the book documents returning an instance to its original state,
   configuration and database, for Docker Compose, Kubernetes and a single
-  binary. The deployment probe harness runs the Compose procedure and reads
-  the outcome back: the database volume is deleted, an EHR written before the
-  reset is gone, and the server reports the shipped configuration.
+  binary. The deployment probe harnesses run the Compose and the Helm
+  procedures and read the outcome back: the database volume or the database is
+  gone, an EHR written before the reset is not found, the reinstalled server
+  migrates the empty database (`P-K8S-RESET-*`), and the Compose server reports
+  the shipped configuration (`P-RESET-*`).
 - **Status:** partial. The shipped profile is `sandbox`, so a deployment
   holding patient data is secure only after it sets `production` and closes
-  the five refused defaults above. The Kubernetes and single-binary reset
-  procedures are documented and not exercised by a probe.
-- **Open:** a probe of the Kubernetes reset procedure (#3677).
+  the five refused defaults above. The single-binary reset is documented
+  and not exercised by a probe; its database step is the one the Helm probe
+  runs.
+- **Open:** none for the reset.
 
 ### (c) Security updates, automatic updates, notification and postponement
 
@@ -654,4 +657,4 @@ vulnerabilities and third-party information arrive. It is revised:
 | Version | Date | Change |
 |---|---|---|
 | 1 | 2026-10-06 | First assessment, from the CRA Annex I audit of #3611 |
-| 2 | 2026-10-07 | (a): the per-release exploitability record (#3636), the viewer image scanned before it is tagged (#3674) and every release binary and image binary built with `cargo auditable` (#3675); (b): the declared profile in the chart and the Compose files, the reasons for `sandbox` and the shipped defaults a production holder keeps, and the reset procedure (#3637); Part II(1): SBOMs for the crates and the chart (#3643); the declared security-relevant paths and their release gate (#3649); (m): the erase command and the decommissioning page (#3642); (e): a plaintext `amqp://` broker refused under `production` (#3676); (e): a plain `http://` audit FHIR feed and a multimedia store with `allow_http` refused under `production` (#3689) |
+| 2 | 2026-10-07 | (a): the per-release exploitability record (#3636), the viewer image scanned before it is tagged (#3674) and every release binary and image binary built with `cargo auditable` (#3675); (b): the declared profile in the chart and the Compose files, the reasons for `sandbox` and the shipped defaults a production holder keeps, and the reset procedure (#3637); Part II(1): SBOMs for the crates and the chart (#3643); the declared security-relevant paths and their release gate (#3649); (m): the erase command and the decommissioning page (#3642); (e): a plaintext `amqp://` broker refused under `production` (#3676); (e): a plain `http://` audit FHIR feed and a multimedia store with `allow_http` refused under `production` (#3689); (b): the Helm reset run by the Kubernetes probe harness (#3677) |

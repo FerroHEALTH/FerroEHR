@@ -214,5 +214,5 @@ evidence if it ran in an enforcing namespace — say which.
 | Chart version bump on packaged-content change | `chart-version-guard` |
 | The committed `appVersion` equals the workspace version, and the image annotations + generated README agree with it | `chart-appversion-guard` → `scripts/checks/chart-appversion.sh` (#2890, mutation-proven). The release PR bumps it in the same sweep as the compose tags; the package-time injection (#2779) stays as belt-and-braces for the release leg and the dispatch recovery lane |
 | Field-vs-`kubeVersion` availability | **review-enforced** — no tool knows which fields a manifest uses; §1 is the procedure |
-| Applied posture, admission, readiness gating, secret reads | `scripts/deploy-probe-k8s.sh` — observed on a live cluster, machine-readable record |
+| Applied posture, admission, readiness gating, secret reads, the book's Helm reset | `scripts/deploy-probe-k8s.sh` — observed on a live cluster, machine-readable record. `PROBE_K8S_VALUES` layers an override for a cluster that cannot run a chart default (a kind node in a podman VM refuses the user-namespaced pods of `hostUsers: false`); the run header names it, and such a run is never a record of the chart's defaults |
 | Live behaviour beyond those probes | **review-enforced** — the `/k8s-test` skill is the procedure; the PR quotes observations |

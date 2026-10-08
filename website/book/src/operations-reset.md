@@ -129,6 +129,12 @@ The chart deploys no database, so the two halves are separate operations.
    The schema is applied at boot (`config.db.migrate: apply`, the chart
    default), or by the migration Job when you enabled it.
 
+The Kubernetes deployment probes run these three steps against a real
+cluster: the release is removed and the DSN Secret survives, the database is
+dropped and recreated by the bootstrap superuser, and the reinstalled release
+migrates the empty database and no longer finds an EHR written before the
+reset.
+
 ## A single binary
 
 1. Stop the server.
