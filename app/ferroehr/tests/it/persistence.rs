@@ -121,7 +121,6 @@ async fn migrations_apply_cleanly_and_idempotently() {
             "event_outbox",
             "event_outbox_reader",
             "event_subscription",
-            "fhir_mapping",
             "item_tag",
             "node",
             "restriction",

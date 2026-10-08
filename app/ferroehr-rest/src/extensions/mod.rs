@@ -28,9 +28,9 @@
 //! - [`terminology`] — the `/terminology` wire: `I_TERMINOLOGY_SERVICE` is SM
 //!   `master12`; the development-edition OAS set defines no terminology API, so
 //!   the operation semantics are cited from SM and the wire shape is our own.
-//! - [`event_subscription`] + [`fhir`] — eventing and the FHIR R4 connector
-//!   (enterprise features E1/E3); nothing in SM/ITS-REST governs them.
-//!   mentions.
+//! - [`event_subscription`] — eventing; nothing in SM/ITS-REST governs it.
+//! - [`fhir`] — the RESTful-ATNA ITI-81 `AuditEvent` retrieval; the SM names
+//!   `I_SYSTEM_LOG` as IHE ATNA-compliant and defines no wire.
 //!
 //! The ATNA audit middleware is NOT here — it realizes the SM System Log
 //! component and lives at [`crate::system_log`].

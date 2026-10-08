@@ -12,13 +12,12 @@
 //! chapters that touch integration, deployment and security-of-access were
 //! checked as the last possible spec home: master14 governs
 //! archetype-to-archetype data conversion (`GENERIC_ENTRY` + `FEEDER_AUDIT`) and
-//! not FHIR resources, message brokers or outbound emission; master13 is
+//! not message brokers or outbound emission; master13 is
 //! informative deployment guidance prescribing no eventing or
 //! blob offload; master07 governs the `EHR_ACCESS` object and
-//! authn-at-deployment. The two places a submodule touches spec-defined data are
-//! the FHIR connector's `FEEDER_AUDIT` builder and the multimedia offload's
-//! `DV_MULTIMEDIA` rewrite, which carry their RM citations in [`fhir`] and
-//! [`multimedia`].
+//! authn-at-deployment. The one place a submodule touches spec-defined data is
+//! the multimedia offload's `DV_MULTIMEDIA` rewrite, which carries its RM
+//! citation in [`multimedia`].
 //!
 //! Every extension keeps two non-negotiables: each submodule doc comment carries
 //! the explicit flag "no openEHR spec governs this — our own design/extension",
@@ -29,10 +28,8 @@
 //! | Submodule | Gate (config path, default off) |
 //! |---|---|
 //! | [`events`] | `events.enabled` |
-//! | [`fhir`] | `fhir.api_enabled` (routes) / `fhir.outbound.enabled` (emitter) |
 //! | [`multimedia`] | `multimedia.enabled` |
 
 pub mod events;
-pub mod fhir;
 pub mod multimedia;
 pub mod outbox;

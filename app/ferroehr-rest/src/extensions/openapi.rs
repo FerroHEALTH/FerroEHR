@@ -81,7 +81,7 @@ const SECURITY_SCHEME: &str = "openehr_auth";
                        handlers: the standardised ITS-REST API groups (EHR / COMPOSITION / \
                        CONTRIBUTION / DIRECTORY / DEMOGRAPHIC / DEFINITION / QUERY / ADMIN), the \
                        own-design extensions (terminology, PARTY_RELATIONSHIP, event-subscription, \
-                       FHIR connector), and the operational endpoints \
+                       the ITI-81 audit retrieval), and the operational endpoints \
                        (health, status, management, SMART discovery, the OpenAPI endpoints). \
                        `info.version` is this product's own SemVer; the implemented openEHR \
                        ITS-REST contract version is the document-level `x-openehr-its-rest` \
@@ -161,7 +161,6 @@ const SECURITY_SCHEME: &str = "openehr_auth";
         (name = "admin-dump-load", description = "The SM I_ADMIN_DUMP_LOAD calls (export every EHR to a file-system archive; populate the repository from one). OUR OWN EXTENSION: no ITS-REST operation governs these routes (same admin gate + RBAC Admin class)."),
         (name = "message", description = "The SM MESSAGE component — I_EHR_EXTRACT_SERVICE (EHR-Extract export/import) and I_TDD_SERVICE (Template Data Document import). OUR OWN EXTENSION: ITS-REST 1.1.0 publishes no message/extract/TDD API at all, so no released operation governs any route here; they carry the ordinary clinical authentication class, not the admin gate."),
         (name = "event-subscription", description = "Event-subscription CRUD extension (config-gated: FERROEHR_REST_EVENT_SUBSCRIPTION__ENABLED)."),
-        (name = "fhir", description = "FHIR R4 inbound connector + mapping store (config-gated: FERROEHR_REST_FHIR__ENABLED)."),
     )
 )]
 #[derive(Debug)]
@@ -371,7 +370,7 @@ fn redirect_to_index(ui_path: &str) -> Response {
     params(("family" = String, Path,
         description = "The API family slug — one of the fixed set `ehr`, `query`, `definition`, \
                        `demographic`, `admin`, `management`, `terminology`, `relationships`, \
-                       `events`, `fhir`, `smart`. Not a free parameter: each value is \
+                       `messaging`, `events`, `audit`, `smart`. Not a free parameter: each value is \
                        its own static route.")),
     responses(
         (status = 200, description = "The composed server document filtered to that API family (JSON).", body = serde_json::Value),
@@ -544,11 +543,11 @@ const FAMILIES: &[(&str, &str, Members)] = &[
         Members::Tags(&["event-subscription"]),
     ),
     (
-        "FerroEHR — FHIR Connector",
-        "fhir",
-        // `audit` is the ITI-81 AuditEvent retrieval, served under the same
-        // `/fhir/r4` root but gated by the local audit repository.
-        Members::Tags(&["fhir", "audit"]),
+        "FerroEHR — Audit",
+        "audit",
+        // The ITI-81 AuditEvent retrieval under `/fhir/r4`, gated by the local
+        // audit repository.
+        Members::Tags(&["audit"]),
     ),
     (
         "FerroEHR — SMART Discovery",

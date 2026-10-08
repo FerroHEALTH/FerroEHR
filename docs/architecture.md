@@ -347,8 +347,8 @@ Three physical directories (consolidated 2026-07-16):
 `ferroehr-rest` (the ITS-REST protocol adapter, which calls the concrete
 `FerroEhrService` directly), `ferroehr-server` (the wiring-only binary; the
 bin is still named `ferroehr`), `ferroehr-ext` (the feature-gated
-optional-integration crate — FHIR conversion core, events transport,
-multimedia store — one additive cargo feature per integration, default all-on,
+optional-integration crate — the FHIR `AuditEvent` renderer and terminology
+decoder, events transport, multimedia store — one additive cargo feature per integration, default all-on,
 slim builds compile them out with loud boot refusals for enabled-but-unbuilt
 integrations), and `ferroehr-viewer` (the Leptos SSR viewer — its own
 binary/OCI image, consuming the CDR strictly over ITS-REST);
@@ -402,7 +402,7 @@ The service layer realizes the openEHR **SM Platform Service Model**
 | `ferroehr-rest` | ITS-REST protocol adapter (axum) + auth + ATNA audit middleware; `access` module = RBAC/ABAC authz; calls the concrete `FerroEhrService` | application |
 | `ferroehr` | The platform library: storage, service layer (one module per SM chapter), AQL engine, `versioning` (change control plus the VERSION `signature` signing under `versioning::signature`), validation, templates, the full config tree, telemetry, `privacy`, `system_log`, `licence` (the boot-verified grant in force and the identifier stamp it keys), `usage_report` (the `start` and `daily` installation reports to FerroPULSE, on by default, contract in FerroHEALTH/FerroPULSE `docs/report-v1.md`, vendored schemas in `corpus/ferropulse/`) | application |
 | `ferroehr-server` | The wiring-only binary (config → pool → migrations → service → serve); bin name `ferroehr` | application |
-| `ferroehr-ext` | Optional integrations behind additive features (`fhir`, `events`, `multimedia`): FHIR mapping/reverse/feeder-audit cores, the AMQP events transport, the content-addressed multimedia store | application |
+| `ferroehr-ext` | Optional integrations behind additive features (`fhir`, `events`, `multimedia`): the FHIR `AuditEvent` renderer and terminology-response decoder, the AMQP events transport, the content-addressed multimedia store | application |
 | `ferroehr-viewer` | The Leptos SSR viewer: its own binary and OCI image, consuming the CDR strictly over ITS-REST | application |
 | `testkit` | Shared test-database harness: one PG18 server + template-database cloning (`tools/*`) | tooling |
 
@@ -455,7 +455,7 @@ EHR system to include both harmonised software components:
 | Component | Shipped by | Where |
 |---|---|---|
 | European logging software component (Annex II 3) | FerroEHR | `ferroehr::system_log` (the access-event model, the audit store, the DICOM and FHIR renderings, the sinks, and `system_log::chain_check`, the scheduled verification of the store's hash chain), the audit schema migrations in `app/ferroehr/migrations/audit/`, `ferroehr-rest::system_log` (the middleware that records every API access and classifies it), the ITI-81 `GET /fhir/r4/AuditEvent` retrieval in `ferroehr-rest::extensions::fhir`, and the retention register in `ferroehr::storage::marks` |
-| European interoperability software component (Annex II 2.1 to 2.3) | FerroBRIDGE | the openEHR-to-exchange-format mappings (#3206); FerroEHR's in-tree FHIR connector is retired (#3080), and the AuditEvent route above is not part of that retirement |
+| European interoperability software component (Annex II 2.1 to 2.3) | FerroBRIDGE | the openEHR-to-exchange-format mappings (#3206), and FHIR R4 resource mapping (<https://github.com/FerroHEALTH/FerroBRIDGE>, BUSL-1.1), reaching FerroEHR over ITS-REST; FerroEHR carries no FHIR mapping of its own, and keeps the AuditEvent route above and the FHIR terminology client |
 
 The two components are independent of each other (Art 2(2)(n) and (o), Art
 30(1)(b)) because they are separate products that meet only over ITS-REST. The

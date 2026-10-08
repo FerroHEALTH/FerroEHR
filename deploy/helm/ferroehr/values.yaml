@@ -472,9 +472,6 @@ secrets:
   # -- AMQP broker URL for [events] (carries credentials). MOUNTED as
   # /etc/ferroehr-secrets/events.url (events.url_file).
   eventsUrl: ""
-  # -- AMQP broker URL for [fhir.outbound] (carries credentials). MOUNTED as
-  # /etc/ferroehr-secrets/fhir.outbound.url (fhir.outbound.url_file).
-  fhirOutboundUrl: ""
   # -- Argon2id password hashes for [[auth.basic.users]], keyed by username. Each
   # is MOUNTED as /etc/ferroehr-secrets/auth.basic.users.<username>.password_hash
   # and the chart injects the matching `password_hash_file` into the rendered TOML.
@@ -761,16 +758,6 @@ config:
     enabled: false
     exchange: ferroehr.events
     tls: false
-
-  # [fhir] — FHIR connector. api_enabled mounts /fhir/r4/* (inbound façade).
-  # outbound.enabled emits mapped resources → AMQP (WARNING: PHI stream; distinct
-  # exchange). The outbound broker URL is the secrets.fhirOutboundUrl secret.
-  fhir:
-    api_enabled: false
-    outbound:
-      enabled: false
-      exchange: ferroehr.fhir
-      tls: false
 
   # [terminology] — terminology extension API + external FHIR-TS validation.
   #

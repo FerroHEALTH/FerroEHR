@@ -16,7 +16,6 @@ use crate::config::secret::SecretUrl;
 use crate::db::DbConfig;
 use crate::db::domain::Domain;
 use crate::extensions::events::config::EventsConfig;
-use crate::extensions::fhir::config::FhirOutboundConfig;
 use config::{Config, Environment, File, FileFormat};
 
 use super::FerroEhrConfig;
@@ -494,14 +493,6 @@ fn resolve_secret_files(config: &mut FerroEhrConfig, errors: &mut Vec<ConfigErro
         &mut config.events.url,
         &default_broker,
         config.events.url_file.take(),
-        errors,
-    );
-    let default_fhir_broker = FhirOutboundConfig::default().url;
-    resolve_secret_url(
-        "fhir.outbound.url",
-        &mut config.fhir.outbound.url,
-        &default_fhir_broker,
-        config.fhir.outbound.url_file.take(),
         errors,
     );
 }

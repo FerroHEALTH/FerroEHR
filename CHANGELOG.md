@@ -374,6 +374,45 @@ workflow refuses a tag that has no matching section here.
   on by default; exporting the variable as `false` before `docker compose up`
   now switches it off, which it did not before.
 
+### Removed
+
+- **The in-tree FHIR connector is removed; FHIR R4 mapping is FerroBRIDGE's**
+  (#3080). This is a breaking change with no deprecation period. Mapping
+  between FHIR and openEHR is served by
+  [FerroBRIDGE](https://github.com/FerroHEALTH/FerroBRIDGE) (BUSL-1.1), a
+  separate server that keeps its mappings as FHIRconnect documents and reaches
+  FerroEHR over ITS-REST. A stored `fhir_mapping` row does not carry over to
+  it. What is gone:
+  - the routes `POST /fhir/r4/{resource_type}`,
+    `POST /fhir/r4/{resource_type}/$validate`, `GET /fhir/r4/{resource_type}`
+    and the `/admin/fhir_mapping` CRUD, with their `fhir` tag and the
+    `ferroehr-fhir.openapi.json` document of the served OpenAPI (the ITI-81
+    route now has its own `ferroehr-audit.openapi.json` document);
+  - the outbound FHIR emitter on the `ferroehr.fhir` AMQP exchange and its
+    `fhir_outbound` health indicator;
+  - the configuration sections `[fhir]` (`api_enabled`) and `[fhir.outbound]`
+    (`enabled`, `url`, `url_file`, `exchange`, `tls`, `batch_size`,
+    `poll_interval_ms`, `publish_max_retries`) and their `FERROEHR__FHIR__…`
+    environment forms, which now fail at boot as unknown keys;
+  - the `fhir_mapping` table, dropped by the new clinical migration
+    `0013_retire_fhir_connector.sql`, which also deletes the emitter's
+    `fhir-outbound` cursor row so it no longer holds the outbox prune floor;
+  - the `org.fhir.rest` service of the SMART discovery document;
+  - the viewer's FHIR screen and its sidebar entry;
+  - the Helm values `config.fhir.*` and `secrets.fhirOutboundUrl` (chart
+    version 11.0.0), the `fhir` deploy-probe family, the
+    `fhir-r4-connector` and `fhir-mapping-store` rows of the conformance
+    statement, and the book pages *FHIR connectors* and *FHIR connector*
+    (the EHDS priority-category table moves to *EHDS readiness*).
+
+  The `plaintext_broker` deployment gap now concerns `[events]` alone. Not
+  affected: the FHIR `AuditEvent` rendering and the ITI-81
+  `GET /fhir/r4/AuditEvent` retrieval (`[audit.store]`, `[audit.fhir_feed]`),
+  the FHIR terminology client (`[terminology.external]`), the change-event
+  outbox and its AMQP publisher (`[events]`), and the Simplified Formats. The
+  `fhir` cargo feature stays and now covers the audit rendering and the
+  terminology client only; it no longer pulls in `events`.
+
 ### Fixed
 
 - **An AQL query over `EHR_ACCESS` and a `CONTRIBUTION` that deletes a version

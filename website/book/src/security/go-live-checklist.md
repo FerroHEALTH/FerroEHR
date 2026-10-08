@@ -98,9 +98,9 @@ which ships the access log unencrypted and without delivery confirmation. Set
 `transport = "tls"`, or accept the gap by name where the UDP path stays on a
 trusted segment and the local store or the FHIR feed holds the durable copy.
 
-`plaintext_broker` opens when the change-event outbox (`[events]`) or the FHIR
-outbound emitter (`[fhir.outbound]`) is on with an `amqp://` URL and `tls = false`,
-which publishes change events and FHIR resources to the broker unencrypted. Use
+`plaintext_broker` opens when the change-event outbox (`[events]`) is on with an
+`amqp://` URL and `tls = false`, which publishes change events to the broker
+unencrypted. Use
 an `amqps://` URL or set `tls = true`, or accept the gap by name where the path
 to the broker stays on a trusted segment.
 

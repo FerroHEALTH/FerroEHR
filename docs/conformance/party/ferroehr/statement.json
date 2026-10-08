@@ -104,8 +104,6 @@
     "terminology",
     "event-subscription",
     "tenancy",
-    "fhir-r4-connector",
-    "fhir-mapping-store",
     "iti-81-audit-record-repository",
     "party-relationship",
     "stored-query-bare-list",

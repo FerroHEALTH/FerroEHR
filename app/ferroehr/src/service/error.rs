@@ -189,7 +189,7 @@ pub enum ServiceError {
     /// does-not-exist status ([`CallStatusType`] `*_does_not_exist` family,
     /// `master03-common_package.adoc` §Representing Call Status) — construct
     /// via [`ServiceError::sm`] naming the precise status; extension resources
-    /// the SM has no status for (event subscriptions, FHIR mappings, item
+    /// the SM has no status for (event subscriptions, item
     /// tags) use the generic `versioned_object_does_not_exist`.
     #[error("{0} not found")]
     NotFound(#[source] SmError),

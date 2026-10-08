@@ -73,8 +73,6 @@ fn nav_key(path: &str) -> &'static str {
         "/operations"
     } else if path.starts_with("/subscriptions") {
         "/subscriptions"
-    } else if path.starts_with("/fhir") {
-        "/fhir"
     } else {
         "/"
     }
@@ -129,11 +127,10 @@ fn apply_dark(theme: RwSignal<thaw::Theme>, dark: bool) {
 pub fn AppShell() -> impl IntoView {
     let session = Resource::new(|| (), |()| current_session());
     let status = Resource::new(|| (), |()| fetch_status());
-    // The three surface probes are created HERE, in component setup — never
+    // The two surface probes are created HERE, in component setup — never
     // inside a Suspend closure, which re-runs and would re-create the resource.
-    // They gate the operations, FHIR and subscriptions nav entries.
+    // They gate the operations and subscriptions nav entries.
     let management = crate::management::management_gate();
-    let fhir = crate::fhir::fhir_gate();
     let subscriptions = crate::subscriptions::event_subscription_gate();
     let theme = thaw::ConfigInjection::expect_context().theme;
     let is_dark = RwSignal::new(false);
@@ -259,7 +256,6 @@ pub fn AppShell() -> impl IntoView {
                 session
                 status
                 management
-                fhir
                 subscriptions
                 theme
                 is_dark
@@ -283,8 +279,6 @@ fn AuthedChrome(
     management: Resource<
         Result<crate::management::ManagementAvailability, crate::error::ViewerError>,
     >,
-    /// The FHIR-connector probe (gates the FHIR nav entry).
-    fhir: Resource<Result<crate::fhir::FhirAvailability, crate::error::ViewerError>>,
     /// The event-subscription probe (gates the subscriptions nav entry).
     subscriptions: Resource<
         Result<crate::subscriptions::SubscriptionAvailability, crate::error::ViewerError>,
@@ -304,7 +298,6 @@ fn AuthedChrome(
         session,
         status,
         management,
-        fhir,
         subscriptions,
         theme,
         is_dark,
@@ -327,8 +320,6 @@ const NAV_DEMOGRAPHICS: &str = "/demographics/person";
 /// that does not serve the surface shows no link to a screen whose cards would
 /// all read "not available".
 enum NavProbe {
-    /// The FHIR connector (see [`crate::fhir`]).
-    Fhir,
     /// The event-subscription admin API (see [`crate::subscriptions`]).
     Subscriptions,
     /// The management surface, off by default (see [`crate::management`]).
@@ -358,14 +349,13 @@ enum NavSlot {
 /// full-featured deployment reads in the same order as a minimal one. The
 /// divider belongs to the meta group, whose anchors (`Audit log`, `System`) are
 /// unconditional — so no hidden entry can ever strand it or double a gap.
-const NAV_SLOTS: [NavSlot; 12] = [
+const NAV_SLOTS: [NavSlot; 11] = [
     NavSlot::Item("/", "Dashboard", icondata_lu::LuLayoutDashboard),
     NavSlot::Item("/templates", "Templates", icondata_lu::LuFileCode2),
     NavSlot::Item("/queries", "Queries", icondata_lu::LuSearchCode),
     NavSlot::Item("/ehrs", "EHRs", icondata_lu::LuDatabase),
     NavSlot::Item(NAV_DEMOGRAPHICS, "Demographics", icondata_lu::LuUsers),
     NavSlot::Item("/terminology", "Terminology", icondata_lu::LuBookA),
-    NavSlot::Gated(NavProbe::Fhir, "/fhir", "FHIR", icondata_lu::LuPlug),
     NavSlot::Gated(
         NavProbe::Subscriptions,
         "/subscriptions",
@@ -438,7 +428,6 @@ fn authed_shell(
     management: Resource<
         Result<crate::management::ManagementAvailability, crate::error::ViewerError>,
     >,
-    fhir: Resource<Result<crate::fhir::FhirAvailability, crate::error::ViewerError>>,
     subscriptions: Resource<
         Result<crate::subscriptions::SubscriptionAvailability, crate::error::ViewerError>,
     >,
@@ -736,11 +725,6 @@ fn authed_shell(
         .into_iter()
         .map(|slot| match slot {
             NavSlot::Item(href, label, icon) => nav_entry(active, href, label, icon).into_any(),
-            NavSlot::Gated(NavProbe::Fhir, href, label, icon) => {
-                crate::fhir::when_fhir_connector_usable(fhir, move || {
-                    nav_entry(active, href, label, icon).into_any()
-                })
-            }
             NavSlot::Gated(NavProbe::Subscriptions, href, label, icon) => {
                 crate::subscriptions::when_event_subscriptions_usable(subscriptions, move || {
                     nav_entry(active, href, label, icon).into_any()
@@ -836,7 +820,6 @@ mod tests {
             NavSlot::Item(_, label, _) => (*label).to_owned(),
             NavSlot::Gated(probe, _, label, _) => {
                 let probe = match probe {
-                    NavProbe::Fhir => "fhir",
                     NavProbe::Subscriptions => "subscriptions",
                     NavProbe::Management => "management",
                 };
@@ -861,7 +844,6 @@ mod tests {
                 "EHRs",
                 "Demographics",
                 "Terminology",
-                "FHIR (gated: fhir)",
                 "Subscriptions (gated: subscriptions)",
                 "──",
                 "Operations (gated: management)",
@@ -872,8 +854,8 @@ mod tests {
     }
 
     /// The divider is meta-group chrome, and the meta group's anchors are
-    /// unconditional — so the leanest possible deployment (no FHIR connector,
-    /// no event subscriptions, no management surface) still shows the rule with
+    /// unconditional — so the leanest possible deployment (no event
+    /// subscriptions, no management surface) still shows the rule with
     /// content on both sides: no stray divider, no doubled gap.
     #[test]
     fn hiding_every_gated_entry_leaves_the_divider_between_two_groups() {
@@ -941,11 +923,6 @@ mod tests {
         );
         assert_eq!(nav_key("/subscriptions"), "/subscriptions");
         assert_eq!(nav_key("/subscriptions?page=1"), "/subscriptions");
-        assert_eq!(nav_key("/fhir"), "/fhir");
-        assert_eq!(
-            nav_key("/fhir?resource_type=Observation&patient=p-42"),
-            "/fhir"
-        );
         assert_eq!(nav_key("/unknown"), "/");
     }
 }

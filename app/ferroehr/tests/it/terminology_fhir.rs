@@ -412,7 +412,7 @@ async fn repeated_operations_are_served_from_the_cache() {
     }
 }
 
-// ── ConceptMap/$translate (the FHIR-mapping code-translation seam) ───────────
+// ── ConceptMap/$translate (cross-terminology code translation) ───────────────
 
 #[tokio::test]
 async fn translate_takes_the_first_strictly_equivalent_match() {

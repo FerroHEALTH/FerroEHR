@@ -227,7 +227,7 @@ label upstream-confirmed b45309 "Upstream-report verified first-hand as genuine;
 
 echo "== product areas =="
 label viewer     5319e7 "The FerroEHR Viewer (the console, its own OCI image)"
-label fhir       f58220 "FHIR R4 connector (mapping, outbound, terminology client, subject proxy): our own extension"
+label fhir       f58220 "FHIR surfaces the CDR keeps: AuditEvent, ITI-81, terminology client (mapping is FerroBRIDGE)"
 label regulation 0e8a16 "A regulation, standard or jurisdiction FerroEHR should be measured against"
 
 echo "== workflow labels =="

@@ -22,8 +22,14 @@ use sqlx::PgPool;
 pub struct OutboxReader(&'static str);
 
 impl OutboxReader {
-    /// The FHIR outbound emitter (`fhir.outbound`).
-    pub const FHIR_OUTBOUND: Self = Self("fhir-outbound");
+    /// Names a reader by its registry key.
+    ///
+    /// The registry refuses a key outside `^[a-z][a-z0-9-]{0,62}$` (the
+    /// `ck_event_outbox_reader_name` check) when a call writes it.
+    #[must_use]
+    pub const fn new(name: &'static str) -> Self {
+        Self(name)
+    }
 
     /// The reader's registry key.
     #[must_use]

@@ -27,12 +27,6 @@ cd "$(dirname "$0")/../.."
 SRC="website/book/ehds.yaml"
 READINESS="website/book/src/compliance/ehds-readiness.md"
 TECHDOC="website/book/src/compliance/technical-documentation.md"
-# The coverage matrix is injected into a HAND-WRITTEN page between markers,
-# rather than owning a page of its own: the FHIR chapter is the place a reader
-# already asks this question, and only the table is generated.
-FHIR_PAGE="website/book/src/beyond-core/fhir.md"
-FHIR_BEGIN="<!-- BEGIN generated: ehds-priority-categories -->"
-FHIR_END="<!-- END generated: ehds-priority-categories -->"
 SCRIPT="scripts/render/ehds-pages.sh"
 
 CHECK=0
@@ -179,6 +173,8 @@ ANNEX2
        (.items[] | "| \(.id) | \(.summary | gsub("\n"; " ")) | \(.status | badge) | \(. | evidence) | \(. | detail) |"),
        "")
   ' "$WORK/ehds.json"
+
+  render_categories
 
   cat <<'DECISIONS'
 ## The position this page rests on
@@ -362,65 +358,44 @@ REST
 
 render_categories() {
   cat <<'INTRO'
-The six priority categories of personal electronic health data are Annex I of
-the EHDS regulation, and Annex II 2.1 to 2.3 require an EHR system to provide
-and receive them in the European electronic health record exchange format.
-That format is set by implementing acts under Article 15(1) that have not
-been adopted, so this table is not a conformance claim against it. What it says is
-narrower and checkable: which category has a committed template whose example
-composition round-trips through this façade today.
+## The priority categories
 
-| Annex I | Category | Committed template | A profile mapping would target | Transform proven |
-|---|---|---|---|---|
+The six priority categories of personal electronic health data are Annex I of
+the regulation, and Annex II 2.1 to 2.3 require an EHR system to provide and
+receive them in the European electronic health record exchange format. That
+format is set by implementing acts under Article 15(1) that have not been
+adopted, so this table is not a conformance claim against it. What it says is
+narrower and checkable: which category has an operational template committed
+to this repository, and which FHIR resource a mapping for it would target.
+
+| Annex I | Category | Committed template | A profile mapping would target |
+|---|---|---|---|
 INTRO
 
   jq -r '
-    def state: {template:"Yes", "no-template":"**No committed template**"}[.];
     .priority_categories[]
-    | "| \(.id) | \(.name) | \(if .template == "" then "—" else "`corpus/templates/ckm/\(.template).opt`" end) | \(.fhir) | \(.state | state) |"
+    | "| \(.id) | \(.name) | \(if .template == "" then "**No committed template**" else "`corpus/templates/ckm/\(.template).opt`" end) | \(.fhir) |"
   ' "$WORK/ehds.json"
 
   cat <<'OUTRO'
 
-"Transform proven" means exactly what the test asserts, and no more
-(`app/ferroehr/tests/it/fhir_priority_categories.rs`): the category's
-committed operational template builds a Web Template, its committed example
-composition flattens against that template to a non-empty map, and a mapping
-entry over a leaf taken from that map drives the reverse transform to a FHIR
-resource carrying the composition's own value. The leaf is derived from the
-map rather than written into the test, so a corpus refresh moves it and the
-case still holds.
+A category without a committed template is not one FerroEHR cannot store: the
+CDR stores whatever an operational template defines. It is a category with no
+committed example, so nothing in this repository demonstrates it end to end.
 
-Three things it deliberately does **not** establish, each of which a reader
-could otherwise assume:
+The rightmost column says what a mapping for the category *would* target, not
+what exists. FerroEHR carries no FHIR mapping: mapping openEHR content to FHIR
+is the job of FerroBRIDGE (<https://github.com/FerroHEALTH/FerroBRIDGE>), the
+other product of the EHR system, which reads FerroEHR over ITS-REST. No mapping
+set for these categories ships with either product, and no test in this
+repository asserts a transform for them.
 
-- **No profile mapping ships.** The rightmost column says what a mapping for
-  that category *would* target, not what exists. The test maps its leaf onto
-  `Observation.note.text`, a free-text element: it proves the machinery
-  carries real clinical content, not that an IPS-shaped `Bundle` or a
-  `MedicationRequest` has been authored and reviewed. Mappings are data a
-  deployment registers, as the section above describes.
-- **It exercises the transform, not the endpoint.** The test calls the
-  reverse transform directly, so routing, authorization and the stored-mapping
-  lookup are covered by other tests rather than by this table.
-- **It is not conformance to the exchange format**, which does not exist yet.
-
-The connector this table measures is planned to leave: FerroBRIDGE
-(<https://github.com/rubentalstra/FerroBRIDGE>) is the FHIRconnect and OMOP
-bridge, and it ships the European interoperability software component of the
-EHR system Cadasto B.V. declares, FerroEHR and FerroBRIDGE together.
-[#3080](https://github.com/FerroHEALTH/FerroEHR/issues/3080) retires the
-in-tree connector once FerroBRIDGE carries the mappings. The EHDS question does
-not leave with the connector, because it is asked of the EHR system, so this
-table moves to the compliance chapter at that point instead of being deleted
-with the page it currently sits on.
-
-Two of the example compositions this rests on — the patient summary and the
-imaging report — were patched by hand rather than regenerated against a
-running server, which their pack's provenance records and
+Two of the example compositions behind the committed templates, the patient
+summary and the imaging report, were patched by hand rather than regenerated
+against a running server, which their pack's provenance records and
 [#1724](https://github.com/FerroHEALTH/FerroEHR/issues/1724) tracks. They are
-real CKM templates either way; the caveat belongs beside a claim that leans on
-them.
+real CKM templates either way.
+
 OUTRO
 }
 
@@ -442,19 +417,6 @@ render_readiness > "$WORK/readiness.md"
 render_techdoc  > "$WORK/techdoc.md"
 emit "$READINESS" "$WORK/readiness.md"
 emit "$TECHDOC"   "$WORK/techdoc.md"
-
-# The FHIR chapter keeps its hand-written prose; only the region between the
-# markers is ours. A missing marker is an error rather than a silent skip.
-grep -qF "$FHIR_BEGIN" "$FHIR_PAGE" || die "$FHIR_PAGE has no $FHIR_BEGIN marker"
-grep -qF "$FHIR_END" "$FHIR_PAGE" || die "$FHIR_PAGE has no $FHIR_END marker"
-{
-  sed -n "1,/$(printf '%s' "$FHIR_BEGIN" | sed 's/[][\/.*^$]/\\&/g')/p" "$FHIR_PAGE"
-  echo
-  render_categories
-  echo
-  sed -n "/$(printf '%s' "$FHIR_END" | sed 's/[][\/.*^$]/\\&/g')/,\$p" "$FHIR_PAGE"
-} > "$WORK/fhir.md"
-emit "$FHIR_PAGE" "$WORK/fhir.md"
 
 count="$(jq '[.requirements[].items[]] | length' "$WORK/ehds.json")"
 if [[ "$CHECK" -eq 1 ]]; then

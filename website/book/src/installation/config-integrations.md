@@ -1,8 +1,8 @@
 # Integrations
 
-Query execution and the four optional integrations: `[query]`, `[events]`,
-`[fhir]`, `[terminology]`, `[multimedia]`. Everything except the query knobs is
-off by default, and a disabled integration contacts nothing and mounts no
+Query execution and the three optional integrations: `[query]`, `[events]`,
+`[terminology]`, `[multimedia]`. Everything except the query knobs is off by
+default, and a disabled integration contacts nothing and mounts no
 routes. Precedence, the environment-name grammar, and file discovery are on the
 [Configuration reference](configuration.md) index.
 
@@ -52,7 +52,7 @@ default; the envelopes are PHI-free by design.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `enabled` | bool | `false` | Spawn the outbox publisher. Together with `fhir.outbound.enabled` it also gates the per-commit outbox INSERT, so with both off the commit path writes no outbox rows at all. |
+| `enabled` | bool | `false` | Spawn the outbox publisher. It also gates the per-commit outbox INSERT, so with it off the commit path writes no outbox rows at all. |
 | `url` | secret URL | `amqp://guest:guest@localhost:5672/%2f` | AMQP broker URL; credentials are redacted from every rendering. |
 | `url_file` | path | unset | Read the broker URL from a file instead, for a mounted secret. At most one of the pair, where the built-in development default does not count as "set". |
 | `exchange` | string | `ferroehr.events` | Topic exchange for the PHI-free envelope stream. |
@@ -69,33 +69,6 @@ default; the envelopes are PHI-free by design.
 > and container images. A binary built with `--no-default-features` refuses at
 > startup if `events.enabled` is set, rather than running with the publisher
 > silently absent.
-
-## `[fhir]`
-
-The FHIR connector: an inbound façade and an independent outbound emitter.
-
-`[fhir]`: `api_enabled` (bool, `false`) mounts `/fhir/r4/*` plus the
-`/admin/fhir_mapping` CRUD; the routes answer `404` while it is off.
-
-`[fhir.outbound]`:
-
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `enabled` | bool | `false` | Emit mapped FHIR resources to the broker. |
-| `url` | secret URL | `amqp://guest:guest@localhost:5672/%2f` | AMQP broker URL; credentials redacted. |
-| `url_file` | path | unset | Read the broker URL from a mounted file instead. At most one of the pair. |
-| `exchange` | string | `ferroehr.fhir` | Topic exchange, deliberately distinct from the events exchange, for PHI isolation. |
-| `tls` | bool | `false` | Upgrade `amqp://` to `amqps://`. Under `deployment_profile = "production"`, an enabled emitter that still publishes over `amqp://` opens the [`plaintext_broker`](configuration.md#deployment_profile) gap. |
-| `batch_size` | int | `128` | Outbox rows scanned per poll. |
-| `poll_interval_ms` | int | `1000` | Idle poll interval. |
-| `publish_max_retries` | int | `3` | Per-message publish retries before backing off. |
-
-> [!WARNING]
-> The outbound stream carries **PHI**: its payload *is* the mapped FHIR
-> resource. That is why it is a separate switch and a separate exchange from the
-> PHI-free change-event stream: broker-level access control can then restrict
-> the PHI-bearing stream on its own. Enable it only against a TLS,
-> access-controlled broker.
 
 ## `[terminology]`
 

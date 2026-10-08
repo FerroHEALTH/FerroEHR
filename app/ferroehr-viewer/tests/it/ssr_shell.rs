@@ -188,9 +188,9 @@ const STATIC_SIDEBAR: [&str; 8] = [
     "/system System",
 ];
 
-/// The three sidebar entries a CDR probe decides, each hidden when its probe
+/// The two sidebar entries a CDR probe decides, each hidden when its probe
 /// does not report the surface mounted.
-const GATED_SIDEBAR_HREFS: [&str; 3] = ["/fhir", "/subscriptions", "/operations"];
+const GATED_SIDEBAR_HREFS: [&str; 2] = ["/subscriptions", "/operations"];
 
 /// Marks the entry at `index` of [`STATIC_SIDEBAR`] active and returns the whole
 /// expected sidebar.

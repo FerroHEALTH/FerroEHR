@@ -120,18 +120,6 @@ The identity fields Art. 30(1)(a) asks for are yours in every case:
 | Retention | Published rows pruned after `[events] retention_days`, seven days by default |
 | Security measures | Written in the same transaction as the commit it announces, so there is no event without its commit; optional TLS to the broker; the envelope carries identifiers, so a consumer still has to authenticate to the API to read anything |
 
-## 7. The FHIR façade (off by default)
-
-| Art. 30 field | What the software does |
-|---|---|
-| Purpose | Exchanging mapped resources with FHIR systems, when `[fhir]` is enabled |
-| Categories of data subject | Record subjects |
-| Categories of personal data | Whatever the registered mappings project, which is clinical content and therefore Art. 9 data. Outbound emission is PHI-bearing, unlike the change-event envelope |
-| Recipients | The configured broker or FHIR peer |
-| Third-country transfers | *yours* |
-| Retention | Nothing is stored by the façade beyond the mappings themselves and an outbound cursor |
-| Security measures | Mappings are data an administrator registers, so what leaves is what someone configured rather than a default; the façade is a targeted surface with no free-text search and no `_include`; TLS to the peer |
-
 ## Fields no software can fill
 
 The record is not complete until these are answered, and they are answered by

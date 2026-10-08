@@ -484,7 +484,7 @@ Four controls sit on top of it, and they are separate on purpose:
 ## Retrieving audit records (ITI-81)
 
 The RESTful-ATNA **ITI-81 Retrieve ATNA Audit Event** transaction is served
-at the FHIR façade:
+under the FHIR R4 path `fhir/r4`, the one FHIR route FerroEHR serves:
 
 ```text
 GET /ferroehr/rest/openehr/v1/fhir/r4/AuditEvent

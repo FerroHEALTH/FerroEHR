@@ -40,8 +40,7 @@ and published*.
 
 - **One licence for all of our own code, with no open-core tier.**
   Role- and attribute-based access control, IHE ATNA audit,
-  per-version digital signatures, the FHIR R4 connectors, change events and
-  the viewer are in one repository under the Business Source License 1.1.
+  per-version digital signatures, change events and the viewer are in one repository under the Business Source License 1.1.
   Nothing is held back to be sold back
   to you. (Vendored openEHR material keeps its own upstream terms, and the
   spec crates that embed it say so in their own metadata; see

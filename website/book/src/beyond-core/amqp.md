@@ -28,9 +28,9 @@ properties you can design a consumer against:
   authenticated REST API.
 - **Commits never wait on the broker.** If the broker is down, events accumulate
   in the outbox and drain when it returns. Published rows are pruned after a
-  retention window, and never past the cursor of an active reader (the FHIR
-  outbound emitter, when enabled): the prune's floor is the lowest active
-  reader cursor in `event_outbox_reader`, read in the same statement.
+  retention window, and never past the cursor of an active reader registered in
+  `event_outbox_reader`: the prune's floor is the lowest active reader cursor,
+  read in the same statement.
 
 ```mermaid
 flowchart LR

@@ -26,7 +26,7 @@ you can judge the exposure rather than reading "secrets" generically.
 | The OIDC HMAC secret | `secrets.authOidcHmacSecret` (HS256 development setups) | the ability to **mint valid tokens** for any user and role |
 | The version-signing passphrase (plus the PGP key via `config.files`) | `config.signing.mode: pgp` | the ability to forge version signatures, breaking the integrity guarantee |
 | A terminology `client_secret` | `secrets.terminologyOauth2ClientSecrets` | access to that terminology server as this client |
-| AMQP broker URLs | `secrets.eventsUrl`, `secrets.fhirOutboundUrl` | the FHIR outbound stream **carries PHI**; the events stream is PHI-free by design |
+| The AMQP broker URL | `secrets.eventsUrl` | access to the change-event stream, which is PHI-free by design |
 | The audit repository URL | `secrets.auditFhirFeedUrl` | the ability to read or forge audit records at the repository |
 | S3 credentials | `secrets.multimediaSecretAccessKey` (with `secrets.multimediaAccessKeyId`) | offloaded `DV_MULTIMEDIA` blobs, which **are PHI** |
 | The viewer's OIDC client secret | `viewer.existingSecret`, when the viewer is enabled | the ability to impersonate the viewer at your identity provider |

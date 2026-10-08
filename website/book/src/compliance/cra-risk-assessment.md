@@ -330,8 +330,8 @@ transit by state of the art mechanisms, and by using other technical means"
   (`production_refuses_a_plain_management_listener_on_its_own_port`), and a
   syslog audit feed over UDP opens `audit_syslog_udp`
   (`production_refuses_a_udp_audit_syslog_unless_accepted_by_name`). An
-  enabled change-event outbox or FHIR outbound emitter publishing to a plain
-  `amqp://` broker opens `plaintext_broker` (#3676,
+  enabled change-event outbox publishing to a plain `amqp://` broker opens
+  `plaintext_broker` (#3676,
   `production_refuses_a_plaintext_amqp_broker_unless_accepted_by_name`).
   An enabled audit FHIR feed on an `http://` URL opens `plaintext_audit_feed`,
   and an enabled multimedia store with `allow_http` opens
@@ -436,7 +436,7 @@ external interfaces"
 
 - **Applies:** yes.
 - **How:** optional surfaces are off by default (admin, management, SMART,
-  multimedia, events, FHIR, the terminology API); Swagger UI is `private`;
+  multimedia, events, the terminology API); Swagger UI is `private`;
   optional integrations are compiled behind features; the runtime images are
   distroless `nonroot` with no shell; the chart installs an ingress
   NetworkPolicy.
@@ -587,7 +587,6 @@ listed.
 | Remote policy decision point (`[authz.abac.remote]`) | off | the attributes of the request being decided | the authorisation decision the deployment delegates to its own policy service |
 | Terminology server (`[terminology.external]`) | off | codes and value-set references to validate, expand or subsume | validating terminology bindings on write and expanding `TERMINOLOGY()` in AQL |
 | Change events over AMQP (`[events]`) | off | commit notifications, free of PHI by default | telling the provider's other systems that a record changed |
-| FHIR outbound over AMQP (`[fhir.outbound]`) | off | mapped FHIR resources, which carry PHI | feeding the provider's FHIR consumers; enabling it is an explicit decision |
 | Multimedia to S3 (`[multimedia]`) | off | `DV_MULTIMEDIA` bytes above a size threshold, keyed by content hash | storing large attachments of the record outside the database |
 | Access log to syslog (`[audit.syslog]`) and to a FHIR feed (`[audit.fhir_feed]`) | off | access records | an off-box copy of the access log, which the threat model asks for |
 | Traces and metrics over OTLP (`telemetry.otlp_endpoint`) | off | spans and metrics, with identified data sanitised out | operating the instance |

@@ -213,10 +213,10 @@ broker accounts.
 
 ### Systems FerroEHR sent data to
 
-Change events on the message broker, documents sent to a FHIR server, records
-sent to an external Audit Record Repository or a syslog collector, and the logs
-and traces your telemetry backend received are held by those systems. Remove
-them there, under the same retention duties.
+Change events on the message broker, records sent to an external Audit Record
+Repository or a syslog collector, and the logs and traces your telemetry
+backend received are held by those systems. Remove them there, under the same
+retention duties.
 
 ### The physical media
 

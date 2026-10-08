@@ -21,9 +21,9 @@
 //!   audit middleware + operation classification).
 //! - [`extensions`] — everything the specs do **not** govern, quarantined and
 //!   flagged: authentication + authorization ([`extensions::access`]),
-//!   management/observability, `OpenAPI` serving, terminology, eventing, FHIR, and
-//!   each config-gated so a stock server exposes only the
-//!   standardised ITS-REST surface.
+//!   management/observability, `OpenAPI` serving, terminology, eventing, the
+//!   ITI-81 audit retrieval, and each config-gated so a stock server exposes
+//!   only the standardised ITS-REST surface.
 //!
 //! [`router::router`] assembles these under the configured base path with the
 //! `tower-http` middleware stack. The adapter is generic over the platform

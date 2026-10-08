@@ -583,8 +583,7 @@ impl FerroEhrService {
     /// `ehr_create_with_id` (`PUT /ehr/{ehr_id}`), both of which route through
     /// [`Self::create_ehr_meta`] / [`Self::create_ehr_with_id_meta`]; the
     /// subject-scoped SM creates have no wire binding and therefore no
-    /// request headers to merge (the in-process caller is the FHIR ingest
-    /// path, which commits under the server's own attribution).
+    /// request headers to merge.
     ///
     /// # Errors
     /// [`SmError`] when the subject already owns an EHR (409-equivalent), the

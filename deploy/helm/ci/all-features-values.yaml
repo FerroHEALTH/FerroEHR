@@ -33,7 +33,6 @@ secrets:
   authOidcHmacSecret: ci-fixture-not-a-secret-0000000000000000
   signingKeyPassphrase: ci-fixture-not-a-secret-passphrase
   eventsUrl: amqps://user:pass@rabbitmq:5671/%2f
-  fhirOutboundUrl: amqps://user:pass@rabbitmq:5671/%2f
   auditFhirFeedUrl: https://arr:arr-password@arr.example.com/fhir
   multimediaAccessKeyId: AKIAEXAMPLE
   multimediaSecretAccessKey: s3-secret
@@ -163,12 +162,6 @@ config:
     enabled: true
     exchange: ferroehr.events
     tls: true
-  fhir:
-    api_enabled: true
-    outbound:
-      enabled: true
-      exchange: ferroehr.fhir
-      tls: true
   terminology:
     api_enabled: true
     external:

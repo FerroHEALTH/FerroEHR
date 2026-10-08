@@ -19,7 +19,7 @@ path = "src/main.rs"
 [features]
 # Forward the optional-integration gates (#1890); default mirrors ferroehr's.
 default = ["fhir", "events", "multimedia"]
-fhir = ["ferroehr/fhir", "ferroehr-rest/fhir", "events"]
+fhir = ["ferroehr/fhir", "ferroehr-rest/fhir"]
 events = ["ferroehr/events", "ferroehr-rest/events"]
 multimedia = ["ferroehr/multimedia", "ferroehr-rest/multimedia"]
 

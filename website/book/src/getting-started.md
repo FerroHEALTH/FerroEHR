@@ -213,8 +213,7 @@ credential when the browser asks) to browse and try every endpoint from your
 browser. The UI's spec selector carries one entry per API
 family: the standardised openEHR groups (EHR, Query, Definition, Demographic,
 Admin) and the server's own extensions (status & management, terminology, party
-relationships, messaging, event subscriptions, the FHIR connector, SMART
-discovery), plus **FerroEHR — Complete surface** last, which
+relationships, messaging, event subscriptions, audit, SMART discovery), plus **FerroEHR — Complete surface** last, which
 is the whole server in one document. Every entry is filtered from that same
 document, which the server generates from its own handlers, so nothing here can
 drift from the routes it actually serves. When authentication is enabled the

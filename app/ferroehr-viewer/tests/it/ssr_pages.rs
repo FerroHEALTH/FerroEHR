@@ -623,22 +623,6 @@ async fn the_subscriptions_screen_renders_the_create_form_with_its_filter_fields
     }
 }
 
-// ------------------------------------------------------------------- FHIR
-
-/// The FHIR connector is probe-and-hide: nothing that needs the surface renders
-/// before the probe answers, so the server pass is the header over a skeleton.
-#[tokio::test]
-async fn the_fhir_screen_renders_its_header_over_the_connector_probe_skeleton() {
-    let html = render_page("/fhir", &[], || {
-        view! { <ferroehr_viewer::pages::fhir::FhirPage /> }.into_any()
-    });
-    assert!(html.contains("id=\"fhir-screen\""), "{html}");
-    assert!(html.contains(">FHIR</h1>"), "{html}");
-    assert!(html.contains("thaw-skeleton"), "{html}");
-    assert!(!html.contains("id=\"fhir-create\""), "{html}");
-    assert!(!html.contains("id=\"fhir-disabled\""), "{html}");
-}
-
 // ------------------------------------------------------------- operations
 
 #[tokio::test]

@@ -180,18 +180,12 @@ SECURITY POSTURE
      request 401s — add config.auth.oidc.issuer, an [[auth.basic.users]] entry
      under config.auth.basic.users, or supply material via config.files.
 {{ end -}}
-{{ if .Values.config.fhir.outbound.enabled }}
-  ⚠  config.fhir.outbound.enabled=true — this AMQP stream carries PHI (mapped FHIR
-     resources). Ensure the broker + exchange "{{ .Values.config.fhir.outbound.exchange }}" are access-controlled and TLS.
-{{ end -}}
 {{ if and .Values.config.multimedia.enabled .Values.config.multimedia.allow_http }}
   ⚠  config.multimedia.allow_http=true — plain-HTTP object store. Dev only; prod S3 is HTTPS.
 {{ end }}
 Optional integrations currently ON:
   admin API:        {{ .Values.config.admin.enabled }}
   eventing (AMQP):  {{ .Values.config.events.enabled }}
-  FHIR inbound:     {{ .Values.config.fhir.api_enabled }}
-  FHIR outbound:    {{ .Values.config.fhir.outbound.enabled }} (PHI)
   S3 multimedia:    {{ .Values.config.multimedia.enabled }}
   ATNA audit:       {{ .Values.config.audit.enabled }}
   {{- /* The INJECTED state, not the values one: terminology.enabled writes

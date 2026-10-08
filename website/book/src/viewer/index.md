@@ -204,9 +204,6 @@ it in readable form.
 - **Demographics:** browse and edit the five demographic party kinds, their
   relationships, version history, and tags. See
   [Demographics](demographics.md).
-- **FHIR:** the connector's mapping-store editor, a read-path viewer, and a
-  validate-only dry-run panel; appears only when the CDR's FHIR API is
-  enabled. See [FHIR connector admin](fhir.md).
 - **Terminology:** browse the terminologies the CDR serves, define a code,
   expand a value set, and test membership or subsumption. See
   [Terminology](terminology.md).

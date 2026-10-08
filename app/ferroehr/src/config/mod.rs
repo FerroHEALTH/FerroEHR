@@ -93,8 +93,6 @@ pub struct FerroEhrConfig {
     pub query: crate::service::query::config::QueryConfig,
     /// `[events]` — contribution-outbox eventing (+ its admin API).
     pub events: crate::extensions::events::config::EventsConfig,
-    /// `[fhir]` — the FHIR connector (inbound façade + outbound emitter).
-    pub fhir: crate::extensions::fhir::config::FhirConfig,
     /// `[terminology]` — terminology API + external-server validation.
     pub terminology: crate::service::terminology::config::TerminologyConfig,
     /// `[multimedia]` — `DV_MULTIMEDIA` externalization.
@@ -1603,7 +1601,6 @@ mod tests {
     fn the_credential_keys_resolve_identically_from_a_file_and_inline() {
         const DSN: &str = "postgres://u:p@db.internal:5432/ferroehr";
         const BROKER: &str = "amqps://u:p@broker.internal:5671/%2f";
-        const FHIR_BROKER: &str = "amqps://u:p@fhir-broker.internal:5671/%2f";
         const HASH: &str = "$argon2id$v=19$m=19456,t=2,p=1$c2FsdHNhbHQ$aGFzaGhhc2g";
 
         let secret_file = |name: &str, contents: &str| {
@@ -1616,17 +1613,14 @@ mod tests {
 
         let dsn = secret_file("dsn", DSN);
         let broker = secret_file("broker", BROKER);
-        let fhir_broker = secret_file("fhir-broker", FHIR_BROKER);
         let hash = secret_file("hash", HASH);
 
         let from_files = toml_file(&format!(
             "[db]\nurl_file = \"{}\"\n\
              [events]\nurl_file = \"{}\"\n\
-             [fhir.outbound]\nurl_file = \"{}\"\n\
              [[auth.basic.users]]\nusername = \"alice\"\npassword_hash_file = \"{}\"\n",
             dsn.path().display(),
             broker.path().display(),
-            fhir_broker.path().display(),
             hash.path().display(),
         ));
         let via_file = assemble_ok(Some(from_files.path()), &env(&[]), &[]);
@@ -1634,7 +1628,6 @@ mod tests {
         let inline = toml_file(&format!(
             "[db]\nurl = \"{DSN}\"\n\
              [events]\nurl = \"{BROKER}\"\n\
-             [fhir.outbound]\nurl = \"{FHIR_BROKER}\"\n\
              [[auth.basic.users]]\nusername = \"alice\"\npassword_hash = \"{HASH}\"\n"
         ));
         let via_inline = assemble_ok(Some(inline.path()), &env(&[]), &[]);
@@ -1642,7 +1635,6 @@ mod tests {
         assert_eq!(via_file.db.url.expose(), DSN);
         assert_eq!(via_file.db.url.expose(), via_inline.db.url.expose());
         assert_eq!(via_file.events.url.expose(), BROKER);
-        assert_eq!(via_file.fhir.outbound.url.expose(), FHIR_BROKER);
         let user = &via_file.auth.basic.as_ref().expect("basic").users[0];
         assert_eq!(user.password_hash.expose(), HASH);
 
@@ -1663,7 +1655,7 @@ mod tests {
     }
 
     /// Setting a credential both inline and as a file is refused for each of the
-    /// seven, rather than one silently winning.
+    /// six, rather than one silently winning.
     ///
     /// Each of these fields has a non-empty dev default, so "the operator set it"
     /// means "it differs from that default" — the default itself must NOT count
@@ -1679,7 +1671,6 @@ mod tests {
             "[storage.linkage]\nurl = \"postgres://u:p@h:5432/d\"\n\
              url_file = \"/dev/null\"\n",
             "[events]\nurl = \"amqp://u:p@h:5672/%2f\"\nurl_file = \"/dev/null\"\n",
-            "[fhir.outbound]\nurl = \"amqp://u:p@h:5672/%2f\"\nurl_file = \"/dev/null\"\n",
             "[[auth.basic.users]]\nusername = \"a\"\npassword_hash = \"x\"\n\
              password_hash_file = \"/dev/null\"\n",
         ];
@@ -1724,10 +1715,6 @@ mod tests {
                     &broker.path().display().to_string(),
                 ),
                 (
-                    "FERROEHR__FHIR__OUTBOUND__URL_FILE",
-                    &broker.path().display().to_string(),
-                ),
-                (
                     "FERROEHR__STORAGE__PARTY__URL_FILE",
                     &migrate.path().display().to_string(),
                 ),
@@ -1743,7 +1730,6 @@ mod tests {
              falling back to db.url as an unwired key would"
         );
         assert_eq!(c.events.url.expose(), "amqps://u:p@b:5671/%2f");
-        assert_eq!(c.fhir.outbound.url.expose(), "amqps://u:p@b:5671/%2f");
     }
 
     /// The dev default is not a setting, so a `*_file` alone works without the
@@ -1779,26 +1765,25 @@ mod tests {
         c.storage.linkage.url = Some(leaky(5));
         c.storage.audit.url = Some(leaky(6));
         c.events.url = leaky(7);
-        c.fhir.outbound.url = leaky(8);
-        c.audit.fhir_feed.url = leaky(9);
+        c.audit.fhir_feed.url = leaky(8);
         c.terminology.external.providers.insert(
             "ts".to_owned(),
             FhirProviderConfig {
-                url: leaky(10),
+                url: leaky(9),
                 ..FhirProviderConfig::default()
             },
         );
         c.terminology.external.oauth2_clients.insert(
             "client".to_owned(),
             TerminologyOauth2Config {
-                token_url: leaky(11),
+                token_url: leaky(10),
                 ..TerminologyOauth2Config::default()
             },
         );
-        c.usage_report.endpoint = leaky(12);
-        c.authz.abac.remote.server = Some(leaky(13));
-        c.telemetry.otlp_endpoint = Some(leaky(14));
-        c.multimedia.endpoint = Some(leaky(15));
+        c.usage_report.endpoint = leaky(11);
+        c.authz.abac.remote.server = Some(leaky(12));
+        c.telemetry.otlp_endpoint = Some(leaky(13));
+        c.multimedia.endpoint = Some(leaky(14));
 
         let toml = c.to_redacted_toml().expect("toml");
         let table = c.to_redacted_table().expect("table").to_string();
@@ -1814,7 +1799,7 @@ mod tests {
                 !rendered.contains("URL_PW_SENTINEL"),
                 "URL userinfo leaked into the {surface} rendering: {rendered}"
             );
-            for n in 1..=15 {
+            for n in 1..=14 {
                 assert!(
                     rendered.contains(&format!("https://***@h{n}:1/p{n}")),
                     "URL {n} lost its host and path in the {surface} rendering: {rendered}"
@@ -1859,7 +1844,6 @@ mod tests {
         const PASSPHRASE: &str = "PASSPHRASE_SENTINEL_1d5a";
         const S3_KEY: &str = "S3_SECRET_SENTINEL_8c6b";
         const EVENTS_PW: &str = "EVENTS_PW_SENTINEL_2f7e";
-        const FHIR_PW: &str = "FHIR_PW_SENTINEL_6a9d";
 
         let mut c = FerroEhrConfig::default();
         c.db.url = SecretUrl::new(format!(
@@ -1882,14 +1866,11 @@ mod tests {
         c.multimedia.secret_access_key = Some(Secret::new(S3_KEY));
         c.multimedia.access_key_id = Some("AKIA_PUBLIC_ID".to_owned());
         c.events.url = SecretUrl::new(format!("amqp://mq:{EVENTS_PW}@broker:5672/vh"));
-        c.fhir.outbound.url = SecretUrl::new(format!("amqps://fhir:{FHIR_PW}@bus:5671/vh"));
 
         let value = c.to_redacted_json().expect("render redacted json");
         let rendered = serde_json::to_string(&value).expect("stringify");
 
-        for sentinel in [
-            DB_PW, BASIC_HASH, HMAC, PASSPHRASE, S3_KEY, EVENTS_PW, FHIR_PW,
-        ] {
+        for sentinel in [DB_PW, BASIC_HASH, HMAC, PASSPHRASE, S3_KEY, EVENTS_PW] {
             assert!(
                 !rendered.contains(sentinel),
                 "secret leaked into GET /admin/config body: {sentinel} in {rendered}"
@@ -1906,7 +1887,6 @@ mod tests {
             "postgres://***@db.internal:5432/ferroehr"
         );
         assert_eq!(value["events"]["url"], "amqp://***@broker:5672/vh");
-        assert_eq!(value["fhir"]["outbound"]["url"], "amqps://***@bus:5671/vh");
 
         // Non-secret identifiers stay visible (they are not credentials).
         assert_eq!(value["auth"]["basic"]["users"][0]["username"], "alice");

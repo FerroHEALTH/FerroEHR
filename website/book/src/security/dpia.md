@@ -45,8 +45,6 @@ the Art. 30 fields, in
    `AuditEvent` renderings.
 6. **Change-event publication**: a PHI-free envelope per commit, drained to a
    broker when `[events]` is enabled.
-7. **The FHIR façade**: inbound ingestion and outbound emission of mapped
-   resources, when `[fhir]` is enabled.
 
 Everything else the server does (templates, terminology lookup, conformance
 reporting) operates on definitions rather than on people.

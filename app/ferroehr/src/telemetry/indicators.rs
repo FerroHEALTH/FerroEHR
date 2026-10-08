@@ -265,49 +265,9 @@ impl HealthIndicator for EventsHealth {
     }
 }
 
-/// `fhir_outbound` — reports the FHIR outbound emitter's broker-delivery
-/// health.
-///
-/// Degraded-tolerable (unemitted outbox rows stay past the emitter's cursor, so
-/// delivery lag must not block readiness): a broker outage flips only the
-/// aggregate to `DEGRADED`, never readiness. Registered only when the outbound
-/// emitter is started (`fhir.outbound.enabled`).
-#[derive(Debug)]
-pub struct FhirOutboundHealth {
-    healthy: Arc<AtomicBool>,
-}
-
-impl FhirOutboundHealth {
-    /// Construct over the emitter's shared health flag (the
-    /// `FhirOutboundHandle::healthy` accessor).
-    #[must_use]
-    pub fn new(healthy: Arc<AtomicBool>) -> Self {
-        Self { healthy }
-    }
-}
-
-#[async_trait]
-impl HealthIndicator for FhirOutboundHealth {
-    fn name(&self) -> &'static str {
-        "fhir_outbound"
-    }
-
-    async fn check(&self) -> Health {
-        if self.healthy.load(Ordering::Relaxed) {
-            Health::up()
-        } else {
-            Health::degraded("FHIR outbound broker unavailable; outbox retained")
-        }
-    }
-
-    fn required(&self) -> bool {
-        false
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{AuditHealth, DbHealth, EventsHealth, FhirOutboundHealth, MigrationsHealth};
+    use super::{AuditHealth, DbHealth, EventsHealth, MigrationsHealth};
     use crate::system_log::config::{AuditConfig, AuditPosture, FailMode};
     use crate::telemetry::health::{HealthIndicator, HealthStatus};
     use std::sync::Arc;
@@ -369,14 +329,14 @@ mod tests {
         );
     }
 
-    /// The outbound emitter's shared flag IS the indicator's answer: healthy
-    /// reads UP, a broker failure reads DEGRADED with a detail, and the
-    /// indicator never blocks readiness (the outbox retains the rows).
+    /// The publisher's shared flag IS the indicator's answer: healthy reads UP,
+    /// a broker failure reads DEGRADED with a detail, and the indicator never
+    /// blocks readiness (the outbox buffers the rows).
     #[tokio::test]
-    async fn fhir_outbound_health_follows_the_shared_flag() {
+    async fn events_health_follows_the_shared_flag() {
         let healthy = Arc::new(AtomicBool::new(true));
-        let indicator = FhirOutboundHealth::new(Arc::clone(&healthy));
-        assert_eq!(indicator.name(), "fhir_outbound");
+        let indicator = EventsHealth::new(Arc::clone(&healthy));
+        assert_eq!(indicator.name(), "events");
         assert!(
             !indicator.required(),
             "delivery lag must never take the instance out of rotation"
@@ -388,20 +348,8 @@ mod tests {
         assert_eq!(degraded.status, HealthStatus::Degraded);
         assert!(
             degraded.detail.is_some_and(|d| d.contains("outbox")),
-            "the degraded detail must say the rows are retained"
+            "the degraded detail must say the outbox buffers"
         );
-    }
-
-    /// The outbound indicator mirrors the `events` one it is modelled on: same
-    /// flag-to-status mapping, same non-required posture, distinct names.
-    #[tokio::test]
-    async fn outbound_and_events_indicators_agree_on_shape() {
-        let flag = Arc::new(AtomicBool::new(false));
-        let events = EventsHealth::new(Arc::clone(&flag));
-        let outbound = FhirOutboundHealth::new(flag);
-        assert_ne!(events.name(), outbound.name());
-        assert_eq!(events.required(), outbound.required());
-        assert_eq!(events.check().await.status, outbound.check().await.status);
     }
 
     /// A failing database probe must report the FACT and nothing else.

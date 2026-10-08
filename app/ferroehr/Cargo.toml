@@ -16,8 +16,12 @@ publish = false
 # The optional-integration gates (#1890): default = all on, so the shipped
 # binary and every existing consumer keep today's surface; a
 # --no-default-features build is the slim CDR. Additive only.
+# `fhir` covers the FHIR the CDR keeps: the ATNA `AuditEvent` rendering (the
+# local store, the ATX:FHIR Feed, the ITI-81 retrieval) and the FHIR R4B
+# terminology client. FHIR R4 resource mapping is FerroBRIDGE's, outside this
+# workspace.
 default = ["fhir", "events", "multimedia"]
-fhir = ["dep:ferroehr-ext", "ferroehr-ext/fhir", "events"]
+fhir = ["dep:ferroehr-ext", "ferroehr-ext/fhir"]
 events = ["dep:ferroehr-ext", "ferroehr-ext/events"]
 multimedia = ["dep:ferroehr-ext", "ferroehr-ext/multimedia"]
 
@@ -128,17 +132,11 @@ openehr-query = { path = "../../crates/openehr-query" }
 
 [dev-dependencies]
 # Every feature the integration modules USE, named here rather than left to
-# unification. Three of them reach `ferroehr_ext::fhir`
-# (`fhir_ingest_translate`, `fhir_outbound_amqp`, `fhir_priority_categories`),
-# which that feature gates; without it here the test binary compiled only
-# because cargo unified the feature in from the library's own default set
-# (#3207).
-#
-# There is deliberately NO lane building these targets with the library's
-# `fhir` feature off, because they cannot compile that way and should not:
-# four modules import `ferroehr::system_log::fhir`, a LIBRARY module the same
-# feature gates, so the integration binary genuinely requires it. The
-# declaration below is therefore honest rather than load-bearing.
+# unification (#3207). The `multimedia` and `events` modules reach
+# `ferroehr_ext` directly; `fhir` is named because four modules import
+# `ferroehr::system_log::fhir`, a LIBRARY module that feature gates, so the
+# integration binary genuinely requires it. There is deliberately NO lane
+# building these targets with the library's `fhir` feature off.
 ferroehr-ext = { path = "../ferroehr-ext", features = ["multimedia", "events", "fhir"] }
 testkit = { path = "../../tools/testkit" }
 serde_norway.workspace = true

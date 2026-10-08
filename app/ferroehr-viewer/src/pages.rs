@@ -12,7 +12,6 @@ pub mod demographics;
 pub mod ehr_detail;
 pub mod ehr_tags;
 pub mod ehrs;
-pub mod fhir;
 pub mod login;
 pub mod operations;
 pub mod queries;

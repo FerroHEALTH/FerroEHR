@@ -7,7 +7,8 @@
 //! (EHR / COMPOSITION / DIRECTORY / CONTRIBUTION, definitions, demographics,
 //! query, admin, message), the Simplified Formats surface, authentication
 //! (Basic + Bearer) with the RBAC/ABAC PEP and SMART scope enforcement, the ATNA
-//! audit middleware, and the flagged extensions (FHIR, terminology, management,
+//! audit middleware, and the flagged extensions (the ITI-81 audit retrieval,
+//! terminology, management,
 //! tenancy, event subscriptions, TLS).
 //!
 //! Most tests drive the real `FerroEhrService` over a fully-migrated `PostgreSQL`
@@ -53,8 +54,6 @@ mod error_chain;
 mod event_subscription_http;
 mod example_http;
 mod extensions_openapi;
-mod fhir_http;
-mod fhir_inbound;
 mod fixture_smoke;
 mod flat_http;
 mod headers;

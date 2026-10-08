@@ -473,7 +473,7 @@ impl FhirTerminologyProvider {
         code: &str,
         target_system: &str,
         concept_map: Option<&str>,
-    ) -> Result<Option<ferroehr_ext::fhir::mapping::TranslatedCode>, SmError> {
+    ) -> Result<Option<ferroehr_ext::fhir::terminology::TranslatedCode>, SmError> {
         if code.is_empty() {
             return Err(SmError::precondition("code must not be empty"));
         }
@@ -500,7 +500,7 @@ impl FhirTerminologyProvider {
             .and_then(|m| {
                 m.code
                     .clone()
-                    .map(|code| ferroehr_ext::fhir::mapping::TranslatedCode {
+                    .map(|code| ferroehr_ext::fhir::terminology::TranslatedCode {
                         code,
                         display: m.display.clone(),
                     })

@@ -112,8 +112,8 @@ impl FerroEhrService {
     /// The diagnostics-bearing sibling of [`Self::content_valid`]: the same
     /// commit-path validation, answering `None` for valid content and
     /// `Some(rejection)` with the refusal text VERBATIM — the seam a dry-run
-    /// caller (the FHIR `$validate` door) previews the commit's own verdict
-    /// through. Full strictness, exactly like a bare validity check.
+    /// caller previews the commit's own verdict through. Full strictness,
+    /// exactly like a bare validity check.
     ///
     /// # Errors
     /// A validation verdict is never an error; any other service failure from

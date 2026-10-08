@@ -8,9 +8,8 @@
 //! **off by default**: with [`EventsConfig::enabled`] `false` the binary never
 //! spawns the publisher.
 //!
-//! The commit path only writes `event_outbox` rows when an outbox consumer is
-//! configured on (this publisher OR the FHIR outbound emitter), gated in the
-//! binary from `events.enabled || fhir.outbound.enabled`.
+//! The commit path only writes `event_outbox` rows when this publisher is
+//! configured on, gated in the binary from `events.enabled`.
 
 use std::path::PathBuf;
 
@@ -21,8 +20,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct EventsConfig {
-    /// Master switch. Off by default; also (with `fhir.outbound.enabled`) gates
-    /// the per-commit outbox INSERT.
+    /// Master switch. Off by default; also gates the per-commit outbox INSERT.
     pub enabled: bool,
     /// AMQP broker URL (credentials redacted from every rendering).
     pub url: SecretUrl,

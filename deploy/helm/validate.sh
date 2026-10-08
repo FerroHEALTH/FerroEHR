@@ -260,7 +260,6 @@ secret_leak_gate() {
   local -a routed_paths=(
     "db.url"
     "events.url"
-    "fhir.outbound.url"
     "audit.fhir_feed.url"
     "auth.oidc.hmac_secret"
     "signing.key_passphrase"
@@ -898,7 +897,6 @@ auth|enabled|true
 server.tls|enabled|
 management|port|
 events|enabled|false
-fhir.outbound|enabled|false
 CLAIMS
   grep -qE '^ *subject_namespaces = \[".+"' <<<"$toml" \
     || { red "  privacy.subject_namespaces is empty: open_subject_namespace would refuse the boot"; missing=1; }

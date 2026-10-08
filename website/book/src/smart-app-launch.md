@@ -132,9 +132,9 @@ reads it to find your authorization server. It looks like:
 }
 ```
 
-- **`services`** is an object keyed by service type. It always names the openEHR
-  REST service, and adds the FHIR façade
-  (`org.fhir.rest`) when the FHIR routes are enabled. Each `baseUrl` is
+- **`services`** is an object keyed by service type. It names the openEHR REST
+  service; the FHIR entry (`org.fhir.rest`) is never advertised, because
+  FerroEHR serves no FHIR API for clinical data. Each `baseUrl` is
   **absolute**, built by prefixing the CDR's own base path with
   `PUBLIC_BASE_URL`, which is why that key is required.
 - **`capabilities`** always contains `context-openehr-ehr` (the CDR binds the

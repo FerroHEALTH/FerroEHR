@@ -1120,18 +1120,8 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     let audit_config: AuditConfig = config.audit.clone();
     let (audit_sender, audit_handle) = start_audit(&audit_config, &pool, &pools.audit).await;
 
-    // Contribution-outbox eventing + FHIR outbound emitter (both off by default).
-    let outbox_enabled = config.events.enabled || config.fhir.outbound.enabled;
-    // A cursor reader that is switched off must not hold the outbox prune
-    // floor (#3330): record every reader's configured state before a drainer
-    // starts.
-    ferroehr::extensions::outbox::reconcile(
-        &pool,
-        ferroehr::extensions::outbox::OutboxReader::FHIR_OUTBOUND,
-        config.fhir.outbound.enabled,
-    )
-    .await
-    .context("registering the outbox readers")?;
+    // Contribution-outbox eventing (off by default).
+    let outbox_enabled = config.events.enabled;
     #[cfg(feature = "events")]
     let events_handle = if config.events.enabled {
         tracing::info!(exchange = %config.events.exchange, "contribution-outbox eventing enabled");
@@ -1229,37 +1219,8 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         started,
     );
 
-    // Off by default (it carries PHI) and gated on the `fhir` feature, which
-    // itself implies `events` for the broker transport.
-    #[cfg(feature = "fhir")]
-    let fhir_outbound_handle = if config.fhir.outbound.enabled {
-        tracing::info!(
-            exchange = %config.fhir.outbound.exchange,
-            "FHIR outbound emitter enabled (publishes clinical FHIR resources)"
-        );
-        Some(ferroehr::extensions::fhir::outbound::start(
-            config.fhir.outbound.clone(),
-            pool.clone(),
-            Arc::clone(&service),
-        ))
-    } else {
-        None
-    };
-    #[cfg(not(feature = "fhir"))]
-    if config.fhir.outbound.enabled {
-        return Err(anyhow::anyhow!(
-            "fhir.outbound.enabled = true, but this binary was built without the `fhir` cargo feature"
-        ));
-    }
-    #[cfg(feature = "fhir")]
-    if let Some(handle) = &fhir_outbound_handle {
-        indicators.push(Arc::new(indicators::FhirOutboundHealth::new(
-            handle.healthy(),
-        )));
-    }
-
     // The readiness registry closes over every started subsystem, so it is
-    // assembled after the last optional one (the FHIR outbound emitter).
+    // assembled after the last optional one.
     let observability = Observability {
         management: config.management.clone(),
         prometheus: Some(telemetry.registry()),
@@ -1277,7 +1238,6 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         auth: config.auth.clone(),
         admin: config.admin.clone(),
         smart: config.smart.clone(),
-        fhir_api_enabled: config.fhir.api_enabled,
         terminology_api_enabled: config.terminology.api_enabled,
         events_admin_api: config.events.admin_api,
         audit_organization_claim: config.authz.abac.organization_claim().map(str::to_owned),
@@ -1305,10 +1265,6 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     }
     #[cfg(feature = "events")]
     if let Some(handle) = events_handle {
-        handle.shutdown(AUDIT_DRAIN_TIMEOUT).await;
-    }
-    #[cfg(feature = "fhir")]
-    if let Some(handle) = fhir_outbound_handle {
         handle.shutdown(AUDIT_DRAIN_TIMEOUT).await;
     }
     support_watch.abort();

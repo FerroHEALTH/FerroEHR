@@ -151,7 +151,7 @@ if [[ -z "${UI_E2E_NO_COMPOSE:-}" ]]; then
   BUILD_ARGS=(--build)
   [[ -n "${UI_E2E_NO_BUILD:-}" ]] && BUILD_ARGS=(--no-build)
   # The e2e overlay rides BOTH lanes: without it here, its `ferroehr:` env
-  # block (terminology on, FHIR on) never reached the host-mode CDR — the
+  # block (terminology on, subscriptions on) never reached the host-mode CDR — the
   # lane CI actually runs.
   docker compose -f docker-compose.yml -f docker-compose.dev.yml \
     -f docker/viewer/e2e-env.yml \

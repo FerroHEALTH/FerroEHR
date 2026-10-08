@@ -56,7 +56,6 @@ pub mod deployment;
 pub mod error;
 pub mod example_options;
 pub mod feedback;
-pub mod fhir;
 pub mod format;
 pub mod highlight;
 pub mod management;
