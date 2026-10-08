@@ -15,6 +15,38 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+## [4.3.5] - 2026-10-08
+
+### Security
+
+- **`auth.oidc.jwks_json` refuses a symmetric key or private key material at
+  boot** (#3664, GHSA-r86f-f3vw-j4jr; RFC 7517 §4.1, RFC 7518 §6.4). The
+  inline key set is shown in clear by `ferroehr config check` and
+  `GET {base}/admin/config`, so a set carrying a `kty: "oct"` key or a private
+  member (`d`, `p`, `q`, `dp`, `dq`, `qi`, `oth`, `k`) is now a boot error
+  that names the key's position and `kid`, never its value. A set that does
+  not parse as a JWK Set is refused with the line and column only. Public key
+  sets boot as before; a symmetric key belongs in `auth.oidc.hmac_secret`.
+- **The S3 store's endpoint refusals no longer print URL userinfo** (#3656,
+  GHSA-h2gv-2qpx-4fg8). With `[multimedia]` configured, an endpoint such as
+  `https://user:password@s3.example` that failed validation was quoted in full
+  in the boot error and the log. The endpoint is now validated once, by the
+  configuration, and every refusal quotes it with the userinfo masked.
+- **The configuration views no longer print URL userinfo** (#3629,
+  GHSA-4jp3-xxj8-vv86). A URL written with credentials
+  (`https://user:password@host/…`) in `auth.oidc.issuer`, a terminology
+  provider `url` or OAuth2 `token_url`, `authz.abac.remote.server`,
+  `telemetry.otlp_endpoint` or `multimedia.endpoint` was shown in clear by
+  `GET {base}/admin/config` and `ferroehr config check`. Every string value in
+  those views and in `GET /management/env` now passes one masker, so each URL
+  keeps its host and path with the userinfo shown as `***`.
+- **`hickory-resolver` 0.26.3** (#3700, GHSA-rjpj-g667-cmvm): the DNS resolver
+  the server binary links through the AMQP client is updated from 0.26.1. It
+  resolves the broker's host name when `[events]` or `[fhir.outbound]` is
+  enabled (both off by default), where GHSA-6w6g-hm98-mhgm and
+  GHSA-6f2x-v7q7-m7m5 reached it for an attacker who controls that name's DNS
+  answers.
+
 ## [4.3.4] - 2026-10-06
 
 ### Added
@@ -10220,7 +10252,8 @@ but has not yet run in production.
   seccomp, default-deny NetworkPolicy) and golden-render validation.
 
 
-[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.4...HEAD
+[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.5...HEAD
+[4.3.5]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.4...v4.3.5
 [4.3.4]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.3...v4.3.4
 [4.3.3]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.2...v4.3.3
 [4.3.2]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.1...v4.3.2

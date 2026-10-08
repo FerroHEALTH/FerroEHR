@@ -539,6 +539,87 @@ async fn admin_config_admin_gets_redacted_snapshot() {
     );
 }
 
+/// Userinfo written into every plain-`String` URL key of the configuration
+/// reaches neither `GET {base}/admin/config` nor `GET /management/env`: both
+/// serve the snapshot the binary builds with `FerroEhrConfig::to_redacted_json`,
+/// and each URL keeps its host and path with the userinfo masked.
+#[tokio::test]
+async fn no_url_userinfo_reaches_admin_config_or_management_env() {
+    use ferroehr::config::management::{AccessLevel, EndpointLevels, ManagementConfig};
+    use ferroehr::service::terminology::config::{FhirProviderConfig, TerminologyOauth2Config};
+
+    let leaky = |n: u32| format!("https://u{n}:URL_PW_SENTINEL_{n}@h{n}/p");
+    let mut cfg = ferroehr::config::FerroEhrConfig::default();
+    cfg.auth.oidc = Some(OidcConfig {
+        issuer: leaky(1),
+        ..OidcConfig::default()
+    });
+    cfg.terminology.external.providers.insert(
+        "ts".to_owned(),
+        FhirProviderConfig {
+            url: leaky(2),
+            ..FhirProviderConfig::default()
+        },
+    );
+    cfg.terminology.external.oauth2_clients.insert(
+        "client".to_owned(),
+        TerminologyOauth2Config {
+            token_url: leaky(3),
+            ..TerminologyOauth2Config::default()
+        },
+    );
+    cfg.usage_report.endpoint = leaky(4);
+    cfg.authz.abac.remote.server = Some(leaky(5));
+    cfg.telemetry.otlp_endpoint = Some(leaky(6));
+    cfg.multimedia.endpoint = Some(leaky(7));
+    let snapshot = cfg.to_redacted_json().expect("redacted json");
+
+    let (_pg, svc) = service(None).await;
+    let obs = ferroehr_rest::extensions::management::Observability {
+        management: ManagementConfig {
+            enabled: true,
+            endpoints: EndpointLevels {
+                env: AccessLevel::AdminOnly,
+                ..EndpointLevels::default()
+            },
+            ..ManagementConfig::default()
+        },
+        env_snapshot: Arc::new(snapshot),
+        ..Default::default()
+    };
+    let app = ferroehr_rest::build_full(rest_config(), svc, authz(true), obs).expect("build app");
+    for uri in [format!("{BASE}/admin/config"), "/management/env".to_owned()] {
+        let request = Request::builder()
+            .method("GET")
+            .uri(&uri)
+            .header("authorization", basic("root"))
+            .body(Body::empty())
+            .expect("request");
+        let resp = app.clone().oneshot(request).await.expect("oneshot");
+        assert_eq!(resp.status(), StatusCode::OK, "{uri}");
+        let bytes = http_body_util::BodyExt::collect(resp.into_body())
+            .await
+            .expect("body")
+            .to_bytes();
+        let body = String::from_utf8_lossy(&bytes);
+        assert!(
+            !body.contains("URL_PW_SENTINEL"),
+            "URL userinfo leaked from {uri}"
+        );
+        for n in 1..=7 {
+            // `/management/env` masks a `token`-named key whole, so `token_url`
+            // shows no URL there at all.
+            if n == 3 && uri == "/management/env" {
+                continue;
+            }
+            assert!(
+                body.contains(&format!("https://***@h{n}/p")),
+                "URL {n} lost its host and path in {uri}"
+            );
+        }
+    }
+}
+
 // ── base64 helper ─────────────────────────────────────────────────────────────
 
 fn base64_encode(bytes: &[u8]) -> String {

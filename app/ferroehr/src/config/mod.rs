@@ -509,30 +509,36 @@ impl FerroEhrConfig {
                     != oidc.issuer.trim().trim_end_matches('/') =>
             {
                 errors.push(ConfigError::semantic(format!(
-                    "smart.endpoints.issuer ({advertised:?}) and auth.oidc.issuer ({:?}) \
+                    "smart.endpoints.issuer ({:?}) and auth.oidc.issuer ({:?}) \
                      name different authorization servers: applications would obtain tokens \
                      from the first and every request would be refused by the second",
-                    oidc.issuer
+                    secret::redact_userinfo(advertised),
+                    secret::redact_userinfo(&oidc.issuer)
                 )));
             }
             _ => {}
         }
     }
 
-    /// The redacted TOML rendering (secrets show `***`) for `/management/env`
-    /// and `ferroehr config check`.
+    /// Returns the redacted TOML rendering `ferroehr config check` prints.
+    ///
+    /// The rendering is [`Self::to_redacted_json`]'s tree in the
+    /// configuration's own key order, with the unset keys TOML cannot carry
+    /// left out.
     ///
     /// # Errors
     /// [`ConfigError`] if the tree cannot be serialized to TOML.
     pub fn to_redacted_toml(&self) -> Result<String, ConfigError> {
-        toml::to_string_pretty(self)
+        toml::to_string_pretty(&without_nulls(self.to_redacted_json()?))
             .map_err(|e| ConfigError::semantic(format!("rendering config as TOML: {e}")))
     }
 
-    /// The effective configuration as a redacted JSON tree, the source of the
-    /// `GET /admin/config` endpoint and the `/management/env` snapshot the binary
-    /// builds at boot. No openEHR spec governs configuration — our own
-    /// design/extension.
+    /// Returns the effective configuration as a redacted JSON tree, the one
+    /// redacted tree every rendering derives from.
+    ///
+    /// The binary builds the `/management/env` and `GET /admin/config`
+    /// snapshot with it, and [`Self::to_redacted_toml`] renders it. No openEHR
+    /// spec governs configuration — our own design/extension.
     ///
     /// Redaction is a property of the leaf type rather than of a key-name scan:
     /// every secret-bearing field is typed [`secret::Secret`], whose
@@ -540,19 +546,51 @@ impl FerroEhrConfig {
     /// [`secret::SecretUrl`], whose [`Serialize`] masks the URL `userinfo`
     /// component. Serializing `self` therefore yields a tree whose secret leaves
     /// are already masked, so a field cannot leak by being renamed and a secret
-    /// nested anywhere is masked by its own type. A correctly typed new secret is
-    /// redacted with no change here; one smuggled in as a bare `String` breaks
-    /// that property, and the `redacted_json_masks_every_secret_field` test
-    /// enumerates the current secret set as the standing backstop. Non-secret
-    /// identifiers, such as a Basic user's `username` and `roles`, an OIDC
-    /// `issuer`, or `auth.oidc.jwks_json` public verification material, stay
-    /// visible.
+    /// nested anywhere is masked by its own type; the
+    /// `redacted_json_masks_every_secret_field` test enumerates the current
+    /// secret set as the standing backstop. On top of the types, every string
+    /// leaf of the tree passes [`secret::redact_userinfo`], so a URL in a key
+    /// that is not typed `SecretUrl` is masked too. Non-secret identifiers, such
+    /// as a Basic user's `username` and `roles`, an OIDC `issuer` without
+    /// `userinfo`, or `auth.oidc.jwks_json` (public verification material only,
+    /// since boot refuses a symmetric or private key in it), stay visible.
     ///
     /// # Errors
     /// [`ConfigError`] if the tree cannot be serialized to JSON.
     pub fn to_redacted_json(&self) -> Result<serde_json::Value, ConfigError> {
-        serde_json::to_value(self)
-            .map_err(|e| ConfigError::semantic(format!("rendering config as JSON: {e}")))
+        let mut tree = serde_json::to_value(self)
+            .map_err(|e| ConfigError::semantic(format!("rendering config as JSON: {e}")))?;
+        mask_url_userinfo(&mut tree);
+        Ok(tree)
+    }
+}
+
+/// Masks the `userinfo` of every URL string in `tree`, recursively, with
+/// [`secret::redact_userinfo`].
+fn mask_url_userinfo(tree: &mut serde_json::Value) {
+    match tree {
+        serde_json::Value::String(text) => *text = secret::redact_userinfo(text),
+        serde_json::Value::Array(items) => items.iter_mut().for_each(mask_url_userinfo),
+        serde_json::Value::Object(members) => members.values_mut().for_each(mask_url_userinfo),
+        serde_json::Value::Null | serde_json::Value::Bool(_) | serde_json::Value::Number(_) => {}
+    }
+}
+
+/// Returns `tree` without its `null` object members, the unset keys a TOML
+/// rendering leaves out (TOML has no null value).
+fn without_nulls(tree: serde_json::Value) -> serde_json::Value {
+    match tree {
+        serde_json::Value::Object(members) => serde_json::Value::Object(
+            members
+                .into_iter()
+                .filter(|(_, value)| !value.is_null())
+                .map(|(key, value)| (key, without_nulls(value)))
+                .collect(),
+        ),
+        serde_json::Value::Array(items) => {
+            serde_json::Value::Array(items.into_iter().map(without_nulls).collect())
+        }
+        leaf => leaf,
     }
 }
 
@@ -767,34 +805,9 @@ fn multimedia_endpoint_errors(
     if !config.enabled {
         return Vec::new();
     }
-    let Some(endpoint) = &config.endpoint else {
-        return Vec::new();
-    };
-    let trimmed = endpoint.trim();
-    if trimmed.is_empty() {
-        return vec![ConfigError::semantic(
-            "multimedia.endpoint is set but empty — give an absolute URL \
-             (e.g. http://seaweedfs:8333) or remove the key to use default \
-             AWS endpoint resolution"
-                .to_owned(),
-        )];
-    }
-    match url::Url::parse(trimmed) {
-        // `seaweedfs:8333` parses as a URL (scheme `seaweedfs`, path `8333`),
-        // so syntax alone does not catch the common "host:port with no scheme"
-        // mistake — an S3 endpoint is http or https, and nothing else reaches
-        // a bucket.
-        Ok(url) if !matches!(url.scheme(), "http" | "https") => {
-            vec![ConfigError::semantic(format!(
-                "multimedia.endpoint {trimmed:?} has scheme {:?} — an S3 endpoint \
-                 must be http or https (did you mean \"http://{trimmed}\"?)",
-                url.scheme()
-            ))]
-        }
+    match config.endpoint_url() {
         Ok(_) => Vec::new(),
-        Err(e) => vec![ConfigError::semantic(format!(
-            "multimedia.endpoint {trimmed:?} is not an absolute URL: {e}"
-        ))],
+        Err(e) => vec![ConfigError::semantic(e.to_string())],
     }
 }
 
@@ -1512,6 +1525,56 @@ mod tests {
         let c = assemble_ok(Some(file.path()), &env(&[]), &[]);
         assert_eq!(c.db.url.expose(), "postgres://u:p@h:5432/d");
         assert_eq!(c.db.max_connections, 7);
+    }
+
+    /// Userinfo written into a plain-`String` URL key reaches neither the TOML
+    /// rendering (`ferroehr config check`) nor the JSON tree (`/management/env`,
+    /// `GET /admin/config`); each URL keeps its host and path with the
+    /// userinfo masked.
+    #[test]
+    fn url_userinfo_reaches_no_rendering() {
+        use crate::config::auth::OidcConfig;
+        use crate::service::terminology::config::{FhirProviderConfig, TerminologyOauth2Config};
+
+        let leaky = |n: u32| format!("https://u{n}:URL_PW_SENTINEL_{n}@h{n}:1/p{n}");
+        let mut c = FerroEhrConfig::default();
+        c.auth.oidc = Some(OidcConfig {
+            issuer: leaky(1),
+            ..OidcConfig::default()
+        });
+        c.terminology.external.providers.insert(
+            "ts".to_owned(),
+            FhirProviderConfig {
+                url: leaky(2),
+                ..FhirProviderConfig::default()
+            },
+        );
+        c.terminology.external.oauth2_clients.insert(
+            "client".to_owned(),
+            TerminologyOauth2Config {
+                token_url: leaky(3),
+                ..TerminologyOauth2Config::default()
+            },
+        );
+        c.usage_report.endpoint = leaky(4);
+        c.authz.abac.remote.server = Some(leaky(5));
+        c.telemetry.otlp_endpoint = Some(leaky(6));
+        c.multimedia.endpoint = Some(leaky(7));
+
+        let toml = c.to_redacted_toml().expect("toml");
+        let json = serde_json::to_string(&c.to_redacted_json().expect("json")).expect("json");
+        for (surface, rendered) in [("toml", &toml), ("json", &json)] {
+            assert!(
+                !rendered.contains("URL_PW_SENTINEL"),
+                "URL userinfo leaked into the {surface} rendering"
+            );
+            for n in 1..=7 {
+                assert!(
+                    rendered.contains(&format!("https://***@h{n}:1/p{n}")),
+                    "URL {n} lost its host and path in the {surface} rendering"
+                );
+            }
+        }
     }
 
     /// `to_redacted_json` masks EVERY secret-bearing leaf in the whole config

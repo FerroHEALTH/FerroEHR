@@ -105,11 +105,14 @@ Details that decide behaviour:
   query's other versions survive.
 - **The config view is redacted structurally, not by key name.** Passwords and
   password hashes, HMAC and signing-key secrets and S3 secret keys render as
-  `***`; connection URLs (database, AMQP) keep their host and path and mask
-  the embedded credentials (`postgres://***@host:5432/db`). Non-secret
-  identifiers (usernames, roles, an OIDC issuer) stay visible. Redaction is
-  a property of the configuration's secret types, so no secret value can reach
-  this response.
+  `***`. Every URL in the configuration (database, AMQP, terminology servers
+  and their token endpoints, the remote policy server, the OTLP collector, the
+  object store, the OIDC issuer) keeps its host and path with the embedded
+  credentials masked (`postgres://***@host:5432/db`), and so does the same URL
+  in `ferroehr config check`. Non-secret identifiers (usernames, roles, an OIDC
+  issuer) stay visible. Redaction is a property of the configuration's secret
+  types plus one masker over every URL value, so no secret value can reach this
+  response.
 
 > [!NOTE]
 > The template delete, the stored-query delete and the config view are FerroEHR

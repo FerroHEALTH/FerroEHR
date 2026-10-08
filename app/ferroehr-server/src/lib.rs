@@ -1022,9 +1022,13 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
 
     telemetry.start_samplers(pool.clone());
 
-    // `/management/env` reports the whole config tree; secrets render `***` by
-    // construction of the `Secret` type.
-    let env_snapshot = Arc::new(serde_json::to_value(&config).unwrap_or(serde_json::Value::Null));
+    // `/management/env` and `GET {base}/admin/config` serve the whole config
+    // tree, redacted by its leaf types and with every URL's userinfo masked.
+    let env_snapshot = Arc::new(
+        config
+            .to_redacted_json()
+            .context("rendering the redacted configuration snapshot")?,
+    );
 
     // Version signing (fail-closed at boot for `pgp` without a usable key).
     let signer =

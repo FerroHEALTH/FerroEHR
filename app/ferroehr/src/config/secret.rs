@@ -136,26 +136,28 @@ impl SecretUrl {
     }
 }
 
-/// Replace the `userinfo` (`user[:password]@`) of a URL authority with
-/// [`REDACTED`]. Pure string surgery: the `userinfo` is the span between the
-/// `://` and the first `@` that precedes the path (`/`). A URL with no
-/// `userinfo` is returned unchanged. (No percent-decoding is performed, so the
-/// owner's "URL codec only via `urlencoding`" rule does not apply — this only
-/// redacts a substring.)
-fn redact_userinfo(url: &str) -> String {
+/// Returns `url` with the `userinfo` (`user[:password]@`) of its authority
+/// replaced by [`REDACTED`].
+///
+/// The one userinfo masker of the configuration tree: [`SecretUrl`] renders
+/// through it, and so does every surface that quotes a URL it did not type.
+/// The authority is the span after `://` up to the first `/`, `?` or `#`
+/// (RFC 3986 §3.2), and its `userinfo` ends at the last `@` inside it; an `@`
+/// in the path, query or fragment is not one. A URL with no `userinfo` is
+/// returned unchanged. Pure string surgery, with no percent-decoding.
+#[must_use]
+pub fn redact_userinfo(url: &str) -> String {
     let Some((scheme, rest)) = url.split_once("://") else {
         return url.to_owned();
     };
-    // `userinfo` can only precede the path, so a `@` inside the path is not one.
-    let authority = rest
-        .split_once('/')
-        .map_or(rest, |(authority, _)| authority);
-    if !authority.contains('@') {
+    let authority_end = rest.find(['/', '?', '#']).unwrap_or(rest.len());
+    let Some(authority) = rest.get(..authority_end) else {
         return url.to_owned();
-    }
-    // The authority is a prefix of `rest`, so this is the same `@`, and
-    // everything after it (host, port, path) is kept verbatim.
-    let Some((_userinfo, after_at)) = rest.split_once('@') else {
+    };
+    let Some(at) = authority.rfind('@') else {
+        return url.to_owned();
+    };
+    let Some(after_at) = rest.get(at + 1..) else {
         return url.to_owned();
     };
     format!("{scheme}://{REDACTED}@{after_at}")
@@ -244,6 +246,27 @@ mod tests {
         // An '@' in the path must not be mistaken for userinfo.
         let at_in_path = SecretUrl::new("https://host/path/@handle");
         assert_eq!(at_in_path.redacted(), "https://host/path/@handle");
+    }
+
+    #[test]
+    fn userinfo_ends_at_the_authority_per_rfc_3986() {
+        // The authority ends at `?` and `#` as well as `/` (RFC 3986 §3.2).
+        assert_eq!(
+            redact_userinfo("https://host?next=a@b"),
+            "https://host?next=a@b"
+        );
+        assert_eq!(redact_userinfo("https://host#a@b"), "https://host#a@b");
+        assert_eq!(
+            redact_userinfo("https://u:p@host?next=a@b"),
+            "https://***@host?next=a@b"
+        );
+        // A password holding a raw `@` is masked whole: the userinfo ends at
+        // the LAST `@` of the authority.
+        assert_eq!(
+            redact_userinfo("https://u:p@ss@host:443/x"),
+            "https://***@host:443/x"
+        );
+        assert_eq!(redact_userinfo("not a url"), "not a url");
     }
 
     #[test]
