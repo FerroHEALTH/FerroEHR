@@ -185,7 +185,9 @@ out in Annex II"
 
 [`compliance/instructions-for-use.md`](../../website/book/src/compliance/instructions-for-use.md),
 attached to each release, and the installation pages it points to. The CRA
-Annex II user information is mapped point by point on that page.
+Annex II information and instructions to the user are
+[`compliance/cra-user-information.md`](../../website/book/src/compliance/cra-user-information.md),
+point by point; the notes of each release link the copy of that page frozen
+for the release, and the release lane refuses notes without the link.
 
-State: available for the EHDS instructions; the CRA Annex II user information
-per release is completed in #3650.
+State: available.

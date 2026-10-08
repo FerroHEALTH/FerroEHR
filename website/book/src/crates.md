@@ -21,8 +21,8 @@ vendored specification text.
 
 ```toml
 [dependencies]
-openehr-rm = "0.0.71"
-openehr-its = "0.0.71"
+openehr-rm = "0.0.86"
+openehr-its = "0.0.86"
 ```
 
 All nine are **edition 2024** with an MSRV of **Rust 1.97**, and all nine
@@ -122,8 +122,8 @@ OPT 1.4 template:
 
 ```toml
 [dependencies]
-openehr-its = { version = "0.0.71", default-features = false, features = ["opt14"] }
-openehr-sdt = { version = "0.0.71", default-features = false, features = ["flat"] }
+openehr-its = { version = "0.0.86", default-features = false, features = ["opt14"] }
+openehr-sdt = { version = "0.0.86", default-features = false, features = ["flat"] }
 ```
 
 With `default-features = false` and no feature at all, `openehr-sdt` compiles
@@ -146,6 +146,81 @@ interrupted halfway can be re-run to finish the set. The lane then reads the
 registry back and refuses to report success unless all nine resolve at the
 same version, because while the line is `0.0.x` a straggler makes its
 siblings' internal requirements unresolvable for every consumer.
+
+## Information for integrators (CRA Annex II point 8(f))
+
+The crates are libraries for building into other software. The Cyber
+Resilience Act (Regulation (EU) 2024/2847) has a product intended for
+integration into other products accompanied by "the information necessary for
+the integrator to comply with the essential cybersecurity requirements set out
+in Annex I and the documentation requirements set out in Annex VII" (Annex II
+point 8(f)). This section is that information for the nine crates. The rest
+of the information Annex II lists for FerroEHR is on
+[CRA information and instructions to the user](compliance/cra-user-information.md);
+the manufacturer and the reporting channels there apply to the crates too.
+
+- **Reporting a vulnerability in a crate:** to Cadasto B.V., through GitHub
+  private vulnerability reporting or [info@cadasto.com](mailto:info@cadasto.com),
+  as
+  [`SECURITY.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#reporting-a-vulnerability)
+  describes.
+- **Hearing of a fixed vulnerability:** every fixed vulnerability that reaches a
+  published crate gets a GitHub security advisory on the repository, naming the
+  affected and the fixed crate versions. An advisory
+  that names a published crate also reaches the GitHub Advisory Database in
+  OSV format. Watch the advisories; nothing in the crates contacts anyone.
+- **Support period:** five years from the month a crate version is published.
+  The fix ships in the newest published version of all nine, never as a
+  backport
+  ([`SECURITY.md` § Supported versions](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions)).
+  While the line is `0.0.x`, the version that carries a fix may also carry a
+  breaking change (see [Versioning](#versioning)), so plan for the work of
+  taking the newest version when you set the support period of your own
+  product.
+- **Software bill of materials:** each release publishes a CycloneDX SBOM per
+  crate, listing its normal and build dependencies, attested against the
+  `.crate` archive crates.io serves
+  ([the SBOMs](verifying-releases.md#the-sboms-one-per-published-artefact)).
+  Annex I Part II(1) has you draw up an SBOM of your own product "covering at
+  the very least the top-level dependencies"; the crate SBOMs give you what
+  each crate pulls in below that.
+- **Where the crates come from:** crates.io Trusted Publishing authenticates
+  the upload, and records no build provenance. The source of truth is this
+  repository at the release tag
+  ([the `openehr-*` crates](verifying-releases.md#the-openehr--crates)).
+
+What the crates do for the security of your product, and what they leave to
+it:
+
+- **Memory safety.** `unsafe_code = "forbid"` holds in all nine crates; there
+  is no `unsafe` block in them.
+- **Parsers.** The canonical JSON and XML readers, the AQL parser, the ADL
+  parser, the OPT 1.4 reader, the simplified formats and the identifier types
+  each have a libFuzzer harness run on a nightly campaign, and a crash is fixed
+  in the crate. Fuzzing finds crashes and does not prove their absence. Bound
+  the size of what you hand a parser, and the time you let it run, in your own
+  product: the FerroEHR server does this with its request body limits and
+  timeouts.
+- **The REST contract.** The `rest-server` router of `openehr-its` dispatches
+  each request to the server traits you implement and authenticates no one.
+  Authentication, authorisation, rate limiting, TLS and an access log are
+  layers your product adds. The `rest-client` engine sends over rustls TLS,
+  never follows a redirect, and takes a `reqwest::ClientBuilder` you configure
+  with your trust roots and proxies.
+- **The SMART scope grammar** in `openehr-sdt` parses scope strings. It decides
+  no access; enforcing a scope is your product's.
+- **No storage, no network of their own.** The crates write nothing to disk;
+  `openehr-lang` reads the BMM schema files from the directory your code names.
+  They open no connection except the requests your code sends through
+  `rest-client`.
+
+For the documentation of Annex VII: the crates are third-party components of
+your product, which CRA Art. 13(5) has you integrate with due diligence. Your
+technical documentation names the crate versions you build (the
+`Cargo.lock` records them) and your risk assessment covers how your product
+uses them. The FerroEHR [CRA risk assessment](compliance/cra-risk-assessment.md)
+assesses the FerroEHR release and covers the crates only where a row says so;
+it is not an assessment of your product.
 
 ## Licensing
 

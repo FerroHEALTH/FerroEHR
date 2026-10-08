@@ -6,8 +6,10 @@ as EHDS Art. 30(1)(d) asks: "clear and complete instructions for use"
 up a deployment in the European Union, what maintenance it needs and how
 often (Art. 30(1)(k)), and the limitations of its interoperability and
 security features that you should know before you rely on it (Art. 28(b)).
-They also carry the user information of the Cyber Resilience Act (CRA,
-Regulation (EU) 2024/2847, Annex II), mapped point by point at the end. The
+They also point to the information and instructions to the user of the Cyber
+Resilience Act (CRA, Regulation (EU) 2024/2847, Annex II), which
+[CRA information and instructions to the user](cra-user-information.md)
+carries point by point and which the table at the end maps. The
 [information sheet](information-sheet.md) accompanies them.
 
 Most of what these instructions point to is documented in detail elsewhere in
@@ -271,6 +273,11 @@ duties that come first are on [Decommissioning](../operations-decommissioning.md
 
 ## The CRA user information (CRA Annex II)
 
+The full information for each point, with what the point asks, is on
+[CRA information and instructions to the user](cra-user-information.md). The
+notes of each GitHub release link the copy of that page frozen for the
+release.
+
 | CRA Annex II | Where |
 |---|---|
 | 1. The manufacturer's name, postal address, email and website | [information sheet, (a)](information-sheet.md#a-the-manufacturer) |
@@ -285,11 +292,8 @@ duties that come first are on [Decommissioning](../operations-decommissioning.md
 | 8(c). How security-relevant updates are installed | [upgrades](../operations.md#upgrades) |
 | 8(d). Secure decommissioning, and removing user data | [taking a deployment out of service](#taking-a-deployment-out-of-service) |
 | 8(e). Turning off automatic security updates | does not apply: FerroEHR installs no update by itself ([the justification](cra-risk-assessment.md#automatic-security-updates-annex-i-part-i2c-and-part-ii7)) |
-| 8(f). Information for an integrator | FerroEHR is not intended for integration into another product with digital elements; FerroBRIDGE meets it over the REST API |
+| 8(f). Information for an integrator | the server is not intended for integration into another product with digital elements; FerroBRIDGE meets it over the REST API. The information for integrators of the `openehr-*` crates is on [Rust crates](../crates.md#information-for-integrators-cra-annex-ii-point-8f) |
 | 9. Where the software bill of materials is | [the SBOMs](../verifying-releases.md#the-sboms-one-per-published-artefact) |
-
-The CRA user information per release is completed in
-[#3650](https://github.com/FerroHEALTH/FerroEHR/issues/3650).
 
 ## Contact
 

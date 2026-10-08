@@ -27,6 +27,13 @@ optional:
   Art 13(8) and (19), Annex II point 7, `docs/law/eu/cra/text.html`;
   `SECURITY.md` §Supported versions). The heading's date is therefore the
   release date, and a heading without one stops the lane.
+- **The user information goes into every release's notes.** After the support
+  period the lane appends an "Information and instructions to the user (CRA
+  Annex II)" section linking `website/book/src/compliance/cra-user-information.md`
+  in the frozen book of that tag (CRA Art 13(18), Annex II,
+  `docs/law/eu/cra/text.html`). `scripts/checks/release-notes.sh` composes the
+  URL and refuses notes without the link or the support period, in the plan job,
+  so a refused release publishes nothing.
 - **Cutting a release** (on a `release/vX.Y.Z` branch): rename
   `[Unreleased]` → `## [X.Y.Z] - YYYY-MM-DD`, re-add an empty
   `[Unreleased]`, update the link references at the bottom, bump the

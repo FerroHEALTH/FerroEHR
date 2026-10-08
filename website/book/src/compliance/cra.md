@@ -92,6 +92,15 @@ documentation
 and the release-by-release table is in
 [`SECURITY.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions).
 
+## The information that accompanies each release
+
+CRA Art. 13(18) has each product "accompanied by the information and
+instructions to the user set out in Annex II". For FerroEHR that information
+is on [CRA information and instructions to the user](cra-user-information.md),
+point by point. The book is frozen with every release, and the notes of each
+GitHub release link the copy of that page for the release; the release lane
+refuses to publish a release whose notes do not.
+
 ## How conformity will be assessed
 
 Cadasto B.V. declares FerroEHR, with FerroBRIDGE, as an EHR system under the
@@ -120,12 +129,8 @@ case:
   declaration has been drawn up yet.
 
 The CRA requirements are walked point by point in the
-[CRA risk assessment](cra-risk-assessment.md); the open points are
-issues on the tracker,
-among them the Annex II user information per release
-([#3650](https://github.com/FerroHEALTH/FerroEHR/issues/3650)) and a release
-gate over security-relevant paths
-([#3649](https://github.com/FerroHEALTH/FerroEHR/issues/3649)).
+[CRA risk assessment](cra-risk-assessment.md); its open points are issues on
+the tracker.
 
 ## Default product, or important product of class I
 
@@ -207,11 +212,16 @@ counsel, as is the corresponding EHDS question.
    service becomes a manufacturer itself (CRA Art. 21 and 22, EHDS Art. 34).
 4. Whether a deployment Cadasto B.V. hosts as a service is remote data
    processing outside the CRA's product scope, and whether Cadasto B.V. is then
-   an essential or important entity under NIS2.
+. Whether user information in English alone meets the CRA Art. 13(18) duty
+   ("a language which can be easily understood by users and market surveillance
+   authorities") in each Member State where FerroEHR is made available, or
+   which Member States require a translation.
 
 ## Related
 
 - [CRA risk assessment](cra-risk-assessment.md): Annex I, point by point.
+- [CRA information and instructions to the user](cra-user-information.md):
+  Annex II, point by point.
 - [Technical documentation](technical-documentation.md): the one set for the
   EHDS and the CRA.
 - [Complaints, incidents and vulnerabilities](post-market.md): the reporting

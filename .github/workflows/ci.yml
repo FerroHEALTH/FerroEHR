@@ -566,6 +566,8 @@ jobs:
         run: bash scripts/watch/ghcr-prune-orphans.sh --self-test
       - name: The release withdrawal refuses unregistered versions and moves only the floating tags
         run: bash scripts/release/withdraw.sh --self-test
+      - name: The release-notes check refuses notes without the CRA user information or the support period
+        run: bash scripts/checks/release-notes.sh --self-test
 
   # The tracker helpers set the native issue type and the Priority and Effort
   # fields, and declare the label taxonomy (.claude/rules/issue-workflow.md).
