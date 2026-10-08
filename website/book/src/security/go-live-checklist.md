@@ -68,7 +68,7 @@ remedy, so one boot tells you the whole list:
 ```text
 deployment_profile = "production" refuses to start: this deployment has not
 made the separations production asserts. Make them, or accept each one by name
-in deployment_accepts (which is then stated on every boot and on /rest/status):
+in deployment_accepts (which is then stated on every boot and on /management/status):
   - shared_credential: ...
 ```
 
@@ -110,7 +110,7 @@ on with `allow_http = true`. Use `https://` for both, or accept the gap by name
 where the repository or the store is reached on a trusted segment.
 
 A gap you have decided to run with goes in `deployment_accepts` by name. It is
-then stated on every boot and on `GET /ferroehr/rest/status`, so it is run
+then stated on every boot and on `GET /management/status`, so it is run
 rather than hidden.
 
 - [ ] `deployment_profile = "production"` and the server starts.

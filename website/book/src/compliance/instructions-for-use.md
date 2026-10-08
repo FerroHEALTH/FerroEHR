@@ -97,12 +97,13 @@ name in `deployment_accepts`: shared database credentials or clusters, an
 undeclared pseudonym namespace, the access log off, failing open or shipped
 over UDP syslog, the open per-EHR access default, migrations on a runtime
 credential, authentication off, a plaintext listener on a routable address
-(the separate management port included), an AMQP integration publishing to a
-plain `amqp://` broker. Each refusal names the gap
+(the separate management port included), change events published to a plain
+`amqp://` broker, an audit FHIR feed on an `http://` URL, a multimedia store
+with `allow_http = true`. Each refusal names the gap
 and what to change
 ([`deployment_profile`](../installation/configuration.md#deployment_profile)).
 A gap you accept by name is stated on every boot and on
-`GET /ferroehr/rest/status`. Behind a TLS-terminating ingress you accept
+`GET /management/status`. Behind a TLS-terminating ingress you accept
 `plaintext_listener` by name. The Helm chart and the Compose files declare
 `sandbox`, the binary's default. On Kubernetes, install with the chart's
 `values-production.yaml`. It sets `production`, makes the separations a values
@@ -224,6 +225,10 @@ knows of for this release.
 - FerroEHR does not provide or receive the European electronic health record
   exchange format. FerroBRIDGE carries it, and its content waits on
   implementing acts under EHDS Art. 15(1) that have not been adopted.
+- FerroEHR maps no FHIR resources. FHIR R4 mapping is FerroBRIDGE's; FerroEHR
+  uses FHIR for the access log's `AuditEvent` (with the ITI-81 retrieval) and
+  for external terminology servers only. A configuration that still carries
+  `[fhir]` or `[fhir.outbound]` is refused at boot as unknown keys.
 - Of the access-log renderings, the DICOM message carries neither the
   accessing organisation, the purpose, the origins nor the categories, because
   DICOM PS3.15 defines no element for them; the FHIR `AuditEvent` carries all

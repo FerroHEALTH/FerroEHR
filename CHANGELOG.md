@@ -15,6 +15,8 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+## [4.3.6] - 2026-10-08
+
 ### Added
 
 - **The server verifies the audit hash chain on a schedule** (#3640, CRA
@@ -207,13 +209,14 @@ workflow refuses a tag that has no matching section here.
   specification pins, `openehr-*` crate versions, the migration level of each
   schema set, the deployment posture, the licence summary, the manufacturer and
   the effective configuration. A manifest names any part it could not read and
-  why. No credential, URL userinfo or patient data reaches it. Attach it to a
-  complaint or a serious-incident report.
+  why. No credential, URL userinfo or patient data reaches it: its configuration
+  passes the same userinfo masker as `ferroehr config check` (#3629). Attach it
+  to a complaint or a serious-incident report.
 
 - **The Helm chart carries the access-log category map and the calendar-year
   horizon** (#3655): `config.audit.categories` (empty `templates` and
   `archetypes`, as in the binary) and `config.audit.store.retention_years`
-  (unset) in `values.yaml`, typed by shape in `values.schema.json`. Chart 10.2.3.
+  (unset) in `values.yaml`, typed by shape in `values.schema.json`. Chart 11.0.0.
 - **The Helm chart and the Compose files declare the deployment profile**
   (#3637): `config.deployment_profile: sandbox`, with a comment listing what
   `production` refuses under the chart defaults, and
@@ -272,8 +275,8 @@ workflow refuses a tag that has no matching section here.
   one. The DICOM syslog message has no purpose element and does not carry it.
 
 - **`production` refuses three more plaintext paths** (#3676, #3689; CRA Annex
-  I Part I(2)(e)). An enabled change-event outbox or FHIR outbound emitter on a
-  plain `amqp://` broker (no `amqps://`, no `tls = true`) opens
+  I Part I(2)(e)). An enabled change-event outbox on a plain `amqp://` broker
+  (no `amqps://`, no `tls = true`) opens
   `plaintext_broker`; an enabled audit FHIR feed on an `http://` URL opens
   `plaintext_audit_feed`; an enabled multimedia store with `allow_http = true`
   opens `plaintext_object_store`. Each refuses boot unless accepted by name in
@@ -286,6 +289,21 @@ workflow refuses a tag that has no matching section here.
   namespaces, OIDC, and a TLS Ingress with a NetworkPolicy admitting only the
   ingress controller. It accepts `plaintext_listener` by name, because TLS ends
   at the Ingress. Chart validation and the boot check cover it.
+- **Every binary in the published images lists its Rust dependencies**
+  (#3675): the server and viewer binaries inside the images, and the viewer
+  image built from source, are built with `cargo auditable`, so an image scan
+  and the release's exploitability record see the Rust graph. The OpenVEX
+  statement for RUSTSEC-2023-0071 now covers the viewer image.
+- **Every operating-system finding in the three images carries an OpenVEX
+  judgement** (#3673): `ferroehr-os.openvex.json` (25 statements for the
+  distroless `ferroehr` and `ferroehr-viewer` images) and
+  `postgres-os.openvex.json` (101 for `ferroehr-postgres`), each argued from
+  what the shipped programs load and import. Seven are `affected`, with an
+  action statement: CVE-2026-8674 (a long resolver search domain) in all three
+  images, and three libxml2 and two glibc JISX0213 findings any database login
+  reaches through PostgreSQL's XML functions, which FerroEHR itself never
+  calls. The release's exploitability record now has a judgement for every
+  finding.
 
 ### Changed
 
@@ -353,8 +371,7 @@ workflow refuses a tag that has no matching section here.
   "spec-compliant" or "hardened by default"** (#3619). FerroEHR is
   single-tenant; the openEHR conformance record is described as measured, with
   the version it measured; the README states that TLS is off by default, that
-  the shipped profile is `sandbox`, and that the in-tree FHIR connector is to
-  be removed in favour of FerroBRIDGE.
+  the shipped profile is `sandbox`, and that FHIR R4 mapping is FerroBRIDGE's.
 
 - **The EHDS readiness and technical-documentation pages follow the
   manufacturer decision** (#3626). Every Annex II row was re-read on
@@ -388,6 +405,19 @@ workflow refuses a tag that has no matching section here.
   `FERROEHR__USAGE_REPORT__ENABLED` from your shell** (#3623). The report stays
   on by default; exporting the variable as `false` before `docker compose up`
   now switches it off, which it did not before.
+- **The `ferroehr-viewer` image is scanned before it is tagged** (#3674): the
+  release and main image lanes scan it by its pushed digest on both platforms,
+  so a fixable high or critical finding stops the viewer's tags as it stops
+  the server's.
+- **The `ferroehr-postgres` image drops GnuPG and the Go `gosu`** (#3673).
+  GnuPG and the libraries only it uses (gnupg, gpg, gpg-agent, gpgsm,
+  gpgconf, dirmngr, pinentry-curses, libgnutls30t64, libp11-kit0, libtasn1-6,
+  libksba8, libassuan9, libnpth0t64) served upstream's build-time key import
+  alone. `gosu` is now a shell wrapper over util-linux `setpriv` under the same
+  name, so the upstream entrypoint runs unchanged and the image carries no Go
+  binary and no Go standard-library findings; the 22 gosu exceptions in
+  `.trivyignore.yaml` and `postgres-gosu.openvex.json` are gone. The base is
+  re-pinned to the 2026-10-06 respin of `postgres:18.6`.
 
 ### Removed
 
@@ -441,14 +471,6 @@ workflow refuses a tag that has no matching section here.
 - **The FHIR `AuditEvent` of an AQL query carries the origins of the data it
   served** (#3654), one entity per origin with the capped-count marker, as a
   document read does.
-- **The redacted configuration no longer prints the user name or password
-  embedded in a URL** (#3629) on `/management/env`, `GET {base}/admin/config`,
-  `ferroehr config check` or `ferroehr report`. The terminology provider `url`
-  and OAuth2 `token_url`, `usage_report.endpoint`, `authz.abac.remote.server`,
-  `telemetry.otlp_endpoint` and `multimedia.endpoint` are secret URLs, every
-  string value passes one userinfo masker (which now ends the authority at
-  `/`, `?` or `#` and masks up to the last `@`, so a password containing `@` no
-  longer leaks), and `/admin/config` is served from the redacted tree.
 - **The test harness no longer connects a database socket to itself**
   (#3630). On macOS `localhost` resolves to `::1` first while the test
   container publishes its port on IPv4 only, and a port in the ephemeral range
@@ -473,45 +495,37 @@ workflow refuses a tag that has no matching section here.
   `definition_query_version_store.yaml`) were served in an underscore form
   that did not match the id in the access record.
 
+## [4.3.5] - 2026-10-08
+
 ### Security
 
 - **`auth.oidc.jwks_json` refuses a symmetric key or private key material at
-  boot** (#3664; RFC 7517 §4.1, RFC 7518 §6.4), so the inline key set holds
-  public keys only, and every configuration view shows the same value.
-- **The S3 store's endpoint refusals no longer print URL userinfo** (#3656): the
-  endpoint is validated once, by the configuration, and every refusal quotes it
-  masked.
-- **`hickory-resolver` 0.26.3** (GHSA-5j98-2g5x-46v6, GHSA-6w6g-hm98-mhgm,
-  GHSA-6f2x-v7q7-m7m5): the DNS resolver the server binary links is updated
-  past three advisories, two of them high, that the v4.3.4 binaries carry.
-- **The `ferroehr-viewer` image is scanned before it is tagged** (#3674): the
-  release and main image lanes scan it by its pushed digest on both platforms,
-  so a fixable high or critical finding stops the viewer's tags as it stops
-  the server's.
-- **Every binary in the published images lists its Rust dependencies**
-  (#3675): the server and viewer binaries inside the images, and the viewer
-  image built from source, are built with `cargo auditable`, so an image scan
-  and the release's exploitability record see the Rust graph. The OpenVEX
-  statement for RUSTSEC-2023-0071 now covers the viewer image.
-- **The `ferroehr-postgres` image drops GnuPG and the Go `gosu`** (#3673).
-  GnuPG and the libraries only it uses (gnupg, gpg, gpg-agent, gpgsm,
-  gpgconf, dirmngr, pinentry-curses, libgnutls30t64, libp11-kit0, libtasn1-6,
-  libksba8, libassuan9, libnpth0t64) served upstream's build-time key import
-  alone. `gosu` is now a shell wrapper over util-linux `setpriv` under the same
-  name, so the upstream entrypoint runs unchanged and the image carries no Go
-  binary and no Go standard-library findings; the 22 gosu exceptions in
-  `.trivyignore.yaml` and `postgres-gosu.openvex.json` are gone. The base is
-  re-pinned to the 2026-10-06 respin of `postgres:18.6`.
-- **Every operating-system finding in the three images carries an OpenVEX
-  judgement** (#3673): `ferroehr-os.openvex.json` (25 statements for the
-  distroless `ferroehr` and `ferroehr-viewer` images) and
-  `postgres-os.openvex.json` (101 for `ferroehr-postgres`), each argued from
-  what the shipped programs load and import. Seven are `affected`, with an
-  action statement: CVE-2026-8674 (a long resolver search domain) in all three
-  images, and three libxml2 and two glibc JISX0213 findings any database login
-  reaches through PostgreSQL's XML functions, which FerroEHR itself never
-  calls. The release's exploitability record now has a judgement for every
-  finding.
+  boot** (#3664, GHSA-r86f-f3vw-j4jr; RFC 7517 §4.1, RFC 7518 §6.4). The
+  inline key set is shown in clear by `ferroehr config check` and
+  `GET {base}/admin/config`, so a set carrying a `kty: "oct"` key or a private
+  member (`d`, `p`, `q`, `dp`, `dq`, `qi`, `oth`, `k`) is now a boot error
+  that names the key's position and `kid`, never its value. A set that does
+  not parse as a JWK Set is refused with the line and column only. Public key
+  sets boot as before; a symmetric key belongs in `auth.oidc.hmac_secret`.
+- **The S3 store's endpoint refusals no longer print URL userinfo** (#3656,
+  GHSA-h2gv-2qpx-4fg8). With `[multimedia]` configured, an endpoint such as
+  `https://user:password@s3.example` that failed validation was quoted in full
+  in the boot error and the log. The endpoint is now validated once, by the
+  configuration, and every refusal quotes it with the userinfo masked.
+- **The configuration views no longer print URL userinfo** (#3629,
+  GHSA-4jp3-xxj8-vv86). A URL written with credentials
+  (`https://user:password@host/…`) in `auth.oidc.issuer`, a terminology
+  provider `url` or OAuth2 `token_url`, `authz.abac.remote.server`,
+  `telemetry.otlp_endpoint` or `multimedia.endpoint` was shown in clear by
+  `GET {base}/admin/config` and `ferroehr config check`. Every string value in
+  those views and in `GET /management/env` now passes one masker, so each URL
+  keeps its host and path with the userinfo shown as `***`.
+- **`hickory-resolver` 0.26.3** (#3700, GHSA-rjpj-g667-cmvm): the DNS resolver
+  the server binary links through the AMQP client is updated from 0.26.1. It
+  resolves the broker's host name when `[events]` or `[fhir.outbound]` is
+  enabled (both off by default), where GHSA-6w6g-hm98-mhgm and
+  GHSA-6f2x-v7q7-m7m5 reached it for an attacker who controls that name's DNS
+  answers.
 
 ## [4.3.4] - 2026-10-06
 
@@ -10718,7 +10732,9 @@ but has not yet run in production.
   seccomp, default-deny NetworkPolicy) and golden-render validation.
 
 
-[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.4...HEAD
+[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.6...HEAD
+[4.3.6]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.5...v4.3.6
+[4.3.5]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.4...v4.3.5
 [4.3.4]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.3...v4.3.4
 [4.3.3]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.2...v4.3.3
 [4.3.2]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.1...v4.3.2

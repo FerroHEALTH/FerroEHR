@@ -269,7 +269,7 @@ ticked by being present:
 | `plaintext_audit_feed` | An `https://` URL for an enabled audit FHIR feed (`[audit.fhir_feed] url`), so the access records, which name the patient and the professional, do not cross the network in clear (CRA Annex I Part I(2)(e)). A deployment whose repository is reached on a segment it trusts accepts `plaintext_audit_feed` by name |
 | `plaintext_object_store` | `[multimedia] allow_http = false` on an enabled multimedia store, so the externalised clinical blobs travel over an `https://` endpoint (CRA Annex I Part I(2)(e)). A deployment whose object store is reached on a segment it trusts accepts `plaintext_object_store` by name |
 
-An accepted gap is stated on every boot and on `/rest/status`; it can be run,
+An accepted gap is stated on every boot and on `/management/status`; it can be run,
 not hidden. Environment form: `FERROEHR__DEPLOYMENT_PROFILE=production`,
 `FERROEHR__DEPLOYMENT_ACCEPTS=shared_cluster`. There is no `research` value:
 the key controls rigour, not purpose, and a secondary-use platform under an

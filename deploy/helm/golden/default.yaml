@@ -26,7 +26,7 @@ metadata:
     helm.sh/chart: ferroehr-11.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "4.3.4"
+    app.kubernetes.io/version: "4.3.6"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
 spec:
@@ -54,7 +54,7 @@ metadata:
     helm.sh/chart: ferroehr-11.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "4.3.4"
+    app.kubernetes.io/version: "4.3.6"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
 spec:
@@ -75,7 +75,7 @@ metadata:
     helm.sh/chart: ferroehr-11.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "4.3.4"
+    app.kubernetes.io/version: "4.3.6"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
 automountServiceAccountToken: false
@@ -90,7 +90,7 @@ metadata:
     helm.sh/chart: ferroehr-11.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "4.3.4"
+    app.kubernetes.io/version: "4.3.6"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
 data:
@@ -209,7 +209,7 @@ metadata:
     helm.sh/chart: ferroehr-11.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "4.3.4"
+    app.kubernetes.io/version: "4.3.6"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
   annotations:
@@ -239,7 +239,7 @@ metadata:
     helm.sh/chart: ferroehr-11.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "4.3.4"
+    app.kubernetes.io/version: "4.3.6"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
 spec:
@@ -287,7 +287,7 @@ spec:
         supplementalGroupsPolicy: Strict
       containers:
         - name: ferroehr
-          image: "ghcr.io/ferrohealth/ferroehr:4.3.4"
+          image: "ghcr.io/ferrohealth/ferroehr:4.3.6"
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false

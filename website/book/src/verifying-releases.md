@@ -27,7 +27,7 @@ the originals, so run `cosign verify` against the `ghcr.io/rubentalstra` path.
 ## What a release publishes
 
 Substitute the release tag you downloaded for `<tag>` (for example
-`v4.3.4`) and the architecture for `<arch>` (`x86_64` or `aarch64`) throughout
+`v4.3.6`) and the architecture for `<arch>` (`x86_64` or `aarch64`) throughout
 this page. Linux is the only published target.
 
 | Asset | What it is |
@@ -203,7 +203,7 @@ carry a Sigstore-signed SLSA provenance attestation, plus the SPDX SBOM and
 provenance the builder writes onto the image index itself.
 
 ```bash
-gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:4.3.4 \
+gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:4.3.6 \
   -R FerroHEALTH/FerroEHR
 ```
 
@@ -227,7 +227,7 @@ tag once and verify the digest it resolved — otherwise the bytes verified and
 the bytes pulled can differ:
 
 ```bash
-digest=$(docker buildx imagetools inspect ghcr.io/ferrohealth/ferroehr:4.3.4 \
+digest=$(docker buildx imagetools inspect ghcr.io/ferrohealth/ferroehr:4.3.6 \
   | awk '/^Digest:/{print $2}')
 gh attestation verify "oci://ghcr.io/ferrohealth/ferroehr@${digest}" \
   -R FerroHEALTH/FerroEHR

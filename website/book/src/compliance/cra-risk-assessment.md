@@ -150,11 +150,18 @@ evidence only) and the open work.
   `scripts/checks/vex-reachability.sh`; `scripts/checks/vex-coverage.sh`;
   `.github/workflows/release.yml` (`vulnerability-record`);
   [the exploitability record](../verifying-releases.md#the-exploitability-record).
-- **Status:** met. Every finding of the full scan carries a judgement or the
+- **Status:** partial. Every finding of the full scan carries a judgement or the
   release does not ship, and the scan reads the Rust dependencies of the
   server and viewer binaries from the binaries themselves (#3674, #3675). The
-  CRA does not define "known".
-- **Open:** none.
+  CRA does not define "known". Seven OS findings are judged `affected` and
+  have no upstream fix: CVE-2026-8674 (a long resolver search domain) in all
+  three images, and three libxml2 and two glibc JISX0213 findings in the
+  `ferroehr-postgres` image that a database login reaches through
+  PostgreSQL's XML functions, which FerroEHR itself never calls (#3673).
+  Each carries an action statement in `security/vex/`.
+- **Open:** the seven `affected` findings (#3708), until Debian ships fixes that a
+  rebuild picks up; each such rebuild is a security-only patch with its
+  advisory.
 
 ### (b) Secure by default, and reset to the original state
 
@@ -663,3 +670,4 @@ vulnerabilities and third-party information arrive. It is revised:
 | 1 | 2026-10-06 | First assessment, from the CRA Annex I audit of #3611 |
 | 2 | 2026-10-07 | (a): the per-release exploitability record (#3636), the viewer image scanned before it is tagged (#3674) and every release binary and image binary built with `cargo auditable` (#3675); (b): the declared profile in the chart and the Compose files, the reasons for `sandbox` and the shipped defaults a production holder keeps, and the reset procedure (#3637); Part II(1): SBOMs for the crates and the chart (#3643); the declared security-relevant paths and their release gate (#3649); (m): the erase command and the decommissioning page (#3642); (e): a plaintext `amqp://` broker refused under `production` (#3676); (e): a plain `http://` audit FHIR feed and a multimedia store with `allow_http` refused under `production` (#3689); (b): the Helm reset run by the Kubernetes probe harness (#3677) |
 | 3 | 2026-10-08 | Part II: the manufacturer's vulnerability-handling and post-market policy is cited from the FerroHEALTH book, where it moved for every FerroHEALTH product; the measures are unchanged (#3701) |
+| 4 | 2026-10-08 | Reviewed for release 4.3.6 against the security-relevant paths changed since 4.3.5: the outbound FHIR emitter and its AMQP flow are gone with the in-tree connector (#3080), so the outbound-flow table names change events alone on AMQP; (a): the `ferroehr-postgres` image drops GnuPG and `gosu`, and every operating-system finding of the three images carries an OpenVEX judgement in `security/vex/` (#3673) |

@@ -124,7 +124,9 @@ the EHR system and versions of those standards, formats and specifications".
 | DICOM PS3.15 §A.5 audit message | the edition is not pinned | the access log over syslog |
 | HL7 FHIR `AuditEvent` | R4 | the access log as FHIR |
 | Syslog | RFC 5424, over UDP or TLS | the access-log feed |
+| HL7 FHIR terminology operations | R4B | validating codes against external terminology servers |
 | OAuth 2.0 bearer tokens, JWT, OpenID Connect | RFC 6750, RFC 7519, OpenID Connect Core 1.0 | authentication |
+| OAuth 2.0 Step Up Authentication Challenge | RFC 9470 | refusing a patient-data request below the configured assurance level |
 | SMART App Launch | the version is not pinned; PKCE per RFC 7636 | application launch and scopes |
 | TLS | 1.3 by default | transport security |
 | PostgreSQL | 18 | the database the deployment provides |

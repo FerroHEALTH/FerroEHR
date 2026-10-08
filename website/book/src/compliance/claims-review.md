@@ -115,6 +115,38 @@ Read on the tree after commit `d6539d470`, before FerroEHR 4.3.5.
   says so under "Before you install"; the `Chart.yaml` description still does
   not.
 
+## The review of 2026-10-08
+
+Read on the tree after commit `de648fcc3`, for FerroEHR 4.3.6. This release
+removes the in-tree FHIR connector (#3080) and moves the deployment gaps off
+the public status document (#3671), so those two facts were checked in every
+text in scope.
+
+### Changed
+
+| # | Text | Claim | Art. 28 | Finding | Now reads |
+|---|---|---|---|---|---|
+| 1 | Landing page, "Fits your stack" | "FHIR R4B" | (a) | FerroEHR maps no FHIR resources; it reaches FHIR R4B terminology servers and renders its access log as FHIR R4 `AuditEvent` | "FHIR R4B terminology" |
+| 2 | Book, [instructions for use](instructions-for-use.md), [CRA user information](cra-user-information.md), [configuration](../installation/configuration.md#deployment_profile), [go-live checklist](../security/go-live-checklist.md) | an accepted deployment gap is stated "on `GET /ferroehr/rest/status`" | (a) | the gaps moved to the authenticated `GET /management/status` (#3671); the public status document carries the profile only | "on `GET /management/status`" |
+| 3 | Book, [instructions for use](instructions-for-use.md), the deployment profile | the list of what `production` refuses | (b) | omitted the plaintext audit feed and the plaintext object store (#3676, #3689) | both named |
+| 4 | Book, [instructions for use](instructions-for-use.md), limitations | none on FHIR | (b) | an operator of an earlier release may rely on the removed connector | FerroEHR maps no FHIR resources, and `[fhir]` is refused at boot |
+| 5 | Book, [information sheet](information-sheet.md), (e) | the standards table | (b) | omitted the FHIR terminology operations and RFC 9470, which this release uses | both listed |
+
+### Read and kept
+
+- **The README's integration list and the book's
+  [Beyond the core](../beyond-core/index.md)**: both state that FHIR R4 mapping
+  is FerroBRIDGE's and name the two uses of FHIR FerroEHR keeps.
+- **Single tenancy**: the README, the landing page and the book state one
+  instance per organisation; "multi-tenant" appears only where the book quotes
+  openEHR's placement of multi-tenancy outside one system.
+- **The Helm chart's description**: it now says a stock install runs the
+  `sandbox` profile (#3637), which closes the item left open on 2026-10-06.
+
+### Left open
+
+Nothing.
+
 ## Annex II 2.5, re-assessed
 
 EHDS Annex II 2.5: "The harmonised software components of an EHR system shall
@@ -173,3 +205,4 @@ cut, after the texts in scope have been read.
 | Reviewed | Tree | Changed | Left open |
 |---|---|---|---|
 | 2026-10-06 | before 4.3.5, after `d6539d470` | 15 claims, in the README, the landing page and three book pages | the chart description (#3637) |
+| 2026-10-08 | 4.3.6, after `de648fcc3` | 5 claims, in the landing page and five book pages; the chart description item closed | nothing |
