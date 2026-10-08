@@ -2761,7 +2761,6 @@ dependencies = [
  "openehr-base",
  "openehr-its",
  "openehr-rm",
- "openehr-sdt",
  "secrecy",
  "serde",
  "serde_json",

@@ -33,7 +33,6 @@ multimedia = [
     "dep:object_store",
     "dep:openehr-base",
     "dep:openehr-its",
-    "dep:openehr-sdt",
     "dep:openehr-rm",
     "dep:secrecy",
     "dep:serde_json",
@@ -48,7 +47,6 @@ workspace = true
 [dependencies]
 openehr-base = { path = "../../crates/openehr-base", optional = true }
 openehr-its = { path = "../../crates/openehr-its", optional = true }
-openehr-sdt = { path = "../../crates/openehr-sdt", optional = true }
 openehr-rm = { path = "../../crates/openehr-rm", optional = true }
 
 async-trait = { workspace = true, optional = true }
