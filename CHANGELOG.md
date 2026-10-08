@@ -15,6 +15,15 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The chart's SBOM is attested** (#3710). The CycloneDX SBOM the chart lane
+  writes carried no `serialNumber`, which `actions/attest` requires of a
+  CycloneDX document, so chart 11.0.1 was published without its SBOM
+  attestation. The generator now writes a `urn:uuid:` serial number and
+  refuses to hand on a document without `bomFormat`, `serialNumber` and
+  `specVersion`. Chart 11.0.2 carries the attestation.
+
 ## [4.3.6] - 2026-10-08
 
 ### Added

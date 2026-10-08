@@ -85,14 +85,20 @@ for i in $(seq 0 $((count - 1))); do
   echo "  ${repo}${tag:+:${tag}} -> ${digest}"
 done
 
+# CycloneDX 1.5 §serialNumber: a urn:uuid per BOM; actions/attest refuses a CycloneDX
+# document without bomFormat, serialNumber and specVersion (its src/sbom.ts).
+serial="urn:uuid:$(uuidgen | tr "[:upper:]" "[:lower:]")"
+
 jq -n \
   --arg name "$name" --arg version "$version" --arg app "$app_version" \
+  --arg serial "$serial" \
   --arg chart_digest "$CHART_DIGEST" --arg chart_repo "$CHART_REPOSITORY" --arg timestamp "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   --argjson components "$components" '
   ("chart:\($name)@\($version)") as $chart_ref
   | {
       bomFormat: "CycloneDX",
       specVersion: "1.5",
+      serialNumber: $serial,
       version: 1,
       metadata: {
         timestamp: $timestamp,
@@ -117,5 +123,10 @@ jq -n \
         ($components[] | {ref: ."bom-ref", dependsOn: []})
       ]
     }' > "$OUT"
+
+# The fields actions/attest keys a CycloneDX document on: refuse to hand it one
+# it would reject, so the failure is here and names the cause.
+jq -e '.bomFormat == "CycloneDX" and (.serialNumber | test("^urn:uuid:[0-9a-f-]{36}$")) and .specVersion == "1.5"' "$OUT" >/dev/null \
+  || { echo "chart-sbom: $OUT lacks bomFormat, serialNumber or specVersion" >&2; exit 1; }
 
 echo "${OUT}: CycloneDX 1.5, chart ${name} ${version}, ${count} image(s) by digest"
