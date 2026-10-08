@@ -15,7 +15,11 @@ system it declares is FerroEHR and FerroBRIDGE together: FerroEHR ships the
 European logging software component, FerroBRIDGE the European
 interoperability software component. This page states, requirement by
 requirement, what FerroEHR provides today, and names FerroBRIDGE where a
-requirement is its part.
+requirement is its part. The documentation of the EHR system as a whole, its
+intended purpose and the split of duties with the deploying organisation, is
+in the FerroHEALTH book
+([intended purpose](https://ferrohealth.eu/docs/ehds/intended-purpose.html),
+[shared responsibility](https://ferrohealth.eu/docs/ehds/shared-responsibility.html)).
 
 <!-- toc -->
 
@@ -73,10 +77,10 @@ the issue that closes it where one exists.
 
 | # | Requirement (our paraphrase) | Status | Evidence | Notes |
 |---|---|---|---|---|
-| 1.1 | The components achieve the performance the manufacturer intended and are suitable for their intended purpose in normal use, without putting patient safety at risk. | Partial | [The manufacturer's intended-purpose statement](intended-purpose.md); [The hazard log of the logging component](hazard-log.md) | **Gap:** Cadasto B.V. states the intended purpose, and the hazard log assesses the logging component against it in normal conditions of use, each hazard with its control and the test that shows it. H9, an emergency access to data restricted under EHDS Art. 8, is controlled by the emergency mark; the Art. 8 restriction itself is planned. The interoperability component's assessment is FerroBRIDGE's. The Regulation names no method for showing performance or safety, and no conformity assessment has examined either. Tracked in [#3682](https://github.com/FerroHEALTH/FerroEHR/issues/3682) |
+| 1.1 | The components achieve the performance the manufacturer intended and are suitable for their intended purpose in normal use, without putting patient safety at risk. | Partial | [The manufacturer's intended-purpose statement for the EHR system](https://ferrohealth.eu/docs/ehds/intended-purpose.html); [FerroEHR's part of it](intended-purpose.md); [The hazard log of the logging component](hazard-log.md) | **Gap:** Cadasto B.V. states the intended purpose, and the hazard log assesses the logging component against it in normal conditions of use, each hazard with its control and the test that shows it. H9, an emergency access to data restricted under EHDS Art. 8, is controlled by the emergency mark; the Art. 8 restriction itself is planned. The interoperability component's assessment is FerroBRIDGE's. The Regulation names no method for showing performance or safety, and no conformity assessment has examined either. Tracked in [#3682](https://github.com/FerroHEALTH/FerroEHR/issues/3682) |
 | 1.2 | The components can be supplied and installed following the manufacturer's instructions without adversely affecting their characteristics and performance. | Partial | [The instructions for use](instructions-for-use.md); [Deployment artifacts and their documented installation](../installation/index.md); [The chart's production overlay](../installation/kubernetes.md#the-production-overlay) | **Gap:** The instructions for use set the production profile, which refuses to start while a separation is missing, and point a Kubernetes installation at the chart's `values-production.yaml`: it sets `production`, makes every separation a values file can make, and accepts `plaintext_listener` by name behind a TLS ingress. The chart's validation renders it and asserts each separation, and its boot check has the server evaluate the posture from the rendered configuration. Separate database clusters, which the server measures over live connections, are judged by no check before the first boot against the operator's databases. The chart and the Compose files still declare `sandbox` by default, so an installation that follows the quickstart instead of the instructions runs the sandbox posture, which must not hold real personal data; the server says so on every boot and on `GET /ferroehr/rest/status`. Tracked in [#3692](https://github.com/FerroHEALTH/FerroEHR/issues/3692) |
-| 1.3 | Interoperability, safety and security features uphold the rights of natural persons in line with the intended purpose, as set out in Chapter II. | Partial | [The rights the software can serve, and who must serve the rest](shared-responsibility.md); [One patient's access log, through a subject-scoped grant](../audit.md#retrieving-audit-records-iti-81) | **Gap:** Most Chapter II rights are served through the electronic health data access services Member States establish (Art. 4(1)) and through the deploying organisation; the shared-responsibility page says which side each falls on. An access declared with an agreed emergency purpose code is marked in its access record and shown to the person through the subject-scoped retrieval, as Art. 11(5) asks ([emergency access](../audit.md#emergency-access-ehds-art-115)); the mark lifts no restriction. FerroEHR does not yet hold the Art. 8 restriction of access by health professionals, so a Member State access service or the deploying organisation enforces it. Tracked in [#3682](https://github.com/FerroHEALTH/FerroEHR/issues/3682) |
-| 1.4 | Components intended to operate with other products, including medical devices, are designed so interoperability and compatibility are reliable and secure and data can be shared with the device. | Partial | [The access log's IHE ATNA transactions and mutual TLS](../audit.md#node-authentication-iti-19-mutual-tls); [Medical device purposes are outside the intended purpose](intended-purpose.md#what-the-intended-purpose-excludes) | **Gap:** The logging component works with other products through IHE ATNA: ITI-20 feeds, ITI-81 retrieval, ITI-19 mutual TLS. The syslog feed ships with UDP transport when switched on, which delivers no record reliably and encrypts none, so `deployment_profile = "production"` refuses it unless `audit_syslog_udp` is accepted by name; TLS syslog and the outbox-driven FHIR feed are the reliable choices, and the instructions for use name them. FerroEHR claims no interoperability with a medical device; a device manufacturer that claims it carries Art. 27(1). |
+| 1.3 | Interoperability, safety and security features uphold the rights of natural persons in line with the intended purpose, as set out in Chapter II. | Partial | [The rights the software can serve, and who must serve the rest](https://ferrohealth.eu/docs/ehds/shared-responsibility.html); [One patient's access log, through a subject-scoped grant](../audit.md#retrieving-audit-records-iti-81) | **Gap:** Most Chapter II rights are served through the electronic health data access services Member States establish (Art. 4(1)) and through the deploying organisation; the shared-responsibility page of the FerroHEALTH book says which side each falls on. An access declared with an agreed emergency purpose code is marked in its access record and shown to the person through the subject-scoped retrieval, as Art. 11(5) asks ([emergency access](../audit.md#emergency-access-ehds-art-115)); the mark lifts no restriction. FerroEHR does not yet hold the Art. 8 restriction of access by health professionals, so a Member State access service or the deploying organisation enforces it. Tracked in [#3682](https://github.com/FerroHEALTH/FerroEHR/issues/3682) |
+| 1.4 | Components intended to operate with other products, including medical devices, are designed so interoperability and compatibility are reliable and secure and data can be shared with the device. | Partial | [The access log's IHE ATNA transactions and mutual TLS](../audit.md#node-authentication-iti-19-mutual-tls); [Medical device purposes are outside the intended purpose](https://ferrohealth.eu/docs/ehds/intended-purpose.html) | **Gap:** The logging component works with other products through IHE ATNA: ITI-20 feeds, ITI-81 retrieval, ITI-19 mutual TLS. The syslog feed ships with UDP transport when switched on, which delivers no record reliably and encrypts none, so `deployment_profile = "production"` refuses it unless `audit_syslog_udp` is accepted by name; TLS syslog and the outbox-driven FHIR feed are the reliable choices, and the instructions for use name them. FerroEHR claims no interoperability with a medical device; a device manufacturer that claims it carries Art. 27(1). |
 
 ### 2. Requirements for interoperability
 
@@ -161,7 +165,9 @@ FerroEHR is also a product with digital elements under Regulation (EU)
 2024/2847. Its reporting duties apply now, and from 11 December 2027 the CRA's
 essential requirements are assessed through this Regulation's Chapter III
 procedure, in one technical documentation set and one declaration. The
-[Cyber Resilience Act](cra.md) page states the position.
+[Cyber Resilience Act](cra.md) page states FerroEHR's position, and the
+FerroHEALTH book states the manufacturer's
+([the CRA](https://ferrohealth.eu/docs/cra.html)).
 
 ## Related
 
@@ -170,7 +176,8 @@ procedure, in one technical documentation set and one declaration. The
 - [Information sheet](information-sheet.md) and
   [instructions for use](instructions-for-use.md): what accompanies each
   release (Article 30(1)(d), Article 38).
-- [Shared responsibility](shared-responsibility.md): which duties the
-  software can carry and which belong to the deployment.
+- [Shared responsibility](https://ferrohealth.eu/docs/ehds/shared-responsibility.html),
+  in the FerroHEALTH book: which duties the software can carry and which
+  belong to the deployment.
 - [Control matrix](control-matrix.md): the legal controls the tracker
   declares, generated from the tracker.

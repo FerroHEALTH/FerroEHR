@@ -104,7 +104,9 @@ requirements:
         status: partial
         issues: [3682]
         evidence:
-          - text: The manufacturer's intended-purpose statement
+          - text: The manufacturer's intended-purpose statement for the EHR system
+            href: https://ferrohealth.eu/docs/ehds/intended-purpose.html
+          - text: FerroEHR's part of it
             href: intended-purpose.md
           - text: The hazard log of the logging component
             href: hazard-log.md
@@ -155,14 +157,14 @@ requirements:
         issues: [3682]
         evidence:
           - text: The rights the software can serve, and who must serve the rest
-            href: shared-responsibility.md
+            href: https://ferrohealth.eu/docs/ehds/shared-responsibility.html
           - text: One patient's access log, through a subject-scoped grant
             href: ../audit.md#retrieving-audit-records-iti-81
         gap: >-
           Most Chapter II rights are served through the electronic health data
           access services Member States establish (Art. 4(1)) and through the
-          deploying organisation; the shared-responsibility page says which
-          side each falls on. An access declared with an agreed emergency
+          deploying organisation; the shared-responsibility page of the
+          FerroHEALTH book says which side each falls on. An access declared with an agreed emergency
           purpose code is marked in its access record and shown to the person
           through the subject-scoped retrieval, as Art. 11(5) asks
           ([emergency access](../audit.md#emergency-access-ehds-art-115)); the
@@ -179,7 +181,7 @@ requirements:
           - text: The access log's IHE ATNA transactions and mutual TLS
             href: ../audit.md#node-authentication-iti-19-mutual-tls
           - text: Medical device purposes are outside the intended purpose
-            href: intended-purpose.md#what-the-intended-purpose-excludes
+            href: https://ferrohealth.eu/docs/ehds/intended-purpose.html
         gap: >-
           The logging component works with other products through IHE ATNA:
           ITI-20 feeds, ITI-81 retrieval, ITI-19 mutual TLS. The syslog feed
@@ -362,9 +364,11 @@ technical_documentation:
         source: shipped
         href: intended-purpose.md
         note: >-
-          The statement of intended purpose is versioned with the book, which
-          is frozen per release; the version and release date are each
-          release's tag and changelog heading.
+          FerroEHR's part of the statement of intended purpose is versioned
+          with the book, which is frozen per release; the version and release
+          date are each release's tag and changelog heading. The statement for
+          the EHR system as a whole is in the FerroHEALTH book
+          (<https://ferrohealth.eu/docs/ehds/intended-purpose.html>).
       - id: "1(b)"
         summary: The categories of personal electronic health data it processes.
         source: shipped

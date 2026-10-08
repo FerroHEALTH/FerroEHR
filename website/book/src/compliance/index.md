@@ -19,6 +19,20 @@ same EU layer. The Netherlands is filled in first because that is where the
 project's own deployments are, not because it is the default; the
 [national law](#national-law) section says how to add another.
 
+The documentation that belongs to the FerroHEALTH family or to its
+manufacturer, Cadasto B.V., lives in the FerroHEALTH book at
+<https://ferrohealth.eu/docs/>:
+[the manufacturer](https://ferrohealth.eu/docs/manufacturer.html), the
+[security policy](https://ferrohealth.eu/docs/security.html), the
+[post-market procedure](https://ferrohealth.eu/docs/post-market.html), the
+[manufacturer side of the CRA](https://ferrohealth.eu/docs/cra.html), the
+[intended purpose](https://ferrohealth.eu/docs/ehds/intended-purpose.html) and
+the [shared responsibility](https://ferrohealth.eu/docs/ehds/shared-responsibility.html)
+of the EHR system FerroEHR forms with FerroBRIDGE,
+[licensing](https://ferrohealth.eu/docs/licensing.html), and
+[how the products fit together](https://ferrohealth.eu/docs/architecture.html).
+This book keeps FerroEHR's own: the pages below.
+
 <!-- toc -->
 
 ## What FerroEHR claims, and what it does not
@@ -191,7 +205,7 @@ repository actually touches.
 | **Art. 20(1) and (2)** portability in a structured, commonly used and machine-readable format, and direct transmission where technically feasible | Canonical openEHR JSON and XML, the [simplified FLAT and STRUCTURED formats](../using-the-api/content-negotiation.md#simplified-formats-flat-and-structured), and the [EHR Extract](../beyond-core/messaging.md#exporting-an-ehr), which another openEHR system imports directly | shipped | Check the trigger before answering: 20(1)(a) reaches processing based on consent or on a contract, and 20(3) excludes processing for a task carried out in the public interest, which is the basis much care runs on |
 | **Art. 21(1)** objection, and **21(6)** objection to research processing under Art. 89(1) | A [research objection](retention.md#objection-to-research-processing) per EHR: while it stands, the record leaves every full-population query, every export and the event stream, the three surfaces a secondary-use consumer reads the repository through, while a query naming the `ehr_id` and a read for care are untouched. The public-interest override 21(6) admits is recorded beside it and says on whose authority | shipped, [#3325](https://github.com/FerroHEALTH/FerroEHR/issues/3325) | Weigh the compelling legitimate grounds 21(1) asks for, record the outcome, and carry the objection into the systems outside the CDR |
 | **Art. 25** data protection by design and by default | Deny-by-default authorization, an `EHR_ACCESS` default that can be set to restricted, audit on by default. The two defaults that favour compatibility, the `open` per-EHR access default and the `open` audit fail mode, stop a `production` deployment booting: each is a named gap (`open_ehr_access_default`, `audit_fails_open`) that the deployment either closes or accepts by name in `deployment_accepts`, which is then stated on every boot and on `/rest/status` | shipped, [#3323](https://github.com/FerroHEALTH/FerroEHR/issues/3323) | Choose the restrictive settings, or record the decision to keep a compatibility default and carry it in `deployment_accepts` |
-| **Art. 28(3)(e) to (h)** what a processor's contract must let it do: assist with the rights, assist with Arts. 32 to 36, delete or return the data at the end of service, and make audit information available | For a vendor operating a deployment: the rights operations in the rows above for (e), the trail and the controls documented in this book for (f), [EHR Extract export](../beyond-core/messaging.md#exporting-an-ehr) beside admin [physical deletion](../operations-admin-apis.md#physical-deletion) for (g), and `GET {base}/admin/config` with the trail as the evidence (h) asks for | shipped | Conclude the contract Art. 28(3) requires with whoever operates the deployment; no software supplies it. Cadasto B.V. is the manufacturer of each release: for a self-hosted deployment it processes no personal data on your behalf and is not your processor; where Cadasto B.V. hosts the deployment for you it is your processor, and the contract is with it ([shared responsibility](shared-responsibility.md)). Either way, the one service a deployment reaches by default is Cadasto B.V.'s collector for the [usage report](../usage-report.md), which Cadasto B.V. receives as controller for its own purposes |
+| **Art. 28(3)(e) to (h)** what a processor's contract must let it do: assist with the rights, assist with Arts. 32 to 36, delete or return the data at the end of service, and make audit information available | For a vendor operating a deployment: the rights operations in the rows above for (e), the trail and the controls documented in this book for (f), [EHR Extract export](../beyond-core/messaging.md#exporting-an-ehr) beside admin [physical deletion](../operations-admin-apis.md#physical-deletion) for (g), and `GET {base}/admin/config` with the trail as the evidence (h) asks for | shipped | Conclude the contract Art. 28(3) requires with whoever operates the deployment; no software supplies it. Cadasto B.V. is the manufacturer of each release: for a self-hosted deployment it processes no personal data on your behalf and is not your processor; where Cadasto B.V. hosts the deployment for you it is your processor, and the contract is with it ([shared responsibility](https://ferrohealth.eu/docs/ehds/shared-responsibility.html)). Either way, the one service a deployment reaches by default is Cadasto B.V.'s collector for the [usage report](../usage-report.md), which Cadasto B.V. receives as controller for its own purposes |
 | **Art. 30** records of processing activities, and **30(1)(f)** the envisaged time limits for erasure of the different categories of data | The effective configuration as a redacted JSON tree at `GET {base}/admin/config`, this book as a description of what the software does, and the [retention register](retention.md#the-retention-register) as the machine-readable answer to the time limits per category 30(1)(f) asks for | shipped, [#3346](https://github.com/FerroHEALTH/FerroEHR/issues/3346) | Write and maintain the record itself; the software cannot know your purposes or recipients |
 | **Art. 32** security of processing | The controls listed in [Security](../security.md) and the residual risk in the [threat model](../threat-model.md) | shipped | Assess whether they are appropriate to your risk, and supply everything below the application |
 | **Art. 33(3)(a)** the categories and approximate number of subjects and of records a breach touched, and **Art. 34(3)(a)** the measures that remove the duty to tell patients | The trail records reads, writes and refusals per patient and per agent, so whose records an incident reached, and how many, is countable from it | shipped | Assess and notify inside the deadlines. 34(3)(a) lifts the duty to inform patients only where the protection measures "were applied to the personal data affected", so check what was in fact protected: the application seals national identifiers in the demographic domain and nothing else, and encryption of clinical content at rest belongs to the database and the disk. The regulation's text says nothing about encryption at rest, so the measure and its strength are your choice to make and to defend |
@@ -354,16 +368,18 @@ binds a community or the identity issuers, the row says so.
 
 - **[Control matrix](control-matrix.md):** the machine-generated status of every
   declared control, straight from the tracker.
-- **[Shared responsibility](shared-responsibility.md):** which obligation is
-  the software's and which is yours, obligation by obligation.
+- **[Shared responsibility](shared-responsibility.md):** what a FerroEHR
+  deployment sends out by default, and where FerroEHR documents its side of
+  each obligation; the tables, obligation by obligation, are in the
+  FerroHEALTH book.
 - **[Complaints, incidents and vulnerabilities](post-market.md):** how to
-  complain or report a serious incident, the manufacturer's registers, and
-  what happens when a release is withdrawn.
-- **[Intended purpose](intended-purpose.md):** the manufacturer's statement
-  of who FerroEHR is for, the data it is designed to process, the environment
-  it assumes and the misuse it foresees.
-- **[Cyber Resilience Act](cra.md):** the manufacturer, the duties and their
-  dates, the conformity route through the EHDS, and the questions for counsel.
+  report about FerroEHR, FerroEHR's registers, and what happens when a
+  release is withdrawn.
+- **[Intended purpose](intended-purpose.md):** FerroEHR's part of the
+  manufacturer's statement: its essential functions, the data it is designed
+  to process, the environment it assumes and the misuse it foresees.
+- **[Cyber Resilience Act](cra.md):** FerroEHR's CRA documents and product
+  facts, and the class I question.
 - **[CRA risk assessment](cra-risk-assessment.md):** the cybersecurity risks,
   and how each point of CRA Annex I applies, with its evidence and its open
   work.

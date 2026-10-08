@@ -41,6 +41,9 @@ its authorised representative".
 The running server names the manufacturer in the same words on its startup
 banner, in `ferroehr --version` and on `GET /management/info`
 ([the manufacturer and the deployment report](../operations.md#the-manufacturer-and-the-deployment-report)).
+Cadasto B.V. is the manufacturer of every FerroHEALTH product; the FerroHEALTH
+book describes it at <https://ferrohealth.eu/docs/manufacturer.html> and its
+post-market procedure at <https://ferrohealth.eu/docs/post-market.html>.
 
 ## (b) Name, version and release date
 
@@ -74,8 +77,10 @@ not intended for any medical device purpose. It runs one instance per
 organisation, operated by the organisation itself, by a processor on its
 behalf, or by Cadasto B.V. as a hosted service.
 
-The full statement, with the users, the environment and the foreseeable
-misuse, is the [intended purpose](intended-purpose.md).
+FerroEHR's part of the statement, with the environment and the foreseeable
+misuse, is the [intended purpose](intended-purpose.md). The statement for the
+EHR system FerroEHR forms with FerroBRIDGE, with its users, is in the
+FerroHEALTH book at <https://ferrohealth.eu/docs/ehds/intended-purpose.html>.
 
 ## (d) The categories of electronic health data
 

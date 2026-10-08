@@ -28,6 +28,16 @@ for reading it, citing it and writing against it. The vendoring mechanics
   produce: compliance pages, provenance records, vendor scripts, `Control:`
   declarations on issues.
 
+The compliance pages live in two books. FerroEHR's own (the compliance
+overview, the national-law tables, the CRA risk assessment, the Annex II user
+information, the hazard log, the EHDS readiness and technical-documentation
+pages, the information sheet, the instructions for use) are under
+`website/book/src/compliance/`. The manufacturer's and the EHR system's (the
+post-market procedure, the CRA's manufacturer side, the EHDS intended purpose
+and shared responsibility, the security policy) are in the FerroHEALTH book at
+`https://ferrohealth.eu/docs/` (repo FerroHEALTH/FerroHEALTH); the page list is
+in `docs-website.md`.
+
 None of them is `spec-researcher`, `cnf-triage` or `/spec-audit`, and none
 of them is ever folded into those: the openEHR specifications are the
 conformance oracle for the wire, the regulations are the measure of the

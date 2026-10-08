@@ -32,7 +32,7 @@ ITS-REST 1.1.0 &nbsp;·&nbsp; AQL 1.1 &nbsp;·&nbsp; RM 1.2.0 **+ 1.1.0** &nbsp;
 [![CNF performance](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fferroehr%2Fbadge-performance.json)](docs/conformance/ferroehr/CONFORMANCE_CERTIFICATE.md)
 [![SLSA Build L3](https://slsa.dev/images/gh-badge-level3.svg)](https://ferroehr.eu/docs/latest/verifying-releases.html#what-slsa-level-each-artifact-reaches)
 
-[**Live sandbox**](https://sandbox.ferroehr.eu) · [**Documentation**](https://ferroehr.eu/) · [Why this exists](#why-this-project-exists) · [**Do you need a commercial licence?**](#do-you-need-a-commercial-licence) · [Quick start](#quick-start) · [Features](#features) · [Spec versions](#choose-your-openehr-specification-generation) · [Rust crates](#the-openehr-specification-layer-as-rust-crates) · [Architecture](#architecture) · [Conformance](#conformance-measured) · [Deployment](#deployment) · [Roadmap](https://github.com/orgs/FerroHEALTH/projects/2) · [Contributing](#contributing-and-security)
+[**Live sandbox**](https://sandbox.ferroehr.eu) · [**Documentation**](https://ferroehr.eu/) · [Why this exists](#why-this-project-exists) · [**Do you need a commercial licence?**](#do-you-need-a-commercial-licence) · [Quick start](#quick-start) · [Features](#features) · [Spec versions](#choose-your-openehr-specification-generation) · [Rust crates](#the-openehr-specification-layer-as-rust-crates) · [Architecture](#architecture) · [Conformance](#conformance-measured) · [Deployment](#deployment) · [Roadmap](https://github.com/orgs/FerroHEALTH/projects/2) · [Contributing](#contributing-governance-and-security)
 
 </div>
 
@@ -169,8 +169,8 @@ on the documentation site.
 - **Demographics:** a versioned party store (person, organisation, group,
   agent, role) with relationships
 - **Terminology:** the bundled openEHR terminology plus pluggable external
-  FHIR terminology servers (validate, expand, subsume); FerroTERM, the Ferro
-  family's terminology server, ships with the quickstart as a compose overlay
+  FHIR terminology servers (validate, expand, subsume); FerroTERM, the
+  FerroHEALTH family's terminology server, ships with the quickstart as a compose overlay
 
 ### Integration
 
@@ -600,6 +600,7 @@ spec-codegen drift, comment style, and a container smoke test. See [CONTRIBUTING
 |                                                                       |                                                                     |
 |-----------------------------------------------------------------------|---------------------------------------------------------------------|
 | [Documentation website](https://ferroehr.eu/)                         | The user guide, versioned per release                               |
+| [FerroHEALTH documentation](https://ferrohealth.eu/docs/)             | The family and its manufacturer, Cadasto B.V.: the security and post-market policy, the CRA, the EHDS EHR system, licensing, and how the products fit together |
 | [API reference](https://sandbox.ferroehr.eu/ferroehr/rest/swagger-ui) | The live sandbox's Swagger UI (demo login `ferroehr`/`ferroehr`)    |
 | [Architecture](docs/architecture.md)                                  | How the system is built, and why                                    |
 | [Conformance report](docs/conformance/ferroehr/CONFORMANCE_REPORT.md) | The latest measured results, per test case                          |
@@ -627,7 +628,7 @@ public issues.
 | [SUPPORT.md](SUPPORT.md) | where to ask a question, report a defect, or report a vulnerability — they are not the same place |
 | [GOVERNANCE.md](GOVERNANCE.md) | who decides, how a change gets in, and how to become a maintainer |
 | [MAINTAINERS.md](MAINTAINERS.md) | who the maintainers are, which publishing identities exist, and what happens if they are unavailable |
-| [SECURITY.md](SECURITY.md) | how to report a vulnerability, what you can expect back, and **which versions receive security fixes** |
+| [SECURITY.md](SECURITY.md) | how to report a vulnerability in FerroEHR, and **which versions receive security fixes**; what you can expect back is the manufacturer's [security policy](https://ferrohealth.eu/docs/security.html) |
 | [Threat model](https://ferroehr.eu/docs/latest/threat-model.html) | the trust boundaries, the control at each, the residual risk that survives it, and what is explicitly not defended against |
 
 Two of those are worth reading before a procurement decision rather than
@@ -665,6 +666,9 @@ named in [MAINTAINERS.md](MAINTAINERS.md). The licence you receive is a signed
 token file: point `[licence] file` (or `FERROEHR__LICENCE__FILE`) at it and
 `GET /ferroehr/rest/status` reports the grant in force. Without one the server
 runs identically under the embedded non-commercial grant, and says so there.
+The licence policy shared by the FerroHEALTH products, with the trademarks, is
+on the FerroHEALTH book's
+[Licensing and trademarks](https://ferrohealth.eu/docs/licensing.html) page.
 
 The nine `openehr-*` crates on crates.io are a separate question. The five
 generated model crates (`openehr-base`, `openehr-rm`, `openehr-am`,
@@ -707,8 +711,8 @@ third-party tree, is on the documentation site's
 | Material                                                                                                                                                                                              | License                                                                                                                   |
 |-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------|
 | **FerroEHR's own code:** the application, the tooling, the viewer and the documentation                                                                                                                       | [BUSL-1.1](LICENSE)                                                                                                       |
-| The five generated **`openehr-*` model crates** on crates.io (`openehr-base`, `openehr-rm`, `openehr-am`, `openehr-lang`, `openehr-term`)                                                                                                            | [Apache-2.0](LICENSE-APACHE-2.0) (`openehr-term` also CC-BY-SA-3.0 for the terminology XML)                                                           |
-| The three hand-written **`openehr-*` engines** on crates.io (`openehr-query`, `openehr-adl`, `openehr-its`)                                                                                                                                        | [BUSL-1.1](LICENSE) (`openehr-its` also Apache-2.0 for the openEHR-derived codecs, contract and schema it embeds)                                                                                 |
+| The six **`openehr-*` model and wire crates** on crates.io (`openehr-base`, `openehr-rm`, `openehr-am`, `openehr-lang`, `openehr-term`, `openehr-its`)                                                                                                            | [Apache-2.0](LICENSE-APACHE-2.0) (`openehr-term` also CC-BY-SA-3.0 for the terminology XML)                                                           |
+| The three hand-written **`openehr-*` engines** on crates.io (`openehr-query`, `openehr-adl`, `openehr-sdt`)                                                                                                                                        | [BUSL-1.1](LICENSE)                                                                                 |
 | openEHR **machine-readable artifacts** (BMM, XSDs, OpenAPI, JSON Schemas — the `specifications-ITS-*` repos) and the vendored **test corpora** (archie, Better `web-template-tests`, the EHRbase SDK) | [Apache-2.0](LICENSE-APACHE-2.0)                                                                                          |
 | openEHR **specification text** (vendored for conformance work)                                                                                                                                        | [CC-BY-SA 3.0](LICENSE-CC-BY-SA-3.0)                                                                                      |
 | **CKM-derived clinical models** (test corpora)                                                                                                                                                        | per-file `licence` metadata — a mix of [CC-BY-SA 4.0](LICENSES/CC-BY-SA-4.0.txt) and [CC-BY-SA 3.0](LICENSE-CC-BY-SA-3.0) |

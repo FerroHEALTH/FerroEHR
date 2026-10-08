@@ -1,55 +1,29 @@
 # Intended purpose
 
-This page is the statement by Cadasto B.V., the manufacturer of each tagged
-FerroEHR release, of the use it intends FerroEHR for: who uses it, which data
-it is designed to process, the environment it is designed to run in, and the
-misuse that can reasonably be foreseen. Two regulations measure the product
-against this statement. The Cyber Resilience Act (CRA, Regulation (EU)
-2024/2847) defines the intended purpose as "the use for which a product with
-digital elements is intended by the manufacturer, including the specific
-context and conditions of use, as specified in the information supplied by the
-manufacturer in the instructions for use, promotional or sales materials and
-statements, as well as in the technical documentation" (CRA Art. 3(23)), and
-asks for it "including the security environment provided by the manufacturer"
-in the information that accompanies the product (Annex II point 4). The EHDS
-(Regulation (EU) 2025/327) asks for "its intended purpose, and the date and
-version of the EHR system" in the technical documentation (Annex III 1(a)) and
-on the information sheet (Art. 38(2)(c)), and forbids advertising that suggests
-uses "other than those stated to form part of the intended purpose in the
-technical documentation" (Art. 28(c)).
+Cadasto B.V. states the intended purpose of the EHR system that FerroEHR and
+FerroBRIDGE form together, under the EHDS (Regulation (EU) 2025/327) and the
+Cyber Resilience Act (CRA, Regulation (EU) 2024/2847), once for both
+products: the statement and its version, who uses the system, how it is
+operated (self-hosted, or hosted by Cadasto B.V.), and what the intended
+purpose excludes, the medical-device purposes of the MDR among them. That
+statement is published in the FerroHEALTH book:
+[The EHDS EHR system: intended purpose](https://ferrohealth.eu/docs/ehds/intended-purpose.html).
 
-The [CRA risk assessment](cra-risk-assessment.md), the
+This page keeps FerroEHR's part of it: its essential functions, the data it
+is designed to process, the environment it runs in and relies on, and the use
+and misuse that can be foreseen for it (CRA Annex II point 4, EHDS Annex III
+1(b)). The [CRA risk assessment](cra-risk-assessment.md), the
 [hazard log](hazard-log.md) and the [claims review](claims-review.md) are
-written against this statement.
+written against it.
 
 <!-- toc -->
 
 > [!WARNING]
 > The quotations are from the Official Journal texts vendored in the repository
-> under [`docs/law/eu/`](https://github.com/FerroHEALTH/FerroEHR/tree/main/docs/law/eu):
-> `cra/text.html` for the [CRA](https://eur-lex.europa.eu/eli/reg/2024/2847/oj),
-> `ehds/text.html` for the [EHDS](https://eur-lex.europa.eu/eli/reg/2025/327/oj)
-> and `mdr/text.html` for the
-> [MDR](https://eur-lex.europa.eu/eli/reg/2017/745/oj). This page says what
-> the manufacturer intends. It does not say that FerroEHR, or a deployment of
-> it, meets either regulation: no conformity assessment has been carried out
-> and no EU declaration of conformity exists.
-
-## The statement, its version and its scope
-
-| | |
-|---|---|
-| Issued by | Cadasto B.V., Comeniusstraat 2d, 1817 MS Alkmaar, The Netherlands, [info@cadasto.com](mailto:info@cadasto.com) |
-| Statement version | 1, of 2026-10-06 |
-| Applies to | the FerroEHR server (the `ferroehr` binary and the `ghcr.io/ferrohealth/ferroehr` image), the `ferroehr-viewer` and `ferroehr-postgres` images, and the Helm chart, from the release whose documentation first carries this page |
-| Where each version lives | this book is frozen with every release at `/docs/vX.Y.Z/`, so each release's documentation carries the statement that applied to it |
-
-A change to the intended purpose is a new statement version, named in the
-release notes of the release that carries it. Under the CRA, a change that
-"results in a modification to the intended purpose for which the product with
-digital elements has been assessed" is a substantial modification
-(CRA Art. 3(30)), so the [risk assessment](cra-risk-assessment.md) is revised
-with it.
+> under [`docs/law/eu/`](https://github.com/FerroHEALTH/FerroEHR/tree/main/docs/law/eu).
+> This page says what the manufacturer intends. It does not say that FerroEHR,
+> or a deployment of it, meets either regulation: no conformity assessment has
+> been carried out and no EU declaration of conformity exists.
 
 ## What FerroEHR is for
 
@@ -62,9 +36,7 @@ clinical user interface of its own: health professionals reach it through the
 clinical applications the provider connects to it.
 
 FerroEHR records every access to the records it holds in its access log, the
-European logging software component of EHDS Art. 2(2)(o). With FerroBRIDGE,
-which carries the European interoperability software component, it forms the
-EHR system Cadasto B.V. declares (EHDS Art. 2(2)(k) and Art. 25(1)).
+European logging software component of EHDS Art. 2(2)(o).
 
 Its essential functions, in the sense of CRA Annex II point 4:
 
@@ -90,16 +62,6 @@ Its essential functions, in the sense of CRA Annex II point 4:
 The security properties that go with these functions are on the
 [Security](../security.md) page; the risk that survives each control is in the
 [threat model](../threat-model.md).
-
-## Who uses it
-
-| User | How they use FerroEHR |
-|---|---|
-| A healthcare provider, the deploying organisation | runs one FerroEHR instance for its own records, as controller of the data in it. Its operators install, configure, upgrade and monitor the instance |
-| Developers of clinical applications | connect an application to the REST API and AQL, on behalf of the provider |
-| Health professionals | use FerroEHR only through those applications. The application's caller is authenticated by the provider's identity provider, and FerroEHR authorises each request and records it |
-| Patients | do not use FerroEHR directly. A patient reads their record, and the log of who accessed it, through an electronic health data access service, which EHDS Art. 4(1) has the Member States establish. Such a service can read one patient's access log through ITI-81 when the deployment configures a subject audit role ([retrieving audit records](../audit.md#retrieving-audit-records-iti-81)) |
-| Clinical modellers and administrators | load templates, write stored queries and run the operational surfaces, through the API or the [FerroEHR Viewer](../viewer/index.md), which is a management interface over the same API and not a record interface for patient care |
 
 ## The data FerroEHR is designed to process
 
@@ -137,19 +99,11 @@ performance aggregates and no patient data.
 
 ## The operational environment
 
-FerroEHR runs in one of two ways:
-
-- **Self-hosted.** The deploying organisation installs and runs it, or has a
-  processor of its own choosing do so. Cadasto B.V. is the manufacturer only
-  and has no access to the deployment or its data.
-- **Hosted by Cadasto B.V.** Cadasto B.V. may run FerroEHR as a service for an
-  organisation. It is then also the operator, and that organisation's
-  processor under a contract that GDPR Art. 28(3) requires. An EHR system
-  offered as a service to a person established in the Union "shall be
-  considered as having been put into service" (EHDS Art. 26(2)).
-
-In both cases each organisation gets its own instance. The public sandbox at
-`sandbox.ferroehr.eu` is a demonstration holding demo data, wiped nightly.
+Each organisation gets its own FerroEHR instance, whether it runs FerroEHR
+itself or Cadasto B.V. hosts it; the two operating models are described in the
+[FerroHEALTH book](https://ferrohealth.eu/docs/ehds/intended-purpose.html).
+The public sandbox at `sandbox.ferroehr.eu` is a demonstration holding demo
+data, wiped nightly.
 
 - **One instance per organisation.** FerroEHR is single-tenant: several
   organisations are served by several instances, each with its own database
@@ -245,27 +199,15 @@ Foreseeable misuse, and what FerroEHR does about it:
 
 ## What the intended purpose excludes
 
-- **Medical device purposes.** Cadasto B.V. does not intend FerroEHR for any
-  of the "specific medical purposes" in the MDR's definition of a medical
-  device (`mdr/text.html` Art. 2(1)): "diagnosis, prevention, monitoring,
-  prediction, prognosis, treatment or alleviation of disease", and the others
-  that article lists. FerroEHR stores and returns records as written; it
-  computes no diagnosis, score, alert or treatment advice.
+The exclusions that hold for the whole EHR system, the medical-device purposes
+of the MDR first, are in the
+[FerroHEALTH statement](https://ferrohealth.eu/docs/ehds/intended-purpose.html).
+For FerroEHR they mean:
+
+- **No diagnosis or advice.** FerroEHR stores and returns records as written;
+  it computes no diagnosis, score, alert or treatment advice.
 - **Hosting for several organisations.** One instance serves one organisation.
 - **Identity management.** FerroEHR verifies identities that another system
   issues.
 - **The interoperability component.** Exchange in the European electronic
   health record exchange format is FerroBRIDGE's part of the EHR system.
-
-## Where this statement is used
-
-- The [CRA risk assessment](cra-risk-assessment.md) analyses the risks "based on
-  the intended purpose and reasonably foreseeable use" (CRA Art. 13(3)), and
-  measures data minimisation against it (Annex I Part I(2)(g)).
-- The [hazard log](hazard-log.md) of the logging component assesses patient
-  safety "during normal conditions of use" (EHDS Annex II 1.1).
-- The [claims review](claims-review.md) checks every public text against it
-  (EHDS Art. 28(c)).
-- The [technical documentation readiness](technical-documentation.md) page
-  maps EHDS Annex III 1(a) onto it, and the
-  [information sheet](information-sheet.md) of EHDS Art. 38 repeats it.

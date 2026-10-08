@@ -24,6 +24,36 @@ authority for layout, look & feel, and content.
   never rebuilt); `scripts/site/cut-version.sh vX.Y.Z` cuts one (the release
   pipeline's docs-freeze leg does this on every non-prerelease `v*` tag).
 
+## Family documentation lives in the FerroHEALTH book (#3701)
+
+FerroEHR is one product of the FerroHEALTH family, and Cadasto B.V. is the
+manufacturer of every product in it. Documentation about the family or the
+manufacturer is written ONCE, in the FerroHEALTH book
+(`https://ferrohealth.eu/docs/`, repo FerroHEALTH/FerroHEALTH), and this book
+links it. The family pages, at fixed addresses:
+
+| Family page | Address | Kept here as a short page linking it |
+|---|---|---|
+| The manufacturer | `manufacturer.html` | (cited from `compliance/cra-user-information.md` point 1, `compliance/information-sheet.md` (a)) |
+| Security: vulnerability handling, disclosure, advisories, security-only patches, CRA Art 14 reporting, cessation | `security.html` | `SECURITY.md` keeps the supported versions, the reporting routes and scope, the repository settings, `security.txt` |
+| Post-market procedure | `post-market.html` | `compliance/post-market.md` (FerroEHR's channels, registers, withdrawn releases); `docs/post-market.md` (the steps bound to this repository's registers, tracker, release lane and `scripts/release/withdraw.sh`) |
+| The CRA, the manufacturer side | `cra.html` | `compliance/cra.md` (FerroEHR's product facts, its CRA documents, the class I question) |
+| The EHDS EHR system: intended purpose | `ehds/intended-purpose.html` | `compliance/intended-purpose.md` (FerroEHR's essential functions, data, environment, security environment, foreseeable misuse) |
+| The EHDS EHR system: shared responsibility | `ehds/shared-responsibility.html` | `compliance/shared-responsibility.md` (the usage report, where FerroEHR documents its side) |
+| Licensing and trademarks | `licensing.html` | `licensing.md` (installing a licence, the crate licences, vendored material, REUSE, lineage; `licensing-declarations.sh` and `copyright-holder.sh` read it) |
+| How the products fit together | `architecture.html` | none |
+
+**Stays in this book, linking the family book:** the information sheet and
+the instructions for use (the release lane attaches them to every release),
+the generated EHDS readiness and technical-documentation pages
+(`website/book/ehds.yaml` + `scripts/render/ehds-pages.sh`), FerroEHR's CRA
+risk assessment and Annex II user information, the hazard log, the claims
+review, the control matrix, the compliance overview, and every installation,
+configuration, API, operations and security page. A moved page keeps its file
+and URL so frozen books and the release notes' links keep resolving. Before
+writing a page here, ask whether it is about FerroEHR alone; if it is about
+the family or the manufacturer, it goes to the FerroHEALTH book.
+
 ## The same-PR docs rule (mirror of the changelog rule)
 
 **Any PR that changes the REST surface, configuration (`FERROEHR_*`), the
