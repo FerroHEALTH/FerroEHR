@@ -39,6 +39,12 @@
 #                     are declared not exercised by name rather than run against
 #                     an empty directory, which is not an index.
 #   PROBE_K8S_NS      namespace (default ferroehr-probe; created and deleted).
+#   PROBE_K8S_VALUES  an extra values file layered over every install, for a
+#                     cluster that cannot run a chart default (a kind node in a
+#                     podman VM cannot create the user-namespaced pods
+#                     `hostUsers: false` asks for). The header prints it, and the
+#                     posture probes then measure the overridden release, so a
+#                     run with it is never a record of the chart's defaults.
 #   PROBE_OUT         where the machine-readable record lands.
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
@@ -102,6 +108,9 @@ echo "  context:   $(kubectl config current-context)"
 echo "  node:      $(kubectl get nodes -o jsonpath='{.items[0].status.nodeInfo.kubeletVersion}' 2>/dev/null)"
 echo "  image:     $PROBE_K8S_IMAGE_REPO:$PROBE_K8S_IMAGE_TAG"
 echo "  namespace: $K8S_NS"
+if [[ -n "${PROBE_K8S_VALUES:-}" ]]; then
+  echo "  overrides: $PROBE_K8S_VALUES (not the chart's defaults)"
+fi
 echo
 
 bold "bringing up the host database the chart will be pointed at"
@@ -123,6 +132,9 @@ if probes_k8s_boot; then
   probes_k8s_readiness
   probes_k8s_viewer
   probes_k8s_terminology
+  # Last: it uninstalls the release and drops the database, which is the
+  # procedure under test.
+  probes_k8s_original_state
 else
   red "the release never served — the probes that need a running CDR were not run"
   uncovered "every probe after P-K8S-SERVE" \

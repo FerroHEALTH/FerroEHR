@@ -192,6 +192,7 @@ k8s_install() {
     --set image.repository="$PROBE_K8S_IMAGE_REPO" \
     --set image.tag="$PROBE_K8S_IMAGE_TAG" \
     --set image.pullPolicy=IfNotPresent \
+    ${PROBE_K8S_VALUES:+-f "$PROBE_K8S_VALUES"} \
     "$@" >/dev/null 2>&1
 }
 
@@ -1087,5 +1088,63 @@ probes_k8s_term_index() {
       "index at line $idx_line, listener at line $listen_line" \
       "the startup probe then passes on a server that cannot yet answer a lookup; the 5s x 60 budget is what stands between that and a restart loop"
   fi
+  probe_done
+}
+
+# The Helm half of the book's reset procedure (website/book/src/operations-reset.md
+# § Kubernetes and Helm), run as written: uninstall the release, drop and
+# recreate the database, install again with only the values every deployment
+# supplies. CRA Annex I Part I(2)(b) asks for "the possibility to reset the
+# product to its original state" (docs/law/eu/cra/text.html). Destructive: it
+# removes the release and the database, so it runs last.
+probes_k8s_original_state() {
+  bold "returning to the original state (the book's Helm reset)"
+  local db="${PG_INIT_DB:-ferroehr}" owner="${PG_INIT_USER:-ferroehr}" hdr ehr="" out
+  # The book's step 2 runs as "the bootstrap superuser or the database owner";
+  # the owner here holds no CREATEDB, so the bootstrap superuser it is.
+  local superuser="${POSTGRES_USER:-postgres}"
+
+  k8s_pf_start || true
+  hdr="$(curl -s -u "$K8S_BASIC" -X POST -D - -o /dev/null "$K8S_API/ehr" || true)"
+  ehr="$(printf '%s' "$hdr" | grep -i '^location' | tr -d '\r' | awk -F/ '{print $NF}')"
+  k8s_pf_stop
+  if [[ -z "$ehr" ]]; then
+    uncovered "the Helm reset procedure" \
+      "no EHR could be written before the reset, so nothing would show the reset removed it"
+    return
+  fi
+
+  probe "P-K8S-RESET-UNINSTALL" "working" "chart" "#3677" \
+    "helm uninstall removes the release and keeps the DSN Secret the operator created"
+  helm uninstall "$K8S_RELEASE" -n "$K8S_NS" --wait >/dev/null 2>&1 \
+    || probe_fail "a clean helm uninstall" "helm uninstall failed"
+  [[ -z "$(kc get deploy "$K8S_RELEASE" -o name 2>/dev/null)" ]] \
+    || probe_fail "no Deployment after the uninstall" "deploy/$K8S_RELEASE still exists"
+  [[ -n "$(kc get secret ferroehr-db -o name 2>/dev/null)" ]] \
+    || probe_fail "the operator's DSN Secret kept" "secret/ferroehr-db is gone" \
+      "the book's step 1 says the Secrets you created survive the uninstall"
+  probe_done
+
+  probe "P-K8S-RESET-DATABASE" "working" "database" "#3677" \
+    "the database is dropped and recreated as the book's step 2 writes it"
+  out="$(docker compose -p "$COMPOSE_PROJECT" exec -T ferroehr-postgres \
+    psql -v ON_ERROR_STOP=1 -U "$superuser" -d postgres \
+    -c "DROP DATABASE \"$db\" WITH (FORCE);" \
+    -c "CREATE DATABASE \"$db\" OWNER \"$owner\";" 2>&1)" \
+    || probe_fail "DROP DATABASE … WITH (FORCE) and CREATE DATABASE succeed" "$out"
+  probe_done
+
+  probe "P-K8S-RESET-REINSTALL" "working" "chart" "#3677" \
+    "a reinstall with the minimal values migrates the empty database and serves none of the old data"
+  if k8s_install && k8s_rollout 240s && k8s_pf_start; then
+    assert_eq "404" "$(curl -s -u "$K8S_BASIC" -o /dev/null -w '%{http_code}' "$K8S_API/ehr/$ehr")" \
+      "GET /ehr/$ehr must find nothing after the reset"
+    assert_eq "200" "$(curl -s -o /dev/null -w '%{http_code}' "$K8S_CDR/health/readiness")" \
+      "the reinstalled release is ready on the recreated database"
+  else
+    probe_fail "a ready release after the reinstall" "rollout or port-forward failed" \
+      "$(kc logs -l app.kubernetes.io/name=ferroehr --tail=6 --all-containers 2>&1 | tail -6 | tr '\n' ' ')"
+  fi
+  k8s_pf_stop
   probe_done
 }
