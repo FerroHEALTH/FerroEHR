@@ -393,3 +393,4 @@ EHDS-side risk assessment of the component.
 |---|---|---|
 | 1 | 2026-10-06 | First log, nine hazards |
 | 2 | 2026-10-07 | H9 names the EHDS Art. 8 restriction; the emergency mark and the subject-scoped retrieval are its control |
+| 3 | 2026-10-08 | Reviewed for release 4.3.6 (changes since 4.3.5: the assurance level and the natural person, the emergency mark, the FHIR connector removed beside the ITI-81 route); every named test exists and asserts its control; no hazard added |

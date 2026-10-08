@@ -21,7 +21,7 @@ type: application
 # A published OCI version is immutable by refusal rather than by the registry —
 # `helm push` over an existing tag replaces it silently — so a correction always
 # ships as a NEW version and the published one stands as it was.
-version: 11.0.0
+version: 11.0.1
 # The DEFAULT container image tag (overridable via image.tag). Equals the
 # workspace version in Cargo.toml, bumped in the release PR beside the
 # docker-compose.yml image tags — one version sweep, the compose treatment
@@ -40,7 +40,7 @@ version: 11.0.0
 # defaults: values track development between releases, so the publish lane
 # re-checks the pairing against an image, and the `chart-boot` CI job replays it
 # against the image built from the tree.
-appVersion: "4.3.4"
+appVersion: "4.3.6"
 
 # A COMPATIBILITY floor, and a real one: 1.36 is the release where the newest
 # field this chart renders became stable.
@@ -164,7 +164,7 @@ annotations:
   # leaving a false claim in place, so it is deliberately not used.
   artifacthub.io/images: |
     - name: ferroehr
-      image: ghcr.io/ferrohealth/ferroehr:4.3.4  # party: first
+      image: ghcr.io/ferrohealth/ferroehr:4.3.6  # party: first
       platforms:
         - linux/amd64
         - linux/arm64
@@ -174,7 +174,7 @@ annotations:
     # the entry describes a surface an operator opts into rather than one every
     # install carries, and it is listed so that surface is scanned.
     - name: ferroehr-viewer
-      image: ghcr.io/ferrohealth/ferroehr-viewer:4.3.4  # party: first
+      image: ghcr.io/ferrohealth/ferroehr-viewer:4.3.6  # party: first
       platforms:
         - linux/amd64
         - linux/arm64
@@ -182,7 +182,7 @@ annotations:
     # `backup.enabled` is set: it carries pg_dump. The chart still provisions no
     # database — this image runs as a client, on a schedule, and exits.
     - name: ferroehr-postgres
-      image: ghcr.io/ferrohealth/ferroehr-postgres:4.3.4  # party: first
+      image: ghcr.io/ferrohealth/ferroehr-postgres:4.3.6  # party: first
       platforms:
         - linux/amd64
         - linux/arm64
