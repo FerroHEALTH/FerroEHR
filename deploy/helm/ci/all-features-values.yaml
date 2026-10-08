@@ -333,3 +333,29 @@ terminology:
   podDisruptionBudget:
     enabled: true
     minAvailable: 1
+
+# FerroBRIDGE beside the CDR and FerroTERM, on the branches the bridge overlay
+# leaves unrendered: a bearer credential, no mapping set, two replicas under a
+# disruption budget, and an extra egress rule. The narrowed CDR policy above
+# gains its rule admitting these pods from the chart.
+bridge:
+  enabled: true
+  replicaCount: 2
+  cdr:
+    existingSecret: ferroehr-bridge-cdr
+    auth: bearer
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+  networkPolicy:
+    ingressFrom:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: integration
+    extraEgress:
+      - to:
+          - ipBlock:
+              cidr: 192.0.2.0/24
+        ports:
+          - protocol: TCP
+            port: 443

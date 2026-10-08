@@ -15,6 +15,21 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+### Added
+
+- **The Helm chart deploys FerroBRIDGE beside the CDR** (#3713, chart 11.1.0).
+  `bridge.enabled=true` installs FerroBRIDGE 0.0.5 (pinned by digest) as its
+  own workload under the same Restricted security context, with its
+  `config.toml` pointed at the release's CDR Service, its CDR credential read
+  from the Secret named in `bridge.cdr.existingSecret`, its mapping files from
+  `bridge.mappings.existingConfigMap`, and its terminology server set to the
+  chart's FerroTERM when `terminology.enabled` is on. FerroBRIDGE authenticates
+  no caller yet (FerroHEALTH/FerroBRIDGE#400), so the chart keeps it
+  cluster-internal: a ClusterIP Service, no Ingress, and a NetworkPolicy that
+  admits only the peers in `bridge.networkPolicy.ingressFrom`; an empty list
+  or an admit-everything peer is refused. The image is listed in
+  `artifacthub.io/images`, so Artifact Hub scans it.
+
 ### Fixed
 
 - **The chart's SBOM is attested** (#3710). The CycloneDX SBOM the chart lane

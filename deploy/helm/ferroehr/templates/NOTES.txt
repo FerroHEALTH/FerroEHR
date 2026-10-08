@@ -170,6 +170,21 @@ SECURITY POSTURE
      terminology.wireCdr=true.
 {{- end }}
 {{- end }}
+{{- if .Values.bridge.enabled }}
+  FerroBRIDGE:            {{ include "ferroehr.bridgeFullname" . }}:{{ .Values.bridge.service.port }} — reachable from the bridge.networkPolicy.ingressFrom peers only.
+     FerroBRIDGE authenticates no caller yet (FerroHEALTH/FerroBRIDGE#400), and
+     whoever reaches it acts on this CDR with the credential in Secret
+     "{{ .Values.bridge.cdr.existingSecret }}" ({{ .Values.bridge.cdr.auth }}). No Ingress is rendered for it.
+     CDR: {{ include "ferroehr.bridgeCdrUrl" . }}
+     {{- if .Values.terminology.enabled }}
+     Terminology: the FerroTERM above, at /r4.
+     {{- end }}
+     {{- if .Values.bridge.mappings.existingConfigMap }}
+     Mappings: {{ len .Values.bridge.mappings.files }} file(s) from ConfigMap "{{ .Values.bridge.mappings.existingConfigMap }}"; the templates they name are fetched from the CDR at boot.
+     {{- else }}
+     Mappings: none — $tofhir and $toopenehr answer 503 until bridge.mappings names a set.
+     {{- end }}
+{{- end }}
 
 {{ if not .Values.config.auth.enabled }}
   ⚠  config.auth.enabled=false — ALL requests pass UNAUTHENTICATED. Dev only.

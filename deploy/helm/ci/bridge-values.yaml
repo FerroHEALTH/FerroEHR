@@ -1,0 +1,48 @@
+# The FerroBRIDGE overlay: the CDR, FerroTERM and FerroBRIDGE, all three
+# rendered. Without it `bridge` is a code path no golden, no restricted-profile
+# gate and no selector gate ever sees. FerroTERM is on so the render carries
+# FerroBRIDGE's [terminology] wiring, its egress rule to FerroTERM and
+# FerroTERM's ingress rule admitting it.
+#
+# The Basic-auth shape is reused verbatim from basic-auth-values.yaml so no new
+# credential-shaped string enters the tree. FerroBRIDGE's own credential is a
+# Secret NAME: the chart never takes the credential as a value.
+database:
+  existingSecret: ferroehr-db
+  existingSecretKey: FERROEHR__DB__URL
+
+secrets:
+  basicUserPasswordHashes:
+    clinician: "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
+
+config:
+  auth:
+    enabled: true
+    basic:
+      users:
+        - username: clinician
+          roles: [ADMIN]
+
+terminology:
+  enabled: true
+
+bridge:
+  enabled: true
+  cdr:
+    existingSecret: ferroehr-bridge-cdr
+  # A ConfigMap NAME and two of its keys: the chart mounts each key on its own,
+  # which is the branch this overlay exists to render.
+  mappings:
+    existingConfigMap: ferroehr-bridge-mappings
+    files:
+      - blood_pressure.context.yml
+      - blood_pressure.yml
+  config:
+    operations:
+      composition_language: en
+      composition_territory: NL
+  networkPolicy:
+    ingressFrom:
+      - podSelector:
+          matchLabels:
+            ferrobridge.example/client: "true"

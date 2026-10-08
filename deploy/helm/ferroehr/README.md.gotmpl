@@ -148,6 +148,22 @@ port. Set `ingressFrom` to your ingress controller, or set
 open state at all. And note that **none of it does anything unless your CNI
 enforces NetworkPolicy**. Check yours; several do not.
 
+## FerroBRIDGE alongside the CDR
+
+`bridge.enabled=true` deploys [FerroBRIDGE](https://github.com/FerroHEALTH/FerroBRIDGE),
+the FHIR and openEHR bridge, as its own workload pointed at this release's CDR
+Service (and at the chart's FerroTERM when `terminology.enabled` is set). It
+needs two things the render refuses to go without: `bridge.cdr.existingSecret`,
+a Secret holding its CDR credential (`user` and `password`, or `bearer_token`
+with `bridge.cdr.auth=bearer`), and at least one peer in
+`bridge.networkPolicy.ingressFrom`. FerroBRIDGE authenticates no caller yet
+([FerroBRIDGE#400](https://github.com/FerroHEALTH/FerroBRIDGE/issues/400)), so
+the chart keeps it cluster-internal: a ClusterIP Service, no Ingress, and a
+NetworkPolicy that admits only the peers you name. Its mapping files come from a
+ConfigMap of yours (`bridge.mappings.existingConfigMap` plus the keys in
+`bridge.mappings.files`); FerroBRIDGE's own documentation is at
+<https://ferrobridge.eu/docs/>.
+
 {{ template "chart.requirementsSection" . }}
 
 > [!NOTE]

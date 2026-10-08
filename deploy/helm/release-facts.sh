@@ -14,7 +14,8 @@
 #     software nobody is running. First-party means the images built from this
 #     repository at this version: `ferroehr`, `ferroehr-viewer` and
 #     `ferroehr-postgres` today. A third-party image the chart deploys —
-#     `ghcr.io/ferrohealth/ferroterm` since #3305 — is a separate product on
+#     `ghcr.io/ferrohealth/ferroterm` since #3305, and
+#     `ghcr.io/ferrohealth/ferrobridge` since #3713 — is a separate product on
 #     its own release line, pinned in the chart's values and helpers, so
 #     rewriting its tag to a FerroEHR version would publish an image reference
 #     that does not exist. Its tag is left exactly as committed.

@@ -1,4 +1,65 @@
 ---
+# Source: ferroehr/templates/bridge.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ferroehr-bridge
+  annotations:
+    kubernetes.io/description: >-
+      Ingress for FerroBRIDGE: only its HTTP port, and only from the bridge.networkPolicy.ingressFrom peers. Egress admits this release's CDR, its FerroTERM and DNS.
+  labels:
+    helm.sh/chart: ferroehr-11.1.0
+    app.kubernetes.io/name: ferroehr-bridge
+    app.kubernetes.io/instance: ferroehr
+    app.kubernetes.io/version: "4.3.6"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: ferroehr
+    app.kubernetes.io/component: bridge
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: ferroehr-bridge
+      app.kubernetes.io/instance: ferroehr
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              ferrobridge.example/client: "true"
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ferroehr
+              app.kubernetes.io/instance: ferroehr
+      ports:
+        - protocol: TCP
+          port: 8080
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ferroehr-terminology
+              app.kubernetes.io/instance: ferroehr
+      ports:
+        - protocol: TCP
+          port: 8080
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+---
 # Source: ferroehr/templates/networkpolicy.yaml
 # Ingress policy for the ferroehr pods, admitting traffic ONLY to the API port
 # (and the management port when it runs on its own listener). Every other inbound
@@ -42,61 +103,63 @@ spec:
           protocol: TCP
 
 ---
-# Source: ferroehr/templates/viewer.yaml
-# The viewer's ingress half has the same three states the CDR's policy has, and
-# for the same API reason: an ingress rule with no `from` admits every source —
-# other namespaces and off-cluster clients included
-# (https://kubernetes.io/docs/concepts/services-networking/network-policies/ —
-# "If no ... from is specified ... it allows all traffic"). The viewer is the
-# HUMAN-facing surface, so an accidentally open rule here is a login page reachable
-# from anywhere the cluster network reaches.
-#   ingressFrom set                                     → sources narrowed
-#   ingressFrom empty, ingressAllowAll true             → EVERY source (shipped)
-#   ingressFrom empty, ingressAllowAll false            → refused at render, below
+# Source: ferroehr/templates/terminology.yaml
+# FerroTERM's policy is the one place in this chart where ingress is narrowed by
+# DEFAULT rather than by an operator's list: its caller is known — the CDR's
+# pods — so there is no state in which admitting every source is the right
+# answer, and none is offered. That is the licence posture above expressed as a
+# policy object rather than as advice.
+#
+# Egress carries DNS and nothing else: FerroTERM opens no outbound connection of
+# its own, and without DNS a policy'd pod cannot resolve the cluster's own names,
+# which fails in a way that reads as the server being wedged.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: ferroehr-viewer
+  name: ferroehr-terminology
   annotations:
     kubernetes.io/description: >-
-      Ingress for the viewer: only its HTTP port, but from EVERY source — this policy narrows ports, NOT sources (viewer.networkPolicy.ingressAllowAll=true). Set viewer.networkPolicy.ingressFrom for a PHI workload. Egress admits the CDR Service and DNS only.
+      Ingress for FerroTERM: only its HTTP port, and only from the CDR's pods, FerroBRIDGE's pods. Egress admits DNS only.
   labels:
     helm.sh/chart: ferroehr-11.1.0
-    app.kubernetes.io/name: ferroehr-viewer
+    app.kubernetes.io/name: ferroehr-terminology
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "4.3.6"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
-    app.kubernetes.io/component: viewer
+    app.kubernetes.io/component: terminology
 spec:
   podSelector:
     matchLabels:
-      app.kubernetes.io/name: ferroehr-viewer
+      app.kubernetes.io/name: ferroehr-terminology
       app.kubernetes.io/instance: ferroehr
   policyTypes:
     - Ingress
     - Egress
   ingress:
-    -
-      ports:
-        - protocol: TCP
-          port: 3000
-  egress:
-    # The CDR, by pod selector — the viewer's ONLY application destination.
-    #
-    # This selects the server's pods exactly: the viewer carries its own
-    # `app.kubernetes.io/name`, so the two label sets no longer overlap and
-    # this rule cannot admit viewer→viewer traffic.
-    - to:
+    - from:
+        # The CDR, by pod selector. The CDR carries its own
+        # `app.kubernetes.io/name`, so this selects the server's pods and
+        # nothing else in the release.
         - podSelector:
             matchLabels:
               app.kubernetes.io/name: ferroehr
               app.kubernetes.io/instance: ferroehr
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ferroehr-bridge
+              app.kubernetes.io/instance: ferroehr
       ports:
+        # 8080 is the CONTAINER port, not terminology.service.port: `port`
+        # "represents the port on the given protocol. This can either be a
+        # numerical or named port on a pod"
+        # (https://kubernetes.io/docs/reference/kubernetes-api/policy-resources/network-policy-v1/,
+        # NetworkPolicyPort) — the pod's, after the Service's translation. The
+        # CDR's matching egress rule carries the same number for the same
+        # reason.
         - protocol: TCP
           port: 8080
-    # DNS. Without this the Service name above does not resolve and the viewer
-    # fails in a way that looks like the CDR being down.
+  egress:
     - to:
         - namespaceSelector: {}
           podSelector:
@@ -133,6 +196,21 @@ spec:
       app.kubernetes.io/instance: ferroehr
 
 ---
+# Source: ferroehr/templates/bridge.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ferroehr-bridge
+  labels:
+    helm.sh/chart: ferroehr-11.1.0
+    app.kubernetes.io/name: ferroehr-bridge
+    app.kubernetes.io/instance: ferroehr
+    app.kubernetes.io/version: "4.3.6"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: ferroehr
+    app.kubernetes.io/component: bridge
+automountServiceAccountToken: false
+---
 # Source: ferroehr/templates/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
@@ -148,19 +226,19 @@ metadata:
 automountServiceAccountToken: false
 
 ---
-# Source: ferroehr/templates/viewer.yaml
+# Source: ferroehr/templates/terminology.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: ferroehr-viewer
+  name: ferroehr-terminology
   labels:
     helm.sh/chart: ferroehr-11.1.0
-    app.kubernetes.io/name: ferroehr-viewer
+    app.kubernetes.io/name: ferroehr-terminology
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "4.3.6"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
-    app.kubernetes.io/component: viewer
+    app.kubernetes.io/component: terminology
 automountServiceAccountToken: false
 ---
 # Source: ferroehr/templates/secret.yaml
@@ -193,6 +271,40 @@ type: Opaque
 stringData:
   auth.basic.users.clinician.password_hash: "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
 
+---
+# Source: ferroehr/templates/bridge.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ferroehr-bridge
+  annotations:
+    kubernetes.io/description: >-
+      FerroBRIDGE's config.toml. It names the CDR credential by the path of a file mounted from bridge.cdr.existingSecret and carries no secret value itself.
+  labels:
+    helm.sh/chart: ferroehr-11.1.0
+    app.kubernetes.io/name: ferroehr-bridge
+    app.kubernetes.io/instance: ferroehr
+    app.kubernetes.io/version: "4.3.6"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: ferroehr
+    app.kubernetes.io/component: bridge
+data:
+  config.toml: |
+    [cdr]
+      base_url = "http://ferroehr:8080/ferroehr/rest/openehr/v1"
+      [cdr.credentials]
+        password_file = "/etc/ferrobridge/secrets/cdr/password"
+    
+    [mappings]
+      directory = "/etc/ferrobridge/mappings"
+    
+    [operations]
+      composition_language = "en"
+      composition_territory = "NL"
+    
+    [terminology]
+      base_url = "http://ferroehr-terminology:8080/r4"
+      wire_version = "r4"
 ---
 # Source: ferroehr/templates/configmap.yaml
 apiVersion: v1
@@ -309,12 +421,186 @@ data:
     
     [terminology]
       api_enabled = false
+      [terminology.external]
+        enabled = true
+        fail_on_error = false
+        [terminology.external.providers]
+          [terminology.external.providers.default]
+            type = "fhir"
+            url = "http://ferroehr-terminology:8080/r4b"
     
     [usage_report]
       deployment = "helm"
       enabled = true
     
 
+---
+# Source: ferroehr/templates/terminology.yaml
+# The licence-free shaped seed this repository ships: two code systems and two
+# value sets under the reserved example.test domain (IETF RFC 6761 §6.2), the
+# same content the conformance lane binds to. No licensed terminology is
+# distributed with FerroEHR or FerroTERM.
+#
+# Delivered as a ConfigMap built from the chart's own files, so a fresh
+# `helm install` from the registry serves terminology with no repository
+# checkout and no init container. The canonical copy is
+# docker/terminology/seed/ and scripts/checks/terminology-seed-drift.sh holds
+# the two byte-identical.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ferroehr-terminology-codesystems
+  annotations:
+    kubernetes.io/description: >-
+      Synthetic, licence-free FHIR code systems and value sets under the reserved example.test domain, mounted read-only as FerroTERM's code-system directory. Replace it with terminology.codeSystems.existingConfigMap to serve your own.
+  labels:
+    helm.sh/chart: ferroehr-11.1.0
+    app.kubernetes.io/name: ferroehr-terminology
+    app.kubernetes.io/instance: ferroehr
+    app.kubernetes.io/version: "4.3.6"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: ferroehr
+    app.kubernetes.io/component: terminology
+data:
+  codesystem-lab-shaped.json: |
+    {
+      "resourceType": "CodeSystem",
+      "id": "cnf-lab-shaped",
+      "url": "http://cnf.example.test/fhir/CodeSystem/lab-shaped",
+      "version": "1.0.0",
+      "name": "CnfLabShapedTestCodeSystem",
+      "title": "CNF test code system, LOINC-shaped (synthetic)",
+      "status": "active",
+      "experimental": true,
+      "publisher": "ferroehr CNF conformance corpus",
+      "description": "SYNTHETIC test content. A flat code system whose codes are SHAPED like LOINC observation codes (NNNNN-N) so the conformance battery can drive a SECOND terminology namespace, routed to a second configured provider, in one running deployment. It contains no LOINC content and is not derived from any licensed terminology: every code and display is invented for this test corpus and lives under the reserved example.test domain (IETF RFC 6761 §6.2).",
+      "caseSensitive": true,
+      "compositional": false,
+      "versionNeeded": false,
+      "content": "complete",
+      "concept": [
+        {
+          "code": "99991-1",
+          "display": "Test systolic blood pressure (CNF)"
+        },
+        {
+          "code": "99992-9",
+          "display": "Test diastolic blood pressure (CNF)"
+        },
+        {
+          "code": "99993-7",
+          "display": "Test body temperature (CNF)"
+        }
+      ]
+    }
+  codesystem-sct-shaped.json: |
+    {
+      "resourceType": "CodeSystem",
+      "id": "cnf-sct-shaped",
+      "url": "http://cnf.example.test/fhir/CodeSystem/sct-shaped",
+      "version": "1.0.0",
+      "name": "CnfSnomedShapedTestCodeSystem",
+      "title": "CNF test code system, SNOMED-CT-shaped (synthetic)",
+      "status": "active",
+      "experimental": true,
+      "publisher": "ferroehr CNF conformance corpus",
+      "description": "SYNTHETIC test content. A hierarchical, numerically-coded code system SHAPED like SNOMED CT so the conformance battery can exercise is-a subsumption and value-set membership against a real FHIR R4 terminology server. It contains no SNOMED CT content and is not derived from any licensed terminology: every code and display is invented for this test corpus and lives under the reserved example.test domain (IETF RFC 6761 §6.2).",
+      "caseSensitive": true,
+      "hierarchyMeaning": "is-a",
+      "compositional": false,
+      "versionNeeded": false,
+      "content": "complete",
+      "concept": [
+        {
+          "code": "1000001",
+          "display": "Test disorder (CNF)",
+          "concept": [
+            {
+              "code": "1000002",
+              "display": "Test hypertensive disorder (CNF)"
+            }
+          ]
+        },
+        {
+          "code": "1000003",
+          "display": "Test metabolic disorder (CNF)"
+        }
+      ]
+    }
+  valueset-lab-shaped-vitals.json: |
+    {
+      "resourceType": "ValueSet",
+      "id": "cnf-lab-shaped-vitals",
+      "url": "http://cnf.example.test/fhir/ValueSet/lab-shaped-vitals",
+      "version": "1.0.0",
+      "name": "CnfLabShapedVitals",
+      "title": "CNF test value set, LOINC-shaped vitals (synthetic)",
+      "status": "active",
+      "experimental": true,
+      "publisher": "ferroehr CNF conformance corpus",
+      "description": "SYNTHETIC test content. The enumerated value set the LOINC-shaped conformance cases bind to: 99991-1 and 99992-9 are members, 99993-7 is deliberately NOT. This value set exists in a SECOND terminology namespace so a case can prove per-terminology provider selection with two providers configured at the same time.",
+      "compose": {
+        "include": [
+          {
+            "system": "http://cnf.example.test/fhir/CodeSystem/lab-shaped",
+            "concept": [
+              { "code": "99991-1", "display": "Test systolic blood pressure (CNF)" },
+              { "code": "99992-9", "display": "Test diastolic blood pressure (CNF)" }
+            ]
+          }
+        ]
+      }
+    }
+  valueset-sct-shaped-disorders.json: |
+    {
+      "resourceType": "ValueSet",
+      "id": "cnf-sct-shaped-disorders",
+      "url": "http://cnf.example.test/fhir/ValueSet/sct-shaped-disorders",
+      "version": "1.0.0",
+      "name": "CnfSnomedShapedDisorders",
+      "title": "CNF test value set, SNOMED-CT-shaped disorders (synthetic)",
+      "status": "active",
+      "experimental": true,
+      "publisher": "ferroehr CNF conformance corpus",
+      "description": "SYNTHETIC test content. The enumerated value set the SNOMED-CT-shaped conformance cases bind to: 1000001 and 1000002 are members, 1000003 is deliberately NOT, so membership answers differ and a case can prove the value set was really resolved through the terminology server.",
+      "compose": {
+        "include": [
+          {
+            "system": "http://cnf.example.test/fhir/CodeSystem/sct-shaped",
+            "concept": [
+              { "code": "1000001", "display": "Test disorder (CNF)" },
+              { "code": "1000002", "display": "Test hypertensive disorder (CNF)" }
+            ]
+          }
+        ]
+      }
+    }
+---
+# Source: ferroehr/templates/bridge.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: ferroehr-bridge
+  annotations:
+    kubernetes.io/description: >-
+      In-cluster address for FerroBRIDGE. ClusterIP only, with no Ingress: FerroBRIDGE authenticates no caller yet, so its NetworkPolicy is what decides who reaches it.
+  labels:
+    helm.sh/chart: ferroehr-11.1.0
+    app.kubernetes.io/name: ferroehr-bridge
+    app.kubernetes.io/instance: ferroehr
+    app.kubernetes.io/version: "4.3.6"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: ferroehr
+    app.kubernetes.io/component: bridge
+spec:
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      appProtocol: http
+  selector:
+    app.kubernetes.io/name: ferroehr-bridge
+    app.kubernetes.io/instance: ferroehr
 ---
 # Source: ferroehr/templates/service.yaml
 apiVersion: v1
@@ -343,31 +629,173 @@ spec:
     app.kubernetes.io/instance: ferroehr
 
 ---
-# Source: ferroehr/templates/viewer.yaml
+# Source: ferroehr/templates/terminology.yaml
 apiVersion: v1
 kind: Service
 metadata:
-  name: ferroehr-viewer
+  name: ferroehr-terminology
   annotations:
     kubernetes.io/description: >-
-      In-cluster address for the FerroEHR Viewer. The viewer is a REST client of the CDR and holds no data of its own; it is the human-facing surface, so this is the Service an Ingress normally publishes.
+      In-cluster address for FerroTERM. Reached by the CDR alone — no Ingress is rendered for it, because a published FHIR terminology endpoint serves $expand and $lookup to every client that can reach it.
   labels:
     helm.sh/chart: ferroehr-11.1.0
-    app.kubernetes.io/name: ferroehr-viewer
+    app.kubernetes.io/name: ferroehr-terminology
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "4.3.6"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
-    app.kubernetes.io/component: viewer
+    app.kubernetes.io/component: terminology
 spec:
   ports:
     - name: http
-      port: 3000
+      port: 8080
       targetPort: http
       appProtocol: http
   selector:
-    app.kubernetes.io/name: ferroehr-viewer
+    app.kubernetes.io/name: ferroehr-terminology
     app.kubernetes.io/instance: ferroehr
+---
+# Source: ferroehr/templates/bridge.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ferroehr-bridge
+  annotations:
+    kubernetes.io/description: >-
+      FerroBRIDGE, the FHIR and openEHR bridge. It reaches this release's CDR over ITS-REST with the credential from bridge.cdr.existingSecret, and FerroTERM when that runs.
+  labels:
+    helm.sh/chart: ferroehr-11.1.0
+    app.kubernetes.io/name: ferroehr-bridge
+    app.kubernetes.io/instance: ferroehr
+    app.kubernetes.io/version: "4.3.6"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: ferroehr
+    app.kubernetes.io/component: bridge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ferroehr-bridge
+      app.kubernetes.io/instance: ferroehr
+  template:
+    metadata:
+      annotations:
+        checksum/config: e60cc27ea98d39f903bd19f9b9ace71898fef7ca48c12b5d52ceb0d84e19890e
+      labels:
+        app.kubernetes.io/name: ferroehr-bridge
+        app.kubernetes.io/instance: ferroehr
+    spec:
+      serviceAccountName: ferroehr-bridge
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 20
+      hostUsers: false
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+        supplementalGroupsPolicy: Strict
+      containers:
+        - name: bridge
+          image: "ghcr.io/ferrohealth/ferrobridge@sha256:c92e58dac60d0d1cb94b446e2414ebdc2b209a42c87df3aaf0b18d7c51d5c774"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: FERROBRIDGE_CONFIG
+              value: "/etc/ferrobridge/config/config.toml"
+            - name: FERROBRIDGE__CDR__CREDENTIALS__USER
+              valueFrom:
+                secretKeyRef:
+                  name: ferroehr-bridge-cdr
+                  key: user
+          livenessProbe:
+            httpGet:
+              path: /health/liveness
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /health/readiness
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          startupProbe:
+            httpGet:
+              path: /health/liveness
+              port: http
+            periodSeconds: 5
+            failureThreshold: 24
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: 5
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 50m
+              memory: 128Mi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: config
+              mountPath: /etc/ferrobridge/config
+              readOnly: true
+            - name: cdr-credential
+              mountPath: /etc/ferrobridge/secrets/cdr
+              readOnly: true
+            - name: mappings
+              mountPath: "/etc/ferrobridge/mappings/blood_pressure.context.yml"
+              subPath: "blood_pressure.context.yml"
+              readOnly: true
+            - name: mappings
+              mountPath: "/etc/ferrobridge/mappings/blood_pressure.yml"
+              subPath: "blood_pressure.yml"
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: config
+          configMap:
+            name: ferroehr-bridge
+        - name: cdr-credential
+          secret:
+            secretName: ferroehr-bridge-cdr
+            items:
+              - key: password
+                path: password
+        - name: mappings
+          configMap:
+            name: ferroehr-bridge-mappings
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          matchLabelKeys:
+            - pod-template-hash
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: ferroehr-bridge
+              app.kubernetes.io/instance: ferroehr
 ---
 # Source: ferroehr/templates/deployment.yaml
 apiVersion: apps/v1
@@ -403,7 +831,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: 184383a0ce9b12825423482bf69ef3568ec9b849190a69e0e94ea70ea6dfc290
+        checksum/config: c513dfb68c70fe7487feced2341f76b22414f5e2a061947281fc4f5150a28f1d
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr
@@ -565,35 +993,41 @@ spec:
               app.kubernetes.io/instance: ferroehr
 
 ---
-# Source: ferroehr/templates/viewer.yaml
+# Source: ferroehr/templates/terminology.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ferroehr-viewer
+  name: ferroehr-terminology
   annotations:
     kubernetes.io/description: >-
-      The FerroEHR Viewer: a Leptos SSR web UI that consumes the CDR strictly over ITS-REST. It never reaches the database, which the viewer NetworkPolicy enforces rather than assumes.
+      FerroTERM, the FHIR terminology server the CDR resolves bindings against. It serves a read-only index and the shaped code-system directory; it holds no clinical data and reaches nothing outbound.
   labels:
     helm.sh/chart: ferroehr-11.1.0
-    app.kubernetes.io/name: ferroehr-viewer
+    app.kubernetes.io/name: ferroehr-terminology
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "4.3.6"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
-    app.kubernetes.io/component: viewer
+    app.kubernetes.io/component: terminology
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: ferroehr-viewer
+      app.kubernetes.io/name: ferroehr-terminology
       app.kubernetes.io/instance: ferroehr
   template:
     metadata:
+      annotations:
+        # FerroTERM reads its code-system directory at boot, so a changed seed
+        # has to roll the pod: without this, an edited ConfigMap propagates
+        # into the volume while every pod keeps serving what it read at
+        # startup. Same reasoning as the CDR's checksum/config.
+        checksum/codesystems: 038c68455d87cf2369f00a4b490e5d9de2c4c39dd7f0341d87b67212029ce0d0
       labels:
-        app.kubernetes.io/name: ferroehr-viewer
+        app.kubernetes.io/name: ferroehr-terminology
         app.kubernetes.io/instance: ferroehr
     spec:
-      serviceAccountName: ferroehr-viewer
+      serviceAccountName: ferroehr-terminology
       automountServiceAccountToken: false
       # Same reason as the server's: the kubelet's per-Service link variables
       # land in the reserved `FERROEHR_` namespace for any Service named
@@ -612,8 +1046,8 @@ spec:
           type: RuntimeDefault
         supplementalGroupsPolicy: Strict
       containers:
-        - name: viewer
-          image: "ghcr.io/ferrohealth/ferroehr-viewer:4.3.6"
+        - name: terminology
+          image: "ghcr.io/ferrohealth/ferroterm@sha256:7ec4c9622e88e3028faf7c74a2384fb02e57dc3163c282b21274121a26aa3d5b"
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -628,50 +1062,73 @@ spec:
               type: RuntimeDefault
           ports:
             - name: http
-              containerPort: 3000
+              containerPort: 8080
               protocol: TCP
           env:
-            # The CDR is addressed by its in-cluster Service — the viewer never
-            # talks to the database, and the egress policy below enforces that.
-            - name: FERROEHR_VIEWER__CDR__BASE_URL
-              value: "http://ferroehr:8080"
-            # The viewer's base path mirrors the CDR's own, so shortening
-            # config.server.base_path cannot leave the two disagreeing.
-            - name: FERROEHR_VIEWER__CDR__BASE_PATH
-              value: "/ferroehr/rest/openehr/v1"
+            # The code-system directory, mounted read-only from the ConfigMap
+            # above (or the operator's).
+            - name: FERROTERM_CODESYSTEMS
+              value: "/etc/ferroterm/codesystems"
+            # FerroTERM's own browsing UI. Off, because the workload has no
+            # Ingress and the CDR does not use it; turning it on only widens
+            # what a caller inside the cluster can do with the release.
+            - name: FERROTERM_UI
+              value: "off"
+            - name: FERROTERM_LOG_FORMAT
+              value: "json"
+            - name: FERROTERM_DEFAULT_LANGUAGE
+              value: "en"
+            - name: RUST_LOG
+              value: "info"
           livenessProbe:
             httpGet:
-              path: /
+              path: /health
               port: http
             initialDelaySeconds: 10
             periodSeconds: 20
           readinessProbe:
             httpGet:
-              path: /
+              path: /health
               port: http
             initialDelaySeconds: 5
             periodSeconds: 10
           startupProbe:
             httpGet:
-              path: /
+              path: /health
               port: http
             periodSeconds: 5
-            failureThreshold: 24
+            failureThreshold: 60
           lifecycle:
             preStop:
               sleep:
                 seconds: 5
           resources:
             limits:
-              memory: 512Mi
+              memory: 1536Mi
             requests:
-              cpu: 50m
-              memory: 128Mi
+              cpu: 100m
+              memory: 256Mi
           volumeMounts:
             # `readOnlyRootFilesystem: true` leaves nowhere to write, so the
             # writable scratch the runtime needs is an explicit emptyDir.
             - name: tmp
               mountPath: /tmp
+            - name: codesystems
+              mountPath: "/etc/ferroterm/codesystems"
+              readOnly: true
       volumes:
         - name: tmp
           emptyDir: {}
+        - name: codesystems
+          configMap:
+            name: ferroehr-terminology-codesystems
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          matchLabelKeys:
+            - pod-template-hash
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: ferroehr-terminology
+              app.kubernetes.io/instance: ferroehr

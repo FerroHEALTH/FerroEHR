@@ -751,3 +751,219 @@ the chart's own, unless the operator named one of theirs.
 {{- printf "%s-codesystems" (include "ferroehr.terminologyFullname" .) }}
 {{- end }}
 {{- end }}
+
+{{/*
+The FerroBRIDGE workload's resource name: the release fullname plus a suffix,
+so its objects never collide with the CDR's and are obvious in `kubectl get`.
+*/}}
+{{- define "ferroehr.bridgeFullname" -}}
+{{- printf "%s-bridge" (include "ferroehr.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+FerroBRIDGE labels.
+
+Its OWN `app.kubernetes.io/name`, for the reason the viewer's and FerroTERM's
+labels carry: a Service or PodDisruptionBudget selector is a SUBSET match, and
+this container also listens on 8080, which is what the CDR's `targetPort: http`
+resolves to
+(https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/).
+*/}}
+{{- define "ferroehr.bridgeLabels" -}}
+helm.sh/chart: {{ include "ferroehr.chart" . }}
+{{ include "ferroehr.bridgeSelectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+app.kubernetes.io/part-of: ferroehr
+app.kubernetes.io/component: bridge
+{{- end }}
+
+{{- define "ferroehr.bridgeSelectorLabels" -}}
+app.kubernetes.io/name: {{ printf "%s-bridge" (include "ferroehr.name" .) | trunc 63 | trimSuffix "-" }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+
+{{/*
+The FerroBRIDGE release this chart is pinned to, and the ONE place that version
+is written.
+
+A separate product on its own release line, like FerroTERM, so it never falls
+back to `.Chart.AppVersion`. Three sites read this string: the
+`bridge.image.tag` default below, the tag-versus-digest refusal beside it, and
+scripts/checks/chart-appversion.sh, which holds the `artifacthub.io/images`
+entry in Chart.yaml to it. Bumping FerroBRIDGE is this line plus
+`bridge.image.digest` in values.yaml.
+*/}}
+{{- define "ferroehr.bridgePinnedVersion" -}}
+0.0.5
+{{- end }}
+
+{{/*
+The FerroBRIDGE image reference: digest wins over tag, and a tag other than the
+pin is refused while the shipped digest is set, for the reason
+`ferroehr.terminologyImage` gives.
+*/}}
+{{- define "ferroehr.bridgeImage" -}}
+{{- $pinned := include "ferroehr.bridgePinnedVersion" . }}
+{{- if and .Values.bridge.image.digest .Values.bridge.image.tag (ne .Values.bridge.image.tag $pinned) }}
+{{- fail (printf "bridge.image.tag=%s is set while bridge.image.digest is non-empty, and a digest wins over a tag here: the render would deploy the digest and ignore the tag entirely. Set bridge.image.digest=\"\" to deploy tag %s, or set bridge.image.digest to that tag's own digest. The chart pins FerroBRIDGE %s by digest by default." .Values.bridge.image.tag .Values.bridge.image.tag $pinned) }}
+{{- end }}
+{{- if .Values.bridge.image.digest }}
+{{- $digest := .Values.bridge.image.digest }}
+{{- if not (hasPrefix "sha256:" $digest) }}{{- $digest = printf "sha256:%s" $digest }}{{- end }}
+{{- printf "%s@%s" .Values.bridge.image.repository $digest }}
+{{- else }}
+{{- printf "%s:%s" .Values.bridge.image.repository (.Values.bridge.image.tag | default $pinned) }}
+{{- end }}
+{{- end }}
+
+{{/*
+FerroBRIDGE's topology spread: the CDR's default over FerroBRIDGE's own pods,
+for the reasons `ferroehr.topologySpreadConstraints` states.
+*/}}
+{{- define "ferroehr.bridgeTopologySpreadConstraints" -}}
+{{- if .Values.bridge.topologySpreadConstraints -}}
+{{- toYaml .Values.bridge.topologySpreadConstraints -}}
+{{- else -}}
+- maxSkew: 1
+  topologyKey: kubernetes.io/hostname
+  whenUnsatisfiable: ScheduleAnyway
+  matchLabelKeys:
+    - pod-template-hash
+  labelSelector:
+    matchLabels:
+      {{- include "ferroehr.bridgeSelectorLabels" . | nindent 6 }}
+{{- end }}
+{{- end }}
+
+{{/*
+Where FerroBRIDGE's rendered config.toml, its CDR credential and its mapping
+files are mounted. Three sibling directories, never one nested in another: a
+ConfigMap or Secret volume is read-only, so the kubelet cannot create a mount
+point inside it.
+*/}}
+{{- define "ferroehr.bridgeConfigDir" -}}
+/etc/ferrobridge/config
+{{- end }}
+
+{{- define "ferroehr.bridgeSecretDir" -}}
+/etc/ferrobridge/secrets/cdr
+{{- end }}
+
+{{- define "ferroehr.bridgeMappingsDir" -}}
+/etc/ferrobridge/mappings
+{{- end }}
+
+{{/*
+The in-cluster address of the release's own CDR, as FerroBRIDGE's `[cdr]
+base_url` names it: the Service, its port and the REST base path, which is the
+server's own default when config.server.base_path is unset.
+*/}}
+{{- define "ferroehr.bridgeCdrUrl" -}}
+{{- printf "http://%s:%v%s" (include "ferroehr.fullname" .) .Values.service.port (dig "server" "base_path" "/ferroehr/rest/openehr/v1" (.Values.config | default dict)) }}
+{{- end }}
+
+{{/*
+FerroBRIDGE's config.toml: `bridge.config` with the sections the chart owns
+injected — `[cdr]` at the release's CDR Service with its credential read from a
+mounted file, `[terminology]` at the release's FerroTERM when that runs, and
+`[mappings] directory` when the chart mounts the mapping files. A value of the
+operator's that the injection would overwrite is refused rather than silently
+replaced, and so is a secret-shaped key: this file is a ConfigMap. No openEHR
+spec governs this; FerroBRIDGE's own configuration reference defines the keys.
+*/}}
+{{- define "ferroehr.bridgeConfigToml" -}}
+{{- $config := deepCopy (.Values.bridge.config | default dict) -}}
+{{- $findings := include "ferroehr.bridgeSecretScan" (dict "node" $config "path" "") | trim -}}
+{{- $leaks := list -}}
+{{- range $finding := splitList "\n" $findings -}}
+{{- if $finding -}}
+{{- $leaks = append $leaks (printf "bridge.config.%s" $finding) -}}
+{{- end -}}
+{{- end -}}
+{{- if dig "cdm" "url" "" $config -}}
+{{- $leaks = append $leaks "bridge.config.cdm.url" -}}
+{{- end -}}
+{{- if $leaks -}}
+{{- fail (printf "refusing to render a secret into FerroBRIDGE's ConfigMap: %s. A ConfigMap is not a sensitive object (it is readable with namespace read and not covered by Secret encryption at rest), so set the key's `_file` sibling instead and mount the file from a Secret with bridge.extraVolumes and bridge.extraVolumeMounts. The CDR credential itself comes from bridge.cdr.existingSecret." (join ", " $leaks)) -}}
+{{- end -}}
+{{- $owned := list -}}
+{{- $cdr := dig "cdr" (dict) $config -}}
+{{- range $key := list "base_url" "credentials" -}}
+{{- if hasKey $cdr $key -}}{{- $owned = append $owned (printf "bridge.config.cdr.%s (the chart points [cdr] at this release's CDR Service, with the credential from bridge.cdr.existingSecret)" $key) -}}{{- end -}}
+{{- end -}}
+{{- if and $.Values.terminology.enabled (hasKey $config "terminology") -}}
+{{- $owned = append $owned "bridge.config.terminology (terminology.enabled=true points [terminology] at this release's FerroTERM; set terminology.enabled=false to name another server)" -}}
+{{- end -}}
+{{- if and $.Values.bridge.mappings.existingConfigMap (hasKey (dig "mappings" (dict) $config) "directory") -}}
+{{- $owned = append $owned "bridge.config.mappings.directory (bridge.mappings.existingConfigMap mounts the mapping files and names their directory)" -}}
+{{- end -}}
+{{- if hasKey (dig "server" (dict) $config) "listen" -}}
+{{- $owned = append $owned "bridge.config.server.listen (the image listens on 0.0.0.0:8080, which the Service, the probes and the NetworkPolicy name)" -}}
+{{- end -}}
+{{- if $owned -}}
+{{- fail (printf "bridge.config sets a key the chart already writes into FerroBRIDGE's config.toml, and an injection that overwrites cannot be told apart from one that agrees: %s. Drop the key." (join "; " $owned)) -}}
+{{- end -}}
+{{- if not (hasKey $config "cdr") -}}{{- $_ := set $config "cdr" (dict) -}}{{- end -}}
+{{- $cdr = get $config "cdr" -}}
+{{- $_ := set $cdr "base_url" (include "ferroehr.bridgeCdrUrl" $) -}}
+{{- if eq $.Values.bridge.cdr.auth "bearer" -}}
+{{- $_ := set $cdr "credentials" (dict "bearer_token_file" (printf "%s/bearer_token" (include "ferroehr.bridgeSecretDir" $))) -}}
+{{- else -}}
+{{- $_ := set $cdr "credentials" (dict "password_file" (printf "%s/password" (include "ferroehr.bridgeSecretDir" $))) -}}
+{{- end -}}
+{{- if $.Values.terminology.enabled -}}
+{{- $_ := set $config "terminology" (dict "base_url" (printf "http://%s:%v/r4" (include "ferroehr.terminologyFullname" $) $.Values.terminology.service.port) "wire_version" "r4") -}}
+{{- end -}}
+{{- if $.Values.bridge.mappings.existingConfigMap -}}
+{{- if not (hasKey $config "mappings") -}}{{- $_ := set $config "mappings" (dict) -}}{{- end -}}
+{{- $_ := set (get $config "mappings") "directory" (include "ferroehr.bridgeMappingsDir" $) -}}
+{{- end -}}
+{{- include "ferroehr.bridgeIntegers" $config -}}
+{{- toToml $config -}}
+{{- end }}
+
+{{/*
+The secret-shaped LEAF keys of a `bridge.config` subtree, one dotted path per
+line. Unlike `ferroehr.secretScan`, a map is always descended into rather than
+judged by its name: FerroBRIDGE's `[cdr.credentials]` and
+`[terminology.credentials]` are sections whose `user` is not a secret, and
+whose `password`/`bearer_token` are.
+*/}}
+{{- define "ferroehr.bridgeSecretScan" -}}
+{{- $path := .path -}}
+{{- range $key, $value := .node -}}
+{{- $child := ternary $key (printf "%s.%s" $path $key) (eq $path "") -}}
+{{- if kindIs "map" $value -}}
+{{- include "ferroehr.bridgeSecretScan" (dict "node" $value "path" $child) -}}
+{{- else if and (regexMatch (include "ferroehr.secretKeyPattern" $) $key) (not (regexMatch "(_file|_path|_dir)$" $key)) -}}
+{{- printf "%s\n" $child -}}
+{{- end -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Turn every whole-number float in a values subtree back into an integer, in
+place. Helm decodes values through JSON, so `timeout_ms: 5000` reaches a
+template as float64 and `toToml` writes `5000.0`; FerroBRIDGE reads its integer
+keys strictly and refuses a float at boot. A number inside a list is left as it
+is: no FerroBRIDGE key takes a list of integers.
+*/}}
+{{- define "ferroehr.bridgeIntegers" -}}
+{{- $node := . -}}
+{{- if kindIs "map" $node -}}
+{{- range $key, $value := $node -}}
+{{- if kindIs "float64" $value -}}
+{{- if eq $value (float64 (int64 $value)) -}}{{- $_ := set $node $key (int64 $value) -}}{{- end -}}
+{{- else if or (kindIs "map" $value) (kindIs "slice" $value) -}}
+{{- include "ferroehr.bridgeIntegers" $value -}}
+{{- end -}}
+{{- end -}}
+{{- else if kindIs "slice" $node -}}
+{{- range $value := $node -}}
+{{- if kindIs "map" $value -}}{{- include "ferroehr.bridgeIntegers" $value -}}{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end }}

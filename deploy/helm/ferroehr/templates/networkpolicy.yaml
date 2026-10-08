@@ -49,8 +49,8 @@ spec:
         {{- end }}
       {{- /* An empty `ingressFrom` renders NO `from`, which admits every source —
              sanctioned only by `ingressAllowAll` (refused above otherwise). Once
-             an operator narrows it, the viewer must still be admitted or
-             enabling both this policy and `viewer` locks the viewer out of the
+             an operator narrows it, the viewer and FerroBRIDGE must still be
+             admitted or enabling this policy beside either locks it out of the
              CDR — a failure that looks like the CDR being down. */}}
       {{- if .Values.networkPolicy.ingressFrom }}
       from:
@@ -59,6 +59,11 @@ spec:
         - podSelector:
             matchLabels:
               {{- include "ferroehr.viewerSelectorLabels" . | nindent 14 }}
+        {{- end }}
+        {{- if .Values.bridge.enabled }}
+        - podSelector:
+            matchLabels:
+              {{- include "ferroehr.bridgeSelectorLabels" . | nindent 14 }}
         {{- end }}
       {{- end }}
   {{- if .Values.networkPolicy.egress.enabled }}

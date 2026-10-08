@@ -1410,6 +1410,190 @@
           "description": "Send the usage report (on by default); false sends nothing."
         }
       }
+    },
+    "bridge": {
+      "description": "FerroBRIDGE, the FHIR and openEHR bridge, deployed as its own workload against this release's CDR. Off by default. Cluster-internal while FerroBRIDGE has no inbound authentication (FerroHEALTH/FerroBRIDGE#400): there is no Ingress key and no Service type key, and enabling it without a networkPolicy.ingressFrom peer or a cdr.existingSecret is refused at render.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "description": "Deploy FerroBRIDGE alongside the CDR.",
+          "type": "boolean"
+        },
+        "replicaCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "topologySpreadConstraints": {
+          "description": "Replaces the chart's default spread (one replica per node, ScheduleAnyway) wholesale rather than merging with it.",
+          "type": "array"
+        },
+        "strategy": {
+          "description": "Deployment update strategy. Empty leaves the API default; set type Recreate when extraVolumes mounts a ReadWriteOnce claim.",
+          "type": "object"
+        },
+        "image": {
+          "description": "FerroBRIDGE image. Its tag falls back to the FerroBRIDGE release this chart pins, never to .Chart.appVersion. A tag other than that pin is refused while digest is non-empty: the digest wins, so the tag would be inert.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "repository": {
+              "type": "string",
+              "minLength": 1
+            },
+            "pullPolicy": {
+              "type": "string",
+              "enum": [
+                "Always",
+                "IfNotPresent",
+                "Never"
+              ]
+            },
+            "tag": {
+              "type": "string"
+            },
+            "digest": {
+              "description": "sha256 digest; wins over tag. Bare hex or sha256:-prefixed.",
+              "type": "string",
+              "pattern": "^$|^(sha256:)?[a-fA-F0-9]{64}$"
+            }
+          }
+        },
+        "service": {
+          "description": "Always ClusterIP: FerroBRIDGE authenticates no caller yet, so no key publishes it.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "port": {
+              "$ref": "#/definitions/port"
+            }
+          }
+        },
+        "cdr": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "existingSecret": {
+              "description": "An EXISTING Secret with the keys user and password (auth basic) or bearer_token (auth bearer). Required when enabled.",
+              "type": "string"
+            },
+            "auth": {
+              "type": "string",
+              "enum": [
+                "basic",
+                "bearer"
+              ]
+            }
+          }
+        },
+        "mappings": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "existingConfigMap": {
+              "description": "An EXISTING ConfigMap of FHIRconnect mapping files. Empty means no mapping set.",
+              "type": "string"
+            },
+            "files": {
+              "description": "The keys of existingConfigMap to mount, each on its own: a whole ConfigMap volume's ..data snapshot directories read as duplicate mappings.",
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^[-._a-zA-Z0-9]+$",
+                "not": {
+                  "pattern": "^\\.\\.?$"
+                }
+              }
+            }
+          }
+        },
+        "config": {
+          "description": "Further FerroBRIDGE configuration, rendered into its config.toml and adjudicated by FerroBRIDGE at boot, which refuses an unknown key. The keys the chart writes and secret-shaped keys are refused at render.",
+          "type": "object"
+        },
+        "networkPolicy": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "ingressFrom": {
+              "description": "The peers admitted to FerroBRIDGE's port; at least one is required when enabled. There is deliberately no admit-everything key, and each peer is admitted exactly as written, so the peer itself is constrained: an empty peer, or an empty podSelector/namespaceSelector inside one, selects every pod in the namespace or in every namespace and is refused.",
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/narrowingNetworkPolicyPeer"
+              }
+            },
+            "extraEgress": {
+              "description": "Raw NetworkPolicyEgressRule entries beyond the CDR, FerroTERM and DNS.",
+              "type": "array"
+            }
+          }
+        },
+        "podDisruptionBudget": {
+          "description": "FerroBRIDGE's own budget, over its own pods. Set one of minAvailable / maxUnavailable, never both.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "minAvailable": {
+              "type": [
+                "integer",
+                "string"
+              ]
+            },
+            "maxUnavailable": {
+              "type": [
+                "integer",
+                "string"
+              ]
+            },
+            "unhealthyPodEvictionPolicy": {
+              "type": "string",
+              "enum": [
+                "AlwaysAllow",
+                "IfHealthyBudget"
+              ]
+            }
+          }
+        },
+        "podSecurityContext": {
+          "type": "object"
+        },
+        "securityContext": {
+          "type": "object"
+        },
+        "terminationGracePeriodSeconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "preStopSleepSeconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "resources": {
+          "type": "object"
+        },
+        "nodeSelector": {
+          "type": "object"
+        },
+        "tolerations": {
+          "type": "array"
+        },
+        "affinity": {
+          "type": "object"
+        },
+        "extraEnv": {
+          "type": "array"
+        },
+        "extraVolumes": {
+          "type": "array"
+        },
+        "extraVolumeMounts": {
+          "type": "array"
+        }
+      }
     }
   },
   "definitions": {
