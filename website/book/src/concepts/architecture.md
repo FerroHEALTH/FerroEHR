@@ -55,7 +55,9 @@ S3 multimedia) sit beside it in their own crate behind additive cargo features,
 so a build without them contains none of their code; see
 [Beyond the core](../beyond-core/index.md). FHIR R4 resource mapping is not
 part of FerroEHR: it is [FerroBRIDGE](https://github.com/FerroHEALTH/FerroBRIDGE),
-a separate server that reaches FerroEHR over ITS-REST.
+a separate server that reaches FerroEHR over ITS-REST. The Helm chart deploys it
+in the same release with `bridge.enabled=true`; see
+[Kubernetes & Helm](../installation/kubernetes.md#ferrobridge-the-fhir-bridge-off-by-default).
 
 What you actually deploy is small: **one self-contained server binary** plus
 PostgreSQL. No JVM, no language runtime, and a pure-Rust TLS stack. The

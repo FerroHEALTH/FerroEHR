@@ -83,6 +83,18 @@ K8S_TERM_NON_MEMBER="corpus/fixtures/composition/terminology_binding_sct_non_mem
 # declared not exercised rather than faked: an empty directory is not an index.
 K8S_TERM_INDEX_CLAIM="${K8S_TERM_INDEX_CLAIM:-}"
 
+# The FerroBRIDGE workload the chart renders behind `bridge.enabled` (#3713): a
+# fourth Deployment from a fourth image. The name is the chart's bridgeFullname
+# for this release, the label its OWN app.kubernetes.io/name, and the client
+# label is the one peer the probe's values admit to its port.
+K8S_BRIDGE="ferroehr-bridge"
+K8S_BRIDGE_LABEL="app.kubernetes.io/name=$K8S_BRIDGE"
+K8S_BRIDGE_CLIENT_LABEL="ferroehr.probe/client=bridge"
+K8S_BRIDGE_SECRET="ferroehr-bridge-cdr"
+K8S_BRIDGE_MAPPINGS="ferroehr-bridge-mappings"
+# The template the probe's mapping names; FerroBRIDGE fetches it from the CDR.
+K8S_BRIDGE_TEMPLATE="corpus/templates/blood_pressure.opt"
+
 # The compose database this cluster is pointed at. It binds 0.0.0.0 because a
 # pod reaches the host through the Docker Desktop gateway, which a loopback bind
 # would refuse; the stack is thrown away at the end of the run.
@@ -1088,6 +1100,309 @@ probes_k8s_term_index() {
       "index at line $idx_line, listener at line $listen_line" \
       "the startup probe then passes on a server that cannot yet answer a lookup; the 5s x 60 budget is what stands between that and a restart loop"
   fi
+  probe_done
+}
+
+# ── FerroBRIDGE, the chart's bridge workload (#3713) ──────────────────────────
+#
+# A fourth Deployment from a fourth image, and the one whose network policy
+# carries the most weight: FerroBRIDGE authenticates no caller yet
+# (FerroHEALTH/FerroBRIDGE#400), so the NetworkPolicy is the only thing between
+# a pod in the cluster and the CDR acting under FerroBRIDGE's credential. The
+# family measures the posture the runtime applies, admission, the credential
+# reaching the CDR, the mapping set arriving through per-key mounts, and the
+# policy refusing a pod it does not name while serving one it does.
+#
+# It runs after the terminology family and keeps FerroTERM on, so the bridge's
+# [terminology] wiring is exercised too.
+
+k8s_bridge_values() {
+  cat > "$PROBE_TMP/bridge-values.yaml" <<YAML
+bridge:
+  enabled: true
+  cdr:
+    existingSecret: $K8S_BRIDGE_SECRET
+  mappings:
+    existingConfigMap: $K8S_BRIDGE_MAPPINGS
+    files:
+      - probe.context.yml
+      - probe_blood_pressure.yml
+  networkPolicy:
+    ingressFrom:
+      - podSelector:
+          matchLabels:
+            ${K8S_BRIDGE_CLIENT_LABEL%=*}: ${K8S_BRIDGE_CLIENT_LABEL#*=}
+YAML
+}
+
+# The credential and the mapping set an operator supplies, created the way the
+# book tells them to: a Secret with `user` and `password` for a Basic user of
+# the CDR, and a ConfigMap of FHIRconnect files. The mapping is the smallest one
+# that compiles against the CDR's cnf.blood_pressure template: one context, one
+# model, one mapped element.
+k8s_bridge_inputs() {
+  kc delete secret "$K8S_BRIDGE_SECRET" --ignore-not-found >/dev/null 2>&1
+  kc create secret generic "$K8S_BRIDGE_SECRET" \
+    --from-literal=user="${K8S_BASIC%%:*}" \
+    --from-literal=password="${K8S_BASIC#*:}" >/dev/null 2>&1 || return 1
+  mkdir -p "$PROBE_TMP/bridge-mappings"
+  cat > "$PROBE_TMP/bridge-mappings/probe.context.yml" <<'YAML'
+grammar: FHIRConnect/v1.0.0
+type: context
+metadata:
+  name: probe.context
+  version: 1.0.0
+spec:
+  system: FHIR
+  version: R4
+context:
+  profile:
+    url: "http://example.org/fhir/StructureDefinition/probe-blood-pressure"
+  template:
+    id: "cnf.blood_pressure"
+  archetypes:
+    - "probe_blood_pressure"
+  start: "probe_blood_pressure"
+YAML
+  cat > "$PROBE_TMP/bridge-mappings/probe_blood_pressure.yml" <<'YAML'
+grammar: FHIRConnect/v1.0.0
+type: model
+metadata:
+  name: probe_blood_pressure
+  version: 1.0.0
+spec:
+  system: FHIR
+  version: R4
+  openEhrConfig:
+    archetype: openEHR-EHR-OBSERVATION.blood_pressure.v2
+  fhirConfig:
+    structureDefinition: http://hl7.org/fhir/StructureDefinition/Observation
+mappings:
+  - name: "systolic"
+    with:
+      fhir: "$resource.value.ofType(Quantity)"
+      openehr: "$archetype/data[at0001]/events[at0006]/data[at0003]/items[at0004]"
+      type: "QUANTITY"
+YAML
+  kc delete configmap "$K8S_BRIDGE_MAPPINGS" --ignore-not-found >/dev/null 2>&1
+  kc create configmap "$K8S_BRIDGE_MAPPINGS" --from-file="$PROBE_TMP/bridge-mappings" >/dev/null 2>&1
+}
+
+# The template the mapping names, uploaded to the CDR through the API forward.
+# FerroBRIDGE fetches it from the CDR at boot, so its absence is a crash loop.
+k8s_bridge_template() {
+  local code
+  code="$(curl -s -u "$K8S_BASIC" -o /dev/null -w '%{http_code}' -X POST \
+    -H 'Content-Type: application/xml' --data-binary "@$K8S_BRIDGE_TEMPLATE" \
+    "$K8S_API/definition/template/adl1.4")"
+  case "$code" in 201 | 204 | 409) return 0 ;; *) return 1 ;; esac
+}
+
+k8s_bridge_install() {
+  k8s_install --set terminology.enabled=true -f "$PROBE_TMP/bridge-values.yaml"
+}
+
+# 300s: the bridge's startup probe allows two minutes, and a first run also
+# pulls the image.
+k8s_bridge_rollout() { kc rollout status "deploy/$K8S_BRIDGE" --timeout="${1:-300s}" >/dev/null 2>&1; }
+
+# An HTTP GET through the bridge's Service from a pod carrying the label its
+# policy admits. Read from the finished pod's logs, for the attach race the
+# viewer's client documents; the trailing exit= line is busybox wget's status.
+k8s_bridge_get() {
+  local name="probe-bridge-$$-$RANDOM" out phase _i
+  # shellcheck disable=SC2016 # $? belongs to the busybox shell, not this one
+  kubectl -n "$K8S_NS" run "$name" --image=busybox:1.37 --restart=Never \
+    --labels="$K8S_BRIDGE_CLIENT_LABEL" --env="BRIDGE_URL=http://$K8S_BRIDGE:8080$1" \
+    --command -- sh -c 'wget -q -O - "$BRIDGE_URL"; echo; echo exit=$?' >/dev/null 2>&1
+  for _i in $(seq 1 30); do
+    phase="$(kc get pod "$name" -o jsonpath='{.status.phase}' 2>/dev/null)"
+    case "$phase" in Succeeded | Failed) break ;; *) ;; esac
+    sleep 2
+  done
+  out="$(kc logs "$name" 2>/dev/null)"
+  kc delete pod "$name" --ignore-not-found --wait=false >/dev/null 2>&1
+  printf '%s' "$out"
+}
+
+probes_k8s_bridge() {
+  bold "the bridge workload (bridge.enabled)"
+
+  probe "P-K8S-BRIDGE-OFF" "off" "chart" "#3713" \
+    "the shipped default renders no bridge object at all"
+  local off
+  off="$(kc get deploy,svc,configmap,networkpolicy,serviceaccount -l "$K8S_BRIDGE_LABEL" \
+         -o name 2>/dev/null | tr '\n' ' ')"
+  assert_eq "" "${off// /}" \
+    "bridge.enabled defaults to false, so anything found here means the gate leaks"
+  probe_done
+
+  # The BROKEN states, at render: no peer named, and no credential named. Both
+  # must be refusals that say which key fixes them.
+  probe "P-K8S-BRIDGE-GUARD" "broken" "chart" "#3713" \
+    "bridge.enabled with no ingressFrom peer, or with no CDR credential Secret, is refused at render"
+  local guard
+  guard="$(helm template "$K8S_RELEASE" deploy/helm/ferroehr -n "$K8S_NS" \
+             -f "$K8S_AUTH_VALUES" --set database.existingSecret=ferroehr-db \
+             --set bridge.enabled=true --set bridge.cdr.existingSecret=probe 2>&1)"
+  assert_contains "$guard" "bridge.networkPolicy.ingressFrom" \
+    "FerroBRIDGE authenticates no caller, so an open ingress rule must not render"
+  guard="$(helm template "$K8S_RELEASE" deploy/helm/ferroehr -n "$K8S_NS" \
+             -f "$K8S_AUTH_VALUES" --set database.existingSecret=ferroehr-db \
+             --set bridge.enabled=true \
+             --set-json 'bridge.networkPolicy.ingressFrom=[{"podSelector":{"matchLabels":{"probe":"x"}}}]' 2>&1)"
+  assert_contains "$guard" "bridge.cdr.existingSecret" \
+    "a bridge with no credential cannot reach a CDR that requires one, and the refusal must say where it goes"
+  probe_done
+
+  probe "P-K8S-BRIDGE-BOOT" "working" "chart" "#3713" \
+    "bridge.enabled installs FerroBRIDGE beside the CDR and FerroTERM, and it rolls out"
+  k8s_bridge_values
+  k8s_pf_stop
+  if ! k8s_pf_start || ! k8s_bridge_template; then
+    probe_fail "the cnf.blood_pressure template accepted by the deployed CDR" \
+      "the OPT upload did not answer 201, 204 or 409" \
+      "FerroBRIDGE fetches the template its mapping names from the CDR at boot"
+    probe_done
+    uncovered "every bridge probe after P-K8S-BRIDGE-BOOT" \
+      "the template the mapping set needs could not be stored, so the bridge could not start"
+    return 0
+  fi
+  if ! k8s_bridge_inputs; then
+    probe_fail "the credential Secret and the mapping ConfigMap created" "kubectl refused one of them"
+    probe_done
+    return 0
+  fi
+  if ! k8s_bridge_install; then
+    probe_fail "a successful helm upgrade --install with the bridge on" \
+      "helm refused the release" \
+      "re-run k8s_bridge_install without the output redirect to see the render error"
+    probe_done
+    uncovered "every bridge probe after P-K8S-BRIDGE-BOOT" \
+      "the bridge workload never installed, so nothing about it could be observed"
+    return 0
+  fi
+  # The CDR rolls too (this install leaves config.terminology.api_enabled at its
+  # default, which rewrites its ConfigMap), and the bridge fetches its template
+  # from it at boot, so the CDR settles first and its forward is rebuilt.
+  k8s_rollout 180s
+  k8s_pf_stop
+  k8s_pf_start || true
+  if ! k8s_bridge_rollout; then
+    probe_fail "a rolled-out bridge Deployment" \
+      "$(kc logs -l "$K8S_BRIDGE_LABEL" --tail=6 --all-containers 2>&1 | tail -6
+         kc get pod -l "$K8S_BRIDGE_LABEL" -o jsonpath='{.items[0].status.containerStatuses[0].state.waiting.reason} {.items[0].status.containerStatuses[0].state.waiting.message}' 2>/dev/null)" \
+      "an unpullable image, a refused configuration (exit 78) and a template fetch the CDR refused all land here"
+    probe_done
+    uncovered "every bridge probe after P-K8S-BRIDGE-BOOT" \
+      "the bridge workload never became ready, so nothing about it could be observed"
+    return 0
+  fi
+  probe_done
+
+  probes_k8s_bridge_runtime
+  probes_k8s_bridge_psa
+  probes_k8s_bridge_cred
+  probes_k8s_bridge_serve
+  probes_k8s_bridge_netpol
+
+  uncovered "FerroBRIDGE's FHIR facade (GET /fhir/metadata and the resource routes)" \
+    "the facade keeps an identity map in a file it must write, and the chart mounts no writable volume for it; this run serves the operations lane alone"
+  uncovered "a bearer credential (bridge.cdr.auth=bearer)" \
+    "the harness's CDR authenticates Basic users; a token the CDR accepts needs an identity provider this harness does not run"
+}
+
+probes_k8s_bridge_runtime() {
+  local node cid spec
+  node="$(k8s_node_container)"
+  if [[ -z "$node" ]]; then
+    uncovered "the bridge container's applied runtime posture (uid, capabilities, seccomp, read-only root)" \
+      "this cluster node is not a local container, so its runtime spec is not readable from here"
+    return 0
+  fi
+  probe "P-K8S-BRIDGE-RUNTIME" "working" "chart" "#3713" \
+    "the bridge container runs under the same hardened posture as the server"
+  cid="$(docker exec "$node" crictl ps --name bridge -q 2>/dev/null | head -1)"
+  if [[ -z "$cid" ]]; then
+    probe_fail "a running bridge container on the node" "crictl listed none"
+  else
+    spec="$(docker exec "$node" crictl inspect "$cid" 2>/dev/null | jq -c '.info.runtimeSpec')"
+    k8s_assert_hardened "$spec"
+  fi
+  probe_done
+}
+
+probes_k8s_bridge_psa() {
+  probe "P-K8S-BRIDGE-PSA" "working" "chart" "#3713" \
+    "the bridge pod is admitted under the Restricted profile"
+  kubectl label namespace "$K8S_NS" \
+    pod-security.kubernetes.io/enforce=restricted --overwrite >/dev/null 2>&1
+  kc rollout restart "deploy/$K8S_BRIDGE" >/dev/null 2>&1
+  if ! k8s_bridge_rollout 240s; then
+    probe_fail "an admitted bridge rollout under enforce=restricted" \
+      "$(kc get events --sort-by=.lastTimestamp 2>/dev/null | grep -i 'violate\|forbidden' | tail -3)" \
+      "the chart holds every workload to Restricted; admission is what settles it for this one"
+  fi
+  # Removed before any client pod runs: the probe pods are plain busybox.
+  kubectl label namespace "$K8S_NS" pod-security.kubernetes.io/enforce- >/dev/null 2>&1
+  probe_done
+}
+
+# The credential, proven USED rather than mounted: with no templates directory
+# FerroBRIDGE fetches cnf.blood_pressure from the CDR at boot under the Secret's
+# Basic credential, and only a fetch the CDR answered lets the operations lane
+# report a compiled program. The same boot line reports one context, which is
+# what the per-key mounts are for: a whole-ConfigMap volume would have loaded
+# each file three times and refused the start.
+probes_k8s_bridge_cred() {
+  probe "P-K8S-BRIDGE-CRED" "working" "server" "#3713" \
+    "the bridge authenticates to the CDR with the Secret's credential and compiles the mounted mapping set"
+  local logs
+  logs="$(kc logs -l "$K8S_BRIDGE_LABEL" --tail=200 --all-containers 2>/dev/null)"
+  assert_contains "$logs" '"lane":"operations","enabled":true' \
+    "the operations lane is enabled only when the mapping set and its templates loaded"
+  assert_contains "$logs" '"contexts":1,' \
+    "one context loaded; the ..data copies of a whole-ConfigMap volume would have been refused as duplicates"
+  assert_contains "$logs" '"programs":1,' \
+    "one program compiled, against the template fetched from the CDR under the Secret's credential"
+  probe_done
+}
+
+# The admitted half: a pod carrying the label the policy names reaches the
+# Service, and the readiness body it gets back is FerroBRIDGE's own report that
+# the CDR and FerroTERM answered it, so the egress rules carried those calls.
+probes_k8s_bridge_serve() {
+  probe "P-K8S-BRIDGE-SERVE" "working" "server" "#3713" \
+    "an admitted peer reaches FerroBRIDGE's Service, and FerroBRIDGE reaches the CDR and FerroTERM"
+  local body
+  body="$(k8s_bridge_get /health/readiness)"
+  assert_contains "$body" '"state":"up"' \
+    "readiness answers 200 only when every upstream answered"
+  assert_contains "$body" '"cdr":{"state":"up"}' \
+    "the CDR indicator must be up: the bridge's egress rule to the CDR's pods carried the call"
+  assert_contains "$body" '"terminology":{"state":"up"}' \
+    "the terminology indicator must be up: the bridge's egress rule and FerroTERM's ingress rule both admit it"
+  probe_done
+}
+
+# The refused half, from the layer that decides it. An unenforcing CNI turns
+# both calls into exit=0 and fails the row, which is the honest outcome: the
+# policy is the only thing standing in for authentication here.
+probes_k8s_bridge_netpol() {
+  probe "P-K8S-BRIDGE-NETPOL" "working" "chart" "#3713" \
+    "the bridge port refuses a pod outside ingressFrom, in this namespace and in another"
+  local ip
+  ip="$(kc get pod -l "$K8S_BRIDGE_LABEL" -o jsonpath='{.items[0].status.podIP}' 2>/dev/null)"
+  if [[ -z "$ip" ]]; then
+    probe_fail "a bridge pod with an address" "none was reported" \
+      "without an address the refusals below would pass for the wrong reason"
+    probe_done
+    return 0
+  fi
+  assert_eq "1" "$(k8s_term_nc "$K8S_NS" "$ip")" \
+    "a pod in the release's own namespace without the admitted label acts on the CDR if it gets through"
+  assert_eq "1" "$(k8s_term_nc default "$ip")" \
+    "the policy's peers are namespace-scoped, so another namespace must be refused too"
   probe_done
 }
 

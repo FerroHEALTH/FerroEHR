@@ -329,7 +329,7 @@ metadata:
   name: {{ include "ferroehr.terminologyFullname" . }}
   annotations:
     kubernetes.io/description: >-
-      Ingress for FerroTERM: only its HTTP port, and only from the CDR's pods{{ if .Values.terminology.networkPolicy.extraIngressFrom }} and the terminology.networkPolicy.extraIngressFrom peers{{ end }}. Egress admits DNS only.
+      Ingress for FerroTERM: only its HTTP port, and only from the CDR's pods{{ if .Values.bridge.enabled }}, FerroBRIDGE's pods{{ end }}{{ if .Values.terminology.networkPolicy.extraIngressFrom }} and the terminology.networkPolicy.extraIngressFrom peers{{ end }}. Egress admits DNS only.
   labels:
     {{- include "ferroehr.terminologyLabels" . | nindent 4 }}
 spec:
@@ -347,6 +347,13 @@ spec:
         - podSelector:
             matchLabels:
               {{- include "ferroehr.selectorLabels" . | nindent 14 }}
+        {{- /* FerroBRIDGE, when it runs: bridge.yaml points its [terminology]
+               at this Service, so it is the second caller the chart knows. */}}
+        {{- if .Values.bridge.enabled }}
+        - podSelector:
+            matchLabels:
+              {{- include "ferroehr.bridgeSelectorLabels" . | nindent 14 }}
+        {{- end }}
         {{- /* Raw peers, admitted exactly as written. The schema refuses an
                empty one and an empty `podSelector`/`namespaceSelector` inside
                one, because "namespaceSelector selects namespaces using

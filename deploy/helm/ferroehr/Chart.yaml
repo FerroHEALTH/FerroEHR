@@ -21,7 +21,7 @@ type: application
 # A published OCI version is immutable by refusal rather than by the registry —
 # `helm push` over an existing tag replaces it silently — so a correction always
 # ships as a NEW version and the published one stands as it was.
-version: 11.0.2
+version: 11.1.0
 # The DEFAULT container image tag (overridable via image.tag). Equals the
 # workspace version in Cargo.toml, bumped in the release PR beside the
 # docker-compose.yml image tags — one version sweep, the compose treatment
@@ -202,6 +202,17 @@ annotations:
     # is those two edits; this line is then checked, not maintained.
     - name: ferroterm
       image: ghcr.io/ferrohealth/ferroterm:0.1.6@sha256:7ec4c9622e88e3028faf7c74a2384fb02e57dc3163c282b21274121a26aa3d5b  # party: third
+      platforms:
+        - linux/amd64
+        - linux/arm64
+    # FerroBRIDGE, deployed when `bridge.enabled` is set (templates/bridge.yaml).
+    # Marked third party on the FerroTERM reasoning: a separate product on its
+    # own release line, so its tag is neither the appVersion nor rewritten at
+    # package time. Tag AND digest, held by scripts/checks/chart-appversion.sh
+    # to `ferroehr.bridgePinnedVersion` in _helpers.tpl and
+    # `bridge.image.digest` in values.yaml.
+    - name: ferrobridge
+      image: ghcr.io/ferrohealth/ferrobridge:0.0.5@sha256:c92e58dac60d0d1cb94b446e2414ebdc2b209a42c87df3aaf0b18d7c51d5c774  # party: third
       platforms:
         - linux/amd64
         - linux/arm64

@@ -95,6 +95,7 @@ declare -a CASES=(
   "basic-auth:${CI_DIR}/basic-auth-values.yaml"
   "viewer:${CI_DIR}/viewer-values.yaml"
   "terminology:${CI_DIR}/terminology-values.yaml"
+  "bridge:${CI_DIR}/bridge-values.yaml"
   "audit-categories:${CI_DIR}/audit-categories-values.yaml"
   # The user-facing production overlay ships INSIDE the chart (#3678), so it is
   # rendered from there rather than from a ci/ copy that could drift from it.
@@ -470,6 +471,66 @@ network_policy_gate() {
   else
     FAIL=1
   fi
+
+  # ── FerroBRIDGE: narrowed by CONSTRUCTION ─────────────────────────────────
+  # FerroBRIDGE authenticates no caller yet (FerroHEALTH/FerroBRIDGE#400), so
+  # whoever reaches its port acts on the CDR with its credential. Its policy
+  # must carry exactly the operator's peers (an empty list is refused at render,
+  # probed in the refusal registry), its egress must reach the CDR, FerroTERM and
+  # DNS and nothing else by default, and no Ingress may be rendered for it.
+  # The two policies it calls through must admit it: the CDR's once narrowed,
+  # FerroTERM's always.
+  local bridge="${CI_DIR}/bridge-values.yaml" fenced=0 render
+  if ! render="$(helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "$bridge" 2>&1)"; then
+    red "  bridge: the bridge overlay no longer renders at all:"
+    printf '%s\n' "$render" | head -4
+    fenced=1
+  else
+    policy="$(printf '%s' "$render" | yq -r 'select(.kind == "NetworkPolicy" and .metadata.name == "ferroehr-bridge")')"
+    if [[ -z "$policy" ]]; then
+      red "  bridge: no NetworkPolicy named ferroehr-bridge in the render — this gate checked nothing"
+      fenced=1
+    else
+      if [[ "$(printf '%s' "$policy" | yq -r '.spec.ingress | length')" != "1" ]] \
+         || [[ "$(printf '%s' "$policy" | yq -r '.spec.ingress[0].from | length')" != "1" ]] \
+         || [[ "$(printf '%s' "$policy" | yq -r '.spec.ingress[0].from[0].podSelector.matchLabels["ferrobridge.example/client"]')" != "true" ]]; then
+        red "  bridge: the ingress rule is not exactly the bridge.networkPolicy.ingressFrom peer the overlay names"
+        fenced=1
+      fi
+      if [[ "$(printf '%s' "$policy" | yq -r '[.spec.egress[].to[].podSelector.matchLabels["app.kubernetes.io/name"] // "dns"] | join(",")')" != "ferroehr,ferroehr-terminology,dns" ]]; then
+        red "  bridge: egress is no longer the CDR, FerroTERM and DNS"
+        fenced=1
+      fi
+    fi
+    if [[ -n "$(printf '%s' "$render" | yq -r 'select(.kind == "Ingress") | .metadata.name' | sed '/^$/d')" ]]; then
+      red "  bridge: an Ingress is rendered, and FerroBRIDGE authenticates no caller yet"
+      fenced=1
+    fi
+    if [[ "$(printf '%s' "$render" | yq -r 'select(.kind == "Service" and .metadata.name == "ferroehr-bridge") | .spec.type // "ClusterIP"' | sed '/^$/d')" != "ClusterIP" ]]; then
+      red "  bridge: the Service is not ClusterIP"
+      fenced=1
+    fi
+    if [[ "$(printf '%s' "$render" | yq -r 'select(.kind == "NetworkPolicy" and .metadata.name == "ferroehr-terminology") | [.spec.ingress[0].from[].podSelector.matchLabels["app.kubernetes.io/name"]] | join(",")' | sed '/^$/d')" != "ferroehr,ferroehr-bridge" ]]; then
+      red "  bridge: FerroTERM's policy does not admit FerroBRIDGE beside the CDR"
+      fenced=1
+    fi
+  fi
+  if render="$(helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "${CI_DIR}/all-features-values.yaml" \
+               -s templates/networkpolicy.yaml 2>&1)"; then
+    if [[ "$(printf '%s' "$render" | yq -r 'select(.metadata.name == "ferroehr") | [.spec.ingress[0].from[].podSelector.matchLabels["app.kubernetes.io/name"] // ""] | join(",")' | sed '/^$/d')" != *"ferroehr-bridge"* ]]; then
+      red "  bridge: the narrowed CDR policy does not admit FerroBRIDGE, which locks it out of the CDR"
+      fenced=1
+    fi
+  else
+    red "  bridge: the all-features CDR policy no longer renders:"
+    printf '%s\n' "$render" | head -4
+    fenced=1
+  fi
+  if [[ "$fenced" -eq 0 ]]; then
+    echo "  bridge: ingress is exactly the named peers, egress is the CDR + FerroTERM + DNS, no Ingress, ClusterIP, and the CDR and FerroTERM policies admit it"
+  else
+    FAIL=1
+  fi
 }
 network_policy_gate
 
@@ -505,6 +566,7 @@ refusal_registry_gate() {
   local base="${CI_DIR}/default-values.yaml"
   local basic="${CI_DIR}/basic-auth-values.yaml"
   local viewer="${CI_DIR}/viewer-values.yaml"
+  local bridge="${CI_DIR}/bridge-values.yaml"
   local -a registry=(
     "deployment.yaml|no authentication mechanism is configured|${base}|--set config.auth.oidc.issuer=null|config.auth.basic.users;config.auth.oidc.issuer"
     "migration-job.yaml|requires migrations.job.existingSecret|${base}|--set migrations.job.enabled=true|migrations.job.existingSecret"
@@ -519,6 +581,18 @@ refusal_registry_gate() {
     "_helpers.tpl|while config.terminology.external.routes is empty|${base}|--set terminology.enabled=true --set config.terminology.external.providers.tx.type=fhir --set config.terminology.external.providers.tx.url=https://tx.example.com/fhir|config.terminology.external.routes;terminology.wireCdr"
     "_helpers.tpl|while terminology.image.digest is non-empty|${base}|--set terminology.enabled=true --set terminology.image.tag=never-a-release|terminology.image.tag;terminology.image.digest"
     "_helpers.tpl|the chart injects both|${base}|--set config.usage_report.enabled=false|config.usage_report.enabled;usageReport.enabled"
+    "_helpers.tpl|while bridge.image.digest is non-empty|${bridge}|--set bridge.image.tag=never-a-release|bridge.image.tag;bridge.image.digest"
+    "_helpers.tpl|refusing to render a secret into FerroBRIDGE's ConfigMap|${bridge}|--set-string bridge.config.cdm.url=SENTINEL_PROBE|bridge.config.cdm.url;_file"
+    "_helpers.tpl|refusing to render a secret into FerroBRIDGE's ConfigMap|${bridge}|--set terminology.enabled=false --set-string bridge.config.terminology.credentials.bearer_token=SENTINEL_PROBE|bridge.config.terminology.credentials.bearer_token;bridge.extraVolumes"
+    "_helpers.tpl|sets a key the chart already writes|${bridge}|--set-string bridge.config.cdr.base_url=http://cdr.example.com/v1|bridge.config.cdr.base_url;bridge.cdr.existingSecret"
+    "_helpers.tpl|sets a key the chart already writes|${bridge}|--set-string bridge.config.cdr.credentials.user=probe|bridge.config.cdr.credentials"
+    "_helpers.tpl|sets a key the chart already writes|${bridge}|--set-string bridge.config.terminology.base_url=http://tx.example.com/r4|bridge.config.terminology;terminology.enabled=false"
+    "_helpers.tpl|sets a key the chart already writes|${bridge}|--set-string bridge.config.mappings.directory=/srv/mappings|bridge.config.mappings.directory;bridge.mappings.existingConfigMap"
+    "_helpers.tpl|sets a key the chart already writes|${bridge}|--set-string bridge.config.server.listen=[::]:9090|bridge.config.server.listen"
+    "bridge.yaml|with an empty bridge.networkPolicy.ingressFrom|${bridge}|--set bridge.networkPolicy.ingressFrom=null|bridge.networkPolicy.ingressFrom;FerroBRIDGE#400"
+    "bridge.yaml|with an empty bridge.cdr.existingSecret|${bridge}|--set bridge.cdr.existingSecret=|bridge.cdr.existingSecret;bearer_token"
+    "bridge.yaml|with an empty bridge.mappings.files|${bridge}|--set bridge.mappings.files=null|bridge.mappings.files;..data"
+    "bridge.yaml|with an empty bridge.mappings.existingConfigMap|${bridge}|--set bridge.mappings.existingConfigMap=|bridge.mappings.existingConfigMap"
     "_helpers.tpl|the chart injects both|${base}|--set-string config.usage_report.deployment=compose|config.usage_report.deployment;usageReport.enabled"
     "networkpolicy.yaml|networkPolicy.ingressAllowAll=false with an empty|${base}|--set networkPolicy.ingressAllowAll=false|networkPolicy.ingressFrom;hardening-network-policy.md"
     "networkpolicy.yaml|with no destination for the database|${base}|--set networkPolicy.egress.enabled=true|networkPolicy.egress.database.to;hardening-network-policy.md"
@@ -668,6 +742,14 @@ schema_gate() {
     "terminology.image.digest=sha256:nothex|/terminology/image/digest"
     "terminology.logFormat=verbose|/terminology/logFormat"
     "terminology.index.mountPath=data/index|/terminology/index/mountPath"
+    "bridge.enabled=maybe|/bridge/enabled"
+    "bridge.ingress.enabled=true|additional properties 'ingress' not allowed"
+    "bridge.service.type=NodePort|additional properties 'type' not allowed"
+    "bridge.networkPolicy.ingressAllowAll=true|additional properties 'ingressAllowAll' not allowed"
+    "bridge.cdr.auth=oauth|/bridge/cdr/auth"
+    "bridge.cdr.password=SENTINEL_PROBE|additional properties 'password' not allowed"
+    "bridge.image.digest=sha256:nothex|/bridge/image/digest"
+    "bridge.mappings.files[0]=..|/bridge/mappings/files/0"
     "backup.clinicl.schedule=@daily|additional properties 'clinicl' not allowed"
     "backup.enabled=maybe|/backup/enabled"
     "backup.clinical.schedule=17|/backup/clinical/schedule"
@@ -738,8 +820,29 @@ schema_gate() {
     printf '%s\n' "$out" | head -4
     json_refused=1
   fi
+  # FerroBRIDGE's ingressFrom carries the same peer constraint, and it is the
+  # ONLY source list that policy has: there is no CDR peer beside it.
+  local -a bridge_json_refusals=(
+    'bridge.networkPolicy.ingressFrom=[{"namespaceSelector":{}}]|/bridge/networkPolicy/ingressFrom/0/namespaceSelector'
+    'bridge.networkPolicy.ingressFrom=[{"podSelector":{}}]|/bridge/networkPolicy/ingressFrom/0/podSelector'
+    'bridge.networkPolicy.ingressFrom=[{"podSelector":{"matchLabels":{}}}]|/bridge/networkPolicy/ingressFrom/0/podSelector'
+    'bridge.networkPolicy.ingressFrom=[{}]|/bridge/networkPolicy/ingressFrom/0'
+  )
+  for case in "${bridge_json_refusals[@]}"; do
+    probe="${case%%|*}"
+    want="${case##*|}"
+    if out="$(helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" \
+              -f "${CI_DIR}/bridge-values.yaml" --set-json "$probe" 2>&1)"; then
+      red "  NOT REFUSED: --set-json ${probe} rendered a peer that admits every source"
+      json_refused=1
+    elif ! grep -qF -- "$want" <<<"$out"; then
+      red "  --set-json ${probe} was refused, but the message does not mention '${want}':"
+      printf '%s\n' "$out" | head -4
+      json_refused=1
+    fi
+  done
   if [[ "$json_refused" -eq 0 ]]; then
-    echo "  all ${#json_refusals[@]} admit-everything peer shapes refused, and a peer that names a source still renders"
+    echo "  all $(( ${#json_refusals[@]} + ${#bridge_json_refusals[@]} )) admit-everything peer shapes refused, and a peer that names a source still renders"
   else
     FAIL=1
   fi

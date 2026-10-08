@@ -32,7 +32,8 @@
 #      appVersion contradicts. First-party means the images built from THIS
 #      repository at this version: `ferroehr`, `ferroehr-viewer` and
 #      `ferroehr-postgres` today. A third-party image the chart deploys —
-#      `ghcr.io/ferrohealth/ferroterm` since #3305 — moves on its own release
+#      `ghcr.io/ferrohealth/ferroterm` since #3305, and
+#      `ghcr.io/ferrohealth/ferrobridge` since #3713 — moves on its own release
 #      line, is pinned in the chart's own values and helpers, and is neither
 #      equal to appVersion nor rewritten at package time; holding it to this
 #      rule would make every FerroEHR release claim a FerroTERM version that
@@ -48,11 +49,13 @@
 #      else would be rewritten to our version, and a first-party image
 #      published under another name would be left a release behind — and
 #      neither mistake shows up in any render.
-#   3. The third-party FerroTERM entry equals its own two sources: the TAG
-#      equals `ferroehr.terminologyPinnedVersion` in _helpers.tpl (which the
-#      `terminology.image.tag` default and the chart's tag-versus-digest
-#      refusal both read), and the DIGEST equals `terminology.image.digest` in
-#      values.yaml (which is what every install actually runs). Without this the
+#   3. Each third-party entry equals its own two sources: the TAG equals its
+#      pinned-version define in _helpers.tpl (FerroTERM's
+#      `ferroehr.terminologyPinnedVersion`, FerroBRIDGE's
+#      `ferroehr.bridgePinnedVersion`, which the image-tag default and the
+#      chart's tag-versus-digest refusal both read), and the DIGEST equals the
+#      `image.digest` of its values section (`terminology:`, `bridge:`), which
+#      is what every install actually runs. Without this the
 #      annotation is a fourth hand-maintained copy of a version: Artifact Hub
 #      would scan whatever `ferroterm:<tag>` had moved to while the chart
 #      deployed a pinned digest, and the vulnerability report would describe
@@ -66,10 +69,11 @@
 #      FROM Chart.yaml, so a disagreement means it was never regenerated.
 #
 # Usage: scripts/checks/chart-appversion.sh [--self-test]
-#   --self-test mutates a COPY of the chart tree six ways — a first-party tag
+#   --self-test mutates a COPY of the chart tree ten ways — a first-party tag
 #   moved off appVersion, an image line with its party marker removed, and each of
-#   the FerroTERM tag and digest moved off its pin from either side (the
-#   annotation, the helper, the values file) — and asserts the guard rejects each.
+#   the FerroTERM and FerroBRIDGE tags and digests moved off its pin from either
+#   side (the annotation, the helper, the values file) — and asserts the guard
+#   rejects each.
 #   The detectors are arithmetic over text, and a text detector never shown to fail
 #   is a green light nobody has tested (reliability.md §enforcement tiers).
 # Callers: the `chart-appversion` job in ci.yml, and the `plan` job of
@@ -99,6 +103,10 @@ if [[ "${1:-}" == "--self-test" ]]; then
     "the FerroTERM digest moved off the values pin|${self_chart}|s|@sha256:[0-9a-f]\\{8\\}|@sha256:0000c0de|"
     "the helper pin moved without the annotation|${self_helpers}|s|^[0-9]*\\.[0-9]*\\.[0-9]*$|9.9.9|"
     "the values digest moved without the annotation|${self_values}|s|^    digest: sha256:[0-9a-f]\\{8\\}|    digest: sha256:0000c0de|"
+    "the FerroBRIDGE tag moved off the helper pin|${self_chart}|s|ferrobridge:[0-9][^@]*@|ferrobridge:9.9.9@|"
+    "the FerroBRIDGE digest moved off the values pin|${self_chart}|s|\\(ferrobridge:[^@]*\\)@sha256:[0-9a-f]\\{8\\}|\\1@sha256:0000c0de|"
+    "the FerroBRIDGE helper pin moved without the annotation|${self_helpers}|/define \"ferroehr\\.bridgePinnedVersion\"/{n;s|^[0-9]*\\.[0-9]*\\.[0-9]*$|9.9.9|;}"
+    "the bridge values digest moved without the annotation|${self_values}|/^bridge:/,\$s|^    digest: sha256:[0-9a-f]\\{8\\}|    digest: sha256:0000c0de|"
   )
   for mutation in "${mutations[@]}"; do
     label="${mutation%%|*}"
@@ -190,23 +198,39 @@ if [[ "$first_party" -eq 0 ]]; then
   report "$CHART declares no first-party artifacthub.io/images entry — the publish lane rewrites those tags at package time and would rewrite nothing."
 fi
 
-# 3. The third-party FerroTERM entry equals the two places the chart pins it.
-# Both are read out of the chart itself rather than restated here: a guard
-# carrying its own copy of a version is the fourth copy it exists to prevent.
-terminology_pin=$(sed -nE '/define "ferroehr\.terminologyPinnedVersion"/{n;s/^[[:space:]]*([0-9][0-9A-Za-z.+-]*)[[:space:]]*$/\1/p;}' "$HELPERS")
-terminology_digest=$(sed -nE '/^  image:$/,/^  [a-z]/{s/^    digest: (sha256:[0-9a-f]{64})$/\1/p;}' "$VALUES" | tail -1)
-if [[ -z "$terminology_pin" ]]; then
-  report "could not read the FerroTERM pin from $HELPERS — 'ferroehr.terminologyPinnedVersion' must be a define whose next line is the bare version, because this guard and the chart's own tag default both read it there."
-elif [[ -z "$terminology_digest" ]]; then
-  report "could not read terminology.image.digest from $VALUES — the chart pins FerroTERM by digest, and this guard holds the published annotation to that pin."
-else
-  want="ghcr.io/ferrohealth/ferroterm:${terminology_pin}@${terminology_digest}"
-  have=$(grep -oE 'image: ghcr\.io/ferrohealth/ferroterm[^[:space:]]*' "$CHART" | head -1)
-  have="${have#image: }"
-  if [[ "$have" != "$want" ]]; then
-    report "$CHART lists FerroTERM as '${have:-<absent>}' but the chart deploys '${want}' (tag from ferroehr.terminologyPinnedVersion in $HELPERS, digest from terminology.image.digest in $VALUES). Artifact Hub scans the reference in the annotation, so a stale one reports vulnerabilities for an image nobody runs."
+# 3. Each third-party entry equals the two places the chart pins it. Both are
+# read out of the chart itself rather than restated here: a guard carrying its
+# own copy of a version is the fourth copy it exists to prevent. The digest is
+# read inside its own top-level values section, so two pinned images can never
+# be checked against each other's digest.
+# <product>|<repository>|<pinned-version define>|<top-level values key>
+third_party=(
+  "FerroTERM|ghcr.io/ferrohealth/ferroterm|ferroehr.terminologyPinnedVersion|terminology"
+  "FerroBRIDGE|ghcr.io/ferrohealth/ferrobridge|ferroehr.bridgePinnedVersion|bridge"
+)
+for entry in "${third_party[@]}"; do
+  IFS='|' read -r product repository define section <<<"$entry"
+  pin=$(sed -nE "/define \"${define//./\\.}\"/{n;s/^[[:space:]]*([0-9][0-9A-Za-z.+-]*)[[:space:]]*\$/\\1/p;}" "$HELPERS")
+  digest=$(awk -v section="${section}:" '
+    $0 == section { inside = 1; next }
+    inside && /^[^[:space:]#]/ { inside = 0 }
+    inside && /^  image:$/ { image = 1; next }
+    inside && image && /^  [^[:space:]]/ { image = 0 }
+    inside && image && /^    digest: sha256:[0-9a-f]+$/ { print $2 }
+  ' "$VALUES" | head -1)
+  if [[ -z "$pin" ]]; then
+    report "could not read the ${product} pin from $HELPERS — '${define}' must be a define whose next line is the bare version, because this guard and the chart's own tag default both read it there."
+  elif [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+    report "could not read ${section}.image.digest from $VALUES — the chart pins ${product} by digest, and this guard holds the published annotation to that pin."
+  else
+    want="${repository}:${pin}@${digest}"
+    have=$(grep -oE "image: ${repository//./\\.}[:@][^[:space:]]*" "$CHART" | head -1)
+    have="${have#image: }"
+    if [[ "$have" != "$want" ]]; then
+      report "$CHART lists ${product} as '${have:-<absent>}' but the chart deploys '${want}' (tag from ${define} in $HELPERS, digest from ${section}.image.digest in $VALUES). Artifact Hub scans the reference in the annotation, so a stale one reports vulnerabilities for an image nobody runs."
+    fi
   fi
-fi
+done
 
 # 4. None of the injected annotations is committed.
 for injected in artifacthub.io/changes artifacthub.io/containsSecurityUpdates artifacthub.io/prerelease; do

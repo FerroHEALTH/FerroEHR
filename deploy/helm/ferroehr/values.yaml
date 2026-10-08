@@ -1435,3 +1435,167 @@ terminology:
   affinity: {}
   # -- Extra environment for FerroTERM (escape hatch).
   extraEnv: []
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FerroBRIDGE: the FHIR and openEHR bridge, beside the CDR.
+#
+# One Deployment, one ClusterIP Service and a NetworkPolicy, with FerroBRIDGE's
+# config.toml rendered as a ConfigMap: [cdr] points at this release's CDR
+# Service, [cdr.credentials] reads a file mounted from bridge.cdr.existingSecret,
+# and [terminology] points at this release's FerroTERM when terminology.enabled
+# is set. Off by default.
+#
+# CLUSTER-INTERNAL. FerroBRIDGE has no inbound authentication yet
+# (https://github.com/FerroHEALTH/FerroBRIDGE/issues/400), and what it serves
+# writes into and reads from the CDR under the credential below. So no Ingress
+# is rendered and no value renders one, the Service is ClusterIP, and the
+# NetworkPolicy admits only the peers named in networkPolicy.ingressFrom: an
+# empty list is refused at render, and the schema refuses a peer that selects
+# everything.
+# ─────────────────────────────────────────────────────────────────────────────
+bridge:
+  # -- Deploy FerroBRIDGE alongside the CDR. Needs `bridge.cdr.existingSecret`
+  # and at least one `bridge.networkPolicy.ingressFrom` peer; the render is
+  # refused without either.
+  enabled: false
+  # -- Replica count. FerroBRIDGE keeps no state of its own while its FHIR
+  # facade is off, so replicas are a throughput choice. Above 1, turn
+  # `podDisruptionBudget` below on.
+  replicaCount: 1
+  # -- Topology spread for FerroBRIDGE's pods. Empty uses the chart's default:
+  # one replica per node, `ScheduleAnyway`, scoped to the ReplicaSet being
+  # rolled. Set it to replace that wholesale.
+  topologySpreadConstraints: []
+  # -- Deployment update strategy. Empty leaves the API default
+  # (`RollingUpdate`). Set `{type: Recreate}` when `extraVolumes` mounts a
+  # ReadWriteOnce claim (the FHIR facade's identity store): a rolling update
+  # surges a second pod that cannot attach it on another node.
+  strategy: {}
+  image:
+    # -- FerroBRIDGE image repository. A separate product on its own release
+    # line (https://github.com/FerroHEALTH/FerroBRIDGE), BUSL-1.1 from the same
+    # Licensor as FerroEHR.
+    repository: ghcr.io/ferrohealth/ferrobridge
+    # -- Pull policy.
+    pullPolicy: IfNotPresent
+    # -- Image tag. Empty falls back to the FerroBRIDGE release this chart is
+    # pinned to (0.0.5), never `.Chart.appVersion`, which is FerroEHR's line.
+    # A tag other than that pin is REFUSED while `digest` below is non-empty:
+    # the digest wins, so the tag would be inert. Clear `digest` to deploy a tag.
+    tag: ""
+    # -- Image digest (`sha256:…`); wins over `tag`. Pinned by default, so an
+    # install runs the exact image this chart was validated against.
+    digest: sha256:c92e58dac60d0d1cb94b446e2414ebdc2b209a42c87df3aaf0b18d7c51d5c774
+  service:
+    # -- Service port. The Service is always ClusterIP and the container always
+    # listens on 8080.
+    port: 8080
+  cdr:
+    # -- Name of an EXISTING Secret holding FerroBRIDGE's credential for this
+    # release's CDR. Required. With `auth: basic` it must carry the keys `user`
+    # and `password`; with `auth: bearer`, the key `bearer_token`. The password
+    # or token is mounted as a FILE and named by its `_file` key in
+    # config.toml, so it never enters the ConfigMap or the pod's environment;
+    # the user name, which FerroBRIDGE does not treat as a secret, reaches the
+    # container as `FERROBRIDGE__CDR__CREDENTIALS__USER`.
+    existingSecret: ""
+    # -- How FerroBRIDGE authenticates to the CDR: `basic` (RFC 7617, a user of
+    # the CDR's `config.auth.basic.users`) or `bearer` (RFC 6750, a token the
+    # CDR accepts). FerroBRIDGE sends a bearer token as it is and cannot renew
+    # one, so `bearer` suits only a token that does not expire.
+    auth: basic
+  mappings:
+    # -- Name of an EXISTING ConfigMap holding the FHIRconnect mapping files
+    # FerroBRIDGE serves `$tofhir` and `$toopenehr` with. Empty means no mapping
+    # set: FerroBRIDGE starts, and those two operations answer 503. The
+    # templates each context names are fetched from this release's CDR at
+    # boot, so a template the CDR does not hold stops the start.
+    existingConfigMap: ""
+    # -- The keys of `existingConfigMap` to mount, one file each. Required with
+    # `existingConfigMap`. Each key is mounted on its own (`subPath`), because a
+    # whole ConfigMap volume carries the kubelet's `..data` snapshot
+    # directories, which FerroBRIDGE 0.0.5's recursive walk reads as a second
+    # and third copy of every file and refuses as duplicate mapping names. A
+    # `subPath` mount does not follow later edits to the ConfigMap; the pod's
+    # rollout annotation hashes this list, not the ConfigMap's contents, so
+    # restart the workload after editing it.
+    files: []
+  # -- Further FerroBRIDGE configuration, rendered into its config.toml beside
+  # the keys the chart writes (FerroBRIDGE's configuration reference:
+  # https://ferrobridge.eu/docs/operate/configuration.html). FerroBRIDGE
+  # refuses an unknown key at boot, so a typo here is a crash loop, not a
+  # silent default. Refused at render: `cdr.base_url`, `cdr.credentials`,
+  # `server.listen`, `terminology` while `terminology.enabled` is on,
+  # `mappings.directory` while `mappings.existingConfigMap` is set, and any
+  # secret-shaped key (a password, a token, `cdm.url`), whose `_file` sibling
+  # takes a file you mount with `extraVolumes`.
+  config: {}
+  networkPolicy:
+    # -- The peers admitted to FerroBRIDGE's port. REQUIRED: the render is
+    # refused while it is empty, because an ingress rule with no `from` admits
+    # every source and FerroBRIDGE authenticates nobody yet. Raw
+    # NetworkPolicyPeer entries; the schema refuses an empty peer and an empty
+    # selector inside one, which would select every pod or every namespace.
+    # There is deliberately no admit-everything key.
+    ingressFrom: []
+    # -- Egress rules beyond the ones the chart writes (this release's CDR, its
+    # FerroTERM when that runs, and DNS). Raw NetworkPolicyEgressRule entries,
+    # for an upstream you name in `config`, such as an external terminology
+    # server.
+    extraEgress: []
+  # -- Protect FerroBRIDGE during voluntary disruption. Off by default: the
+  # shipped `replicaCount` is 1, and a budget over a single pod blocks the drain
+  # it exists to survive.
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+    # maxUnavailable: ""   # set one of minAvailable / maxUnavailable
+    unhealthyPodEvictionPolicy: AlwaysAllow
+  # -- Pod-level security context. Mirrors the server's. The user-namespace
+  # setting is NOT mirrored here: it is the release-wide `hostUsers` key.
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    runAsGroup: 65532
+    fsGroup: 65532
+    fsGroupChangePolicy: OnRootMismatch
+    supplementalGroupsPolicy: Strict
+    seccompProfile:
+      type: RuntimeDefault
+  # -- Container-level security context. Mirrors the server's.
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    allowPrivilegeEscalation: false
+    privileged: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: [ALL]
+    seccompProfile:
+      type: RuntimeDefault
+  # -- Termination grace period. FerroBRIDGE drains in-flight requests on
+  # SIGTERM for up to its own `server.shutdown_timeout_ms` (10 s by default).
+  terminationGracePeriodSeconds: 20
+  # -- Lame-duck pause before SIGTERM, in seconds (0 disables): the same
+  # endpoint-propagation race the server's `preStopSleepSeconds` covers.
+  preStopSleepSeconds: 5
+  # -- Resource requests/limits.
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+  # -- Node selector.
+  nodeSelector: {}
+  # -- Tolerations.
+  tolerations: []
+  # -- Affinity.
+  affinity: {}
+  # -- Extra environment for FerroBRIDGE (escape hatch).
+  extraEnv: []
+  # -- Extra volumes for the FerroBRIDGE pod, such as a Secret holding a
+  # `_file` credential named in `config`.
+  extraVolumes: []
+  # -- Extra volume mounts for the FerroBRIDGE container.
+  extraVolumeMounts: []

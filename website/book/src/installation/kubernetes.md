@@ -38,7 +38,7 @@ kubectl -n ferroehr create secret generic ferroehr-db \
   --from-literal=FERROEHR__DB__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 11.0.2 -n ferroehr \
+  --version 11.1.0 -n ferroehr \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=4.3.6
 ```
@@ -55,7 +55,7 @@ helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
 reference. To read the chart's metadata without installing it:
 
 ```shell
-helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 11.0.2
+helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 11.1.0
 ```
 
 ### Pin two versions, not one
@@ -68,7 +68,7 @@ against.
 
 | | Selects | Pin with | Line |
 |---|---|---|---|
-| Chart version | templates, values schema, defaults | `--version 11.0.2` | SemVer over the chart's own contract |
+| Chart version | templates, values schema, defaults | `--version 11.1.0` | SemVer over the chart's own contract |
 | Image tag | the server binary | `--set image.tag=4.3.6` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
@@ -168,7 +168,7 @@ image, and FerroTERM.
 > the image itself as the authority:
 >
 > ```shell
-> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 11.0.2 \
+> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 11.1.0 \
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
@@ -303,7 +303,7 @@ the TLS Secret and the ingress controller's namespace in it are examples.
 Replace them in a values file of your own and pass both:
 
 ```shell
-helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 11.0.2 --untar
+helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 11.1.0 --untar
 helm install ferroehr ./ferroehr -n ferroehr \
   -f ./ferroehr/values-production.yaml -f my-site-values.yaml
 ```
@@ -678,7 +678,7 @@ config:
 
 ```shell
 helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 11.0.2 -n ferroehr --reuse-values \
+  --version 11.1.0 -n ferroehr --reuse-values \
   --set config.query.plan_cache_capacity=512
 ```
 
@@ -777,7 +777,7 @@ running. It is the Helm equivalent of the
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 11.0.2 -n ferroehr --reuse-values \
+  --version 11.1.0 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
@@ -913,6 +913,111 @@ Because that digest is set, `terminology.image.tag` alone deploys nothing: the
 digest wins, and a tag pointing anywhere else is refused at render rather than
 ignored. Clear the digest to deploy by tag.
 
+### FerroBRIDGE (the FHIR bridge, off by default)
+
+[FerroBRIDGE](https://github.com/FerroHEALTH/FerroBRIDGE) maps between FHIR R4
+and openEHR with FHIRconnect mappings and reaches FerroEHR over ITS-REST.
+FerroEHR itself serves no FHIR API for clinical data, so FerroBRIDGE is the
+component that does. `bridge.enabled` renders it as its own workload in the same
+release: a Deployment, a ClusterIP Service, its own ServiceAccount, a ConfigMap
+holding its configuration file, and a NetworkPolicy.
+
+The chart writes three sections of that file for you:
+
+- **`[cdr]`:** `base_url` is this release's CDR Service with its REST base path
+  (`http://<release>:<service.port><config.server.base_path>`), and
+  `[cdr.credentials]` names a file mounted from your Secret.
+- **`[terminology]`:** with `terminology.enabled` on, `base_url` is the chart's
+  FerroTERM Service at `/r4` and `wire_version` is `r4`. With it off the
+  section is absent, and you may set your own under `bridge.config`.
+- **`[mappings]`:** `directory` is where the mapping files below are mounted.
+
+**The CDR credential comes from a Secret you create.** The chart never takes it
+as a value. With `bridge.cdr.auth: basic` (the default) the Secret carries the
+keys `user` and `password`, for a user of the CDR's `config.auth.basic.users`;
+with `bridge.cdr.auth: bearer` it carries `bearer_token`. The password or token
+is mounted as a file and named by its `_file` key, so it is in neither the
+ConfigMap nor the environment. FerroBRIDGE does not treat the username as a
+secret, and the chart passes it as `FERROBRIDGE__CDR__CREDENTIALS__USER`.
+FerroBRIDGE reads an environment value as TOML when it parses as TOML, so a
+username made only of digits arrives as a number and is refused at boot. A bearer
+token is sent as it is and never renewed, so `bearer` suits only a token that
+does not expire.
+
+```shell
+kubectl -n ferroehr create secret generic ferroehr-bridge-cdr \
+  --from-literal=user=bridge --from-file=password=./bridge-password
+```
+
+**The mapping files come from a ConfigMap you create**, named in
+`bridge.mappings.existingConfigMap`, with each key listed in
+`bridge.mappings.files`. The chart mounts every key on its own: a whole
+ConfigMap volume also carries the kubelet's `..data` snapshot directories, and
+FerroBRIDGE 0.0.5 reads those as a second and third copy of every file and
+refuses the start with a duplicate mapping name. FerroBRIDGE fetches each
+template a mapping context names from the CDR at boot, so upload the templates
+first; a template the CDR does not hold stops the start. Without a mapping set
+FerroBRIDGE still starts, and `$tofhir` and `$toopenehr` answer `503`.
+
+```yaml
+bridge:
+  enabled: true
+  cdr:
+    existingSecret: ferroehr-bridge-cdr
+  mappings:
+    existingConfigMap: ferroehr-bridge-mappings
+    files:
+      - vital_signs.context.yml
+      - blood_pressure.yml
+  networkPolicy:
+    ingressFrom:
+      - podSelector:
+          matchLabels:
+            app.kubernetes.io/name: my-fhir-client
+```
+
+**It stays inside the cluster until FerroBRIDGE authenticates its callers.**
+FerroBRIDGE has no inbound authentication yet
+([FerroBRIDGE#400](https://github.com/FerroHEALTH/FerroBRIDGE/issues/400)), and
+whoever reaches its port acts on the CDR with the credential above. So the chart
+renders no Ingress for it and no value renders one, the Service is always
+ClusterIP, and the NetworkPolicy admits only the peers you list in
+`bridge.networkPolicy.ingressFrom`. An empty list is refused at render, and the
+values schema refuses a peer that selects everything (an empty peer, or an empty
+`podSelector` or `namespaceSelector` inside one). There is no key that admits
+every source. Egress admits this release's CDR, FerroTERM when it runs, and
+DNS; `bridge.networkPolicy.extraEgress` adds a rule for an upstream you name in
+`bridge.config`. When you narrow the CDR's own `networkPolicy.ingressFrom`, the
+chart adds FerroBRIDGE's pods to it, and FerroTERM's policy admits them too.
+
+**Anything else goes in `bridge.config`**, rendered into the same file with
+the keys of FerroBRIDGE's
+[configuration reference](https://ferrobridge.eu/docs/operate/configuration.html).
+FerroBRIDGE refuses an unknown key at boot. The render refuses a key the chart
+writes (`cdr.base_url`, `cdr.credentials`, `server.listen`, `terminology` while
+FerroTERM runs, `mappings.directory` while the chart mounts the mappings) and
+any secret-shaped key, such as a password, a token or `cdm.url`: set its
+`_file` sibling and mount the file with `bridge.extraVolumes` and
+`bridge.extraVolumeMounts`. FerroBRIDGE's FHIR facade (`[facade]`) keeps its
+identity map in a file it writes, and the root filesystem is read-only, so
+turning the facade on also takes a PersistentVolumeClaim of yours mounted with
+those two keys and named in `facade.identity_store`, with
+`bridge.strategy={type: Recreate}` when the claim is ReadWriteOnce. Back that
+volume up with the CDR's database.
+
+Probes use FerroBRIDGE's own endpoints: liveness `/health/liveness`, readiness
+`/health/readiness`, which answers `503` while the CDR or FerroTERM is
+unreachable. FerroBRIDGE carries the same security context as the other
+workloads and the release-wide `hostUsers` setting, and the render gate holds
+it to the same Restricted profile. Its image is pinned by digest in
+`bridge.image.digest` and moves on FerroBRIDGE's own release line, never with
+`appVersion`; a tag other than the pin is refused while the digest is set. The
+deployment probe harness boots it on a cluster and reads back its runtime
+posture, its admission, the credential being used for the template fetch, a
+refusal on its port from a pod outside `ingressFrom`, and its readiness from a
+pod inside it. FerroBRIDGE's own deployment documentation is at
+<https://ferrobridge.eu/docs/operate/container.html>.
+
 ### Per-domain backups (one CronJob per domain, off by default)
 
 `backup.enabled` renders one CronJob per pseudonymisation domain:
@@ -1018,7 +1123,7 @@ Preview an upgrade against what you have installed with
 `helm diff`, or render the new chart version and read it:
 
 ```shell
-helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 11.0.2 \
+helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 11.1.0 \
   -n ferroehr -f my-values.yaml | less
 ```
 

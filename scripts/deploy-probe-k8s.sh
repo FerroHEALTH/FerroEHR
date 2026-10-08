@@ -132,6 +132,7 @@ if probes_k8s_boot; then
   probes_k8s_readiness
   probes_k8s_viewer
   probes_k8s_terminology
+  probes_k8s_bridge
   # Last: it uninstalls the release and drops the database, which is the
   # procedure under test.
   probes_k8s_original_state

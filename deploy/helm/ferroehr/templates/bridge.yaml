@@ -1,0 +1,311 @@
+{{- if .Values.bridge.enabled }}
+{{- /*
+FerroBRIDGE: an OPTIONAL companion workload, the FHIR and openEHR bridge that
+reaches this release's CDR over ITS-REST.
+
+Everything here is gated on `bridge.enabled`, so the default render is
+byte-identical to a chart without this file. No openEHR spec governs the
+deployment; FerroBRIDGE's own configuration reference defines its config.toml
+(https://ferrobridge.eu/docs/operate/configuration.html).
+
+CLUSTER-INTERNAL while FerroBRIDGE has no inbound authentication
+(https://github.com/FerroHEALTH/FerroBRIDGE/issues/400): no Ingress is rendered
+and no value renders one, the Service is ClusterIP, and the NetworkPolicy admits
+only the `bridge.networkPolicy.ingressFrom` peers. Whoever reaches the port acts
+on the CDR with the credential below, so an empty peer list is refused here and
+an admit-everything peer is refused by the values schema.
+
+The pod-security posture is NOT inherited from the server's values: a second
+workload is exactly where a hardened posture is quietly lost, so this one
+carries its own copy and the chart's security gate checks all of them.
+*/}}
+{{- if not .Values.bridge.networkPolicy.ingressFrom }}
+{{- fail "bridge.enabled=true with an empty bridge.networkPolicy.ingressFrom: name the peers that may reach FerroBRIDGE (a podSelector for the in-cluster clients that call it, a namespaceSelector, or an ipBlock). FerroBRIDGE authenticates no caller yet (FerroHEALTH/FerroBRIDGE#400), and an ingress rule with no `from` admits EVERY source, so whoever reached the port would act on the CDR with FerroBRIDGE's credential. There is no key that admits every source." }}
+{{- end }}
+{{- if not .Values.bridge.cdr.existingSecret }}
+{{- fail "bridge.enabled=true with an empty bridge.cdr.existingSecret: create a Secret holding FerroBRIDGE's credential for this release's CDR and name it there. With bridge.cdr.auth=basic it carries the keys `user` and `password` (a user of config.auth.basic.users); with bridge.cdr.auth=bearer, the key `bearer_token`. The chart never takes the credential as a value." }}
+{{- end }}
+{{- if and .Values.bridge.mappings.existingConfigMap (not .Values.bridge.mappings.files) }}
+{{- fail "bridge.mappings.existingConfigMap is set with an empty bridge.mappings.files: list the ConfigMap keys to mount, one mapping file each. The chart mounts each key on its own because a whole ConfigMap volume carries the kubelet's `..data` snapshot directories, which FerroBRIDGE's recursive walk reads as duplicate copies of every mapping and refuses at boot." }}
+{{- end }}
+{{- if and .Values.bridge.mappings.files (not .Values.bridge.mappings.existingConfigMap) }}
+{{- fail "bridge.mappings.files is set with an empty bridge.mappings.existingConfigMap: name the ConfigMap those keys belong to." }}
+{{- end }}
+{{- $configToml := include "ferroehr.bridgeConfigToml" . }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "ferroehr.bridgeFullname" . }}
+  labels:
+    {{- include "ferroehr.bridgeLabels" . | nindent 4 }}
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ferroehr.bridgeFullname" . }}
+  annotations:
+    kubernetes.io/description: >-
+      FerroBRIDGE's config.toml. It names the CDR credential by the path of a file mounted from bridge.cdr.existingSecret and carries no secret value itself.
+  labels:
+    {{- include "ferroehr.bridgeLabels" . | nindent 4 }}
+data:
+  config.toml: |
+    {{- $configToml | nindent 4 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ferroehr.bridgeFullname" . }}
+  annotations:
+    kubernetes.io/description: >-
+      In-cluster address for FerroBRIDGE. ClusterIP only, with no Ingress: FerroBRIDGE authenticates no caller yet, so its NetworkPolicy is what decides who reaches it.
+  labels:
+    {{- include "ferroehr.bridgeLabels" . | nindent 4 }}
+spec:
+  ports:
+    - name: http
+      port: {{ .Values.bridge.service.port }}
+      targetPort: http
+      appProtocol: http
+  selector:
+    {{- include "ferroehr.bridgeSelectorLabels" . | nindent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ferroehr.bridgeFullname" . }}
+  annotations:
+    kubernetes.io/description: >-
+      FerroBRIDGE, the FHIR and openEHR bridge. It reaches this release's CDR over ITS-REST with the credential from bridge.cdr.existingSecret, and FerroTERM when that runs.
+  labels:
+    {{- include "ferroehr.bridgeLabels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.bridge.replicaCount }}
+  {{- with .Values.bridge.strategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "ferroehr.bridgeSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- /* FerroBRIDGE reads its configuration and its mapping set once at
+               boot, so a changed config.toml or mapping list rolls the pods.
+               The hash covers the list of mapping keys, not the operator's
+               ConfigMap contents, which the chart cannot read. */}}
+        checksum/config: {{ printf "%s|%s|%s|%s" $configToml .Values.bridge.mappings.existingConfigMap (join "," .Values.bridge.mappings.files) .Values.bridge.cdr.existingSecret | sha256sum }}
+      labels:
+        {{- include "ferroehr.bridgeSelectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "ferroehr.bridgeFullname" . }}
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: {{ .Values.bridge.terminationGracePeriodSeconds }}
+      {{- if not .Values.hostUsers }}
+      {{- include "ferroehr.hostUsers" . | nindent 6 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.bridge.podSecurityContext | nindent 8 }}
+      containers:
+        - name: bridge
+          image: "{{ include "ferroehr.bridgeImage" . }}"
+          imagePullPolicy: {{ .Values.bridge.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.bridge.securityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: FERROBRIDGE_CONFIG
+              value: {{ printf "%s/config.toml" (include "ferroehr.bridgeConfigDir" .) | quote }}
+            {{- if eq .Values.bridge.cdr.auth "basic" }}
+            - name: FERROBRIDGE__CDR__CREDENTIALS__USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.bridge.cdr.existingSecret }}
+                  key: user
+            {{- end }}
+            {{- with .Values.bridge.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- /* Liveness is process-local and readiness checks the upstreams,
+                 the roles https://kubernetes.io/docs/concepts/workloads/pods/probes/
+                 gives them: FerroBRIDGE's /health/readiness answers 503 while
+                 the CDR or FerroTERM is unreachable, which takes the pod out of
+                 the Service without restarting it. The startup probe covers a
+                 boot that compiles the mapping set against templates fetched
+                 from the CDR. */}}
+          livenessProbe:
+            httpGet:
+              path: /health/liveness
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /health/readiness
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          startupProbe:
+            httpGet:
+              path: /health/liveness
+              port: http
+            periodSeconds: 5
+            failureThreshold: 24
+          {{- if gt (int .Values.bridge.preStopSleepSeconds) 0 }}
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: {{ int .Values.bridge.preStopSleepSeconds }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.bridge.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: config
+              mountPath: {{ include "ferroehr.bridgeConfigDir" . }}
+              readOnly: true
+            - name: cdr-credential
+              mountPath: {{ include "ferroehr.bridgeSecretDir" . }}
+              readOnly: true
+            {{- range .Values.bridge.mappings.files }}
+            - name: mappings
+              mountPath: {{ printf "%s/%s" (include "ferroehr.bridgeMappingsDir" $) . | quote }}
+              subPath: {{ . | quote }}
+              readOnly: true
+            {{- end }}
+            {{- with .Values.bridge.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: config
+          configMap:
+            name: {{ include "ferroehr.bridgeFullname" . }}
+        - name: cdr-credential
+          secret:
+            secretName: {{ .Values.bridge.cdr.existingSecret }}
+            items:
+              {{- if eq .Values.bridge.cdr.auth "bearer" }}
+              - key: bearer_token
+                path: bearer_token
+              {{- else }}
+              - key: password
+                path: password
+              {{- end }}
+        {{- with .Values.bridge.mappings.existingConfigMap }}
+        - name: mappings
+          configMap:
+            name: {{ . }}
+        {{- end }}
+        {{- with .Values.bridge.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.bridge.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.bridge.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.bridge.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      topologySpreadConstraints:
+        {{- include "ferroehr.bridgeTopologySpreadConstraints" . | nindent 8 }}
+{{- if .Values.bridge.podDisruptionBudget.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "ferroehr.bridgeFullname" . }}
+  annotations:
+    kubernetes.io/description: >-
+      Keeps FerroBRIDGE available during voluntary disruption (node drains, cluster upgrades). AlwaysAllow lets a drain evict already-unhealthy pods rather than waiting for them to recover.
+  labels:
+    {{- include "ferroehr.bridgeLabels" . | nindent 4 }}
+spec:
+  {{- /* KEP-3017 is stable in v1.31, below this chart's kubeVersion floor
+         (https://kubernetes.io/docs/concepts/workloads/pods/disruptions/). */}}
+  unhealthyPodEvictionPolicy: {{ .Values.bridge.podDisruptionBudget.unhealthyPodEvictionPolicy }}
+  {{- if .Values.bridge.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ .Values.bridge.podDisruptionBudget.maxUnavailable }}
+  {{- else }}
+  minAvailable: {{ .Values.bridge.podDisruptionBudget.minAvailable }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "ferroehr.bridgeSelectorLabels" . | nindent 6 }}
+{{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ferroehr.bridgeFullname" . }}
+  annotations:
+    kubernetes.io/description: >-
+      Ingress for FerroBRIDGE: only its HTTP port, and only from the bridge.networkPolicy.ingressFrom peers. Egress admits this release's CDR{{ if .Values.terminology.enabled }}, its FerroTERM{{ end }}{{ if .Values.bridge.networkPolicy.extraEgress }}, the bridge.networkPolicy.extraEgress rules{{ end }} and DNS.
+  labels:
+    {{- include "ferroehr.bridgeLabels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "ferroehr.bridgeSelectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    {{- /* Raw peers, admitted exactly as written; never an empty `from`
+           (refused above), and never an empty peer or selector, which the
+           schema refuses: "if present but empty, it selects all namespaces"
+           (https://kubernetes.io/docs/reference/kubernetes-api/policy-resources/network-policy-v1/,
+           NetworkPolicyPeer). */}}
+    - from:
+        {{- toYaml .Values.bridge.networkPolicy.ingressFrom | nindent 8 }}
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "ferroehr.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 8080
+    {{- if .Values.terminology.enabled }}
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "ferroehr.terminologySelectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 8080
+    {{- end }}
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    {{- with .Values.bridge.networkPolicy.extraEgress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}

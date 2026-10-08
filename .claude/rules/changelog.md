@@ -78,7 +78,11 @@ optional:
   (`deploy/helm/validate.sh --update`) and the generated chart README
   (`helm-docs --chart-search-root deploy/helm/ferroehr --template-files
   README.md.gotmpl`). The chart version and `appVersion` are INDEPENDENT SemVer
-  lines and stay so.
+  lines and stay so. "The `artifacthub.io/images` tags" means the entries
+  marked `# party: first` only: the `# party: third` entries (FerroTERM and
+  FerroBRIDGE) are separate products on their own release lines, pinned by
+  tag and digest in `_helpers.tpl` and `values.yaml`, and the release sweep
+  leaves them alone; bumping one is its own chart change.
 
   **`appVersion` is an ordinary cut step again (#2890, the compose
   treatment):** the same release-PR sweep that bumps the docker-compose.yml
