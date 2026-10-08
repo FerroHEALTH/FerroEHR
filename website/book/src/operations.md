@@ -928,7 +928,6 @@ Not every indicator blocks readiness, and the distinction is deliberate:
 | `audit_sender` | the audit posture: `DEGRADED` with the consequence stated when auditing is off (no access log, no EHDS logging component); `UP` with `fail_mode`, the local store and its retention in the detail, and a stated caution under `fail_mode = "open"` | no: reports `DEGRADED`, never `503` |
 | `audit_chain` | the latest scheduled verification of the local audit store's hash chain (present when the local store is on and `[audit.store] verify_interval_seconds` is not `0`): `UP` while intact or before the first run, `DOWN` naming the finding count and the first damaged position, `DEGRADED` when the verification could not run | no: a damaged chain reports `DOWN` in the body, never `503`, because the trail keeps recording while the damage is investigated |
 | `events` | the event publisher's broker delivery (present only when eventing is enabled) | no: reports `DEGRADED`, never `503`, since the outbox buffers while the broker is down |
-| `fhir_outbound` | the FHIR outbound emitter's broker delivery (present only when the emitter is enabled) | no: reports `DEGRADED`, never `503`, since unemitted rows are retained and re-emitted |
 
 An instance whose event broker is unreachable therefore keeps taking traffic
 and says so in the body; an instance that cannot reach its database, or whose

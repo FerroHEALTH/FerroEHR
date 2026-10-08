@@ -20,6 +20,9 @@ use ferroehr::extensions::outbox::{advance, cursor, prune, reconcile};
 use ferroehr::service::FerroEhrService;
 use sqlx::PgPool;
 
+/// The cursor reader these tests register.
+const READER: OutboxReader = OutboxReader::new("omop");
+
 async fn seqs(pool: &PgPool) -> Vec<i64> {
     sqlx::query_scalar("SELECT seq FROM clinical.event_outbox ORDER BY seq")
         .fetch_all(pool)
@@ -50,10 +53,10 @@ async fn prune_stops_at_the_lowest_active_reader_cursor() {
     let seeded = seed_published_rows(&pool).await;
 
     // The reader is active and has processed the first two rows only.
-    reconcile(&pool, OutboxReader::FHIR_OUTBOUND, true)
+    reconcile(&pool, READER, true)
         .await
         .expect("reconcile active");
-    advance(&pool, OutboxReader::FHIR_OUTBOUND, seeded[1])
+    advance(&pool, READER, seeded[1])
         .await
         .expect("advance cursor");
 
@@ -66,7 +69,7 @@ async fn prune_stops_at_the_lowest_active_reader_cursor() {
     );
 
     // The reader catches up: the rest goes on the next pass.
-    advance(&pool, OutboxReader::FHIR_OUTBOUND, seeded[4])
+    advance(&pool, READER, seeded[4])
         .await
         .expect("advance to the end");
     assert_eq!(prune(&pool, 7).await.expect("prune"), 3);
@@ -80,10 +83,10 @@ async fn an_inactive_reader_holds_no_floor() {
     let seeded = seed_published_rows(&pool).await;
 
     // A cursor left behind by a reader the configuration switched off.
-    advance(&pool, OutboxReader::FHIR_OUTBOUND, seeded[0])
+    advance(&pool, READER, seeded[0])
         .await
         .expect("advance cursor");
-    reconcile(&pool, OutboxReader::FHIR_OUTBOUND, false)
+    reconcile(&pool, READER, false)
         .await
         .expect("reconcile inactive");
 
@@ -91,12 +94,7 @@ async fn an_inactive_reader_holds_no_floor() {
     assert!(seqs(&pool).await.is_empty());
     // Reconciling keeps the cursor: switching the reader back on resumes
     // where it left off.
-    assert_eq!(
-        cursor(&pool, OutboxReader::FHIR_OUTBOUND)
-            .await
-            .expect("cursor"),
-        seeded[0]
-    );
+    assert_eq!(cursor(&pool, READER).await.expect("cursor"), seeded[0]);
 }
 
 #[tokio::test]
@@ -105,29 +103,19 @@ async fn advance_is_monotonic_and_registers_the_reader_active() {
     let pool = db.pool();
 
     assert_eq!(
-        cursor(&pool, OutboxReader::FHIR_OUTBOUND)
-            .await
-            .expect("cursor"),
+        cursor(&pool, READER).await.expect("cursor"),
         0,
         "an unregistered reader reads as zero"
     );
-    advance(&pool, OutboxReader::FHIR_OUTBOUND, 10)
-        .await
-        .expect("advance");
-    advance(&pool, OutboxReader::FHIR_OUTBOUND, 5)
+    advance(&pool, READER, 10).await.expect("advance");
+    advance(&pool, READER, 5)
         .await
         .expect("a lower seq is a no-op");
-    assert_eq!(
-        cursor(&pool, OutboxReader::FHIR_OUTBOUND)
+    assert_eq!(cursor(&pool, READER).await.expect("cursor"), 10);
+    let active: bool =
+        sqlx::query_scalar("SELECT active FROM clinical.event_outbox_reader WHERE reader = 'omop'")
+            .fetch_one(&pool)
             .await
-            .expect("cursor"),
-        10
-    );
-    let active: bool = sqlx::query_scalar(
-        "SELECT active FROM clinical.event_outbox_reader WHERE reader = 'fhir-outbound'",
-    )
-    .fetch_one(&pool)
-    .await
-    .expect("read active");
+            .expect("read active");
     assert!(active, "a reader that advances is running, so it is active");
 }

@@ -38,7 +38,7 @@ spec_profile = "development"
 # plaintext_object_store; accept plaintext_listener
 # behind a TLS-terminating ingress; a [management] port opens it too, since that
 # listener is plain HTTP on every interface; plaintext_broker opens on an
-# enabled [events] or [fhir.outbound] amqp:// URL without tls,
+# enabled [events] amqp:// URL without tls,
 # plaintext_audit_feed on an enabled [audit.fhir_feed] http:// url,
 # plaintext_object_store on an enabled [multimedia] with allow_http). Our own
 # posture; auth_off follows CRA Annex I Part I(2)(d), the plaintext_* gaps (e),
@@ -475,20 +475,6 @@ retention_days = 7
 prune_interval_secs = 3600
 publish_max_retries = 3
 admin_api = false            # mount /admin/event_subscription CRUD
-
-# ── [fhir] — FHIR connector (inbound façade + PHI-bearing outbound emitter) ───
-[fhir]
-api_enabled = false          # mount /fhir/r4/* + /admin/fhir_mapping
-
-[fhir.outbound]
-enabled = false              # carries PHI — enabling is an explicit decision
-url = "amqp://guest:guest@localhost:5672/%2f"
-#? url_file = "/run/secrets/fhir-amqp"   # or a mounted file instead of env
-exchange = "ferroehr.fhir"    # distinct from [events].exchange for PHI isolation
-tls = false                  # PROD: true (amqps); production: plaintext_broker on amqp://
-batch_size = 128
-poll_interval_ms = 1000
-publish_max_retries = 3
 
 # ── [terminology] — terminology API + external-server validation ──────────────
 [terminology]

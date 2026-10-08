@@ -164,8 +164,8 @@ For production, set at least:
   so the introspection surface is never reachable on the clinical listener, and
   every endpoint stays `off` until you name a level for it.
 - **TLS everywhere a transport supports it:** `server.tls` (or a
-  TLS-terminating ingress), `audit.syslog.transport = "tls"`, `events.tls`,
-  `fhir.outbound.tls`, HTTPS for the object store.
+  TLS-terminating ingress), `audit.syslog.transport = "tls"`, `events.tls`, HTTPS for the object
+  store.
 - **real secrets via the environment or a `*_file` sibling**, never inline.
 
 Before a deployment holding real patient data goes live, work through the

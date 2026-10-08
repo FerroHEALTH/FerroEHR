@@ -104,50 +104,6 @@ async fn seed_adl2_fixture(cdr: &str, user: &str, pass: &str) {
     println!("adl2 capture fixture seed -> {status}");
 }
 
-/// Store one FHIR mapping so the connector capture shows a populated mapping
-/// store instead of its empty state.
-///
-/// Idempotent for a capture pass: `201` created, `409` already there. Any other
-/// answer leaves the store empty and the capture simply shows that; the shot is
-/// never skipped for it. It binds the same template
-/// `scripts/ui-e2e.sh` seeds while bringing the stack up.
-async fn seed_fhir_mapping(cdr: &str, user: &str, pass: &str) {
-    let status = reqwest::Client::new()
-        .post(format!("{cdr}/ferroehr/rest/openehr/v1/admin/fhir_mapping"))
-        .basic_auth(user, Some(pass))
-        .json(&serde_json::json!({
-            "name": "observation-weight",
-            "enabled": true,
-            "definition": {
-                "resource_type": "Observation",
-                "profile_url": "http://hl7.org/fhir/StructureDefinition/vitalsigns",
-                "template_id": TEMPLATE_ID,
-                "subject": {
-                    "reference_path": "subject.reference",
-                    "namespace": "fhir",
-                    "strip_prefix": "Patient/"
-                },
-                "context": {
-                    "ctx/language": "en",
-                    "ctx/territory": "US",
-                    "ctx/composer_name": "fhir-connector"
-                },
-                "entries": [
-                    {
-                        "openehr_path": "minimal/minimal:0/quantity",
-                        "fhir_path": "valueQuantity.value",
-                        "transform": { "kind": "quantity", "unit_path": "valueQuantity.unit" }
-                    }
-                ]
-            }
-        }))
-        .send()
-        .await
-        .expect("seed the FHIR capture fixture")
-        .status();
-    println!("fhir capture fixture seed -> {status}");
-}
-
 /// Store one event subscription so the subscriptions capture shows a populated
 /// table instead of its empty state.
 ///
@@ -878,15 +834,6 @@ async fn dark_admin_screens(h: &Harness, dir: &Path) {
         "#subscriptions-disabled",
     )
     .await;
-    capture_dark_gated(
-        h,
-        dir,
-        "/fhir",
-        "fhir/fhir-dark",
-        "#fhir-screen",
-        "#fhir-disabled",
-    )
-    .await;
 }
 
 /// Capture every screen whose data the CDR classes as ADMIN work, in one
@@ -896,8 +843,7 @@ async fn dark_admin_screens(h: &Harness, dir: &Path) {
 /// signs in as the ORDINARY dev user, and a screen reading an `/admin` route
 /// answers that session `403` — so a capture taken there publishes the viewer's
 /// refusal card instead of the screen the book documents. That is not
-/// hypothetical: `/system`'s runtime-configuration card and the whole `/fhir`
-/// screen have exactly that shape (issue #2578). One session, one place to add
+/// hypothetical: `/system`'s runtime-configuration card has exactly that shape (issue #2578). One session, one place to add
 /// the next one.
 ///
 /// A fresh [`Harness`] rather than a re-login: a new browser session starts with
@@ -952,30 +898,6 @@ async fn capture_admin_screens(dir: &Path) {
         );
     } else {
         shot_to(&h, dir, "subscriptions/subscriptions").await;
-    }
-
-    // The FHIR connector: probe-gated on `[fhir] api_enabled`, which the E2E
-    // stack enables (docker/viewer/e2e-env.yml). The capture seeds one
-    // mapping first, so the book shows a populated store rather than the empty
-    // state the journeys leave behind.
-    if let Some(cdr) = env("UI_E2E_CDR_URL") {
-        seed_fhir_mapping(&cdr, &admin_user, &admin_pass).await;
-    }
-    h.goto("/fhir").await;
-    h.wait_css("#fhir-screen").await;
-    if is_present(&h, "#fhir-disabled").await {
-        println!(
-            "SKIP docs-shots: fhir not captured — the CDR under test runs with \
-             [fhir] api_enabled = false"
-        );
-    } else {
-        let dry_run = h.wait_css("#fhir-dry-run").await;
-        shot_to(&h, dir, "fhir/fhir").await;
-        // The two verification panels sit below the fold on the capture window,
-        // and a screenshot is the VIEWPORT: scroll them into view for their own
-        // shot, or the book documents them with a picture of the store.
-        dry_run.scroll_into_view().await;
-        shot_to(&h, dir, "fhir/fhir-verify").await;
     }
 
     // ── The ADMIN destructive operations. They are probe-gated on the CDR's

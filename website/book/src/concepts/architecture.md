@@ -24,7 +24,7 @@ flowchart TB
         rest["REST adapter (axum)<br/>authentication · authorization · wire mapping"]
         sm["Native service API<br/>(SM Platform Service Model)"]
         core["Platform: PG18 storage · versioning ·<br/>AQL→SQL engine · validation · signing"]
-        ext["Optional integrations<br/>(FHIR · events · multimedia — compiled in by cargo feature)"]
+        ext["Optional integrations<br/>(FHIR audit and terminology · events · multimedia — compiled in by cargo feature)"]
     end
 
     db[("PostgreSQL 18")]
@@ -50,9 +50,12 @@ regeneration. That layer is also published for reuse, as
 **The application layer is the server.** It holds everything the generated
 layer does not: storage, the query execution engine, validation, and security.
 This is where design choices specific to FerroEHR live. The optional
-integrations (FHIR R4, change events, S3 multimedia) sit beside it in their own
-crate behind additive cargo features, so a build without them contains none of
-their code; see [Beyond the core](../beyond-core/index.md).
+integrations (the FHIR audit rendering and terminology client, change events,
+S3 multimedia) sit beside it in their own crate behind additive cargo features,
+so a build without them contains none of their code; see
+[Beyond the core](../beyond-core/index.md). FHIR R4 resource mapping is not
+part of FerroEHR: it is [FerroBRIDGE](https://github.com/FerroHEALTH/FerroBRIDGE),
+a separate server that reaches FerroEHR over ITS-REST.
 
 What you actually deploy is small: **one self-contained server binary** plus
 PostgreSQL. No JVM, no language runtime, and a pure-Rust TLS stack. The

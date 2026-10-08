@@ -287,7 +287,6 @@ const CLINICAL_READ: &[(&str, &str)] = &[
     ),
     ("GET", "/message/export/{ehr_id}"),
     ("POST", "/message/export"),
-    ("GET", "/fhir/r4/{resource_type}"),
 ];
 
 /// Clinical writes (base-relative). The `/message` imports and the TDD
@@ -356,12 +355,6 @@ const CLINICAL_WRITE: &[(&str, &str)] = &[
     ("POST", "/message/import/{ehr_id}"),
     ("POST", "/message/tdd/{ehr_id}"),
     ("POST", "/message/tdd/{ehr_id}/batch"),
-    ("POST", "/fhir/r4/{resource_type}"),
-    // The ingest door's dry twin (#342): the same class as the door it
-    // previews — it exists for mapping development by callers allowed to
-    // ingest, and although it commits nothing it exercises the same
-    // mapping/template surface.
-    ("POST", "/fhir/r4/{resource_type}/$validate"),
 ];
 
 /// Admin-class reads (base-relative) — every one under the `/admin/` prefix
@@ -374,8 +367,6 @@ const ADMIN_READ: &[(&str, &str)] = &[
     ("GET", "/admin/report/versioned_composition/count"),
     ("GET", "/admin/event_subscription"),
     ("GET", "/admin/event_subscription/{subscription_id}"),
-    ("GET", "/admin/fhir_mapping"),
-    ("GET", "/admin/fhir_mapping/{mapping_id}"),
     // The storage-parity sweep mutates nothing and answers identifiers +
     // defect classes only — a pinned EXTENSION_READ_ROUTES read despite the
     // POST verb, so a read-only integrity auditor can run it (#2692).
@@ -425,9 +416,6 @@ const ADMIN_WRITE: &[(&str, &str)] = &[
     ("POST", "/admin/event_subscription"),
     ("PUT", "/admin/event_subscription/{subscription_id}"),
     ("DELETE", "/admin/event_subscription/{subscription_id}"),
-    ("POST", "/admin/fhir_mapping"),
-    ("PUT", "/admin/fhir_mapping/{mapping_id}"),
-    ("DELETE", "/admin/fhir_mapping/{mapping_id}"),
 ];
 
 /// The ITI-81 audit retrieval: the node's security-surveillance record, so the

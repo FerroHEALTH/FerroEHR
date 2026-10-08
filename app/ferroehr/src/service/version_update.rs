@@ -227,7 +227,7 @@ pub fn system_committer() -> PartyProxy {
 /// lifecycle, the server's own audit identity, no client signature, no
 /// attestations.
 ///
-/// The internal commit paths (FHIR ingest, TDD import) that synthesize
+/// The internal commit paths (TDD import) that synthesize
 /// content use this; wire commits carry the caller's merged envelope instead.
 /// It is a free function because `UPDATE_VERSION` is the generated ITS-REST
 /// contract type — foreign to this crate, so it can carry no inherent

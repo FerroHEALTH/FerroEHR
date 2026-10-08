@@ -60,8 +60,8 @@ can actually run: complete, openly developed, source-available, and
 measured against the specification itself. That is what FerroEHR is for.
 
 The whole thing is source-available under the Business Source License 1.1,
-with no open-core tier. RBAC/ABAC, ATNA audit, signatures, FHIR, events and
-the viewer are all in this repository under the same
+with no open-core tier. RBAC/ABAC, ATNA audit, signatures, events and the
+viewer are all in this repository under the same
 licence, and nothing is held back to be sold back to you. Reading, building,
 modifying and redistributing the source is free, and so is every
 non-production use. Production use is free for Non-Commercial Purposes and
@@ -177,11 +177,11 @@ on the documentation site.
 - **Change events:** a transactional outbox publishes every commit to
   AMQP/RabbitMQ with per-EHR ordering, filterable server-side
   subscriptions, and PHI-free payloads by default
-- **FHIR R4B connectors:** bidirectional and mapping-driven: ingest FHIR
-  resources as validated compositions with full provenance, expose
-  committed data through a FHIR read façade, emit FHIR resources on change.
-  This connector is to be removed once FerroBRIDGE, the separate FHIR bridge,
-  replaces it ([#3080](https://github.com/FerroHEALTH/FerroEHR/issues/3080))
+- **FHIR:** FHIR R4 resource mapping is
+  [FerroBRIDGE](https://github.com/FerroHEALTH/FerroBRIDGE), a separate server
+  that maps between FHIR and openEHR and reaches FerroEHR over ITS-REST;
+  FerroEHR itself renders its access log as FHIR `AuditEvent` (with the ITI-81
+  retrieval) and validates codes against external FHIR terminology servers
 - **Binary & object storage:** large multimedia is content-addressed into
   any S3-compatible store with cryptographic integrity verification;
   SeaweedFS works out of the box for self-hosted setups
@@ -414,7 +414,7 @@ flowchart TB
         core["ferroehr<br/>the platform library: PG18 node storage · versioning ·<br/>AQL→SQL engine · validation · signing · templates ·<br/>audit — one service module<br/>per SM Platform Service Model chapter"]
         bin["ferroehr-server<br/>the wiring-only binary"]
         viewer["ferroehr-viewer<br/>the Leptos SSR viewer (own OCI image,<br/>consumes the CDR strictly over ITS-REST)"]
-        ext["ferroehr-ext<br/>optional integrations behind additive features:<br/>FHIR conversion · AMQP events · multimedia store"]
+        ext["ferroehr-ext<br/>optional integrations behind additive features:<br/>FHIR audit and terminology · AMQP events · multimedia store"]
     end
 
     subgraph tools ["tools/* — generation + verification (not shipped)"]
@@ -562,7 +562,7 @@ deploys, and listed on
 
 ```shell
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 10.2.3 --set database.existingSecret=my-db-secret
+  --version 11.0.0 --set database.existingSecret=my-db-secret
 ```
 
 There is no HTTP chart repository, so `helm repo add` does not apply — OCI is the

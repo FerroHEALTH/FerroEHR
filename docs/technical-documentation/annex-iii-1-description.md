@@ -57,8 +57,8 @@ software that is not part of the EHR system itself"
   [`compliance/intended-purpose.md`](../../website/book/src/compliance/intended-purpose.md#the-security-environment-ferroehr-assumes).
 - Every connection FerroEHR opens on its own initiative, with what it carries:
   [`compliance/cra-risk-assessment.md`](../../website/book/src/compliance/cra-risk-assessment.md#outbound-data-flows-annex-i-part-i2g).
-- The optional integrations (terminology servers, change events, FHIR, S3
-  multimedia): [`beyond-core/index.md`](../../website/book/src/beyond-core/index.md).
+- The optional integrations (terminology servers, change events, the FHIR audit
+  feed, S3 multimedia): [`beyond-core/index.md`](../../website/book/src/beyond-core/index.md).
 - FerroBRIDGE, the other product of the EHR system, reads FerroEHR over the
   same REST API; the FerroEHR Viewer is a management interface over it
   ([`viewer/index.md`](../../website/book/src/viewer/index.md)).

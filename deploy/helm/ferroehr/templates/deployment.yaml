@@ -155,10 +155,6 @@ spec:
             - name: FERROEHR__EVENTS__URL_FILE
               value: {{ printf "%s/events.url" (include "ferroehr.secretMountPath" .) | quote }}
             {{- end }}
-            {{- if .Values.secrets.fhirOutboundUrl }}
-            - name: FERROEHR__FHIR__OUTBOUND__URL_FILE
-              value: {{ printf "%s/fhir.outbound.url" (include "ferroehr.secretMountPath" .) | quote }}
-            {{- end }}
             {{- if .Values.secrets.auditFhirFeedUrl }}
             - name: FERROEHR__AUDIT__FHIR_FEED__URL
               valueFrom:
@@ -353,10 +349,6 @@ spec:
               {{- if .Values.secrets.eventsUrl }}
                     - key: events.url
                       path: events.url
-              {{- end }}
-              {{- if .Values.secrets.fhirOutboundUrl }}
-                    - key: fhir.outbound.url
-                      path: fhir.outbound.url
               {{- end }}
               {{- if .Values.secrets.authOidcHmacSecret }}
                     - key: auth.oidc.hmac_secret

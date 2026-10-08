@@ -26,9 +26,9 @@ bin-only crate is untestable by construction — Book ch11.3).
   (#3190). Everything past that seam belongs to the crate that owns it:
   `ferroehr` API behaviour in `app/ferroehr/tests/it/`, the assembled
   `ferroehr-rest` router in `app/ferroehr-rest/tests/it/`. Parking either here
-  made them invisible to the owning crate's gate — the four that had been
-  (`persistence`, `telemetry`, `fhir_inbound`, `service_query`) were relocated
-  to their owners. The dev-dependency set is scoped to that seam (`anyhow`,
+  made them invisible to the owning crate's gate — the ones that had been
+  (`persistence`, `telemetry`, `service_query`) were relocated to their owners.
+  The dev-dependency set is scoped to that seam (`anyhow`,
   `assert_fs`, `clap`, `openehr-its`, `tokio`); a new dev-dep here is a signal
   the test belongs in another crate.
 - The bin target is named `ferroehr` (`[[bin]] name = "ferroehr"`; container

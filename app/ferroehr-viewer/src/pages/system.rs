@@ -95,7 +95,7 @@ const OPENAPI_FAMILIES: &[(&str, &str)] = &[
     ("terminology", "FerroEHR — Terminology"),
     ("relationships", "FerroEHR — Party Relationships"),
     ("events", "FerroEHR — Event Subscriptions"),
-    ("fhir", "FerroEHR — FHIR Connector"),
+    ("audit", "FerroEHR — Audit"),
     ("smart", "FerroEHR — SMART Discovery"),
 ];
 

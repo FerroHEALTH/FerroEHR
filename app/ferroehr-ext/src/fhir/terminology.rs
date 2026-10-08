@@ -87,6 +87,16 @@ pub struct TranslateMatch {
     pub display: Option<String>,
 }
 
+/// A resolved translation: the target code (and display, when the server
+/// returned one).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TranslatedCode {
+    /// The translated code in the target system.
+    pub code: String,
+    /// The target concept's display text.
+    pub display: Option<String>,
+}
+
 /// One member of a `ValueSet.expansion`, with its nested members.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ExpansionMember {

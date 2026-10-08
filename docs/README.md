@@ -27,7 +27,7 @@ ITS layer is generated from the vendored machine-readable specs by
 `openehr-codegen`; the application is idiomatic Rust of our own design on
 those crates, with its own PG18-native storage and typed AQL engine, four
 app crates with zero re-exports, an SM-aligned service layer, and enterprise
-capabilities — eventing, multi-tenancy, FHIR connectors, multimedia
+capabilities — eventing, multi-tenancy, multimedia
 externalization; acceptance is the openEHR conformance suite. See
 `architecture.md`.)
 

@@ -21,6 +21,8 @@ enable = true
 # renamed FerroEHR Viewer. mdBook writes an HTML shim at each old path so links
 # already published keep resolving
 # (https://rust-lang.github.io/mdBook/format/configuration/renderers.html).
+# The two FHIR connector pages were removed with the connector; their old paths
+# land on the section index.
 [output.html.redirect]
 "/admin-ui/index.html" = "../viewer/index.html"
 "/admin-ui/queries.html" = "../viewer/queries.html"
@@ -28,7 +30,9 @@ enable = true
 "/admin-ui/demographics.html" = "../viewer/demographics.html"
 "/admin-ui/terminology.html" = "../viewer/terminology.html"
 "/admin-ui/operations.html" = "../viewer/operations.html"
-"/admin-ui/fhir.html" = "../viewer/fhir.html"
+"/admin-ui/fhir.html" = "../viewer/index.html"
+"/viewer/fhir.html" = "index.html"
+"/beyond-core/fhir.html" = "index.html"
 "/admin-ui/subscriptions.html" = "../viewer/subscriptions.html"
 "/admin-ui/dark-mode.html" = "../viewer/dark-mode.html"
 

@@ -78,9 +78,12 @@
 - [Respond in English](respond-in-english.md) — always reply in English, even to Dutch messages
 - [Refs PR can close an issue](refs-pr-can-close-issue.md) — check closingIssuesReferences before merging a plan-only PR
 - [Usage report stays default-on (accepted risk)](usage-report-default-on-accepted-risk.md) — owner chose on-by-default over the #3580 opt-in reading; do not re-propose
-- [EHDS/CRA manufacturer posture](ehds-cra-manufacturer-posture.md) — Cadasto B.V. manufacturer per release (A73 adopted); FerroEHR+FerroBRIDGE one EHR system; v4.3.5 = readiness
+- [EHDS/CRA manufacturer posture](ehds-cra-manufacturer-posture.md) — Cadasto B.V. manufacturer per release (A73 adopted); FerroEHR+FerroBRIDGE one EHR system; v4.3.6 = readiness
 - [Migration headers keep the old holder](migration-headers-keep-old-holder.md) — released migrations keep "Vernum Projecten B.V."; editing breaks the sqlx checksum
 - [Tests run in PR CI](tests-run-in-pr-ci.md) — never run nextest/cargo test locally (RAM); local = fmt/clippy/check/doc; tell every worker
 - [Cadasto hosting and certifications](cadasto-hosting-and-certifications.md) — Cadasto may host FerroEHR (operator+processor); ISO 9001/27001/NEN 7510 are org-level, never "FerroEHR certified"
 - [Push PR fixes without asking](push-pr-fixes-without-asking.md) — fixing a red PR: commit + push to its branch, no permission prompt
 - [Stacked PRs after a squash merge](stacked-prs-after-squash.md) — rebase --onto the lower PR's last commit; lease-push to the exact remote sha
+- [Greenfield: breaking changes OK](greenfield-breaking-changes-ok.md) — remove superseded routes/keys in 4.3.x, no major bump
+- [FerroHEALTH is the mother name](ferrohealth-umbrella.md) — family-level docs (manufacturer, EHDS system, CRA overview, licensing) go to the FerroHEALTH book, not FerroEHR's
+- [Podman, not Docker](podman-not-docker.md) — owner runs podman; DOCKER_HOST to the podman socket for testkit

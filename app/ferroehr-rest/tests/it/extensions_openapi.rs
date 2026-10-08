@@ -65,7 +65,7 @@ const FAMILY_SLUGS: &[&str] = &[
     "relationships",
     "messaging",
     "events",
-    "fhir",
+    "audit",
     "smart",
 ];
 
@@ -106,7 +106,7 @@ fn extensions_doc_is_non_empty() {
         "/ferroehr/rest/openehr/v1/terminology",
         "/ferroehr/rest/openehr/v1/demographic/party_relationship",
         "/ferroehr/rest/openehr/v1/admin/event_subscription",
-        "/ferroehr/rest/openehr/v1/fhir/r4/{resource_type}",
+        "/ferroehr/rest/openehr/v1/fhir/r4/AuditEvent",
     ] {
         assert!(
             paths.contains_key(expected),
@@ -538,7 +538,6 @@ fn app_config() -> AppConfig {
             enabled: true,
             ..SmartConfig::default()
         },
-        fhir_api_enabled: true,
         terminology_api_enabled: true,
         events_admin_api: true,
         audit_organization_claim: None,

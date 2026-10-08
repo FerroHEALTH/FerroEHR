@@ -198,7 +198,6 @@ pub fn App() -> impl IntoView {
                             path=path!("subscriptions")
                             view=crate::pages::subscriptions::SubscriptionsPage
                         />
-                        <Route path=path!("fhir") view=crate::pages::fhir::FhirPage />
                         <Route
                             path=path!("operations")
                             view=crate::pages::operations::OperationsPage

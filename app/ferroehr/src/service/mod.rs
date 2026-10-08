@@ -212,12 +212,10 @@ pub struct FerroEhrService {
     /// [`QueryConfig::max_result_rows`](crate::service::query::config::QueryConfig::max_result_rows).
     query_result_ceiling: Option<i64>,
     /// Whether the transactional event outbox is written on every commit. The
-    /// outbox feeds the eventing extensions (AMQP publisher + FHIR outbound
-    /// emitter) — no openEHR spec governs eventing (our own extension). When no
-    /// consumer is configured the per-commit `event_outbox` INSERT (and its
-    /// envelope serialization) is pure overhead, so the binary gates it on
-    /// whether any consumer is configured on
-    /// (`events.enabled || fhir_outbound.enabled`). Defaults to `true` in
+    /// outbox feeds the AMQP publisher — no openEHR spec governs eventing (our
+    /// own extension). When the publisher is off the per-commit `event_outbox`
+    /// INSERT (and its envelope serialization) is pure overhead, so the binary
+    /// gates it on `events.enabled`. Defaults to `true` in
     /// [`Self::new`] so a bare service (tests, embeddings) never silently drops
     /// an event; the binary sets the real gate via [`Self::with_outbox_enabled`].
     outbox_enabled: bool,
@@ -535,7 +533,7 @@ impl FerroEhrService {
     }
 
     /// Set whether the transactional event outbox is written on commit. The
-    /// binary calls this with `events.enabled || fhir_outbound.enabled` so the
+    /// binary calls this with `events.enabled` so the
     /// `event_outbox` INSERT is skipped when no consumer will ever read it. The
     /// gate reflects whether the eventing subsystem is *configured on* (a
     /// boot-time flag), not whether subscribers currently exist — so commits

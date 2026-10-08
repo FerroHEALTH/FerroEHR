@@ -60,7 +60,7 @@ product of the EHR system Cadasto B.V. declares.
 
 | Component | Status | Where it stands |
 |---|---|---|
-| European interoperability software component for EHR systems | Open question ([#3080](https://github.com/FerroHEALTH/FerroEHR/issues/3080)) | Shipped by FerroBRIDGE, the other product of the EHR system Cadasto B.V. declares, which holds the mappings from openEHR to the European electronic health record exchange format and reads FerroEHR over ITS-REST. The format itself is set by implementing acts under Article 15(1) that have not been adopted, so no component can emit it yet. FerroEHR's in-tree FHIR connector is to be retired in favour of FerroBRIDGE. |
+| European interoperability software component for EHR systems | Open question | Shipped by FerroBRIDGE, the other product of the EHR system Cadasto B.V. declares, which holds the mappings from openEHR to the European electronic health record exchange format and reads FerroEHR over ITS-REST. The format itself is set by implementing acts under Article 15(1) that have not been adopted, so no component can emit it yet. FerroEHR itself carries no FHIR mapping. |
 | European logging software component for EHR systems | Partial | Shipped by FerroEHR: the access-event model, the audit store with its hash chain and the scheduled verification of that chain, the DICOM and FHIR renderings and the sinks, the middleware that records and classifies every API access, the ITI-81 retrieval, and the retention register. All five Annex II 3.2 elements are recorded, and every access record outside the demographic domain carries a category; a token that names a client application is recorded as that client, together with the professional it acts for when the deployment declares the claim that names one. The central store and review of the log are planned to move to FerroSYS in a later release. |
 
 ## Annex II: the essential requirements
@@ -82,9 +82,9 @@ the issue that closes it where one exists.
 
 | # | Requirement (our paraphrase) | Status | Evidence | Notes |
 |---|---|---|---|---|
-| 2.1 | A system that stores or intermediates personal electronic health data provides an interface giving access to it in the European electronic health record exchange format, through the European interoperability software component. | Open question | [The interoperability component is FerroBRIDGE's part of the system](intended-purpose.md#what-the-intended-purpose-excludes) | **Question:** This requirement is carried by FerroBRIDGE, which ships the interoperability component of the EHR system and reads FerroEHR over ITS-REST. The exchange format is set by implementing acts under Art. 15(1) that have not been adopted; the two EHDS implementing acts adopted so far, 2026/2083 (Art. 23) and 2026/2099 (Art. 16), set neither the format nor the Art. 36 common specifications. Tracked in [#3080](https://github.com/FerroHEALTH/FerroEHR/issues/3080) |
-| 2.2 | Such a system can receive personal electronic health data in that format, through the same component. | Open question | — | **Question:** Carried by FerroBRIDGE, and waiting on the same Art. 15(1) implementing acts as 2.1. Tracked in [#3080](https://github.com/FerroHEALTH/FerroEHR/issues/3080) |
-| 2.3 | A system designed to provide access to personal electronic health data can receive it in that format, through the same component. | Open question | — | **Question:** Carried by FerroBRIDGE, and waiting on the same Art. 15(1) implementing acts as 2.1. Tracked in [#3080](https://github.com/FerroHEALTH/FerroEHR/issues/3080) |
+| 2.1 | A system that stores or intermediates personal electronic health data provides an interface giving access to it in the European electronic health record exchange format, through the European interoperability software component. | Open question | [The interoperability component is FerroBRIDGE's part of the system](intended-purpose.md#what-the-intended-purpose-excludes) | **Question:** This requirement is carried by FerroBRIDGE, which ships the interoperability component of the EHR system and reads FerroEHR over ITS-REST. The exchange format is set by implementing acts under Art. 15(1) that have not been adopted; the two EHDS implementing acts adopted so far, 2026/2083 (Art. 23) and 2026/2099 (Art. 16), set neither the format nor the Art. 36 common specifications. |
+| 2.2 | Such a system can receive personal electronic health data in that format, through the same component. | Open question | — | **Question:** Carried by FerroBRIDGE, and waiting on the same Art. 15(1) implementing acts as 2.1. |
+| 2.3 | A system designed to provide access to personal electronic health data can receive it in that format, through the same component. | Open question | — | **Question:** Carried by FerroBRIDGE, and waiting on the same Art. 15(1) implementing acts as 2.1. |
 | 2.4 | A system that lets a user enter structured personal electronic health data allows entry with enough granularity to provide it in the exchange format. | Partial | [Templates and the archetype-constrained entry model](../templates-validation.md) | **Gap:** Clinical applications enter structured data through the REST API against operational templates, which constrain it to the archetype's granularity, finer than an exchange format is likely to need. That the granularity suffices cannot be shown until the Art. 15(1) implementing acts set the format's datasets. |
 | 2.5 | The components include no feature that prohibits, restricts or unduly burdens authorised access, sharing or permitted use. | Shipped | [The re-assessment against the authorisation defaults](claims-review.md#annex-ii-25-re-assessed); [The query surface over the whole stored record](../querying-aql.md); [Authorisation refuses or permits; it adds no commercial gate](../security.md) | — |
 | 2.6 | The components include no feature that prohibits, restricts or unduly burdens exporting the data in order to replace the system with another product. | Shipped | [Whole-repository dump and load](../operations-admin-apis.md); [EHR-Extract export](../beyond-core/messaging.md) | — |
@@ -97,6 +97,42 @@ the issue that closes it where one exists.
 | 3.2 | The European logging software component records, for every access event or group of events, at least the healthcare provider or other individuals who accessed the data, the specific natural person or persons who accessed it, the categories of data, the time and date, and the origin of the data. | Partial | [The five elements mapped onto fields, gaps included](../audit.md#the-ehds-logging-elements-mapped); [The category map a deployment declares](../installation/config-audit.md#auditcategories) | **Gap:** Points (a), (d) and (e) are recorded: the accessing organisation, the time, and the origins of the served data read from the FEEDER_AUDIT provenance openEHR stamps on content, with the true distinct count beside the capped set. Point (b) records the authenticated principal and, when the deployment declares how a token names the natural person, the acting mode and the professional a client application acts for. Point (c) is recorded through the `[audit.categories]` map the deployment declares from its templates and archetypes to the Art. 14(1) priority categories; FerroEHR ships no map, so until one is declared every access is recorded unclassified. Records in the demographic domain carry no category, because no priority category lives there. The FHIR rendering of a read or a query carries the origins of the served data. The DICOM rendering carries neither the organisation, the declared purpose, the origins nor the categories, because PS3.15 A.5 defines no element for them. |
 | 3.3 | The components include tools or mechanisms to review and analyse the log data, or support connecting external software that does. | Shipped | [Audit retrieval (IHE ATNA ITI-81) and the syslog and FHIR feeds](../audit.md) | — |
 | 3.4 | Components that store personal electronic health data support different retention periods and access rights that take the origin and category of the data into account. | Partial | [Retention periods keyed on a priority category](retention.md#keying-a-period-on-a-priority-category); [The access-log horizon in calendar years, and its floors](../installation/config-audit.md#auditstore-the-local-audit-record-repository); [Access rights per EHR, per role and per template](../security.md#abac-attribute-based-fine-grained) | **Gap:** A retention period can be keyed on the priority category of clinical content, through the category map the deployment declares, and an unclassified object takes the longest period configured for its kind. The access log's horizon is set in calendar years (`retention_years`), with a three-year floor in every EU Member State (Art. 9(2)) and a longer national floor where one applies. Access rights can be keyed on the template through ABAC; the category is not itself an authorisation attribute. Neither retention nor access rights are keyed on the ORIGIN of the data. The origins FerroEHR records are the `FEEDER_AUDIT` originating-system ids a sending system chooses, as free text, and data committed directly carries none, so a period keyed on an origin could neither be checked against a declared vocabulary, as a category is, nor reach the data without a feeder audit; keying on origin first needs a register of the origins a deployment recognises. The archival tier moves records without expiring them. |
+
+## The priority categories
+
+The six priority categories of personal electronic health data are Annex I of
+the regulation, and Annex II 2.1 to 2.3 require an EHR system to provide and
+receive them in the European electronic health record exchange format. That
+format is set by implementing acts under Article 15(1) that have not been
+adopted, so this table is not a conformance claim against it. What it says is
+narrower and checkable: which category has an operational template committed
+to this repository, and which FHIR resource a mapping for it would target.
+
+| Annex I | Category | Committed template | A profile mapping would target |
+|---|---|---|---|
+| 1 | Patient summaries | `corpus/templates/ckm/international-patient-summary.opt` | Bundle (IPS-shaped) over Patient, Condition, AllergyIntolerance, MedicationStatement |
+| 2 | Electronic prescriptions | `corpus/templates/ckm/eprescription-fhir.opt` | MedicationRequest |
+| 3 | Electronic dispensations | **No committed template** | MedicationDispense |
+| 4 | Medical imaging studies and related imaging reports | `corpus/templates/ckm/ccta-report.opt` | DiagnosticReport (+ ImagingStudy for the study itself) |
+| 5 | Medical test results, including laboratory and other diagnostic results | `corpus/templates/ckm/generic-lab-test-result.opt` | DiagnosticReport + Observation |
+| 6 | Discharge reports | **No committed template** | Composition (discharge summary) + Encounter |
+
+A category without a committed template is not one FerroEHR cannot store: the
+CDR stores whatever an operational template defines. It is a category with no
+committed example, so nothing in this repository demonstrates it end to end.
+
+The rightmost column says what a mapping for the category *would* target, not
+what exists. FerroEHR carries no FHIR mapping: mapping openEHR content to FHIR
+is the job of FerroBRIDGE (<https://github.com/FerroHEALTH/FerroBRIDGE>), the
+other product of the EHR system, which reads FerroEHR over ITS-REST. No mapping
+set for these categories ships with either product, and no test in this
+repository asserts a transform for them.
+
+Two of the example compositions behind the committed templates, the patient
+summary and the imaging report, were patched by hand rather than regenerated
+against a running server, which their pack's provenance records and
+[#1724](https://github.com/FerroHEALTH/FerroEHR/issues/1724) tracks. They are
+real CKM templates either way.
 
 ## The position this page rests on
 

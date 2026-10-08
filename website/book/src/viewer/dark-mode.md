@@ -60,8 +60,3 @@ and outcome filters](img/audit/audit-dark.png)
 
 ![The event subscriptions screen in dark mode: the subscription table and its
 predicates](img/subscriptions/subscriptions-dark.png)
-
-## FHIR connector
-
-![The FHIR connector admin in dark mode: the mapping store and the
-verification panels](img/fhir/fhir-dark.png)

@@ -124,3 +124,4 @@ source of every release is public at its tag.
 | Date | Release | Change |
 |---|---|---|
 | 2026-10-06 | before 4.3.5 | First version of the tree (#3616) |
+| 2026-10-08 | 4.3.6 | The in-tree FHIR connector is removed (#3080); the ITI-81 `GET /fhir/r4/AuditEvent` route is unchanged and is now the only route in `ferroehr-rest::extensions::fhir` |

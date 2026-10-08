@@ -67,15 +67,13 @@ components:
   - id: interoperability
     name: European interoperability software component for EHR systems
     status: open
-    issues: [3080]
     note: >-
       Shipped by FerroBRIDGE, the other product of the EHR system Cadasto B.V.
       declares, which holds the mappings from openEHR to the European
       electronic health record exchange format and reads FerroEHR over
       ITS-REST. The format itself is set by implementing acts under Article
       15(1) that have not been adopted, so no component can emit it yet.
-      FerroEHR's in-tree FHIR connector is to be retired in favour of
-      FerroBRIDGE.
+      FerroEHR itself carries no FHIR mapping.
   - id: logging
     name: European logging software component for EHR systems
     status: partial
@@ -209,7 +207,6 @@ requirements:
           Art. 15(1) that have not been adopted; the two EHDS implementing
           acts adopted so far, 2026/2083 (Art. 23) and 2026/2099 (Art. 16),
           set neither the format nor the Art. 36 common specifications.
-        issues: [3080]
         evidence:
           - text: The interoperability component is FerroBRIDGE's part of the system
             href: intended-purpose.md#what-the-intended-purpose-excludes
@@ -221,7 +218,6 @@ requirements:
         question: >-
           Carried by FerroBRIDGE, and waiting on the same Art. 15(1)
           implementing acts as 2.1.
-        issues: [3080]
       - id: "2.3"
         summary: >-
           A system designed to provide access to personal electronic health
@@ -230,7 +226,6 @@ requirements:
         question: >-
           Carried by FerroBRIDGE, and waiting on the same Art. 15(1)
           implementing acts as 2.1.
-        issues: [3080]
       - id: "2.4"
         summary: >-
           A system that lets a user enter structured personal electronic
@@ -485,30 +480,26 @@ technical_documentation:
 # demonstrate the export end to end.
 #
 # `fhir` names the resource type a mapping for that category would target.
-# The façade is mapping-driven and resource-agnostic: no mapping set ships,
-# and a deployment registers its own. That is the honest state, and the
-# matrix says it rather than implying a catalogue exists.
+# FerroEHR carries no FHIR mapping: mapping is FerroBRIDGE's, and no mapping
+# set ships with either product. The matrix says that rather than implying a
+# catalogue exists.
 priority_categories:
   - id: "1"
     name: Patient summaries
     template: international-patient-summary
     fhir: Bundle (IPS-shaped) over Patient, Condition, AllergyIntolerance, MedicationStatement
-    state: template
   - id: "2"
     name: Electronic prescriptions
     template: eprescription-fhir
     fhir: MedicationRequest
-    state: template
   - id: "3"
     name: Electronic dispensations
     template: ""
     fhir: MedicationDispense
-    state: no-template
   - id: "4"
     name: Medical imaging studies and related imaging reports
     template: ccta-report
     fhir: DiagnosticReport (+ ImagingStudy for the study itself)
-    state: template
     note: >-
       The committed template is a report. The imaging STUDY — the pixel data
       and its DICOM metadata — is not openEHR content and is not stored here;
@@ -517,12 +508,10 @@ priority_categories:
     name: Medical test results, including laboratory and other diagnostic results
     template: generic-lab-test-result
     fhir: DiagnosticReport + Observation
-    state: template
   - id: "6"
     name: Discharge reports
     template: ""
     fhir: Composition (discharge summary) + Encounter
-    state: no-template
 
 # The owner decisions that settle who carries the manufacturer's duties and
 # what the EHR system consists of (#3606, 2026-10-06). Each is a decision, with

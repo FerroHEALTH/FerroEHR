@@ -378,9 +378,6 @@
         "eventsUrl": {
           "type": "string"
         },
-        "fhirOutboundUrl": {
-          "type": "string"
-        },
         "basicUserPasswordHashes": {
           "description": "Keyed by username; each username also needs an entry under config.auth.basic.users, or rendering fails.",
           "type": "object",
@@ -634,40 +631,6 @@
                 "boolean",
                 "null"
               ]
-            }
-          }
-        },
-        "fhir": {
-          "type": [
-            "object",
-            "null"
-          ],
-          "properties": {
-            "api_enabled": {
-              "type": [
-                "boolean",
-                "null"
-              ]
-            },
-            "outbound": {
-              "type": [
-                "object",
-                "null"
-              ],
-              "properties": {
-                "enabled": {
-                  "type": [
-                    "boolean",
-                    "null"
-                  ]
-                },
-                "exchange": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                }
-              }
             }
           }
         },

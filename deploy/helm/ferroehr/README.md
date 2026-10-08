@@ -2,7 +2,7 @@
 
 Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1). A single static binary deployed with a hardened-by-default security posture: runs as a non-root, read-only-rootfs workload whose NetworkPolicy admits its serving port only, and that connects to an EXTERNAL PostgreSQL 18 as an unprivileged app role, with schema preparation on its own credential. A stock install runs the sandbox deployment profile, which must not hold real patient data; set config.deployment_profile for a production holder.
 
-![Version: 10.2.3](https://img.shields.io/badge/Version-10.2.3-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 4.3.4](https://img.shields.io/badge/AppVersion-4.3.4-informational?style=flat-square)
+![Version: 11.0.0](https://img.shields.io/badge/Version-11.0.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 4.3.4](https://img.shields.io/badge/AppVersion-4.3.4-informational?style=flat-square)
 
 FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0 at the
 API, AQL 1.1 as the query language, PostgreSQL 18-native storage, shipped as a
@@ -44,7 +44,7 @@ to add; `helm repo add` does not apply to this chart:
 
 ```console
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 10.2.3 \
+  --version 11.0.0 \
   --namespace ferroehr --create-namespace \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=4.3.4
@@ -58,7 +58,7 @@ They are independent SemVer lines and they move independently:
 
 | What | Set with | This release |
 |---|---|---|
-| the **chart** (templates, defaults, this document) | `--version` | `10.2.3` |
+| the **chart** (templates, defaults, this document) | `--version` | `11.0.0` |
 | the **server image** | `image.tag` | `4.3.4` |
 
 `appVersion` is the image the chart defaults to; pinning `image.tag` explicitly
@@ -70,7 +70,7 @@ The chart carries two keyless Sigstore artifacts, and they answer different
 questions. A **cosign signature:** who signed this:
 
 ```console
-cosign verify ghcr.io/ferrohealth/charts/ferroehr:10.2.3 \
+cosign verify ghcr.io/ferrohealth/charts/ferroehr:11.0.0 \
   --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/publish-chart\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -78,7 +78,7 @@ cosign verify ghcr.io/ferrohealth/charts/ferroehr:10.2.3 \
 A **SLSA build provenance attestation:** what source it was built from, and how:
 
 ```console
-gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:10.2.3 \
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:11.0.0 \
   -R FerroHEALTH/FerroEHR
 gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:4.3.4 \
   -R FerroHEALTH/FerroEHR
@@ -227,10 +227,6 @@ Kubernetes: `>=1.36.0-0`
 | config.events.enabled | bool | `false` |  |
 | config.events.exchange | string | `"ferroehr.events"` |  |
 | config.events.tls | bool | `false` |  |
-| config.fhir.api_enabled | bool | `false` |  |
-| config.fhir.outbound.enabled | bool | `false` |  |
-| config.fhir.outbound.exchange | string | `"ferroehr.fhir"` |  |
-| config.fhir.outbound.tls | bool | `false` |  |
 | config.files | object | `{}` |  |
 | config.log.format | string | `"json"` |  |
 | config.management.base_path | string | `"/management"` |  |
@@ -360,7 +356,6 @@ Kubernetes: `>=1.36.0-0`
 | secrets.authOidcHmacSecret | string | `""` | Symmetric HS256 secret for [auth.oidc] (dev/test). MOUNTED as /etc/ferroehr-secrets/auth.oidc.hmac_secret (auth.oidc.hmac_secret_file). |
 | secrets.basicUserPasswordHashes | object | `{}` | Argon2id password hashes for [[auth.basic.users]], keyed by username. Each is MOUNTED as /etc/ferroehr-secrets/auth.basic.users.<username>.password_hash and the chart injects the matching `password_hash_file` into the rendered TOML. Declare the user itself — `username`, `roles` — under config.auth.basic.users; a username with no matching entry is a render error. A hash under `config:` is refused: it would reach the ConfigMap. |
 | secrets.eventsUrl | string | `""` | AMQP broker URL for [events] (carries credentials). MOUNTED as /etc/ferroehr-secrets/events.url (events.url_file). |
-| secrets.fhirOutboundUrl | string | `""` | AMQP broker URL for [fhir.outbound] (carries credentials). MOUNTED as /etc/ferroehr-secrets/fhir.outbound.url (fhir.outbound.url_file). |
 | secrets.multimediaAccessKeyId | string | `""` | S3 access key id for [multimedia] → FERROEHR__MULTIMEDIA__ACCESS_KEY_ID env. Not a secret in the server's own model (it is reported unredacted by /management/env); prefer IRSA/Workload-Identity (leave empty) on cloud. |
 | secrets.multimediaSecretAccessKey | string | `""` | S3 secret access key for [multimedia]. MOUNTED as /etc/ferroehr-secrets/multimedia.secret_access_key (multimedia.secret_access_key_file). |
 | secrets.signingKeyPassphrase | string | `""` | PGP key passphrase (config.signing.mode=pgp). MOUNTED as /etc/ferroehr-secrets/signing.key_passphrase (signing.key_passphrase_file). |

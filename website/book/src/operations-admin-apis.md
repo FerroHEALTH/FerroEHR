@@ -631,14 +631,13 @@ other `Content-Type` is **415**.
 
 ## Other routes under `{base}/admin`
 
-Three further families share the `/admin` path prefix but **not** the
-`admin.enabled` switch: each has its own, and each answers **404** (not
-`405`) while its own switch is off, because the group is simply not serving:
+One further family shares the `/admin` path prefix but **not** the
+`admin.enabled` switch: it has its own, and answers **404** (not `405`) while
+that switch is off, because the group is simply not serving:
 
 | Routes | Own switch | Documented in |
 |---|---|---|
 | `{base}/admin/event_subscription…` | `events.admin_api` | [Change events (AMQP)](beyond-core/amqp.md) |
-| `{base}/admin/fhir_mapping…` | `fhir.api_enabled` | [FHIR connectors](beyond-core/fhir.md) |
 
 They are still admin-class routes for authorization, so the same **401** /
 **403** split applies.

@@ -133,10 +133,7 @@ pub fn gap_text(code: &str) -> String {
         "plaintext_listener" => {
             "a listener serves plain HTTP on an address reachable from the network"
         }
-        "plaintext_broker" => {
-            "change events or FHIR resources are published to a message broker without \
-             encryption"
-        }
+        "plaintext_broker" => "change events are published to a message broker without encryption",
         "plaintext_audit_feed" => {
             "access records are sent to the audit repository without encryption"
         }

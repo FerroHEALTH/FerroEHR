@@ -15,8 +15,8 @@ use ferroehr::config::smart::SmartConfig;
 /// from the root [`ferroehr::config::FerroEhrConfig`].
 ///
 /// Not a serde root — it is built in code, so extension-group toggles are
-/// plain `bool`s lifted from their owning sections (`[fhir].api_enabled`,
-/// `[terminology].api_enabled`, `[events].admin_api`).
+/// plain `bool`s lifted from their owning sections
+/// (`[terminology].api_enabled`, `[events].admin_api`).
 #[derive(Debug, Clone, Default)]
 pub struct AppConfig {
     /// `[server]` — listener + REST surface + System-Options identity.
@@ -27,8 +27,6 @@ pub struct AppConfig {
     pub admin: AdminConfig,
     /// `[smart]` — SMART App Launch resource-server posture.
     pub smart: SmartConfig,
-    /// `[fhir].api_enabled` — mount the FHIR R4 inbound façade + admin mapping.
-    pub fhir_api_enabled: bool,
     /// `[terminology].api_enabled` — mount the terminology extension API.
     pub terminology_api_enabled: bool,
     /// `[events].admin_api` — mount the `/admin/event_subscription` CRUD.
@@ -77,7 +75,6 @@ mod tests {
         assert!(c.auth.enabled);
         assert!(!c.admin.enabled);
         assert!(!c.smart.enabled);
-        assert!(!c.fhir_api_enabled);
         assert!(!c.terminology_api_enabled);
         assert!(!c.events_admin_api);
     }

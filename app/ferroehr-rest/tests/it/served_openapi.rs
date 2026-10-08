@@ -1400,20 +1400,6 @@ const NON_SPEC_FAMILIES: &[NonSpecFamily] = &[
         operations: 5,
     },
     NonSpecFamily {
-        label: "the FHIR R4 connector + read facade",
-        prefixes: &["/ferroehr/rest/openehr/v1/fhir/r4/{resource_type}"],
-        flag: "no openehr spec governs this",
-        // Ingest, the read facade, and the ingest door's `$validate` dry
-        // twin (#342).
-        operations: 3,
-    },
-    NonSpecFamily {
-        label: "the FHIR mapping store",
-        prefixes: &["/ferroehr/rest/openehr/v1/admin/fhir_mapping"],
-        flag: "no openehr spec governs this",
-        operations: 5,
-    },
-    NonSpecFamily {
         // IHE ITI-81 is its own (non-openEHR) basis; the flag still has to say
         // that no openEHR spec governs the endpoint.
         label: "the ITI-81 ATNA audit retrieval",

@@ -38,7 +38,7 @@ kubectl -n ferroehr create secret generic ferroehr-db \
   --from-literal=FERROEHR__DB__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 10.2.3 -n ferroehr \
+  --version 11.0.0 -n ferroehr \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=4.3.4
 ```
@@ -55,7 +55,7 @@ helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
 reference. To read the chart's metadata without installing it:
 
 ```shell
-helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 10.2.3
+helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 11.0.0
 ```
 
 ### Pin two versions, not one
@@ -68,7 +68,7 @@ against.
 
 | | Selects | Pin with | Line |
 |---|---|---|---|
-| Chart version | templates, values schema, defaults | `--version 10.2.3` | SemVer over the chart's own contract |
+| Chart version | templates, values schema, defaults | `--version 11.0.0` | SemVer over the chart's own contract |
 | Image tag | the server binary | `--set image.tag=4.3.4` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
@@ -168,7 +168,7 @@ image, and FerroTERM.
 > the image itself as the authority:
 >
 > ```shell
-> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 10.2.3 \
+> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 11.0.0 \
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
@@ -206,8 +206,8 @@ therefore classifies every key it renders and takes one of two actions.
 
 **A secret the chart routes:** `auth.oidc.hmac_secret`, `signing.key_passphrase`,
 `multimedia.secret_access_key`, a Basic user's `password_hash`, a terminology
-`client_secret`, and the four URL-shaped ones (`db.url`, `events.url`,
-`fhir.outbound.url`, `audit.fhir_feed.url`) has a `secrets:` key of its own, so
+`client_secret`, and the three URL-shaped ones (`db.url`, `events.url`,
+`audit.fhir_feed.url`) has a `secrets:` key of its own, so
 a value under `config:` is a mistake and fails the render, naming the key that
 belongs there:
 
@@ -303,7 +303,7 @@ the TLS Secret and the ingress controller's namespace in it are examples.
 Replace them in a values file of your own and pass both:
 
 ```shell
-helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 10.2.3 --untar
+helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 11.0.0 --untar
 helm install ferroehr ./ferroehr -n ferroehr \
   -f ./ferroehr/values-production.yaml -f my-site-values.yaml
 ```
@@ -426,7 +426,7 @@ the same way: put the token the licensor issued under `config.files` as
 it the pod runs under the `non-commercial` grant every build embeds (see
 [Licensing & legal](../licensing.md#installing-a-commercial-licence)). Secret-bearing scalar values go under
 `secrets:`: `authOidcHmacSecret`, `signingKeyPassphrase`, `eventsUrl`,
-`fhirOutboundUrl`, `auditFhirFeedUrl`, `basicUserPasswordHashes`,
+`auditFhirFeedUrl`, `basicUserPasswordHashes`,
 `multimediaAccessKeyId`, `multimediaSecretAccessKey`,
 `terminologyOauth2ClientSecrets`, and the database DSN comes from
 `database.existingSecret` (key `database.existingSecretKey`, default
@@ -448,7 +448,7 @@ asks for a read-only volume instead.
 | `secrets.multimediaSecretAccessKey` | mounted at `/etc/ferroehr-secrets/multimedia.secret_access_key` |
 | `secrets.basicUserPasswordHashes` (per username) | mounted at `/etc/ferroehr-secrets/auth.basic.users.<username>.password_hash`; the chart injects the matching `password_hash_file` |
 | `secrets.terminologyOauth2ClientSecrets` (per client) | mounted at `/etc/ferroehr-secrets/terminology.external.oauth2_clients.<name>.client_secret`; the chart injects the matching `client_secret_file` |
-| `secrets.eventsUrl`, `secrets.fhirOutboundUrl` | mounted at `/etc/ferroehr-secrets/events.url` and `…/fhir.outbound.url` |
+| `secrets.eventsUrl` | mounted at `/etc/ferroehr-secrets/events.url` |
 | `secrets.auditFhirFeedUrl` | env; `audit.fhir_feed.url` is the only credential-bearing key with no `*_file` sibling |
 | `secrets.multimediaAccessKeyId` | env; an access key *id* is not secret (it is reported unredacted by the management surface's `env` endpoint) |
 
@@ -678,7 +678,7 @@ config:
 
 ```shell
 helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 10.2.3 -n ferroehr --reuse-values \
+  --version 11.0.0 -n ferroehr --reuse-values \
   --set config.query.plan_cache_capacity=512
 ```
 
@@ -716,8 +716,6 @@ is an explicit, auditable decision:
 | RBAC | `config.authz.rbac.enabled` | **on** | The coarse role gate (active while `config.auth.enabled`). |
 | ABAC | `config.authz.abac.enabled` | off | Cedar (policies via a `config.files` mount) or a remote policy decision point. |
 | Eventing → AMQP | `config.events.enabled` | off | Envelopes are **PHI-free** by design. Use `config.events.tls: true`; URL via `secrets.eventsUrl`. |
-| FHIR inbound/façade | `config.fhir.api_enabled` | off | Read façade + inbound mapping. |
-| FHIR outbound → AMQP | `config.fhir.outbound.enabled` | off | ⚠ **Carries PHI** (the mapped FHIR resource). Separate exchange; TLS broker only; URL via `secrets.fhirOutboundUrl`. |
 | S3 multimedia | `config.multimedia.enabled` | off | ⚠ Offloaded blobs are PHI. Private, encrypted, HTTPS bucket; keys via `secrets.multimediaAccessKeyId` and `secrets.multimediaSecretAccessKey`. |
 | External terminology | `config.terminology.external.enabled` | off | FHIR terminology server; the provider map is more `config.terminology.external.providers` keys. To run one in the cluster instead, use `terminology.enabled` ([FerroTERM](#ferroterm-a-terminology-server-beside-the-cdr-off-by-default)), which sets these keys for you. |
 | ATNA audit trail | `config.audit.enabled` | **on** | On with the local store only; forwarding (`config.audit.syslog`, `config.audit.fhir_feed`) is opt-in per sink. |
@@ -779,7 +777,7 @@ running. It is the Helm equivalent of the
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 10.2.3 -n ferroehr --reuse-values \
+  --version 11.0.0 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
@@ -1020,7 +1018,7 @@ Preview an upgrade against what you have installed with
 `helm diff`, or render the new chart version and read it:
 
 ```shell
-helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 10.2.3 \
+helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 11.0.0 \
   -n ferroehr -f my-values.yaml | less
 ```
 

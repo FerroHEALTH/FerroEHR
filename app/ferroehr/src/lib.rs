@@ -29,9 +29,8 @@
 //! - [`storage`] — the decomposed node model, node codec, and row I/O.
 //! - [`db`] — pool, settings, migrators.
 //! - [`telemetry`] — observability infrastructure.
-//! - [`extensions`] — quarantined enterprise extensions (eventing, FHIR
-//!   connector, multimedia offload), each off by default behind its
-//!   own config gate.
+//! - [`extensions`] — quarantined enterprise extensions (eventing,
+//!   multimedia offload), each off by default behind its own config gate.
 //! - [`manufacturer`] — the manufacturer every surface names, and [`report`]
 //!   — the redacted deployment report `ferroehr report` writes.
 //! - [`support`] — the support period of this release, which every identity

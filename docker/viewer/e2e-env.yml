@@ -10,14 +10,12 @@
 # `keycloak` to 127.0.0.1). The client secret is the shipped DEV realm's
 # (docker/keycloak/import) — test-only, never a production credential.
 #
-# The CDR block turns three opt-in extensions on for the run, all of which
+# The CDR block turns two opt-in extensions on for the run, both of which
 # answer `404` as if unmounted while they are off — so the viewer's journeys
 # over them would otherwise have nothing but a disabled empty state to drive:
-# the terminology surface (`[terminology] api_enabled`), the FHIR connector
-# (`[fhir] api_enabled`, which gates both `/fhir/r4/*` and the
-# `/admin/fhir_mapping` store) and the event-subscription admin API
-# (`[events] admin_api`). The mechanical `__` env mapping addresses the same
-# TOML keys (app/ferroehr/assets/ferroehr.default.toml).
+# the terminology surface (`[terminology] api_enabled`) and the
+# event-subscription admin API (`[events] admin_api`). The mechanical `__` env
+# mapping addresses the same TOML keys (app/ferroehr/assets/ferroehr.default.toml).
 #
 # `[events] admin_api` is deliberately alone: the subscription CRUD is a
 # database store, so it needs no broker and no `[events] enabled` — turning the
@@ -27,7 +25,6 @@ services:
   ferroehr:
     environment:
       FERROEHR__TERMINOLOGY__API_ENABLED: "true"
-      FERROEHR__FHIR__API_ENABLED: "true"
       FERROEHR__EVENTS__ADMIN_API: "true"
 
   ferroehr-viewer:

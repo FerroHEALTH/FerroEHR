@@ -39,7 +39,7 @@ use crate::extensions::access::authz::roles::claim_string;
 ///
 /// Definitions (templates, archetypes, stored-query texts), terminology, the
 /// aggregate counts of `/admin/report`, and the admin surfaces that manage
-/// configuration, mappings, subscriptions, the retention policy, templates and
+/// configuration, subscriptions, the retention policy, templates and
 /// stored queries hold no record of a person. The list is closed on purpose: an
 /// unlisted route, including any route added later, is judged patient data.
 const NO_PATIENT_DATA: &[&str] = &[
@@ -47,7 +47,6 @@ const NO_PATIENT_DATA: &[&str] = &[
     "/terminology",
     "/admin/report",
     "/admin/config",
-    "/admin/fhir_mapping",
     "/admin/event_subscription",
     "/admin/retention/policy",
     "/admin/template",
@@ -281,7 +280,7 @@ mod tests {
             "/admin/ehr/{ehr_id}",
             "/admin/load",
             "/message/export",
-            "/fhir/r4/{resource_type}",
+            "/fhir/r4/AuditEvent",
             "/admin/retention/due",
             "/admin/configuration-of-something-new",
         ] {

@@ -289,7 +289,6 @@ unless its key is set, so add only the rows you have switched on:
 | FerroTERM in the cluster | `terminology.enabled` | 8080 | in-cluster, and the **chart renders this rule itself** — it chose the destination when it wired the CDR at the Service, so you do not add it to `rules`. Omitted, terminology would fail silently: under the shipped fail-open posture an unresolvable binding is accepted, so nothing refuses and nothing logs. |
 | Terminology token endpoint | `config.terminology.external.oauth2_clients.<name>.token_url` | 443 | off-cluster |
 | AMQP broker (events) | `config.events.enabled` plus `secrets.eventsUrl` | 5672, or 5671 with `config.events.tls` | in-cluster |
-| AMQP broker (FHIR outbound) | `config.fhir.outbound.enabled` plus `secrets.fhirOutboundUrl` | 5672 / 5671 | in-cluster |
 | Object store | `config.multimedia.enabled` plus `config.multimedia.endpoint` (unset means AWS regional resolution) | 443, or the endpoint's | off-cluster |
 | Syslog audit repository | `config.audit.syslog.enabled` | 514 UDP, or 6514 TCP with `config.audit.syslog.transport: tls` | off-cluster |
 | FHIR audit repository | `config.audit.fhir_feed.enabled` plus `secrets.auditFhirFeedUrl` | 443 | off-cluster |

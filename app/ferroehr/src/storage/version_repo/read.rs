@@ -527,8 +527,8 @@ pub async fn read_currents(
 }
 
 /// Read a specific version by its STORAGE ORDINAL (`sys_version`) — for internal
-/// callers that key rows by ordinal (the FHIR mapping table, extract export
-/// iteration), never for wire version ids.
+/// callers that key rows by ordinal (extract export iteration), never for wire
+/// version ids.
 ///
 /// # Errors
 /// Returns [`StorageError`] on a driver/reassembly failure.

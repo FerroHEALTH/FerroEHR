@@ -1,9 +1,9 @@
 # `ferroehr-ext` — the optional-integration crate (feature-gated)
 
 The carve-out target for the platform's OPTIONAL integrations (#1890):
-`fhir` (mapping engine, outbound publisher, feeder-audit probe, the typed
-FHIR surface — the ATNA `AuditEvent` renderer and the
-terminology-response decoder), `events` (subscriptions + publisher
+`fhir` (the typed FHIR surface — the ATNA `AuditEvent` renderer and the
+terminology-response decoder; FHIR resource mapping is FerroBRIDGE's, not
+this crate's), `events` (subscriptions + publisher
 transports), `multimedia` (blob store/offload). One ADDITIVE cargo feature
 per integration; the shipped binary builds all-on, slim deployments compile
 integrations out.
@@ -17,10 +17,9 @@ integrations out.
 - **No openEHR spec governs these surfaces** — flag every behaviour decision
   as our own design; vendor implementations are prior art only. FHIR wire
   facts still cite official HL7/docs.rs sources.
-- **Two FHIR release identities, deliberately** (`src/fhir/mod.rs` §Release
-  identity): the CONNECTOR speaks **R4** (its wire is `/fhir/r4`; every
-  resource it builds is outside R4B's changed set, so the documents are valid
-  under either release) and cites `hl7.org/fhir/R4/…`; the TERMINOLOGY
+- **Two FHIR release identities, deliberately** (`src/fhir/mod.rs`): the
+  `AuditEvent` renderer (`fhir::audit`) serves the ITI-81 retrieval under
+  `/fhir/r4`, and the resource is unchanged between R4 and R4B; the TERMINOLOGY
   decoder (`fhir::terminology`) speaks **R4B** because the release belongs to
   the external server it reads, and cites `hl7.org/fhir/R4B/…`. Keep a new
   citation on the side its subsystem is on.
@@ -33,7 +32,7 @@ integrations out.
 - Zero re-exports. The serde CONFIG sections stay in the `ferroehr` config
   tree (they carry `Secret`/`SecretUrl` and the tree's redaction semantics);
   this crate takes plain runtime parameter structs at construction
-  (`BlobStoreParams`, the events/AMQP url, `MappedSubject`) — the platform's
+  (`BlobStoreParams`, the events/AMQP url) — the platform's
   gated glue maps config → params.
 - Features are additive — no `compile_error!` pairs; the `--all-features`
   workspace lanes stay valid.

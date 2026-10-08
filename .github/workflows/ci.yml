@@ -1234,15 +1234,15 @@ jobs:
   # in CI ever built the server WITHOUT the optional integrations: every
   # `require_disabled` refusal path, every `#[cfg(not(feature = …))]` block and
   # the additive feature wiring of #1890 were compiled by no lane at all. That
-  # is how a wrong gate on the FHIR outbound emitter stayed latent until #2358,
-  # where `--features events` without `fhir` did not compile.
+  # is how a wrong feature gate stayed latent until #2358, where
+  # `--features events` without `fhir` did not compile.
   #
-  # Three feature sets, each a real deployment shape: the slim CDR, and each
-  # single integration enabled on top of it. `fhir` pulls `events` in by its own
-  # feature edge, so the `events`-only lane is the one that proves the gates are
-  # not silently coupled the other way. clippy, not check: the deny-tier lints
-  # must cover the gated code too. No tests — the feature graphs are compile
-  # properties, and the test job owns behaviour.
+  # Three feature sets, each a real deployment shape: the slim CDR, and the
+  # `events` and the `fhir` integration each enabled on top of it. Neither
+  # implies the other, so each lane proves the gates are not silently coupled.
+  # clippy, not check: the deny-tier lints must cover the gated code too. No
+  # tests — the feature graphs are compile properties, and the test job owns
+  # behaviour.
   feature-combos:
     name: clippy (slim server feature combos)
     needs: changes

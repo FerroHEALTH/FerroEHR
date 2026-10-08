@@ -112,8 +112,8 @@ module.**
   at `corpus/fixtures/service`, reached as `../../corpus/fixtures/service`
   from `CARGO_MANIFEST_DIR`; a test in this crate never reaches into another
   crate's tree either. A new suite is a module registered in `main.rs`, never
-  a new top-level `tests/*.rs`. The three container suites (`events_amqp`,
-  `fhir_outbound_amqp`, `multimedia_s3`) are serialized by the nextest
+  a new top-level `tests/*.rs`. The two container suites (`events_amqp`,
+  `multimedia_s3`) are serialized by the nextest
   `containers` group, which matches them by module prefix — renaming one of
   those modules means updating `.config/nextest.toml`.
 - Gates: `cargo clippy -p ferroehr --all-targets` +

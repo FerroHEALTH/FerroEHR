@@ -36,7 +36,7 @@ max-threads = 1
 # the container tests, so a new test in these modules is serialized by default:
 # the safe direction is a container test that waits, never one that does not.
 [[profile.default.overrides]]
-filter = 'package(ferroehr) & binary(it) & test(/^(events_amqp|fhir_outbound_amqp|multimedia_s3|adl2_vetdf_ferroterm)::/) - test(/^multimedia_s3::(disabled_by_default_stores_inline_verbatim|unreachable_store_refuses_expansion_instead_of_answering_silently)$/)'
+filter = 'package(ferroehr) & binary(it) & test(/^(events_amqp|multimedia_s3|adl2_vetdf_ferroterm)::/) - test(/^multimedia_s3::(disabled_by_default_stores_inline_verbatim|unreachable_store_refuses_expansion_instead_of_answering_silently)$/)'
 test-group = 'containers'
 retries = 1
 
@@ -52,6 +52,6 @@ fail-fast = false
 slow-timeout = { period = "60s" }
 
 [[profile.ci.overrides]]
-filter = 'package(ferroehr) & binary(it) & test(/^(events_amqp|fhir_outbound_amqp|multimedia_s3|adl2_vetdf_ferroterm)::/)'
+filter = 'package(ferroehr) & binary(it) & test(/^(events_amqp|multimedia_s3|adl2_vetdf_ferroterm)::/)'
 test-group = 'containers'
 retries = 1

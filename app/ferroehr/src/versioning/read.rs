@@ -405,8 +405,8 @@ pub(crate) async fn read_currents(
 }
 
 /// Read a specific version of an object by its STORAGE ORDINAL (`sys_version`)
-/// — for internal callers that key rows by ordinal (the FHIR mapping table,
-/// extract export iteration), never for wire version ids.
+/// — for internal callers that key rows by ordinal (extract export
+/// iteration), never for wire version ids.
 ///
 /// # Errors
 /// The storage read error of `version_repo::read::read_version_by_ordinal`, or
