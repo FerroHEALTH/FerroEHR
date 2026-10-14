@@ -1,5 +1,7 @@
 # Vendored ITS-XML schemas (provenance + serving policy)
 
+Reproduced by: `scripts/vendor/codegen-inputs.sh` (`--check` verifies the committed files against the pin).
+
 XSD schemas from `openEHR/specifications-ITS-XML`, vendored **verbatim** (full
 upstream `components/` trees) for canonical-XML (de)serialization. Reference /
 validation inputs and the `emit-xml` codegen oracle; no code here.

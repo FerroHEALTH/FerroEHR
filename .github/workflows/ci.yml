@@ -1464,6 +1464,10 @@ jobs:
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Regenerate and diff
         run: bash scripts/checks/codegen-drift.sh
+      # The committed codegen inputs reproduce byte-identically from their
+      # pinned upstream commits (vendored-corpora.md; fetched over https).
+      - name: Codegen inputs match their pins
+        run: bash scripts/vendor/codegen-inputs.sh --check
 
   # ── Build + tests against PostgreSQL 18.6 ──────────────────────────────────
   # The catalogue's own artifact validation is no longer here: the instrument is

@@ -13,8 +13,12 @@
 //! The `inputs` describe the CONSTRAINT, not resolved runtime values, which
 //! fixes three boundaries:
 //!
-//! * `defaultValue` comes only from an explicit archetype assumed value; RM
-//!   defaults are a composition-build concern.
+//! * `defaultValue` comes only from an explicit archetype assumed value
+//!   (`assumed_value` on `C_PRIMITIVE`, `C_CODE_PHRASE`, `C_DV_QUANTITY`,
+//!   `C_DV_ORDINAL` and `C_DV_STATE`, AM `UML/classes/org.openehr.am.aom14.*`),
+//!   rendered as the string the released `web_template/Input.yaml` types it
+//!   as; an assumed code or unit outside the constraint's own list is not
+//!   offered. RM defaults are a composition-build concern.
 //! * Only archetype-`local` value sets become coded `list` entries; bindings to
 //!   external terminologies surface as `termBindings`, and validating an
 //!   external code is the terminology service's job.
@@ -151,8 +155,31 @@ fn text_input(cstring: Option<&CPrimitive>, suffix: Option<&str>) -> WebTemplate
                 .push(WebTemplateCodedValue::new(item, Some(item.clone())));
         }
         input.list_open = Some(cs.list_open == Some(true));
+        input.default_value = cs
+            .assumed_value
+            .as_deref()
+            .filter(|v| cs.list.is_empty() || cs.list.iter().any(|item| item == v))
+            .and_then(default_value);
     }
     input
+}
+
+/// The `defaultValue` wire form of an assumed value: a string, as the released
+/// `web_template/Input.yaml` declares the member.
+fn default_value(value: impl ToString) -> Option<serde_json::Value> {
+    Some(serde_json::Value::String(value.to_string()))
+}
+
+/// The `defaultValue` of a coded input: the assumed code when the constraint
+/// lists it (or lists none).
+fn assumed_code(
+    assumed: Option<&openehr_base::v1_3::base_types::terminology::code_phrase::CodePhrase>,
+    code_list: &[String],
+) -> Option<serde_json::Value> {
+    assumed
+        .map(|cp| cp.code_string.as_str())
+        .filter(|code| code_list.is_empty() || code_list.iter().any(|c| c == code))
+        .and_then(default_value)
 }
 
 // ── DV_CODED_TEXT ────────────────────────────────────────────────────────────

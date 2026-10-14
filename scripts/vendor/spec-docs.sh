@@ -27,8 +27,9 @@
 # Figures are copied byte-for-byte — never re-encoded, never optimized.
 #
 # This is REFERENCE DOCUMENTATION for spec-adherence checks. It is NOT a build
-# input: codegen consumes tools/openehr-codegen/vendor/** (BMM/XSD/OAS) and
-# openehr-its/schemas/**; those vendor dirs stay authoritative for generation.
+# input: codegen consumes the BMM under tools/openehr-codegen/vendor/bmm/ and
+# the XSDs, JSON schemas and OAS under crates/openehr-its/{schemas,vendor}/,
+# all fetched by scripts/vendor/codegen-inputs.sh at their own pins.
 #
 # Idempotent: wipes and re-vendors each component dir. Re-run after bumping a
 # ref below (keep docs/VERSIONS.md in sync).

@@ -59,6 +59,21 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **The vendored openEHR specifications move to current upstream** (#3716,
+  #3717, #3718, #3719, #3720, #3721, #3723). BASE, RM, AM, TERM, LANG, CNF and
+  the ITS-JSON docs follow upstream master, as the development generations
+  are pinned; upstream agent files (`CLAUDE.md`) and build tooling
+  (`development/`) are no longer vendored. ITS-XML stays on its release tags,
+  and the spec-update watcher now reads a tag pin as one (#3722). The
+  generator's inputs (BMM, ITS-JSON schemas, ITS-XML XSDs, ITS-REST OAS) are
+  fetched by `scripts/vendor/codegen-inputs.sh`, which CI runs with `--check`.
+- **TERM 3.1.0 amendment 3.1.4 (SPECPR-450)** (#3717, #3727). Template upload
+  accepts a `DV_QUANTITY` constrained to the properties 761–765 (flow rate
+  per area, volume per area, mitotic count, length per area, concentration
+  per volume), and FLAT/STRUCTURED quantity validation knows their units
+  (`mg/m²`, `mm/m²`, `ng/mL/cm³`, `μg/L/cm³`); a unit filed under a different
+  property is refused under 764 and 765.
+
 - **AQL result row counts change for paths through repeated nodes** (#3733,
   #3734). A `SELECT` path through a repeated step returns one row per node
   where it returned one row with an arbitrary node's value; a whole-object

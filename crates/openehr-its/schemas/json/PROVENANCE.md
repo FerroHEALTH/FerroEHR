@@ -1,5 +1,7 @@
 # Vendored ITS-JSON schemas (canonical-JSON validation oracle)
 
+Reproduced by: `scripts/vendor/codegen-inputs.sh` (`--check` verifies the committed files against the pin).
+
 JSON Schemas from `openEHR/specifications-ITS-JSON`, vendored **verbatim** (full
 upstream `components/` tree).
 

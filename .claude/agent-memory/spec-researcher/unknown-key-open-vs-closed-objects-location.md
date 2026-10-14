@@ -25,7 +25,7 @@ metadata:
    draft-07, 134 definitions, **`additionalProperties: false` on 128**; the 6
    without are degenerate stubs (ARRAY/LIST/SET/URI/VALIDITY_KIND/VERSION_STATUS,
    `properties` = `_type` only). Closure works because
-   `docs/specs/openehr/ITS-JSON/README.adoc` §Design choices: "no inheritance in
+   `docs/specs/openehr/ITS-JSON/README.md` §Design choices: "no inheritance in
    definitions, so definitions contain all their fields directly". **Status =
    DEVELOPMENT** (README + `manifest.json` `spec_status`).
 3. **ITS-REST OAS (open)** — the release's own designated payload-validation
