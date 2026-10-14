@@ -3614,3 +3614,159 @@ async fn a_list_test_over_no_elements_is_unknown() {
     let some = run_aql(&svc, aql, ehr_scope(&linked)).await;
     assert_eq!(rows(&some).len(), 1, "no link equals the value: {some}");
 }
+
+const REFERRAL_ARCHETYPE: &str = "openEHR-EHR-COMPOSITION.referral.v1";
+
+/// Commit a composition whose own archetype is `archetype`, returning its
+/// `OBJECT_VERSION_ID`.
+async fn create_comp_of(
+    svc: &FerroEhrService,
+    ehr_id: &str,
+    name: &str,
+    archetype: &str,
+) -> String {
+    let mut c = composition(name, 1.0);
+    c["archetype_node_id"] = json!(archetype);
+    c["archetype_details"]["archetype_id"]["value"] = json!(archetype);
+    svc.create_composition(ehr_id.parse().expect("ehr_id uuid"), uv(&c, "249", None))
+        .await
+        .unwrap_or_else(|e| panic!("create_composition ({name}): {e:?}"))
+        .version_uid()
+}
+
+/// QUERY master03 §Containment puts OR between containment constraints
+/// whatever the operand class, so a composition declared in an OR branch
+/// under the EHR is readable: a row whose branch did not match reads NULL
+/// there, two matching branches pair up as two node branches do, the uid is
+/// the current version's, and a deleted composition binds nothing.
+#[tokio::test]
+async fn or_branch_compositions_are_projected() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let aql = format!(
+        "SELECT c1/uid/value, c2/uid/value FROM EHR e CONTAINS \
+         (COMPOSITION c1[openEHR-EHR-COMPOSITION.minimal.v1] \
+          OR COMPOSITION c2[{REFERRAL_ARCHETYPE}])"
+    );
+    let ehr_id = create_ehr(&svc).await;
+    let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse().expect("ehr_id uuid"));
+
+    let neither = run_aql(&svc, &aql, ehr_scope(&ehr_id)).await;
+    assert!(rows(&neither).is_empty(), "no branch matches: {neither}");
+
+    let first = create_comp(&svc, &ehr_id, "alpha", 1.0).await;
+    for request in [ehr_scope(&ehr_id), AqlQueryRequest::default()] {
+        let one = run_aql(&svc, &aql, request).await;
+        assert_eq!(
+            rows(&one),
+            &vec![json!([first, null])],
+            "the first branch matched, the second reads NULL: {one}"
+        );
+    }
+
+    let referral = create_comp_of(&svc, &ehr_id, "beta", REFERRAL_ARCHETYPE).await;
+    let both = run_aql(&svc, &aql, ehr_scope(&ehr_id)).await;
+    assert_eq!(
+        rows(&both),
+        &vec![json!([first, referral])],
+        "both branches match and pair up: {both}"
+    );
+
+    let filtered = run_aql(
+        &svc,
+        &format!("{aql} WHERE c2/name/value = 'beta'"),
+        ehr_scope(&ehr_id),
+    )
+    .await;
+    assert_eq!(rows(&filtered).len(), 1, "{filtered}");
+    let none = run_aql(
+        &svc,
+        &format!("{aql} WHERE c2/name/value = 'gamma'"),
+        ehr_scope(&ehr_id),
+    )
+    .await;
+    assert!(rows(&none).is_empty(), "no branch value passes: {none}");
+
+    let vo_id: ferroehr::ids::VoId = uid_root(&first).parse().expect("vo_id uuid");
+    let updated = svc
+        .update_composition(
+            ehr_uuid,
+            vo_id,
+            uv(&composition("alpha", 2.0), "251", Some(&first)),
+        )
+        .await
+        .expect("update_composition")
+        .version_uid();
+    svc.delete_composition(ehr_uuid, &referral.parse().expect("ovid"), None, None)
+        .await
+        .expect("delete_composition");
+    let current = run_aql(&svc, &aql, ehr_scope(&ehr_id)).await;
+    assert_eq!(
+        rows(&current),
+        &vec![json!([updated, null])],
+        "the current version reads, the deleted composition binds nothing: {current}"
+    );
+}
+
+/// A variable nested under an OR branch's composition reads through that
+/// composition's binding, and NULL on a row where the other branch matched.
+#[tokio::test]
+async fn a_variable_under_an_or_branch_composition_is_projected() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let aql = format!(
+        "SELECT c1/uid/value, o/archetype_node_id FROM EHR e CONTAINS \
+         (COMPOSITION c1[openEHR-EHR-COMPOSITION.minimal.v1] CONTAINS OBSERVATION o \
+          OR COMPOSITION c2[{REFERRAL_ARCHETYPE}])"
+    );
+
+    let other = create_ehr(&svc).await;
+    create_comp_of(&svc, &other, "beta", REFERRAL_ARCHETYPE).await;
+    let r = run_aql(&svc, &aql, ehr_scope(&other)).await;
+    assert_eq!(rows(&r), &vec![json!([null, null])], "{r}");
+
+    let minimal = create_ehr(&svc).await;
+    let uid = create_comp(&svc, &minimal, "alpha", 1.0).await;
+    let r = run_aql(&svc, &aql, ehr_scope(&minimal)).await;
+    assert_eq!(rows(&r), &vec![json!([uid, OBS_ARCHETYPE])], "{r}");
+}
+
+/// A composition a FOLDER references, declared in an OR branch, is readable,
+/// under an EHR and from a FOLDER with no EHR above it; a composition no
+/// folder references binds nothing.
+#[tokio::test]
+async fn folder_referenced_or_branch_compositions_are_projected() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr_id = create_ehr(&svc).await;
+    let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<Uuid>().expect("ehr uuid"));
+    let filed = create_comp(&svc, &ehr_id, "filed", 1.0).await;
+    create_comp_of(&svc, &ehr_id, "unfiled", REFERRAL_ARCHETYPE).await;
+    let directory = json!({
+        "_type": "FOLDER",
+        "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+        "name": { "_type": "DV_TEXT", "value": "root" },
+        "items": [folder_ref(&uid_root(&filed))]
+    });
+    svc.create_directory(ehr_uuid, uv(&directory, "249", None))
+        .await
+        .expect("create_directory");
+
+    let branches = format!(
+        "FOLDER f CONTAINS (COMPOSITION c1[openEHR-EHR-COMPOSITION.minimal.v1] \
+         OR COMPOSITION c2[{REFERRAL_ARCHETYPE}])"
+    );
+    for aql in [
+        format!("SELECT c1/uid/value, c2/uid/value FROM EHR e CONTAINS {branches}"),
+        format!("SELECT c1/uid/value, c2/uid/value FROM {branches}"),
+    ] {
+        for request in [ehr_scope(&ehr_id), AqlQueryRequest::default()] {
+            let r = run_aql(&svc, &aql, request).await;
+            assert_eq!(
+                rows(&r),
+                &vec![json!([filed, null])],
+                "only the referenced composition binds: {aql}: {r}"
+            );
+        }
+    }
+}

@@ -52,7 +52,12 @@ ORDER BY systolic DESC
   `CLUSTER cl1 CONTAINS CLUSTER cl2` binds only clusters nested inside
   another cluster. A variable declared inside an `OR` branch can be read in
   `SELECT`, `WHERE`, and `ORDER BY`: a row where its branch did not match
-  reads `null` for it.
+  reads `null` for it, and when both branches match, each match of one pairs
+  with each match of the other. This holds for a branch that is a versioned
+  object of its own too: `EHR e CONTAINS (COMPOSITION c1[...] OR COMPOSITION
+  c2[...])` returns the current version of each matching composition, its
+  `c1/uid/value` included, and a `FOLDER` branch reads the compositions the
+  folder references.
 - **`SELECT`** projects values by path. Paths use archetype node ids (`at0004`)
   and RM attribute names (`value/magnitude`); `AS` names a column. A path
   through a repeated node returns one row per node it reaches: selecting the
@@ -558,11 +563,6 @@ silently incorrect answer:
 - **Reading a variable declared under `NOT CONTAINS`.** `NOT CONTAINS` states
   that no such node exists, so a path through its variable has nothing to
   read.
-- **Reading a versioned object declared in an `OR` branch.** Variables of an
-  `OR` branch inside one composition (`COMPOSITION c CONTAINS (OBSERVATION o
-  OR EVALUATION ev)`) are readable; a branch that is itself a versioned object
-  (`EHR e CONTAINS (COMPOSITION c1 OR COMPOSITION c2)`, or one a `FOLDER`
-  references) can filter but not be read. Query each branch separately.
 - **`SELECT DISTINCT` ordered by an unselected expression.** De-duplication and
   sorting by something the projection dropped have no defined meaning together;
   sort by a selected column.

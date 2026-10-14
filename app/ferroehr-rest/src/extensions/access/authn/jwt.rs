@@ -456,11 +456,7 @@ impl<'c> openidconnect::AsyncHttpClient<'c> for DiscoveryHttpClient {
     /// `Send` is declared, so the authentication middleware awaiting it stays
     /// `Send`.
     type Future = std::pin::Pin<
-        Box<
-            dyn std::future::Future<Output = Result<openidconnect::HttpResponse, Self::Error>>
-                + Send
-                + 'c,
-        >,
+        Box<dyn Future<Output = Result<openidconnect::HttpResponse, Self::Error>> + Send + 'c>,
     >;
 
     fn call(&'c self, request: openidconnect::HttpRequest) -> Self::Future {

@@ -840,12 +840,13 @@ impl Builder<'_> {
                         if classify_edge(&g.types, &r.rm_type)? == EdgeKind::Structural =>
                     {
                         let siblings = siblings.to_vec();
-                        let alias = self.left_bind(&g.node, BoundEdge::Descendant, |b, inner| {
-                            let mut conds = b.rm_conds(inner, &r)?;
-                            conds.extend(siblings);
-                            conds.extend(b.nested_condition(inner, &r, contained)?);
-                            Ok(conds)
-                        })?;
+                        let alias =
+                            self.left_bind(&g.node, BoundEdge::Descendant, |b, inner| {
+                                let mut conds = b.rm_conds(inner, &r)?;
+                                conds.extend(siblings);
+                                conds.extend(b.nested_condition(inner, &r, contained)?);
+                                Ok(conds)
+                            })?;
                         self.node_alias.insert(sid, alias.clone());
                         VoGroup {
                             node: alias,
@@ -883,8 +884,10 @@ impl Builder<'_> {
         let Some(c) = contained else {
             return Ok(None);
         };
-        let nested =
-            self.contained_exists(&ExistsAnchor::Vo(inner.to_owned(), r.rm_type.clone()), &c.tree)?;
+        let nested = self.contained_exists(
+            &ExistsAnchor::Vo(inner.to_owned(), r.rm_type.clone()),
+            &c.tree,
+        )?;
         Ok(Some(match c.link {
             Link::Contains => nested,
             Link::NotContains => nested.not(),
@@ -1391,15 +1394,8 @@ impl Builder<'_> {
         for alias in self.ehr_alias.values().cloned().collect::<Vec<_>>() {
             self.q.and_where(col(&alias, Ehr::RestrictedAt).is_null());
         }
-        // Multi-EHR scoping (`ehr_ids: List<UUID>`): restrict every VO root to
-        // the id set with `ehr_id = ANY($ids)` — ONE array bind rather than one
-        // bind per id, so a cohort of any size stays inside the 65535-parameter
-        // wire limit (`PostgreSQL` 18 §Frontend/Backend Protocol, Bind, whose
-        // parameter count is an `int16`,
-        // <https://www.postgresql.org/docs/18/protocol-message-formats.html>).
-        // The single-`ehr_id` REST case is the one-element set; empty = no
-        // explicit scope (the population gate takes over).
-        // A bare `FROM EHR e` (no CONTAINS) has no VO root — the scope
+        // Multi-EHR scoping restricts every VO root and every EHR source. A
+        // bare `FROM EHR e` (no CONTAINS) has no VO root — the scope
         // must bind the EHR source itself, or a scoped query would run
         // over the whole population (ITS-REST query Request.md: `ehr_id`
         // "used to execute the query within a single EHR context").
@@ -1409,7 +1405,10 @@ impl Builder<'_> {
             .iter()
             .map(|root| col(root, Node::EhrId))
             .chain(ehrs.iter().map(|alias| col(alias, Ehr::Id)));
-        for cond in scoped.filter_map(|target| self.ehr_ids_cond(target)).collect::<Vec<_>>() {
+        for cond in scoped
+            .filter_map(|target| self.ehr_ids_cond(target))
+            .collect::<Vec<_>>()
+        {
             self.q.and_where(cond);
         }
         // The per-EHR access decision binds every VO root and EHR source the
@@ -1419,7 +1418,10 @@ impl Builder<'_> {
             .iter()
             .map(|root| col(root, Node::EhrId))
             .chain(ehrs.iter().map(|alias| col(alias, Ehr::Id)));
-        for cond in accessed.filter_map(|target| self.access_cond(target)).collect::<Vec<_>>() {
+        for cond in accessed
+            .filter_map(|target| self.access_cond(target))
+            .collect::<Vec<_>>()
+        {
             self.q.and_where(cond);
         }
         for root in &roots {
@@ -1430,7 +1432,13 @@ impl Builder<'_> {
     }
 
     /// The explicit `ehr_ids` scope on the EHR id `target`, when the query is
-    /// scoped (see [`Self::apply_ehr_scope`]).
+    /// scoped (`ehr_ids: List<UUID>`; the single-`ehr_id` REST case is the
+    /// one-element set, and an empty set leaves the population gate in charge).
+    ///
+    /// The set is ONE array bind, `ehr_id = ANY($ids)`, so a cohort of any size
+    /// stays inside the 65535-parameter wire limit (`PostgreSQL` 18
+    /// §Frontend/Backend Protocol, Bind, whose parameter count is an `int16`,
+    /// <https://www.postgresql.org/docs/18/protocol-message-formats.html>).
     fn ehr_ids_cond(&self, target: Expr) -> Option<Expr> {
         if self.ctx.ehr_ids.is_empty() {
             return None;

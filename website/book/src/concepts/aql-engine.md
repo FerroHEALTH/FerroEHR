@@ -112,6 +112,15 @@ flowchart LR
   `EXISTS`, outside the clause's assignment.
   An `ORDER BY` key below the bindings takes the first match in document
   order.
+- **A variable of an `OR` branch binds like a projected step.** A branch
+  operand a path reads is bound under the object the branches share: one row
+  per node that matches the branch, one row with `null` cells where it does
+  not, and two branches that both match pair up as two independent steps do.
+  A branch that is its own versioned object (a `COMPOSITION` directly under
+  the `EHR`, or one a `FOLDER` references) binds its node together with its
+  version row, in the scope the same object has outside the `OR`: the latest
+  version under `LATEST_VERSION`, never a deleted or restricted one, with its
+  `uid` read from that version.
 - **An aggregate binds nothing.** It reads every item of its path per row in
   a correlated subquery and combines the rows, so `COUNT(*)` beside it is
   unaffected; inside that subquery the `WHERE` clause is evaluated again

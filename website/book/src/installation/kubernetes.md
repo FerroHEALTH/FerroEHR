@@ -316,9 +316,11 @@ validation renders the overlay and asserts each separation above, and its
 boot check has the server evaluate the posture from the rendered
 configuration. Neither reaches a database. The deployment probe
 (`scripts/deploy-probe-k8s.sh --production-only`) installs the overlay on a
-real cluster against four PostgreSQL clusters and observes the server refuse
-two domains on one cluster by naming `shared_cluster`; against your own
-databases, `shared_cluster` is first judged when the pod starts.
+real cluster against four PostgreSQL clusters: it observes the migration Job
+prepare all four, the server start under `production` with `plaintext_listener`
+as its only gap, and the server refuse all four domains on one cluster by
+naming `shared_cluster`. Against your own databases, `shared_cluster` is first
+judged when the pod starts.
 
 ## Database roles — who runs migrations
 

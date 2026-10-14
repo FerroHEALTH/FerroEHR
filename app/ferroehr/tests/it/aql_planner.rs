@@ -2061,22 +2061,155 @@ fn reading_a_not_contains_variable_is_refused() {
     );
 }
 
-/// A versioned object declared in an OR branch directly under the EHR is a
-/// named capability gap, never the generic SQL-generation refusal.
+/// Lowers `q` with the given scope and limit, returning the whole prepared
+/// query.
+fn prepare(
+    q: &str,
+    ehr_ids: Vec<ferroehr::ids::EhrId>,
+    subject_scope: Option<&str>,
+    limit: Option<i64>,
+) -> ferroehr::aql::sql::PreparedQuery {
+    let ir = plan_ok(q);
+    let ctx = SqlCtx {
+        system_id: "sys.example.com".to_owned(),
+        ehr_ids,
+        subject_scope: subject_scope.map(str::to_owned),
+        ehr_access: ferroehr::aql::sql::EhrAccessScope::Unrestricted,
+        limit,
+        offset: None,
+        archetype_lineage: Arc::new(ArchetypeLineage::default()),
+    };
+    ferroehr::aql::sql::build(&ir, &Params::new(), &ctx)
+        .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"))
+}
+
+const OR_COMPOSITIONS: &str = "SELECT c1/uid/value, c2/uid/value FROM EHR e CONTAINS \
+     (COMPOSITION c1[openEHR-EHR-COMPOSITION.report.v1] \
+      OR COMPOSITION c2[openEHR-EHR-COMPOSITION.referral.v1])";
+
+/// A composition declared in an OR branch under the EHR is readable (QUERY
+/// master03 §Containment defines OR between containment constraints without
+/// limiting the operand class): each read branch binds its node and, one to
+/// one beside it, its version row, which the `uid` synthesizes from.
 #[test]
-fn reading_an_or_branch_versioned_object_is_a_named_refusal() {
-    let err =
-        build_err("SELECT c1/name/value FROM EHR e CONTAINS (COMPOSITION c1 OR COMPOSITION c2)");
-    assert!(
-        matches!(
-            err,
-            AqlError::Feature(AqlFeatureError::OrBranchVersionedObject {
-                variable: Some(ref v),
-                ..
-            }) if v == "c1"
-        ),
-        "{err:?}"
+fn or_branch_versioned_objects_are_readable() {
+    let sql = build_sql(OR_COMPOSITIONS);
+    assert_eq!(
+        sql.matches("unnest(ARRAY(").count(),
+        4,
+        "a node and a version binding per read branch: {sql}"
     );
+    assert_eq!(
+        sql.matches(r#"LEFT JOIN "version" AS"#).count(),
+        2,
+        "one version binding per branch: {sql}"
+    );
+    assert_eq!(
+        sql.matches(r#""creating_system_id""#).count(),
+        2,
+        "each uid synthesizes from its own branch's version row: {sql}"
+    );
+    // Each branch filter links its node and its version to the EHR (4); each
+    // binding links its node directly and again inside its scope test (6).
+    assert_eq!(
+        sql.matches(r#""ehr_id" = "e0"."id""#).count(),
+        10,
+        "the branch nodes belong to the EHR: {sql}"
+    );
+}
+
+/// The branch binding carries the scope the same object has outside the OR:
+/// the trunk head under `LATEST_VERSION`, and no restricted object.
+#[test]
+fn an_or_branch_binding_reads_the_latest_unrestricted_version() {
+    let sql = build_sql(OR_COMPOSITIONS);
+    // Two branch filters plus two bindings, each with its own head join.
+    assert_eq!(
+        sql.matches(r#""trunk_head_sys_version""#).count(),
+        4,
+        "each filter and each binding reads the trunk head: {sql}"
+    );
+    assert_eq!(
+        sql.matches(r#""restricted_at" IS NULL"#).count(),
+        5,
+        "four head gates plus the EHR row's own gate: {sql}"
+    );
+}
+
+/// A variable nested under a branch's versioned object binds under that
+/// object's binding.
+#[test]
+fn a_variable_under_an_or_branch_versioned_object_is_readable() {
+    let sql = build_sql(
+        "SELECT c1/uid/value, o/name/value FROM EHR e CONTAINS \
+         (COMPOSITION c1 CONTAINS OBSERVATION o OR COMPOSITION c2)",
+    );
+    assert_eq!(
+        sql.matches("unnest(ARRAY(").count(),
+        3,
+        "c1's node and version, then o under c1: {sql}"
+    );
+}
+
+/// A composition a FOLDER references, declared in an OR branch, is readable;
+/// with no EHR above the folder the binding carries the population gate itself.
+#[test]
+fn a_folder_referenced_or_branch_is_readable() {
+    let sql =
+        build_sql("SELECT c1/uid/value FROM FOLDER f CONTAINS (COMPOSITION c1 OR COMPOSITION c2)");
+    assert_eq!(
+        sql.matches("unnest(ARRAY(").count(),
+        2,
+        "the read branch's node and version: {sql}"
+    );
+    assert_eq!(
+        sql.matches("jsonb_array_elements(").count(),
+        3,
+        "two branch filters and the binding resolve the folder's items: {sql}"
+    );
+    assert_eq!(
+        sql.matches(r#""is_queryable" = $"#).count(),
+        2,
+        "the folder root's gate and the unlinked binding's own: {sql}"
+    );
+}
+
+/// A branch binding under the EHR is covered by the EHR's own scope gates;
+/// the ABAC patient scope, which binds versioned-object roots, is carried
+/// into the binding.
+#[test]
+fn an_or_branch_binding_carries_the_patient_scope() {
+    let unscoped = prepare(OR_COMPOSITIONS, Vec::new(), None, None).sql;
+    assert!(!unscoped.contains(r#""subject_id""#), "{unscoped}");
+    let scoped = prepare(OR_COMPOSITIONS, Vec::new(), Some("patient-1"), None).sql;
+    assert_eq!(
+        scoped.matches(r#""subject_id" = $"#).count(),
+        2,
+        "one patient-scope test per branch binding: {scoped}"
+    );
+}
+
+/// The branch bindings are reported to the access log: one EHR column and one
+/// version locator per bound branch.
+#[test]
+fn or_branch_bindings_are_logged_as_served_roots() {
+    let prepared = prepare(
+        OR_COMPOSITIONS,
+        vec![ferroehr::ids::EhrId(uuid::Uuid::nil())],
+        None,
+        None,
+    );
+    assert_eq!(prepared.access_ehr_cols.len(), 2, "{}", prepared.sql);
+    assert_eq!(prepared.access_version_cols.len(), 2, "{}", prepared.sql);
+}
+
+/// A LIMIT does not move an OR read onto the streaming shape: the bindings
+/// stay implicitly lateral FROM functions of the flat shape.
+#[test]
+fn a_limited_or_branch_read_keeps_the_flat_shape() {
+    let sql = prepare(OR_COMPOSITIONS, Vec::new(), None, Some(10)).sql;
+    assert!(!sql.contains("JOIN LATERAL"), "{sql}");
+    assert_eq!(sql.matches("unnest(ARRAY(").count(), 4, "{sql}");
 }
 
 /// QUERY master03 §Aggregate functions: an aggregate's inputs are the data
@@ -2095,26 +2228,6 @@ fn aggregate_arguments_add_no_row_binding() {
         sql.matches("MAX(").count(),
         2,
         "the per-row maximum combined by an outer maximum: {sql}"
-    );
-}
-
-/// The refusal names the branch's versioned object, not the variable read
-/// below it.
-#[test]
-fn an_or_branch_refusal_names_the_versioned_object() {
-    let err = build_err(
-        "SELECT o/name/value FROM EHR e CONTAINS \
-         (COMPOSITION c1 CONTAINS OBSERVATION o OR COMPOSITION c2)",
-    );
-    assert!(
-        matches!(
-            err,
-            AqlError::Feature(AqlFeatureError::OrBranchVersionedObject {
-                variable: Some(ref v),
-                ..
-            }) if v == "c1"
-        ),
-        "{err:?}"
     );
 }
 

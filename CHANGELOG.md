@@ -322,6 +322,20 @@ workflow refuses a tag that has no matching section here.
   `32024R2847R(08)` corrects the Slovenian version only (Art. 3(17), Art.
   14(7) and the titles of Articles 21 and 22); it has no English version and
   changes no text FerroEHR cites.
+- **The four-cluster production layout prepares and boots** (#3755, #3756,
+  #3757, #3762). A database that holds the linkage domain without the party
+  domain also receives the party migration set (schema and grants only), and
+  a relocated domain's database is prepared and verified on its own migration
+  credential, the new `[storage.migrate.<domain>] url`/`url_file` (chart:
+  `database.<domain>.migrateExistingSecret`). The chart's migration Job
+  prepares every cluster, and `scripts/deploy-probe-k8s.sh --production-only`
+  proves the boot and the shared-cluster refusal live.
+- **Chart: TLS and migration-hook corrections** (#3760, #3766). The hook
+  ServiceAccount survives a failed hook and is created only when the chart
+  creates the release's account; `client_auth: required` with server TLS is
+  refused at render, since kubelet probes present no client certificate; an
+  Ingress in front of a TLS listener needs `ingress.backendTlsAnnotations`;
+  `prometheus.io/scheme` follows the listener.
 - **The compose image-tag guard covers the terminology overlay** (#3605).
   `scripts/checks/compose-image-tags.sh` checks every FerroEHR image tag in
   every root and `docker/` compose file, `docker-compose.terminology.yml`

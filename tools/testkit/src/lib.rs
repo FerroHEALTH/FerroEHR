@@ -926,9 +926,8 @@ fn stale(name: &str, comment: Option<&str>, current_template: &str, now_secs: u6
         let built = comment
             .and_then(parse_stamp)
             .and_then(|stamp| stamp.built_secs);
-        return built.is_none_or(|built| {
-            now_secs.saturating_sub(built) >= TEMPLATE_GRACE.as_secs()
-        });
+        return built
+            .is_none_or(|built| now_secs.saturating_sub(built) >= TEMPLATE_GRACE.as_secs());
     }
     let Some((secs_hex, _)) = rest.split_once('_') else {
         return false;
