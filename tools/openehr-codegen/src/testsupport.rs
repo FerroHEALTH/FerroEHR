@@ -19,7 +19,7 @@
 use crate::analyze::invariants::{self, Bucket};
 use crate::analyze::{Model, augment_with_reemit, class_paths, cross_schema_reemit};
 use crate::cli;
-use crate::load::bmm::BmmSchema;
+use crate::load::bmm::{BmmPropKind, BmmSchema, BmmType};
 use crate::load::impls::SiblingImpls;
 use crate::load::oas;
 use crate::plan::composition::{self, ComposedUnit, compose};
@@ -721,8 +721,8 @@ pub struct GenerationDelta {
 fn attribute_signature(property: &crate::load::bmm::BmmProperty) -> String {
     let existence = if property.is_mandatory { "" } else { "?" };
     match &property.kind {
-        crate::load::bmm::BmmPropKind::Single(t) => format!("{existence}{}", type_text(t)),
-        crate::load::bmm::BmmPropKind::Container {
+        BmmPropKind::Single(t) => format!("{existence}{}", type_text(t)),
+        BmmPropKind::Container {
             container_type,
             item,
             cardinality,
@@ -740,10 +740,10 @@ fn attribute_signature(property: &crate::load::bmm::BmmProperty) -> String {
 }
 
 /// A BMM type reference as text (`DV_INTERVAL<DV_QUANTITY>`).
-fn type_text(t: &crate::load::bmm::BmmType) -> String {
+fn type_text(t: &BmmType) -> String {
     match t {
-        crate::load::bmm::BmmType::Simple(name) => name.clone(),
-        crate::load::bmm::BmmType::Generic { root, params } => {
+        BmmType::Simple(name) => name.clone(),
+        BmmType::Generic { root, params } => {
             let args: Vec<String> = params.iter().map(type_text).collect();
             format!("{root}<{}>", args.join(","))
         }
@@ -1115,6 +1115,19 @@ pub fn decision_maps() -> Vec<DeclMap> {
                 .collect(),
         },
         DeclMap {
+            map: "spec_contradiction",
+            check_existence: true,
+            entries: overrides::SPEC_CONTRADICTIONS
+                .iter()
+                .map(|e| DeclEntry {
+                    key: format!("{}.{}", e.owner, e.field),
+                    decision: format!("{:?} not realized", e.kind),
+                    citation: e.citation.to_string(),
+                    reason: e.reason.to_string(),
+                })
+                .collect(),
+        },
+        DeclMap {
             map: "unrenderable_default",
             check_existence: true,
             entries: overrides::UNRENDERABLE_DEFAULTS
@@ -1429,6 +1442,53 @@ pub fn field_exists(class: &str, field: &str) -> Result<bool, Error> {
         }
     }
     Ok(false)
+}
+
+/// Every existence-contradiction entry whose vendored ground is gone, as one
+/// message per defect.
+///
+/// An entry stays live only while some loaded schema declares the attribute on
+/// the entry's owner AND every such declaration is still a mandatory
+/// `Hash<K, V>`: an upstream fix to `0..1` (or a retyped attribute) leaves the
+/// entry stale, and so does an owner that declares no such attribute.
+///
+/// # Errors
+/// Returns an error if any composition's BMM files cannot be loaded.
+pub fn stale_existence_contradictions() -> Result<Vec<String>, Error> {
+    let mut stale = Vec::new();
+    for entry in overrides::SPEC_CONTRADICTIONS
+        .iter()
+        .filter(|c| c.kind == overrides::ContradictionKind::Existence)
+    {
+        let mut declarations = 0usize;
+        for key in crate_keys() {
+            for u in compose(key)?.generations.iter().flat_map(|g| &g.units) {
+                let Some(prop) = u
+                    .model
+                    .get(entry.owner)
+                    .and_then(|cls| cls.properties.iter().find(|p| p.name == entry.field))
+                else {
+                    continue;
+                };
+                declarations += 1;
+                let hash = matches!(&prop.kind,
+                    BmmPropKind::Single(BmmType::Generic { root, .. }) if root == "Hash");
+                if !prop.is_mandatory || !hash {
+                    stale.push(format!(
+                        "{key}/{}: {}.{} is no longer a mandatory Hash",
+                        u.spec.file, entry.owner, entry.field
+                    ));
+                }
+            }
+        }
+        if declarations == 0 {
+            stale.push(format!(
+                "{}.{}: no loaded schema declares the attribute on its owner",
+                entry.owner, entry.field
+            ));
+        }
+    }
+    Ok(stale)
 }
 
 /// The attribute names composition `key`'s OWN schema declares on `class`

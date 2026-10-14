@@ -171,8 +171,11 @@ services:
         limits:
           cpus: "${FERROEHR_DB_CPUS:-4}"
           memory: ${FERROEHR_DB_MEM:-4G}
+    # Over TCP: the image's init runs a temporary server on the Unix socket
+    # only (listen_addresses='', docker-library/postgres docker-entrypoint.sh),
+    # which a socket check reports healthy before the real start.
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${PG_INIT_USER:-ferroehr} -d ${PG_INIT_DB:-ferroehr}"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${PG_INIT_USER:-ferroehr} -d ${PG_INIT_DB:-ferroehr}"]
       interval: 5s
       timeout: 5s
       retries: 20

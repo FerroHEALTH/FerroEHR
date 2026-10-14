@@ -48,7 +48,7 @@ mod predicate;
 mod select;
 mod value;
 
-use crate::db::iden::{Node, VersionRow};
+use crate::db::iden::{Ehr, Node, VersionRow};
 use crate::ids::EhrId;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -76,10 +76,9 @@ pub struct SqlCtx {
     /// explicit scope (the population gate over `is_queryable` EHRs applies).
     pub ehr_ids: Vec<EhrId>,
     /// The ABAC patient-scope subject id (no openEHR spec governs this, our own
-    /// extension): when set, every
-    /// VO root is restricted to EHRs whose `subject_id` equals it, so rows the
-    /// caller may not see are never fetched — independent of what the query
-    /// projects.
+    /// extension): when set, every VO root and every EHR source is restricted
+    /// to EHRs whose `subject_id` equals it, so rows the caller may not see are
+    /// never fetched, independent of what the query projects.
     pub subject_scope: Option<String>,
     /// The per-EHR access decision the caller's principal is held to
     /// (`EHR_ACCESS`, RM ehr `ehr_access.adoc`: "All access decisions to data
@@ -208,20 +207,22 @@ impl std::fmt::Debug for PreparedQuery {
 
 /// A built scope-collection query for the ABAC query post-check.
 ///
-/// `SELECT DISTINCT` of every bound VO root's `ehr_id` + `template_id` over the
-/// same containment/filter as the main query (no openEHR spec governs ABAC —
-/// our own extension). Its rows carry the set of EHRs and templates the query
-/// touches — across **all** bound variables and **independent of the
-/// projection**.
+/// `SELECT DISTINCT` of every bound EHR source's `id` and every bound VO root's
+/// `ehr_id` + `template_id` over the same containment/filter as the main query
+/// (no openEHR spec governs ABAC — our own extension). Its rows carry the set
+/// of EHRs and templates the query touches — across **all** bound variables and
+/// **independent of the projection**.
 #[derive(Debug)]
 pub struct ScopeQuery {
     /// The generated SQL.
     pub sql: String,
     /// The bound parameter values.
     pub values: SqlxValues,
-    /// The `(ehr-id column, template-id column)` alias pairs, one per bound VO
-    /// root, the executor reads each result row's ehr/template from.
-    pub columns: Vec<(String, String)>,
+    /// The EHR-id column aliases, one per bound EHR source and per bound VO
+    /// root, the executor reads each result row's touched EHRs from.
+    pub ehr_columns: Vec<String>,
+    /// The template-id column aliases, one per bound VO root.
+    pub template_columns: Vec<String>,
 }
 
 /// A VO "group": the node alias that roots it and the `version` alias its
@@ -433,10 +434,15 @@ pub fn build(ir: &QueryIr, params: &Params, ctx: &SqlCtx) -> Result<PreparedQuer
 }
 
 /// Builds the ABAC scope-collection query for `ir`, or `None` when the query
-/// has no VO root (nothing to collect).
+/// binds neither an EHR source nor a versioned-object root (nothing to
+/// collect).
 ///
 /// The FROM, the SELECT path bindings and the WHERE are the main query's, so
-/// the collected scope is exactly the rows that query can serve.
+/// the collected scope is exactly the rows that query can serve. Every EHR
+/// source contributes its `ehr.id`, so a query that reads only the `ehr` row
+/// (`FROM EHR e`, an `ehr_status` path, an `OR` under the EHR) still reports
+/// the EHRs it touches; every versioned-object root contributes its `ehr_id`
+/// and `template_id`.
 ///
 /// # Errors
 /// The same refusals as [`build`].
@@ -453,14 +459,27 @@ pub fn build_scope(
     b.bind_select_paths()?;
     b.build_where()?;
     let roots = b.served_roots();
-    if roots.is_empty() {
+    let mut ehrs: Vec<(usize, String)> = b
+        .ehr_alias
+        .iter()
+        .map(|(sid, alias)| (*sid, alias.clone()))
+        .collect();
+    ehrs.sort_unstable();
+    if roots.is_empty() && ehrs.is_empty() {
         return Ok(None);
     }
-    // One (ehr_id, template_id) column pair per bound VO root — the row-wise
-    // cartesian of the joined roots, DISTINCT-ed, so every touched EHR/template
-    // across every bound variable is collected.
-    let mut columns = Vec::with_capacity(roots.len());
-    for (i, (node, vo)) in roots.iter().enumerate() {
+    // The row-wise cartesian of the bound EHR sources and roots, DISTINCT-ed,
+    // so every touched EHR/template across every bound variable is collected.
+    // One index runs over the EHR sources, then the roots, so `scope_ehr_{i}`
+    // and its root's `scope_template_{i}` share it.
+    let mut ehr_columns = Vec::with_capacity(ehrs.len() + roots.len());
+    let mut template_columns = Vec::with_capacity(roots.len());
+    for (i, (_, alias)) in ehrs.iter().enumerate() {
+        let ehr_col = format!("scope_ehr_{i}");
+        b.q.expr_as(col(alias, Ehr::Id), Alias::new(ehr_col.as_str()));
+        ehr_columns.push(ehr_col);
+    }
+    for (i, (node, vo)) in (ehrs.len()..).zip(roots.iter()) {
         let ehr_col = format!("scope_ehr_{i}");
         let template_col = format!("scope_template_{i}");
         b.q.expr_as(col(node, Node::EhrId), Alias::new(ehr_col.as_str()));
@@ -468,13 +487,15 @@ pub fn build_scope(
             col(vo, VersionRow::TemplateId),
             Alias::new(template_col.as_str()),
         );
-        columns.push((ehr_col, template_col));
+        ehr_columns.push(ehr_col);
+        template_columns.push(template_col);
     }
     b.q.distinct();
     let (sql, values) = b.q.build_sqlx(PostgresQueryBuilder);
     Ok(Some(ScopeQuery {
         sql,
         values,
-        columns,
+        ehr_columns,
+        template_columns,
     }))
 }

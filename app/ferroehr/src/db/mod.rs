@@ -309,6 +309,21 @@ pub enum DbError {
         domain: Domain,
     },
 
+    /// A runtime role can write a migration bookkeeping table.
+    #[error(
+        "database role `{role}` can write the migration bookkeeping table `{relation}`, which \
+         `[db] migrate = \"verify\"` compares against this build's migrations: a runtime \
+         credential able to rewrite it can make an unmigrated or altered database pass that \
+         check. Remedy: `REVOKE ALL ON {relation} FROM {role}; GRANT SELECT ON {relation} TO \
+         {role}` (no openEHR spec governs database roles — our own design)"
+    )]
+    BookkeepingWritable {
+        /// The runtime role holding a write privilege on the bookkeeping.
+        role: String,
+        /// The schema-qualified bookkeeping table.
+        relation: String,
+    },
+
     /// A domain's `[storage.migrate.<domain>]` credential reaches a different
     /// database from the one the domain is served from.
     #[error(
@@ -640,23 +655,48 @@ const FIRST_GENERATION_SETS: &[FirstGenerationSet] = &[
     },
 ];
 
-/// Bootstrap done outside the migrations: the five schemas and `btree_gist`.
+/// The extension the schema needs, installed by the bootstrap.
 ///
-/// `btree_gist` is the only extension the schema needs — it backs
-/// `linkage.subject_ehr`'s temporal `UNIQUE (... WITHOUT OVERLAPS)`, which
-/// PostgreSQL enforces as a `GiST` index over its operator classes
-/// (<https://www.postgresql.org/docs/18/sql-createtable.html>) — and installing
+/// `btree_gist` is the only one: it backs `linkage.subject_ehr`'s temporal
+/// `UNIQUE (... WITHOUT OVERLAPS)`, which PostgreSQL enforces as a `GiST` index
+/// over its operator classes
+/// (<https://www.postgresql.org/docs/18/sql-createtable.html>), and installing
 /// it here is what lets a plain PostgreSQL 18 database serve with nothing
-/// preinstalled. Every test proves it: `testkit` builds its template databases
-/// by running exactly this path against a fresh database.
-const BOOTSTRAP: &[&str] = &[
-    "CREATE SCHEMA IF NOT EXISTS ext",
-    "CREATE SCHEMA IF NOT EXISTS clinical",
-    "CREATE SCHEMA IF NOT EXISTS party",
-    "CREATE SCHEMA IF NOT EXISTS linkage",
-    "CREATE SCHEMA IF NOT EXISTS audit",
-    "CREATE EXTENSION IF NOT EXISTS btree_gist WITH SCHEMA ext",
-];
+/// preinstalled.
+const BOOTSTRAP_EXTENSION: &str = "CREATE EXTENSION IF NOT EXISTS btree_gist WITH SCHEMA ext";
+
+/// The schemas a database's preparation creates, in [`Domain::ALL`] order:
+/// each set's own, and each schema a set's statements name
+/// ([`Domain::names_schemas_of`]).
+fn bootstrap_schemas(sets: &[Domain]) -> Vec<Domain> {
+    let mut schemas: Vec<Domain> = sets.to_vec();
+    for set in sets {
+        for named in set.names_schemas_of() {
+            if !schemas.contains(named) {
+                schemas.push(*named);
+            }
+        }
+    }
+    schemas.sort_unstable();
+    schemas
+}
+
+/// Bootstrap done outside the migrations, for a database where `sets` apply:
+/// the `ext` schema, the schemas [`bootstrap_schemas`] names, and
+/// [`BOOTSTRAP_EXTENSION`].
+///
+/// Every test proves it: `testkit` builds its template databases by running
+/// exactly this path, over every set, against a fresh database.
+fn bootstrap_statements(sets: &[Domain]) -> Vec<String> {
+    let mut statements = vec!["CREATE SCHEMA IF NOT EXISTS ext".to_owned()];
+    statements.extend(
+        bootstrap_schemas(sets)
+            .into_iter()
+            .map(|domain| format!("CREATE SCHEMA IF NOT EXISTS {}", domain.schema())),
+    );
+    statements.push(BOOTSTRAP_EXTENSION.to_owned());
+    statements
+}
 
 /// A stable fingerprint of the complete embedded migration state: the
 /// bootstrap statements plus every migrator's (version, checksum) sequence,
@@ -680,7 +720,7 @@ pub fn migration_fingerprint() -> String {
             hash = hash.wrapping_mul(PRIME);
         }
     };
-    for statement in BOOTSTRAP {
+    for statement in bootstrap_statements(&Domain::ALL) {
         eat(statement.as_bytes());
     }
     for migrator in std::iter::once(&EXT_MIGRATOR)
@@ -1201,10 +1241,13 @@ async fn verify_recorded_state(conn: &mut PgConnection, domains: &[Domain]) -> R
 /// Refuses to serve when the database's grants do not hold the domain
 /// boundaries the deployment claims.
 ///
-/// Three refusals: a runtime role that can read a pseudonymisation domain it
-/// does not own, two separately-configured domains that authenticate as one
-/// role, and — under [`DeploymentProfile::Production`] — a domain role that
-/// does not exist.
+/// Four refusals: a runtime role that can read a pseudonymisation domain it
+/// does not own, a runtime role that can write a migration bookkeeping table,
+/// two separately-configured domains that authenticate as one role, and —
+/// under [`DeploymentProfile::Production`] — a domain role that does not exist.
+/// The grant sweep runs once in every DATABASE a domain pool reaches, read from
+/// the server (`pg_control_system()` and `current_database()`), because grants
+/// are per database and a relocated domain's database carries its own.
 ///
 /// The separation of the clinical record, the identity of its subject, and the
 /// map between them is a property of the DATABASE's grants, not of the
@@ -1241,7 +1284,8 @@ async fn verify_recorded_state(conn: &mut PgConnection, domains: &[Domain]) -> R
 /// # Errors
 ///
 /// [`DbError::DomainIsolationBreached`] naming the role, the object kind and
-/// the schema-qualified object it can reach, [`DbError::DomainRoleShared`] when
+/// the schema-qualified object it can reach, [`DbError::BookkeepingWritable`]
+/// naming the role and the bookkeeping table, [`DbError::DomainRoleShared`] when
 /// two separately-configured domains authenticate as one role,
 /// [`DbError::DomainRoleMissing`] under `production`, or [`DbError::Sqlx`] when
 /// a catalog read itself fails.
@@ -1250,16 +1294,34 @@ pub async fn verify_domain_isolation(
     layout: &DomainLayout,
     profile: DeploymentProfile,
 ) -> Result<(), DbError> {
-    verify_role_barriers(pools.get(Domain::Clinical), profile).await?;
+    let mut swept: Vec<(String, String)> = Vec::new();
+    for domain in Domain::ALL {
+        let pool = pools.get(domain);
+        let database: (String, String) = sqlx::query_as(
+            "SELECT system_identifier::text, current_database()::text FROM pg_control_system()",
+        )
+        .fetch_one(pool)
+        .await?;
+        if swept.contains(&database) {
+            continue;
+        }
+        swept.push(database);
+        verify_role_barriers(pool, profile).await?;
+    }
     verify_configured_separation(pools, layout).await
 }
 
-/// The grant sweep: every domain role against every schema it must not reach.
+/// The grant sweep over the database `pool` reaches: every domain role against
+/// every schema it must not reach, and against every migration bookkeeping
+/// table it must not write.
 ///
-/// One pool is enough and the clinical one is the natural choice: the check
-/// reads `pg_catalog` and the `has_*_privilege` functions, which answer about
-/// any role from any session.
+/// Any pool of that database serves: the check reads `pg_catalog` and the
+/// `has_*_privilege` functions, which answer about any role from any session.
 async fn verify_role_barriers(pool: &PgPool, profile: DeploymentProfile) -> Result<(), DbError> {
+    let bookkeeping_schemas: Vec<String> = std::iter::once("ext")
+        .chain(Domain::ALL.into_iter().map(Domain::schema))
+        .map(str::to_owned)
+        .collect();
     for domain in Domain::ALL {
         let forbidden: Vec<String> = domain
             .barred_from()
@@ -1294,6 +1356,28 @@ async fn verify_role_barriers(pool: &PgPool, profile: DeploymentProfile) -> Resu
                      refuses to boot in this state"
                 );
                 continue;
+            }
+            // The bookkeeping is what `verify` compares against the embedded
+            // sources, so a runtime role able to rewrite it could make an
+            // unmigrated or altered database pass.
+            let writable: Option<String> = sqlx::query_scalar(
+                "SELECT n.nspname || '._sqlx_migrations'
+                 FROM pg_namespace n
+                 JOIN pg_class c ON c.relnamespace = n.oid AND c.relname = '_sqlx_migrations'
+                 WHERE n.nspname = ANY($2)
+                   AND has_table_privilege($1, c.oid, 'INSERT,UPDATE,DELETE,TRUNCATE')
+                 ORDER BY 1
+                 LIMIT 1",
+            )
+            .bind(role)
+            .bind(&bookkeeping_schemas)
+            .fetch_optional(pool)
+            .await?;
+            if let Some(relation) = writable {
+                return Err(DbError::BookkeepingWritable {
+                    role: (*role).to_owned(),
+                    relation,
+                });
             }
             if forbidden.is_empty() {
                 continue;
@@ -1513,7 +1597,7 @@ async fn verify_set(
     Ok(())
 }
 
-/// The bootstrap, the `ext` set and each named domain's set, on one dedicated
+/// Runs the bootstrap, the `ext` set and each named set on one dedicated
 /// connection.
 ///
 /// `ext` first, unconditionally: every later set finds its roles, helper
@@ -1522,10 +1606,26 @@ async fn verify_set(
 /// Already-applied sets are no-ops, which is what makes "the `ext` set is
 /// applied per database by whichever domain reaches it first" true without any
 /// bookkeeping of our own.
+///
+/// A schema a set only NAMES ([`Domain::names_schemas_of`]) and which this run
+/// had to create is dropped again afterwards, so a relocated database ends
+/// holding `ext` and its own sets' schemas and nothing else. The drop is
+/// `RESTRICT` (<https://www.postgresql.org/docs/18/sql-dropschema.html>): a
+/// schema that came to hold anything stays, and the failure is reported.
 async fn apply_migrations(conn: &mut PgConnection, domains: &[Domain]) -> Result<(), DbError> {
     guard_first_generation_database(&mut *conn).await?;
-    for &statement in BOOTSTRAP {
-        sqlx::query(statement).execute(&mut *conn).await?;
+    let named_only: Vec<&'static str> = bootstrap_schemas(domains)
+        .into_iter()
+        .filter(|domain| !domains.contains(domain))
+        .map(Domain::schema)
+        .collect();
+    let preexisting = present_schemas(&mut *conn, &named_only).await?;
+    for statement in bootstrap_statements(domains) {
+        // Each statement is built from the `Domain::schema` literals, never
+        // input; DDL takes no bind placeholder.
+        sqlx::query(sqlx::AssertSqlSafe(statement))
+            .execute(&mut *conn)
+            .await?;
     }
 
     sqlx::query("SET search_path TO ext")
@@ -1542,6 +1642,15 @@ async fn apply_migrations(conn: &mut PgConnection, domains: &[Domain]) -> Result
             .execute(&mut *conn)
             .await?;
         migrator.run(&mut *conn).await?;
+    }
+    for schema in named_only {
+        if preexisting.contains(&schema) {
+            continue;
+        }
+        // The name is a `Domain::schema` literal, never input.
+        sqlx::query(sqlx::AssertSqlSafe(format!("DROP SCHEMA {schema}")))
+            .execute(&mut *conn)
+            .await?;
     }
     Ok(())
 }
@@ -1654,6 +1763,41 @@ fn owned_schemas(domains: &[Domain]) -> Vec<&'static str> {
     schemas
 }
 
+/// Returns the schemas an erasure drops in the connected database, where the
+/// sets of `domains` are applied: those of [`owned_schemas`] that exist, and
+/// any other schema name of this build that exists and holds nothing.
+///
+/// An earlier release created every domain's schema in every database it
+/// prepared, so a relocated database may still carry the others, empty; an
+/// erasure removes them too, and never one that holds an object.
+async fn erasable_schemas(
+    conn: &mut PgConnection,
+    domains: &[Domain],
+) -> Result<Vec<&'static str>, DbError> {
+    let mut schemas = present_schemas(&mut *conn, &owned_schemas(domains)).await?;
+    let others: Vec<&'static str> = Domain::ALL
+        .into_iter()
+        .filter(|domain| !domains.contains(domain))
+        .map(Domain::schema)
+        .collect();
+    let names: Vec<String> = others.iter().map(|s| (*s).to_owned()).collect();
+    let empty: Vec<String> = sqlx::query_scalar(
+        "SELECT n.nspname::text FROM pg_namespace n WHERE n.nspname = ANY($1) \
+         AND NOT EXISTS (SELECT 1 FROM pg_class c WHERE c.relnamespace = n.oid) \
+         AND NOT EXISTS (SELECT 1 FROM pg_proc p WHERE p.pronamespace = n.oid) \
+         AND NOT EXISTS (SELECT 1 FROM pg_type t WHERE t.typnamespace = n.oid)",
+    )
+    .bind(&names)
+    .fetch_all(&mut *conn)
+    .await?;
+    schemas.extend(
+        others
+            .into_iter()
+            .filter(|schema| empty.iter().any(|name| name == schema)),
+    );
+    Ok(schemas)
+}
+
 /// The schemas among `candidates` that exist in the connected database, in the
 /// order given.
 async fn present_schemas(
@@ -1715,7 +1859,7 @@ pub async fn erase_inventory(
             let database: String = sqlx::query_scalar("SELECT current_database()::text")
                 .fetch_one(&mut conn)
                 .await?;
-            let schemas = present_schemas(&mut conn, &owned_schemas(&group.sets())).await?;
+            let schemas = erasable_schemas(&mut conn, &group.sets()).await?;
             let instance_id = if group.domains.contains(&Domain::Clinical) {
                 stored_instance_id(&mut conn).await?
             } else {
@@ -1745,8 +1889,10 @@ pub async fn erase_inventory(
 /// (<https://www.postgresql.org/docs/18/sql-dropschema.html>). The cascade takes
 /// the `btree_gist` extension installed in `ext`, the cold-tier partitions and
 /// the default privileges granted in those schemas. Cluster-wide objects stay:
-/// the `ferroehr_*` roles, and the database itself. A schema already absent is
-/// skipped, so a second run drops nothing and reports an empty list.
+/// the `ferroehr_*` roles, and the database itself. Another domain's schema of
+/// this build that a database holds empty, as an earlier release left in a
+/// relocated database, is dropped too. A schema already absent is skipped, so a
+/// second run drops nothing and reports an empty list.
 ///
 /// The returned report lists, per database, the schemas this call dropped;
 /// `instance_id` is the id that was stored before the drop. No openEHR spec
@@ -1806,7 +1952,7 @@ async fn drop_owned_schemas(
     } else {
         None
     };
-    let schemas = present_schemas(&mut tx, &owned_schemas(domains)).await?;
+    let schemas = erasable_schemas(&mut tx, domains).await?;
     for schema in &schemas {
         // The name is one of the `owned_schemas` literals, never input;
         // DROP SCHEMA takes no bind placeholder.

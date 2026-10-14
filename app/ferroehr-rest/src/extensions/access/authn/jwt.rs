@@ -28,6 +28,7 @@ use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header};
 
 use super::{AuthError, AuthMethod, KeyResolutionError, Principal, TokenRejection};
 use ferroehr::config::auth::OidcConfig;
+use ferroehr::oauth2_http::Oauth2HttpClient;
 
 /// A configured bearer-token validator.
 pub(super) struct JwtValidator {
@@ -340,7 +341,7 @@ struct RemoteJwks {
     issuer: String,
     /// Built once, so the timeouts are a configuration-time property and the
     /// connection pool survives across fetches.
-    http: DiscoveryHttpClient,
+    http: Oauth2HttpClient,
     cache: moka::future::Cache<&'static str, Result<Arc<JwkSet>, AuthError>>,
 }
 
@@ -385,7 +386,7 @@ impl RemoteJwks {
             .timeout(Duration::from_millis(cfg.request_timeout_ms))
             .build()
             .map_err(|e| format!("oidc discovery HTTP client: {e}"))?;
-        let http = DiscoveryHttpClient(http);
+        let http = Oauth2HttpClient::new(http);
         let expiry = JwksExpiry {
             negative_ttl: Duration::from_secs(cfg.negative_cache_ttl_seconds),
         };
@@ -423,7 +424,7 @@ impl RemoteJwks {
                 .map_err(|e| key_resolution("OIDC discovery failed", e))?;
         let body = self
             .http
-            .0
+            .client()
             .get(metadata.jwks_uri().url().as_str())
             .send()
             .await
@@ -439,50 +440,6 @@ impl RemoteJwks {
         })?;
         Ok(Arc::new(set))
     }
-}
-
-/// The workspace `reqwest` client as the `openidconnect` transport
-/// ([`openidconnect::AsyncHttpClient`]).
-///
-/// `openidconnect`'s own `reqwest` integration targets an older major version
-/// whose TLS trusts only the bundled web-PKI roots; this one sends the request
-/// the crate built and reassembles the reply as the `http::Response<Vec<u8>>`
-/// it parses.
-#[derive(Debug)]
-struct DiscoveryHttpClient(reqwest::Client);
-
-impl<'c> openidconnect::AsyncHttpClient<'c> for DiscoveryHttpClient {
-    type Error = DiscoveryTransportError;
-    /// `Send` is declared, so the authentication middleware awaiting it stays
-    /// `Send`.
-    type Future = std::pin::Pin<
-        Box<dyn Future<Output = Result<openidconnect::HttpResponse, Self::Error>> + Send + 'c>,
-    >;
-
-    fn call(&'c self, request: openidconnect::HttpRequest) -> Self::Future {
-        Box::pin(async move {
-            let response = self.0.execute(reqwest::Request::try_from(request)?).await?;
-            let mut builder = http::Response::builder().status(response.status());
-            for (name, value) in response.headers() {
-                builder = builder.header(name, value);
-            }
-            builder
-                .body(response.bytes().await?.to_vec())
-                .map_err(DiscoveryTransportError::Http)
-        })
-    }
-}
-
-/// A transport failure while talking to the issuer; `openidconnect` requires
-/// the client's error to be a `std::error::Error`.
-#[derive(Debug, thiserror::Error)]
-enum DiscoveryTransportError {
-    /// The request could not be sent or its body could not be read.
-    #[error("the request to the OIDC issuer failed")]
-    Reqwest(#[from] reqwest::Error),
-    /// The reply could not be reassembled as an `http::Response`.
-    #[error("the OIDC issuer's response was malformed")]
-    Http(#[from] http::Error),
 }
 
 /// A key-set refusal naming the failed `step`, carrying `cause` for the log.

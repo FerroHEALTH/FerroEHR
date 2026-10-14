@@ -3770,3 +3770,200 @@ async fn folder_referenced_or_branch_compositions_are_projected() {
         }
     }
 }
+
+/// An `EHR_STATUS` whose subject is `PARTY_SELF` with an external reference to
+/// `subject` under `namespace` (RM ehr master04 §EHR Status: `subject` 1..1
+/// `PARTY_SELF`).
+fn status_with_subject(namespace: &str, subject: &str) -> openehr_rm::prelude::EhrStatus {
+    openehr_its::json::from_canonical_value(&json!({
+        "_type": "EHR_STATUS",
+        "archetype_node_id": "openEHR-EHR-EHR_STATUS.generic.v1",
+        "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID",
+                              "value": "openEHR-EHR-EHR_STATUS.generic.v1" },
+            "rm_version": "1.2.0"
+        },
+        "name": { "_type": "DV_TEXT", "value": "EHR Status" },
+        "subject": {
+            "_type": "PARTY_SELF",
+            "external_ref": {
+                "_type": "PARTY_REF",
+                "namespace": namespace,
+                "type": "PERSON",
+                "id": { "_type": "GENERIC_ID", "value": subject, "scheme": "test" }
+            }
+        },
+        "is_queryable": true,
+        "is_modifiable": true
+    }))
+    .expect("the subject-bearing EHR_STATUS decodes")
+}
+
+/// The ABAC patient scope confines every query shape to the caller's EHRs: a
+/// query with no versioned-object root (`FROM EHR e`, an `ehr_status` path, an
+/// `OR` under the EHR) reads the `ehr` row itself, so the scope binds that row
+/// as well as every root, on the flat and the LIMIT-streaming shape. No openEHR
+/// spec governs the patient scope — our own access-control extension.
+#[tokio::test]
+async fn the_patient_scope_confines_every_query_shape() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+
+    let own = svc
+        .create_ehr(Some(status_with_subject("test.patients", "PATIENT-A")))
+        .await
+        .expect("create the in-scope EHR")
+        .to_string();
+    let other = svc
+        .create_ehr(Some(status_with_subject("test.patients", "PATIENT-B")))
+        .await
+        .expect("create the out-of-scope EHR")
+        .to_string();
+    create_comp(&svc, &own, "BP", 80.0).await;
+    create_comp(&svc, &other, "BP", 120.0).await;
+
+    let scoped = |ehr_ids: Vec<String>| AqlQueryRequest {
+        ehr_ids,
+        subject_scope: Some("PATIENT-A".to_owned()),
+        ..AqlQueryRequest::default()
+    };
+
+    // Queries projecting the EHR id: every row names the in-scope EHR.
+    for aql in [
+        "SELECT e/ehr_id/value FROM EHR e",
+        "SELECT e/ehr_id/value, e/ehr_status/subject FROM EHR e",
+        "SELECT e/ehr_id/value FROM EHR e CONTAINS EHR_STATUS s",
+        "SELECT e/ehr_id/value FROM EHR e CONTAINS COMPOSITION c",
+        "SELECT e/ehr_id/value, c/name/value FROM EHR e CONTAINS COMPOSITION c LIMIT 10",
+        "SELECT e/ehr_id/value FROM EHR e CONTAINS (COMPOSITION c1 OR EHR_STATUS s1)",
+        "SELECT e/ehr_id/value, c1/uid/value FROM EHR e \
+         CONTAINS (COMPOSITION c1 OR COMPOSITION c2)",
+    ] {
+        let unscoped = run_aql(&svc, aql, AqlQueryRequest::default()).await;
+        let ids: Vec<&str> = rows(&unscoped)
+            .iter()
+            .map(|row| row[0].as_str().expect("ehr_id cell"))
+            .collect();
+        assert!(
+            ids.contains(&other.as_str()),
+            "{aql}: unscoped control reaches the other EHR: {ids:?}"
+        );
+        let r = run_aql(&svc, aql, scoped(Vec::new())).await;
+        let ids: Vec<&str> = rows(&r)
+            .iter()
+            .map(|row| row[0].as_str().expect("ehr_id cell"))
+            .collect();
+        assert!(!ids.is_empty(), "{aql}: the in-scope EHR is served");
+        assert!(
+            ids.iter().all(|id| *id == own),
+            "{aql}: only the caller's EHR is served: {ids:?}"
+        );
+    }
+
+    // Queries projecting no EHR id: the row count is the in-scope EHR's alone.
+    for aql in [
+        "SELECT e/time_created/value FROM EHR e",
+        "SELECT COUNT(*) FROM EHR e",
+        "SELECT s/uid/value FROM EHR_STATUS s",
+        "SELECT s/uid/value FROM EHR_STATUS s LIMIT 10",
+        "SELECT c/uid/value FROM COMPOSITION c",
+        "SELECT c/name/value FROM COMPOSITION c LIMIT 10",
+    ] {
+        let r = run_aql(&svc, aql, scoped(Vec::new())).await;
+        let served = if aql.contains("COUNT") {
+            rows(&r)[0][0].as_i64().expect("count is an integer")
+        } else {
+            i64::try_from(rows(&r).len()).expect("row count fits")
+        };
+        assert_eq!(served, 1, "{aql}: one in-scope row: {r}");
+    }
+
+    // An explicit `ehr_id` scope naming the other EHR does not lift the
+    // patient scope.
+    let r = run_aql(
+        &svc,
+        "SELECT e/ehr_id/value FROM EHR e",
+        scoped(vec![other.clone()]),
+    )
+    .await;
+    assert!(rows(&r).is_empty(), "the other EHR stays out of scope: {r}");
+}
+
+/// The patient claim carries a subject id and no namespace, so an id held under
+/// two namespaces names neither subject: the scope admits no EHR of either,
+/// while an id held under one namespace still admits its own. No openEHR spec
+/// governs the patient scope — our own access-control extension.
+#[tokio::test]
+async fn the_patient_scope_refuses_an_id_held_under_two_namespaces() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+
+    let mut shared = Vec::new();
+    for namespace in ["test.patients", "other.patients"] {
+        let ehr = svc
+            .create_ehr(Some(status_with_subject(namespace, "PATIENT-X")))
+            .await
+            .expect("create an EHR under the shared id")
+            .to_string();
+        create_comp(&svc, &ehr, "BP", 80.0).await;
+        shared.push(ehr);
+    }
+    let unique = svc
+        .create_ehr(Some(status_with_subject("test.patients", "PATIENT-U")))
+        .await
+        .expect("create the EHR under a unique id")
+        .to_string();
+    create_comp(&svc, &unique, "BP", 90.0).await;
+
+    let scoped = |subject: &str| AqlQueryRequest {
+        subject_scope: Some(subject.to_owned()),
+        ..AqlQueryRequest::default()
+    };
+    for aql in [
+        "SELECT e/ehr_id/value FROM EHR e",
+        "SELECT e/ehr_id/value FROM EHR e CONTAINS COMPOSITION c",
+        "SELECT e/ehr_id/value, c/name/value FROM EHR e CONTAINS COMPOSITION c LIMIT 10",
+        "SELECT c/uid/value FROM COMPOSITION c",
+        "SELECT s/uid/value FROM EHR_STATUS s",
+    ] {
+        let unscoped = run_aql(&svc, aql, AqlQueryRequest::default()).await;
+        assert_eq!(
+            rows(&unscoped).len(),
+            3,
+            "{aql}: unscoped control: {unscoped}"
+        );
+        let ambiguous = run_aql(&svc, aql, scoped("PATIENT-X")).await;
+        assert!(
+            rows(&ambiguous).is_empty(),
+            "{aql}: an id held under two namespaces admits no EHR: {ambiguous}"
+        );
+        let own = run_aql(&svc, aql, scoped("PATIENT-U")).await;
+        assert_eq!(
+            rows(&own).len(),
+            1,
+            "{aql}: an id held under one namespace admits its EHR: {own}"
+        );
+    }
+    let own = run_aql(
+        &svc,
+        "SELECT e/ehr_id/value FROM EHR e",
+        scoped("PATIENT-U"),
+    )
+    .await;
+    assert_eq!(rows(&own)[0][0], json!(unique));
+    let all = run_aql(
+        &svc,
+        "SELECT e/ehr_id/value FROM EHR e",
+        AqlQueryRequest::default(),
+    )
+    .await;
+    for ehr in &shared {
+        assert!(
+            rows(&all).iter().any(|row| row[0] == json!(ehr)),
+            "the unscoped control serves {ehr}: {all}"
+        );
+    }
+}

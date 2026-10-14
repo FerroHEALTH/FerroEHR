@@ -42,7 +42,9 @@ use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig, SyslogCon
 use ferroehr::system_log::sender::{AuditSender, start};
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authz::engine::{AuthzError, PolicyEngine};
-use ferroehr_rest::extensions::access::authz::request::{Attr, AuthzRequest, Decision};
+use ferroehr_rest::extensions::access::authz::request::{
+    Attr, AuthzRequest, Decision, ResourceKind,
+};
 use ferroehr_rest::extensions::access::authz::{AuthzHandle, AuthzResolvers, ResolveError};
 use ferroehr_rest::extensions::management::Observability;
 use ferroehr_rest::{build_full, build_with};
@@ -760,4 +762,172 @@ async fn template_scoped_rule_does_not_bind_a_templateless_composition() {
         "a templateless composition carries no template attribute, so the \
          template-scoped rule must deny"
     );
+}
+
+// ── the query subject scope ───────────────────────────────────────────────────
+
+/// Create an EHR with a chosen id whose `EHR_STATUS.subject` refers to
+/// `patient` (`PUT /ehr/{id}` with a status body → 201).
+async fn seed_ehr_for(seed: &Router, ehr_id: &str, patient: &str) {
+    let status = json!({
+        "_type": "EHR_STATUS",
+        "archetype_node_id": "openEHR-EHR-EHR_STATUS.generic.v1",
+        "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID",
+                              "value": "openEHR-EHR-EHR_STATUS.generic.v1" },
+            "rm_version": "1.2.0"
+        },
+        "name": { "_type": "DV_TEXT", "value": "EHR Status" },
+        "subject": {
+            "_type": "PARTY_SELF",
+            "external_ref": {
+                "_type": "PARTY_REF",
+                "namespace": "test.patients",
+                "type": "PERSON",
+                "id": { "_type": "GENERIC_ID", "value": patient, "scheme": "test" }
+            }
+        },
+        "is_queryable": true,
+        "is_modifiable": true
+    });
+    let req = Request::builder()
+        .method("PUT")
+        .uri(format!("{BASE}/ehr/{ehr_id}"))
+        .header("content-type", "application/json")
+        .body(Body::from(status.to_string()))
+        .expect("request");
+    let (code, _, body) = common::send(seed, req).await;
+    assert_eq!(code, StatusCode::CREATED, "seed EHR {ehr_id}: {body}");
+}
+
+/// Run `aql` through `POST /query/aql` as a caller whose token carries
+/// `patient`, returning the first column of every row.
+async fn query_first_column(app: &Router, aql: &str, patient: &str) -> Vec<Value> {
+    let req = Request::builder()
+        .method("POST")
+        .uri(format!("{BASE}/query/aql"))
+        .header("authorization", bearer(Some(patient)))
+        .header("content-type", "application/json")
+        .body(Body::from(json!({ "q": aql }).to_string()))
+        .expect("request");
+    let (code, _, body) = common::send(app, req).await;
+    assert_eq!(code, StatusCode::OK, "query {aql}: {body}");
+    let result: Value = serde_json::from_str(&body).expect("RESULT_SET JSON");
+    result["rows"]
+        .as_array()
+        .expect("rows array")
+        .iter()
+        .map(|row| row[0].clone())
+        .collect()
+}
+
+/// The ABAC patient scope filters the HTTP query result to the caller's EHRs
+/// for every query shape, including a query with no versioned-object root,
+/// which reads the `ehr` row alone (our own extension; no openEHR spec governs
+/// the patient scope).
+#[tokio::test]
+async fn query_is_filtered_to_the_callers_patient() {
+    let (_pg, svc, seed) = service_and_seed_app().await;
+    seed_ehr_for(&seed, EHR_OWN, PATIENT_OWN).await;
+    seed_ehr_for(&seed, EHR_OTHER, PATIENT_OTHER).await;
+    seed_composition(&seed, EHR_OWN).await;
+    seed_composition(&seed, EHR_OTHER).await;
+
+    let gated = abac_app(Arc::clone(&svc), true);
+    let open = abac_app(svc, false);
+    for aql in [
+        "SELECT e/ehr_id/value FROM EHR e",
+        "SELECT e/ehr_id/value, e/ehr_status/subject FROM EHR e",
+        "SELECT e/ehr_id/value FROM EHR e CONTAINS EHR_STATUS s",
+        "SELECT e/ehr_id/value FROM EHR e CONTAINS COMPOSITION c",
+        "SELECT e/ehr_id/value, c/name/value FROM EHR e CONTAINS COMPOSITION c LIMIT 10",
+        "SELECT e/ehr_id/value FROM EHR e CONTAINS (COMPOSITION c1 OR EHR_STATUS s1)",
+    ] {
+        let control = query_first_column(&open, aql, PATIENT_OWN).await;
+        assert!(
+            control.contains(&json!(EHR_OTHER)),
+            "{aql}: with ABAC off the other EHR is served: {control:?}"
+        );
+        let served = query_first_column(&gated, aql, PATIENT_OWN).await;
+        assert!(!served.is_empty(), "{aql}: the caller's EHR is served");
+        assert!(
+            served.iter().all(|id| *id == json!(EHR_OWN)),
+            "{aql}: only the caller's EHR is served: {served:?}"
+        );
+    }
+    let count = query_first_column(&gated, "SELECT COUNT(*) FROM EHR e", PATIENT_OWN).await;
+    assert_eq!(count, vec![json!(1)], "one EHR is in the caller's scope");
+}
+
+/// A PDP that refuses every query touching `PATIENT_OWN`'s data and permits the
+/// rest, so the post-check is what denies.
+#[derive(Debug)]
+struct DenyOwnPatientQueries;
+
+#[async_trait]
+impl PolicyEngine for DenyOwnPatientQueries {
+    async fn decide(&self, req: &AuthzRequest<'_>) -> Result<Decision, AuthzError> {
+        let touches_own = match &req.patient {
+            Some(Attr::One(p)) => p == PATIENT_OWN,
+            Some(Attr::Set(set)) => set.iter().any(|p| p == PATIENT_OWN),
+            None => false,
+        };
+        Ok(if req.kind == ResourceKind::Query && touches_own {
+            Decision::Deny
+        } else {
+            Decision::Permit
+        })
+    }
+}
+
+/// Run `aql` through `POST /query/aql` as a caller whose token carries
+/// `patient`, returning the status only.
+async fn query_status(app: &Router, aql: &str, patient: &str) -> StatusCode {
+    let req = Request::builder()
+        .method("POST")
+        .uri(format!("{BASE}/query/aql"))
+        .header("authorization", bearer(Some(patient)))
+        .header("content-type", "application/json")
+        .body(Body::from(json!({ "q": aql }).to_string()))
+        .expect("request");
+    status(app, req).await
+}
+
+/// A query that reads only the `ehr` row still reaches the post-check PDP: the
+/// scope collection reports the EHRs it touches from its EHR source, so a deny
+/// rule applies to `SELECT e/ehr_id/value FROM EHR e` as it does to a query
+/// over compositions (our own extension; no openEHR spec governs ABAC).
+#[tokio::test]
+async fn the_query_post_check_applies_to_an_ehr_only_query() {
+    let (_pg, svc, seed) = service_and_seed_app().await;
+    seed_ehr_for(&seed, EHR_OWN, PATIENT_OWN).await;
+    seed_ehr_for(&seed, EHR_OTHER, PATIENT_OTHER).await;
+    seed_composition(&seed, EHR_OWN).await;
+
+    let app = build_full(
+        rest_config(),
+        svc,
+        authz_with(Arc::new(DenyOwnPatientQueries), resolvers()),
+        Observability::default(),
+    )
+    .expect("build app");
+    for aql in [
+        "SELECT e/ehr_id/value FROM EHR e",
+        "SELECT e/time_created/value FROM EHR e",
+        "SELECT e/ehr_status/subject FROM EHR e",
+        "SELECT e/ehr_id/value FROM EHR e CONTAINS (COMPOSITION c1 OR EHR_STATUS s1)",
+        "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c",
+    ] {
+        assert_eq!(
+            query_status(&app, aql, PATIENT_OWN).await,
+            StatusCode::FORBIDDEN,
+            "{aql}: the PDP deny applies"
+        );
+        assert_eq!(
+            query_status(&app, aql, PATIENT_OTHER).await,
+            StatusCode::OK,
+            "{aql}: another patient's query is permitted"
+        );
+    }
 }

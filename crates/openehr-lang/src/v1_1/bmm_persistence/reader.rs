@@ -663,6 +663,9 @@ fn read_packages(
     level: PackageLevel,
 ) -> Result<BTreeMap<String, PBmmPackage>, PBmmReadError> {
     let path = block.member_path(name);
+    // NOTE: master04-syntax.adoc §Package Definition shows a leaf package without `packages`,
+    // against the 1..1 class table (upstream #3770); absent reads as the empty map, as in
+    // the generated JSON reader.
     let Some(value) = block.take(name) else {
         return Ok(BTreeMap::new());
     };

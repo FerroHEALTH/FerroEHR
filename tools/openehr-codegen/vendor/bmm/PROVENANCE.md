@@ -83,10 +83,12 @@ model, with its adjudicated outcome) and `tests/it/el_assertions.rs` (the
 pinned versions' assertion strings against the EL grammar). For BASE 1.3.0, RM 1.2.0 and TERM 3.1.0 those ODIN files
 are the ITS-BMM copies at `37b31739…`, which predate the json overlays above,
 so they do not carry the overlay changes. Those tests cannot read the json
-overlays instead: the generated strict `P_BMM_SCHEMA` reader in `openehr-lang`
-refuses them, because a leaf package omits `packages`, which the LANG BMM
-declares mandatory on `P_BMM_PACKAGE_CONTAINER`. The stale copies stay until
-that is resolved.
+overlays instead: `openehr-lang`'s P_BMM pipeline reads ODIN only, and its
+generated strict JSON reader is a codec for the whole `P_BMM_CLASS` object,
+whose `uid` and `source_schema_id` are set while a schema is read and appear in
+no persisted file. (A leaf package without `packages` is not the obstacle:
+the generated reader takes it as the empty package map.) The stale copies stay
+until the pipeline reads the json serialization.
 
 Note (drift caught 2026-07-04): re-vendoring verbatim at this commit corrected a
 one-character doc typo (`senstive`->`sensitive`) in BASE's

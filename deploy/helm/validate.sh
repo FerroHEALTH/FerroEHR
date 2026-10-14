@@ -1097,13 +1097,13 @@ viewer-url|https://${RELEASE_NAME}:8080
 bridge-url|https://${RELEASE_NAME}:8080/ferroehr/rest/openehr/v1
 viewer-certdir|/etc/ssl/certs:/etc/ferroehr-cdr-ca
 bridge-certdir|/etc/ssl/certs:/etc/ferroehr-cdr-ca
-viewer-ca-secret|ferroehr-server-tls
-bridge-ca-secret|ferroehr-server-tls
+viewer-ca-secret|ferroehr-server-ca
+bridge-ca-secret|ferroehr-server-ca
 viewer-ca-mount|/etc/ferroehr-cdr-ca
 bridge-ca-mount|/etc/ferroehr-cdr-ca
 service-appprotocol|https
 scrape-scheme|https
-scrape-ca-secret|ferroehr-server-tls
+scrape-ca-secret|ferroehr-server-ca
 annotation-scheme|https
 ingress-backend-protocol|HTTPS
 CLAIMS

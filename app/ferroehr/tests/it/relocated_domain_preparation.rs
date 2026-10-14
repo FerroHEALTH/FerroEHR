@@ -68,6 +68,17 @@ async fn exists(pool: &sqlx::PgPool, relation: &str) -> bool {
         .expect("probe the catalog")
 }
 
+/// The schemas of this build present in the database `pool` reaches, sorted.
+async fn schemas_of_this_build(pool: &sqlx::PgPool) -> Vec<String> {
+    sqlx::query_scalar(
+        "SELECT nspname::text FROM pg_namespace \
+         WHERE nspname IN ('ext', 'clinical', 'party', 'linkage', 'audit') ORDER BY 1",
+    )
+    .fetch_all(pool)
+    .await
+    .expect("read the schemas")
+}
+
 /// The linkage domain alone in a second database is prepared under `apply`,
 /// verified under `verify`, and boots under both.
 ///
@@ -101,6 +112,12 @@ async fn a_linkage_domain_in_its_own_database_is_prepared_and_verified() {
     assert!(
         !exists(&relocated, "clinical.version").await,
         "and nothing of the clinical domain reaches the linkage database"
+    );
+    assert_eq!(
+        schemas_of_this_build(&relocated).await,
+        ["ext", "linkage", "party"],
+        "the linkage database holds ext and its own sets' schemas, not an empty \
+         clinical or audit schema"
     );
 
     let verifying = DbConfig {
@@ -213,4 +230,158 @@ async fn a_migrator_reaching_another_database_is_refused() {
         !exists(&second.pool(), "ext._sqlx_migrations").await,
         "and nothing was prepared in the database the migrator reaches"
     );
+}
+
+/// Prepares the first database with every domain but linkage and a second,
+/// empty one with linkage alone, and returns the settings, the layout and the
+/// second database.
+async fn prepared_relocated_linkage(
+    db: &testkit::TestDb,
+    suffix: &str,
+) -> (DbConfig, StorageConfig, testkit::TestDb) {
+    let second = testkit::empty_db().await.expect("a second, empty database");
+    let (linkage_login, password) = login(db, suffix, "ferroehr_linkage").await;
+    let storage = relocated_linkage(
+        &with_role(second.url(), &linkage_login, &password),
+        second.url(),
+    );
+    let settings = DbConfig {
+        migrate: MigrationMode::Apply,
+        ..DbConfig::new(db.url())
+    };
+    ferroehr::db::apply_schema(&settings, &storage)
+        .await
+        .expect("prepare both databases");
+    (settings, storage, second)
+}
+
+/// The grant sweep runs in every database a pool reaches: a cross-domain grant
+/// made in the relocated linkage database refuses the boot, although the first
+/// database's grants are intact.
+#[tokio::test]
+async fn the_grant_sweep_reaches_a_relocated_database() {
+    let db = testkit::db().await.expect("testkit database");
+    let (settings, storage, second) = prepared_relocated_linkage(&db, "relsweep").await;
+    let pools = ferroehr::db::connect_domains(&settings, &storage)
+        .await
+        .expect("the domain pools connect");
+    ferroehr::db::verify_domain_isolation(
+        &pools,
+        &storage.layout(&settings),
+        DeploymentProfile::Sandbox,
+    )
+    .await
+    .expect("both databases hold the boundary as prepared");
+
+    sqlx::query("GRANT SELECT ON party.version TO ferroehr_linkage")
+        .execute(&second.pool())
+        .await
+        .expect("breach the boundary in the second database only");
+    let error = ferroehr::db::verify_domain_isolation(
+        &pools,
+        &storage.layout(&settings),
+        DeploymentProfile::Sandbox,
+    )
+    .await
+    .expect_err("the breach in the linkage database refuses the boot");
+    pools.close().await;
+    let DbError::DomainIsolationBreached { role, relation, .. } = error else {
+        panic!("a cross-domain grant must surface as a breach: {error}")
+    };
+    assert_eq!(role, "ferroehr_linkage");
+    assert!(relation.starts_with("party."), "{relation}");
+}
+
+/// An erasure of the relocated layout leaves no schema of this build in
+/// either database.
+#[tokio::test]
+async fn an_erasure_empties_the_relocated_database() {
+    let db = testkit::db().await.expect("testkit database");
+    let (settings, storage, second) = prepared_relocated_linkage(&db, "relerase").await;
+    ferroehr::db::erase_schema(&settings, &storage)
+        .await
+        .expect("the erasure runs");
+    assert!(schemas_of_this_build(&second.pool()).await.is_empty());
+    assert!(schemas_of_this_build(&db.pool()).await.is_empty());
+}
+
+/// `SQLSTATE` 42501 `insufficient_privilege` (`PostgreSQL` docs § Appendix A
+/// "`PostgreSQL` Error Codes", class 42).
+const SQLSTATE_INSUFFICIENT_PRIVILEGE: &str = "42501";
+
+/// A runtime role reads its schema's migration bookkeeping and cannot write
+/// it.
+#[tokio::test]
+async fn a_runtime_role_cannot_write_its_migration_bookkeeping() {
+    let db = testkit::db().await.expect("testkit database");
+    for (suffix, role, schema) in [
+        ("bkclin", "ferroehr_clinical", "clinical"),
+        ("bkparty", "ferroehr_party", "party"),
+        ("bklink", "ferroehr_linkage", "linkage"),
+    ] {
+        let (login, password) = login(&db, suffix, role).await;
+        let pool = sqlx::PgPool::connect(&with_role(db.url(), &login, &password))
+            .await
+            .expect("connect as the runtime login");
+        // The schema name is one of the three literals above, never input.
+        let read: i64 = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
+            "SELECT count(*) FROM {schema}._sqlx_migrations"
+        )))
+        .fetch_one(&pool)
+        .await
+        .expect("the runtime role reads its migration level");
+        assert!(read > 0);
+        for write in [
+            format!("DELETE FROM {schema}._sqlx_migrations WHERE false"),
+            format!("UPDATE {schema}._sqlx_migrations SET success = success WHERE false"),
+        ] {
+            let error = sqlx::query(sqlx::AssertSqlSafe(write.clone()))
+                .execute(&pool)
+                .await
+                .expect_err("a runtime role must not write the bookkeeping");
+            let sqlx::Error::Database(refusal) = &error else {
+                panic!("{write}: {error}")
+            };
+            assert_eq!(
+                refusal.code().as_deref(),
+                Some(SQLSTATE_INSUFFICIENT_PRIVILEGE),
+                "{role}: {write}"
+            );
+        }
+        pool.close().await;
+    }
+}
+
+/// The boot gate refuses a runtime role that can write a bookkeeping table,
+/// naming the role and the table.
+#[tokio::test]
+async fn the_boot_gate_refuses_a_writable_bookkeeping_table() {
+    let db = testkit::db().await.expect("testkit database");
+    let settings = DbConfig::new(db.url());
+    let pools = ferroehr::db::domain::DomainPools::from_shared(&db.pool());
+    ferroehr::db::verify_domain_isolation(
+        &pools,
+        &StorageConfig::default().layout(&settings),
+        DeploymentProfile::Sandbox,
+    )
+    .await
+    .expect("the migrated database passes");
+
+    sqlx::query("GRANT INSERT ON clinical._sqlx_migrations TO ferroehr_clinical")
+        .execute(&db.pool())
+        .await
+        .expect("reopen the write");
+    let error = ferroehr::db::verify_domain_isolation(
+        &pools,
+        &StorageConfig::default().layout(&settings),
+        DeploymentProfile::Sandbox,
+    )
+    .await
+    .expect_err("a writable bookkeeping table refuses the boot");
+    pools.close().await;
+    let DbError::BookkeepingWritable { role, relation } = error else {
+        panic!("must surface as a writable bookkeeping table: {error}")
+    };
+    assert_eq!(role, "ferroehr_clinical");
+    assert_eq!(relation, "clinical._sqlx_migrations");
 }

@@ -370,6 +370,19 @@ fn decision_map_integrity_entries_are_cited_and_reference_real_classes() {
     }
 }
 
+/// Every existence-contradiction entry still names a mandatory `Hash` its owner
+/// declares, so an upstream fix to the class table (`0..1`) fails here instead
+/// of leaving a citation that describes a contradiction no longer there.
+#[test]
+fn existence_contradictions_name_a_still_mandatory_hash() {
+    let stale = testsupport::stale_existence_contradictions().unwrap();
+    assert!(
+        stale.is_empty(),
+        "stale existence-contradiction entries:\n{}",
+        stale.join("\n")
+    );
+}
+
 /// Every adjudicated free-form field is a REAL degrade whose adjudication is
 /// written at the site: some generated file renders the field as
 /// `serde_json::Value` and carries the `// NOTE:` with the entry's citation.

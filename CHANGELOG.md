@@ -103,6 +103,13 @@ workflow refuses a tag that has no matching section here.
 
 ### Security
 
+- **ABAC patient scoping covers queries that read only the EHR row** (#3771).
+  With `[authz.abac]` on, `SELECT e/ehr_id/value FROM EHR e`,
+  `COUNT(*) FROM EHR e`, `e/ehr_status/...` paths, `EHR e CONTAINS (A OR B)`
+  and an `ehr_id`-scoped query naming another patient's EHR returned EHRs of
+  other patients. The patient scope now applies to the EHR row and to every
+  versioned object, on every query plan.
+
 - **The viewer's Basic sign-in follows only a same-origin `next`.** After a
   successful or refused sign-in, an absolute, scheme-relative or backslash
   destination lands on the dashboard instead (an open redirect).
@@ -349,6 +356,12 @@ workflow refuses a tag that has no matching section here.
   discovery and JWKS fetches verify against the platform trust store
   (`SSL_CERT_DIR`, `SSL_CERT_FILE`), as the viewer now does; `reqwest` 0.12
   and its bundled roots leave the dependency graph.
+- **`openehr-lang` reads BMM packages without `packages`** (#3768). The
+  generated BMM JSON reader (and its AM 2.4 re-emission) reads a package or
+  schema without `packages` as an empty package map and leaves an empty map
+  out on write, as the LANG BMM persistence syntax chapter's example and every
+  published openEHR BMM do; the class table's `1..1` is reported upstream
+  (#3770).
 - **The compose image-tag guard covers the terminology overlay** (#3605).
   `scripts/checks/compose-image-tags.sh` checks every FerroEHR image tag in
   every root and `docker/` compose file, `docker-compose.terminology.yml`

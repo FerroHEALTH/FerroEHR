@@ -115,11 +115,18 @@ pub(crate) fn query_pre(
     Ok((patient, true))
 }
 
-/// Post-checks a query execution: the PDP fan-out over the touched template
-/// set.
+/// Post-checks a query execution: one PDP decision over the touched EHR and
+/// template sets.
 ///
-/// A query touching no template asks nothing of the PDP. The patient gate is
-/// already enforced by the subject-scope pre-filter, so it is not re-run here.
+/// The executor collects every EHR the query touches, from its EHR sources as
+/// well as its versioned-object roots, so a query reading only the `ehr` row
+/// reaches the PDP too; a query touching nothing asks nothing of the PDP. The
+/// patient gate is the subject-scope pre-filter, which binds every EHR source
+/// and root, so it is not re-run here.
+///
+/// # Errors
+/// A ready `403` when the PDP denies or the patient claim is missing, or a
+/// `500` when the PDP fails.
 pub(crate) async fn query_post(
     state: &AppState,
     op: &'static str,

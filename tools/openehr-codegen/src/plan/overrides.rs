@@ -916,48 +916,91 @@ pub(crate) fn default_unrenderable(owner: &str, field: &str) -> bool {
         .any(|u| u.owner == owner && u.field == field)
 }
 
-/// A container attribute whose vendored cardinality lower bound is CONTRADICTED
-/// by the same release's normative syntax, with the citation that resolves it.
-///
-/// The emitter never softens a bound on its own — a `1..*` is emitted as
-/// `NonEmptyVec<T>` precisely so the model carries it. An entry here exists
-/// only where the vendored release states the bound BOTH ways and the syntax
-/// chapter (which defines the persistence form and shows conformant instances)
-/// governs over the UML class table.
-struct CardinalityContradiction {
-    /// The declaring BMM class.
-    owner: &'static str,
-    /// The container attribute.
-    field: &'static str,
-    /// The spec text that resolves the contradiction.
-    #[expect(
-        dead_code,
-        reason = "the citation is this decision map's spec record — it exists to be read at review, exactly like every other override map's citation field, and is deliberately not consumed by emitted text"
-    )]
-    citation: &'static str,
-    /// One-line reason.
-    #[expect(
-        dead_code,
-        reason = "the reason is this decision map's spec record — read at review, not consumed by emitted text"
-    )]
-    reason: &'static str,
+/// Which vendored statement a [`SpecContradiction`] entry declines to realize.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ContradictionKind {
+    /// A container's `1..*` lower bound: the field is emitted as a plain
+    /// (possibly empty) container instead of `NonEmptyVec<T>`.
+    LowerBound,
+    /// A mandatory `Hash<K, V>` attribute's `1..1` existence: the field stays
+    /// a `BTreeMap`, an absent key reads as the empty map, and the empty map is
+    /// omitted on write.
+    Existence,
 }
 
-/// Every adjudicated cardinality contradiction in the vendored inputs.
-static CARDINALITY_CONTRADICTIONS: &[CardinalityContradiction] = &[CardinalityContradiction {
-    owner: "P_BMM_GENERIC_TYPE",
-    field: "generic_parameter_defs",
-    citation: "docs/specs/openehr/LANG/docs/bmm_persistence/master04-syntax.adoc \u{a7}Generic                Classes: \"within `P_BMM_GENERIC_TYPE`, use `_generic_parameters_` for a list of                string types; use `_generic_parameter_defs_` for a list of complex type                references\" \u{2014} the two are ALTERNATIVES, and the chapter\u{2019}s own                example writes `root_type = <\"DV_INTERVAL\"> generic_parameters =                <\"DV_QUANTITY\">` with no `generic_parameter_defs` at all. The UML class table                (docs/specs/openehr/LANG/docs/UML/classes/org.openehr.lang.bmm_persistence.p_bmm_generic_type.adoc)                states 1..1 for the same attribute, which would make that example \u{2014} and                every string-parameterised generic type in a real .bmm schema \u{2014} invalid,                and would leave the 0..1 `generic_parameters` attribute dead. The syntax                chapter governs.",
-    reason: "Reported upstream as a spec defect (tracker issue #1717); the syntax chapter's reading is emitted.",
-}];
+/// An attribute whose vendored cardinality or existence is CONTRADICTED by the
+/// same release's normative syntax, with the citation that resolves it.
+///
+/// The emitter never softens a bound on its own — a `1..*` is emitted as
+/// `NonEmptyVec<T>` and a `1..1` as a required field precisely so the model
+/// carries them. An entry here exists only where the vendored release states
+/// the constraint BOTH ways and the syntax chapter (which defines the
+/// persistence form and shows conformant instances) governs over the UML class
+/// table. An entry is declared on the attribute's declaring class, so it
+/// reaches every descendant that inherits the attribute.
+pub(crate) struct SpecContradiction {
+    /// The declaring BMM class.
+    pub owner: &'static str,
+    /// The attribute.
+    pub field: &'static str,
+    /// What the entry declines to realize.
+    pub kind: ContradictionKind,
+    /// The spec text that resolves the contradiction.
+    pub citation: &'static str,
+    /// One-line reason.
+    pub reason: &'static str,
+}
+
+/// Every adjudicated cardinality or existence contradiction in the vendored
+/// inputs.
+pub(crate) const SPEC_CONTRADICTIONS: &[SpecContradiction] = &[
+    SpecContradiction {
+        owner: "P_BMM_GENERIC_TYPE",
+        field: "generic_parameter_defs",
+        kind: ContradictionKind::LowerBound,
+        citation: "docs/specs/openehr/LANG/docs/bmm_persistence/master04-syntax.adoc \u{a7}Generic                Classes: \"within `P_BMM_GENERIC_TYPE`, use `_generic_parameters_` for a list of                string types; use `_generic_parameter_defs_` for a list of complex type                references\" \u{2014} the two are ALTERNATIVES, and the chapter\u{2019}s own                example writes `root_type = <\"DV_INTERVAL\"> generic_parameters =                <\"DV_QUANTITY\">` with no `generic_parameter_defs` at all. The UML class table                (docs/specs/openehr/LANG/docs/UML/classes/org.openehr.lang.bmm_persistence.p_bmm_generic_type.adoc)                states 1..1 for the same attribute, which would make that example \u{2014} and                every string-parameterised generic type in a real .bmm schema \u{2014} invalid,                and would leave the 0..1 `generic_parameters` attribute dead. The syntax                chapter governs.",
+        reason: "Reported upstream as a spec defect (tracker issue #1717); the syntax chapter's reading is emitted.",
+    },
+    SpecContradiction {
+        owner: "P_BMM_PACKAGE_CONTAINER",
+        field: "packages",
+        kind: ContradictionKind::Existence,
+        citation: "docs/specs/openehr/LANG/docs/bmm_persistence/master04-syntax.adoc \u{a7}Package \
+                   Definition: \"just name the classes and packages in a recursive fashion\", and \
+                   the chapter\u{2019}s only package example (`org.openehr.test_pkg`, carrying \
+                   `name` and `classes`) has no `packages` attribute; \u{a7}Serialisation Formats \
+                   applies the same rules to the JSON form. The UML class table \
+                   (docs/specs/openehr/LANG/docs/UML/classes/org.openehr.lang.bmm_persistence.p_bmm_package_container.adoc \
+                   \u{a7}Attributes) and the LANG BMM state 1..1, which would make that example \
+                   and every leaf package of every published BMM schema invalid, while the \
+                   in-memory twin (org.openehr.lang.bmm.bmm_package_container.adoc \
+                   \u{a7}Attributes) states 0..1. The syntax chapter governs; no text defines \
+                   absent as empty, so reading absence as the empty package map is our own \
+                   design, matching the ODIN reader.",
+        reason: "Reported upstream as a spec defect (tracker issue #3770); a leaf package or schema without `packages` reads as the empty map, which is omitted on write.",
+    },
+];
+
+/// Whether `(owner, field)` carries an adjudicated contradiction of `kind`.
+fn contradicted(owner: &str, field: &str, kind: ContradictionKind) -> bool {
+    SPEC_CONTRADICTIONS
+        .iter()
+        .any(|c| c.owner == owner && c.field == field && c.kind == kind)
+}
 
 /// Whether `(owner, field)`'s vendored cardinality lower bound is an adjudicated
 /// contradiction that the emitter must NOT realize as a non-empty container.
 #[must_use]
 pub(crate) fn cardinality_contradicted(owner: &str, field: &str) -> bool {
-    CARDINALITY_CONTRADICTIONS
-        .iter()
-        .any(|c| c.owner == owner && c.field == field)
+    contradicted(owner, field, ContradictionKind::LowerBound)
+}
+
+/// Whether `(owner, field)`'s vendored `1..1` existence is an adjudicated
+/// contradiction: the mandatory `Hash` field reads an absent key as the empty
+/// map and omits the empty map on write.
+#[must_use]
+pub(crate) fn existence_contradicted(owner: &str, field: &str) -> bool {
+    contradicted(owner, field, ContradictionKind::Existence)
 }
 
 /// The default expression for a resolved property, or `None`.

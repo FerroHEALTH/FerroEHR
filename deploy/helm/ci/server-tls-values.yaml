@@ -4,9 +4,10 @@
 # helpers is one no golden and no gate sees, and the clients' URLs went on
 # saying `http://` while the listener spoke TLS.
 #
-# The key pair and the CA come from one Secret in the shape a cert-manager
-# Certificate writes (`tls.crt`, `tls.key`, `ca.crt`), mounted into the server
-# with extraVolumes and named to the clients with service.tls.caExistingSecret.
+# The key pair comes from a Secret in the shape a cert-manager Certificate
+# writes (`tls.crt`, `tls.key`), mounted into the server with extraVolumes; the
+# clients are named a CA-only Secret (`ca.crt`) through
+# service.tls.caExistingSecret, so no client mounts the private key.
 # The Basic-auth shape is reused verbatim from basic-auth-values.yaml so no new
 # credential-shaped string enters the tree.
 database:
@@ -47,7 +48,7 @@ extraVolumeMounts:
 
 service:
   tls:
-    caExistingSecret: ferroehr-server-tls
+    caExistingSecret: ferroehr-server-ca
 
 metrics:
   # The pod annotations too, so the gate reads their scheme beside the

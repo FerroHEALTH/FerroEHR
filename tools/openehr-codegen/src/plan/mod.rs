@@ -19,7 +19,9 @@ pub(crate) mod overrides;
 
 use crate::analyze::Model;
 use crate::load::bmm::{BmmClass, BmmEnumeration, BmmPropKind, BmmSchema, BmmType};
-use crate::plan::overrides::{back_reference, cardinality_contradicted, field_default, primitive};
+use crate::plan::overrides::{
+    back_reference, cardinality_contradicted, existence_contradicted, field_default, primitive,
+};
 use crate::render::naming;
 use std::collections::BTreeSet;
 
@@ -218,7 +220,10 @@ pub(crate) struct JsonField {
 pub(crate) enum JsonFieldKind {
     /// `Option<T>` — omitted when `None`.
     Optional,
-    /// `Vec<T>` (a mandatory container) — omitted when empty.
+    /// `Vec<T>` (a mandatory container), or the `BTreeMap` of a mandatory
+    /// `Hash` under an adjudicated existence contradiction
+    /// ([`crate::plan::overrides::existence_contradicted`]) — read as empty when
+    /// absent, omitted when empty.
     Container,
     /// `NonEmptyVec<T>` (a mandatory `1..*` container) — always present, and
     /// read through the type's own fallible constructor, so an absent or empty
@@ -323,6 +328,11 @@ impl Model {
                         (true, false) => JsonFieldKind::Container,
                         (false, _) => JsonFieldKind::OptionalContainer,
                     }
+                } else if p.is_mandatory && existence_contradicted(&rp.owner, &p.name) {
+                    // A `1..1` `Hash` whose existence the syntax chapter
+                    // contradicts takes the mandatory-container door: absent
+                    // reads as empty, empty is omitted on write.
+                    JsonFieldKind::Container
                 } else if p.is_mandatory {
                     JsonFieldKind::Plain
                 } else {

@@ -617,7 +617,7 @@ spec:
                 path: password
         - name: cdr-ca
           secret:
-            secretName: ferroehr-server-tls
+            secretName: ferroehr-server-ca
             items:
               - key: ca.crt
                 path: ca.crt
@@ -965,7 +965,7 @@ spec:
           emptyDir: {}
         - name: cdr-ca
           secret:
-            secretName: ferroehr-server-tls
+            secretName: ferroehr-server-ca
             items:
               - key: ca.crt
                 path: ca.crt
@@ -1041,5 +1041,5 @@ spec:
         serverName: ferroehr
         ca:
           secret:
-            name: ferroehr-server-tls
+            name: ferroehr-server-ca
             key: ca.crt

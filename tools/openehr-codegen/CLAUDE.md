@@ -114,9 +114,12 @@ containers take. Where no such rule exists (`FOLDER.items`/`folders`,
 `…org.openehr.rm.common.folder.adoc` §Attributes types both `0..1` with no
 non-empty rule), both states are real and the type must carry both.
 
-The `1..*` cardinality source is the BMM, minus the overrides in
-`plan/overrides.rs` `cardinality_contradicted` — a class whose own invariants
-contradict its declared lower bound.
+The `1..*` cardinality source is the BMM, minus the `LowerBound` entries of
+`plan/overrides.rs` `SPEC_CONTRADICTIONS` (`cardinality_contradicted`) — an
+attribute whose bound the release's own syntax chapter contradicts. The map's
+`Existence` entries (`existence_contradicted`) do the same for a mandatory
+`Hash`: it stays a `BTreeMap`, absent reads as empty, and empty is omitted on
+write (`P_BMM_PACKAGE_CONTAINER.packages`).
 
 **The wire is unaffected in the write direction**: the canonical-JSON writer
 omits an empty list whether it is `None` or `Some(vec![])`, per

@@ -316,7 +316,8 @@ pub struct QueryScope {
 }
 
 /// Run the scope-collection query for `ir` and return the distinct EHR-id and
-/// template-id sets it touches. Empty when the query has no VO root.
+/// template-id sets it touches. Empty when the query binds no EHR source and no
+/// VO root.
 ///
 /// # Errors
 /// [`AqlError::Sql`] if the scope query cannot be lowered; [`AqlError::Exec`] if
@@ -339,13 +340,21 @@ pub async fn collect_scope(
         .map_err(ExecError::from)?;
     let mut ehr_ids = std::collections::BTreeSet::new();
     let mut template_ids = std::collections::BTreeSet::new();
+    // A NULL cell is a left binding whose branch did not match; a cell that
+    // fails to decode is a defect and fails the collection, never a silently
+    // narrower scope.
     for row in &rows {
-        // Every bound VO root contributes an (ehr_id, template_id) column pair.
-        for (ehr_col, template_col) in &scope.columns {
-            if let Ok(Some(e)) = row.try_get::<Option<Uuid>, _>(ehr_col.as_str()) {
+        for ehr_col in &scope.ehr_columns {
+            let ehr: Option<Uuid> = row.try_get(ehr_col.as_str()).map_err(ExecError::from)?;
+            if let Some(e) = ehr {
                 ehr_ids.insert(e.to_string());
             }
-            if let Ok(Some(t)) = row.try_get::<Option<String>, _>(template_col.as_str()) {
+        }
+        for template_col in &scope.template_columns {
+            let template: Option<String> = row
+                .try_get(template_col.as_str())
+                .map_err(ExecError::from)?;
+            if let Some(t) = template {
                 template_ids.insert(t);
             }
         }
