@@ -34,6 +34,7 @@
 use crate::analyze::Model;
 use crate::load::bmm::BmmSchema;
 use crate::plan::construction;
+use crate::plan::overrides::resolve_default;
 use crate::plan::{JsonEnumDispatch, JsonField, JsonFieldKind, JsonType};
 use std::fmt::Write as _;
 
@@ -879,7 +880,7 @@ fn emit_struct_deserialize(
     let finals: Vec<String> = fields
         .iter()
         .enumerate()
-        .map(|(i, f)| field_final(f, i))
+        .map(|(i, f)| field_final(f, i, schema))
         .collect();
     if let Some((params, fallible)) = door {
         assert_eq!(
@@ -939,10 +940,14 @@ fn emit_struct_deserialize(
 }
 
 /// The expression that turns field `i`'s map slot into the final field value.
-fn field_final(f: &JsonField, i: usize) -> String {
+///
+/// A mandatory field with a default falls back to it, resolved for this
+/// generation (`schema`) when it is an enumeration-constant marker.
+fn field_final(f: &JsonField, i: usize, schema: &JsonSchema<'_>) -> String {
     let wire = &f.wire_name;
     match (&f.kind, &f.default) {
         (JsonFieldKind::Plain, Some(default)) => {
+            let default = resolve_default(default, |marker| schema.door_param(marker));
             format!("__s{i}.flatten().unwrap_or({default})")
         }
         (JsonFieldKind::Plain, None) | (JsonFieldKind::NonEmptyContainer, _) => {

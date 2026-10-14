@@ -25,7 +25,14 @@
 #                                four DSNs must reach four different PostgreSQL
 #                                clusters. Pointing them at one cluster is refused;
 #                                accept `shared_cluster` by name only as a
-#                                recorded decision.
+#                                recorded decision. This build cannot yet run
+#                                the four-cluster layout: it verifies the
+#                                `linkage` schema only beside `party`, and a
+#                                domain in another database on its runtime
+#                                role, which cannot read the migration
+#                                bookkeeping. Keep every domain in the database
+#                                the migration Secret reaches and accept
+#                                `shared_cluster` until that is fixed.
 #   open_subject_namespace       made: privacy.subject_namespaces is declared.
 #   audit_off                    made: the audit trail is on with its local store.
 #   audit_fails_open             made: audit.fail_mode is `closed`.

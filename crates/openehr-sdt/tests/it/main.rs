@@ -16,6 +16,7 @@
 mod common;
 
 mod canonical_json_literals;
+mod category_default;
 mod ckm_full_pack;
 mod cnf_vitals_template;
 mod coded_names;

@@ -43,6 +43,13 @@ workflow refuses a tag that has no matching section here.
   the EHR physical delete. It is our own extension; no ITS-REST operation
   governs it.
 
+- **A live probe of `values-production.yaml`** (#3692).
+  `scripts/deploy-probe-k8s.sh --production-only` installs the production
+  overlay against four PostgreSQL clusters, one per storage domain, and
+  checks that the server boots and that it refuses when domains share a
+  cluster; `--render-check` runs without a cluster. The probe runs on kind
+  with podman as well as Docker.
+
 ### Changed
 
 - **AQL result row counts change for paths through repeated nodes** (#3733,
@@ -63,6 +70,13 @@ workflow refuses a tag that has no matching section here.
   `https://github.com/Vernum-Projecten/Veredictum`.
 
 ### Security
+
+- **The release pipeline checks the linkage the OS VEX statements rest on**
+  (#3694). Each statement that argues from what the binary loads now carries
+  that linkage as data (the needed libraries, the loader, the imports it
+  rules out), and the release lane refuses a `ferroehr` or `ferroehr-viewer`
+  binary, on either architecture, that needs another library or imports a
+  function a statement rules out.
 
 - **An unresolvable signing key set no longer discloses the identity
   provider's URLs** (#3666). The `503` names only the failed step (issuer URL,
@@ -229,6 +243,13 @@ workflow refuses a tag that has no matching section here.
   role extraction read the default claims when RBAC, ABAC and a restricted
   per-EHR default were all off; the boot log now also says when only a
   restricted per-EHR default switches authorization on.
+- **The Helm chart's in-chart clients follow the server's own TLS** (#3714,
+  chart 11.1.1). With `config.server.tls.enabled`, the viewer, FerroBRIDGE,
+  the ServiceMonitor scrape and the kubelet probes use https, and the viewer
+  and FerroBRIDGE trust the CA named by the new `service.tls.caExistingSecret`;
+  the chart refuses to render a TLS listener beside an in-chart client without
+  one. The migration Job runs under its own hook ServiceAccount, so a first
+  install no longer waits on an account Helm creates only after the hooks.
 - **The compose image-tag guard covers the terminology overlay** (#3605).
   `scripts/checks/compose-image-tags.sh` checks every FerroEHR image tag in
   every root and `docker/` compose file, `docker-compose.terminology.yml`

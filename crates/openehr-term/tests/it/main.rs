@@ -6,4 +6,5 @@
 //! discipline), one module per topic.
 
 mod asset_identity;
+mod property_units;
 mod xsd_conformance;

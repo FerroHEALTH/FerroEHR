@@ -756,10 +756,14 @@ fn terminology_code(
     })
 }
 
-/// Map a `C_PRIMITIVE_OBJECT` (its wrapped `C_PRIMITIVE`) to the matching `v2_4`
-/// primitive constraint node. The converter passes primitive nodes through
-/// untouched; phase-1 (no RM repo) does not validate primitive-constraint
-/// internals, so a faithful-but-minimal mapping is sufficient and safe.
+/// Maps a `C_PRIMITIVE_OBJECT` (its wrapped `C_PRIMITIVE`) to the matching
+/// `v2_4` primitive constraint node.
+///
+/// The converter passes primitive nodes through untouched. A node without
+/// `item` maps as the unconstrained constraint of the primitive type its
+/// `rm_type_name` names (`unconstrained_primitive`); a name that is no AOM 1.4
+/// primitive type maps to an unconstrained object of that type, reported in
+/// `conversion_details`.
 #[expect(
     clippy::too_many_lines,
     reason = "one arm per primitive C_* struct literal — a flat mapping table"
@@ -769,8 +773,22 @@ fn map_primitive_object(c: &opt14::types::CPrimitiveObject, cx: &mut RootCx) -> 
     let node_id = c.node_id.as_str();
     let occ = &c.occurrences;
     let Some(item) = c.item.as_deref() else {
-        // A primitive object with no inner constraint → an unconstrained string.
-        return c_string(rm, node_id, occ, Vec::new(), None);
+        if let Some(item) = unconstrained_primitive(rm) {
+            let with_item = opt14::types::CPrimitiveObject {
+                item: Some(Box::new(item)),
+                ..c.clone()
+            };
+            return map_primitive_object(&with_item, cx);
+        }
+        cx.note(
+            format!("primitive_without_item.{rm}.{node_id}"),
+            format!(
+                "C_PRIMITIVE_OBJECT node {node_id:?} carries no item and its rm_type_name \
+                 {rm:?} names no AOM 1.4 primitive type; it converts to an unconstrained \
+                 {rm} object"
+            ),
+        );
+        return complex(rm, node_id, occ, Vec::new());
     };
     match item {
         opt14::types::CPrimitive::CBoolean(p) => {
@@ -977,6 +995,67 @@ fn map_primitive_object(c: &opt14::types::CPrimitiveObject, cx: &mut RootCx) -> 
             ),
         }),
     }
+}
+
+/// Returns the constraint that admits every value of the AOM 1.4 primitive
+/// type `rm_type_name` names, or `None` when it names none.
+///
+/// A `C_PRIMITIVE_OBJECT` without `item` constrains nothing beyond its type
+/// (`item` is `minOccurs="0"` in `its-xml-1.0.2-nsv1/ALL/Archetype.xsd`
+/// `C_PRIMITIVE_OBJECT`), so it converts to the
+/// unconstrained form of the `C_PRIMITIVE` subtype for that type
+/// (AM `AOM1.4/master06-primitive_package.adoc` §Class Descriptions). The
+/// type names are matched case-insensitively.
+fn unconstrained_primitive(rm_type_name: &str) -> Option<opt14::types::CPrimitive> {
+    use opt14::types::CPrimitive;
+    let name = rm_type_name.to_ascii_uppercase();
+    Some(match name.as_str() {
+        "BOOLEAN" => CPrimitive::CBoolean(opt14::types::CBoolean {
+            true_valid: true,
+            false_valid: true,
+            assumed_value: None,
+        }),
+        "STRING" => CPrimitive::CString(opt14::types::CString {
+            pattern: None,
+            list: Vec::new(),
+            list_open: None,
+            assumed_value: None,
+        }),
+        "INTEGER" => CPrimitive::CInteger(opt14::types::CInteger {
+            list: Vec::new(),
+            range: None,
+            assumed_value: None,
+        }),
+        "REAL" => CPrimitive::CReal(opt14::types::CReal {
+            list: Vec::new(),
+            range: None,
+            assumed_value: None,
+        }),
+        "DATE" => CPrimitive::CDate(opt14::types::CDate {
+            pattern: None,
+            timezone_validity: None,
+            range: None,
+            assumed_value: None,
+        }),
+        "DATE_TIME" => CPrimitive::CDateTime(opt14::types::CDateTime {
+            pattern: None,
+            timezone_validity: None,
+            range: None,
+            assumed_value: None,
+        }),
+        "TIME" => CPrimitive::CTime(opt14::types::CTime {
+            pattern: None,
+            timezone_validity: None,
+            range: None,
+            assumed_value: None,
+        }),
+        "DURATION" => CPrimitive::CDuration(opt14::types::CDuration {
+            pattern: None,
+            range: None,
+            assumed_value: None,
+        }),
+        _ => return None,
+    })
 }
 
 /// Date/time/date-time constraints carry a pattern XOR a range on the ADL2
@@ -2276,6 +2355,60 @@ mod tests {
         };
         assert_eq!(d.pattern_constraint.as_deref(), Some("yyyy-??-??"));
         assert!(cx.notes.is_empty());
+    }
+
+    /// An item-less `C_PRIMITIVE_OBJECT` converts to the unconstrained
+    /// constraint of the primitive type its `rm_type_name` names, never to a
+    /// `C_STRING` for a non-string type.
+    #[test]
+    fn itemless_primitive_keeps_its_type() {
+        let node = |rm: &str| opt14::types::CPrimitiveObject {
+            rm_type_name: rm.to_owned(),
+            occurrences: unbounded_occurrences(),
+            node_id: String::new(),
+            item: None,
+        };
+        let mut cx = test_cx();
+        let CObject::CInteger(i) = map_primitive_object(&node("INTEGER"), &mut cx) else {
+            panic!("an item-less INTEGER must convert to a C_INTEGER");
+        };
+        assert_eq!(i.rm_type_name, "INTEGER");
+        assert!(i.constraint.as_ref().is_none_or(Vec::is_empty));
+        assert!(i.assumed_value.is_none());
+
+        let CObject::CDate(d) = map_primitive_object(&node("DATE"), &mut cx) else {
+            panic!("an item-less DATE must convert to a C_DATE");
+        };
+        assert_eq!(d.rm_type_name, "DATE");
+        assert!(d.constraint.as_ref().is_none_or(Vec::is_empty));
+        assert!(d.pattern_constraint.is_none());
+
+        let CObject::CBoolean(b) = map_primitive_object(&node("BOOLEAN"), &mut cx) else {
+            panic!("an item-less BOOLEAN must convert to a C_BOOLEAN");
+        };
+        assert_eq!(b.constraint.as_deref(), Some([true, false].as_slice()));
+
+        assert!(matches!(
+            map_primitive_object(&node("STRING"), &mut cx),
+            CObject::CString(_)
+        ));
+        assert!(
+            cx.notes.is_empty(),
+            "a known primitive type is not reported"
+        );
+
+        // A name that is no AOM 1.4 primitive type: an unconstrained object of
+        // that type, reported in conversion_details.
+        let CObject::CComplexObject(_) = map_primitive_object(&node("DV_TEXT"), &mut cx) else {
+            panic!("an unknown primitive type must convert to an unconstrained object");
+        };
+        assert!(
+            cx.notes
+                .keys()
+                .any(|k| k.starts_with("primitive_without_item.DV_TEXT")),
+            "{:?}",
+            cx.notes
+        );
     }
 
     /// Notes recorded during a walk land in the converted archetype's

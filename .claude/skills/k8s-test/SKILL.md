@@ -103,6 +103,22 @@ helm version --short                # v4.1.3+gc94d381
 If there is no cluster: Docker Desktop → Settings → Kubernetes → *Enable
 Kubernetes* → Apply & restart. Nothing here needs a cloud account.
 
+On a podman host (no Docker CLI), use kind on podman instead:
+
+```bash
+KIND_EXPERIMENTAL_PROVIDER=podman kind create cluster --name ferroehr-probe
+printf 'hostUsers: true\n' > /tmp/kind-podman-values.yaml   # the kind node refuses user-namespaced pods
+PROBE_K8S_VALUES=/tmp/kind-podman-values.yaml scripts/deploy-probe-k8s.sh
+KIND_EXPERIMENTAL_PROVIDER=podman kind delete cluster --name ferroehr-probe
+```
+
+`scripts/deploy-probe-k8s.sh` routes `docker compose` to `docker-compose` and
+`docker exec` to `podman exec` when no `docker` CLI exists, and points
+`DOCKER_HOST` at the podman machine's socket. Pods reach the compose databases
+at `host.docker.internal`. `--production-only` runs only the
+`values-production.yaml` probes against four PostgreSQL clusters, and
+`--render-check` renders that install without a cluster.
+
 ## 0b. Testing a chart change that needs an UNRELEASED server
 
 The chart often needs server support that no published image has yet — the

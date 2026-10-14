@@ -352,7 +352,7 @@ jobs:
           # `deny.toml` is in the code allowlist, so without this a PR editing
           # a VEX justification or its check script skipped the job that would
           # have refused it.
-          if echo "$changed" | grep -qE '^(security/vex/|scripts/checks/(vex-reachability|advisory-exceptions)\.sh$)' ; then
+          if echo "$changed" | grep -qE '^(security/vex/|scripts/checks/(vex-reachability|advisory-exceptions|vex-linkage)\.sh$)' ; then
             echo "vex=true" >> "$GITHUB_OUTPUT"
           else
             echo "vex=false" >> "$GITHUB_OUTPUT"
@@ -1196,6 +1196,8 @@ jobs:
       # input here so a broken detector is caught before a release depends on it.
       - name: The exploitability-record detector refuses what it claims to
         run: bash scripts/checks/vex-coverage.sh --self-test
+      - name: OS VEX linkage detector self-test
+        run: bash scripts/checks/vex-linkage.sh --self-test
 
   clippy:
     name: clippy

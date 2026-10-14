@@ -434,6 +434,43 @@ fn quantity_property_units_membership() {
     assert!(walk_only(&any, &no_prop).is_empty());
 }
 
+/// TERM 3.1.0 amendment 3.1.4 (SPECPR-450) gives property `765` (Concentration
+/// per volume) the units `ng/mL/cm³` and `μg/L/cm³` (UCUM `ng/mL/cm3`,
+/// `ug/L/cm3`) in the vendored `PropertyUnitData.xml`, and property `764`
+/// (Length per area) the unit `mm/m²`. A unit of the constrained property
+/// validates in either spelling; a unit the table files under another
+/// property is refused, which needs 765's unit set (absent before the
+/// amendment, when every unit was tolerated under 765).
+#[test]
+fn quantity_property_units_follow_the_specpr_450_table() {
+    let n = quantity_property_node("765"); // Concentration per volume
+    for units in ["μg/L/cm³", "ug/L/cm3", "ng/mL/cm³", "ng/mL/cm3"] {
+        let ok = json!({"_type": "DV_QUANTITY", "magnitude": 1.5, "units": units});
+        assert!(
+            walk_only(&ok, &n).is_empty(),
+            "{units} is a property 765 unit"
+        );
+    }
+    let length_per_area = json!({"_type": "DV_QUANTITY", "magnitude": 1.5, "units": "mm/m2"});
+    assert_eq!(
+        kinds(&walk_only(&length_per_area, &n)),
+        vec![ValidationKind::CodedValue],
+        "mm/m2 belongs to property 764, so it must be refused under 765"
+    );
+    let mass = json!({"_type": "DV_QUANTITY", "magnitude": 1.5, "units": "mg"});
+    assert_eq!(
+        kinds(&walk_only(&mass, &n)),
+        vec![ValidationKind::CodedValue],
+        "a mass unit must be refused under property 765"
+    );
+    let per_area = quantity_property_node("764"); // Length per area
+    let ok = json!({"_type": "DV_QUANTITY", "magnitude": 2.0, "units": "mm/m2"});
+    assert!(
+        walk_only(&ok, &per_area).is_empty(),
+        "mm/m2 is a property 764 unit"
+    );
+}
+
 // ── type conformance ─────────────────────────────────────────────────────────────
 
 #[test]

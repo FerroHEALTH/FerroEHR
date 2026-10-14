@@ -288,7 +288,7 @@ separation that profile checks made, except one it accepts by name:
 | Gap | In the overlay |
 |---|---|
 | `shared_credential` | the clinical, party and linkage domains each read their own Secret (`database.existingSecret`, `database.party.existingSecret`, `database.linkage.existingSecret`), and the audit domain reads `database.audit.existingSecret` |
-| `shared_cluster` | yours to make: the server compares the cluster each domain pool reaches, so point the four DSNs at four PostgreSQL clusters, or add `shared_cluster` to `config.deployment_accepts` as a recorded decision |
+| `shared_cluster` | yours to make: the server compares the cluster each domain pool reaches, so the separation is four DSNs on four PostgreSQL clusters. This release cannot run that layout yet (it verifies the `linkage` schema only beside `party`, and a domain in another database on its runtime role, which cannot read the migration bookkeeping), so keep every domain in the database the migration Secret reaches and add `shared_cluster` to `config.deployment_accepts` as a recorded decision |
 | `migrate_on_runtime_credential` | `config.db.migrate: verify`, with `migrations.job.enabled` preparing the schema on `database.migrateExistingSecret` |
 | `open_subject_namespace` | `config.privacy.subject_namespaces` declared |
 | `audit_off`, `audit_fails_open`, `audit_syslog_udp` | the audit trail on with its local store, `config.audit.fail_mode: closed`, no UDP syslog sink |
@@ -314,8 +314,11 @@ the pod from starting, and the server refuses to start under `production`
 while a separation is open, naming each gap and its remedy. The chart's
 validation renders the overlay and asserts each separation above, and its
 boot check has the server evaluate the posture from the rendered
-configuration. Neither reaches a database, so `shared_cluster` is first judged
-when the pod starts against yours.
+configuration. Neither reaches a database. The deployment probe
+(`scripts/deploy-probe-k8s.sh --production-only`) installs the overlay on a
+real cluster against four PostgreSQL clusters and observes the server refuse
+two domains on one cluster by naming `shared_cluster`; against your own
+databases, `shared_cluster` is first judged when the pod starts.
 
 ## Database roles — who runs migrations
 

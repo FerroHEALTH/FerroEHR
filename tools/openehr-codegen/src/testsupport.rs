@@ -74,6 +74,42 @@ pub struct CompositionInfo {
     pub reason: String,
 }
 
+/// One specification unit's `includes`, as the vendored BMM file declares
+/// them.
+#[derive(Debug, Clone)]
+pub struct UnitIncludes {
+    /// The composition key.
+    pub key: String,
+    /// The generation-module name.
+    pub module: String,
+    /// The vendored BMM file.
+    pub file: String,
+    /// The `includes` schema ids (`openehr_base_1.3.0`), in file order.
+    pub includes: Vec<String>,
+}
+
+/// The `includes` of every specification unit of every composition generation,
+/// read from the vendored files.
+///
+/// # Errors
+/// Returns an error if a vendored BMM file cannot be loaded.
+pub fn unit_includes() -> Result<Vec<UnitIncludes>, Error> {
+    let mut out = Vec::new();
+    for c in composition::COMPOSITIONS {
+        for g in c.generations {
+            for u in g.units {
+                out.push(UnitIncludes {
+                    key: c.key.to_string(),
+                    module: g.module.to_string(),
+                    file: u.file.to_string(),
+                    includes: composition::load_bmm(u.file)?.includes,
+                });
+            }
+        }
+    }
+    Ok(out)
+}
+
 /// Every crate → generation composition entry.
 #[must_use]
 pub fn composition_infos() -> Vec<CompositionInfo> {
@@ -1426,8 +1462,9 @@ pub struct VendoredDefault {
     pub field: String,
     /// The facet text, verbatim from the schema.
     pub facet: String,
-    /// The literal Rust expression the emitter derives, or `None` when the
-    /// facet is not renderable in the property's declared type.
+    /// The Rust expression the emitter derives (an enumeration constant as the
+    /// `@SPEC::Variant` marker), or `None` when the facet is not renderable in
+    /// the property's declared type.
     pub rendered: Option<String>,
 }
 
@@ -1452,7 +1489,7 @@ pub fn vendored_defaults() -> Result<Vec<VendoredDefault>, Error> {
                             owner: owner.clone(),
                             field: prop.name.clone(),
                             facet: facet.clone(),
-                            rendered: overrides::vendored_default(prop),
+                            rendered: overrides::vendored_default(prop, |name| u.model.get(name)),
                         });
                     }
                 }
@@ -1466,6 +1503,29 @@ pub fn vendored_defaults() -> Result<Vec<VendoredDefault>, Error> {
 #[must_use]
 pub fn default_unrenderable(owner: &str, field: &str) -> bool {
     overrides::default_unrenderable(owner, field)
+}
+
+/// The adjudicated un-renderable `default` facets as `(owner, field, facets)`,
+/// `facets` being the vendored values each entry's citation describes.
+#[must_use]
+pub fn unrenderable_defaults() -> Vec<(String, String, Vec<String>)> {
+    overrides::UNRENDERABLE_DEFAULTS
+        .iter()
+        .map(|u| {
+            (
+                u.owner.to_string(),
+                u.field.to_string(),
+                u.facets.iter().map(ToString::to_string).collect(),
+            )
+        })
+        .collect()
+}
+
+/// Resolve a rendered default against a stand-in `@SPEC` resolver, exactly as
+/// the emitters resolve it (`plan::overrides::resolve_default`).
+#[must_use]
+pub fn resolve_default(default: &str, resolve: impl Fn(&str) -> String) -> String {
+    overrides::resolve_default(default, resolve)
 }
 
 /// The hand-written `field_default` residue as `(owner, field)` pairs.

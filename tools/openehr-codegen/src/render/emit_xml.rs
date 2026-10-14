@@ -16,7 +16,7 @@ use crate::analyze::Model;
 use crate::load::bmm::BmmSchema;
 use crate::load::xsd::XsdModel;
 use crate::plan::construction;
-use crate::plan::overrides::xml_bmm_only_allowed;
+use crate::plan::overrides::{resolve_default, xml_bmm_only_allowed};
 use crate::plan::{XmlField, XmlType};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
@@ -635,7 +635,12 @@ fn emit_struct_from_xml(
     // path, one grammar.
     let values: Vec<(String, String)> = fields
         .iter()
-        .map(|f| (f.rust_name.clone(), read_expr(f, &attrs, target.spec)))
+        .map(|f| {
+            (
+                f.rust_name.clone(),
+                read_expr(f, &attrs, target.spec, door_env),
+            )
+        })
         .collect();
     emit_read_construction(b, target, &values, door_env);
     b.push_str("}\n}\n\n");
@@ -706,8 +711,13 @@ fn emit_read_loop(b: &mut String, fields: &[XmlField], attrs: &BTreeSet<String>)
 }
 
 /// The Rust expression that yields one field's value once the read loop has
-/// finished.
-fn read_expr(f: &XmlField, attrs: &BTreeSet<String>, spec: &str) -> String {
+/// finished; `door_env` resolves an enumeration-constant default marker.
+fn read_expr(
+    f: &XmlField,
+    attrs: &BTreeSet<String>,
+    spec: &str,
+    door_env: Option<&XmlSchema<'_>>,
+) -> String {
     match read_shape(f, attrs) {
         ReadShape::Attribute => attr_read_expr(f, spec),
         ReadShape::ComplexHash => "Default::default()".to_owned(),
@@ -719,7 +729,7 @@ fn read_expr(f: &XmlField, attrs: &BTreeSet<String>, spec: &str) -> String {
                 var
             }
         }
-        ReadShape::Multiple | ReadShape::Single => element_read_expr(f, spec),
+        ReadShape::Multiple | ReadShape::Single => element_read_expr(f, spec, door_env),
     }
 }
 
@@ -737,11 +747,18 @@ fn attr_read_expr(f: &XmlField, spec: &str) -> String {
     }
 }
 
-/// The value expression for a field carried as one or more child elements. A
-/// mandatory child's absence, and an empty `1..*` container, are reported
+/// The value expression for a field carried as one or more child elements.
+///
+/// A mandatory child's absence, and an empty `1..*` container, are reported
 /// through the reader, which knows the element just read and where it sits
-/// (`XmlReader::missing_child`, `XmlReader::invalid_content`).
-fn element_read_expr(f: &XmlField, spec: &str) -> String {
+/// (`XmlReader::missing_child`, `XmlReader::invalid_content`). A mandatory
+/// field with a default falls back to it, an enumeration-constant marker
+/// resolved through `door_env`.
+///
+/// # Panics
+/// When an enumeration-constant default is emitted without a door environment
+/// (an emit-opt closure bug).
+fn element_read_expr(f: &XmlField, spec: &str, door_env: Option<&XmlSchema<'_>>) -> String {
     let var = acc_var(&f.rust_name);
     let wire = &f.wire_name;
     let nonempty_new = format!(
@@ -772,6 +789,13 @@ fn element_read_expr(f: &XmlField, spec: &str) -> String {
     if let Some(default) = &f.default {
         // Mandatory field archie omits at its default (Interval flags): use the
         // default when the element is absent.
+        let default = resolve_default(default, |marker| match door_env {
+            Some(env) => door_param(env, marker),
+            None => panic!(
+                "{spec}.{wire}: enumeration default {marker} emitted without a door environment \
+                 (an emit-opt closure bug)"
+            ),
+        });
         return format!("{var}.unwrap_or({default})");
     }
     format!("{var}.ok_or_else(|| reader.missing_child(\"{spec}\", \"{wire}\"))?")

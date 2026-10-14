@@ -136,9 +136,10 @@ pub(crate) struct XmlField {
     /// name (`V`); `None` otherwise. `Some("String")` is serialized inline as the
     /// openEHR `StringDictionaryItem` shape.
     pub map_value: Option<String>,
-    /// A mandatory field archie omits at its default (the `Interval` inclusivity/
-    /// boundedness flags): the Rust default expression (`true`/`false`) to use on
-    /// deserialization when the element is absent. `None` = genuinely required.
+    /// The field's default expression ([`field_default`]); the reader uses it
+    /// for a mandatory field whose element is absent (the `Interval`
+    /// inclusivity/boundedness flags archie omits). An enumeration constant is
+    /// a `@SPEC::Variant` marker resolved by the emitter. `None` = no default.
     pub default: Option<String>,
 }
 
@@ -203,10 +204,11 @@ pub(crate) struct JsonField {
     pub wire_name: String,
     pub rust_name: String,
     pub kind: JsonFieldKind,
-    /// A literal default (`"true"`/`"false"`) for a mandatory (`Plain`) field the
-    /// wire may omit — the `Interval` `*_included`/`*_unbounded` flags. When set,
-    /// a missing field deserializes to this default instead of erroring, matching
-    /// the retired derive's `#[openehr(default = "…")]`.
+    /// The field's default expression ([`field_default`]); for a mandatory
+    /// (`Plain`) field the wire may omit (the `Interval` `*_included`/
+    /// `*_unbounded` flags) a missing key deserializes to it instead of
+    /// erroring. An enumeration constant is a `@SPEC::Variant` marker resolved
+    /// by the emitter. `None` = no default.
     pub default: Option<String>,
 }
 
@@ -330,7 +332,7 @@ impl Model {
                     wire_name: p.name.clone(),
                     rust_name: naming::field_ident(&p.name),
                     kind,
-                    default: field_default(&rp.owner, p),
+                    default: field_default(&rp.owner, p, |name| self.get(name)),
                 }
             })
             .collect()
@@ -506,7 +508,7 @@ impl Model {
                                     }))),
                     target,
                     map_value,
-                    default: field_default(&rp.owner, p),
+                    default: field_default(&rp.owner, p, |name| self.get(name)),
                 }
             })
             .collect()

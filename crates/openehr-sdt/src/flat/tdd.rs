@@ -399,14 +399,19 @@ fn is_locatable(rm_type: &str) -> bool {
 
 // ── the `WebTemplate`-driven build ─────────────────────────────────────────────
 
-/// Convert a TDD XML instance to a canonical-JSON `COMPOSITION`, guided by `wt`.
+/// Converts a TDD XML instance to a canonical-JSON `COMPOSITION`, guided by `wt`.
+///
+/// A TDD that carries no `category` takes the template's default for it
+/// (`crate::flat::build::template_category`).
 ///
 /// # Errors
+///
 /// [`FlatError::TddXml`] if the TDD is not well-formed XML,
 /// [`FlatError::TddAttribute`] on a malformed attribute,
 /// [`FlatError::TddElement`] if a leaf fragment cannot be parsed as its RM
 /// type, and [`FlatError::Conversion`] if its root does not match the
-/// template.
+/// template, or if it carries no category while the template admits several
+/// with no default.
 pub fn from_tdd(tdd_xml: &str, wt: &WebTemplate) -> Result<Value, FlatError> {
     let root_el = parse_tree(tdd_xml)?;
     let root_id = &wt.tree.id;
@@ -430,7 +435,7 @@ pub fn from_tdd(tdd_xml: &str, wt: &WebTemplate) -> Result<Value, FlatError> {
     let mut comp = build_node(&root_el, &wt.tree, "COMPOSITION", "", true)?;
     if let Value::Object(m) = &mut comp {
         ensure_template_id(m, &wt.tree, &wt.template_id);
-        ensure_category(m);
+        ensure_category(m, &wt.tree)?;
     }
     complete_tree(&mut comp);
     Ok(comp)
@@ -1174,11 +1179,27 @@ fn ensure_template_id(comp: &mut Map<String, Value>, root: &WebTemplateNode, tem
     }
 }
 
-/// `COMPOSITION.category` is mandatory; default to `event` (openEHR 433) when the
-/// template did not carry it as a tree node.
-fn ensure_category(comp: &mut Map<String, Value>) {
-    comp.entry("category".to_owned())
-        .or_insert_with(|| dv_coded_text("event", "openehr", "433"));
+/// Supplies the mandatory `COMPOSITION.category` when the TDD carried none,
+/// taking the default from the template's constraint on it
+/// (`crate::flat::build::template_category`).
+///
+/// # Errors
+///
+/// [`FlatError::Conversion`] naming `/category` when the template admits
+/// several codes and fixes no default.
+fn ensure_category(comp: &mut Map<String, Value>, root: &WebTemplateNode) -> Result<(), FlatError> {
+    if comp.contains_key("category") {
+        return Ok(());
+    }
+    let category = crate::flat::build::template_category(root).map_err(|admitted| {
+        FlatError::Conversion(format!(
+            "COMPOSITION.category (/category) is required: the template admits {} and fixes \
+             no default",
+            admitted.join(", ")
+        ))
+    })?;
+    comp.insert("category".to_owned(), category);
+    Ok(())
 }
 
 // ── name matching + path helpers ─────────────────────────────────────────────

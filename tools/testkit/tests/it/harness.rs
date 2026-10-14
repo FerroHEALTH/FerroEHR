@@ -113,3 +113,35 @@ fn fingerprint_is_stable() {
         ferroehr::db::migration_fingerprint()
     );
 }
+
+/// A template dropped mid-run, as the startup sweep of a suite built from
+/// another migration fingerprint drops it on a shared server, is rebuilt, and
+/// the next clone is fully migrated: a clone is made only from a stamped
+/// template, never from one being rebuilt.
+///
+/// Cluster-global like the sweep gate above: it removes the shared template,
+/// which every concurrent process then rebuilds through the same path.
+#[tokio::test]
+async fn a_dropped_template_is_rebuilt_before_the_next_clone() {
+    let first = testkit::db().await.expect("first clone");
+    let template = format!("ferroehr_tk_tpl_{}", ferroehr::db::migration_fingerprint());
+    let drop_template = format!("DROP DATABASE IF EXISTS {template} WITH (FORCE)");
+    sqlx::raw_sql(sqlx::AssertSqlSafe(drop_template))
+        .execute(&first.pool())
+        .await
+        .expect("drop the template as a foreign sweep does");
+
+    let second = testkit::db()
+        .await
+        .expect("a clone after the template was dropped");
+    ferroehr::db::verify_migrations(&second.pool())
+        .await
+        .expect("the clone carries every embedded migration");
+    let restored: Vec<String> =
+        sqlx::query_scalar("SELECT datname FROM pg_database WHERE datname = $1")
+            .bind(template.as_str())
+            .fetch_all(&second.pool())
+            .await
+            .expect("catalog probe for the template");
+    assert_eq!(restored, vec![template], "the template was not rebuilt");
+}

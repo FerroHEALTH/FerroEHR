@@ -300,6 +300,7 @@ STUB
   run "an added library (libstdc++) is refused" 1 "VIOLATED CVE-2026-102010 ferroehr (amd64): DT_NEEDED carries libstdc++.so.6" ferroehr "$f"
   listing "$f" "Advanced Micro Devices X86-64" libgcc_s.so.1 libc.so.6 ld-linux-x86-64.so.2 -- -- "${base_imports[@]}"
   run "a dropped library is refused" 1 "DT_NEEDED lacks libm.so.6" ferroehr "$f"
+  # shellcheck disable=SC2016 # $ORIGIN is the literal loader token a RUNPATH carries
   listing "$f" "Advanced Micro Devices X86-64" "${amd64_ok[@]}" \
     -- ' 0x000000000000001d (RUNPATH)            Library runpath: [$ORIGIN/../lib]' -- "${base_imports[@]}"
   run "a RUNPATH is refused" 1 "VIOLATED CVE-2026-95818 ferroehr (amd64): carries RPATH/RUNPATH \$ORIGIN/../lib" ferroehr "$f"

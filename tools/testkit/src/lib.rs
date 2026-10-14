@@ -13,9 +13,11 @@
 //! and reclaimed with `docker rm -f ferroehr-testkit-pg18`.
 //!
 //! The template (`ferroehr_tk_tpl_<fingerprint>`) is built once per
-//! fingerprint under a `PostgreSQL` advisory lock and stamped complete as its
-//! database comment, read via `shobj_description` because a connection to a
-//! template blocks cloning (`PostgreSQL` docs § CREATE DATABASE). Clones are
+//! fingerprint under a `PostgreSQL` advisory lock, migrated under a staging
+//! name and renamed into place, and stamped complete as its database comment,
+//! read via `shobj_description` because a connection to a template blocks
+//! cloning (`PostgreSQL` docs § CREATE DATABASE). A clone is made under the
+//! same lock in shared mode and only from a stamped template. Clones are
 //! named `ferroehr_tk_<secs>_<rand>` and swept by [`sweep_stale`], which every
 //! test process runs once before it hands out a database.
 
@@ -104,6 +106,15 @@ pub enum TestkitError {
     /// setup with a REACHABLE daemon still fails through the other variants.
     #[error("testkit: {0}")]
     DockerUnavailable(String),
+    /// The migrated template stayed absent or incomplete through every rebuild
+    /// within the deadline, so no clone could be made from it.
+    #[error("testkit: template {template} not available for cloning within {seconds}s")]
+    TemplateUnavailable {
+        /// The template database name.
+        template: String,
+        /// Deadline that elapsed.
+        seconds: u64,
+    },
     /// The container's published host has no IPv4 address to reach the
     /// IPv4-published port on.
     #[error("testkit: the container host {host} resolves to no IPv4 address: {reason}")]
@@ -206,12 +217,16 @@ pub async fn empty_db() -> Result<TestDb, TestkitError> {
 
 /// Creates a uniquely named database (a clone of `template`, or empty) and
 /// pools it.
+///
+/// A clone is verified against the migrations this build embeds before it is
+/// handed out, so a database that is not fully migrated fails here, named as
+/// harness breakage, rather than inside the test that received it.
 async fn provision(server: &str, template: Option<&str>) -> Result<TestDb, TestkitError> {
     const POOL_DEADLINE: Duration = Duration::from_secs(15);
     let name = fresh_name();
     let mut admin = connect_ready(server).await?;
     if let Some(template) = template {
-        create_clone(&mut admin, &name, template).await?;
+        create_clone(&mut admin, server, &name, template).await?;
     } else {
         let sql = format!("CREATE DATABASE {name}");
         sqlx::raw_sql(sqlx::AssertSqlSafe(sql))
@@ -239,12 +254,16 @@ async fn provision(server: &str, template: Option<&str>) -> Result<TestDb, Testk
         }
         tokio::time::sleep(Duration::from_millis(200)).await;
     };
-    Ok(TestDb {
+    let db = TestDb {
         pool,
         url,
         name,
         admin_url: server.to_owned(),
-    })
+    };
+    if template.is_some() {
+        db::verify_migrations(&db.pool).await?;
+    }
+    Ok(db)
 }
 
 // ---------------------------------------------------------------------------
@@ -447,7 +466,7 @@ async fn connect_ready(admin_url: &str) -> Result<PgConnection, TestkitError> {
 async fn ensure_template(admin_url: &str) -> Result<String, TestkitError> {
     let fingerprint = db::migration_fingerprint();
     let template = format!("{DB_PREFIX}tpl_{fingerprint}");
-    let stamp = format!("ferroehr-testkit fingerprint={fingerprint} complete");
+    let stamp = template_stamp(&fingerprint);
 
     let mut admin = connect_ready(admin_url).await?;
 
@@ -473,12 +492,18 @@ async fn ensure_template(admin_url: &str) -> Result<String, TestkitError> {
     Ok(template)
 }
 
+/// The completion stamp a template of migration `fingerprint` carries as its
+/// database comment.
+fn template_stamp(fingerprint: &str) -> String {
+    format!("ferroehr-testkit fingerprint={fingerprint} complete")
+}
+
 /// Whether `template` exists and carries the completion stamp.
 async fn template_complete(
     admin: &mut PgConnection,
     template: &str,
     stamp: &str,
-) -> Result<bool, TestkitError> {
+) -> Result<bool, sqlx::Error> {
     // `shobj_description` is NULL for a template with no comment yet, so the
     // scalar is doubly optional: NULL means "not complete", never an error.
     let complete: Option<Option<bool>> = sqlx::query_scalar(
@@ -493,7 +518,14 @@ async fn template_complete(
 }
 
 /// Builds the template under the already-held advisory lock: re-check, drop
-/// any incomplete carcass, create, migrate, then stamp the database comment.
+/// any incomplete carcass, migrate a staging database, rename it to the
+/// template, then stamp the database comment.
+///
+/// The template name therefore only ever names a fully migrated database. The
+/// staging database carries a clone-shaped name, so a concurrent process's
+/// sweep spares it for [`SWEEP_GRACE`] instead of dropping it mid-migration;
+/// another fingerprint's suite on the same server sweeps THIS template as
+/// stale, and nothing it drops can be half built.
 async fn build_template(
     admin: &mut PgConnection,
     admin_url: &str,
@@ -507,21 +539,47 @@ async fn build_template(
     sqlx::raw_sql(sqlx::AssertSqlSafe(drop_sql))
         .execute(&mut *admin)
         .await?;
-    let create_sql = format!("CREATE DATABASE {template}");
+    let staging = fresh_name();
+    let create_sql = format!("CREATE DATABASE {staging}");
     sqlx::raw_sql(sqlx::AssertSqlSafe(create_sql))
         .execute(&mut *admin)
         .await?;
-
-    // Close the pool fully: a lingering connection to the template blocks
-    // every clone.
-    let template_url = clone_url(admin_url, template);
-    let pool = db::connect(&DbConfig::new(template_url)).await?;
-    let migrated = db::run_migrations(&pool).await;
-    pool.close().await;
-    migrated?;
+    let built = migrate_and_rename(admin, admin_url, &staging, template).await;
+    if built.is_err() {
+        let sql = format!("DROP DATABASE IF EXISTS {staging} WITH (FORCE)");
+        drop(
+            sqlx::raw_sql(sqlx::AssertSqlSafe(sql))
+                .execute(&mut *admin)
+                .await,
+        );
+    }
+    built?;
 
     let comment_sql = format!("COMMENT ON DATABASE {template} IS '{stamp}'");
     sqlx::raw_sql(sqlx::AssertSqlSafe(comment_sql))
+        .execute(&mut *admin)
+        .await?;
+    Ok(())
+}
+
+/// Migrates the `staging` database, closes every connection to it, and renames
+/// it to `template`.
+///
+/// The pool is closed fully first: `ALTER DATABASE … RENAME` and every later
+/// clone refuse a database other sessions are connected to (`PostgreSQL` docs
+/// § ALTER DATABASE, § CREATE DATABASE).
+async fn migrate_and_rename(
+    admin: &mut PgConnection,
+    admin_url: &str,
+    staging: &str,
+    template: &str,
+) -> Result<(), TestkitError> {
+    let pool = db::connect(&DbConfig::new(clone_url(admin_url, staging))).await?;
+    let migrated = db::run_migrations(&pool).await;
+    pool.close().await;
+    migrated?;
+    let rename_sql = format!("ALTER DATABASE {staging} RENAME TO {template}");
+    sqlx::raw_sql(sqlx::AssertSqlSafe(rename_sql))
         .execute(&mut *admin)
         .await?;
     Ok(())
@@ -546,32 +604,77 @@ fn fresh_name() -> String {
     format!("{DB_PREFIX}{secs:x}_{short}")
 }
 
-/// Clones the template, retrying the transient lock conflict concurrent clones
-/// of one template can hit.
+/// Clones the template, only ever from a complete one.
+///
+/// Each attempt holds the template advisory lock in SHARED mode, so no build
+/// (which holds it exclusively) runs between the completion check and the
+/// clone. A template that is gone or unstamped (another fingerprint's sweep
+/// drops this one as stale) is rebuilt through [`ensure_template`] with the
+/// shared lock released; any other refusal, such as the transient conflict
+/// concurrent clones of one template can hit, is retried. Both stop at the
+/// deadline.
 async fn create_clone(
     admin: &mut PgConnection,
+    admin_url: &str,
     name: &str,
     template: &str,
 ) -> Result<(), TestkitError> {
     const DEADLINE: Duration = Duration::from_mins(1);
+    let stamp = template_stamp(&db::migration_fingerprint());
     let start = Instant::now();
     loop {
-        // Default WAL_LOG strategy: no forced checkpoint per clone
-        // (PostgreSQL docs § CREATE DATABASE, `STRATEGY`).
-        let sql = format!("CREATE DATABASE {name} TEMPLATE {template}");
-        match sqlx::raw_sql(sqlx::AssertSqlSafe(sql))
+        sqlx::query("SELECT pg_advisory_lock_shared($1)")
+            .bind(TEMPLATE_LOCK_KEY)
             .execute(&mut *admin)
-            .await
-        {
-            Ok(_) => return Ok(()),
-            Err(error) => {
-                if start.elapsed() >= DEADLINE {
-                    return Err(TestkitError::Sqlx(error));
-                }
+            .await?;
+        let attempt = clone_if_complete(admin, name, template, &stamp).await;
+        sqlx::query("SELECT pg_advisory_unlock_shared($1)")
+            .bind(TEMPLATE_LOCK_KEY)
+            .execute(&mut *admin)
+            .await?;
+        let expired = start.elapsed() >= DEADLINE;
+        match attempt {
+            Ok(CloneAttempt::Cloned) => return Ok(()),
+            Ok(CloneAttempt::TemplateIncomplete) if expired => {
+                return Err(TestkitError::TemplateUnavailable {
+                    template: template.to_owned(),
+                    seconds: DEADLINE.as_secs(),
+                });
             }
+            Ok(CloneAttempt::TemplateIncomplete) => {
+                ensure_template(admin_url).await?;
+            }
+            Err(error) if expired => return Err(TestkitError::Sqlx(error)),
+            Err(_) => tokio::time::sleep(Duration::from_millis(100)).await,
         }
-        tokio::time::sleep(Duration::from_millis(100)).await;
     }
+}
+
+/// What one clone attempt under the shared template lock found.
+enum CloneAttempt {
+    /// The clone was created from the complete template.
+    Cloned,
+    /// The template is absent or not stamped complete; nothing was created.
+    TemplateIncomplete,
+}
+
+/// Clones `template` as `name` when it carries the completion stamp.
+async fn clone_if_complete(
+    admin: &mut PgConnection,
+    name: &str,
+    template: &str,
+    stamp: &str,
+) -> Result<CloneAttempt, sqlx::Error> {
+    if !template_complete(admin, template, stamp).await? {
+        return Ok(CloneAttempt::TemplateIncomplete);
+    }
+    // Default WAL_LOG strategy: no forced checkpoint per clone (PostgreSQL docs
+    // § CREATE DATABASE, `STRATEGY`).
+    let sql = format!("CREATE DATABASE {name} TEMPLATE {template}");
+    sqlx::raw_sql(sqlx::AssertSqlSafe(sql))
+        .execute(&mut *admin)
+        .await?;
+    Ok(CloneAttempt::Cloned)
 }
 
 /// The DSN for database `name` on the server `admin_url` points at.

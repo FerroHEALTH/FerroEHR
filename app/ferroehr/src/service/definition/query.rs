@@ -16,11 +16,19 @@
               ADL/OPT wire envelopes"
 )]
 
+use std::sync::Arc;
+
+use async_trait::async_trait;
 use serde_json::{Value, json};
 use sqlx::Row;
 use sqlx::postgres::PgRow;
 use uuid::Uuid;
 
+use crate::aql::error::AqlError;
+use crate::aql::ir::{ParamValue, Params};
+use crate::aql::lineage::ArchetypeLineage;
+use crate::aql::sql::{EhrAccessScope, SqlCtx};
+use crate::aql::terminology::TerminologyExpander;
 use crate::service::FerroEhrService;
 use crate::service::definition::types::QueryDescriptor;
 use crate::service::error::ServiceError;
@@ -40,6 +48,45 @@ use super::{compile_pattern, page_bounds, paginate};
 /// query, not for storing one. The slot below is the lowest SEMVER a first store
 /// can carry, which keeps the version-less form idempotent.
 const DEFAULT_QUERY_VERSION: &str = "1.0.0";
+
+/// The value every `$parameter` is bound to while a stored query is analysed.
+///
+/// SQL generation reads parameter values only to bind them, except a temporal
+/// comparison bound, whose ISO-8601 shape it checks; this value has that shape
+/// and is a valid string everywhere else, so no refusal at store time depends
+/// on a value the caller supplies only at execution.
+const STORE_TIME_PARAMETER: &str = "1970-01-01";
+
+/// The terminology seam used while a stored query is analysed: it resolves
+/// nothing and answers every `TERMINOLOGY()` call with a fixed result.
+///
+/// NOTE: QUERY master03 §TERMINOLOGY lets a resolution differ per execution,
+/// so the store checks the query's shape and leaves resolution to execution.
+#[derive(Debug)]
+struct StoreTimeTerminology;
+
+#[async_trait]
+impl TerminologyExpander for StoreTimeTerminology {
+    /// Answers an `expand` with one placeholder code.
+    async fn expand(&self, _service_api: &str, _params_uri: &str) -> Result<Vec<String>, AqlError> {
+        Ok(vec![STORE_TIME_PARAMETER.to_owned()])
+    }
+
+    /// Answers every Boolean operation with `true`.
+    async fn boolean_operation(
+        &self,
+        _operation: &str,
+        _service_api: &str,
+        _params_uri: &str,
+    ) -> Result<bool, AqlError> {
+        Ok(true)
+    }
+
+    /// Answers a terminology URI with one placeholder code.
+    async fn expand_uri(&self, _uri: &str) -> Result<Vec<String>, AqlError> {
+        Ok(vec![STORE_TIME_PARAMETER.to_owned()])
+    }
+}
 
 // ── SM Definitions native API (I_DEFINITION_QUERY) — the catalog contract ────
 
@@ -84,8 +131,9 @@ impl FerroEhrService {
     ///
     /// - Query text that is not a valid instance of the effective formalism →
     ///   `invalid_query` (`422`).
-    /// - Query text that fails the store-time AQL parse →
-    ///   `precondition_violation` (`400`).
+    /// - Query text that fails the store-time analysis (the parse, lowering
+    ///   and SQL generation an execution runs) → `precondition_violation`
+    ///   (`400`).
     /// - A database failure (`exception` → `500`).
     pub async fn store_query(
         &self,
@@ -398,6 +446,10 @@ impl FerroEhrService {
 impl FerroEhrService {
     /// Store a stored query, returning the effective SEMVER it is stored at.
     ///
+    /// The text must pass the analysis an execution runs before it touches the
+    /// database ([`Self::analyse_stored_aql`]), so a query the engine refuses
+    /// is refused here instead of on every later execution.
+    ///
     /// - With an explicit `version` the `(name, version)` pair is immutable: an
     ///   already-existing pair, compared case-insensitively, is a `Conflict`
     ///   rather than an overwrite (ITS-REST overview
@@ -408,6 +460,13 @@ impl FerroEhrService {
     ///
     /// Identity is case-insensitive but storage case-preserving (BASE master05
     /// §Composite Identifiers and Case).
+    ///
+    /// # Errors
+    ///
+    /// - The reserved query-name `aql`, a non-exact SEMVER `version`, or a
+    ///   text the AQL engine refuses → `BadRequest` (`400`).
+    /// - An existing `(name, version)` pair → `Conflict` (`409`).
+    /// - A database failure → `500`.
     pub(super) async fn store_query_version(
         &self,
         qualified_name: &str,
@@ -431,19 +490,7 @@ impl FerroEhrService {
             )));
         }
 
-        // Store-time AQL validation via the `openehr_query` parser: the
-        // stored-query table only holds AQL (`query_type = 'AQL'`), so a non-AQL
-        // or syntactically-invalid body is a `400 Bad Request`
-        // (`definition_query_store` lists only `200`/`400`).
-        if let Err(err) = openehr_query::parser::parse_str(&query_text) {
-            return Err(ServiceError::bad_request(
-                format!(
-                    "stored query text is not valid AQL: {}",
-                    crate::service::error::ErrorChain::new(&err)
-                ),
-                err,
-            ));
-        }
+        self.analyse_stored_aql(&query_text).await?;
 
         // ONE canonical key for every surface (SM master04 §Registered Queries:
         // "If no namespace is supplied, the namespace \"misc\" is assumed"), so
@@ -532,6 +579,63 @@ impl FerroEhrService {
             )));
         }
         Ok(v.to_owned())
+    }
+
+    /// Runs the analysis an execution of `query_text` runs before it reaches
+    /// the database, refusing a text the AQL engine refuses.
+    ///
+    /// The stages are the execution path's own: parse, the `TERMINOLOGY()`
+    /// pre-pass, lowering to the IR, and SQL generation in both FROM shapes
+    /// (flat and LIMIT-streaming). Nothing is executed: the pre-pass answers
+    /// every `TERMINOLOGY()` call through [`StoreTimeTerminology`], and every
+    /// `$parameter` is bound to [`STORE_TIME_PARAMETER`].
+    ///
+    /// # Errors
+    ///
+    /// `BadRequest` (`400`) for a text that does not parse, or that the
+    /// engine refuses at lowering or SQL generation, with the refusal the
+    /// execution would report.
+    async fn analyse_stored_aql(&self, query_text: &str) -> Result<(), ServiceError> {
+        let mut ast = openehr_query::parser::parse_str(query_text).map_err(|err| {
+            ServiceError::bad_request(
+                format!(
+                    "stored query text is not valid AQL: {}",
+                    crate::service::error::ErrorChain::new(&err)
+                ),
+                err,
+            )
+        })?;
+        let refused = |err: AqlError| {
+            ServiceError::bad_request(
+                format!("the query engine refuses the stored query text: {err}"),
+                err,
+            )
+        };
+        crate::aql::terminology::expand_matches(&mut ast, &StoreTimeTerminology)
+            .await
+            .map_err(refused)?;
+        let ir = crate::aql::lower_query(&ast, self.spec_profile).map_err(refused)?;
+        let params = ir.params.iter().fold(Params::new(), |params, name| {
+            params.with(
+                name.clone(),
+                ParamValue::Str(STORE_TIME_PARAMETER.to_owned()),
+            )
+        });
+        // A `LIMIT` selects the streaming FROM shape when the query admits it
+        // (`aql::sql::build`), so both shapes an execution can take are built.
+        for limit in [None, Some(1)] {
+            let ctx = SqlCtx {
+                system_id: self.effective_system_id(),
+                ehr_ids: Vec::new(),
+                subject_scope: None,
+                ehr_access: EhrAccessScope::Unrestricted,
+                limit,
+                offset: None,
+                archetype_lineage: Arc::new(ArchetypeLineage::default()),
+            };
+            crate::aql::sql::build(&ir, &params, &ctx).map_err(refused)?;
+        }
+        Ok(())
     }
 
     /// Retrieve a stored query — an exact `version`, a SEMVER **prefix**

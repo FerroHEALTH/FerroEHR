@@ -28,10 +28,16 @@
 //!   query string as well as from the body. Precedence between the two carriers
 //!   is unassigned, so the same rule applies: equal values are accepted,
 //!   conflicting values are a `400`.
-//! - **JSON-only response** (`200_Query.yaml` declares `application/json`; the
-//!   `RESULT_SET` has no canonical-XML shape): an exclusively-XML `Accept`
-//!   negotiates to `406` on every operation — documented below as our real wire
-//!   though the OAS does not enumerate `406`. The `POST`s answer a non-JSON
+//! - **JSON-only response**: a service "MUST support at least one of the
+//!   openEHR XML or JSON canonical formats" and answers an `Accept:
+//!   application/xml` it cannot fulfil with `406` (`docs/overview/Resources.md`
+//!   §Data representation, §XML Format), and the released `200_Query.yaml`
+//!   declares `application/json` only. The vendored
+//!   `its-xml-2.0.0-nsv2/QUERY/latest/Query.xsd` does declare a `result_set`
+//!   element (status Draft), so the refusal rests on that optionality, not on a
+//!   missing XML shape: an exclusively-XML `Accept` negotiates to `406` on every
+//!   operation, documented below as our real wire though the OAS does not
+//!   enumerate `406`. The `POST`s answer a non-JSON
 //!   request `Content-Type` with `415`, likewise OAS-undeclared and likewise a
 //!   cross-cutting MUST (`Resources.md` §"JSON Format").
 //! - **`ETag`** (`200_Query.yaml` + `headers/ETag_RESULT_SET.yaml`): the `200`
