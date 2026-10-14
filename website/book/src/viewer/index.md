@@ -79,7 +79,13 @@ form is never shown against a bearer-only CDR, and vice versa. If the CDR
 cannot be reached at all, the page falls back to the viewer's own
 configuration and renders anyway, and the outage then surfaces on the login
 attempt instead of hiding the page. Sign-in is served fully rendered and works
-with JavaScript disabled.
+with JavaScript disabled. A username or password the CDR refuses brings you
+back to the sign-in card with the refusal, whether or not JavaScript is on.
+
+The viewer verifies the CDR and the OIDC issuer against the platform trust
+store, so an identity provider whose certificate comes from a private CA is
+trusted once that CA is in the image's system store or in a directory or file
+named by `SSL_CERT_DIR` or `SSL_CERT_FILE`.
 
 The viewer manages no accounts of its own: it authenticates you against the
 CDR (Basic) or your identity provider (OIDC), and there are no user, role, or

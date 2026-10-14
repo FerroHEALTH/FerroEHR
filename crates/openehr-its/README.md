@@ -175,7 +175,7 @@ Exactly one third-party file travels inside this package:
 - **Packaged path:** `schemas/json/openehr_rm_1.1.0_all.json`
 - **Upstream:** [`openEHR/specifications-ITS-JSON`](https://github.com/openEHR/specifications-ITS-JSON),
   path `components/openehr_rm_1.1.0_all.json`, commit
-  `5acae056248e917a4b4c56f7e712f4fcfeb616a6` (`master` — ITS-JSON is
+  `14387ce9191f228d768b6bade3308b79aaf87471` (`master` — ITS-JSON is
   DEVELOPMENT status and has no numbered release)
 - **Copyright:** openEHR Foundation; redistributed **verbatim** under
   Apache-2.0 ([`LICENSE-APACHE-2.0`](LICENSE-APACHE-2.0),

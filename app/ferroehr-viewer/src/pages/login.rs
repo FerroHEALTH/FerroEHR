@@ -104,7 +104,7 @@ pub fn LoginPage() -> impl IntoView {
                 })
         }}
     }
-        .into_any();
+    .into_any();
 
     let error_bar = view! {
         {move || {

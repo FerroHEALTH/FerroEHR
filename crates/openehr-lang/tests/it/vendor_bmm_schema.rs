@@ -388,7 +388,10 @@ fn vendor_root() -> PathBuf {
 /// Referenced by path (never copied) so the boundary test below pins the reader
 /// against the schemas the project actually pins (`docs/VERSIONS.md`). Codegen
 /// itself consumes the `.bmm.json` serialisation of these same models, so these
-/// ODIN files are not part of this crate's committed corpus.
+/// ODIN files are not part of this crate's committed corpus. For BASE 1.3.0,
+/// RM 1.2.0 and TERM 3.1.0 they are the ITS-BMM copies, which predate the
+/// component-repo json overlays codegen reads
+/// (`tools/openehr-codegen/vendor/bmm/PROVENANCE.md`).
 const CODEGEN_VENDOR_ODIN: &str = "../../tools/openehr-codegen/vendor/bmm/components";
 
 /// Reads `path` relative to `tests/vendor`.

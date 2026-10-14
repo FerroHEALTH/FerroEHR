@@ -94,7 +94,7 @@ COMPOSE_PROJECT="ferroehr-probe-k8s"
 # pg_control_system().system_identifier) and the database a relocated domain is
 # prepared and verified in. These probes install the overlay against four
 # compose PostgreSQL clusters, one per storage domain, read the posture back
-# with `ferroehr report` inside the running pod, then point two domains at one
+# with `ferroehr report` inside the running pod, then point all four domains at one
 # cluster and watch the boot refuse. No openEHR spec governs deployment
 # posture; this is our own design.
 K8S_PROD_NS="${K8S_NS}-production"
@@ -369,22 +369,28 @@ render_check() {
     'deployment_profile = "production"' \
     'deployment_accepts = ["plaintext_listener"]' \
     'migrate = "verify"' \
-    "secretName: probe-db-migrate" \
+    "name: probe-db-migrate" \
     "name: probe-db-clinical" \
     "name: probe-db-party" \
     "name: probe-db-linkage" \
     "name: probe-db-audit" \
+    "name: probe-db-party-migrate" \
+    "name: probe-db-linkage-migrate" \
+    "name: probe-db-audit-migrate" \
     'value: "/etc/ferroehr-secrets/storage.party.url"' \
     'value: "/etc/ferroehr-secrets/storage.linkage.url"' \
     'value: "/etc/ferroehr-secrets/storage.audit.url"' \
     'value: "/etc/ferroehr-secrets/db.migrate_url"' \
+    'value: "/etc/ferroehr-secrets/storage.migrate.party.url"' \
+    'value: "/etc/ferroehr-secrets/storage.migrate.linkage.url"' \
+    'value: "/etc/ferroehr-secrets/storage.migrate.audit.url"' \
     "name: ${K8S_PROD_RELEASE}-migrate"; do
     grep -qF -- "$want" <<<"$rendered" || { red "  the production install render lacks: ${want}"; failed=1; }
   done
-  [[ "$(grep -c -- '- key: dsn' <<<"$rendered")" -ge 6 ]] \
-    || { red "  fewer than six projections read the probe's 'dsn' key (four domains, the migrator, the Job)"; failed=1; }
+  [[ "$(grep -c -- '- key: dsn' <<<"$rendered")" -ge 12 ]] \
+    || { red "  fewer than twelve projections read the probe's 'dsn' key (the Deployment: four domains, three domain migrators, the migrator; the Job: the migrator and three domain migrators)"; failed=1; }
   [[ "$failed" -eq 0 ]] || exit 1
-  green "render-check: the production install wires four domain DSNs, the migrator and the Job to the probe's Secrets"
+  green "render-check: the production install wires four domain DSNs, four migrators and the Job to the probe's Secrets"
 }
 
 if [[ "$RENDER_CHECK" -eq 1 ]]; then

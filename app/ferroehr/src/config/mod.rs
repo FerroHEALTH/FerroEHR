@@ -1757,8 +1757,7 @@ mod tests {
              falling back to db.url as an unwired key would"
         );
         assert_eq!(
-            c.storage
-                .migrate_dsn(crate::db::domain::Domain::Linkage),
+            c.storage.migrate_dsn(crate::db::domain::Domain::Linkage),
             Some("postgres://m:p@h:5432/d"),
             "a relocated domain's migration credential arrives through the env grammar"
         );

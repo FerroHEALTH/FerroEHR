@@ -49,7 +49,7 @@ esac
 # name | upstream repo | pinned commit | upstream subdir | file filter | destination | provenance record
 SETS=(
   "bmm|specifications-ITS-BMM|37b317396eb9b5f03c4c422296a15bdd665028dd|components|no-yaml|tools/openehr-codegen/vendor/bmm/components|tools/openehr-codegen/vendor/bmm/PROVENANCE.md"
-  "its-json|specifications-ITS-JSON|5acae056248e917a4b4c56f7e712f4fcfeb616a6|components|all|crates/openehr-its/schemas/json|crates/openehr-its/schemas/json/PROVENANCE.md"
+  "its-json|specifications-ITS-JSON|14387ce9191f228d768b6bade3308b79aaf87471|components|all|crates/openehr-its/schemas/json|crates/openehr-its/schemas/json/PROVENANCE.md"
   "its-xml-nsv1|specifications-ITS-XML|f7a937778bf9ea43b01b0f9d8a616e47f35017c1|components|all|crates/openehr-its/schemas/xml/its-xml-1.0.2-nsv1|crates/openehr-its/schemas/xml/PROVENANCE.md"
   "its-xml-nsv2|specifications-ITS-XML|de8b37ba6c9a5e126623a063cafba3b58ebf1107|components|all|crates/openehr-its/schemas/xml/its-xml-2.0.0-nsv2|crates/openehr-its/schemas/xml/PROVENANCE.md"
   "rest-oas|specifications-ITS-REST|24058992d5fa96e8dfbd855d9c133f328387fc09|computable/OAS|all|crates/openehr-its/vendor/rest-oas|crates/openehr-its/vendor/rest-oas/PROVENANCE.md"
@@ -84,6 +84,36 @@ for entry in "${OVERLAYS[@]}"; do
 done
 if [[ "$missing" -ne 0 ]]; then
   echo "Update the provenance record(s) in the same change as the pin." >&2
+  exit 1
+fi
+
+# A set whose spec text spec-docs.sh also vendors pins the SAME commit, so the
+# machine-readable artifact and its prose cannot drift apart.
+# codegen set | spec-docs.sh component
+TWIN_PINS=(
+  "its-json|ITS-JSON"
+  "its-xml-nsv2|ITS-XML"
+  "rest-oas|ITS-REST"
+)
+pin_drift=0
+for pair in "${TWIN_PINS[@]}"; do
+  IFS='|' read -r set_name component <<<"$pair"
+  set_sha=""
+  for entry in "${SETS[@]}"; do
+    IFS='|' read -r name _repo sha _sub _filter _dest _record <<<"$entry"
+    [[ "$name" = "$set_name" ]] && set_sha=$sha
+  done
+  docs_sha=$(grep -E "^  \"${component}\|" scripts/vendor/spec-docs.sh | head -1 | tr -d '"' | awk -F'|' '{print $4}')
+  if [[ -z "$set_sha" || -z "$docs_sha" ]]; then
+    echo "ERROR: no pin for $set_name here or for $component in scripts/vendor/spec-docs.sh" >&2
+    pin_drift=1
+  elif [[ "$set_sha" != "$docs_sha" ]]; then
+    echo "ERROR: $set_name is pinned at $set_sha but spec-docs.sh pins $component at $docs_sha" >&2
+    pin_drift=1
+  fi
+done
+if [[ "$pin_drift" -ne 0 ]]; then
+  echo "Pin the codegen input and its spec text to one commit." >&2
   exit 1
 fi
 

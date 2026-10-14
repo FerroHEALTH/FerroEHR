@@ -18,7 +18,7 @@ added then, and layer 5 nearly refuted a claim that layers 1-4 supported).
 | 2 ADL1.4 prose (VERBATIM twin, same defects) | `AM/docs/ADL1.4/master05-cadl.adoc` | §Constraints on Dates… L843-932: intro L852 · exhaustiveness sentence L863 · pattern table L865-892 · "(but not date)" L896 · timezone table L898-906 · assumed-value L912 · intervals L914-932 · §Assumed Values L1007-1019 (**the `some_date` example is L1018, ADL1.4-ONLY**) · §Symbols lexical spec L1283-1498 |
 | 3 grammar (3 rival artifacts) | vendored `.g4` + the 1.4 chapter's OWN lexical spec | see the grammar table below |
 | 4 AOM object model (docs text) | `AM/docs/UML/classes/org.openehr.am.aom2.c_temporal_definitions.adoc` | 3 pattern lists L16-26 / L55-64 / L89-99 · 3 replacement hashes L29-50 / L67-84 / L102-125 · `valid_iso8601_*_constraint_pattern` fns L131-160 |
-| 5 **the AOM BMMs + the ITS-XML AM XSDs** | `tools/openehr-codegen/vendor/bmm/components/AM/json/openehr_am_{1.4.0,2.4.0}.bmm.json` · `crates/openehr-its/schemas/xml/components/AM/{Release-1.4,latest}/*.xsd` | see §Layer 5 below — **this layer disagrees with layer 4** |
+| 5 **the AOM BMMs + the ITS-XML AM XSDs** | `tools/openehr-codegen/vendor/bmm/components/AM/json/openehr_am_{1.4.0,2.4.0}.bmm.json` · `crates/openehr-its/schemas/xml/its-xml-2.0.0-nsv2/AM/{Release-1.4,latest}/*.xsd` | see §Layer 5 below — **this layer disagrees with layer 4** |
 | 6 **the published UML diagrams** (0-text, rasterizable) | `AM/docs/UML/diagrams/AM-aom{14.archetype,2}.constraint_model.primitive.svg` | `rsvg-convert -z 2 <svg> -o out.png` renders fully legibly; **also disagrees with layer 4** |
 
 `C_TEMPORAL.pattern_constraint` is the AOM2 carrier (`…aom2.c_temporal.adoc`

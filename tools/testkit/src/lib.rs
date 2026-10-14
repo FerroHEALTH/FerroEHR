@@ -16,7 +16,9 @@
 //! fingerprint under a `PostgreSQL` advisory lock, migrated under a staging
 //! name and renamed into place, and stamped complete as its database comment,
 //! read via `shobj_description` because a connection to a template blocks
-//! cloning (`PostgreSQL` docs § CREATE DATABASE). A clone is made under the
+//! cloning (`PostgreSQL` docs § CREATE DATABASE); the stamp carries the build
+//! time, so another fingerprint's sweep spares a template younger than
+//! [`TEMPLATE_GRACE`]. A clone is made under the
 //! same lock in shared mode and only from a stamped template. Clones are
 //! named `ferroehr_tk_<secs>_<rand>` and swept by [`sweep_stale`], which every
 //! test process runs once before it hands out a database.
@@ -76,6 +78,17 @@ const SWEEP_LOCK_KEY: i64 = 0x0EB2_7E57_0002;
 /// `min_connections = 0`), so connectedness cannot tell live from leaked; the
 /// name-embedded creation time can.
 const SWEEP_GRACE: Duration = Duration::from_mins(30);
+
+/// Templates of another migration fingerprint stamped complete less than this
+/// long ago are never swept.
+///
+/// Suites built from different fingerprints share one server; without the
+/// grace each one's startup sweep drops the other's template, which then
+/// rebuilds on its next clone.
+const TEMPLATE_GRACE: Duration = Duration::from_mins(30);
+
+/// The leading text of every template completion stamp.
+const STAMP_PREFIX: &str = "ferroehr-testkit fingerprint=";
 
 /// Failures of the harness itself (server acquisition, template build,
 /// cloning) — always broken test infrastructure, never application behaviour.
@@ -466,11 +479,10 @@ async fn connect_ready(admin_url: &str) -> Result<PgConnection, TestkitError> {
 async fn ensure_template(admin_url: &str) -> Result<String, TestkitError> {
     let fingerprint = db::migration_fingerprint();
     let template = format!("{DB_PREFIX}tpl_{fingerprint}");
-    let stamp = template_stamp(&fingerprint);
 
     let mut admin = connect_ready(admin_url).await?;
 
-    if template_complete(&mut admin, &template, &stamp).await? {
+    if template_complete(&mut admin, &template, &fingerprint).await? {
         drop(admin.close().await);
         return Ok(template);
     }
@@ -480,7 +492,7 @@ async fn ensure_template(admin_url: &str) -> Result<String, TestkitError> {
         .bind(TEMPLATE_LOCK_KEY)
         .execute(&mut admin)
         .await?;
-    let outcome = build_template(&mut admin, admin_url, &template, &stamp).await;
+    let outcome = build_template(&mut admin, admin_url, &template, &fingerprint).await;
     drop(
         sqlx::query("SELECT pg_advisory_unlock($1)")
             .bind(TEMPLATE_LOCK_KEY)
@@ -493,46 +505,81 @@ async fn ensure_template(admin_url: &str) -> Result<String, TestkitError> {
 }
 
 /// The completion stamp a template of migration `fingerprint` carries as its
-/// database comment.
-fn template_stamp(fingerprint: &str) -> String {
-    format!("ferroehr-testkit fingerprint={fingerprint} complete")
+/// database comment, recording `built_secs` (Unix seconds) as its build time.
+fn template_stamp(fingerprint: &str, built_secs: u64) -> String {
+    format!("{STAMP_PREFIX}{fingerprint} complete at={built_secs}")
 }
 
-/// Whether `template` exists and carries the completion stamp.
+/// A parsed completion stamp.
+#[derive(Debug, PartialEq, Eq)]
+struct TemplateStamp<'a> {
+    /// The migration fingerprint the template was built from.
+    fingerprint: &'a str,
+    /// When the template was stamped complete (Unix seconds); `None` for a
+    /// stamp written before the build time was recorded.
+    built_secs: Option<u64>,
+}
+
+/// Parses a template's database comment as a completion stamp.
+///
+/// Returns `None` for anything that is not a stamp; a stamp without a build
+/// time still reads as complete, with an unknown age.
+fn parse_stamp(comment: &str) -> Option<TemplateStamp<'_>> {
+    let rest = comment.strip_prefix(STAMP_PREFIX)?;
+    let (fingerprint, tail) = rest.split_once(' ')?;
+    if tail == "complete" {
+        return Some(TemplateStamp {
+            fingerprint,
+            built_secs: None,
+        });
+    }
+    let built = tail.strip_prefix("complete at=")?.parse().ok()?;
+    Some(TemplateStamp {
+        fingerprint,
+        built_secs: Some(built),
+    })
+}
+
+/// Whether `template` exists and carries the completion stamp of
+/// `fingerprint`.
 async fn template_complete(
     admin: &mut PgConnection,
     template: &str,
-    stamp: &str,
+    fingerprint: &str,
 ) -> Result<bool, sqlx::Error> {
     // `shobj_description` is NULL for a template with no comment yet, so the
     // scalar is doubly optional: NULL means "not complete", never an error.
-    let complete: Option<Option<bool>> = sqlx::query_scalar(
-        "SELECT shobj_description(oid, 'pg_database') = $2 \
-         FROM pg_database WHERE datname = $1",
+    let comment: Option<Option<String>> = sqlx::query_scalar(
+        "SELECT shobj_description(oid, 'pg_database') FROM pg_database WHERE datname = $1",
     )
     .bind(template)
-    .bind(stamp)
     .fetch_optional(admin)
     .await?;
-    Ok(complete.flatten() == Some(true))
+    Ok(comment
+        .flatten()
+        .as_deref()
+        .and_then(parse_stamp)
+        .is_some_and(|stamp| stamp.fingerprint == fingerprint))
 }
 
-/// Builds the template under the already-held advisory lock: re-check, drop
-/// any incomplete carcass, migrate a staging database, rename it to the
-/// template, then stamp the database comment.
+/// Builds the template of migration `fingerprint` under the already-held
+/// advisory lock: re-check, drop any incomplete carcass, migrate a staging
+/// database, rename it to the template, then stamp the database comment with
+/// the fingerprint and the build time.
 ///
 /// The template name therefore only ever names a fully migrated database. The
 /// staging database carries a clone-shaped name, so a concurrent process's
 /// sweep spares it for [`SWEEP_GRACE`] instead of dropping it mid-migration;
-/// another fingerprint's suite on the same server sweeps THIS template as
-/// stale, and nothing it drops can be half built.
+/// another fingerprint's suite on the same server spares THIS template for
+/// [`TEMPLATE_GRACE`] after the stamp and sweeps it as stale after that, and
+/// nothing it drops can be half built.
 async fn build_template(
     admin: &mut PgConnection,
     admin_url: &str,
     template: &str,
-    stamp: &str,
+    fingerprint: &str,
 ) -> Result<(), TestkitError> {
-    if template_complete(admin, template, stamp).await? {
+    if template_complete(admin, template, fingerprint).await? {
         return Ok(());
     }
     let drop_sql = format!("DROP DATABASE IF EXISTS {template} WITH (FORCE)");
@@ -555,6 +602,7 @@ async fn build_template(
     }
     built?;
 
+    let stamp = template_stamp(fingerprint, now_secs());
     let comment_sql = format!("COMMENT ON DATABASE {template} IS '{stamp}'");
     sqlx::raw_sql(sqlx::AssertSqlSafe(comment_sql))
         .execute(&mut *admin)
@@ -620,14 +668,14 @@ async fn create_clone(
     template: &str,
 ) -> Result<(), TestkitError> {
     const DEADLINE: Duration = Duration::from_mins(1);
-    let stamp = template_stamp(&db::migration_fingerprint());
+    let fingerprint = db::migration_fingerprint();
     let start = Instant::now();
     loop {
         sqlx::query("SELECT pg_advisory_lock_shared($1)")
             .bind(TEMPLATE_LOCK_KEY)
             .execute(&mut *admin)
             .await?;
-        let attempt = clone_if_complete(admin, name, template, &stamp).await;
+        let attempt = clone_if_complete(admin, name, template, &fingerprint).await;
         sqlx::query("SELECT pg_advisory_unlock_shared($1)")
             .bind(TEMPLATE_LOCK_KEY)
             .execute(&mut *admin)
@@ -658,14 +706,15 @@ enum CloneAttempt {
     TemplateIncomplete,
 }
 
-/// Clones `template` as `name` when it carries the completion stamp.
+/// Clones `template` as `name` when it carries the completion stamp of
+/// `fingerprint`.
 async fn clone_if_complete(
     admin: &mut PgConnection,
     name: &str,
     template: &str,
-    stamp: &str,
+    fingerprint: &str,
 ) -> Result<CloneAttempt, sqlx::Error> {
-    if !template_complete(admin, template, stamp).await? {
+    if !template_complete(admin, template, fingerprint).await? {
         return Ok(CloneAttempt::TemplateIncomplete);
     }
     // Default WAL_LOG strategy: no forced checkpoint per clone (PostgreSQL docs
@@ -764,9 +813,9 @@ async fn startup_sweep(admin: &mut PgConnection) {
     );
 }
 
-/// Drops every stale harness database — clones older than [`SWEEP_GRACE`], and
-/// templates other than the current migration fingerprint's — plus the stale
-/// harness roles.
+/// Drops every stale harness database (clones older than [`SWEEP_GRACE`], and
+/// templates of another migration fingerprint stamped longer than
+/// [`TEMPLATE_GRACE`] ago or not stamped at all) plus the stale harness roles.
 ///
 /// The drops are force-free, so a database another process is connected to is
 /// refused with [`SQLSTATE_OBJECT_IN_USE`] and skipped as benign (`PostgreSQL`
@@ -782,22 +831,23 @@ async fn sweep(admin: &mut PgConnection) -> SweepReport {
     let current_template = format!("{DB_PREFIX}tpl_{}", db::migration_fingerprint());
     let now = now_secs();
 
-    let listed: Result<Vec<String>, sqlx::Error> = sqlx::query_scalar(
-        "SELECT datname FROM pg_database WHERE datname LIKE $1 AND NOT datistemplate",
+    let listed: Result<Vec<(String, Option<String>)>, sqlx::Error> = sqlx::query_as(
+        "SELECT datname, shobj_description(oid, 'pg_database') FROM pg_database \
+         WHERE datname LIKE $1 AND NOT datistemplate",
     )
     .bind(format!("{DB_PREFIX}%"))
     .fetch_all(&mut *admin)
     .await;
-    let names = match listed {
-        Ok(names) => names,
+    let databases = match listed {
+        Ok(databases) => databases,
         Err(error) => {
             tracing::warn!("testkit sweep: cannot list harness databases: {error}");
             Vec::new()
         }
     };
 
-    for name in names {
-        if !stale(&name, &current_template, now) {
+    for (name, comment) in databases {
+        if !stale(&name, comment.as_deref(), &current_template, now) {
             continue;
         }
         report.candidates += 1;
@@ -828,7 +878,7 @@ async fn sweep(admin: &mut PgConnection) -> SweepReport {
             .fetch_all(&mut *admin)
             .await;
     for role in listed_roles.unwrap_or_default() {
-        if !stale(&role, &current_template, now) {
+        if !stale(&role, None, &current_template, now) {
             continue;
         }
         let sql = format!("DROP ROLE IF EXISTS {role}");
@@ -856,15 +906,29 @@ fn refusal_is_benign(code: Option<&str>) -> bool {
     code == Some(SQLSTATE_OBJECT_IN_USE)
 }
 
-/// Whether a harness database is stale: an outdated template (any
-/// `…tpl_…` other than the current one) or a clone whose name-embedded
-/// creation time is older than [`SWEEP_GRACE`].
-fn stale(name: &str, current_template: &str, now_secs: u64) -> bool {
+/// Whether harness database `name`, carrying database comment `comment`, is
+/// stale at `now_secs`.
+///
+/// A template other than `current_template` is stale unless its completion
+/// stamp records a build time younger than [`TEMPLATE_GRACE`]; an unstamped
+/// template, or one whose stamp carries no build time, has no known age and
+/// is stale. A clone is stale when its name-embedded creation time is older
+/// than [`SWEEP_GRACE`]. The live template and names outside the harness
+/// prefix are never stale.
+fn stale(name: &str, comment: Option<&str>, current_template: &str, now_secs: u64) -> bool {
     let Some(rest) = name.strip_prefix(DB_PREFIX) else {
         return false;
     };
-    if let Some(_fingerprint) = rest.strip_prefix("tpl_") {
-        return name != current_template;
+    if rest.starts_with("tpl_") {
+        if name == current_template {
+            return false;
+        }
+        let built = comment
+            .and_then(parse_stamp)
+            .and_then(|stamp| stamp.built_secs);
+        return built.is_none_or(|built| {
+            now_secs.saturating_sub(built) >= TEMPLATE_GRACE.as_secs()
+        });
     }
     let Some((secs_hex, _)) = rest.split_once('_') else {
         return false;
@@ -878,8 +942,9 @@ fn stale(name: &str, current_template: &str, now_secs: u64) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{
-        DB_PREFIX, SQLSTATE_OBJECT_IN_USE, SWEEP_GRACE, TestkitError, clone_url, fresh_name,
-        ipv4_address, probe_docker, redacted, refusal_is_benign, stale,
+        DB_PREFIX, SQLSTATE_OBJECT_IN_USE, SWEEP_GRACE, TEMPLATE_GRACE, TemplateStamp,
+        TestkitError, clone_url, fresh_name, ipv4_address, parse_stamp, probe_docker, redacted,
+        refusal_is_benign, stale, template_stamp,
     };
 
     /// `localhost` resolves to `::1` before `127.0.0.1` on common hosts; the DSN
@@ -923,13 +988,13 @@ mod tests {
     fn stale_spares_current_template_and_young_clones() {
         let now = 0x1000_0000u64;
         let current = "ferroehr_tk_tpl_abcd";
-        assert!(!stale(current, current, now));
-        assert!(stale("ferroehr_tk_tpl_old0", current, now));
+        assert!(!stale(current, None, current, now));
+        assert!(stale("ferroehr_tk_tpl_old0", None, current, now));
         let young = format!("{DB_PREFIX}{:x}_aaaa", now - 10);
-        assert!(!stale(&young, current, now));
+        assert!(!stale(&young, None, current, now));
         let old = format!("{DB_PREFIX}{:x}_aaaa", now - SWEEP_GRACE.as_secs() - 1);
-        assert!(stale(&old, current, now));
-        assert!(!stale("unrelated_db", current, now));
+        assert!(stale(&old, None, current, now));
+        assert!(!stale("unrelated_db", None, current, now));
     }
 
     /// The live template is excluded from the sweep at every age: it carries no
@@ -940,13 +1005,55 @@ mod tests {
         let current = "ferroehr_tk_tpl_deadbeef";
         for now in [0u64, 0x1000_0000, u64::MAX] {
             assert!(
-                !stale(current, current, now),
+                !stale(current, None, current, now),
                 "live template swept at {now}"
             );
         }
         // A template built from any OTHER migration fingerprint is stale.
-        assert!(stale("ferroehr_tk_tpl_0", current, 0));
-        assert!(stale("ferroehr_tk_tpl_feedface", current, 0));
+        assert!(stale("ferroehr_tk_tpl_0", None, current, 0));
+        assert!(stale("ferroehr_tk_tpl_feedface", None, current, 0));
+    }
+
+    /// Another fingerprint's template survives the sweep while its stamp is
+    /// younger than the grace period, and is stale once it is older, or when
+    /// it carries no stamp or a stamp without a build time.
+    #[test]
+    fn stale_spares_a_young_foreign_template() {
+        let current = "ferroehr_tk_tpl_deadbeef";
+        let foreign = "ferroehr_tk_tpl_feedface";
+        let now = 0x1000_0000u64;
+        let young = template_stamp("feedface", now - 10);
+        assert!(!stale(foreign, Some(&young), current, now));
+        let old = template_stamp("feedface", now - TEMPLATE_GRACE.as_secs());
+        assert!(stale(foreign, Some(&old), current, now));
+        assert!(stale(foreign, None, current, now));
+        let undated = "ferroehr-testkit fingerprint=feedface complete";
+        assert!(stale(foreign, Some(undated), current, now));
+        assert!(stale(foreign, Some("not a stamp"), current, now));
+    }
+
+    /// The stamp round-trips, and the undated form still reads as complete.
+    #[test]
+    fn stamps_parse_back() {
+        assert_eq!(
+            parse_stamp(&template_stamp("abc", 42)),
+            Some(TemplateStamp {
+                fingerprint: "abc",
+                built_secs: Some(42),
+            })
+        );
+        assert_eq!(
+            parse_stamp("ferroehr-testkit fingerprint=abc complete"),
+            Some(TemplateStamp {
+                fingerprint: "abc",
+                built_secs: None,
+            })
+        );
+        assert_eq!(parse_stamp("ferroehr-testkit fingerprint=abc"), None);
+        assert_eq!(
+            parse_stamp("ferroehr-testkit fingerprint=abc complete at=x"),
+            None
+        );
     }
 
     /// A clone name whose embedded creation time does not parse is never swept:
@@ -955,8 +1062,8 @@ mod tests {
     fn stale_spares_unparseable_clone_names() {
         let current = "ferroehr_tk_tpl_abcd";
         let now = 0x1000_0000u64;
-        assert!(!stale("ferroehr_tk_notahexnumber_x", current, now));
-        assert!(!stale("ferroehr_tk_nounderscore", current, now));
+        assert!(!stale("ferroehr_tk_notahexnumber_x", None, current, now));
+        assert!(!stale("ferroehr_tk_nounderscore", None, current, now));
     }
 
     /// `PostgreSQL` refuses a force-free `DROP DATABASE` on a database with

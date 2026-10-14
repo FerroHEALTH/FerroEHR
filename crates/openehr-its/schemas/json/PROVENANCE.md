@@ -6,8 +6,11 @@ JSON Schemas from `openEHR/specifications-ITS-JSON`, vendored **verbatim** (full
 upstream `components/` tree).
 
 Source repo: https://github.com/openEHR/specifications-ITS-JSON
-Pinned commit: `5acae056248e917a4b4c56f7e712f4fcfeb616a6` (master; ITS-JSON is
-DEVELOPMENT status with no numbered release — this is the latest available)
+Pinned commit: `14387ce9191f228d768b6bade3308b79aaf87471` (master; ITS-JSON is
+DEVELOPMENT status with no numbered release). The same commit as the ITS-JSON
+spec text (`scripts/vendor/spec-docs.sh`); `codegen-inputs.sh` refuses to run
+when the two differ. Moved from `5acae056248e917a4b4c56f7e712f4fcfeb616a6` on
+2026-10-14 with no byte change to the `components/` tree.
 License: Apache-2.0 (the upstream repo's `LICENSE`; root reference copy
 `LICENSE-APACHE-2.0`)
 Fetched: 2026-07-04.

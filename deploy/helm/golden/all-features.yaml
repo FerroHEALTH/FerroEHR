@@ -2199,15 +2199,26 @@ spec:
 #
 # As a hook, Helm creates it before the Deployment and WAITS for it: a failed
 # migration fails the release instead of rolling pods against a schema that was
-# never applied. Deliberately lean — the migration step needs the DSN and
-# nothing else, so it mounts no ConfigMap and runs on the built-in defaults.
+# never applied. Deliberately lean: the migration step needs DSNs and nothing
+# else, so it mounts no ConfigMap and runs on the built-in defaults. It holds
+# the migrator of the database migrations.job.existingSecret reaches, and the
+# migrator of every other database a domain lives in
+# (database.<domain>.migrateExistingSecret), and prepares each of them.
 #
-# Its pod runs under a ServiceAccount of its own, created as a hook one weight
-# earlier. The release ServiceAccount is an ordinary resource, and Helm creates
-# those only after the pre-install hooks finish, so on a first install a Job
-# naming it waits for an account that does not exist yet; a resource a hook
-# needs must itself be a hook (https://helm.sh/docs/topics/charts_hooks/).
-# The pod calls no Kubernetes API, so the account mounts no token.
+# When the chart creates the release ServiceAccount, the pod runs under one of
+# its own, created as a hook one weight earlier: the release ServiceAccount is
+# an ordinary resource, and Helm creates those only after the pre-install hooks
+# finish, so on a first install a Job naming it waits for an account that does
+# not exist yet; a resource a hook needs must itself be a hook
+# (https://helm.sh/docs/topics/charts_hooks/). The pod calls no Kubernetes API,
+# so the account mounts no token. Its delete policy is `before-hook-creation`
+# only: Helm deletes the `hook-succeeded` hooks that ran before a hook that
+# fails, which on a Helm timeout shorter than activeDeadlineSeconds would delete
+# the account under a Job still running. A token-less account left behind is
+# harmless, and the next release replaces it.
+#
+# With serviceAccount.create=false the operator names an account that exists
+# before any hook runs (and may carry imagePullSecrets), so the Job uses it.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -2223,7 +2234,7 @@ metadata:
   annotations:
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "-10"
-    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    helm.sh/hook-delete-policy: before-hook-creation
 automountServiceAccountToken: false
 ---
 # Source: ferroehr/templates/migration-job.yaml
@@ -2319,10 +2330,12 @@ spec:
         - name: tmp
           emptyDir: {}
         - name: migrator-secret
-          secret:
-            secretName: ferroehr-migrator-dsn
+          projected:
             defaultMode: 0440
-            items:
-              - key: FERROEHR__DB__URL
-                path: db.url
+            sources:
+              - secret:
+                  name: ferroehr-migrator-dsn
+                  items:
+                    - key: FERROEHR__DB__URL
+                      path: db.url
 

@@ -8,8 +8,8 @@ metadata:
 # ITS-XML global document elements — the whole inventory
 
 Bundles: `crates/openehr-its/schemas/xml/its-xml-1.0.2-nsv1/` (STABLE, namespace
-`…/v1`) and `…/its-xml-2.0.0-nsv2/` (TRIAL, namespace `…/v2`), plus a
-`components/` tree. Enumerate with an XML parse for `xs:element` children of
+`…/v1`) and `…/its-xml-2.0.0-nsv2/` (TRIAL, namespace `…/v2`). (A duplicate
+`components/` tree was removed 2026-10-14.) Enumerate with an XML parse for `xs:element` children of
 `xs:schema` (indent-based grep is unreliable — the files mix tabs and spaces).
 
 **1.0.2 bundle (flat `ALL/` + `AOM2/`) — 8 names:** `composition`, `version`,

@@ -300,7 +300,7 @@ workflow refuses a tag that has no matching section here.
   Coded text, quantity, ordinal, count, boolean, text, date/time and
   duration inputs take the assumed value of their constraint, as a string
   (ITS-REST `Input.yaml`), and only when the constraint admits it (AOM
-  `Assumed_value_valid`).
+  `Assumed_value_valid`), for OPT 1.4 and ADL2/OPT2 templates alike.
 - **OPT 1.4 conversion keeps enumerated integer and real lists** (#3752); only
   the range was carried.
 - **The compose image-tag guard covers the terminology overlay** (#3605).

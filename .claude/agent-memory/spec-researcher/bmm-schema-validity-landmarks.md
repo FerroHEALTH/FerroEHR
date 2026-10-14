@@ -40,9 +40,10 @@ metadata:
   keys on `id: String` alone. `…bmm.bmm_schema_core.adoc` L69 = schema_id is
   "Derived name … based on model publisher, model name, model release".
 
-## Where the BMM files are (three serialisations each)
-`tools/openehr-codegen/vendor/bmm/components/<COMP>/{json,odin,yaml}/…` —
-the codegen input. A second copy of the CURRENT pins only lives under
+## Where the BMM files are (json + odin; yaml no longer vendored since 2026-10-14)
+`tools/openehr-codegen/vendor/bmm/components/<COMP>/{json,odin}/…` — json is
+the codegen input; the BASE 1.3.0 / RM 1.2.0 / TERM 3.1.0 odin files are stale
+ITS-BMM copies that lack the json overlay changes (see that dir's PROVENANCE.md). A second copy of the CURRENT pins only lives under
 `docs/specs/openehr/<COMP>/computable/BMM/` (RM has ONLY 1.2.0 there; RM 1.1.0
 exists only in the codegen vendor tree).
 
@@ -61,14 +62,14 @@ exists only in the codegen vendor tree).
   `STATEMENT_SET`/`ASSERTION`/`EXPR_LEAF` are v2.x-only, `EL_BOOLEAN_EXPRESSION`
   is v3-only (`P_ARCHETYPE.rules` is `List<EL_BOOLEAN_EXPRESSION>`).
 - `BMM_ENUMERATION.item_values: List<T>` with no `generic_parameter_defs` on the
-  class or on BMM_CLASS (v2.x json/odin/yaml alike); bmm3 fixed it to
+  class or on BMM_CLASS (v2.x json/odin alike); bmm3 fixed it to
   `List<BMM_PRIMITIVE_VALUE>`. Beware: the same schema ALSO has
   `P_BMM_ENUMERATION.item_values: List<Any>` — two `item_values` sites per file.
 - `EL_CASE<T>.value_constraint: C_OBJECT` in the bmm3 schema (includes BASE only;
   AM includes LANG, so the fix cannot be an include). Its class page's doc string
   is truncated to "Constraint on".
 - **P_ARCHETYPE_SLOT.excludes AND .includes** both state `container_type: List`
-  with NO target type (json/odin/yaml). The complete `List<ASSERTION>` pair lives
+  with NO target type (json/odin). The complete `List<ASSERTION>` pair lives
   on `ARCHETYPE_SLOT` — whose class page is
   `AM/docs/UML/classes/org.openehr.am.aom2.archetype_slot.adoc` L23, included by
   `AM/docs/AOM2/master04.5-constraint_model-class_definitions.adoc` L429.

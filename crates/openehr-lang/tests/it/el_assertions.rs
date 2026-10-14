@@ -119,6 +119,13 @@ fn syntax(src: &str) -> Result<String, ElError> {
 // ── the grammar, over the pinned production schemas ──────────────────────
 
 /// The ODIN serialisations of the component schemas `docs/VERSIONS.md` pins.
+///
+/// For BASE 1.3.0, RM 1.2.0 and TERM 3.1.0 these are the ITS-BMM copies, which
+/// predate the component-repo json overlays codegen reads
+/// (`tools/openehr-codegen/vendor/bmm/PROVENANCE.md`); the overlays cannot
+/// stand in because the generated strict `P_BMM_SCHEMA` reader refuses them (a
+/// leaf package omits `packages`, which `P_BMM_PACKAGE_CONTAINER` declares
+/// mandatory).
 const PINNED_SCHEMAS: &[&str] = &[
     "BASE/odin/openehr_base_1.3.0.bmm",
     "RM/odin/openehr_rm_1.2.0.bmm",

@@ -667,6 +667,10 @@ spec:
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
         checksum/config: aa70fd828eb718b6f2f519a2fb2f343906a98e1fbd57c1dca5ee08420c471a1c
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/management/prometheus"
+        prometheus.io/scheme: "https"
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr
@@ -965,6 +969,34 @@ spec:
             items:
               - key: ca.crt
                 path: ca.crt
+---
+# Source: ferroehr/templates/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ferroehr
+  labels:
+    helm.sh/chart: ferroehr-11.1.1
+    app.kubernetes.io/name: ferroehr
+    app.kubernetes.io/instance: ferroehr
+    app.kubernetes.io/version: "4.3.6"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: ferroehr
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+spec:
+  rules:
+    - host: "ferroehr.example.com"
+      http:
+        paths:
+          - path: /ferroehr
+            pathType: Prefix
+            backend:
+              service:
+                name: ferroehr
+                port:
+                  number: 8080
+
 ---
 # Source: ferroehr/templates/servicemonitor.yaml
 # A Prometheus Operator ServiceMonitor. The prometheus.io/* pod annotations that

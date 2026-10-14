@@ -45,9 +45,8 @@ struct OidcHttpClient(reqwest::Client);
 impl<'c> openidconnect::AsyncHttpClient<'c> for OidcHttpClient {
     type Error = OidcTransportError;
     /// `Send` is declared, so the axum handlers that await it stay `Send`.
-    type Future = Pin<
-        Box<dyn Future<Output = Result<openidconnect::HttpResponse, Self::Error>> + Send + 'c>,
-    >;
+    type Future =
+        Pin<Box<dyn Future<Output = Result<openidconnect::HttpResponse, Self::Error>> + Send + 'c>>;
 
     fn call(&'c self, request: openidconnect::HttpRequest) -> Self::Future {
         Box::pin(async move {

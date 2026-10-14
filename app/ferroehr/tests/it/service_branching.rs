@@ -275,8 +275,9 @@ async fn modifying_an_imported_foreign_version_forks_a_branch() {
 /// structurally: its abstract `VERSION` declares only `contribution`,
 /// `commit_audit` and an optional `signature`, `data` is declared on
 /// `ORIGINAL_VERSION`, and `IMPORTED_VERSION` extends `VERSION` with the single
-/// `item` element (`components/RM/Release-1.1.0/Common.xsd`). Inherited
-/// `commit_audit`/`contribution` are the LOCAL act of committal, "distinct from
+/// `item` element
+/// (`crates/openehr-its/schemas/xml/its-xml-2.0.0-nsv2/RM/Release-1.1.0/Common.xsd`).
+/// Inherited `commit_audit`/`contribution` are the LOCAL act of committal, "distinct from
 /// those of the imported `ORIGINAL_VERSION`" (the class description), and the
 /// wrapper's own `signature` "signifies the act of importing" (RM common
 /// master06 §Digital Signature).

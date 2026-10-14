@@ -104,6 +104,81 @@ async fn sweep_reclaims_ancient_leaked_clones() {
     );
 }
 
+/// Another fingerprint's template stamped complete moments ago survives the
+/// sweep, while one stamped long ago is reclaimed: suites built from different
+/// migration fingerprints on one server stop rebuilding each other's
+/// templates on every process start.
+///
+/// Cluster-global like the sweep gate above; both stand-ins carry unique names
+/// inside the template namespace, and the young one is dropped at the end.
+#[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "non-key randomness: a v4 suffix keeping the stand-in template names \
+              unique across parallel test processes on the shared server"
+)]
+async fn sweep_spares_a_young_foreign_template() {
+    let db = testkit::db().await.expect("clone");
+    let pool = db.pool();
+    let now: i64 = sqlx::query_scalar("SELECT extract(epoch FROM now())::bigint")
+        .fetch_one(&pool)
+        .await
+        .expect("server clock");
+
+    let suffix = uuid::Uuid::new_v4().simple().to_string();
+    let young_fp = format!("young{suffix}");
+    let old_fp = format!("old{suffix}");
+    let stand_ins = [(young_fp.as_str(), now), (old_fp.as_str(), 1)];
+    for (fingerprint, built) in stand_ins {
+        let name = format!("ferroehr_tk_tpl_{fingerprint}");
+        // Two statements: `CREATE DATABASE` refuses to run inside the implicit
+        // transaction a multi-statement simple query opens.
+        let create = format!("CREATE DATABASE {name}");
+        let stamp = format!(
+            "COMMENT ON DATABASE {name} IS \
+             'ferroehr-testkit fingerprint={fingerprint} complete at={built}'"
+        );
+        for sql in [create, stamp] {
+            sqlx::raw_sql(sqlx::AssertSqlSafe(sql))
+                .execute(&pool)
+                .await
+                .expect("create a foreign-template stand-in");
+        }
+    }
+
+    testkit::sweep_stale().await.expect("sweep");
+
+    let probe = |name: String| {
+        let pool = pool.clone();
+        async move {
+            sqlx::query_scalar::<_, String>("SELECT datname FROM pg_database WHERE datname = $1")
+                .bind(name)
+                .fetch_all(&pool)
+                .await
+                .expect("catalog probe after the sweep")
+        }
+    };
+    let young = format!("ferroehr_tk_tpl_{young_fp}");
+    let old = format!("ferroehr_tk_tpl_{old_fp}");
+    let young_after = probe(young.clone()).await;
+    let old_after = probe(old.clone()).await;
+    let cleanup = format!("DROP DATABASE IF EXISTS {young}");
+    sqlx::raw_sql(sqlx::AssertSqlSafe(cleanup))
+        .execute(&pool)
+        .await
+        .expect("drop the young stand-in");
+
+    assert_eq!(
+        young_after,
+        vec![young.clone()],
+        "sweep dropped the young foreign template {young}"
+    );
+    assert!(
+        old_after.is_empty(),
+        "sweep left the old foreign template {old} behind"
+    );
+}
+
 /// The migration fingerprint is stable within a build — the template cache
 /// key must not wobble between calls.
 #[test]

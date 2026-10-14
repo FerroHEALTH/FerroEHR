@@ -565,6 +565,7 @@ jobs:
       - name: The GHCR prune deletes nothing on a dry run and keeps young and retagged manifests
         run: bash scripts/watch/ghcr-prune-orphans.sh --self-test
       - run: bash scripts/watch/spec-update.sh --self-test
+      - run: bash scripts/watch/spec-release.sh --self-test
       - name: The release withdrawal refuses unregistered versions and moves only the floating tags
         run: bash scripts/release/withdraw.sh --self-test
       - name: The release-notes check refuses notes without the CRA user information or the support period
