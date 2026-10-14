@@ -679,7 +679,7 @@ and answers it in the application, over two connections, never in the
 database.
 
 An external identity (a national identifier, say) is matched against the
-sealed `demographic.national_identifier` map by keyed digest, which returns a
+sealed `party.national_identifier` map by keyed digest, which returns a
 party without decrypting anything. That party is then looked up in
 `linkage.subject_ehr` on a second connection, with a second search path and,
 when `[storage.linkage] url` is set, a second database role. **No statement

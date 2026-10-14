@@ -539,6 +539,20 @@ already exists is reported the same way, under its own kind (`PERSON`,
 Both directions are lossless: a dump and a load reproduce every record,
 whichever format and container you choose.
 
+With [national-identifier protection](installation/config-privacy.md) on, a
+party's demographic record also carries its sealed identifier rows, live and
+retired, as base64 ciphertext, nonce and lookup digest. The archive never holds
+a protected value in plaintext. The rows open again only under the same
+`[demographic.identifier_protection]` root key, so restore a dump into a
+deployment configured with the key it was taken under. A load reports a
+demographic container in the response array and restores none of it when:
+
+- one of its sealed rows holds a value that is already live for another party
+  in this repository, or names a scheme this repository has not registered;
+- with protection on here, one of its versions carries a protected scheme's
+  value in plaintext, or references a sealed row the container does not
+  carry.
+
 ### Refusals
 
 | Status | When |

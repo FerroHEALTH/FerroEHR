@@ -333,7 +333,7 @@ demographic side is where a party's identifiers legitimately live, and
 `[demographic.identifier_protection]` decides how they are held there.
 
 With it on, an identifier of a configured scheme never sits in the versioned
-body. The value moves to `demographic.national_identifier`, sealed with
+body. The value moves to `party.national_identifier`, sealed with
 AES-256-GCM under a key derived per domain, and the body keeps a reference in
 its place. Beside the ciphertext sits an HMAC-SHA-256 digest of the value, which
 is what makes "which party holds this identifier" answerable without decrypting
@@ -350,21 +350,27 @@ schemes = ["nl-bsn"]
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `enabled` | bool | `false` | Whether protection is in force. Off leaves identifiers stored as written. |
-| `schemes` | list of string | `["nl-bsn"]` | The `DV_IDENTIFIER.type` values to protect. Each must exist in the `demographic.identifier_scheme` registry; an unregistered code is refused at the write rather than stored in the clear. |
+| `schemes` | list of string | `["nl-bsn"]` | The `DV_IDENTIFIER.type` values to protect. Each must exist in the `party.identifier_scheme` registry; with protection on, the server refuses to boot when one does not. |
 | `key` | secret | unset | The root key, 64 hex characters. Prefer `key_file`. |
 | `key_file` | path | unset | A file holding the root key, read at boot. |
 
-Turning it on with no key, or with an empty `schemes` list, is a **boot error**.
+Turning it on with no key, with an empty `schemes` list, or with a scheme the
+registry does not hold, is a **boot error**.
 A server that believes it seals national identifiers and does not is worse than
 one that never claimed to.
 
-Three properties worth knowing before you enable it:
+Four properties worth knowing before you enable it:
 
 - **The stored, signed and served body are the same form.** Sealing runs before
   the body is decomposed and signed, exactly like the multimedia offload, so a
   signature still verifies against the bytes the server holds. What a reader
   receives carries the reference; the value is available through the resolution
-  path below.
+  path below. A create or update response serves the stored form as well, so
+  the value you submitted does not come back in it.
+- **Each party version keeps its own sealed rows.** A later version retires
+  the rows of the one before it without rewriting them, so an older version
+  still expands to the value it committed. Only live rows take part in
+  resolution.
 - **Resolution is audited.** Going from an identifier to a party is recorded as
   a `linkage`-domain access naming the scheme and whether it matched — never the
   value. A miss is recorded too: it says someone asked whether this deployment

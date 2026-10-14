@@ -20,7 +20,7 @@ pub struct IdentifierProtectionConfig {
     /// (`FERROEHR__DEMOGRAPHIC__IDENTIFIER_PROTECTION__ENABLED`).
     ///
     /// With it on, an identifier in a protected scheme leaves the versioned
-    /// body for `demographic.national_identifier` and the body keeps a
+    /// body for `party.national_identifier` and the body keeps a
     /// reference. With it off the body carries the value as written, which is
     /// the pre-existing behaviour.
     pub enabled: bool,
