@@ -60,6 +60,11 @@ workflow refuses a tag that has no matching section here.
   `ClientError::AnswerTooLarge`, which carries the answer's status and is
   never retried.
 
+- **`[authz.abac] patient_namespace`** (`FERROEHR__AUTHZ__ABAC__PATIENT_NAMESPACE`,
+  #3771): the subject namespace patient-claim ids are issued in. When set, a
+  claim names the EHR subject with that id in that namespace; when unset, an
+  id held under two namespaces matches no EHR.
+
 ### Changed
 
 - **`openehr-its`: the template-example response body is typed** (#3549).
@@ -413,6 +418,12 @@ workflow refuses a tag that has no matching section here.
   A party whose identifier another party already holds answers `409`; two
   values in one scheme, or a reference to an identifier the party does not
   hold, answer `422`.
+- **A patient-scope check that cannot reach the database answers `503`** with
+  `Retry-After` instead of `500` (#3749).
+- **Error texts without stray space runs.** The `400` for an AQL parameter
+  that cannot be coerced, the event-subscription update `400`, the served
+  OpenAPI description of the demographic `party_id` parameter and an ADL
+  parser refusal had lost their line continuations.
 - **The compose image-tag guard covers the terminology overlay** (#3605).
   `scripts/checks/compose-image-tags.sh` checks every FerroEHR image tag in
   every root and `docker/` compose file, `docker-compose.terminology.yml`

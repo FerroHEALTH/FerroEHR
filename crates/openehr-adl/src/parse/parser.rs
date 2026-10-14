@@ -868,7 +868,8 @@ impl Parser<'_> {
         }
         self.err(
             SyntaxErrorCode::Sdinv,
-            "a domain block whose 'list' rows constrain different member sets lowers to              several alternatives and cannot carry a single sibling-order marker",
+            "a domain block whose 'list' rows constrain different member sets lowers to \
+             several alternatives and cannot carry a single sibling-order marker",
         )
     }
 

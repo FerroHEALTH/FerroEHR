@@ -1208,6 +1208,15 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         deployment,
     )?);
 
+    // The schemas are prepared by now, so a configured identifier scheme the
+    // registry does not hold is refused here, not at its first party commit.
+    if let Some(engine) = service.identifier_protection() {
+        engine.verify_registered().await.context(
+            "[demographic.identifier_protection].schemes names a scheme the identifier_scheme \
+             registry does not hold",
+        )?;
+    }
+
     // The retention register keys category periods on the map in force, so it
     // is mirrored before the listener takes traffic. `validate` has already
     // refused a map that does not compile.

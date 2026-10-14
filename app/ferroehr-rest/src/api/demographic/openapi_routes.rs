@@ -407,6 +407,22 @@ pub(crate) fn routes() -> OpenApiRouter<AppState> {
                                       §\"Simplified Formats\"). An absent \
                                       `Content-Type` declares nothing to refuse.",
          body = serde_json::Value),
+        (status = 409, description = "OUR OWN EXTENSION — no openEHR spec \
+                                      governs national-identifier protection. \
+                                      With `[demographic.identifier_protection]` \
+                                      on, the submitted AGENT carries a \
+                                      protected identifier whose value the \
+                                      latest version of another party already \
+                                      holds: one value identifies one party. The \
+                                      status is the released `409 Conflict` \
+                                      trigger, \"the request could not be \
+                                      processed because it might generate a \
+                                      duplicate or a conflict\" \
+                                      (`Requests_and_responses.md` §HTTP status \
+                                      codes); the released operation does not \
+                                      enumerate `409`. The body names the scheme, \
+                                      never the value.",
+         body = serde_json::Value),
         (status = 422, description = "The released trigger, verbatim: `422 \
                                       Unprocessable Entity` \"is returned when the \
                                       content type and syntax is correct, could be \
@@ -418,7 +434,10 @@ pub(crate) fn routes() -> OpenApiRouter<AppState> {
                                       not the type designation), or a body whose \
                                       `_type` is a different PARTY subtype than \
                                       the route's — the routed kind's codec is the \
-                                      one that decodes it.",
+                                      one that decodes it. With identifier protection on, also a AGENT \
+                                      carrying two values in one protected scheme, \
+                                      or referencing a protected identifier this \
+                                      party does not hold (our own extension).",
          body = serde_json::Value)
     )
 )]
@@ -992,6 +1011,22 @@ pub(crate) async fn agent_get(
                                       Formats\"). An absent `Content-Type` declares \
                                       nothing to refuse.",
          body = serde_json::Value),
+        (status = 409, description = "OUR OWN EXTENSION — no openEHR spec \
+                                      governs national-identifier protection. \
+                                      With `[demographic.identifier_protection]` \
+                                      on, the submitted AGENT carries a \
+                                      protected identifier whose value the \
+                                      latest version of another party already \
+                                      holds: one value identifies one party. The \
+                                      status is the released `409 Conflict` \
+                                      trigger, \"the request could not be \
+                                      processed because it might generate a \
+                                      duplicate or a conflict\" \
+                                      (`Requests_and_responses.md` §HTTP status \
+                                      codes); the released operation does not \
+                                      enumerate `409`. The body names the scheme, \
+                                      never the value.",
+         body = serde_json::Value),
         (status = 422, description = "The released trigger, verbatim: `422 \
                                       Unprocessable Entity` \"is returned when the \
                                       content type and syntax is correct, could be \
@@ -1000,7 +1035,10 @@ pub(crate) async fn agent_get(
                                       `specifications/responses/422.yaml`). Here: \
                                       an RM invariant violation on the submitted \
                                       AGENT, or a body typed as a different PARTY \
-                                      subtype than the route's.",
+                                      subtype than the route's. With identifier protection on, also a AGENT \
+                                      carrying two values in one protected scheme, \
+                                      or referencing a protected identifier this \
+                                      party does not hold (our own extension).",
          body = serde_json::Value)
     )
 )]
@@ -1473,6 +1511,22 @@ pub(crate) async fn agent_delete(
                                       §\"Simplified Formats\"). An absent \
                                       `Content-Type` declares nothing to refuse.",
          body = serde_json::Value),
+        (status = 409, description = "OUR OWN EXTENSION — no openEHR spec \
+                                      governs national-identifier protection. \
+                                      With `[demographic.identifier_protection]` \
+                                      on, the submitted GROUP carries a \
+                                      protected identifier whose value the \
+                                      latest version of another party already \
+                                      holds: one value identifies one party. The \
+                                      status is the released `409 Conflict` \
+                                      trigger, \"the request could not be \
+                                      processed because it might generate a \
+                                      duplicate or a conflict\" \
+                                      (`Requests_and_responses.md` §HTTP status \
+                                      codes); the released operation does not \
+                                      enumerate `409`. The body names the scheme, \
+                                      never the value.",
+         body = serde_json::Value),
         (status = 422, description = "The released trigger, verbatim: `422 \
                                       Unprocessable Entity` \"is returned when the \
                                       content type and syntax is correct, could be \
@@ -1484,7 +1538,10 @@ pub(crate) async fn agent_delete(
                                       not the type designation), or a body whose \
                                       `_type` is a different PARTY subtype than \
                                       the route's — the routed kind's codec is the \
-                                      one that decodes it.",
+                                      one that decodes it. With identifier protection on, also a GROUP \
+                                      carrying two values in one protected scheme, \
+                                      or referencing a protected identifier this \
+                                      party does not hold (our own extension).",
          body = serde_json::Value)
     )
 )]
@@ -2058,6 +2115,22 @@ pub(crate) async fn group_get(
                                       Formats\"). An absent `Content-Type` declares \
                                       nothing to refuse.",
          body = serde_json::Value),
+        (status = 409, description = "OUR OWN EXTENSION — no openEHR spec \
+                                      governs national-identifier protection. \
+                                      With `[demographic.identifier_protection]` \
+                                      on, the submitted GROUP carries a \
+                                      protected identifier whose value the \
+                                      latest version of another party already \
+                                      holds: one value identifies one party. The \
+                                      status is the released `409 Conflict` \
+                                      trigger, \"the request could not be \
+                                      processed because it might generate a \
+                                      duplicate or a conflict\" \
+                                      (`Requests_and_responses.md` §HTTP status \
+                                      codes); the released operation does not \
+                                      enumerate `409`. The body names the scheme, \
+                                      never the value.",
+         body = serde_json::Value),
         (status = 422, description = "The released trigger, verbatim: `422 \
                                       Unprocessable Entity` \"is returned when the \
                                       content type and syntax is correct, could be \
@@ -2066,7 +2139,10 @@ pub(crate) async fn group_get(
                                       `specifications/responses/422.yaml`). Here: \
                                       an RM invariant violation on the submitted \
                                       GROUP, or a body typed as a different PARTY \
-                                      subtype than the route's.",
+                                      subtype than the route's. With identifier protection on, also a GROUP \
+                                      carrying two values in one protected scheme, \
+                                      or referencing a protected identifier this \
+                                      party does not hold (our own extension).",
          body = serde_json::Value)
     )
 )]
@@ -2539,6 +2615,22 @@ pub(crate) async fn group_delete(
                                       §\"Simplified Formats\"). An absent \
                                       `Content-Type` declares nothing to refuse.",
          body = serde_json::Value),
+        (status = 409, description = "OUR OWN EXTENSION — no openEHR spec \
+                                      governs national-identifier protection. \
+                                      With `[demographic.identifier_protection]` \
+                                      on, the submitted ORGANISATION carries a \
+                                      protected identifier whose value the \
+                                      latest version of another party already \
+                                      holds: one value identifies one party. The \
+                                      status is the released `409 Conflict` \
+                                      trigger, \"the request could not be \
+                                      processed because it might generate a \
+                                      duplicate or a conflict\" \
+                                      (`Requests_and_responses.md` §HTTP status \
+                                      codes); the released operation does not \
+                                      enumerate `409`. The body names the scheme, \
+                                      never the value.",
+         body = serde_json::Value),
         (status = 422, description = "The released trigger, verbatim: `422 \
                                       Unprocessable Entity` \"is returned when the \
                                       content type and syntax is correct, could be \
@@ -2550,7 +2642,10 @@ pub(crate) async fn group_delete(
                                       not the type designation), or a body whose \
                                       `_type` is a different PARTY subtype than \
                                       the route's — the routed kind's codec is the \
-                                      one that decodes it.",
+                                      one that decodes it. With identifier protection on, also a ORGANISATION \
+                                      carrying two values in one protected scheme, \
+                                      or referencing a protected identifier this \
+                                      party does not hold (our own extension).",
          body = serde_json::Value)
     )
 )]
@@ -3130,6 +3225,22 @@ pub(crate) async fn organisation_get(
                                       Formats\"). An absent `Content-Type` declares \
                                       nothing to refuse.",
          body = serde_json::Value),
+        (status = 409, description = "OUR OWN EXTENSION — no openEHR spec \
+                                      governs national-identifier protection. \
+                                      With `[demographic.identifier_protection]` \
+                                      on, the submitted ORGANISATION carries a \
+                                      protected identifier whose value the \
+                                      latest version of another party already \
+                                      holds: one value identifies one party. The \
+                                      status is the released `409 Conflict` \
+                                      trigger, \"the request could not be \
+                                      processed because it might generate a \
+                                      duplicate or a conflict\" \
+                                      (`Requests_and_responses.md` §HTTP status \
+                                      codes); the released operation does not \
+                                      enumerate `409`. The body names the scheme, \
+                                      never the value.",
+         body = serde_json::Value),
         (status = 422, description = "The released trigger, verbatim: `422 \
                                       Unprocessable Entity` \"is returned when the \
                                       content type and syntax is correct, could be \
@@ -3138,7 +3249,10 @@ pub(crate) async fn organisation_get(
                                       `specifications/responses/422.yaml`). Here: \
                                       an RM invariant violation on the submitted \
                                       ORGANISATION, or a body typed as a different PARTY \
-                                      subtype than the route's.",
+                                      subtype than the route's. With identifier protection on, also a ORGANISATION \
+                                      carrying two values in one protected scheme, \
+                                      or referencing a protected identifier this \
+                                      party does not hold (our own extension).",
          body = serde_json::Value)
     )
 )]
@@ -3623,6 +3737,22 @@ pub(crate) async fn organisation_delete(
                                       §\"Simplified Formats\"). An absent \
                                       `Content-Type` declares nothing to refuse.",
          body = serde_json::Value),
+        (status = 409, description = "OUR OWN EXTENSION — no openEHR spec \
+                                      governs national-identifier protection. \
+                                      With `[demographic.identifier_protection]` \
+                                      on, the submitted PERSON carries a \
+                                      protected identifier whose value the \
+                                      latest version of another party already \
+                                      holds: one value identifies one party. The \
+                                      status is the released `409 Conflict` \
+                                      trigger, \"the request could not be \
+                                      processed because it might generate a \
+                                      duplicate or a conflict\" \
+                                      (`Requests_and_responses.md` §HTTP status \
+                                      codes); the released operation does not \
+                                      enumerate `409`. The body names the scheme, \
+                                      never the value.",
+         body = serde_json::Value),
         (status = 422, description = "The released trigger, verbatim: `422 \
                                       Unprocessable Entity` \"is returned when the \
                                       content type and syntax is correct, could be \
@@ -3634,7 +3764,10 @@ pub(crate) async fn organisation_delete(
                                       not the type designation), or a body whose \
                                       `_type` is a different PARTY subtype than \
                                       the route's — the routed kind's codec is the \
-                                      one that decodes it.",
+                                      one that decodes it. With identifier protection on, also a PERSON \
+                                      carrying two values in one protected scheme, \
+                                      or referencing a protected identifier this \
+                                      party does not hold (our own extension).",
          body = serde_json::Value)
     )
 )]
@@ -4208,6 +4341,22 @@ pub(crate) async fn person_get(
                                       Formats\"). An absent `Content-Type` declares \
                                       nothing to refuse.",
          body = serde_json::Value),
+        (status = 409, description = "OUR OWN EXTENSION — no openEHR spec \
+                                      governs national-identifier protection. \
+                                      With `[demographic.identifier_protection]` \
+                                      on, the submitted PERSON carries a \
+                                      protected identifier whose value the \
+                                      latest version of another party already \
+                                      holds: one value identifies one party. The \
+                                      status is the released `409 Conflict` \
+                                      trigger, \"the request could not be \
+                                      processed because it might generate a \
+                                      duplicate or a conflict\" \
+                                      (`Requests_and_responses.md` §HTTP status \
+                                      codes); the released operation does not \
+                                      enumerate `409`. The body names the scheme, \
+                                      never the value.",
+         body = serde_json::Value),
         (status = 422, description = "The released trigger, verbatim: `422 \
                                       Unprocessable Entity` \"is returned when the \
                                       content type and syntax is correct, could be \
@@ -4216,7 +4365,10 @@ pub(crate) async fn person_get(
                                       `specifications/responses/422.yaml`). Here: \
                                       an RM invariant violation on the submitted \
                                       PERSON, or a body typed as a different PARTY \
-                                      subtype than the route's.",
+                                      subtype than the route's. With identifier protection on, also a PERSON \
+                                      carrying two values in one protected scheme, \
+                                      or referencing a protected identifier this \
+                                      party does not hold (our own extension).",
          body = serde_json::Value)
     )
 )]
@@ -4689,6 +4841,22 @@ pub(crate) async fn person_delete(
                                       §\"Simplified Formats\"). An absent \
                                       `Content-Type` declares nothing to refuse.",
          body = serde_json::Value),
+        (status = 409, description = "OUR OWN EXTENSION — no openEHR spec \
+                                      governs national-identifier protection. \
+                                      With `[demographic.identifier_protection]` \
+                                      on, the submitted ROLE carries a \
+                                      protected identifier whose value the \
+                                      latest version of another party already \
+                                      holds: one value identifies one party. The \
+                                      status is the released `409 Conflict` \
+                                      trigger, \"the request could not be \
+                                      processed because it might generate a \
+                                      duplicate or a conflict\" \
+                                      (`Requests_and_responses.md` §HTTP status \
+                                      codes); the released operation does not \
+                                      enumerate `409`. The body names the scheme, \
+                                      never the value.",
+         body = serde_json::Value),
         (status = 422, description = "The released trigger, verbatim: `422 \
                                       Unprocessable Entity` \"is returned when the \
                                       content type and syntax is correct, could be \
@@ -4700,7 +4868,10 @@ pub(crate) async fn person_delete(
                                       not the type designation), or a body whose \
                                       `_type` is a different PARTY subtype than \
                                       the route's — the routed kind's codec is the \
-                                      one that decodes it.",
+                                      one that decodes it. With identifier protection on, also a ROLE \
+                                      carrying two values in one protected scheme, \
+                                      or referencing a protected identifier this \
+                                      party does not hold (our own extension).",
          body = serde_json::Value)
     )
 )]
@@ -5274,6 +5445,22 @@ pub(crate) async fn role_get(
                                       Formats\"). An absent `Content-Type` declares \
                                       nothing to refuse.",
          body = serde_json::Value),
+        (status = 409, description = "OUR OWN EXTENSION — no openEHR spec \
+                                      governs national-identifier protection. \
+                                      With `[demographic.identifier_protection]` \
+                                      on, the submitted ROLE carries a \
+                                      protected identifier whose value the \
+                                      latest version of another party already \
+                                      holds: one value identifies one party. The \
+                                      status is the released `409 Conflict` \
+                                      trigger, \"the request could not be \
+                                      processed because it might generate a \
+                                      duplicate or a conflict\" \
+                                      (`Requests_and_responses.md` §HTTP status \
+                                      codes); the released operation does not \
+                                      enumerate `409`. The body names the scheme, \
+                                      never the value.",
+         body = serde_json::Value),
         (status = 422, description = "The released trigger, verbatim: `422 \
                                       Unprocessable Entity` \"is returned when the \
                                       content type and syntax is correct, could be \
@@ -5282,7 +5469,10 @@ pub(crate) async fn role_get(
                                       `specifications/responses/422.yaml`). Here: \
                                       an RM invariant violation on the submitted \
                                       ROLE, or a body typed as a different PARTY \
-                                      subtype than the route's.",
+                                      subtype than the route's. With identifier protection on, also a ROLE \
+                                      carrying two values in one protected scheme, \
+                                      or referencing a protected identifier this \
+                                      party does not hold (our own extension).",
          body = serde_json::Value)
     )
 )]

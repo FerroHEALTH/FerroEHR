@@ -603,7 +603,7 @@ fn map_exec_error(e: AqlError) -> SmError {
 
 impl From<AqlError> for SmError {
     /// Bridges an AQL-engine failure to the SM call-status model as a query
-    /// execution reports it ([`map_exec_error`]): a connection that cannot be
+    /// execution reports it (`map_exec_error`): a connection that cannot be
     /// obtained is `service_overloaded` (`503` plus `Retry-After`).
     fn from(e: AqlError) -> Self {
         map_exec_error(e)

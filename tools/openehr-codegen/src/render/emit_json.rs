@@ -104,7 +104,8 @@ impl JsonSchema<'_> {
         }
         let module = self.external.module_of(spec).unwrap_or_else(|| {
             panic!(
-                "construction door parameter @{spec}: neither the declaring generation nor its                  paired dependency generations emit this class (a plan::construction table bug)"
+                "construction door parameter @{spec}: neither the declaring generation nor its \
+                 paired dependency generations emit this class (a plan::construction table bug)"
             )
         });
         format!("{module}::{ident}")

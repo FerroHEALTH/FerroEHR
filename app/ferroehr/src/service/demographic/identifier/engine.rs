@@ -145,6 +145,8 @@ impl IdentifierProtection {
                 .pointer(&format!("{pointer}/type"))
                 .and_then(Value::as_str)
                 .map(str::to_owned);
+            // NOTE: personal-data rule (an access event per read by a caller): this decrypts
+            // only to re-seal inside the commit, so no caller reads and no event is due.
             let Some((scheme, value)) =
                 IdentifierStore::open_held(&mut *conn, &keys, party, row).await?
             else {
