@@ -15,9 +15,9 @@
 //! their dedicated `CallStatusType` variants — never the generic
 //! `versioned_object_does_not_exist` (`i_ehr_index.adoc §Errors`).
 
-use crate::db::acquire::acquire;
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
 use crate::service::ehr_index::types::{EhrIndexEntry, LocationDesc, ResourceStatus, SubjectRef};

@@ -92,6 +92,7 @@ impl FerroEhrService {
             )?,
             None => self.audit(change_type::CREATION, "EHR creation"),
         };
+
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
 
@@ -251,8 +252,12 @@ impl FerroEhrService {
         subject_id: &str,
         namespace: &str,
     ) -> Result<ServiceResponse, ServiceError> {
-        let found =
-            crate::storage::ehr_repo::ehr_id_by_subject(&self.pool, subject_id, namespace).await?;
+        let found = crate::storage::ehr_repo::ehr_id_by_subject(
+            &mut *acquire(&self.pool).await?,
+            subject_id,
+            namespace,
+        )
+        .await?;
         self.emit_subject_resolution(namespace, found)?;
         let ehr_id = found.ok_or_else(|| {
             ServiceError::sm(

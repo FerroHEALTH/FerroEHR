@@ -1152,7 +1152,7 @@ viewer_management_gate() {
     extra=()
     [[ -z "$port" ]] || extra=(--set "config.management.port=${port}")
     if ! render="$(helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "$viewer" \
-                   "${extra[@]}" -s templates/viewer.yaml 2>&1)"; then
+                   ${extra[@]+"${extra[@]}"} -s templates/viewer.yaml 2>&1)"; then
       red "  viewer: the viewer overlay no longer renders${port:+ with config.management.port=$port}:"
       printf '%s\n' "$render" | head -4
       FAIL=1

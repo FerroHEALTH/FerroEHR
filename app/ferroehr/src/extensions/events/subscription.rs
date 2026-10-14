@@ -20,10 +20,10 @@
 // The CRUD helpers below read the `pub(crate)` `pool` field of
 // `crate::service::FerroEhrService`.
 
-use crate::db::acquire::acquire;
 use sqlx::Row;
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
 use crate::service::status::{CallStatusType, SmError};

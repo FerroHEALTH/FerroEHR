@@ -32,12 +32,12 @@
               (families 1/8)"
 )]
 
-use crate::db::acquire::acquire;
 use serde_json::{Value, json};
 use sqlx::Connection as _;
 use sqlx::Row;
 
 use super::ingest;
+use crate::db::acquire::acquire;
 use crate::service::FerroEhrService;
 use crate::service::error::{ServiceError, Violation};
 

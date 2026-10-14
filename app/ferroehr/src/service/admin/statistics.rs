@@ -79,7 +79,7 @@ impl FerroEhrService {
         let ids: Vec<String> = sqlx::query_scalar(sql)
             .bind(lo)
             .bind(hi)
-            .fetch_all(self.contribution_pool(ehr_scoped))
+            .fetch_all(&mut *acquire(self.contribution_pool(ehr_scoped)).await?)
             .await
             .map_err(ServiceError::from)?;
         Ok(ids)

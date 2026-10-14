@@ -21,6 +21,8 @@
 //! account for. GDPR Art. 18(3) (`docs/law/eu/gdpr/text.html`) makes the
 //! sequence itself the obligation.
 
+use sqlx::Connection as _;
+
 use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
@@ -30,8 +32,6 @@ use crate::storage::marks;
 use crate::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, ObjectClass,
 };
-use sqlx::Connection as _;
-
 /// The grounds a restriction may rest on, as the register's CHECK spells them.
 ///
 /// The four GDPR Art. 18(1) points plus `national`, which a deployment uses for

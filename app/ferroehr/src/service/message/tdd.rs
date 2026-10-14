@@ -49,11 +49,11 @@
               verbatim stored content (RM common master06 §Copying)"
 )]
 
-use crate::db::acquire::acquire;
 use quick_xml::Reader;
 use quick_xml::events::Event;
 use serde_json::Value;
 
+use crate::db::acquire::acquire;
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;

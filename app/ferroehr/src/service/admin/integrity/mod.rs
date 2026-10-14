@@ -41,6 +41,7 @@ use std::time::Instant;
 use serde_json::Value;
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
@@ -467,7 +468,7 @@ impl FerroEhrService {
         )
         .bind(&vo_ids)
         .bind(&sys_versions)
-        .fetch_all(self.domain_pool(domain))
+        .fetch_all(&mut *acquire(self.domain_pool(domain)).await?)
         .await?;
         let mut out = HashMap::with_capacity(rows.len());
         for (vo_id, sys_version, text) in rows {
@@ -509,7 +510,7 @@ impl FerroEhrService {
         .bind(scope.committed_since.map(jiff_sqlx::Timestamp::from))
         .bind(scope.vo_id)
         .bind(scope.sys_version)
-        .fetch_all(self.domain_pool(domain))
+        .fetch_all(&mut *acquire(self.domain_pool(domain)).await?)
         .await?;
         Ok(rows
             .into_iter()

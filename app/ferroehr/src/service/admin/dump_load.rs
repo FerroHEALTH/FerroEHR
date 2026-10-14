@@ -59,13 +59,12 @@
               verbatim stored content (RM common master06 §Copying)"
 )]
 
-use crate::db::acquire::acquire;
-use sqlx::Connection as _;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use sqlx::Connection as _;
 use sqlx::{PgConnection, Row};
 use uuid::Uuid;
 
@@ -77,6 +76,7 @@ use openehr_rm::prelude::{
 use openehr_rm::v1_2::demographic::party_relationship::PartyRelationship;
 use serde::de::DeserializeOwned;
 
+use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::admin::types::{

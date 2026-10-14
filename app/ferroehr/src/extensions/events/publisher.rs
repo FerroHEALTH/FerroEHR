@@ -38,18 +38,18 @@
               multimedia offload over stored fragments (families 3/6/8)"
 )]
 
-use crate::db::acquire::{AcquireError, acquire};
-use sqlx::Connection as _;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use backon::{ExponentialBuilder, Retryable};
+use sqlx::Connection as _;
 use sqlx::{PgPool, Row};
 use tokio::sync::watch;
 use tokio::task::JoinHandle;
 
 use super::config::EventsConfig;
+use crate::db::acquire::{AcquireError, acquire};
 use crate::extensions::outbox;
 use crate::service::error::ErrorChain;
 use ferroehr_ext::events::amqp::AmqpPublisher;
@@ -295,10 +295,7 @@ async fn drain_until_caught_up(
                 return;
             }
             Err(DrainError::Acquire(e)) => {
-                tracing::warn!(
-                    "event outbox drain DB error: {}",
-                    ErrorChain::new(&e)
-                );
+                tracing::warn!("event outbox drain DB error: {}", ErrorChain::new(&e));
                 return;
             }
         }

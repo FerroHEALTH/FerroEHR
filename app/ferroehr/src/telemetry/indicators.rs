@@ -11,10 +11,10 @@
 //!
 //! No openEHR spec governs health probes — our own operational design.
 
-use crate::db::acquire::acquire;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use crate::db::acquire::acquire;
 use crate::system_log::chain_check::{ChainCheck, ChainCheckState};
 use crate::system_log::config::AuditPosture;
 use crate::system_log::sender::AuditSender;

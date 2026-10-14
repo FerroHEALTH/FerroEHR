@@ -11,16 +11,16 @@
 //! once at DEBUG; the background task is detached from boot, health and
 //! readiness, so a slow or unreachable collector reaches none of them.
 
-use crate::db::acquire::acquire;
-use sqlx::Connection as _;
 use std::time::{Duration, Instant};
 
 use http::StatusCode;
 use rand::Rng as _;
+use sqlx::Connection as _;
 use sqlx::PgPool;
 use tokio::task::JoinHandle;
 
 use crate::config::profile::SpecProfile;
+use crate::db::acquire::acquire;
 use crate::licence::document::Use;
 use crate::licence::state::LicenceState;
 use crate::service::error::ErrorChain;

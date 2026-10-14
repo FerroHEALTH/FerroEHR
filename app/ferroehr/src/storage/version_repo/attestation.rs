@@ -14,11 +14,11 @@
               round-trip drops forward-compatible keys (the openEHR release strategy: minors are compatible supersets)"
 )]
 
-use crate::db::acquire::acquire;
 use serde_json::Value;
 use sqlx::{PgConnection, PgPool, Row};
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::storage::error::StorageError;
 

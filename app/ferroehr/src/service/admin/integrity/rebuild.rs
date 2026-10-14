@@ -36,14 +36,14 @@
               round-trip drops forward-compatible keys (the openEHR release strategy: minors are compatible supersets)"
 )]
 
-use crate::db::acquire::acquire;
-use sqlx::Connection as _;
 use std::time::Instant;
 
 use serde_json::Value;
+use sqlx::Connection as _;
 use sqlx::PgConnection;
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::admin::integrity::{

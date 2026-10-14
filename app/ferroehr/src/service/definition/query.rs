@@ -16,12 +16,11 @@
               ADL/OPT wire envelopes"
 )]
 
-use crate::db::acquire::acquire;
-use sqlx::Connection as _;
 use std::sync::Arc;
 
 use async_trait::async_trait;
 use serde_json::{Value, json};
+use sqlx::Connection as _;
 use sqlx::Row;
 use sqlx::postgres::PgRow;
 use uuid::Uuid;
@@ -31,6 +30,7 @@ use crate::aql::ir::{ParamValue, Params};
 use crate::aql::lineage::ArchetypeLineage;
 use crate::aql::sql::{EhrAccessScope, SqlCtx};
 use crate::aql::terminology::TerminologyExpander;
+use crate::db::acquire::acquire;
 use crate::service::FerroEhrService;
 use crate::service::definition::types::QueryDescriptor;
 use crate::service::error::ServiceError;

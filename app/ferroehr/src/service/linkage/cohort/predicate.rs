@@ -21,12 +21,12 @@
 //! "the `at0012` ELEMENT under an `openEHR-DEMOGRAPHIC-ADDRESS.address.v1`
 //! node" is one integer join, not a JSON walk.
 
-use crate::db::acquire::acquire;
 use std::collections::BTreeSet;
 
 use sqlx::PgPool;
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::ids::VoId;
 use crate::service::linkage::cohort::CohortError;
 use crate::service::linkage::cohort::config::{PredicateBinding, PredicateKind};

@@ -13,8 +13,6 @@
 //! `crate::service::ehr::tags::validate_item_tag`, so this family and the EHR
 //! family cannot drift apart.
 
-use crate::db::acquire::acquire;
-use sqlx::Connection as _;
 use std::collections::BTreeMap;
 
 use openehr_base::prelude::{
@@ -22,7 +20,9 @@ use openehr_base::prelude::{
 };
 use openehr_its::rest::generated::common::UpdateItemTag;
 use openehr_rm::prelude::ItemTag;
+use sqlx::Connection as _;
 
+use crate::db::acquire::acquire;
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::service::demographic::types::PartyKind;

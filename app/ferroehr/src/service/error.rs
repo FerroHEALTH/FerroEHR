@@ -994,6 +994,31 @@ mod tests {
         }
     }
 
+    /// A resolver failure while acquiring answers `503` on the wire, while the
+    /// same driver identity on an acquired session stays `500` (#3749).
+    #[tokio::test]
+    async fn the_acquire_phase_decides_503_versus_500() {
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(5))
+            .connect_lazy_with(
+                sqlx::postgres::PgConnectOptions::new()
+                    .host("ferroehr-acquire-test.invalid")
+                    .username("nobody")
+                    .database("nothing"),
+            );
+        let failure = crate::db::acquire::acquire(&pool)
+            .await
+            .expect_err("the `.invalid` top-level domain never resolves");
+        let api = ApiError::from(ServiceError::from(failure));
+        assert_eq!(api.status(), http::StatusCode::SERVICE_UNAVAILABLE);
+
+        let in_session = ServiceError::Database(sqlx::Error::Protocol("unexpected".to_owned()));
+        assert_eq!(
+            ApiError::from(in_session).status(),
+            http::StatusCode::INTERNAL_SERVER_ERROR
+        );
+    }
+
     /// The JSON twins: a payload the server was asked to READ names its own
     /// defect on a `400` (the strict reader's contract — the client can only
     /// fix what it is told), while a failure to serialize the server's OWN

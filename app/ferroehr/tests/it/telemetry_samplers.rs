@@ -24,10 +24,10 @@ use opentelemetry::metrics::MeterProvider;
 use opentelemetry_sdk::Resource;
 use opentelemetry_sdk::metrics::{InMemoryMetricExporter, PeriodicReader, SdkMeterProvider};
 
+use ferroehr::db::acquire::acquire;
 use ferroehr::telemetry::metrics::{
     DB_POOL_CONNECTIONS, TOKIO_ALIVE_TASKS, TOKIO_GLOBAL_QUEUE_DEPTH, TOKIO_WORKERS,
 };
-use ferroehr::db::acquire::acquire;
 use ferroehr::telemetry::samplers;
 
 /// The instrument names the exporter has collected so far.

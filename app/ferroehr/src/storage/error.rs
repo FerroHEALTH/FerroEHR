@@ -152,7 +152,7 @@ impl From<StorageError> for crate::service::status::SmError {
 impl From<crate::db::acquire::AcquireError> for crate::service::status::SmError {
     /// Bridges a failure to obtain a connection to the SM call-status model:
     /// `service_overloaded` (→ `503` plus `Retry-After`), through
-    /// [`classify_acquire`], with the pool's error kept as the source.
+    /// `classify_acquire`, with the pool's error kept as the source.
     fn from(e: crate::db::acquire::AcquireError) -> Self {
         classify_acquire(&e).with_source(e)
     }

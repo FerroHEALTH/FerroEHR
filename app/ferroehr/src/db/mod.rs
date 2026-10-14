@@ -28,7 +28,6 @@ pub mod acquire;
 pub mod domain;
 pub mod iden;
 
-use crate::db::acquire::acquire;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -39,6 +38,7 @@ use sqlx::{Connection, PgConnection, PgPool};
 
 use crate::config::deployment::DeploymentProfile;
 use crate::config::secret::SecretUrl;
+use crate::db::acquire::acquire;
 use crate::db::domain::{Domain, DomainLayout, DomainPools, StorageConfig};
 
 // ── Settings — the `[db]` config section ─────────────────────────────────────
@@ -1456,7 +1456,7 @@ async fn verify_configured_separation(
             continue;
         }
         let role: String = sqlx::query_scalar("SELECT current_user::text")
-            .fetch_one(pools.get(domain))
+            .fetch_one(&mut *acquire(pools.get(domain)).await?)
             .await?;
         roles.push((domain, role));
     }

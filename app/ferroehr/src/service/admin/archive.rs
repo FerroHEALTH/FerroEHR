@@ -25,10 +25,10 @@
 //! alone, so archived content leaves the queryable store until it is
 //! restored.
 
-use crate::db::acquire::acquire;
 use sqlx::Connection as _;
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;

@@ -12,11 +12,11 @@
 //! replica's claim commits and every concurrent one re-evaluates the `WHERE`
 //! against it and matches nothing. No replica keeps a cache of these decisions.
 
-use crate::db::acquire::acquire;
 use sqlx::Connection as _;
 use sqlx::{PgConnection, PgPool};
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::usage_report::payload::BUCKETS;
 use crate::usage_report::window::{Series, SeriesCounts, WindowCounts};
 

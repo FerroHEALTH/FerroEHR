@@ -385,6 +385,15 @@ workflow refuses a tag that has no matching section here.
 - **PostgreSQL healthchecks check over TCP** in the compose files, the hosted
   sandbox and CI, so a container is no longer reported healthy while the
   image's initialisation server still runs.
+- **Every connect-time database failure answers `503`** (#3749). Each pool
+  checkout goes through one typed acquire, so an unresolvable or unreachable
+  host and a protocol failure while connecting answer `503` with
+  `Retry-After`; a failure on an established session stays `500`. The
+  `db_pool_acquire_duration` metric is now recorded for every checkout.
+- **Chart: the viewer reaches a management surface on its own port** (#3758).
+  It is given `FERROEHR_VIEWER__CDR__MANAGEMENT_BASE_URL`, and its
+  NetworkPolicy admits the management port when `config.management.port` is
+  set.
 - **The compose image-tag guard covers the terminology overlay** (#3605).
   `scripts/checks/compose-image-tags.sh` checks every FerroEHR image tag in
   every root and `docker/` compose file, `docker-compose.terminology.yml`

@@ -34,10 +34,10 @@
               fragment the seam produced once; stored-content serving"
 )]
 
-use crate::db::acquire::acquire;
 use serde_json::Value;
 use sqlx::Connection as _;
 
+use crate::db::acquire::acquire;
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::service::demographic::support;

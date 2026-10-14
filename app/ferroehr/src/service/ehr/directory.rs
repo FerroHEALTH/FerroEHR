@@ -81,7 +81,13 @@ impl FerroEhrService {
         self.ensure_ehr_exists(ehr_id).await?;
         self.validate_for_commit(Kind::Folder, &folder, incomplete)
             .await?;
-        check_folder_item_refs(&self.pool, ehr_id, &self.effective_system_id(), &folder).await?;
+        check_folder_item_refs(
+            &mut *acquire(&self.pool).await?,
+            ehr_id,
+            &self.effective_system_id(),
+            &folder,
+        )
+        .await?;
         // is_modifiable = False forbids content writes; the directory is EHR
         // content (RM ehr master04 §EHR Active Status).
         self.ensure_content_writable(ehr_id).await?;
@@ -96,6 +102,7 @@ impl FerroEhrService {
                 "EHR {ehr_id} already has a directory"
             )));
         }
+
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
         let committed = create(
@@ -302,12 +309,19 @@ impl FerroEhrService {
         )?;
         self.validate_for_commit(Kind::Folder, &folder, incomplete)
             .await?;
-        check_folder_item_refs(&self.pool, ehr_id, &self.effective_system_id(), &folder).await?;
+        check_folder_item_refs(
+            &mut *acquire(&self.pool).await?,
+            ehr_id,
+            &self.effective_system_id(),
+            &folder,
+        )
+        .await?;
         // is_modifiable = False forbids content writes to the directory (RM ehr
         // master04 §EHR Active Status), after validate_folder's 422.
         if !is_modifiable {
             return Err(crate::versioning::change::not_modifiable_error(ehr_id));
         }
+
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
         let committed = update(
@@ -350,6 +364,7 @@ impl FerroEhrService {
         if !is_modifiable {
             return Err(crate::versioning::change::not_modifiable_error(ehr_id));
         }
+
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
         // The committal request headers merge into the delete audit too

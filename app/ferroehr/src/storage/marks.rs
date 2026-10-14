@@ -29,11 +29,11 @@
 //!   the periods, their citations, and what has fallen due — a list, never a
 //!   disposal.
 
-use crate::db::acquire::acquire;
 use sqlx::Connection as _;
 use sqlx::{PgConnection, PgPool, Row as _};
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::storage::error::StorageError;
 

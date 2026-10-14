@@ -11,11 +11,11 @@
 //! (a tag may address a specific VERSION), so target-ownership checks also
 //! live with the callers.
 
-use crate::db::acquire::acquire;
 use std::collections::BTreeMap;
 
 use sqlx::{PgConnection, PgPool, Row};
 
+use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::storage::error::StorageError;
 

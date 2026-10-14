@@ -11,10 +11,10 @@
 //! `SECURITY DEFINER` function, so a caller that only needs the mapping never
 //! touches the ciphertext.
 
-use crate::db::acquire::acquire;
 use sqlx::{PgPool, Row as _};
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::service::demographic::identifier::crypto::{CryptoError, DomainKeys};
 
 /// What went wrong holding or reading a protected identifier.

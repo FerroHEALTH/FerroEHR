@@ -98,10 +98,11 @@ impl ResolveError {
 /// The future a resolver closure returns.
 pub type ResolverFuture<T> = Pin<Box<dyn Future<Output = Result<T, ResolveError>> + Send>>;
 
-/// `ehr_id → EHR subject` as the patient scope addresses it
-/// ([`ferroehr::aql::subject::ehr_subject`]), or `None` when no EHR has the id.
-/// Ids are passed as strings so the REST layer stays `uuid`-free (the binary
-/// parses).
+/// `ehr_id → EHR subject`, or `None` when no EHR has the id.
+///
+/// The subject is read as the patient scope addresses it
+/// ([`ferroehr::aql::subject::ehr_subject`]). Ids are passed as strings so the
+/// REST layer stays `uuid`-free (the binary parses).
 pub type SubjectFn = Arc<dyn Fn(String) -> ResolverFuture<Option<EhrSubject>> + Send + Sync>;
 
 /// `(vo_id, version) → template_id` (`version.template_id`, read back via

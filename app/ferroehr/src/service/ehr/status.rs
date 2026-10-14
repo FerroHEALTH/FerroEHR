@@ -144,6 +144,7 @@ impl FerroEhrService {
         self.validate_for_commit(Kind::EhrStatus, &body, incomplete)
             .await?;
         let expected = expected_from_if_match(if_match)?;
+
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
         let committed = update(

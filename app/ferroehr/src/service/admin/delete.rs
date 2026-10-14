@@ -23,10 +23,10 @@
     )
 )]
 
-use crate::db::acquire::acquire;
 use sqlx::Connection as _;
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
@@ -226,6 +226,7 @@ impl FerroEhrService {
         // references a blob and there is nothing to collect.
         #[cfg(not(feature = "multimedia"))]
         let candidate_blobs: Vec<String> = Vec::new();
+
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
 
@@ -448,11 +449,16 @@ impl FerroEhrService {
         }
         let mut still_referenced: Vec<String> = Vec::new();
         for domain in [&self.pool, &self.demographic_pool] {
-            match sqlx::query_scalar("SELECT DISTINCT uri FROM blob_ref WHERE uri = ANY($1)")
-                .bind(&candidates)
-                .fetch_all(domain)
-                .await
-            {
+            let read: Result<Vec<String>, ServiceError> = async {
+                Ok(
+                    sqlx::query_scalar("SELECT DISTINCT uri FROM blob_ref WHERE uri = ANY($1)")
+                        .bind(&candidates)
+                        .fetch_all(&mut *acquire(domain).await?)
+                        .await?,
+                )
+            }
+            .await;
+            match read {
                 Ok(rows) => still_referenced.extend(rows),
                 Err(e) => {
                     tracing::warn!(error = %e, "multimedia blob GC reference read failed; keeping all candidates");

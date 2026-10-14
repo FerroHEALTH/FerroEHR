@@ -15,13 +15,13 @@
               round-trip drops forward-compatible keys (the openEHR release strategy: minors are compatible supersets)"
 )]
 
-use crate::db::acquire::acquire;
 use std::collections::{BTreeMap, HashMap};
 
 use serde_json::Value;
 use sqlx::{PgConnection, PgPool, Row};
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::storage::codec::reassemble;
 use crate::storage::error::StorageError;
@@ -352,7 +352,7 @@ pub async fn read_version_canonical(
     vo_id: VoId,
     sys_version: i32,
 ) -> Result<Value, StorageError> {
-    let rows = read_rows(pool, vo_id, sys_version).await?;
+    let rows = read_rows(&mut *acquire(pool).await?, vo_id, sys_version).await?;
     if rows.is_empty() {
         return Ok(Value::Null);
     }

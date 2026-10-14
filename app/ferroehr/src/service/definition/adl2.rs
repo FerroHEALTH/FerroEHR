@@ -19,8 +19,6 @@
               ADL/OPT wire envelopes"
 )]
 
-use crate::db::acquire::acquire;
-use sqlx::Connection as _;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -41,10 +39,12 @@ use openehr_base::validate::InvariantViolation;
 use openehr_sdt::flat::example::{DetailLevel, ExampleType, apply_output_uid, example_composition};
 use openehr_sdt::flat::webtemplate::builder_v2_4::build_web_template_v2_4;
 
+use crate::db::acquire::acquire;
 use crate::service::definition::binding_uri::code_system_and_code;
 use crate::service::terminology::fhir::TermExistence;
 use openehr_sdt::flat::webtemplate::model::WebTemplate;
 use serde_json::Value;
+use sqlx::Connection as _;
 use sqlx::Row;
 
 use crate::service::FerroEhrService;

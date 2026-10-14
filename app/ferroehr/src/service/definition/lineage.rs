@@ -17,11 +17,11 @@
 //! invalidated on every local artefact write, with a short time-to-live that
 //! doubles as the convergence window for an upload made on another instance.
 
-use crate::db::acquire::acquire;
 use std::sync::Arc;
 use std::time::Duration;
 
 use crate::aql::lineage::ArchetypeLineage;
+use crate::db::acquire::acquire;
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
 

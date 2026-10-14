@@ -34,11 +34,11 @@
               verbatim stored content (RM common master06 §Copying)"
 )]
 
-use crate::db::acquire::acquire;
 use serde_json::{Value, json};
 use sqlx::Row;
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
@@ -1108,7 +1108,7 @@ async fn resolve_entity_ehr(
     if let Some(subject) = subject_id {
         let id: Option<EhrId> = sqlx::query_scalar("SELECT id FROM ehr WHERE subject_id = $1")
             .bind(subject)
-            .fetch_optional(&svc.pool)
+            .fetch_optional(&mut *acquire(&svc.pool).await?)
             .await
             .map_err(ServiceError::from)?;
         return id

@@ -71,6 +71,8 @@
 pub mod cohort;
 pub(crate) mod store;
 
+use sqlx::Connection as _;
+
 use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
@@ -79,8 +81,6 @@ use crate::service::status::SmError;
 use crate::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, ObjectClass,
 };
-use sqlx::Connection as _;
-
 /// The subject reference a party is known by on the clinical side: an opaque
 /// pseudonym in a declared namespace, minted by the server (#3232).
 #[derive(Debug, Clone, PartialEq, Eq)]

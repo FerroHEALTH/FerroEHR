@@ -61,12 +61,12 @@
               verbatim stored content (RM common master06 §Copying)"
 )]
 
-use crate::db::acquire::acquire;
-use sqlx::Connection as _;
 use std::collections::BTreeMap;
 
 use serde_json::Value;
+use sqlx::Connection as _;
 
+use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
@@ -134,6 +134,7 @@ impl FerroEhrService {
         let audit = self.audit(change_type::CREATION, "EHR Extract import");
         let signing = self.signing_ctx();
         self.import_parties(&signing, &audit, parties).await?;
+
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::from)?;
         // Into an *empty* target: a duplicate EHR id is
@@ -219,6 +220,7 @@ impl FerroEhrService {
         }
         let (containers, parties) = parse_import_containers(&an_extract)?;
         reject_duplicate_singleton_containers(&containers)?;
+
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::from)?;
         // Exclusive, because the import re-derives the promoted `ehr` columns

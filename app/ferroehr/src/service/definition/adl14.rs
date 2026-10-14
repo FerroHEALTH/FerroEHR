@@ -24,8 +24,6 @@
 //! OAS declares no conversion operation — our own design/extension, service-level
 //! only and never exposed on the wire.
 
-use crate::db::acquire::acquire;
-use sqlx::Connection as _;
 use std::str::FromStr;
 
 use openehr_adl::adl14::convert::{ConvertConfig, parse_and_convert};
@@ -36,8 +34,10 @@ use openehr_adl::validate::rm::ProductionRmModel;
 use openehr_adl::validate::{ValidationIssue, validate_adl14_source};
 use openehr_base::prelude::ArchetypeId;
 use openehr_base::validate::InvariantViolation;
+use sqlx::Connection as _;
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::service::FerroEhrService;
 use crate::service::error::{ServiceError, Violation};
 use crate::service::list::Page;

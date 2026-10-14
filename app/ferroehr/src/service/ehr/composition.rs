@@ -18,12 +18,12 @@
               fragment the seam produced once; stored-content serving"
 )]
 
-use crate::db::acquire::acquire;
 use openehr_base::prelude::ObjectVersionId;
 use openehr_base::v1_3::base_types::identification::lexical::composite_ids_equal;
 use serde_json::Value;
 use sqlx::Connection as _;
 
+use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::datetime::parse_at_time;
@@ -83,7 +83,7 @@ impl FerroEhrService {
         // ONE pooled connection carries both gates AND the commit, rather
         // than the three or four checkouts this path used to take: measured at
         // +0.4 ms per commit on #3097.
-        let mut conn = self.pool.acquire().await?;
+        let mut conn = acquire(&self.pool).await?;
         // The EHR-existence (404) and content-writability (409) gates in one
         // round trip: a COMPOSITION is EHR content (RM ehr master04 §EHR
         // Creation / §EHR Active Status).
@@ -726,6 +726,7 @@ impl FerroEhrService {
             )));
         }
         let _ = expected;
+
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
         // A DELETE is a commit on a change-controlled resource, so the
