@@ -403,6 +403,9 @@ workflow refuses a tag that has no matching section here.
 - **AQL SQL generation is deterministic with several EHR sources**, and an
   AQL execution that cannot obtain a database connection answers `503` with
   `Retry-After` (#3749).
+- **Protected national identifiers are sealed inside the party commit**
+  (#3772). A failed demographic commit no longer leaves a sealed identifier
+  behind, and a failed update no longer replaces the party's stored one.
 - **The compose image-tag guard covers the terminology overlay** (#3605).
   `scripts/checks/compose-image-tags.sh` checks every FerroEHR image tag in
   every root and `docker/` compose file, `docker-compose.terminology.yml`
