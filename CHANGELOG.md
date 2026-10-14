@@ -108,6 +108,21 @@ workflow refuses a tag that has no matching section here.
 
 ### Security
 
+- **Protected national identifiers stay protected on every path** (#3772).
+  A party create or update response no longer echoes the plaintext
+  identifier: with protection on it is the stored version, carrying the
+  reference a later read serves (relationship write responses also serve the
+  stored form under multimedia offload). An EHR extract or an admin load whose
+  party carries a protected identifier in plaintext is refused (`422`, or a
+  per-container failure for a load), because an imported `ORIGINAL_VERSION`
+  stays a faithful copy (RM common §Copying). Admin dump archives carry the
+  sealed rows as ciphertext only, and a load restores them under the same
+  deployment key. Physically deleting a party removes every sealed row of the
+  party and its deleted relationships. A scheme in
+  `[demographic.identifier_protection].schemes` that the database registry
+  does not hold is refused at boot. The served OpenAPI declares the `409` and
+  the identifier `422` cases on the party create and update operations.
+
 - **The runtime roles can no longer write their migration bookkeeping.** The
   shipped grants on every table of a domain schema covered its
   `_sqlx_migrations`; new migrations (clinical 0014, party 0009, linkage 0005)

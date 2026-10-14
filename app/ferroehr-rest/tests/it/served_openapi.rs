@@ -601,7 +601,9 @@ async fn demographic_operations_are_fully_documented() {
             &op,
             &path,
             "PUT",
-            &["200", "204", "400", "404", "406", "409", "412", "415", "422"],
+            &[
+                "200", "204", "400", "404", "406", "409", "412", "415", "422",
+            ],
         );
         assert!(
             op["responses"]["409"]["description"]

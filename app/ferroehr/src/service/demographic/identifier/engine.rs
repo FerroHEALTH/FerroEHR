@@ -193,6 +193,48 @@ impl IdentifierProtection {
         Ok(references.len())
     }
 
+    /// Refuse a party body that must be stored verbatim but would hold a
+    /// protected value this deployment has not sealed.
+    ///
+    /// The import and restore paths keep a received version byte-for-byte (RM
+    /// common `master06-change_control_package.adoc` §Copying: "the
+    /// `ORIGINAL_VERSION` instance is never modified"), so they cannot seal on
+    /// the way in; a refusal is the only way the value stays out of the
+    /// record. A reference is admitted only when `party` holds its row here,
+    /// read on `conn` so a restore's own rows count.
+    ///
+    /// # Errors
+    /// [`StoreError::Unsealed`] for a plaintext value of a protected scheme,
+    /// [`StoreError::ForeignReference`] for a reference `party` does not hold
+    /// (or one whose row holds another scheme), and [`StoreError`] when a
+    /// referenced row cannot be read or does not authenticate under this
+    /// deployment's key.
+    pub async fn refuse_unsealed(
+        &self,
+        conn: &mut PgConnection,
+        party: Uuid,
+        body: &Value,
+    ) -> Result<(), StoreError> {
+        if let Some(plain) = body::find(body, &self.schemes).into_iter().next() {
+            return Err(StoreError::Unsealed {
+                scheme: plain.scheme,
+            });
+        }
+        let keys = DomainKeys::derive(&self.root, KeyDomain::Demographic);
+        for (pointer, row) in referenced(body) {
+            let written = body
+                .pointer(&format!("{pointer}/type"))
+                .and_then(Value::as_str);
+            // NOTE: personal-data rule (an access event per read by a caller): the value
+            // is opened only to prove the row authenticates; nothing leaves the server.
+            let held = IdentifierStore::open_held(&mut *conn, &keys, party, row).await?;
+            if held.is_none_or(|(scheme, _)| written != Some(scheme.as_str())) {
+                return Err(StoreError::ForeignReference);
+            }
+        }
+        Ok(())
+    }
+
     /// Put the plaintext values back into a stored body.
     ///
     /// The audited expansion: the caller is responsible for deciding that this

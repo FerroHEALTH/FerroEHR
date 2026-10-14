@@ -662,13 +662,14 @@ async fn retire_protected_identifiers(
 /// A value another party holds is ITS-REST `409 Conflict` ("the request could
 /// not be processed because it might generate a duplicate or a conflict",
 /// `ITS-REST/specifications/docs/overview/Requests_and_responses.md` §HTTP
-/// status codes). A body that repeats a scheme or carries a reference the
-/// party does not hold is `422` (`responses/422.yaml`: semantic errors in a
-/// resource that parsed). An unregistered scheme is the deployment's own
+/// status codes). A body that repeats a scheme, carries a reference the party
+/// does not hold, or must be stored verbatim with a protected value in
+/// plaintext is `422` (`responses/422.yaml`: semantic errors in a resource
+/// that parsed). An unregistered scheme is the deployment's own
 /// configuration disagreeing with its registry, which the client cannot act
 /// on, so it stays a `500` whose logged context names the scheme. No message
 /// carries an identifier value.
-fn protection_refusal(error: StoreError) -> ServiceError {
+pub(crate) fn protection_refusal(error: StoreError) -> ServiceError {
     match error {
         StoreError::ValueTaken { ref scheme } => ServiceError::Conflict(
             SmError::new(
@@ -677,7 +678,9 @@ fn protection_refusal(error: StoreError) -> ServiceError {
             )
             .with_source(error),
         ),
-        StoreError::SchemeRepeated { .. } | StoreError::ForeignReference => {
+        StoreError::SchemeRepeated { .. }
+        | StoreError::ForeignReference
+        | StoreError::Unsealed { .. } => {
             ServiceError::content_invalid(Violation::new(error.to_string()))
         }
         StoreError::UnknownScheme { ref scheme } => ServiceError::internal(

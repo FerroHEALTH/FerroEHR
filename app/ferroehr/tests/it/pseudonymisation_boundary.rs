@@ -1387,6 +1387,319 @@ async fn an_unregistered_configured_scheme_is_a_configuration_fault() {
     );
 }
 
+/// A write response is the stored form: the create and update bodies carry the
+/// reference, never the submitted value, and equal what a later read serves.
+#[tokio::test]
+async fn a_party_write_response_serves_the_stored_form() {
+    let db = testkit::db().await.expect("testkit database");
+    let (service, _engine, _party_pool) = protected_service(&db);
+
+    let created = service
+        .party_create(
+            PartyKind::Person,
+            typed(&person_carrying("Lovelace", &[("nl-bsn", SYNTHETIC_BSN)])),
+            None,
+        )
+        .await
+        .expect("create the person");
+    let (vo, v1) = committed_ids(&created.body);
+    assert!(
+        !created.body.to_string().contains(SYNTHETIC_BSN),
+        "the create response must not carry the protected value"
+    );
+    assert!(
+        identifier_id(&created.body).starts_with("urn:ferroehr:protected-identifier:"),
+        "the create response carries the reference the store holds"
+    );
+    let read = service
+        .party_get(PartyKind::Person, vo.clone(), None)
+        .await
+        .expect("read the person back");
+    assert_eq!(
+        created.body, read.body,
+        "the create response is the stored form a later read serves"
+    );
+
+    let updated = service
+        .party_update(
+            PartyKind::Person,
+            vo.clone(),
+            v1,
+            typed(&person_carrying(
+                "Lovelace",
+                &[("nl-bsn", SECOND_SYNTHETIC_BSN)],
+            )),
+            None,
+        )
+        .await
+        .expect("update the person");
+    assert!(
+        !updated.body.to_string().contains(SECOND_SYNTHETIC_BSN),
+        "the update response must not carry the protected value"
+    );
+    let reread = service
+        .party_get(PartyKind::Person, vo, None)
+        .await
+        .expect("read the update back");
+    assert_eq!(
+        updated.body, reread.body,
+        "the update response is the stored form a later read serves"
+    );
+}
+
+/// An EHR extract whose party carries a protected value in plaintext is
+/// refused by a deployment that protects the scheme: a copy is stored verbatim
+/// (RM common `master06-change_control_package.adoc` §Copying), so it cannot
+/// be sealed, and nothing of it is stored.
+#[tokio::test]
+async fn an_imported_party_with_a_plaintext_identifier_is_refused() {
+    use openehr_rm::v1_2::ehr_extract::common::extract::Extract;
+
+    let source_db = testkit::db().await.expect("testkit database");
+    let source = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
+        &source_db.pool(),
+    ));
+    let target_db = testkit::db().await.expect("testkit database");
+    let (target, _engine, target_party) = protected_service(&target_db);
+
+    let created = source
+        .party_create(
+            PartyKind::Person,
+            typed(&person_carrying("Lovelace", &[("nl-bsn", SYNTHETIC_BSN)])),
+            None,
+        )
+        .await
+        .expect("an unprotected source stores the person as written");
+    let (party, _) = committed_ids(&created.body);
+
+    let ehr = source.create_ehr(None).await.expect("ehr");
+    let mut status = source
+        .get_ehr_status_at_time(ehr, None)
+        .await
+        .expect("status get");
+    let status_ovid = status
+        .pointer("/uid/value")
+        .and_then(serde_json::Value::as_str)
+        .expect("uid")
+        .to_owned();
+    status.as_object_mut().expect("status obj").remove("uid");
+    *status.pointer_mut("/subject").expect("the subject") = serde_json::json!({
+        "_type": "PARTY_SELF",
+        "external_ref": {
+            "_type": "PARTY_REF",
+            "namespace": "demographic",
+            "type": "PERSON",
+            "id": { "_type": "HIER_OBJECT_ID", "value": party }
+        }
+    });
+    source
+        .replace_ehr_status(ehr, crate::fixtures::uv(&status, "251", Some(&status_ovid)))
+        .await
+        .expect("status update");
+    let exported = source.extract_ehrs(ehr).await.expect("export_ehrs");
+    let extract: Extract =
+        openehr_its::json::from_canonical_value(exported.first().expect("one EXTRACT"))
+            .expect("EXTRACT deserializes into the typed RM model");
+
+    let refused = target
+        .import_ehr(None, extract)
+        .await
+        .expect_err("a plaintext protected value cannot be stored verbatim");
+    assert_eq!(
+        refused.status,
+        CallStatusType::ContentInvalid,
+        "{refused:?}"
+    );
+    assert_eq!(
+        sealed_and_versions(&target_party).await,
+        (0, 0),
+        "nothing of the refused party is stored"
+    );
+}
+
+/// The dump carries a party's sealed rows as ciphertext and never the value,
+/// and a load restores them, so the restored versions expand to what they
+/// committed and the identifier resolves again.
+#[tokio::test]
+async fn a_dump_and_load_carries_the_sealed_identifiers() {
+    let source_db = testkit::db().await.expect("testkit database");
+    let (source, _source_engine, _) = protected_service(&source_db);
+    let target_db = testkit::db().await.expect("testkit database");
+    let (target, target_engine, target_party) = protected_service(&target_db);
+
+    let created = source
+        .party_create(
+            PartyKind::Person,
+            typed(&person_carrying("Lovelace", &[("nl-bsn", SYNTHETIC_BSN)])),
+            None,
+        )
+        .await
+        .expect("create the person");
+    let (vo, v1) = committed_ids(&created.body);
+    source
+        .party_update(
+            PartyKind::Person,
+            vo.clone(),
+            v1,
+            typed(&person_carrying(
+                "Lovelace",
+                &[("nl-bsn", SECOND_SYNTHETIC_BSN)],
+            )),
+            None,
+        )
+        .await
+        .expect("change the identifier");
+
+    let dir = crate::admin_fixture::archive_dir();
+    let exported = source
+        .export_ehrs(
+            dir.clone(),
+            ferroehr::service::admin::types::ExportSpec::canonical_json(64),
+        )
+        .await
+        .expect("export");
+    assert!(exported.is_empty(), "a clean export: {exported:?}");
+    for entry in std::fs::read_dir(&dir).expect("the archive directory") {
+        let text = std::fs::read_to_string(entry.expect("an entry").path()).unwrap_or_default();
+        assert!(
+            !text.contains(SYNTHETIC_BSN) && !text.contains(SECOND_SYNTHETIC_BSN),
+            "no archive entry may carry a protected value"
+        );
+    }
+
+    let loaded = target.load_ehrs(dir.clone()).await.expect("load");
+    assert!(loaded.is_empty(), "a clean load: {loaded:?}");
+    let versions = expanded_versions(&target_engine, &target_party, &vo).await;
+    assert_eq!(versions.len(), 2, "both versions restored");
+    assert_eq!(identifier_id(&versions[0]), SYNTHETIC_BSN);
+    assert_eq!(identifier_id(&versions[1]), SECOND_SYNTHETIC_BSN);
+    assert_eq!(
+        target_engine
+            .resolve("nl-bsn", SECOND_SYNTHETIC_BSN)
+            .await
+            .expect("resolve"),
+        Some(vo.parse().expect("a uuid")),
+        "the restored live row resolves"
+    );
+    assert_eq!(
+        target_engine
+            .resolve("nl-bsn", SYNTHETIC_BSN)
+            .await
+            .expect("resolve"),
+        None,
+        "the restored retired row stays retired"
+    );
+    std::fs::remove_dir_all(&dir).expect("remove the archive");
+}
+
+/// Loading a party whose version carries a protected value in plaintext into
+/// a deployment that protects the scheme reports that container and stores
+/// nothing of it.
+#[tokio::test]
+async fn a_load_refuses_a_plaintext_identifier_per_container() {
+    let source_db = testkit::db().await.expect("testkit database");
+    let source = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
+        &source_db.pool(),
+    ));
+    let target_db = testkit::db().await.expect("testkit database");
+    let (target, _engine, target_party) = protected_service(&target_db);
+
+    let created = source
+        .party_create(
+            PartyKind::Person,
+            typed(&person_carrying("Lovelace", &[("nl-bsn", SYNTHETIC_BSN)])),
+            None,
+        )
+        .await
+        .expect("an unprotected source stores the person as written");
+    let (vo, _) = committed_ids(&created.body);
+
+    let dir = crate::admin_fixture::archive_dir();
+    source
+        .export_ehrs(
+            dir.clone(),
+            ferroehr::service::admin::types::ExportSpec::canonical_json(64),
+        )
+        .await
+        .expect("export");
+    let loaded = target.load_ehrs(dir.clone()).await.expect("load");
+    assert!(
+        loaded.iter().any(|r| r.entity_id == vo && !r.dump_status),
+        "the plaintext container is reported: {loaded:?}"
+    );
+    assert_eq!(
+        sealed_and_versions(&target_party).await,
+        (0, 0),
+        "nothing of the refused container is stored"
+    );
+    std::fs::remove_dir_all(&dir).expect("remove the archive");
+}
+
+/// A physical party erasure removes every sealed row of the party, live and
+/// retired, while a logical deletion keeps them and only takes them out of
+/// resolution.
+#[tokio::test]
+async fn erasing_a_party_removes_its_sealed_identifiers() {
+    let db = testkit::db().await.expect("testkit database");
+    let (service, engine, party_pool) = protected_service(&db);
+
+    let created = service
+        .party_create(
+            PartyKind::Person,
+            typed(&person_carrying("Lovelace", &[("nl-bsn", SYNTHETIC_BSN)])),
+            None,
+        )
+        .await
+        .expect("create the person");
+    let (vo, v1) = committed_ids(&created.body);
+    service
+        .party_update(
+            PartyKind::Person,
+            vo.clone(),
+            v1,
+            typed(&person_carrying(
+                "Lovelace",
+                &[("nl-bsn", SECOND_SYNTHETIC_BSN)],
+            )),
+            None,
+        )
+        .await
+        .expect("change the identifier");
+
+    let party = ferroehr::ids::VoId(vo.parse().expect("a uuid"));
+    service
+        .delete_party(party)
+        .await
+        .expect("logically delete the person");
+    let kept: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM party.national_identifier WHERE party_id = $1")
+            .bind(party.0)
+            .fetch_one(&party_pool)
+            .await
+            .expect("count the sealed rows");
+    assert_eq!(kept, 2, "a logical deletion keeps every version's row");
+    assert_eq!(
+        engine
+            .resolve("nl-bsn", SECOND_SYNTHETIC_BSN)
+            .await
+            .expect("resolve"),
+        None,
+        "a deleted party holds no live identifier"
+    );
+
+    service
+        .physical_party_delete(vo)
+        .await
+        .expect("physically erase the person");
+    let left: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM party.national_identifier WHERE party_id = $1")
+            .bind(party.0)
+            .fetch_one(&party_pool)
+            .await
+            .expect("count the sealed rows");
+    assert_eq!(left, 0, "the erasure removes every sealed row of the party");
+}
+
 /// Resolving an identifier to its party is recorded as a linkage-domain access,
 /// naming the scheme and never the value.
 ///

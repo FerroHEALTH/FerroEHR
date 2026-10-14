@@ -471,6 +471,37 @@ async fn land_first_receipt(
     Ok(())
 }
 
+/// Refuses a received party version that carries a protected national
+/// identifier this deployment has not sealed.
+///
+/// A copy is stored verbatim (master06 §Copying: "the `ORIGINAL_VERSION`
+/// instance is never modified"), so it cannot be sealed the way a local commit
+/// is; the refusal keeps the value out of the record, as the clinical
+/// data-minimisation scan does for clinical content. No openEHR spec governs
+/// identifier protection — our own design/extension.
+///
+/// # Errors
+/// [`crate::versioning::change::protection_refusal`] of the engine's refusal:
+/// `422` for a plaintext protected value or a reference this party does not
+/// hold.
+async fn refuse_unsealed_identifiers(
+    tx: &mut PgConnection,
+    act: &ImportAct<'_>,
+    cursor: &ContainerCursor<'_>,
+    data: &Value,
+) -> Result<(), ServiceError> {
+    let Some(engine) = act.ctx.identifiers else {
+        return Ok(());
+    };
+    if !cursor.kind.is_demographic() || data.is_null() {
+        return Ok(());
+    }
+    engine
+        .refuse_unsealed(tx, cursor.vo_id.0, data)
+        .await
+        .map_err(crate::versioning::change::protection_refusal)
+}
+
 /// Replays one received original as an `IMPORTED_VERSION` row (plus its nodes
 /// and attestations), returning the PHI-free outbox entry announcing it.
 ///
@@ -513,6 +544,7 @@ async fn import_one_version(
             &version.data,
         )?;
     }
+    refuse_unsealed_identifiers(tx, act, cursor, &version.data).await?;
     // The content, decomposed once: the node rows to write AND — through
     // `reassemble` — the exact bytes a later read will serve.
     let rows = if version.data.is_null() {

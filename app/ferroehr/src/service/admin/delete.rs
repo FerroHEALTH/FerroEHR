@@ -29,6 +29,7 @@ use uuid::Uuid;
 use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
+use crate::service::demographic::identifier::store::IdentifierStore;
 use crate::service::error::ServiceError;
 use crate::service::status::{CallStatusType, SmError};
 
@@ -504,7 +505,10 @@ impl FerroEhrService {
     /// `(vo_id, sys_version)` FKs), the CONTRIBUTIONs/audit rows they orphan
     /// (guarded — a row shared with a survivor is kept), the head rows
     /// markers. `audit` has no FK from `version` (NO ACTION), so those rows
-    /// are swept explicitly, as in the EHR delete.
+    /// are swept explicitly, as in the EHR delete. Every sealed national
+    /// identifier row of the deleted objects, live and retired, goes in the
+    /// same transaction: `national_identifier` carries no foreign key to the
+    /// versions that reference it.
     async fn physical_delete_party(&self, party_id: VoId) -> Result<(), ServiceError> {
         let mut conn = acquire(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
@@ -582,6 +586,14 @@ impl FerroEhrService {
             .bind(&vo_ids)
             .execute(&mut *tx)
             .await?;
+
+        // The sealed national identifiers those versions referenced, live and
+        // retired: the erasure removes the values with the record that held
+        // them. No openEHR spec governs identifier protection — our own design.
+        let sealed_owners: Vec<Uuid> = vo_ids.iter().map(|vo| vo.0).collect();
+        IdentifierStore::erase(&mut tx, &sealed_owners)
+            .await
+            .map_err(|e| ServiceError::internal("erase the sealed national identifiers", e))?;
 
         // Orphaned CONTRIBUTIONs (guarded: keep any still referenced by a
         // surviving version/attestation).
