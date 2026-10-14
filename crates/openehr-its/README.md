@@ -132,7 +132,10 @@ A status the operation does not document is `ClientError::UndocumentedStatus`;
 `401`, `403` and a `5xx` are `ClientError::Unauthorized`, `Forbidden` and
 `ServiceFailure`, each carrying the answer body as an `ErrorBody`. Idempotent requests (`GET`, `HEAD`, `OPTIONS`, `PUT`,
 `DELETE`) are retried after a transport failure, a timeout or a `5xx`, within
-the budget `Client::with_retry` sets; a `POST` is sent once. The HTTP engine is
+the budget `Client::with_retry` sets; a `POST` is sent once. `ReqwestTransport::with_max_body(limit)` bounds the bytes read of
+one answer: a longer body is refused (unread when its length is declared, cut
+off at the limit when it is chunked) as `ClientError::AnswerTooLarge`, which
+carries the answer's status and is never retried. The HTTP engine is
 the `Transport` trait, so another `http`-speaking client can replace
 `ReqwestTransport`, and `Client::execute` sends a request the typed surface
 does not build.

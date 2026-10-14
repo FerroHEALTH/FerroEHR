@@ -84,7 +84,9 @@ output, never the raw files:
   monomorphization for generics, `// @generated` headers) — do not re-litigate
   per class; extend the decision maps in `plan/overrides.rs` instead.
 - Vendored inputs live at `vendor/bmm/` (with provenance) — never edit a
-  vendored file; a spec bump re-vendors and regenerates.
+  vendored file; a spec bump moves the pin in `scripts/vendor/codegen-inputs.sh`
+  (BMM, ITS-JSON, ITS-XML, ITS-REST OAS, plus the component-repo BMM overlays),
+  re-runs it, and regenerates; `--check` proves the committed inputs.
 - The generator writes ONLY generated files/subtrees; it must never touch
   `*_impl.rs` siblings or hand-written runtimes.
 - Gates: `cargo clippy -p openehr-codegen --all-targets` +

@@ -50,6 +50,13 @@ workflow refuses a tag that has no matching section here.
   cluster; `--render-check` runs without a cluster. The probe runs on kind
   with podman as well as Docker.
 
+- **`openehr-its`: a bound on the bytes the REST client reads of one
+  answer** (#3600). `ReqwestTransport::with_max_body(limit)` refuses a body
+  whose declared length is past the limit without reading it and cuts a
+  chunked body off at the limit; the call fails with the new
+  `ClientError::AnswerTooLarge`, which carries the answer's status and is
+  never retried.
+
 ### Changed
 
 - **AQL result row counts change for paths through repeated nodes** (#3733,
@@ -250,6 +257,22 @@ workflow refuses a tag that has no matching section here.
   the chart refuses to render a TLS listener beside an in-chart client without
   one. The migration Job runs under its own hook ServiceAccount, so a first
   install no longer waits on an account Helm creates only after the hooks.
+- **Storing a query runs the analysis an execution runs** (#3748).
+  `PUT /definition/query/{name}[/{version}]` parses, lowers and generates the
+  SQL of the query without executing it, so a query the engine would refuse
+  answers `400` instead of being stored and failing on every execution.
+  Terminology resolution still happens at execution (AQL 1.1.0
+  §TERMINOLOGY).
+- **FHIR AuditEvents for deletes carry the agent types BALP Delete fixes**
+  (#3750): client DCM `110150` Application, server `custodian`.
+- **OPT 1.4 conversion keeps the type of a primitive node without an inner
+  constraint** (#3752). An Integer, Date or Boolean node no longer becomes a
+  String constraint.
+- **A composition built from FLAT, STRUCTURED or TDD input without a category
+  takes it from the template** (#3652): its single admitted code, `433` when
+  the template leaves the category open, and a refusal naming
+  `…/category|code` when several codes are admitted and none is assumed. It
+  was always `433`, even where the template admits only `431`.
 - **The compose image-tag guard covers the terminology overlay** (#3605).
   `scripts/checks/compose-image-tags.sh` checks every FerroEHR image tag in
   every root and `docker/` compose file, `docker-compose.terminology.yml`
