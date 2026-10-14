@@ -6,7 +6,7 @@
   <title value="Subject Relationship"/>
   <status value="active"/>
   <experimental value="false"/>
-  <date value="2024-08-22"/>
+  <date value="2026-10-09"/>
   <publisher value="openEHR International"/>
   <contact>
     <name value="openEHR TERM specifications"/>
@@ -17,7 +17,7 @@
   </contact>
   <caseSensitive value="true"/>
   <compose>
-    <lockedDate value="2024-08-22"/>
+    <lockedDate value="2026-10-09"/>
     <include>
       <system value="https://specifications.openehr.org/fhir/codesystem-subject_relationship"/>
       <version value="3.1.0"/>

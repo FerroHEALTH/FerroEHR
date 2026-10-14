@@ -331,7 +331,7 @@ below.
 ### Recovering a partially wiped database
 
 A wipe that removes *some* of the server's schemas is not a fresh start, and the
-server refuses to migrate over one rather than doing something plausible with it.
+server cannot tell it from one.
 
 The server owns five schemas: `ext`, `clinical`, `party`, `linkage` and `audit`.
 A fresh start drops all five. Each domain's cold archival tier is a **partition**
@@ -339,9 +339,14 @@ of the relation it archives, inside that domain's own schema, so a
 `DROP SCHEMA clinical CASCADE` takes the archived rows with the live ones. There
 is no separate mirror schema left to survive a wipe of the tier it mirrors.
 
-Dropping the clinical schemas (`clinical`, `ext`, `audit`) while `party` and
-`linkage` survive is a supported reset: the clinical migration set rebuilds its
-schema on the next boot.
+Dropping some of the schemas is not a supported reset, because they are not
+independent. `btree_gist` is installed in `ext`, so `DROP SCHEMA ext CASCADE`
+also drops the temporal uniqueness constraint on `linkage.subject_ehr` that the
+extension's operator classes back, and the `linkage` set, still recorded as
+applied, never recreates it. `linkage` also maps parties to EHRs that a dropped
+`clinical` no longer holds. The next boot rebuilds the dropped schemas, and its
+migration check reads each set's bookkeeping only, so it passes over a database
+that has lost those guarantees.
 
 A database written by a release before the storage rewrite is refused outright:
 
@@ -729,7 +734,7 @@ supported for five years from the month of its release date (CRA Art 13(8)),
 and the server reads that date from its changelog heading at build time. The
 end month is on the boot banner (`Support` line), in the boot log, in
 `ferroehr --version`, under `support` in `GET /management/info`, and under
-`support` in `GET /ferroehr/rest/status` as
+`support` in `GET /management/status` as
 `{release_date, support_ends, status}`, where `support_ends` is `YYYY-MM` and
 `status` is `supported`, `ended` or `unreleased`. Once the end month has passed,
 `status` reads `ended` and the server logs a `warn` line at boot and once a day
@@ -905,7 +910,7 @@ its own probes.
 | `GET /health` | constant `200 OK` (plain text `OK`), touches nothing | load balancers, `docker` `HEALTHCHECK`, anything that must never be auth-gated |
 | `GET /health/liveness` | identical to `/health`, the same constant answer under the orchestrator-conventional path | Kubernetes `livenessProbe` and `startupProbe` |
 | `GET /health/readiness` | `200` when the aggregate is up or degraded, `503` when a **required** component is down; JSON body with every indicator, each bounded to one second | Kubernetes `readinessProbe`, ops dashboards |
-| `GET /ferroehr/rest/status` | product status document: `status`, `server_version`, `openehr_rest_api_version`, `timestamp`, `licence` (the grant in force: `state`, `use`, `licensee`, `not_after`, `configured_token`) `deployment` (the declared profile, the separations still open and the ones accepted by name) and `support` (`release_date`, `support_ends`, `status`) | version/identity checks; the URL the container's `ferroehr healthcheck` subcommand probes |
+| `GET /ferroehr/rest/status` | public status document: `status`, `server_version`, `openehr_rest_api_version`, `timestamp` and `deployment.profile`. The full document, which adds `licence` (the grant in force: `state`, `use`, `licensee`, `not_after`, `configured_token`), the whole `deployment` posture (the declared profile, the separations still open and the ones accepted by name) and `support` (`release_date`, `support_ends`, `status`), is `GET /management/status` | version/identity checks; the URL the container's `ferroehr healthcheck` subcommand probes |
 | `GET /management/*` | ops introspection; see below | operators, off by default, enable deliberately |
 
 Every management request is itself recorded in the audit trail as a

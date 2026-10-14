@@ -269,8 +269,9 @@ impl FerroEhrService {
         // partial COMPOSITION).
         openehr_sdt::flat::tdd::from_tdd(tdd, &web_template).map_err(|e| {
             SmError::precondition(format!(
-                "TDD body does not conform to operational template {:?}: {e}",
-                envelope.template_id
+                "TDD body does not conform to operational template {:?}: {}",
+                envelope.template_id,
+                crate::service::error::ErrorChain::new(&e)
             ))
             .with_source(e)
         })

@@ -1,8 +1,8 @@
-= specifications-AM - openEHR Archetype Model Specifications
+# specifications-AM - openEHR Archetype Model Specifications
 
-This repository contains the document and model sources (Asciidoctor and MagicDraw) for the openEHR Archetype Model (AM) specifications. The published form may be accessed from the openEHR website http://www.openehr.org/releases/AM/development/docs/index[AM component index page].
+This repository contains the document and model sources (Asciidoctor and MagicDraw) for the openEHR Archetype Model (AM) specifications. The published form may be accessed from the openEHR website [AM component index page](http://www.openehr.org/releases/AM/development/docs/index).
 
-== Contents
+## Contents
 
 ```
 manifest.json                                       # Index of spec titles & other meta-data (used by PHP site & Asciidcotor)

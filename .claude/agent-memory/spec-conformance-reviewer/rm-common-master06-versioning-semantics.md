@@ -82,3 +82,5 @@ Distributed]).
 spells the invariant `Lifecycle_state_ valid` (embedded space);
 `versioned_object.adoc` L158 `Uid_validity: extension.is_empty` names no
 receiver.
+
+**Update 2026-10-14:** "523 + data committable" is CLOSED: versioning/lifecycle.rs reject_deleted_with_data (422) on direct commit and message/import.rs refuse it. See [[aql-row-grain-bindings]].

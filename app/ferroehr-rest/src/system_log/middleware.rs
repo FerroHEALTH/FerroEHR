@@ -492,7 +492,7 @@ fn ehr_id_from_path(path: &str) -> Option<String> {
 
 /// Derives the participant-object id from the request path for operations whose
 /// dispatch carries no `ResourceMeta`: template ids, qualified stored-query
-/// names, and demographic party uids.
+/// names, and demographic party uids, the physical party delete's included.
 ///
 /// `None` for list-style operations and for ad-hoc queries, which have no single
 /// object.
@@ -512,6 +512,7 @@ fn object_id_from_path(op: &str, path: &str) -> Option<String> {
         _ if op.starts_with("person_") => segment_after(path, "person"),
         _ if op.starts_with("role_") => segment_after(path, "role"),
         _ if op.starts_with("versioned_party_") => segment_after(path, "versioned_party"),
+        "admin_party_delete" => segment_after(path, "party"),
         _ => None,
     }
 }
@@ -658,6 +659,11 @@ mod tests {
         assert_eq!(
             object_id_from_path("person_create", "/x/demographic/person"),
             None
+        );
+        // The physical party delete names the party it removed.
+        assert_eq!(
+            object_id_from_path("admin_party_delete", "/x/admin/party/p-7"),
+            Some("p-7".to_owned())
         );
     }
 }

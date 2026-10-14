@@ -45,6 +45,8 @@ use ir::{
 ///
 /// * [`AqlError::Feature`] — a syntactically valid construct outside the
 ///   accepted feature envelope (each variant cites its QUERY spec section).
+///   The refusals that depend on the FROM tree's shape come later, from
+///   [`sql::build`].
 /// * [`AqlError::Analysis`] — an unknown class/variable, an unresolvable
 ///   attribute, a type mismatch, or an unbound parameter.
 pub fn plan(

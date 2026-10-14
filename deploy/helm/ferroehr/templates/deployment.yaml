@@ -182,11 +182,17 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           {{- /* The health family is always mounted on the main HTTP port and
-                 never gated by config, so httpGet probes need no prerequisite. */}}
+                 never gated by config, so httpGet probes need no prerequisite.
+                 With the server's own TLS on, the kubelet probes over HTTPS
+                 and skips certificate verification
+                 (https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#http-probes). */}}
           livenessProbe:
             httpGet:
               path: /health/liveness
               port: http
+              {{- if eq (include "ferroehr.serverTls" .) "true" }}
+              scheme: HTTPS
+              {{- end }}
             {{- with .Values.probes.liveness }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -194,6 +200,9 @@ spec:
             httpGet:
               path: /health/readiness
               port: http
+              {{- if eq (include "ferroehr.serverTls" .) "true" }}
+              scheme: HTTPS
+              {{- end }}
             {{- with .Values.probes.readiness }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -202,6 +211,9 @@ spec:
             httpGet:
               path: /health/liveness
               port: http
+              {{- if eq (include "ferroehr.serverTls" .) "true" }}
+              scheme: HTTPS
+              {{- end }}
             initialDelaySeconds: {{ .Values.probes.startup.initialDelaySeconds }}
             periodSeconds: {{ .Values.probes.startup.periodSeconds }}
             timeoutSeconds: {{ .Values.probes.startup.timeoutSeconds }}

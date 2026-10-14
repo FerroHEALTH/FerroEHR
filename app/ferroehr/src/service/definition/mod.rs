@@ -116,8 +116,8 @@ mod tests {
             panic!("an unusable pattern is a 400, got {err:?}");
         };
         assert_eq!(sm.status, CallStatusType::InvalidIdPattern);
-        // Two hops: the refusal carries its `SmError`, which carries the
-        // concrete compile failure.
+        // `BadRequest` is transparent, so the first hop is the `SmError`'s own
+        // source: the concrete compile failure.
         let hops = std::iter::successors(Error::source(&err), |e| Error::source(*e))
             .map(|e| e.downcast_ref::<regex::Error>().is_some())
             .collect::<Vec<_>>();

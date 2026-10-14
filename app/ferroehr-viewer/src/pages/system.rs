@@ -41,6 +41,7 @@ use crate::components::field::{BTN_SECONDARY, SELECT};
 use crate::components::page_header::PageHeader;
 use crate::components::surface::titled_card;
 use crate::error::ViewerError;
+use crate::served_vocabulary::OPENAPI_FAMILIES;
 
 /// Where the CDR serves its SMART service-discovery document, relative to the
 /// CDR's product root.
@@ -75,39 +76,29 @@ pub async fn fetch_smart_config() -> Result<Option<String>, ViewerError> {
     Ok(Some(crate::cdr::CdrClient::expect_success(response)?.body))
 }
 
-/// The API-family documents the CDR serves beside the complete one, as
-/// `(slug, label)` with the empty slug standing for the complete surface.
+/// Returns the OpenAPI documents the selector offers, as `(slug, label)`: the
+/// complete surface first under the empty slug, then every API family.
 ///
-/// NOTE: no openEHR spec governs an OAS-serving endpoint — our own design /
-/// product extension. The CDR filters one document per API family out of its
-/// OWN generated document (never a vendored OAS) and serves each as
-/// `api-docs/ferroehr-{slug}.openapi.json`; a deployment that does not serve a
-/// family answers `404`, which the card renders as a first-class state rather
-/// than an error.
-const OPENAPI_FAMILIES: &[(&str, &str)] = &[
-    ("", "Complete surface"),
-    ("ehr", "openEHR — EHR"),
-    ("query", "openEHR — Query"),
-    ("definition", "openEHR — Definition"),
-    ("demographic", "openEHR — Demographic"),
-    ("admin", "openEHR — Admin"),
-    ("management", "FerroEHR — Status & Management"),
-    ("terminology", "FerroEHR — Terminology"),
-    ("relationships", "FerroEHR — Party Relationships"),
-    ("events", "FerroEHR — Event Subscriptions"),
-    ("audit", "FerroEHR — Audit"),
-    ("smart", "FerroEHR — SMART Discovery"),
-];
+/// NOTE: no openEHR spec governs an OAS-serving endpoint — our own design.
+/// The CDR serves each family it filters out of its OWN generated document as
+/// `api-docs/ferroehr-{slug}.openapi.json`; the family list is the shared
+/// [`OPENAPI_FAMILIES`], which the server holds its own family set to, and a
+/// deployment that does not serve a family answers `404`, a first-class state
+/// on the card.
+fn openapi_families() -> impl Iterator<Item = (&'static str, &'static str)> {
+    std::iter::once(("", "Complete surface")).chain(OPENAPI_FAMILIES)
+}
 
-/// The known family slug `value` names, or the empty slug (the complete
-/// document) for anything else — an unknown `?openapi=` value in the address
-/// bar is user input, so it degrades to the default instead of failing.
+/// Returns the known family slug `value` names, or the empty slug (the
+/// complete document) for anything else.
+///
+/// An unknown `?openapi=` value in the address bar is user input, so it
+/// degrades to the default instead of failing.
 #[must_use]
 fn openapi_family_slug(value: &str) -> String {
-    OPENAPI_FAMILIES
-        .iter()
+    openapi_families()
         .find(|(slug, _)| *slug == value)
-        .map_or_else(String::new, |(slug, _)| (*slug).to_owned())
+        .map_or_else(String::new, |(slug, _)| slug.to_owned())
 }
 
 /// One of the CDR's own natively served OpenAPI documents, raw JSON: the
@@ -129,7 +120,7 @@ pub async fn fetch_openapi(
     // A server fn is a public endpoint: the family must be one of the documents
     // we know the CDR serves, never a caller-shaped path segment.
     let family = family.trim();
-    if !OPENAPI_FAMILIES.iter().any(|(slug, _)| *slug == family) {
+    if !openapi_families().any(|(slug, _)| slug == family) {
         return Err(ViewerError::Invalid(format!(
             "{family:?} is not an API family the CDR serves a document for"
         )));
@@ -908,14 +899,12 @@ fn openapi_card(family: Memo<String>) -> AnyView {
 /// attribute server-renders the current choice (the audit filter's pattern; a
 /// `prop:` would not render server-side).
 fn openapi_selector(family: Memo<String>) -> AnyView {
-    let options = OPENAPI_FAMILIES
-        .iter()
+    let options = openapi_families()
         .map(|(slug, label)| {
-            let slug = *slug;
             let selected = move || family.get() == slug;
             view! {
                 <option value=slug selected=selected>
-                    {*label}
+                    {label}
                 </option>
             }
         })
@@ -1075,10 +1064,11 @@ fn group_openapi_paths(doc: &serde_json::Value) -> Vec<(String, Vec<(String, Str
 #[cfg(test)]
 mod tests {
     use super::{
-        OPENAPI_FAMILIES, SMART_DISCOVERY_PATH, group_openapi_paths, openapi_family_slug,
+        SMART_DISCOVERY_PATH, group_openapi_paths, openapi_families, openapi_family_slug,
         scalar_rows, smart_probe_failure_copy,
     };
     use crate::error::ViewerError;
+    use crate::served_vocabulary::OPENAPI_FAMILIES;
 
     /// The probe asks for the path the CDR actually serves: relative to the
     /// PLATFORM base URL, which carries a path segment here (ITS-REST
@@ -1179,15 +1169,31 @@ mod tests {
     #[test]
     fn the_family_selector_offers_the_complete_document_first_and_unique_slugs() {
         assert_eq!(
-            OPENAPI_FAMILIES.first().map(|(slug, _)| *slug),
+            openapi_families().next().map(|(slug, _)| slug),
             Some(""),
             "the complete surface is the default (empty) slug"
         );
-        let mut slugs: Vec<&str> = OPENAPI_FAMILIES.iter().map(|(slug, _)| *slug).collect();
+        let mut slugs: Vec<&str> = openapi_families().map(|(slug, _)| slug).collect();
         let count = slugs.len();
         slugs.sort_unstable();
         slugs.dedup();
         assert_eq!(slugs.len(), count, "family slugs must be unique");
+    }
+
+    /// The selector offers every family the server serves (the shared list the
+    /// server's own family set is held to), each under the server's selector
+    /// name and in its order, `messaging` included.
+    #[test]
+    fn the_family_selector_offers_every_served_family() {
+        let offered: Vec<(&str, &str)> = openapi_families().skip(1).collect();
+        assert_eq!(offered, OPENAPI_FAMILIES);
+        assert!(
+            offered
+                .iter()
+                .any(|(slug, label)| *slug == "messaging" && *label == "FerroEHR — Messaging"),
+            "{offered:?}"
+        );
+        assert_eq!(openapi_family_slug("messaging"), "messaging");
     }
 
     #[test]

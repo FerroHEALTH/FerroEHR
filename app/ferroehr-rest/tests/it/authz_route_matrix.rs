@@ -385,6 +385,8 @@ const ADMIN_WRITE: &[(&str, &str)] = &[
     ("DELETE", "/admin/ehr/all"),
     ("DELETE", "/admin/ehr/{ehr_id}"),
     ("DELETE", "/admin/template/{template_id}"),
+    // The physical party delete: the demographic counterpart of the EHR one.
+    ("DELETE", "/admin/party/{party_id}"),
     // The other two destructive shared-definition routes. They do not sit under
     // /admin/, and they used to take Clinical from that fallback — so the
     // privilege depended on the path prefix rather than on the blast radius

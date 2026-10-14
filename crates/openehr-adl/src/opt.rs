@@ -75,7 +75,7 @@ use openehr_lang::nesting::Nesting;
 pub enum OptError {
     /// Flattening the template's (or a constituent's) specialisation lineage
     /// failed.
-    #[error("flattening failed while building the OPT: {0}")]
+    #[error("flattening failed while building the OPT")]
     Flatten(#[from] FlattenError),
     /// A `use_archetype` slot-filler / external reference did not resolve in the
     /// repository (OPT2 master03 §Archetype References — every reference must be

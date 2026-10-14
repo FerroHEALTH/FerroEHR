@@ -826,6 +826,21 @@ service:
   # so it is off unless you have measured that you want it
   # (https://kubernetes.io/docs/reference/networking/virtual-ips/#traffic-distribution).
   trafficDistribution: ""
+  # The trust the chart's own clients of this Service place in the server's own
+  # TLS listener. Read only while `config.server.tls.enabled` is true: the
+  # viewer, FerroBRIDGE and the ServiceMonitor scrape then call
+  # `https://<release fullname>:<service.port>`, so the server's certificate
+  # (config.server.tls.cert_file) carries that Service name as a DNS SAN and is
+  # checked against the CA named here. The render is refused when one of those
+  # clients is enabled and the Secret is not named. The ServiceMonitor reads
+  # the Secret from its own namespace (metrics.serviceMonitor.namespace).
+  tls:
+    # -- Name of an EXISTING Secret holding the CA that signed the server's
+    # certificate, in PEM. A cert-manager Certificate's Secret carries it under
+    # `ca.crt`, so naming the Secret that also holds the server's key pair works.
+    caExistingSecret: ""
+    # -- The key in `caExistingSecret` holding the CA.
+    caExistingSecretKey: ca.crt
 
 ingress:
   # -- Create an Ingress. TLS termination belongs here (or at a gateway).

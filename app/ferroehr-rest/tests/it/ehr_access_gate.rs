@@ -569,3 +569,68 @@ async fn a_stored_query_withholds_an_ehr_the_caller_may_not_read() {
     both.sort();
     assert_eq!(ehr_ids_of(&app, run("bob")).await, both);
 }
+
+/// A `restricted` server default holds with the RBAC gate off: a setting-less
+/// EHR is refused on its path and withheld from AQL for a caller without the
+/// configured admin role, and served to one holding it. No openEHR spec governs
+/// the server-wide default; our own design/extension.
+#[tokio::test]
+async fn a_restricted_default_holds_with_rbac_disabled() {
+    let (_pg, pool) = common::migrated_pool().await;
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let ehr_id: ferroehr::ids::EhrId = EHR_ID.parse().expect("valid ehr uuid");
+    svc.create_ehr_with_id(ehr_id, None)
+        .await
+        .expect("create ehr");
+
+    let mut config = rest_config(true);
+    if let Some(basic) = config.auth.basic.as_mut() {
+        basic.users.push(user("root", &["SUPERADMIN"]));
+    }
+    let mut authz = ferroehr::config::authz::AuthzConfig::default();
+    authz.rbac.enabled = false;
+    authz.rbac.ehr_access_default = ferroehr::config::authz::EhrAccessDefault::Restricted;
+    authz.rbac.admin_role = "SUPERADMIN".to_owned();
+    let handle = ferroehr_rest::extensions::access::authz::AuthzHandle::build(
+        &authz,
+        &config.server.base_path,
+        None,
+        common::null_resolvers(),
+    )
+    .map(Arc::new);
+    assert!(
+        handle.as_ref().is_some_and(|h| !h.rbac_active()),
+        "a restricted default is carried with the coarse gate off"
+    );
+    let app = ferroehr_rest::build_full(config, Arc::new(svc), handle, Observability::default())
+        .expect("build app");
+
+    assert_eq!(
+        status(
+            &app,
+            req("GET", &format!("/ehr/{EHR_ID}"), Some(&basic("alice")), "")
+        )
+        .await,
+        StatusCode::FORBIDDEN,
+        "a setting-less EHR is refused to a caller without the admin role"
+    );
+    assert_ne!(
+        status(
+            &app,
+            req("GET", &format!("/ehr/{EHR_ID}"), Some(&basic("root")), "")
+        )
+        .await,
+        StatusCode::FORBIDDEN,
+        "the configured admin role reaches it"
+    );
+
+    let by_where = format!("SELECT e/ehr_id/value FROM EHR e WHERE e/ehr_id/value = '{EHR_ID}'");
+    assert!(
+        ehr_ids_of(&app, aql(&by_where, "alice")).await.is_empty(),
+        "AQL withholds the setting-less EHR from a caller without the admin role"
+    );
+    assert_eq!(
+        ehr_ids_of(&app, aql(&by_where, "root")).await,
+        vec![EHR_ID.to_owned()]
+    );
+}

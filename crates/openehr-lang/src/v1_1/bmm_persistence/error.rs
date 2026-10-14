@@ -27,7 +27,7 @@
 #[non_exhaustive]
 pub enum PBmmReadError {
     /// The schema text is not well-formed ODIN.
-    #[error("the schema text is not valid ODIN: {0}")]
+    #[error("the schema text is not valid ODIN")]
     Odin(#[from] crate::v1_1::odin::OdinError),
 
     /// The ODIN document root is not the attribute object a schema file is:

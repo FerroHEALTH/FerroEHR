@@ -3,7 +3,7 @@
   "access_right": "open",
   "language": "eng",
   "title": "FerroEHR",
-  "description": "<p>A pure-Rust, openEHR-specification-conformant clinical data repository (CDR): ITS-REST 1.1.0 REST API, AQL 1.1 query language, and the openEHR RM 1.2.0 reference model on PostgreSQL-18-native storage. The openEHR specification layer is generated from the official machine-readable specifications, and conformance is machine-verified per release by a built-in CNF conformance runner.</p>",
+  "description": "<p>A pure-Rust, openEHR-specification-conformant clinical data repository (CDR): ITS-REST 1.1.0 REST API, AQL 1.1 query language, and the openEHR RM 1.2.0 reference model on PostgreSQL-18-native storage. The openEHR specification layer is generated from the official machine-readable specifications. Its openEHR conformance is measured with Veredictum, a separate CNF 2.0 conformance runner, and the run records are committed alongside the source.</p>",
   "publication_date": "2026-10-08",
   "version": "4.3.6",
   "creators": [
@@ -27,10 +27,13 @@
     "PostgreSQL"
   ],
   "references": [
-    "openEHR Reference Model (RM) Release 1.1.0. openEHR International. https://specifications.openehr.org/releases/RM/Release-1.1.0",
+    "openEHR Reference Model (RM) 1.2.0, development generation. openEHR International. https://specifications.openehr.org/releases/RM/development",
+    "openEHR Base Model (BASE) Release 1.3.0. openEHR International. https://specifications.openehr.org/releases/BASE/Release-1.3.0",
+    "openEHR Terminology (TERM) Release 3.1.0. openEHR International. https://specifications.openehr.org/releases/TERM/Release-3.1.0",
+    "openEHR Archetype Model (AM) Release 1.4. openEHR International. https://specifications.openehr.org/releases/AM/Release-1.4",
+    "openEHR Archetype Model (AM) Release 2.4.0. openEHR International. https://specifications.openehr.org/releases/AM/Release-2.4.0",
     "openEHR Archetype Query Language (AQL), QUERY Release 1.1.0. openEHR International. https://specifications.openehr.org/releases/QUERY/Release-1.1.0",
-    "openEHR REST API (ITS-REST) Release 1.1.0. openEHR International. https://specifications.openehr.org/releases/ITS-REST/Release-1.1.0",
-    "openEHR Archetype Model (AM) Release 2.3.0. openEHR International. https://specifications.openehr.org/releases/AM/Release-2.3.0"
+    "openEHR REST API (ITS-REST) Release 1.1.0. openEHR International. https://specifications.openehr.org/releases/ITS-REST/Release-1.1.0"
   ],
   "related_identifiers": [
     {
@@ -44,11 +47,23 @@
       "resource_type": "software"
     },
     {
-      "identifier": "https://specifications.openehr.org/releases/RM/Release-1.1.0",
+      "identifier": "https://specifications.openehr.org/releases/RM/development",
       "relation": "isDerivedFrom"
     },
     {
-      "identifier": "https://specifications.openehr.org/releases/ITS-REST/Release-1.1.0",
+      "identifier": "https://specifications.openehr.org/releases/BASE/Release-1.3.0",
+      "relation": "isDerivedFrom"
+    },
+    {
+      "identifier": "https://specifications.openehr.org/releases/TERM/Release-3.1.0",
+      "relation": "isDerivedFrom"
+    },
+    {
+      "identifier": "https://specifications.openehr.org/releases/AM/Release-1.4",
+      "relation": "isDerivedFrom"
+    },
+    {
+      "identifier": "https://specifications.openehr.org/releases/AM/Release-2.4.0",
       "relation": "isDerivedFrom"
     },
     {
@@ -56,7 +71,7 @@
       "relation": "isDerivedFrom"
     },
     {
-      "identifier": "https://specifications.openehr.org/releases/AM/Release-2.3.0",
+      "identifier": "https://specifications.openehr.org/releases/ITS-REST/Release-1.1.0",
       "relation": "isDerivedFrom"
     },
     {
@@ -100,5 +115,5 @@
       "resource_type": "software"
     }
   ],
-  "notes": "Implements the openEHR specifications at these pinned versions: Reference Model 1.2.0, BASE 1.3.0, Archetype Model 1.4.0 and 2.4.0, Terminology 3.1.0, AQL (QUERY) 1.1.0, ITS-REST 1.1.0 and ITS-XML. The specification layer is generated from the official machine-readable specifications rather than hand-written, and conformance is measured per release by a built-in openEHR CNF conformance runner whose results are committed alongside the source. Requires PostgreSQL 18. Licensing: the recorded licence covers this project's own code; vendored third-party material keeps its upstream terms — Apache-2.0 for the openEHR machine-readable artifacts and test corpora, CC-BY-SA-3.0 for the openEHR specification text and CKM-derived clinical models — each recorded in the PROVENANCE.md of the tree that carries it."
+  "notes": "Implements the openEHR specifications at these pinned versions: Reference Model 1.2.0, BASE 1.3.0, Archetype Model 1.4.0 and 2.4.0, Terminology 3.1.0, AQL (QUERY) 1.1.0, ITS-REST 1.1.0 and ITS-XML. The specification layer is generated from the official machine-readable specifications, and conformance is measured with Veredictum, a separate openEHR CNF 2.0 runner (https://github.com/Vernum-Projecten/Veredictum), whose run records are committed alongside the source. Requires PostgreSQL 18. Licensing: the recorded licence covers this project's own code; vendored third-party material keeps its upstream terms — Apache-2.0 for the openEHR machine-readable artifacts and test corpora, CC-BY-SA-3.0 for the openEHR specification text and CKM-derived clinical models — each recorded in the PROVENANCE.md of the tree that carries it."
 }

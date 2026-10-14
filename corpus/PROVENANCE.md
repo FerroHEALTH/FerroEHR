@@ -35,7 +35,7 @@ hand-edited, refreshed only by re-running the script.
 
 Until 2026-08-26 the corpus sat inside `tools/cnf-runner/artifacts/corpus/`,
 because the instrument was a crate in this workspace. The instrument is now the
-independent [Veredictum](https://github.com/rubentalstra/Veredictum) project,
+independent [Veredictum](https://github.com/Vernum-Projecten/Veredictum) project,
 consumed at the pin `scripts/lib/veredictum.sh` records, and the split follows
 who READS each pack:
 

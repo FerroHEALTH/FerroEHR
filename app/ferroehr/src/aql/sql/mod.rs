@@ -41,6 +41,7 @@
 //! a column spelled as a string here, so a schema rename surfaces as a failing
 //! test rather than a runtime SQL error.
 
+mod condition;
 mod expr;
 mod from;
 mod predicate;
@@ -285,6 +286,18 @@ struct Builder<'a> {
     /// then JOIN instead of adding comma-separated FROM items, or a later
     /// `LATERAL` could no longer reference them (SQL join-tree scoping).
     streaming: bool,
+    /// The structure steps the SELECT paths bind once per row
+    /// ([`Builder::bind_select_paths`]), one entry per distinct step prefix.
+    step_bindings: Vec<StepBinding>,
+}
+
+/// One bound structure-step prefix: the steps from `source` down, and the
+/// alias of the node the last of them binds in this row.
+#[derive(Debug, Clone)]
+struct StepBinding {
+    source: usize,
+    steps: Vec<super::ir::StructureStep>,
+    alias: String,
 }
 
 impl<'a> Builder<'a> {
@@ -305,6 +318,7 @@ impl<'a> Builder<'a> {
             group_vos: Vec::new(),
             sub_ctr: 0,
             streaming: false,
+            step_bindings: Vec::new(),
         }
     }
 
@@ -362,13 +376,16 @@ fn streaming_eligible(ir: &QueryIr, ctx: &SqlCtx) -> bool {
             .any(|c| matches!(c.value, super::ir::SelectValue::Aggregate { .. }))
 }
 
-/// Lower a planned [`QueryIr`] to SQL.
+/// Lowers a planned [`QueryIr`] to SQL.
 ///
 /// # Errors
 ///
-/// [`SqlError`] for a planner-accepted construct the SQL generator does not
-/// render yet.
+/// [`crate::aql::error::AqlFeatureError`] for a read of a variable that binds
+/// no row (`NOT CONTAINS`) or of a versioned object declared in an `OR`
+/// branch, and [`SqlError`] for a planner-accepted construct the SQL
+/// generator does not render.
 pub fn build(ir: &QueryIr, params: &Params, ctx: &SqlCtx) -> Result<PreparedQuery, AqlError> {
+    from::refuse_negated_reads(ir)?;
     let mut b = Builder::new(ir, params, ctx);
     match streaming_eligible(ir, ctx)
         .then(|| from::streaming_plan(ir))
@@ -379,6 +396,7 @@ pub fn build(ir: &QueryIr, params: &Params, ctx: &SqlCtx) -> Result<PreparedQuer
     }
     b.apply_ehr_scope();
     b.apply_population_gate();
+    b.bind_select_paths()?;
     let columns = b.build_select()?;
     let access_ehr_cols = b.build_access_ehr_columns(ir);
     let access_version_cols = b.build_access_version_columns(ir);
@@ -398,20 +416,25 @@ pub fn build(ir: &QueryIr, params: &Params, ctx: &SqlCtx) -> Result<PreparedQuer
     })
 }
 
-/// Build the ABAC scope-collection query for `ir`. `None` when the query has no
-/// VO root (nothing to collect).
+/// Builds the ABAC scope-collection query for `ir`, or `None` when the query
+/// has no VO root (nothing to collect).
+///
+/// The FROM, the SELECT path bindings and the WHERE are the main query's, so
+/// the collected scope is exactly the rows that query can serve.
 ///
 /// # Errors
-/// [`SqlError`] for a construct the SQL generator does not render.
+/// The same refusals as [`build`].
 pub fn build_scope(
     ir: &QueryIr,
     params: &Params,
     ctx: &SqlCtx,
 ) -> Result<Option<ScopeQuery>, AqlError> {
+    from::refuse_negated_reads(ir)?;
     let mut b = Builder::new(ir, params, ctx);
     b.build_from(&ir.contains)?;
     b.apply_ehr_scope();
     b.apply_population_gate();
+    b.bind_select_paths()?;
     b.build_where()?;
     let roots: Vec<(String, String)> = b
         .group_roots

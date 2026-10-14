@@ -485,7 +485,7 @@ pub(crate) async fn query_execute_adhoc_query(
     ),
     request_body(
         content((serde_json::Value = "application/json", example = json!({
-            "q": "SELECT e/ehr_id/value, o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude AS temperature, o/name FROM EHR e CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.body_temperature.v2] WHERE o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude > $temperature ORDER BY temperature DESC",
+            "q": "SELECT e/ehr_id/value, o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude AS temperature, o/name FROM EHR e CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.body_temperature.v2] WHERE o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude > $temperature ORDER BY o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude DESC",
             "offset": 0,
             "fetch": 10,
             "query_parameters": { "temperature": 38.5 }
@@ -579,9 +579,9 @@ pub(crate) async fn query_execute_adhoc_query(
                     "_type": "RESULTSET",
                     "_schema_version": "1.1.0",
                     "_created": "2026-07-26T09:12:44.512331Z",
-                    "_executed_aql": "SELECT e/ehr_id/value, o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude AS temperature, o/name FROM EHR e CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.body_temperature.v2] WHERE o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude > 38.5 ORDER BY temperature DESC"
+                    "_executed_aql": "SELECT e/ehr_id/value, o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude AS temperature, o/name FROM EHR e CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.body_temperature.v2] WHERE o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude > 38.5 ORDER BY o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude DESC"
                 },
-                "q": "SELECT e/ehr_id/value, o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude AS temperature, o/name FROM EHR e CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.body_temperature.v2] WHERE o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude > $temperature ORDER BY temperature DESC",
+                "q": "SELECT e/ehr_id/value, o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude AS temperature, o/name FROM EHR e CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.body_temperature.v2] WHERE o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude > $temperature ORDER BY o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude DESC",
                 "columns": [
                     { "name": "#0", "path": "/ehr_id/value" },
                     { "name": "temperature", "path": "/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude" },

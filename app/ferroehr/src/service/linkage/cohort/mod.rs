@@ -183,7 +183,7 @@ impl From<CohortError> for SmError {
                 Self::new(CallStatusType::ContentInvalid, message).with_source(error)
             }
             CohortError::Database(_) => {
-                crate::service::error::internal_fault("execute a cohort query", &error)
+                crate::service::error::internal_fault_caused("execute a cohort query", &error)
                     .with_source(error)
             }
         }

@@ -85,6 +85,18 @@ fn management_lookup(op: &str) -> Option<Classification> {
     Some(c)
 }
 
+/// The extension routes recorded like a released operation.
+///
+/// The physical party delete records what `admin_ehr_delete` records for an
+/// EHR: a `D` on the deleted record, here a demographic party. Every other id
+/// falls through to the management table.
+fn extension_lookup(op: &str) -> Option<Classification> {
+    match op {
+        "admin_party_delete" => Some(Classification::audited(Delete, Demographic)),
+        _ => management_lookup(op),
+    }
+}
+
 /// Look up the **explicit** classification for an operation id, or `None`
 /// when the id is not in the table.
 ///
@@ -232,8 +244,8 @@ pub fn lookup(op: &str) -> Option<Classification> {
         | "person_tags_delete"
         | "role_tags_delete" => Classification::audited(Delete, Demographic),
 
-        // The management surface's ids live in their own table (#3244).
-        _ => return management_lookup(op),
+        // The extension and management ids live in their own tables (#3244).
+        _ => return extension_lookup(op),
     };
     Some(c)
 }
@@ -468,6 +480,7 @@ mod tests {
         assert_eq!(audit_for("ehr_create"), Some((Create, Ehr)));
         assert_eq!(audit_for("ehr_status_update"), Some((Update, Ehr)));
         assert_eq!(audit_for("composition_delete"), Some((Delete, Composition)));
+        assert_eq!(audit_for("admin_party_delete"), Some((Delete, Demographic)));
         assert_eq!(audit_for("directory_create"), Some((Create, Directory)));
         assert_eq!(audit_for("contribution_get"), Some((Read, Contribution)));
         assert_eq!(

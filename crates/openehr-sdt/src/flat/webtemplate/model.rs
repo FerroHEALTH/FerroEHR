@@ -304,17 +304,18 @@ pub struct WebTemplateNode {
     #[serde(skip)]
     pub closed_attributes: Vec<WebTemplateClosedAttribute>,
 
-    /// Structural stubs for the RM-mandatory structural attributes of an
-    /// ENTRY-family node (`data`, `description`, `protocol`, `state`) that the
+    /// Structural stubs for the structural attributes (`data`, `description`,
+    /// `protocol`, `state`) of an ENTRY, EVENT or ACTIVITY node that the
     /// template **does** constrain with a node-identified structural child
     /// (`ITEM_TREE[at0017]`, a `HISTORY`, …) which does not survive as a
     /// web-template tree child because it carries no leaf content and the
-    /// compactor drops it. Recorded so the FLAT/TDD composition builder can
-    /// synthesise the empty attribute with the *constrained* node id/type/name
-    /// rather than a blind `at0001` placeholder — the constrained attribute must
-    /// be filled by a conforming value (AOM 1.4
+    /// compactor drops it. Recorded so the FLAT/TDD composition builder and the
+    /// example generator can synthesise the empty attribute with the
+    /// *constrained* node id/type/name rather than a blind `at0001` placeholder —
+    /// the constrained attribute must be filled by a conforming value (AOM 1.4
     /// `AM/docs/AOM1.4/master04-constraint_model_package.adoc` §`Valid_value`).
-    /// Captured at build time from the OPT constraint object. Validation-only;
+    /// Captured at build time from the OPT constraint object and re-homed on the
+    /// parent by absolute path when a wrapper is hoisted. Validation-only;
     /// `#[serde(skip)]`.
     #[serde(skip)]
     pub structural_stubs: Vec<WebTemplateStructuralStub>,
@@ -671,8 +672,9 @@ pub struct WebTemplateConstraintBinding {
     pub query_uri: String,
 }
 
-/// A structural stub for an RM-mandatory structural attribute of an
-/// ENTRY-family node (validation/synthesis-only, never serialized).
+/// A structural stub for a structural attribute (`data`, `description`,
+/// `protocol`, `state`) of an ENTRY, EVENT or ACTIVITY node
+/// (validation/synthesis-only, never serialized).
 ///
 /// The template constrains the attribute `attr` (e.g. `description`) with a
 /// node-identified structural child of RM type `rm_type` (`ITEM_TREE`,
@@ -688,6 +690,10 @@ pub struct WebTemplateStructuralStub {
     /// The constrained RM attribute name (`data`, `description`, `protocol`,
     /// `state`).
     pub attr: String,
+    /// Absolute archetype path of the constrained attribute
+    /// (`{owner aqlPath}/{attr}`), so the stub stays addressable after the
+    /// compactor re-homes it onto an ancestor.
+    pub path: String,
     /// The constrained structural RM type (`ITEM_TREE`, `HISTORY`, …).
     pub rm_type: String,
     /// The constraint's archetype node id (`atNNNN`, or an archetype id at a root).

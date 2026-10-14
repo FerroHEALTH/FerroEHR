@@ -803,8 +803,8 @@ fn currency_probes(sql: &str) -> usize {
 /// (`LOCATABLE.links` — LINK is no structure root, so the whole list lives in
 /// the root node's fragment) lowers existentially through the set-returning
 /// `jsonb_path_query`, never the first-match scalar: QUERY master03 §WHERE is
-/// silent on multi-valued predicates, and any-match is the adjudicated
-/// semantics recorded on `data_leaf_exists`.
+/// silent on multi-valued predicates, and any element is the semantics the
+/// `condition` module records.
 #[test]
 fn multi_valued_fragment_predicate_lowers_existentially() {
     let sql = build_sql(
@@ -832,8 +832,8 @@ fn anchored_multi_valued_fragment_predicate_is_existential() {
          WHERE c/context/participations/performer/name = 'Dr Second'",
     );
     assert!(
-        sql.contains("jsonb_path_query(") && sql.contains("BETWEEN"),
-        "anchored walk + per-match extraction: {sql}"
+        sql.contains("jsonb_path_query(") && sql.contains(r#""parent_num""#),
+        "anchored attribute-step walk + per-match extraction: {sql}"
     );
     assert!(sql.contains("EXISTS"), "existential shape: {sql}");
 }
@@ -973,7 +973,9 @@ fn or_contains_under_ehr_lowers_to_disjunctive_exists() {
 }
 
 /// OR-containment under a COMPOSITION shares the parent VO and
-/// interval-anchors each branch inside its node subtree (`num BETWEEN`).
+/// anchors each branch on the STRICT interval of its node subtree (QUERY
+/// master03 §Containment: the left operand is the parent of the right, and a
+/// node is not its own parent).
 #[test]
 fn or_contains_under_vo_interval_anchors_each_branch() {
     let sql = build_sql(
@@ -985,8 +987,12 @@ fn or_contains_under_vo_interval_anchors_each_branch() {
     assert_eq!(anchor_exists(&sql), 2, "{sql}");
     assert!(sql.contains(" OR "), "{sql}");
     assert!(
-        sql.contains("BETWEEN"),
-        "each branch is interval-anchored in the parent VO: {sql}"
+        sql.contains(r#""num" > "n1"."num""#) && sql.contains(r#""num" <= "n1"."num_cap""#),
+        "each branch is anchored on the strict interval of the parent VO: {sql}"
+    );
+    assert!(
+        !sql.contains("BETWEEN"),
+        "no inclusive interval lets the anchor contain itself: {sql}"
     );
 }
 
@@ -1908,5 +1914,323 @@ fn folder_root_never_streams() {
     assert!(
         !sql.contains("JOIN LATERAL"),
         "FOLDER roots take the flat shape: {sql}"
+    );
+}
+
+// ── row grain, strict containment, OR-branch reads ───────────────────────────
+
+/// The QUERY master03 §Variables blood-pressure example: the two leaves share
+/// `data[at0001]/events[at0006]/data[at0003]`, so that prefix binds ONCE per
+/// row (three bindings) and each leaf adds its own `items` binding — five in
+/// all, and no leaf is an independent first-match subquery that could pair a
+/// systolic of one event with the diastolic of another.
+#[test]
+fn sibling_leaves_share_their_bound_prefix() {
+    let sql = build_sql(
+        "SELECT obs/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude, \
+                obs/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude \
+         FROM EHR e CONTAINS COMPOSITION CONTAINS OBSERVATION obs[openEHR-EHR-OBSERVATION.blood_pressure.v1]",
+    );
+    assert_eq!(
+        sql.matches("unnest(ARRAY(").count(),
+        5,
+        "three shared step bindings plus one per leaf: {sql}"
+    );
+    assert!(
+        !sql.contains("LIMIT"),
+        "no projected leaf is a first-match subquery: {sql}"
+    );
+    assert!(
+        sql.contains(r#""parent_num""#),
+        "every bound step is an attribute child of its parent: {sql}"
+    );
+}
+
+/// The same binding on the streaming shape is a `LEFT JOIN LATERAL` per
+/// bound step, so a row whose step matches nothing keeps a NULL cell.
+#[test]
+fn streaming_binds_projected_steps_as_left_laterals() {
+    let sql = build_sql_limited(
+        "SELECT o/data[at0001]/events[at0006]/time/value, \
+                o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude \
+         FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o",
+    );
+    assert_eq!(
+        sql.matches("LEFT JOIN LATERAL").count(),
+        4,
+        "data, events (shared), then data and items below the event: {sql}"
+    );
+}
+
+/// A WHERE path that shares the projected prefix reads the bound node of its
+/// row instead of probing every node of the observation.
+#[test]
+fn where_reads_through_the_projected_binding() {
+    let sql = build_sql(
+        "SELECT o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude \
+         FROM EHR e CONTAINS OBSERVATION o \
+         WHERE o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude > 140",
+    );
+    assert_eq!(anchor_exists(&sql), 0, "no existential walk remains: {sql}");
+    assert_eq!(sql.matches("unnest(ARRAY(").count(), 4, "{sql}");
+}
+
+/// QUERY master03 §Containment: the left operand is the PARENT of the right,
+/// and no node is its own parent, so `CLUSTER CONTAINS CLUSTER` joins on the
+/// strict interval.
+#[test]
+fn contains_is_strict() {
+    let sql = build_sql("SELECT cl2 FROM EHR e CONTAINS CLUSTER cl1 CONTAINS CLUSTER cl2");
+    assert!(
+        sql.contains(r#""n2"."num" > "n1"."num""#)
+            && sql.contains(r#""n2"."num" <= "n1"."num_cap""#),
+        "the child lies strictly inside the parent's interval: {sql}"
+    );
+    assert!(!sql.contains("BETWEEN"), "no inclusive interval: {sql}");
+}
+
+/// `NOT CONTAINS` negates the same strict edge, so a CLUSTER without a nested
+/// CLUSTER satisfies `CLUSTER NOT CONTAINS CLUSTER` instead of excluding
+/// itself.
+#[test]
+fn not_contains_is_strict() {
+    let sql = build_sql(
+        "SELECT cl1/archetype_node_id FROM EHR e CONTAINS CLUSTER cl1 NOT CONTAINS CLUSTER cl2",
+    );
+    assert!(sql.contains(r#"> "n1"."num""#), "strict anti-join: {sql}");
+    assert!(!sql.contains("BETWEEN"), "no inclusive interval: {sql}");
+}
+
+/// The streaming shape keeps the flat shape's answer for a logically deleted
+/// version (RM common master06 §Logical Deletion: its data is Void, so the
+/// flat shape finds no root node): with the root lateral elided, the spine
+/// itself excludes lifecycle state `523`.
+#[test]
+fn elided_streaming_root_excludes_deleted_versions() {
+    let sql = build_sql_limited("SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c");
+    assert!(
+        !sql.contains("JOIN LATERAL"),
+        "the root lateral is elided: {sql}"
+    );
+    assert!(
+        sql.contains(r#""lifecycle_state" <> $"#),
+        "the spine drops deleted versions: {sql}"
+    );
+}
+
+/// A variable of an OR containment branch is readable (QUERY master03
+/// §Containment's own `OR` example binds a variable per branch): each read
+/// branch is left-bound under the shared COMPOSITION.
+#[test]
+fn or_branch_variables_are_readable() {
+    let sql = build_sql(
+        "SELECT o/name/value, ev/name/value FROM EHR e CONTAINS COMPOSITION c \
+         CONTAINS (OBSERVATION o OR EVALUATION ev)",
+    );
+    assert_eq!(
+        sql.matches("unnest(ARRAY(").count(),
+        2,
+        "one left binding per read branch: {sql}"
+    );
+    assert_eq!(anchor_exists(&sql), 2, "the OR filter stays: {sql}");
+}
+
+/// An OR branch nobody reads stays a containment filter: no binding.
+#[test]
+fn unread_or_branches_stay_filters() {
+    let sql = build_sql(
+        "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c \
+         CONTAINS (OBSERVATION o OR EVALUATION ev)",
+    );
+    assert!(!sql.contains("unnest("), "no binding: {sql}");
+}
+
+/// A variable declared under NOT CONTAINS names an object no row holds
+/// (QUERY master03 §Containment), so reading it is a typed refusal.
+#[test]
+fn reading_a_not_contains_variable_is_refused() {
+    let err = build_err(
+        "SELECT o/name/value FROM EHR e CONTAINS COMPOSITION c NOT CONTAINS OBSERVATION o",
+    );
+    assert!(
+        matches!(
+            err,
+            AqlError::Feature(AqlFeatureError::NegatedContainmentVariable(ref v)) if v == "o"
+        ),
+        "{err:?}"
+    );
+}
+
+/// A versioned object declared in an OR branch directly under the EHR is a
+/// named capability gap, never the generic SQL-generation refusal.
+#[test]
+fn reading_an_or_branch_versioned_object_is_a_named_refusal() {
+    let err =
+        build_err("SELECT c1/name/value FROM EHR e CONTAINS (COMPOSITION c1 OR COMPOSITION c2)");
+    assert!(
+        matches!(
+            err,
+            AqlError::Feature(AqlFeatureError::OrBranchVersionedObject {
+                variable: Some(ref v),
+                ..
+            }) if v == "c1"
+        ),
+        "{err:?}"
+    );
+}
+
+/// QUERY master03 §Aggregate functions: an aggregate's inputs are the data
+/// items its path selects in the rows FROM and WHERE define. Its argument adds
+/// no row binding (which would change `COUNT(*)` beside it); it aggregates its
+/// own items per row and combines the rows.
+#[test]
+fn aggregate_arguments_add_no_row_binding() {
+    let sql = build_sql(
+        "SELECT COUNT(*), \
+                MAX(o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude) \
+         FROM EHR e CONTAINS OBSERVATION o",
+    );
+    assert!(!sql.contains("unnest("), "no row binding: {sql}");
+    assert_eq!(
+        sql.matches("MAX(").count(),
+        2,
+        "the per-row maximum combined by an outer maximum: {sql}"
+    );
+}
+
+/// The refusal names the branch's versioned object, not the variable read
+/// below it.
+#[test]
+fn an_or_branch_refusal_names_the_versioned_object() {
+    let err = build_err(
+        "SELECT o/name/value FROM EHR e CONTAINS \
+         (COMPOSITION c1 CONTAINS OBSERVATION o OR COMPOSITION c2)",
+    );
+    assert!(
+        matches!(
+            err,
+            AqlError::Feature(AqlFeatureError::OrBranchVersionedObject {
+                variable: Some(ref v),
+                ..
+            }) if v == "c1"
+        ),
+        "{err:?}"
+    );
+}
+
+/// Paths through different repeated attributes of one variable bind
+/// independently, so the rows are their cross product.
+#[test]
+fn different_repeated_attributes_bind_independently() {
+    let sql = build_sql(
+        "SELECT o/data/events/time/value, o/protocol/items/name/value \
+         FROM EHR e CONTAINS OBSERVATION o",
+    );
+    assert_eq!(
+        sql.matches("unnest(ARRAY(").count(),
+        4,
+        "data and events, then protocol and items: {sql}"
+    );
+}
+
+/// Two paths compared in WHERE read through the one set of WHERE bindings, so
+/// paths sharing their steps compare values of one node and no pair of values
+/// from two different events passes.
+#[test]
+fn path_to_path_comparison_shares_its_steps() {
+    let sql = build_sql(
+        "SELECT o/name/value FROM EHR e CONTAINS OBSERVATION o \
+         WHERE o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude \
+             > o/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude",
+    );
+    assert_eq!(anchor_exists(&sql), 1, "one walk binds both paths: {sql}");
+    assert!(!sql.contains("LIMIT"), "no first-match read remains: {sql}");
+}
+
+/// The WHERE clause binds each structure step its paths descend ONCE, at its
+/// root, as one `EXISTS` over the assignments of those bindings: a row is kept
+/// when some assignment makes the whole clause true. The two tests share
+/// `data/events/data` (three bindings) and each adds its own `items` step, so
+/// AND, OR and NOT all lower to the one `EXISTS` over five bindings, with the
+/// boolean structure evaluated per assignment.
+#[test]
+fn where_binds_each_step_once_for_the_whole_clause() {
+    let sys = "o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude";
+    let dia = "o/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude";
+    for clause in [
+        format!("{sys} >= 140 AND {dia} >= 90"),
+        format!("{sys} >= 140 OR {dia} >= 90"),
+        format!("{sys} >= 140 AND NOT ({dia} < 90)"),
+    ] {
+        let sql = build_sql(&format!(
+            "SELECT o/name/value FROM EHR e CONTAINS OBSERVATION o WHERE {clause}"
+        ));
+        assert_eq!(anchor_exists(&sql), 1, "one assignment EXISTS: {sql}");
+        assert_eq!(
+            sql.matches("unnest(ARRAY(").count(),
+            5,
+            "three shared step bindings plus one per items step: {sql}"
+        );
+    }
+}
+
+/// `events` and `events[at0006]` are two steps, so two independent bindings
+/// (seven in all: the shared `data[at0001]`, then three per event step).
+#[test]
+fn differently_predicated_steps_are_not_shared() {
+    let sql = build_sql(
+        "SELECT o/name/value FROM EHR e CONTAINS OBSERVATION o \
+         WHERE o/data[at0001]/events/data[at0003]/items[at0004]/value/magnitude >= 140 \
+           AND o/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude >= 90",
+    );
+    assert_eq!(sql.matches("unnest(ARRAY(").count(), 7, "{sql}");
+}
+
+/// An aggregate's items are filtered by the WHERE clause with the steps they
+/// share fixed to the item's own nodes (QUERY master03 §Aggregate functions:
+/// inputs are data items "filtered by FROM and WHERE"). This replaces the
+/// earlier test of the same name, whose row-level WHERE was a per-step
+/// existential: the row-level clause is now the one assignment `EXISTS`, and
+/// the per-item filter needs no binding of its own because every step it
+/// reads is the walk's.
+#[test]
+fn aggregate_items_are_filtered_by_a_shared_where() {
+    let sys = "o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude";
+    let sql = build_sql(&format!(
+        "SELECT COUNT({sys}), AVG({sys}) FROM EHR e CONTAINS OBSERVATION o WHERE NOT ({sys} < 140)"
+    ));
+    assert_eq!(
+        anchor_exists(&sql),
+        1,
+        "the row-level assignment EXISTS only: {sql}"
+    );
+    assert_eq!(
+        sql.matches(" < ").count(),
+        4,
+        "the test applies once per row and once per item walk of each per-row aggregate \
+         (COUNT, and SUM and COUNT inside AVG): {sql}"
+    );
+}
+
+/// QUERY master03 §EXISTS: "true means the data associated with the specified
+/// path exists". An `EXISTS` operand walks its own steps in its own `EXISTS`
+/// and never joins the clause's assignment: only the systolic path's four
+/// steps are WHERE bindings.
+#[test]
+fn exists_is_path_level() {
+    let sql = build_sql(
+        "SELECT o/name/value FROM EHR e CONTAINS OBSERVATION o \
+         WHERE NOT EXISTS o/data[at0001]/events[at0006]/data[at0003]/items[at0005] \
+           AND o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude >= 140",
+    );
+    assert_eq!(
+        sql.matches("unnest(ARRAY(").count(),
+        4,
+        "the EXISTS path binds nothing: {sql}"
+    );
+    assert_eq!(
+        anchor_exists(&sql),
+        2,
+        "the assignment EXISTS plus the operand's own: {sql}"
     );
 }

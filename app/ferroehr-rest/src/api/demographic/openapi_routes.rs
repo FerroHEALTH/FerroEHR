@@ -5930,8 +5930,12 @@ pub(crate) async fn versioned_party_version_get_by_id(
 /// (JSON + XML), and `Resources.md` §"Data representation" requires only that
 /// "Services MUST support at least one of the openEHR **XML** or **JSON**
 /// canonical formats" — an honest boundary, not a spec allowance.
+// NOTE: OpenAPI 3.1.0 §4.8.10.1 makes an operationId unique per document and the EHR
+// API serves the released `contribution_create`, so this id follows the released file
+// `operations/demographic_contribution_create.yaml`; the access record keeps the released id.
 #[utoipa::path(
     post, path = "/demographic/contribution", tag = "CONTRIBUTION",
+    operation_id = "demographic_contribution_create",
     params(
         ("Prefer" = Option<String>, Header,
          description = "The released parameter, verbatim: \"Request header to \
@@ -6258,8 +6262,12 @@ pub(crate) async fn contribution_create(
 ///
 /// "Retrieves a CONTRIBUTION identified by `contribution_uid`." (ITS-REST
 /// `specifications/operations/demographic_contribution_get.yaml`).
+// NOTE: OpenAPI 3.1.0 §4.8.10.1 makes an operationId unique per document and the EHR
+// API serves the released `contribution_get`, so this id follows the released file
+// `operations/demographic_contribution_get.yaml`; the access record keeps the released id.
 #[utoipa::path(
     get, path = "/demographic/contribution/{contribution_uid}", tag = "CONTRIBUTION",
+    operation_id = "demographic_contribution_get",
     params(
         ("contribution_uid" = String, Path,
          description = "The released parameter, verbatim: \"The CONTRIBUTION \

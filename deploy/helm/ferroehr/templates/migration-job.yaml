@@ -14,6 +14,25 @@
 # migration fails the release instead of rolling pods against a schema that was
 # never applied. Deliberately lean — the migration step needs the DSN and
 # nothing else, so it mounts no ConfigMap and runs on the built-in defaults.
+#
+# Its pod runs under a ServiceAccount of its own, created as a hook one weight
+# earlier. The release ServiceAccount is an ordinary resource, and Helm creates
+# those only after the pre-install hooks finish, so on a first install a Job
+# naming it waits for an account that does not exist yet; a resource a hook
+# needs must itself be a hook (https://helm.sh/docs/topics/charts_hooks/).
+# The pod calls no Kubernetes API, so the account mounts no token.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "ferroehr.fullname" . }}-migrate
+  labels:
+    {{- include "ferroehr.migrationLabels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+automountServiceAccountToken: false
+---
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -66,8 +85,8 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "ferroehr.serviceAccountName" . }}
-      automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
+      serviceAccountName: {{ include "ferroehr.fullname" . }}-migrate
+      automountServiceAccountToken: false
       # Same reason as the Deployment: the kubelet's per-Service link variables
       # land inside the server's reserved FERROEHR_ namespace and the strict
       # boot-time env sweep then refuses to start.

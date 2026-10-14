@@ -23,7 +23,7 @@
             "description": "openEHR JSON Schemas",
             "summary": "JSON Schemas Overview",
             "micro_summary": "JSON Schemas Overview",
-            "link": "https://github.com/openEHR/specifications-ITS-JSON/blob/master/README.adoc",
+            "link": "https://github.com/openEHR/specifications-ITS-JSON/blob/master/README.md",
             "copyright_year": "2019",
             "spec_status": "DEVELOPMENT",
             "keywords": "json schema, json, schema, its, openehr"

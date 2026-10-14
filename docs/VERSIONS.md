@@ -117,7 +117,7 @@ the script). It is the read/conformance oracle; codegen still consumes only
 
 ## Conformance instrument
 
-The acceptance instrument is [Veredictum](https://github.com/rubentalstra/Veredictum),
+The acceptance instrument is [Veredictum](https://github.com/Vernum-Projecten/Veredictum),
 an independent Apache-2.0 project (split from this repository, #2789/#2811).
 Its pin — the `veredictum` crates.io version the pipeline installs and the
 matching tag whose catalogue/spec data is checked out — lives in EXACTLY one

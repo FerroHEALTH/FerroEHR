@@ -35,7 +35,9 @@ use crate::flat::error::FlatError;
 use crate::flat::map;
 use crate::flat::rmpath;
 use crate::flat::sim::{SimDocument, SimNode};
-use crate::flat::webtemplate::model::{CodedName, WebTemplate, WebTemplateNode};
+use crate::flat::webtemplate::model::{
+    CodedName, WebTemplate, WebTemplateNode, WebTemplateStructuralStub,
+};
 
 /// openEHR reference-model release stamped into a rebuilt
 /// `ARCHETYPED.rm_version` (RM common `archetyped.adoc`: the "version of
@@ -1463,19 +1465,27 @@ fn fill_mandatory_entry_attributes(
 
 /// Synthesize an empty structural node for a missing mandatory ENTRY
 /// attribute (see [`finish_identity`]).
+///
+/// The stub is looked up by the attribute's absolute path, since the compactor
+/// re-homes a hoisted wrapper's stubs (an EVENT's `data`/`state`) onto `node`.
 fn structural_from_stub(
     node: &WebTemplateNode,
     attr: &str,
     default_rm_type: &str,
     default_name: &str,
 ) -> Value {
-    match node.structural_stubs.iter().find(|s| s.attr == attr) {
-        Some(stub) => {
-            let name = stub.name.as_deref().unwrap_or(default_name);
-            structural_container(concrete_structural(&stub.rm_type), &stub.node_id, name)
-        }
+    let path = format!("{}/{attr}", node.aql_path);
+    match node.structural_stubs.iter().find(|s| s.path == path) {
+        Some(stub) => structural_from(stub, default_name),
         None => structural_container(default_rm_type, "at0001", default_name),
     }
+}
+
+/// Synthesizes the empty structural node a [`WebTemplateStructuralStub`]
+/// constrains, named by its rubric or else `default_name`.
+pub(crate) fn structural_from(stub: &WebTemplateStructuralStub, default_name: &str) -> Value {
+    let name = stub.name.as_deref().unwrap_or(default_name);
+    structural_container(concrete_structural(&stub.rm_type), &stub.node_id, name)
 }
 
 /// An abstract `ITEM_STRUCTURE` constraint materialises as `ITEM_TREE`; a

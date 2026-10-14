@@ -130,6 +130,10 @@ pub fn gap_text(code: &str) -> String {
             "schema preparation runs on the clinical runtime credential"
         }
         "auth_off" => "requests are served without authentication",
+        "rbac_off" => {
+            "role checks are off, so every signed-in caller may use every enabled surface, the \
+             admin and management endpoints included"
+        }
         "plaintext_listener" => {
             "a listener serves plain HTTP on an address reachable from the network"
         }
@@ -148,6 +152,7 @@ pub fn gap_text(code: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::{SandboxNotice, StatusDocument, gap_text};
+    use crate::served_vocabulary::DEPLOYMENT_GAPS;
 
     fn status(profile: &str, gaps: &[&str]) -> StatusDocument {
         let gaps: Vec<String> = gaps.iter().map(|g| format!("\"{g}\"")).collect();
@@ -198,28 +203,13 @@ mod tests {
         assert_eq!(doc.sandbox_notice(), None);
     }
 
-    /// Every gap code the server reports (`DeploymentGap::as_str` in
-    /// `app/ferroehr/src/config/deployment.rs`, which the viewer may not depend
-    /// on) has a plain-words text; a code missing here falls through to the raw
-    /// code, and a server gap added without a text belongs in this list.
+    /// Every gap code the server reports has a plain-words text: the list is
+    /// the shared `served_vocabulary::DEPLOYMENT_GAPS`, which the server holds
+    /// its `DeploymentGap` tokens to, so a server gap added without a text here
+    /// fails this test rather than falling through to the raw code.
     #[test]
     fn every_server_gap_has_plain_words() {
-        const SERVER_GAPS: [&str; 13] = [
-            "shared_credential",
-            "shared_cluster",
-            "open_subject_namespace",
-            "audit_off",
-            "audit_fails_open",
-            "audit_syslog_udp",
-            "open_ehr_access_default",
-            "migrate_on_runtime_credential",
-            "auth_off",
-            "plaintext_listener",
-            "plaintext_broker",
-            "plaintext_audit_feed",
-            "plaintext_object_store",
-        ];
-        for code in SERVER_GAPS {
+        for code in DEPLOYMENT_GAPS {
             let text = gap_text(code);
             assert_ne!(text, code, "`{code}` has no plain-words text");
             assert!(!text.contains('_'), "`{code}` reads as a code: {text}");

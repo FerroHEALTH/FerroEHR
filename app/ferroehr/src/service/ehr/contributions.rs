@@ -317,7 +317,7 @@ impl FerroEhrService {
             match self.audit_content_of_objects(&vo_ids).await {
                 Ok(read) => ids.extend(read),
                 Err(e) => tracing::warn!(
-                    error = %e,
+                    error = %crate::service::error::ErrorChain::new(&e),
                     "reading the categories of the objects a CONTRIBUTION deleted failed; the \
                      access record leaves them unclassified"
                 ),

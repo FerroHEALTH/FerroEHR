@@ -161,6 +161,16 @@ pub enum DeploymentGap {
     /// protection from unauthorised access by appropriate control mechanisms,
     /// including but not limited to authentication".
     AuthOff,
+    /// Authentication is on and `authz.rbac.enabled` is `false`, so every
+    /// authenticated caller may use every enabled surface, the admin and
+    /// management groups included.
+    ///
+    /// `docs/law/eu/cra/text.html Annex I Part I(2)(d)`: products shall "ensure
+    /// protection from unauthorised access by appropriate control mechanisms,
+    /// including but not limited to authentication, identity or access
+    /// management systems". Not reported while `auth_off` is, which already
+    /// names the wider exposure.
+    RbacOff,
     /// A listener speaks plaintext on an address reachable off the host: the
     /// main listener with `server.tls.enabled = false` and a non-loopback bind,
     /// or the separate management listener (`management.port`), which always
@@ -211,6 +221,7 @@ impl DeploymentGap {
             Self::OpenEhrAccessDefault => "open_ehr_access_default",
             Self::MigrateOnRuntimeCredential => "migrate_on_runtime_credential",
             Self::AuthOff => "auth_off",
+            Self::RbacOff => "rbac_off",
             Self::PlaintextListener => "plaintext_listener",
             Self::PlaintextBroker => "plaintext_broker",
             Self::PlaintextAuditFeed => "plaintext_audit_feed",
@@ -267,6 +278,11 @@ impl DeploymentGap {
             Self::AuthOff => {
                 "[auth] enabled is false, so every request is served unauthenticated; set [auth] \
                  enabled = true with [auth.oidc] or [auth.basic] configured"
+            }
+            Self::RbacOff => {
+                "[authz.rbac] enabled is false, so every authenticated caller may use every \
+                 enabled surface, the admin API and the management endpoints included; set \
+                 [authz.rbac] enabled = true and give each user the roles it needs"
             }
             Self::PlaintextListener => {
                 "a listener serves plain HTTP on a routable address ([server] bind with \
@@ -405,6 +421,8 @@ impl DeploymentPosture {
         {
             gaps.push(DeploymentGap::AuditSyslogUdp);
         }
+        // NOTE: no openEHR spec governs this, our own design/extension; the configured default is the
+        // effective one: the REST layer applies it with RBAC off, and validation refuses it unenforced.
         if config.authz.rbac.ehr_access_default == crate::config::authz::EhrAccessDefault::Open {
             gaps.push(DeploymentGap::OpenEhrAccessDefault);
         }
@@ -416,6 +434,8 @@ impl DeploymentPosture {
         }
         if !config.auth.enabled {
             gaps.push(DeploymentGap::AuthOff);
+        } else if !config.authz.rbac.enabled {
+            gaps.push(DeploymentGap::RbacOff);
         }
         let plaintext_main = !config.server.tls.enabled && !binds_loopback(&config.server.bind);
         let plaintext_management = config.management.enabled && config.management.port.is_some();
@@ -702,6 +722,7 @@ mod tests {
             DeploymentGap::OpenEhrAccessDefault,
             DeploymentGap::MigrateOnRuntimeCredential,
             DeploymentGap::AuthOff,
+            DeploymentGap::RbacOff,
             DeploymentGap::PlaintextListener,
             DeploymentGap::PlaintextBroker,
             DeploymentGap::PlaintextAuditFeed,
@@ -711,6 +732,35 @@ mod tests {
                 serde_json::to_string(&gap).ok(),
                 Some(format!("\"{}\"", gap.as_str()))
             );
+        }
+    }
+
+    /// Every gap token is in the shared vocabulary the viewer names, in
+    /// declaration order, and the vocabulary names no other token.
+    #[test]
+    fn every_gap_token_is_the_shared_vocabulary() {
+        use crate::served_vocabulary::DEPLOYMENT_GAPS;
+        let index = |gap: DeploymentGap| match gap {
+            DeploymentGap::SharedCredential => 0,
+            DeploymentGap::SharedCluster => 1,
+            DeploymentGap::OpenSubjectNamespace => 2,
+            DeploymentGap::AuditOff => 3,
+            DeploymentGap::AuditFailsOpen => 4,
+            DeploymentGap::AuditSyslogUdp => 5,
+            DeploymentGap::OpenEhrAccessDefault => 6,
+            DeploymentGap::MigrateOnRuntimeCredential => 7,
+            DeploymentGap::AuthOff => 8,
+            DeploymentGap::RbacOff => 9,
+            DeploymentGap::PlaintextListener => 10,
+            DeploymentGap::PlaintextBroker => 11,
+            DeploymentGap::PlaintextAuditFeed => 12,
+            DeploymentGap::PlaintextObjectStore => 13,
+        };
+        for (i, token) in DEPLOYMENT_GAPS.iter().enumerate() {
+            let gap: DeploymentGap =
+                serde_json::from_str(&format!("\"{token}\"")).expect("a known gap token");
+            assert_eq!(gap.as_str(), *token);
+            assert_eq!(index(gap), i, "{token} is out of order");
         }
     }
 
@@ -885,6 +935,40 @@ mod tests {
         assert!(
             !other_name.permits_boot(),
             "accepting a different gap does not accept this one"
+        );
+    }
+
+    /// `production` refuses an authenticated deployment without the RBAC gate
+    /// unless `rbac_off` is accepted by name (CRA Annex I Part I(2)(d)); a
+    /// `restricted` EHR default stays closed with RBAC off, because the per-EHR
+    /// gate applies it either way; and `auth_off` subsumes the gap.
+    #[test]
+    fn production_refuses_rbac_off_and_a_restricted_default_stays_closed() {
+        let mut config = production(separated());
+        config.authz.rbac.enabled = false;
+        let posture = DeploymentPosture::evaluate(&config, &distinct_clusters());
+        assert_eq!(
+            posture.gaps,
+            [DeploymentGap::RbacOff],
+            "the restricted default is in force with RBAC off, so only rbac_off is open"
+        );
+        assert!(!posture.permits_boot());
+        let message = posture.refusal_message();
+        assert!(message.contains("rbac_off"), "{message}");
+        assert!(
+            message.contains(DeploymentGap::RbacOff.describe()),
+            "{message}"
+        );
+
+        config.deployment_accepts = vec![DeploymentGap::RbacOff];
+        assert!(DeploymentPosture::evaluate(&config, &distinct_clusters()).permits_boot());
+
+        config.auth.enabled = false;
+        config.deployment_accepts = Vec::new();
+        assert_eq!(
+            DeploymentPosture::evaluate(&config, &distinct_clusters()).gaps,
+            [DeploymentGap::AuthOff],
+            "with authentication off the wider gap is named once"
         );
     }
 

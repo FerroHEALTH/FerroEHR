@@ -46,6 +46,13 @@ IHE standards define:
   Query (110112), Export/Import (110106/110107, the EHR-Extract directions),
   User Authentication (110114, with the Login `EventTypeCode` 110122).
 
+Both formats give the client and the server the same data-flow role: on a
+read the server is Source (DCM 110153) and the client Destination (110152),
+because the data moves from the server to the client (DICOM PS3.15 §A.5.2.7,
+the BALP `Read` profiles); on a create, an update and a query the client is
+Source (PS3.15 §A.5.3.10 for a query, the BALP `Create`, `Update` and `Query`
+profiles).
+
 Every server operation is audited (an unrecognised extension operation fails
 *closed* to a generic audited class, so nothing is silently unaudited) and
 access refusals are always recorded: a `401`, a `403`, and the `400` a
@@ -114,9 +121,9 @@ lives in the record:
 | The identity of the patient whose record was accessed | `patient_id` — the resolved EHR subject, which under the pseudonymisation boundary is an opaque pseudonym |
 | Which record, or which part of it | `resource_class` + `resource_id`: the version uid, party uid or EHR id the operation touched |
 | The date and time | `recorded_at`, the event time; `stored_at` is when the row was persisted |
-| The kind of action | `action` (DICOM `C`/`R`/`U`/`D`/`E`) plus `operation`, the ITS-REST operation id |
+| The kind of action | `action` (DICOM `C`/`R`/`U`/`D`/`E`) plus `operation`, the released ITS-REST operation id. It equals the served OpenAPI `operationId` except for the demographic CONTRIBUTION pair, served as `demographic_contribution_create` and `demographic_contribution_get` because the released `contribution_create` and `contribution_get` also name the EHR operations and one document needs unique ids |
 | Whether it succeeded | `outcome`, the DICOM outcome indicator (0 success, 4 minor, 8 serious, 12 major) |
-| Under which role or authority | `roles` — the roles the caller held at access time (the RFC 9068 §2.2.3.1 claim carriers for a bearer, the user definition for Basic), rendered as FHIR `agent.role` on the requestor and as a `RoleIDCode` per role on the DICOM source participant |
+| Under which role or authority | `roles` — the roles the caller held at access time (the RFC 9068 §2.2.3.1 claim carriers for a bearer, the user definition for Basic), rendered as FHIR `agent.role` on the requestor and as a `RoleIDCode` per role on the DICOM requesting participant |
 | On whose authority, and why | `purpose` and `legal_basis` |
 | Which system, and from where | `AuditSourceID` and the source participant's network address (`client_ip`) |
 
@@ -183,8 +190,9 @@ either: `agent.policy` holds the
 which a level of assurance is not, and BALP already uses it for the token
 `jti`. The level and its raw value therefore live in the local store's columns only;
 ITI-81 serves the FHIR document, so it does not return them either. The syslog feed carries the DICOM message, so it has the same
-gap. Unlike the FHIR document, these columns are outside the tamper-evidence
-digest; the append-only trigger still refuses any change to them.
+gap. The tamper-evidence digest covers both columns, like every other column of
+the record (see [Tamper evidence](#tamper-evidence) for records written before
+the digest was versioned).
 
 Without `[auth.oidc.professional]` the mode and the professional stay empty and
 (b) is answered by `principal`, which names a client application when the token
@@ -430,6 +438,22 @@ its own content. The chain is built by the database itself, not by the server,
 which means it covers every writer: the per-event insert, the batched drain,
 and any statement typed by hand.
 
+Each record's digest covers every column of the record except the digest itself
+and the two per-sink forwarding stamps. Each record also stores the digest
+version it was hashed under, in `chain_digest_version`:
+
+| Version | Written | Columns the digest covers |
+|---|---|---|
+| `2` | by the current release | every column except `row_hash`, `delivered_syslog_at` and `delivered_fhir_feed_at` |
+| `1` | before the upgrade that introduced version 2 | `id`, `recorded_at`, `stored_at`, `action`, `outcome`, `event_code`, `operation`, `principal`, `patient_id`, `resource_class`, `resource_id`, `client_ip`, `token_id`, the `fhir` document, `chain_seq` and the link to the predecessor |
+
+A version 1 record keeps verifying under version 1 after the upgrade; it is not
+rehashed. Its other columns (the purpose, legal basis, categories, assurance
+level, professional and the emergency mark among them) are protected by the
+append-only trigger only, and the `fhir` document repeats some of them. A record
+whose version is lower than its predecessor's is reported, so a record cannot be
+moved back to the narrower digest unnoticed.
+
 Four controls sit on top of it, and they are separate on purpose:
 
 - **The table refuses the ordinary rewrite paths outright.** The only permitted
@@ -455,9 +479,10 @@ Four controls sit on top of it, and they are separate on purpose:
 
   An empty result means the trail is intact. Any row names one record (its
   chain position, its id, when it was recorded) and what is wrong with it:
-  content modified after it was written, records deleted with no retention
-  record for the removal, or records removed from the end of the chain where no
-  successor would have noticed.
+  content modified after it was written, a digest version lower than the
+  preceding record's, records deleted with no retention record for the removal,
+  or records removed from the end of the chain where no successor would have
+  noticed.
 - **The server runs that query itself, on a schedule.** With the local store on,
   the check runs one minute after boot and then every
   `[audit.store] verify_interval_seconds` (default `86400`, one day; `0` turns

@@ -1,7 +1,8 @@
 # Benchmarks
 
 FerroEHR measures performance with the **same instrument family that measures
-conformance**: the built-in CNF runner. There is no separate benchmark harness:
+conformance**: [Veredictum](https://github.com/Vernum-Projecten/Veredictum),
+the separate CNF 2.0 runner described on [Conformance](conformance.md). There is no separate benchmark harness:
 every published number is measured by a committed, re-runnable instrument,
 reported in both directions, and regenerated from committed artefacts. There is no
 chart in this project that you cannot regenerate yourself with one command.

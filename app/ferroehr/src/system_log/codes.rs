@@ -74,13 +74,15 @@ pub const OPENEHR_ITS_REST: &str = "openEHR-ITS-REST";
 
 // ── RoleIDCode (DICOM PS3.15 §A.5.2, `DCM`) ──────────────────────────────────
 
-/// The requesting-node "Source Role ID".
+/// "Source Role ID": the participant the information originates from
+/// (PS3.15 §A.5.2.7), the server on a read and the client otherwise.
 pub const ROLE_SOURCE: Code = Code {
     csd_code: "110153",
     code_system: DCM,
     original_text: "Source Role ID",
 };
-/// The serving-node "Destination Role ID".
+/// "Destination Role ID": the participant the information is directed to
+/// (PS3.15 §A.5.2.7), the client on a read and the server otherwise.
 pub const ROLE_DESTINATION: Code = Code {
     csd_code: "110152",
     code_system: DCM,

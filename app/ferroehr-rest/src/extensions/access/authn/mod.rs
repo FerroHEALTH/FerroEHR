@@ -118,48 +118,50 @@ pub(crate) struct FreshAuthentication;
 ///
 /// RFC 6750 §3.1 gives every one of these the same `invalid_token` challenge
 /// code, so the distinction never reaches the client; it exists for the operator
-/// and the cause chain. The variants built from `jsonwebtoken` carry that error
-/// as their [`std::error::Error::source`], so a caller can walk to the concrete
-/// kind instead of matching another crate's message text.
+/// and the cause chain. The variants built from `jsonwebtoken` name the check
+/// that refused the token and carry that error as their
+/// [`std::error::Error::source`], so a caller can walk to the concrete kind
+/// instead of matching another crate's message text, and a chain printer reads
+/// it once.
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum TokenRejection {
     /// The `exp` claim is in the past, beyond the configured clock-skew leeway.
-    #[error("{0}")]
+    #[error("the token has expired")]
     Expired(#[source] jsonwebtoken::errors::Error),
     /// The `nbf` claim puts the token's validity in the future.
-    #[error("{0}")]
+    #[error("the token is not yet valid")]
     NotYetValid(#[source] jsonwebtoken::errors::Error),
     /// The signature does not verify against the selected key.
-    #[error("{0}")]
+    #[error("the token signature does not verify")]
     Signature(#[source] jsonwebtoken::errors::Error),
     /// The `iss` claim is not the configured issuer.
-    #[error("{0}")]
+    #[error("the token issuer is not the configured issuer")]
     Issuer(#[source] jsonwebtoken::errors::Error),
     /// The `aud` claim names none of the configured audiences.
-    #[error("{0}")]
+    #[error("the token audience names no configured audience")]
     Audience(#[source] jsonwebtoken::errors::Error),
     /// The `sub` claim is not a subject the validation admits.
-    #[error("{0}")]
+    #[error("the token subject is not admitted")]
     Subject(#[source] jsonwebtoken::errors::Error),
     /// A required claim is absent, or carries the wrong JSON type. The message
     /// names the claim, never its value.
-    #[error("{0}")]
+    #[error("a required claim is absent or carries the wrong type")]
     ClaimSet(#[source] jsonwebtoken::errors::Error),
     /// The credential is not a well-formed JWT at all: a bad shape, or base64 /
     /// JSON / UTF-8 that does not decode.
-    #[error("{0}")]
+    #[error("the credential is not a well-formed JWT")]
     Malformed(#[source] jsonwebtoken::errors::Error),
     /// The header's algorithm disagrees with the decoding key or the validation.
-    #[error("{0}")]
+    #[error("the token algorithm disagrees with the key or the validation")]
     AlgorithmMismatch(#[source] jsonwebtoken::errors::Error),
     /// The key material the validator holds is unusable — an issuer or
     /// deployment misconfiguration rather than a client fault.
-    #[error("{0}")]
+    #[error("the key material the validator holds is unusable")]
     KeyMaterial(#[source] jsonwebtoken::errors::Error),
     /// A `jsonwebtoken` failure outside the classified set. Its `ErrorKind` is
     /// `#[non_exhaustive]`, so a crate upgrade can add kinds this mapping has
     /// not yet named.
-    #[error("{0}")]
+    #[error("the token failed validation")]
     Unclassified(#[source] jsonwebtoken::errors::Error),
     /// The header's `alg` is outside `auth.oidc.algorithms`.
     #[error("token algorithm {0:?} not accepted")]
@@ -203,7 +205,7 @@ pub enum TokenRejection {
     )]
     AmbiguousKey(usize),
     /// The selected JWK cannot be turned into a decoding key.
-    #[error("invalid JWK: {0}")]
+    #[error("the selected JWK cannot be turned into a decoding key")]
     UnusableJwk(#[source] jsonwebtoken::errors::Error),
 }
 
@@ -291,12 +293,15 @@ pub enum AuthError {
     /// The [`TokenRejection`] names which check refused it and carries the
     /// underlying `jsonwebtoken` error as its source; the distinction is an
     /// operator signal, never a wire one.
-    #[error("invalid bearer token: {0}")]
+    #[error("invalid bearer token")]
     InvalidToken(#[from] TokenRejection),
     /// The issuer's signing keys (JWKS) could not be fetched or parsed, so no
     /// bearer token can be validated.
-    #[error("could not resolve signing keys: {0}")]
-    KeyResolution(String),
+    ///
+    /// The [`KeyResolutionError`] names the failed step in curated words, which
+    /// are the whole `503` body; the failure behind it is its source.
+    #[error("could not resolve signing keys")]
+    KeyResolution(#[source] KeyResolutionError),
     /// The caller authenticated but is not permitted the request — the 403
     /// branch of the ITS-REST 401-vs-403 split.
     #[error("forbidden: {0}")]
@@ -306,6 +311,63 @@ pub enum AuthError {
     /// the credentials, so it maps to 500 rather than 401.
     #[error("credential verification unavailable: {0}")]
     VerificationUnavailable(String),
+}
+
+/// Why the issuer's signing keys could not be resolved.
+///
+/// The `Display` is a curated category naming the failed step, and it is the
+/// only text the `503` body carries: a transport or discovery error names the
+/// identity provider's URLs, which a client must not read. The failure behind
+/// it is the [`std::error::Error::source`], so the log walks to the concrete
+/// error ([RFC 0201](https://rust-lang.github.io/rfcs/0201-error-chaining.html)).
+/// No openEHR spec governs this — our own design.
+///
+/// `Arc`, not `Box`, because [`AuthError`] is cloned out of the key-set cache.
+#[derive(Debug, Clone)]
+pub struct KeyResolutionError {
+    /// The curated step message.
+    message: String,
+    /// The failure the step reported, never rendered into `message`.
+    source: Option<Arc<dyn std::error::Error + Send + Sync>>,
+}
+
+impl KeyResolutionError {
+    /// A refusal whose message is the whole fact, with no cause beneath it.
+    pub(crate) fn new(message: impl Into<String>) -> Self {
+        Self {
+            message: message.into(),
+            source: None,
+        }
+    }
+
+    /// A refusal naming the failed step, carrying the failure as its source.
+    pub(crate) fn caused(
+        message: &'static str,
+        source: impl std::error::Error + Send + Sync + 'static,
+    ) -> Self {
+        Self {
+            message: message.to_owned(),
+            source: Some(Arc::new(source)),
+        }
+    }
+}
+
+impl std::fmt::Display for KeyResolutionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message)
+    }
+}
+
+// NOTE: hand-written, because `#[derive(thiserror::Error)]` over an
+// `Option<Arc<dyn Error>>` yields the `Arc` wrapper as the source hop
+// (<https://docs.rs/thiserror/2.0.18/thiserror/index.html>), not the real cause.
+impl std::error::Error for KeyResolutionError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match &self.source {
+            Some(source) => Some(&**source),
+            None => None,
+        }
+    }
 }
 
 impl AuthError {
@@ -320,7 +382,7 @@ impl AuthError {
             // the server cannot decide: RFC 9110 §15.6.4 makes that a 503. A 401
             // would tell a caller with a valid token its credential was
             // rejected.
-            AuthError::KeyResolution(m) => ApiError::ServiceUnavailable(m.clone()),
+            AuthError::KeyResolution(k) => ApiError::ServiceUnavailable(k.to_string()),
             // The body says nothing about why: rendering the rejection would
             // tell an unauthenticated caller whether a token was expired or
             // forged. The reason stays in the log.
@@ -406,9 +468,11 @@ impl Authenticator {
         )
     }
 
-    /// Builds an authenticator with explicit RBAC role-claim paths, used when an
-    /// [`crate::extensions::access::authz::AuthzHandle`] is wired;
-    /// [`Authenticator::new`] defaults them.
+    /// Builds an authenticator with explicit Bearer role-claim paths.
+    ///
+    /// The server passes the configured `[authz.rbac] role_claims` whether or
+    /// not an authorization gate is wired; [`Authenticator::new`] uses the
+    /// defaults.
     ///
     /// # Errors
     /// Returns a message if the OIDC key material/algorithms are invalid.
@@ -832,7 +896,12 @@ fn refusal_response(auth: &Authenticator, headers: &header::HeaderMap, e: &AuthE
     if matches!(e, AuthError::MissingCredentials) {
         tracing::debug!(mechanism, reason, "authentication refused");
     } else {
-        tracing::warn!(mechanism, reason, detail = %e, "authentication refused");
+        tracing::warn!(
+            mechanism,
+            reason,
+            detail = %ferroehr::service::error::ErrorChain::new(e),
+            "authentication refused"
+        );
     }
     let needs_challenge = matches!(status, StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN);
     let challenge = auth.challenge(Some(e));
@@ -905,7 +974,7 @@ mod bearer_grammar_tests {
         );
         // A server-side fault is not a statement about the credential.
         assert_eq!(
-            AuthError::KeyResolution("x".to_owned()).bearer_error_code(),
+            AuthError::KeyResolution(super::KeyResolutionError::new("x")).bearer_error_code(),
             None
         );
     }
@@ -915,7 +984,8 @@ mod bearer_grammar_tests {
     /// rejected.
     #[test]
     fn unreachable_issuer_is_503_not_401() {
-        let api = AuthError::KeyResolution("jwks unreachable".to_owned()).to_api_error();
+        let api = AuthError::KeyResolution(super::KeyResolutionError::new("jwks unreachable"))
+            .to_api_error();
         assert_eq!(api.status(), http::StatusCode::SERVICE_UNAVAILABLE);
     }
 

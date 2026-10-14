@@ -740,6 +740,22 @@
             "PreferSameNode"
           ],
           "description": "Service topology preference (KEP-4444, stable v1.33). Empty omits the field, leaving cluster-wide spreading."
+        },
+        "tls": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "The trust the in-chart clients (viewer, FerroBRIDGE, the ServiceMonitor scrape) place in the server's own TLS listener; read only while config.server.tls.enabled is true.",
+          "properties": {
+            "caExistingSecret": {
+              "type": "string",
+              "description": "An existing Secret holding the PEM CA that signed the server's certificate."
+            },
+            "caExistingSecretKey": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The key in caExistingSecret holding the CA."
+            }
+          }
         }
       }
     },

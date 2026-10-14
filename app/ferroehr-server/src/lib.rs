@@ -693,9 +693,12 @@ fn assemble_service(
 }
 
 /// Wires authorization, active only when authentication is enabled: the RBAC
-/// gate plus the ABAC engine over the DB-backed attribute resolvers.
+/// gate, the ABAC engine over the DB-backed attribute resolvers, and the
+/// per-EHR access default.
 ///
-/// `None` when authentication is off, or when neither layer is configured.
+/// `None` when authentication is off, or when both gates are off and the
+/// per-EHR default is `open`. The boot line names which of the three caused
+/// the handle, so a `restricted` default alone reads as the reason.
 ///
 /// # Errors
 /// An ABAC block that is enabled but unbuildable aborts boot: configuration
@@ -714,11 +717,22 @@ fn wire_authz(
         authz_resolvers(pool.clone(), Arc::clone(service)),
     )?;
     if let Some(handle) = &authz {
-        tracing::info!(
-            rbac = handle.rbac_active(),
-            abac = handle.abac_active(),
-            "authorization enabled"
-        );
+        let ehr_access_default = handle.ehr_access_default();
+        if handle.rbac_active() || handle.abac_active() {
+            tracing::info!(
+                rbac = handle.rbac_active(),
+                abac = handle.abac_active(),
+                ?ehr_access_default,
+                "authorization enabled"
+            );
+        } else {
+            tracing::info!(
+                rbac = false,
+                abac = false,
+                ?ehr_access_default,
+                "authorization enabled for the restricted per-EHR access default only"
+            );
+        }
     }
     Ok(authz)
 }
@@ -1241,6 +1255,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         terminology_api_enabled: config.terminology.api_enabled,
         events_admin_api: config.events.admin_api,
         audit_organization_claim: config.authz.abac.organization_claim().map(str::to_owned),
+        role_claims: config.authz.rbac.role_claims.clone(),
         spec_profile: config.spec_profile,
     };
 

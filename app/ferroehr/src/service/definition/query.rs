@@ -437,7 +437,10 @@ impl FerroEhrService {
         // (`definition_query_store` lists only `200`/`400`).
         if let Err(err) = openehr_query::parser::parse_str(&query_text) {
             return Err(ServiceError::bad_request(
-                format!("stored query text is not valid AQL: {err}"),
+                format!(
+                    "stored query text is not valid AQL: {}",
+                    crate::service::error::ErrorChain::new(&err)
+                ),
                 err,
             ));
         }

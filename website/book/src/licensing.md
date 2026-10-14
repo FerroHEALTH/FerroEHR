@@ -64,7 +64,7 @@ it, Ruben Talstra's copyright line included, because a published grant is a
 record of what was handed out and is not rewritten afterwards.
 
 The conformance instrument is no longer part of this repository. It is
-[Veredictum](https://github.com/rubentalstra/Veredictum), an independent
+[Veredictum](https://github.com/Vernum-Projecten/Veredictum), an independent
 project under Apache-2.0, and the conformance pipeline here consumes it at a
 pinned version. The vendored test corpora this repository still carries keep
 their upstream terms exactly as the table below states.

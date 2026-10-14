@@ -21,6 +21,7 @@ use tokio::task::JoinHandle;
 use crate::config::profile::SpecProfile;
 use crate::licence::document::Use;
 use crate::licence::state::LicenceState;
+use crate::service::error::ErrorChain;
 use crate::telemetry::build_info::BuildInfo;
 use crate::telemetry::health::{HealthIndicator as _, HealthStatus};
 use crate::telemetry::indicators::{DbHealth, MigrationsHealth};
@@ -294,7 +295,7 @@ impl UsageReporter {
             match self.send_start().await {
                 Ok(outcome) => log_start(&outcome),
                 Err(error) => tracing::debug!(
-                    error = %ErrorChain(&error),
+                    error = %ErrorChain::new(&error),
                     "usage report: the start report was not sent"
                 ),
             }
@@ -307,7 +308,7 @@ impl UsageReporter {
                     _ = flush.tick() => {
                         if let Err(error) = self.flush().await {
                             tracing::debug!(
-                                error = %ErrorChain(&error),
+                                error = %ErrorChain::new(&error),
                                 "usage report: the window was not flushed"
                             );
                         }
@@ -323,7 +324,7 @@ impl UsageReporter {
                             }
                             Err(error) => {
                                 tracing::debug!(
-                                    error = %ErrorChain(&error),
+                                    error = %ErrorChain::new(&error),
                                     "usage report: the daily report was not sent"
                                 );
                                 RETRY_AFTER_FAILURE
@@ -406,7 +407,7 @@ pub fn start(
         Ok(reporter) => Some(reporter.spawn()),
         Err(error) => {
             tracing::debug!(
-                error = %ErrorChain(&error),
+                error = %ErrorChain::new(&error),
                 "usage report: the client could not be built"
             );
             None
@@ -507,21 +508,6 @@ fn meminfo_total_bytes(meminfo: &str) -> Option<u64> {
         .and_then(|rest| rest.split_whitespace().next())
         .and_then(|kib| kib.parse::<u64>().ok())
         .map(|kib| kib.saturating_mul(1024))
-}
-
-/// Renders an error and its causes on one line.
-struct ErrorChain<'a>(&'a dyn std::error::Error);
-
-impl std::fmt::Display for ErrorChain<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)?;
-        let mut cause = self.0.source();
-        while let Some(error) = cause {
-            write!(f, ": {error}")?;
-            cause = error.source();
-        }
-        Ok(())
-    }
 }
 
 #[cfg(test)]

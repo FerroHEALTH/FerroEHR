@@ -34,3 +34,4 @@
 - [Viewer ITS-REST consumption](viewer-wire-consumption.md) — AQL backslash-escaping, headerless CdrResponse, the two error-body shapes, OAS-vs-docs-text citation traps, the 204 branches
 - [Storage generation-2 rewrite](storage-generation-2-review.md) — the correlated `vo_head` subquery (27 sites), write-once-read-never `name_code`, the immutability escape hatch, the freeze/archived_at clobber
 - [CONTRIBUTION committer + 666 lifecycle (#3550/#3590)](contribution-committer-666-lifecycle.md) — check the Veredictum runner member builder before calling a refusal CNF-safe; 400/422 split in UpdateAudit.required
+- [AQL row grain + bindings](aql-row-grain-bindings.md) — aggregate args bound into shared FROM contaminate COUNT/SUM/AVG; WHERE-depends-on-SELECT; codec path shape attribute_child relies on

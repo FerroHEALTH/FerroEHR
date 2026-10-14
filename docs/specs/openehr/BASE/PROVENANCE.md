@@ -2,7 +2,7 @@
 
 - Source: https://github.com/openEHR/specifications-BASE
 - Ref: master (BASE 1.3.0)
-- Commit: `e48795762a0648cbe5701be58d42ec5df0c701a7`
+- Commit: `45caad1bf3874b26a5ce275e27e28eff15150b4a`
 - License: CC-BY-SA 3.0 Unported — the upstream `LICENSE` is vendored verbatim alongside
   this file, from the same pinned commit. Root reference copies:
   `LICENSE-CC-BY-SA-3.0` / `LICENSE-APACHE-2.0`.
@@ -17,6 +17,9 @@
   `image::{images_uri}/<name>`, taken byte-for-byte from the same pinned
   commit. Referenced files only — the upstream figure directories are not
   mirrored wholesale.
+- Upstream repo tooling excluded: `.git`, `.github`, `.claude`, `.junie`,
+  `AGENTS.md`, `CLAUDE.md`, `tmp-*` scratch notes, the top-level
+  `development/` build-tooling directory and dependency manifests.
 - Unreferenced figures, UML `.xmi`/`.mdzip`, XSDs and other binaries
   excluded — fetch from the repo at the pinned commit.
 

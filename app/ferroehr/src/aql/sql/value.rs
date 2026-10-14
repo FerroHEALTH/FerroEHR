@@ -5,25 +5,31 @@
 //! typed coercions (QUERY master03 §Comparison operators + §ORDER BY), VERSION /
 //! EHR metadata fields, ORDER BY, and paging.
 //!
-//! No openEHR spec governs the extraction mechanics — this is our own design: a leaf whose anchor is empty reads
-//! its `data` fragment off the source node alias; a leaf with structure hops
-//! reads through a **correlated scalar subquery** walking the anchor chain
-//! (interval containment + promoted-column filters per step). The extracted
-//! fragment is coerced per the resolved [`Coercion`]; subqueries return the value
-//! or `NULL`, so a missing path compares false and never multiplies rows —
-//! keeping `OR`/`NOT`/`EXISTS` correct.
+//! No openEHR spec governs the extraction mechanics — this is our own design.
+//! A leaf reads its `data` fragment inline off the deepest node bound for its
+//! anchor: the source node for an empty anchor, else the node a SELECT or
+//! WHERE binding holds for that step prefix (`Builder::bind_select_paths`, the
+//! `condition` module). Steps left below the deepest bound node (an ORDER BY
+//! key, a function argument in SELECT) are walked by a **correlated subquery**
+//! (one attribute step per hop, promoted-column filters per step) that takes
+//! the first match in document order; an aggregate walks every item
+//! (`Builder::leaf_items`). The extracted fragment is coerced per the resolved [`Coercion`]; a
+//! missing path reads `NULL`, so a test of it is unknown under SQL's
+//! three-valued logic, and a read never multiplies rows.
 
 use std::fmt::Write as _;
 
 use sea_query::{Alias, Expr, ExprTrait as _, Order, Query};
 
 use crate::aql::error::{AnalysisError, AqlError, SqlError};
-use crate::aql::ir::{Coercion, EhrField, LeafPath, OrderKey, PathTarget, Source, VersionField};
+use crate::aql::ir::{
+    Coercion, EhrField, LeafPath, OrderKey, PathTarget, Source, StructureStep, VersionField,
+};
 use crate::db::iden::{CommitAudit, Ehr, Node, VersionRow};
 use crate::storage::promoted::{PROMOTED_LEAVES, PromotedKind};
 
 use super::expr::{as_text, call, cast, col, derived_col, extract_base, order_coercion};
-use super::from::is_vo_root_type;
+use super::from::{attribute_child, is_vo_root_type};
 use super::{Builder, ValueMode};
 
 impl Builder<'_> {
@@ -42,13 +48,7 @@ impl Builder<'_> {
                 let voa = self.version_vo.get(&source.0).cloned().ok_or_else(|| {
                     SqlError::Unsupported("VERSION path without a bound version".to_owned())
                 })?;
-                let system_id = self.ctx.system_id.clone();
-                Ok(version_field_expr(
-                    &voa,
-                    || self.ensure_audit(&voa),
-                    *field,
-                    &system_id,
-                ))
+                Ok(version_field_expr(&voa, || self.ensure_audit(&voa), *field))
             }
             PathTarget::Ehr { source, field } => {
                 let alias = self.ehr_alias.get(&source.0).cloned().ok_or_else(|| {
@@ -67,9 +67,18 @@ impl Builder<'_> {
         }
     }
 
-    /// The design's path split for a data leaf: empty anchor → read the source
-    /// node's `data` fragment inline; non-empty anchor → a correlated scalar
-    /// subquery walking the anchor chain and extracting the fragment.
+    /// Lowers a data leaf to a value expression through the design's path
+    /// split.
+    ///
+    /// The fragment is read inline off the deepest node bound for the leaf's
+    /// anchor ([`Self::walk_start`]); anchor steps left below it are walked by
+    /// a correlated scalar subquery that takes the first match in document
+    /// order (`ORDER BY num`), so an unbound multi-valued step reads the same
+    /// node on every run.
+    ///
+    /// # Errors
+    /// [`AqlError`] from resolving the source node, a predicate or the
+    /// fragment path.
     pub(super) fn data_leaf_expr(
         &mut self,
         leaf: &LeafPath,
@@ -106,8 +115,9 @@ impl Builder<'_> {
             }
         };
 
-        if leaf.anchor.is_empty() {
-            let base = extract(col(&src, Node::Data));
+        let (start, rest) = self.walk_start(leaf)?;
+        if rest.is_empty() {
+            let base = extract(col(&start, Node::Data));
             let value = coerce_value(base, mode, leaf);
             // A root predicate guards the inline read: the value only exists
             // where the source node satisfies it (QUERY master03 §Identified
@@ -118,7 +128,10 @@ impl Builder<'_> {
             });
         }
 
-        let (mut sub, last) = self.anchored_walk(leaf, &src)?;
+        let (mut sub, aliases) = self.anchored_walk(&start, rest)?;
+        let last = aliases.last().cloned().ok_or_else(|| {
+            SqlError::Unsupported("an anchored read with no walked step".to_owned())
+        })?;
         if let Some(conds) = root_conds {
             for cond in conds {
                 sub.and_where(cond);
@@ -126,132 +139,204 @@ impl Builder<'_> {
         }
         let base = extract(col(&last, Node::Data));
         sub.expr(coerce_value(base, mode, leaf));
+        // NOTE: QUERY master03 §ORDER BY is silent on a key reaching several nodes;
+        // an unbound step reads the first match in document order.
+        sub.order_by_expr(col(&last, Node::Num), Order::Asc);
         sub.limit(1);
         Ok(Expr::from(sub))
     }
 
-    /// The anchored containment walk shared by the scalar extraction (above)
-    /// and the existential predicate lowering
-    /// ([`data_leaf_exists`](Self::data_leaf_exists)): a correlated
-    /// `SELECT`-less subquery joining one `node` alias per anchor step, with
-    /// the nested-set containment + type/constraint conditions. Returns the
-    /// statement (FROM/WHERE only) and the innermost alias.
+    /// Builds the correlated walk over `steps` from the node `start`, shared by
+    /// the scalar extraction ([`Self::data_leaf_expr`]) and the per-row item
+    /// walk ([`Self::leaf_items`]).
+    ///
+    /// The walk joins one `node` alias per step, each reached as the
+    /// step's attribute child of the previous node
+    /// ([`super::from::attribute_child`]) and filtered by the step's types and
+    /// predicate. Returns the statement (FROM/WHERE only) and the alias of
+    /// each step's node, in step order.
+    ///
+    /// # Errors
+    /// [`AqlError`] from a step predicate's lowering.
     fn anchored_walk(
         &mut self,
-        leaf: &LeafPath,
-        src: &str,
-    ) -> Result<(sea_query::SelectStatement, String), AqlError> {
+        start: &str,
+        steps: &[StructureStep],
+    ) -> Result<(sea_query::SelectStatement, Vec<String>), AqlError> {
         let mut sub = Query::select();
-        let mut prev = src.to_owned();
-        let mut last = String::new();
-        for step in &leaf.anchor {
+        let mut aliases: Vec<String> = Vec::with_capacity(steps.len());
+        for step in steps {
             let alias = format!("s{}", self.next_ctr());
+            let parent = aliases.last().map_or(start, String::as_str);
+            let conds = self.step_conds(&alias, parent, step)?;
             sub.from_as(Node::Table, Alias::new(alias.as_str()));
-            sub.and_where(super::expr::hot(&alias, Node::Tier));
-            sub.and_where(col(&alias, Node::VoId).eq(col(&prev, Node::VoId)));
-            sub.and_where(col(&alias, Node::SysVersion).eq(col(&prev, Node::SysVersion)));
-            sub.and_where(
-                col(&alias, Node::Num).between(col(&prev, Node::Num), col(&prev, Node::NumCap)),
-            );
-            if let Some(cond) = super::expr::type_cond(&alias, &step.node_types) {
+            for cond in conds {
                 sub.and_where(cond);
             }
-            if let Some(pred) = &step.predicate {
-                for cond in self.node_constraint_conds(&alias, pred)? {
-                    sub.and_where(cond);
-                }
-            }
-            prev.clone_from(&alias);
-            last = alias;
+            aliases.push(alias);
         }
-        Ok((sub, last))
+        Ok((sub, aliases))
     }
 
-    /// The EXISTENTIAL lowering of a predicate on an anchored data leaf:
-    /// `EXISTS (SELECT 1 <walk> WHERE <cond(extracted value)>)` — the
-    /// predicate holds when ANY node the path matches satisfies it.
+    /// The conditions that make the node `alias` the one `step` reaches from
+    /// `parent`: the hot tier, the attribute child ([`attribute_child`]), the
+    /// step's RM types and its predicate.
     ///
-    /// NOTE: QUERY master03 §WHERE is silent on predicates over multi-valued
-    /// paths, so any-match is our own design decision; it is deterministic where
-    /// a scalar `LIMIT 1` pick without an ordering is not, and it lets the
-    /// planner cost the filter as a semi-join rather than an opaque scalar
-    /// subquery.
+    /// # Errors
+    /// [`AqlError`] from the step predicate's lowering.
+    pub(super) fn step_conds(
+        &self,
+        alias: &str,
+        parent: &str,
+        step: &StructureStep,
+    ) -> Result<Vec<Expr>, AqlError> {
+        let mut conds = vec![
+            super::expr::hot(alias, Node::Tier),
+            attribute_child(alias, parent, &step.attribute),
+        ];
+        conds.extend(super::expr::type_cond(alias, &step.node_types));
+        if let Some(pred) = &step.predicate {
+            conds.extend(self.node_constraint_conds(alias, pred)?);
+        }
+        Ok(conds)
+    }
+
+    /// Builds the correlated walk over every data item a path selects in the
+    /// current row, or `None` when the path selects at most one.
     ///
-    /// The same any-match rule covers a multi-valued fragment tail: a path
-    /// crossing a list-valued fragment attribute (`links`, `participations`,
-    /// `identifiers`, `mappings`) yields one item per match through the
-    /// set-returning `jsonb_path_query` in the subquery's FROM, where the scalar
-    /// `jsonb_path_query_first` would see only the first.
+    /// Returns the walk ([`ItemWalk`]): the subquery (FROM/WHERE only), the
+    /// coerced per-item value, and the node each walked step binds.
+    /// The walk starts at the deepest node the SELECT bindings hold for the
+    /// leaf's anchor ([`Self::walk_start`]), descends the unbound anchor steps,
+    /// and, for a list-valued fragment tail (`links`, `participations`,
+    /// `identifiers`, `mappings`), adds the set-returning `jsonb_path_query`
+    /// so every element is an item. The source's root predicate is part of the
+    /// walk. `None` for a single-valued read off a bound or source node, uid
+    /// synthesis, a promoted column, and a VERSION or EHR field, where the
+    /// scalar [`Self::value_expr`] already reads the one item exactly.
     ///
-    /// Returns `Ok(None)` when the leaf is a single-valued inline read, uid
-    /// synthesis, or a promoted column — the caller falls back to the scalar
-    /// comparison, which is exact there.
-    pub(super) fn data_leaf_exists(
+    /// # Errors
+    /// [`AqlError`] from resolving the source node, a predicate or the
+    /// fragment path.
+    pub(super) fn leaf_items(
         &mut self,
-        leaf: &LeafPath,
+        target: &PathTarget,
         mode: ValueMode,
-        cond: impl FnOnce(Expr) -> Expr,
-    ) -> Result<Option<Expr>, AqlError> {
-        if self.version_uid_expr(leaf, mode).is_some()
-            || self.promoted_leaf_expr(leaf, mode).is_some()
-        {
+    ) -> Result<Option<ItemWalk>, AqlError> {
+        let leaf = match target {
+            PathTarget::Data(leaf) => leaf,
+            PathTarget::EhrStatus(leaf) => {
+                self.ensure_ehr_status_root(leaf.source.0)?;
+                leaf
+            }
+            PathTarget::Version { .. } | PathTarget::Ehr { .. } => return Ok(None),
+        };
+        if self.has_column_read(leaf, mode) {
             return Ok(None);
         }
         let fragment = self.fragment_path(leaf)?;
         let multi = fragment.is_some() && leaf.fragment_multi_valued();
-        if leaf.anchor.is_empty() && !multi {
+        let (start, rest) = self.walk_start(leaf)?;
+        if rest.is_empty() && !multi {
             return Ok(None);
         }
         let src = self.source_node(leaf.source.0)?;
-        let (mut sub, base) = if leaf.anchor.is_empty() {
-            // `multi` holds here, so the fragment jsonpath exists.
-            let Some((jp, vars)) = fragment else {
-                return Ok(None);
-            };
-            let mut sub = Query::select();
-            let base = fragment_items(&mut sub, col(&src, Node::Data), &jp, vars, self.next_ctr());
-            (sub, base)
-        } else {
-            let (mut sub, last) = self.anchored_walk(leaf, &src)?;
-            let base = match (fragment, multi) {
-                (Some((jp, vars)), true) => {
-                    fragment_items(&mut sub, col(&last, Node::Data), &jp, vars, self.next_ctr())
-                }
-                (fragment, _) => {
-                    let (jp, vars) = fragment.unzip();
-                    extract_base(col(&last, Node::Data), jp.as_deref(), vars.flatten())
-                }
-            };
-            (sub, base)
+        let (mut sub, aliases) = self.anchored_walk(&start, rest)?;
+        let last = aliases.last().cloned().unwrap_or_else(|| start.clone());
+        let base = match (fragment, multi) {
+            (Some((jp, vars)), true) => {
+                fragment_items(&mut sub, col(&last, Node::Data), &jp, vars, self.next_ctr())
+            }
+            (fragment, _) => {
+                let (jp, vars) = fragment.unzip();
+                extract_base(col(&last, Node::Data), jp.as_deref(), vars.flatten())
+            }
         };
-        // The root predicate correlates against the source node: the value
-        // only exists where the source satisfies it.
         if let Some(pred) = &leaf.root_predicate {
             for c in self.node_constraint_conds(&src, pred)? {
                 sub.and_where(c);
             }
         }
-        sub.expr(Expr::val(1));
-        sub.and_where(cond(coerce_value(base, mode, leaf)));
-        if self.streaming {
-            // The EXISTS must stay CORRELATED: as a bare WHERE sublink the
-            // planner may pull it up and decorrelate its inner side into a
-            // corpus-wide Materialize. Hosting it in a LATERAL behind the
-            // `OFFSET 0` fence pins the per-row SubPlan (a `LIMIT 1` inside the
-            // sublink is NOT a fence); semantics are one boolean per outer row.
-            let probe = format!("p{}", self.next_ctr());
-            let mut wrapper = Query::select();
-            wrapper.expr_as(Expr::exists(sub), Alias::new("hit"));
-            wrapper.offset(0);
-            self.q.join_lateral(
-                sea_query::JoinType::Join,
-                wrapper,
-                Alias::new(probe.as_str()),
-                Expr::val(true),
-            );
-            return Ok(Some(derived_col(&probe, "hit")));
+        let bound_steps = leaf.anchor.len().saturating_sub(rest.len());
+        let mut prefix: Vec<StructureStep> =
+            leaf.anchor.iter().take(bound_steps).cloned().collect();
+        let mut bindings = Vec::with_capacity(rest.len());
+        for (step, alias) in rest.iter().zip(aliases) {
+            prefix.push(step.clone());
+            bindings.push(super::StepBinding {
+                source: leaf.source.0,
+                steps: prefix.clone(),
+                alias,
+            });
         }
-        Ok(Some(Expr::exists(sub)))
+        Ok(Some(ItemWalk {
+            sub,
+            item: coerce_value(base, mode, leaf),
+            bindings,
+        }))
+    }
+
+    /// Reads `leaf`'s value off the node `at` its anchor reaches.
+    ///
+    /// Returns the coerced value, plus, for a list-valued fragment tail, the
+    /// subquery whose FROM yields one element per row (the value then names
+    /// the element), and `None` for a single-valued read.
+    ///
+    /// # Errors
+    /// [`AqlError`] from the fragment path's lowering.
+    pub(super) fn item_at(
+        &mut self,
+        leaf: &LeafPath,
+        mode: ValueMode,
+        at: &str,
+    ) -> Result<(Option<sea_query::SelectStatement>, Expr), AqlError> {
+        let fragment = self.fragment_path(leaf)?;
+        let multi = fragment.is_some() && leaf.fragment_multi_valued();
+        Ok(match (fragment, multi) {
+            (Some((jp, vars)), true) => {
+                let mut sub = Query::select();
+                let base =
+                    fragment_items(&mut sub, col(at, Node::Data), &jp, vars, self.next_ctr());
+                (Some(sub), coerce_value(base, mode, leaf))
+            }
+            (fragment, _) => {
+                let (jp, vars) = fragment.unzip();
+                let base = extract_base(col(at, Node::Data), jp.as_deref(), vars.flatten());
+                (None, coerce_value(base, mode, leaf))
+            }
+        })
+    }
+
+    /// Whether `leaf` reads a column rather than its fragment: uid synthesis
+    /// or a promoted column, both exact single values.
+    pub(super) fn has_column_read(&mut self, leaf: &LeafPath, mode: ValueMode) -> bool {
+        self.version_uid_expr(leaf, mode).is_some() || self.promoted_leaf_expr(leaf, mode).is_some()
+    }
+
+    /// Hosts a correlated `EXISTS` of the WHERE clause so the planner keeps it
+    /// correlated, and returns the boolean to test.
+    ///
+    /// On the flat shape the sublink is returned as is. On the streaming shape
+    /// a bare WHERE sublink may be pulled up and decorrelated into a
+    /// corpus-wide Materialize, so it is hosted in a `LATERAL` behind the
+    /// `OFFSET 0` fence (a `LIMIT 1` inside the sublink is no fence), which
+    /// pins the per-row `SubPlan`: one boolean per outer row either way. No
+    /// openEHR spec governs the plan shape — our own design.
+    pub(super) fn correlated_exists(&mut self, sub: sea_query::SelectStatement) -> Expr {
+        if !self.streaming {
+            return Expr::exists(sub);
+        }
+        let probe = format!("p{}", self.next_ctr());
+        let mut wrapper = Query::select();
+        wrapper.expr_as(Expr::exists(sub), Alias::new("hit"));
+        wrapper.offset(0);
+        self.q.join_lateral(
+            sea_query::JoinType::Join,
+            wrapper,
+            Alias::new(probe.as_str()),
+            Expr::val(true),
+        );
+        derived_col(&probe, "hit")
     }
 
     /// The server-assigned `OBJECT_VERSION_ID` for a `uid` / `uid/value` path on
@@ -283,13 +368,7 @@ impl Builder<'_> {
         }
         let voa = self.vo_alias.get(&leaf.source.0).cloned()?;
         let names: Vec<&str> = leaf.fragment.iter().map(|s| s.name.as_str()).collect();
-        let system_id = self.ctx.system_id.clone();
-        let uid = version_field_expr(
-            &voa,
-            || self.ensure_audit(&voa),
-            VersionField::Uid,
-            &system_id,
-        );
+        let uid = version_field_expr(&voa, || self.ensure_audit(&voa), VersionField::Uid);
         match names.as_slice() {
             // `uid/value` → the OBJECT_VERSION_ID string (projected → JSON string
             // via the caller's `to_jsonb`; compared/ordered as text).
@@ -629,7 +708,6 @@ pub(super) fn version_field_expr(
     voa: &str,
     audit: impl FnOnce() -> String,
     field: VersionField,
-    _system_id: &str,
 ) -> Expr {
     let concat = |parts: Vec<Expr>| -> Expr {
         parts
@@ -807,4 +885,15 @@ pub(super) fn jsonpath(parts: &[String]) -> String {
         let _ = write!(jp, ".{p}");
     }
     jp
+}
+
+/// The per-row walk over every data item a path selects
+/// ([`Builder::leaf_items`]).
+pub(super) struct ItemWalk {
+    /// The correlated subquery, FROM and WHERE only.
+    pub(super) sub: sea_query::SelectStatement,
+    /// The coerced value of one item.
+    pub(super) item: Expr,
+    /// The binding of each walked step to the item's own node, in step order.
+    pub(super) bindings: Vec<super::StepBinding>,
 }

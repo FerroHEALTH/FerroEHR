@@ -8,21 +8,30 @@
 //! join of table aliases + typed WHERE conditions** (the planner folds
 //! cross-join+filter into joins). Each RM source that roots a versioned object
 //! gets a `node` + `version` (+ `audit`) alias; content sources contained
-//! within it share the `version` and interval-join
-//! (`num BETWEEN a.num AND a.num_cap`, same `(vo_id, sys_version)`). `EHR`
-//! sources join VO roots via `ehr_id`; `VERSION` sources share the contained
-//! VO's `version`. `AND` containment is a join; `OR` and `NOT CONTAINS` are
-//! disjunctive / anti-join correlated `EXISTS` filters (QUERY master03
-//! §Containment — boolean `AND`/`OR`, `NOT`).
+//! within it share the `version` and join on the STRICT nested-set interval
+//! (`a.num < num AND num <= a.num_cap`, same `(vo_id, sys_version)`): QUERY
+//! master03 §Containment makes the left operand "the parent object" of the
+//! right, and no node is its own parent. `EHR` sources join VO roots via
+//! `ehr_id`; `VERSION` sources share the contained VO's `version`. `AND`
+//! containment is a join; `OR` and `NOT CONTAINS` are disjunctive / anti-join
+//! correlated `EXISTS` filters (QUERY master03 §Containment — boolean
+//! `AND`/`OR`, `NOT`).
+//!
+//! A variable declared inside an `OR` branch and read by an identified path is
+//! additionally LEFT-bound under the shared anchor ([`Builder::left_bind`]):
+//! one row per matching node, a `NULL` binding where its branch did not match,
+//! so a row never carries a value from a branch that did not hold. QUERY
+//! master03 §Variables lets any FROM variable be read and is silent on the row
+//! shape of a disjunction, so that shape is our own design.
 
 use sea_query::extension::postgres::PgFunc;
 use sea_query::{Alias, Asterisk, Expr, ExprTrait as _, JoinType, Query, SelectStatement};
 use uuid::Uuid;
 
-use crate::aql::error::{AqlError, SqlError};
+use crate::aql::error::{AqlError, AqlFeatureError, SqlError};
 use crate::aql::ir::{
-    Contained, ContainsTree, EhrField, EhrPredicate, LeafPath, Link, Operand, PathTarget, QueryIr,
-    RmSource, SelectValue, Source, VersionField, VersionScope,
+    Contained, ContainsTree, EhrField, EhrPredicate, LeafPath, Link, PathTarget, QueryIr, RmSource,
+    Source, VersionField, VersionScope,
 };
 use crate::db::iden::{CommitAudit, Ehr, Node, VersionRow, VoHead};
 
@@ -33,7 +42,7 @@ use super::{Builder, EhrAccessScope, VoGroup};
 /// The correlation anchor for an `OR` / `NOT CONTAINS` `EXISTS` subquery.
 enum ExistsAnchor {
     /// Interval-anchored inside a node subtree of a shared versioned object:
-    /// `num BETWEEN parent.num AND parent.num_cap`, same `(vo_id, sys_version)`.
+    /// a strict descendant of the parent ([`strict_descendant`]).
     /// Carries the anchor operand's resolved types so the edge classifier can
     /// decide the join shape.
     Vo(String, crate::aql::ir::TypeSet),
@@ -47,7 +56,7 @@ enum ExistsAnchor {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum EdgeKind {
     /// Content inside the parent's own node subtree: same `(vo_id,
-    /// sys_version)`, inclusive interval join. The child shares the parent's
+    /// sys_version)`, strict interval join. The child shares the parent's
     /// version group.
     Structural,
     /// `FOLDER CONTAINS <versioned object>`: reference resolution through
@@ -56,8 +65,7 @@ enum EdgeKind {
     /// ehr master04 §Folders). The child opens its own version group.
     FolderItems,
     /// `FOLDER CONTAINS FOLDER`: the union of the by-value `folders` nesting
-    /// (a STRICT descendant interval — the inclusive join would self-match
-    /// every folder row) and an items-referenced `VERSIONED_FOLDER`'s folder
+    /// (a strict descendant interval, as every structural edge) and an items-referenced `VERSIONED_FOLDER`'s folder
     /// rows (RM common master05: `items` references name versioned objects
     /// "logically in this folder", with no target-type restriction — the same
     /// ground as `FolderItems`, one reference hop). The child opens its own
@@ -81,7 +89,7 @@ fn classify_edge(
     match (parent_all_folder, child_all_folder, child_no_folder) {
         (true, true, _) => Ok(EdgeKind::FolderChild),
         (true, _, true) => Ok(EdgeKind::FolderItems),
-        _ => Err(crate::aql::error::AqlFeatureError::UnsupportedContainment(
+        _ => Err(AqlFeatureError::UnsupportedContainment(
             parent.names().join("|"),
             child.names().join("|"),
         )
@@ -196,15 +204,64 @@ fn trunk_at_instant(version_alias: &str, at: Expr) -> Expr {
 }
 
 /// The by-value half of the `FOLDER CONTAINS FOLDER` union edge: the
-/// child row is a STRICT nested-set descendant of the parent row inside the
-/// same versioned folder tree (same `(vo_id, sys_version)`; strict, because
-/// the inclusive interval would self-match every folder row).
+/// child row is a strict nested-set descendant of the parent row inside the
+/// same versioned folder tree.
 fn folder_by_value_child(parent_node: &str, child_node: &str) -> Expr {
-    col(child_node, Node::VoId)
-        .eq(col(parent_node, Node::VoId))
-        .and(col(child_node, Node::SysVersion).eq(col(parent_node, Node::SysVersion)))
-        .and(col(child_node, Node::Num).gt(col(parent_node, Node::Num)))
-        .and(col(child_node, Node::Num).lte(col(parent_node, Node::NumCap)))
+    strict_descendant(child_node, parent_node)
+}
+
+/// Whether `child` is a STRICT nested-set descendant of `parent` within one
+/// stored version: same `(vo_id, sys_version)`, `parent.num < num <=
+/// parent.num_cap`.
+///
+/// QUERY master03 §Containment: the left-hand operand "is the parent object of
+/// the right-hand operand". We read that as transitive over the subtree (a
+/// descendant at any depth is contained), and since a node is not its own
+/// parent, the interval excludes the node itself.
+pub(super) fn strict_descendant(child: &str, parent: &str) -> Expr {
+    col(child, Node::VoId)
+        .eq(col(parent, Node::VoId))
+        .and(col(child, Node::SysVersion).eq(col(parent, Node::SysVersion)))
+        .and(col(child, Node::Num).gt(col(parent, Node::Num)))
+        .and(col(child, Node::Num).lte(col(parent, Node::NumCap)))
+}
+
+/// Whether `child` is the node an attribute step `attribute` reaches from
+/// `parent`: a strict descendant whose structure parent IS `parent` and whose
+/// stored path continues `parent`'s by exactly that attribute (the codec
+/// writes `<parent path><attribute>[<index>].`).
+///
+/// BASE `architecture_overview/master11-paths.adoc` §Basic Syntax: a path
+/// "select\[s\] the object which is the value of the final attribute name in the
+/// path, when going from some starting point in the tree and following
+/// attribute names given in the path", so each step is one attribute of the
+/// previous object, never the object itself and never a deeper descendant or
+/// a sibling attribute of the same type (`OBSERVATION.data` versus
+/// `OBSERVATION.state`). Attribute names reach here from the RM model, so the
+/// escaped regular expression is a plain literal match.
+pub(super) fn attribute_child(child: &str, parent: &str, attribute: &str) -> Expr {
+    let pattern = format!("^{}[0-9]*\\.$", regex::escape(attribute));
+    strict_descendant(child, parent)
+        .and(col(child, Node::ParentNum).eq(col(parent, Node::Num)))
+        .and(Expr::cust_with_exprs(
+            "substr($1, length($2) + 1) ~ $3",
+            [
+                col(child, Node::Path),
+                col(parent, Node::Path),
+                Expr::val(pattern),
+            ],
+        ))
+}
+
+/// How a left binding ([`Builder::left_bind`]) reaches its nodes from the
+/// parent.
+#[derive(Debug, Clone, Copy)]
+pub(super) enum BoundEdge<'a> {
+    /// One attribute step of an identified path ([`attribute_child`]).
+    Attribute(&'a str),
+    /// A `CONTAINS` operand anywhere in the parent's subtree
+    /// ([`strict_descendant`]).
+    Descendant,
 }
 
 /// The streaming-shape plan: the linear containment chain eligible for the
@@ -343,49 +400,118 @@ fn path_needs_root_node(target: &PathTarget, root: usize) -> bool {
     }
 }
 
-fn operand_needs_root_node(operand: &Operand, root: usize) -> bool {
-    match operand {
-        Operand::Path(t) => path_needs_root_node(t, root),
-        Operand::Function { args, .. } => args.iter().any(|a| operand_needs_root_node(a, root)),
-        Operand::Literal(_) | Operand::Param(_) => false,
-    }
-}
-
-fn filter_needs_root_node(expr: &crate::aql::ir::Expr, root: usize) -> bool {
-    match expr {
-        crate::aql::ir::Expr::Compare { lhs, rhs, .. } => {
-            operand_needs_root_node(lhs, root) || operand_needs_root_node(rhs, root)
-        }
-        crate::aql::ir::Expr::Exists(t)
-        | crate::aql::ir::Expr::Like { path: t, .. }
-        | crate::aql::ir::Expr::Matches { path: t, .. } => path_needs_root_node(t, root),
-        crate::aql::ir::Expr::Const(_) => false,
-        crate::aql::ir::Expr::And(a, b) | crate::aql::ir::Expr::Or(a, b) => {
-            filter_needs_root_node(a, root) || filter_needs_root_node(b, root)
-        }
-        crate::aql::ir::Expr::Not(a) => filter_needs_root_node(a, root),
-    }
-}
-
 /// Whether ANY identified path in the query (SELECT, WHERE, ORDER BY) reads
 /// the streaming root's node row — the projection/predicate half of the
 /// dead-root-lateral test (`build_from_streaming`).
 fn root_node_referenced(ir: &QueryIr, root: usize) -> bool {
-    ir.select.iter().any(|c| match &c.value {
-        SelectValue::Path(t) => path_needs_root_node(t, root),
-        SelectValue::Aggregate { arg, .. } => {
-            arg.as_ref().is_some_and(|t| path_needs_root_node(t, root))
+    let mut needed = false;
+    ir.for_each_path(&mut |t| needed |= path_needs_root_node(t, root));
+    needed
+}
+
+/// The sources some identified path of the query reads.
+fn referenced_sources(ir: &QueryIr) -> std::collections::BTreeSet<usize> {
+    let mut out = std::collections::BTreeSet::new();
+    ir.for_each_path(&mut |t| {
+        out.insert(match t {
+            PathTarget::Data(leaf) | PathTarget::EhrStatus(leaf) => leaf.source.0,
+            PathTarget::Version { source, .. } | PathTarget::Ehr { source, .. } => source.0,
+        });
+    });
+    out
+}
+
+/// The variable of the first source in `tree` (nested containment included)
+/// that `referenced` names, if any.
+fn first_referenced_var(
+    ir: &QueryIr,
+    tree: &ContainsTree,
+    referenced: &std::collections::BTreeSet<usize>,
+) -> Option<String> {
+    match tree {
+        ContainsTree::And(a, b) | ContainsTree::Or(a, b) => first_referenced_var(ir, a, referenced)
+            .or_else(|| first_referenced_var(ir, b, referenced)),
+        ContainsTree::Operand { source, contained } => {
+            let own = referenced
+                .contains(&source.0)
+                .then(|| ir.sources.get(source.0).and_then(Source::var))
+                .flatten()
+                .map(str::to_owned);
+            own.or_else(|| {
+                contained
+                    .as_deref()
+                    .and_then(|c| first_referenced_var(ir, &c.tree, referenced))
+            })
         }
-        SelectValue::Function { args, .. } => args.iter().any(|a| operand_needs_root_node(a, root)),
-        SelectValue::Literal(_) => false,
-    }) || ir
-        .filter
-        .as_ref()
-        .is_some_and(|f| filter_needs_root_node(f, root))
-        || ir
-            .order_by
-            .iter()
-            .any(|k| path_needs_root_node(&k.path, root))
+    }
+}
+
+/// The top-level operand of `tree` whose subtree holds a variable that
+/// `referenced` names, if any.
+fn read_operand(
+    ir: &QueryIr,
+    tree: &ContainsTree,
+    referenced: &std::collections::BTreeSet<usize>,
+) -> Option<usize> {
+    match tree {
+        ContainsTree::And(a, b) | ContainsTree::Or(a, b) => {
+            read_operand(ir, a, referenced).or_else(|| read_operand(ir, b, referenced))
+        }
+        ContainsTree::Operand { source, .. } => {
+            first_referenced_var(ir, tree, referenced).map(|_| source.0)
+        }
+    }
+}
+
+/// The refusal for reading a variable of the `OR` branch operand `sid`,
+/// which is a versioned object of its own.
+fn or_branch_refusal(ir: &QueryIr, sid: usize) -> AqlError {
+    match ir.sources.get(sid) {
+        Some(Source::Rm(r)) => AqlFeatureError::OrBranchVersionedObject {
+            variable: r.var.clone(),
+            class: r.rm_type.names().join("|"),
+        }
+        .into(),
+        Some(Source::Ehr(_) | Source::Version(_)) | None => {
+            SqlError::Unsupported("an OR branch operand that is no RM class".to_owned()).into()
+        }
+    }
+}
+
+/// Refuses a query reading a variable declared under `NOT CONTAINS`.
+///
+/// QUERY master03 §Containment: `NOT CONTAINS` expresses "the absence of any
+/// containment relationship between a parent and potential child items", so a
+/// variable declared there names an object no matching row holds and no path
+/// through it has a value.
+///
+/// # Errors
+/// [`AqlFeatureError::NegatedContainmentVariable`] naming the variable.
+pub(super) fn refuse_negated_reads(ir: &QueryIr) -> Result<(), AqlError> {
+    fn walk(
+        ir: &QueryIr,
+        tree: &ContainsTree,
+        referenced: &std::collections::BTreeSet<usize>,
+    ) -> Result<(), AqlError> {
+        match tree {
+            ContainsTree::And(a, b) | ContainsTree::Or(a, b) => {
+                walk(ir, a, referenced)?;
+                walk(ir, b, referenced)
+            }
+            ContainsTree::Operand { contained, .. } => match contained.as_deref() {
+                Some(Contained {
+                    link: Link::NotContains,
+                    tree,
+                }) => match first_referenced_var(ir, tree, referenced) {
+                    Some(var) => Err(AqlFeatureError::NegatedContainmentVariable(var).into()),
+                    None => Ok(()),
+                },
+                Some(Contained { tree, .. }) => walk(ir, tree, referenced),
+                None => Ok(()),
+            },
+        }
+    }
+    walk(ir, &ir.contains, &referenced_sources(ir))
 }
 
 impl Builder<'_> {
@@ -408,10 +534,16 @@ impl Builder<'_> {
     /// Semantics are identical to the flat shape: each `LATERAL` returns
     /// ALL matching nodes per outer row, so row-per-binding multiplicity
     /// is preserved (QUERY master03 §DISTINCT — duplicates exist by
-    /// default), and QUERY master03 §LIMIT makes WHICH rows return
-    /// explicitly non-deterministic without `ORDER BY`, so the changed
-    /// visit order is conformant. No openEHR spec governs the join
-    /// mechanics — the shape selection is our own design.
+    /// default); a logically deleted version, which the flat shape drops for
+    /// having no node rows, is dropped here too ([`Self::stream_root`]); and
+    /// QUERY master03 §LIMIT makes WHICH rows return explicitly
+    /// non-deterministic without `ORDER BY`, so the changed visit order is
+    /// conformant. No openEHR spec governs the join mechanics — the shape
+    /// selection is our own design.
+    ///
+    /// # Errors
+    /// [`SqlError::Unsupported`] when the plan names a source of the wrong
+    /// kind (a planner defect), plus the per-source condition lowerings.
     pub(super) fn build_from_streaming(&mut self, plan: &StreamPlan) -> Result<(), AqlError> {
         self.streaming = true;
         let Some(Source::Rm(root)) = self.ir.sources.get(plan.root).cloned() else {
@@ -475,21 +607,21 @@ impl Builder<'_> {
                 .into());
             };
             let alias = format!("n{sid}");
+            let inner = format!("{alias}_s");
             let mut sub = Query::select();
-            sub.column(Asterisk).from(Node::Table).offset(0);
-            sub.and_where(hot_unaliased());
+            sub.column((Alias::new(inner.as_str()), Asterisk))
+                .from_as(Node::Table, Alias::new(inner.as_str()))
+                .offset(0);
+            sub.and_where(hot(&inner, Node::Tier));
             if let Some(p) = &parent_alias {
-                sub.and_where(Expr::col(Node::VoId).eq(col(p, Node::VoId)))
-                    .and_where(Expr::col(Node::SysVersion).eq(col(p, Node::SysVersion)))
-                    .and_where(
-                        Expr::col(Node::Num).between(col(p, Node::Num), col(p, Node::NumCap)),
-                    );
+                sub.and_where(strict_descendant(&inner, p));
             } else {
                 // Dead-root binding: the root's subtree is the whole
-                // versioned object, so containment in it IS version
-                // membership — same `(vo_id, sys_version)` as the spine.
-                sub.and_where(Expr::col(Node::VoId).eq(col(&v, VersionRow::VoId)))
-                    .and_where(Expr::col(Node::SysVersion).eq(col(&v, VersionRow::SysVersion)));
+                // versioned object, so strict containment in it is version
+                // membership minus the root row itself (`num = 0`).
+                sub.and_where(col(&inner, Node::VoId).eq(col(&v, VersionRow::VoId)))
+                    .and_where(col(&inner, Node::SysVersion).eq(col(&v, VersionRow::SysVersion)))
+                    .and_where(col(&inner, Node::Num).gt(0));
             }
             self.q.join_lateral(
                 JoinType::Join,
@@ -505,20 +637,32 @@ impl Builder<'_> {
         Ok(())
     }
 
-    /// Emit the streaming root's node lateral — or elide it. The lateral is
-    /// DEAD WEIGHT when (a) the root source carries no node-level condition
-    /// beyond its RM type — which the spine's `kind` filter already pins: a
-    /// versioned object's `num = 0` row has `rm_type = kind` by construction —
-    /// and (b) no identified path reads the root's node row
-    /// ([`root_node_referenced`]). It is then one wasted `pk_node` probe per
-    /// spine row: it yields exactly one row per version (every stored version
-    /// has its root node), so dropping it preserves row multiplicity, and the
-    /// root's subtree interval spans the whole versioned object, so
-    /// first-level containment reduces to sharing the version. Measured as
-    /// the post-streaming ladder's rung 1. No openEHR spec governs the join
-    /// mechanics — our own design. Returns the alias the scope/gate machinery
-    /// group-tracks (the node alias, or the spine when elided — it carries
-    /// the `ehr_id` those gates filter on).
+    /// Emits the streaming root's node lateral, or elides it, and returns the
+    /// alias the scope/gate machinery group-tracks.
+    ///
+    /// The lateral is DEAD WEIGHT when (a) the root source carries no
+    /// node-level condition beyond its RM type — which the spine's `kind`
+    /// filter already pins: a versioned object's `num = 0` row has
+    /// `rm_type = kind` by construction — and (b) no identified path reads the
+    /// root's node row ([`root_node_referenced`]). It is then one wasted
+    /// `pk_node` probe per spine row, and the root's subtree interval spans the
+    /// whole versioned object, so first-level containment reduces to sharing
+    /// the version.
+    ///
+    /// The probe's other effect is kept without it: a version with no root
+    /// node contributes no row. Exactly the logically deleted versions have
+    /// none — a deletion commits a version whose data is Void (RM common
+    /// master06 §Logical Deletion) with lifecycle state `523`, and every other
+    /// commit decomposes a body into at least its root row — so the elided
+    /// shape filters the spine on `lifecycle_state <> '523'`, and both shapes
+    /// answer the same rows. No openEHR spec governs the join mechanics — our
+    /// own design.
+    ///
+    /// Returns the node alias, or the spine when elided (it carries the
+    /// `ehr_id` those gates filter on).
+    ///
+    /// # Errors
+    /// [`AqlError`] from the root's condition lowerings.
     fn stream_root(
         &mut self,
         plan: &StreamPlan,
@@ -530,6 +674,10 @@ impl Builder<'_> {
             || !root.standard.is_empty()
             || root_node_referenced(self.ir, plan.root);
         if !root_node_needed {
+            self.q.and_where(
+                col(v, VersionRow::LifecycleState)
+                    .ne(Expr::val(crate::versioning::lifecycle::state::DELETED)),
+            );
             return Ok(v.to_owned());
         }
         let root_alias = format!("n{}", plan.root);
@@ -598,12 +746,15 @@ impl Builder<'_> {
     ///
     /// The enclosing object satisfies either branch's containment, so each
     /// branch lowers to a correlated `EXISTS` over the shared anchor, combined
-    /// with `OR`. Variables bound only inside an `OR` branch are
-    /// containment-filter-only — see the module NOTE.
+    /// with `OR`. A branch variable an identified path reads is then
+    /// left-bound under the anchor ([`Self::bind_branch`], the row shape the
+    /// module documentation states); a branch nobody reads stays a filter.
     ///
     /// # Errors
     /// [`SqlError::Unsupported`] for a top-level `OR` with no enclosing object
-    /// (there is no row scope to correlate to), plus the branch lowerings.
+    /// (there is no row scope to correlate to);
+    /// [`AqlFeatureError::OrBranchVersionedObject`] for a read branch variable
+    /// that is its own versioned object; plus the branch lowerings.
     fn walk_or(
         &mut self,
         a: &ContainsTree,
@@ -624,7 +775,160 @@ impl Builder<'_> {
         let left = self.contained_exists(&anchor, a)?;
         let right = self.contained_exists(&anchor, b)?;
         self.q.and_where(left.or(right));
+        let referenced = referenced_sources(self.ir);
+        match vo {
+            Some(g) => {
+                self.bind_branch(g, a, &[], &referenced)?;
+                self.bind_branch(g, b, &[], &referenced)?;
+            }
+            None => {
+                for tree in [a, b] {
+                    if let Some(sid) = read_operand(self.ir, tree, &referenced) {
+                        return Err(or_branch_refusal(self.ir, sid));
+                    }
+                }
+            }
+        }
         Ok(None)
+    }
+
+    /// Left-binds every operand of the `OR` branch `tree` whose subtree holds
+    /// a variable an identified path reads, under the branch's anchor group
+    /// `parent`.
+    ///
+    /// A bound operand yields one row per node that matches it, its own nested
+    /// containment and `siblings` (the other halves of an enclosing `AND`
+    /// inside the branch, correlated to the anchor), and one `NULL` row where
+    /// none does: a value never comes from a branch that did not hold. Its
+    /// node alias then serves paths exactly as a joined variable's does.
+    ///
+    /// # Errors
+    /// [`AqlFeatureError::OrBranchVersionedObject`] when a read operand is a
+    /// versioned object of its own (an `EHR` or `FOLDER` anchor), plus the
+    /// condition lowerings.
+    fn bind_branch(
+        &mut self,
+        parent: &VoGroup,
+        tree: &ContainsTree,
+        siblings: &[Expr],
+        referenced: &std::collections::BTreeSet<usize>,
+    ) -> Result<(), AqlError> {
+        if first_referenced_var(self.ir, tree, referenced).is_none() {
+            return Ok(());
+        }
+        let anchor = ExistsAnchor::Vo(parent.node.clone(), parent.types.clone());
+        match tree {
+            ContainsTree::Or(a, b) => {
+                self.bind_branch(parent, a, siblings, referenced)?;
+                self.bind_branch(parent, b, siblings, referenced)
+            }
+            ContainsTree::And(a, b) => {
+                let needs_b = self.contained_exists(&anchor, b)?;
+                let needs_a = self.contained_exists(&anchor, a)?;
+                let mut for_a = siblings.to_vec();
+                for_a.push(needs_b);
+                let mut for_b = siblings.to_vec();
+                for_b.push(needs_a);
+                self.bind_branch(parent, a, &for_a, referenced)?;
+                self.bind_branch(parent, b, &for_b, referenced)
+            }
+            ContainsTree::Operand { source, contained } => {
+                let sid = source.0;
+                let Some(Source::Rm(r)) = self.ir.sources.get(sid).cloned() else {
+                    return Err(SqlError::Unsupported(
+                        "OR/NOT CONTAINS of a non-structure operand".to_owned(),
+                    )
+                    .into());
+                };
+                if classify_edge(&parent.types, &r.rm_type)? != EdgeKind::Structural {
+                    return Err(or_branch_refusal(self.ir, sid));
+                }
+                let contained = contained.as_deref();
+                let siblings = siblings.to_vec();
+                let alias = self.left_bind(&parent.node, BoundEdge::Descendant, |b, inner| {
+                    let mut conds = b.rm_conds(inner, &r)?;
+                    conds.extend(siblings);
+                    if let Some(c) = contained {
+                        let nested = b.contained_exists(
+                            &ExistsAnchor::Vo(inner.to_owned(), r.rm_type.clone()),
+                            &c.tree,
+                        )?;
+                        conds.push(match c.link {
+                            Link::Contains => nested,
+                            Link::NotContains => nested.not(),
+                        });
+                    }
+                    Ok(conds)
+                })?;
+                self.node_alias.insert(sid, alias.clone());
+                if let Some(Contained {
+                    link: Link::Contains,
+                    tree: nested,
+                }) = contained
+                {
+                    let group = VoGroup {
+                        node: alias,
+                        vo: parent.vo.clone(),
+                        types: r.rm_type.clone(),
+                    };
+                    self.bind_branch(&group, nested, &[], referenced)?;
+                }
+                Ok(())
+            }
+        }
+    }
+
+    /// Left-binds the nodes reached from `parent` over `edge` that also meet
+    /// `conds`, and returns the alias whose columns are those of `node`.
+    ///
+    /// The binding yields one row per matching node and a
+    /// single all-`NULL` row when none matches, so it multiplies rows without
+    /// ever removing one. `conds` builds its conditions over the inner node
+    /// alias it is handed. On the streaming shape the binding is a
+    /// `LEFT JOIN LATERAL` behind the `OFFSET 0` fence; on the flat shape, whose
+    /// comma-separated FROM list a join could not reference, it is the
+    /// implicitly lateral FROM function `unnest(ARRAY(<node rows>))` over a
+    /// one-row left join, whose result columns are the `node` row type's
+    /// (PostgreSQL 18 §7.2.1.4 Table Functions and §7.2.1.5 LATERAL
+    /// Subqueries). No openEHR spec governs the join mechanics — our own
+    /// design.
+    ///
+    /// # Errors
+    /// Whatever `conds` returns.
+    pub(super) fn left_bind(
+        &mut self,
+        parent: &str,
+        edge: BoundEdge<'_>,
+        conds: impl FnOnce(&mut Self, &str) -> Result<Vec<Expr>, AqlError>,
+    ) -> Result<String, AqlError> {
+        let alias = format!("b{}", self.next_ctr());
+        let inner = format!("{alias}_n");
+        let edge = match edge {
+            BoundEdge::Attribute(attribute) => attribute_child(&inner, parent, attribute),
+            BoundEdge::Descendant => strict_descendant(&inner, parent),
+        };
+        let on = conds(self, &inner)?
+            .into_iter()
+            .fold(hot(&inner, Node::Tier).and(edge), sea_query::ExprTrait::and);
+        if self.streaming {
+            let mut sub = Query::select();
+            sub.column((Alias::new(inner.as_str()), Asterisk))
+                .from_as(Node::Table, Alias::new(inner.as_str()))
+                .and_where(on)
+                .offset(0);
+            self.q.join_lateral(
+                JoinType::LeftJoin,
+                sub,
+                Alias::new(alias.as_str()),
+                Expr::val(true),
+            );
+        } else {
+            self.q.from_function(
+                left_binding_rows(&alias, &inner, on),
+                Alias::new(alias.as_str()),
+            );
+        }
+        Ok(alias)
     }
 
     /// Lowers one containment operand: the source it names plus the edge it
@@ -752,14 +1056,7 @@ impl Builder<'_> {
         };
 
         if let (Some(EdgeKind::Structural), Some(parent)) = (edge, vo) {
-            self.q
-                .and_where(col(&node, Node::VoId).eq(col(&parent.node, Node::VoId)));
-            self.q
-                .and_where(col(&node, Node::SysVersion).eq(col(&parent.node, Node::SysVersion)));
-            self.q.and_where(col(&node, Node::Num).between(
-                col(&parent.node, Node::Num),
-                col(&parent.node, Node::NumCap),
-            ));
+            self.q.and_where(strict_descendant(&node, &parent.node));
             Ok(VoGroup {
                 node,
                 vo: parent.vo.clone(),
@@ -881,14 +1178,7 @@ impl Builder<'_> {
             ExistsAnchor::Vo(parent, parent_types) => {
                 match classify_edge(parent_types, child_types)? {
                     EdgeKind::Structural => {
-                        sub.and_where(col(alias, Node::VoId).eq(col(parent, Node::VoId)));
-                        sub.and_where(
-                            col(alias, Node::SysVersion).eq(col(parent, Node::SysVersion)),
-                        );
-                        sub.and_where(
-                            col(alias, Node::Num)
-                                .between(col(parent, Node::Num), col(parent, Node::NumCap)),
-                        );
+                        sub.and_where(strict_descendant(alias, parent));
                     }
                     EdgeKind::FolderChild => {
                         // The union edge: an items-referenced VERSIONED_FOLDER
@@ -1249,9 +1539,8 @@ impl Builder<'_> {
             }
             VersionScope::Predicate(p) => {
                 self.bind_head(voa, false);
-                let system_id = self.ctx.system_id.clone();
                 let rhs = cast(Expr::val(self.bind_value(&p.value)?), "text");
-                let lhs = version_field_expr(voa, || self.ensure_audit(voa), p.field, &system_id);
+                let lhs = version_field_expr(voa, || self.ensure_audit(voa), p.field);
                 self.q
                     .and_where(lhs.binary(super::expr::binoper(p.op), rhs));
             }
@@ -1295,4 +1584,22 @@ impl Builder<'_> {
 /// explicitly, not a second opinion about what a versioned object is.
 pub(super) fn is_vo_root_type(t: &str) -> bool {
     crate::versioning::Kind::from_type(t).is_some_and(|kind| !kind.is_demographic())
+}
+
+/// The implicitly lateral FROM function of a left binding on a comma-separated
+/// FROM list: `unnest(ARRAY(<node rows>))` over a one-row left join, so the
+/// binding yields one row per node `on` admits and one
+/// all-`NULL` row when it admits none. Its result columns are the `node` row
+/// type's (PostgreSQL 18 §7.2.1.4 Table Functions, §7.2.1.5 LATERAL
+/// Subqueries). `inner` is the node alias `on` is written over.
+pub(super) fn left_binding_rows(alias: &str, inner: &str, on: Expr) -> sea_query::FunctionCall {
+    let mut one = Query::select();
+    one.expr(Expr::val(1));
+    let mut rows = Query::select();
+    rows.expr(Expr::col(Alias::new(inner)))
+        .from_subquery(one, Alias::new(format!("{alias}_one")))
+        .join_as(JoinType::LeftJoin, Node::Table, Alias::new(inner), on)
+        .order_by_expr(col(inner, Node::Num), sea_query::Order::Asc);
+    let array = Expr::cust_with_exprs("ARRAY$1", [Expr::from(rows)]);
+    sea_query::Func::cust(Alias::new("unnest")).arg(array)
 }

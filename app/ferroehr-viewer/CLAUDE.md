@@ -12,11 +12,14 @@ extension); the wire it consumes IS spec-bound (`docs/specs/openehr/ITS-REST/`
    generated, never touched; styling is Tailwind v4 standalone, no Node).
 2. **The CDR is reached ONLY over ITS-REST.** Never depend on `app/ferroehr`
    or `app/ferroehr-rest`; allowed deps: `crates/openehr-*` + the network.
-   The one source file shared with `app/ferroehr` is
-   `app/ferroehr/src/manufacturer.rs`, compiled here through a `#[path]`
-   module (`crate::manufacturer`): it holds constants only and needs nothing
-   but `serde`, so the footer and the `/system` manufacturer card name the
-   manufacturer without a request and without a Cargo dependency.
+   The two source files shared with `app/ferroehr` are compiled here through
+   `#[path]` modules and hold constants only (no dependency but `serde`):
+   `app/ferroehr/src/manufacturer.rs` (`crate::manufacturer`), so the footer
+   and the `/system` manufacturer card name the manufacturer without a request,
+   and `app/ferroehr/src/served_vocabulary.rs` (`crate::served_vocabulary`),
+   the deployment gap codes and the OpenAPI family slugs the server holds its
+   own definitions to, so the sandbox notice's gap texts and the `/system`
+   family selector cannot drift from what the server serves.
 3. **Every `#[server]` fn is a publicly reachable HTTP endpoint** — each one
    enforces the viewer's own session auth itself; "only my UI calls this"
    is never assumed.

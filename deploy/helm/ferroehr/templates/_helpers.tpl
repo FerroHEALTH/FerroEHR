@@ -857,12 +857,81 @@ point inside it.
 {{- end }}
 
 {{/*
-The in-cluster address of the release's own CDR, as FerroBRIDGE's `[cdr]
-base_url` names it: the Service, its port and the REST base path, which is the
-server's own default when config.server.base_path is unset.
+"true" when the server's own listener speaks TLS (`config.server.tls.enabled`,
+the `[server.tls]` section of ferroehr.toml), else empty.
 */}}
-{{- define "ferroehr.bridgeCdrUrl" -}}
-{{- printf "http://%s:%v%s" (include "ferroehr.fullname" .) .Values.service.port (dig "server" "base_path" "/ferroehr/rest/openehr/v1" (.Values.config | default dict)) }}
+{{- define "ferroehr.serverTls" -}}
+{{- if dig "server" "tls" "enabled" false (.Values.config | default dict) }}true{{ end }}
+{{- end }}
+
+{{/*
+The in-cluster origin of the release's own CDR (scheme, Service and port): the
+one address every in-chart client builds on, the viewer, FerroBRIDGE and the
+ServiceMonitor scrape alike. The scheme follows the server's own listener,
+because a client speaking plain HTTP to a TLS listener fails every call.
+*/}}
+{{- define "ferroehr.cdrOrigin" -}}
+{{- printf "%s://%s:%v" (ternary "https" "http" (eq (include "ferroehr.serverTls" .) "true")) (include "ferroehr.fullname" .) .Values.service.port }}
+{{- end }}
+
+{{/*
+The in-cluster ITS-REST root of the release's own CDR, as FerroBRIDGE's `[cdr]
+base_url` names it: the origin plus the REST base path, which is the server's
+own default when config.server.base_path is unset.
+*/}}
+{{- define "ferroehr.cdrRestUrl" -}}
+{{- printf "%s%s" (include "ferroehr.cdrOrigin" .) (dig "server" "base_path" "/ferroehr/rest/openehr/v1" (.Values.config | default dict)) }}
+{{- end }}
+
+{{/*
+Where an in-chart client finds the CA that signed the server's own
+certificate, mounted from service.tls.caExistingSecret.
+*/}}
+{{- define "ferroehr.cdrCaDir" -}}
+/etc/ferroehr-cdr-ca
+{{- end }}
+
+{{/*
+Refuse a TLS listener that an in-chart client would call with no CA to check
+its certificate against. Takes a dict: `root` (the chart context) and `client`
+(who calls). The certificate names the in-cluster Service, which no public CA
+issues, so the image's system roots cannot vouch for it.
+*/}}
+{{- define "ferroehr.cdrTrustRequired" -}}
+{{- if and (eq (include "ferroehr.serverTls" .root) "true") (not .root.Values.service.tls.caExistingSecret) -}}
+{{- fail (printf "config.server.tls.enabled=true while %s calls the CDR in-cluster, and service.tls.caExistingSecret is empty: name the Secret holding the CA that signed the server's certificate (a cert-manager Certificate's Secret carries it under `ca.crt`, the default service.tls.caExistingSecretKey). The in-chart clients call https://%s:%v, so the certificate carries that Service name as a DNS SAN, which no public CA issues." .client (include "ferroehr.fullname" .root) .root.Values.service.port) -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+The trust an in-chart client places in the server's own TLS listener, as an
+env entry, a volume mount and a volume, each included only while that listener
+speaks TLS. The viewer and FerroBRIDGE verify through
+rustls-platform-verifier, which on Linux loads its roots with
+rustls-native-certs, and that crate reads ONLY the named directories once
+SSL_CERT_DIR is set
+(https://docs.rs/rustls-native-certs/0.8.4/rustls_native_certs/fn.load_native_certs.html).
+So the image's system directory stays listed beside the mounted CA, for the
+clients' other HTTPS peers (an OIDC issuer, an external terminology server).
+*/}}
+{{- define "ferroehr.cdrTrustEnv" -}}
+- name: SSL_CERT_DIR
+  value: {{ printf "/etc/ssl/certs:%s" (include "ferroehr.cdrCaDir" .) | quote }}
+{{- end }}
+
+{{- define "ferroehr.cdrTrustVolumeMount" -}}
+- name: cdr-ca
+  mountPath: {{ include "ferroehr.cdrCaDir" . }}
+  readOnly: true
+{{- end }}
+
+{{- define "ferroehr.cdrTrustVolume" -}}
+- name: cdr-ca
+  secret:
+    secretName: {{ .Values.service.tls.caExistingSecret }}
+    items:
+      - key: {{ .Values.service.tls.caExistingSecretKey }}
+        path: ca.crt
 {{- end }}
 
 {{/*
@@ -908,7 +977,7 @@ spec governs this; FerroBRIDGE's own configuration reference defines the keys.
 {{- end -}}
 {{- if not (hasKey $config "cdr") -}}{{- $_ := set $config "cdr" (dict) -}}{{- end -}}
 {{- $cdr = get $config "cdr" -}}
-{{- $_ := set $cdr "base_url" (include "ferroehr.bridgeCdrUrl" $) -}}
+{{- $_ := set $cdr "base_url" (include "ferroehr.cdrRestUrl" $) -}}
 {{- if eq $.Values.bridge.cdr.auth "bearer" -}}
 {{- $_ := set $cdr "credentials" (dict "bearer_token_file" (printf "%s/bearer_token" (include "ferroehr.bridgeSecretDir" $))) -}}
 {{- else -}}

@@ -46,7 +46,7 @@ use serde_json::Value;
 use sqlx::Row;
 
 use crate::service::FerroEhrService;
-use crate::service::error::{ServiceError, Violation};
+use crate::service::error::{ErrorChain, ServiceError, Violation};
 use crate::service::list::Page;
 use crate::service::status::{CallStatusType, SmError};
 
@@ -695,7 +695,8 @@ impl FerroEhrService {
             .map_err(|e| {
                 ServiceError::content_invalid(
                     Violation::new(format!(
-                        "ADL2 template {template_id} could not be built into a WebTemplate: {e}"
+                        "ADL2 template {template_id} could not be built into a WebTemplate: {}",
+                        ErrorChain::new(&*e)
                     ))
                     .with_source(e),
                 )
@@ -756,8 +757,11 @@ impl FerroEhrService {
             .await?
             .map_err(|e| {
                 ServiceError::content_invalid(
-                    Violation::new(format!("cannot compile operational template: {e}"))
-                        .with_source(e),
+                    Violation::new(format!(
+                        "cannot compile operational template: {}",
+                        ErrorChain::new(&e)
+                    ))
+                    .with_source(e),
                 )
             })
     }

@@ -89,6 +89,8 @@
   <Property id="91" Text="Flow rate (volume) per area" openEHR="761" />
   <Property id="92" Text="Volume per area" openEHR="762" />
   <Property id="93" Text="Mitotic count" openEHR="763" />
+  <Property id="94" Text="Length per area" openEHR="764" />
+  <Property id="95" Text="Concentration per volume" openEHR="765" />
   <Unit property_id="0" Text="1000th in" name="thousandth of inch" conversion="2.54" coefficient="-5" primary="false" UCUM="[in_i]/1000"/>
   <Unit property_id="0" Text="cm" name="centimeter" conversion="1" coefficient="-2" primary="false" UCUM="cm"/>
   <Unit property_id="0" Text="Fr" name="Charrière, french (Gauge of catheters)" conversion="0.33333333" coefficient="-3" primary="false" UCUM="[Ch]"/>
@@ -269,11 +271,13 @@
   <Unit property_id="20" Text="lbm/ft²·s" conversion="4.883" primary="false" UCUM="[lb_av]/[sft_i].s"/>
   <Unit property_id="21" Text="g/cm²" conversion="1" coefficient="1" primary="false" UCUM="g/cm2"/>
   <Unit property_id="21" Text="g/m²" conversion="1" coefficient="-3" primary="false" UCUM="g/m2"/>
+  <Unit property_id="21" Text="mg/m²" conversion="1" coefficient="-6" primary="false" UCUM="mg/m2"/>
   <Unit property_id="21" Text="g/m^2.7" name="mass per height^2.7 (BSA)" conversion="0" primary="false" UCUM="g/m27.10-1"/>
   <Unit property_id="21" Text="kg/m²" conversion="1" primary="true" UCUM="kg/m2"/>
   <Unit property_id="21" Text="lbm/ft²" conversion="4.883" primary="false" UCUM="[lb_av]/[sft_i]"/>
   <Unit property_id="21" Text="lbm/in²" conversion="703" primary="false" UCUM="[lb_av]/[sin_i]"/>
   <Unit property_id="21" Text="ton/mile²" conversion="3.5" coefficient="-4" primary="false" UCUM="[ston_av]/[mi_i]2"/>
+  <Unit property_id="21" Text="{124/335}" name="{MASS/AREA}" conversion="0" primary="false"/>
   <Unit property_id="22" Text="g/cm³" conversion="1" primary="false" UCUM="g/cm3"/>
   <Unit property_id="22" Text="grain/ft³" conversion="2.289" coefficient="-3" primary="false" UCUM="[gr]/[cft_i]"/>
   <Unit property_id="22" Text="kg/m³" conversion="1" primary="true" UCUM="kg/m3"/>
@@ -634,4 +638,9 @@
   <Unit property_id="93" Text="mitoses/11.85 mm²" name="mitoses per 11.85 square millimetres" conversion="0" primary="false" UCUM="{mitoses}/1185.10-3.mm2"/>
   <Unit property_id="93" Text="mitoses/17.2 mm²" name="mitoses per 17.2 square millimetres" conversion="0" primary="false" UCUM="{mitoses}/172.10-1.mm2"/>
   <Unit property_id="85" Text="CU" name="categorical unit" conversion="0" primary="true" UCUM="[arb'U]{CU}"/>
+  <Unit property_id="94" Text="{122/335}" name="{LENGTH/AREA}" conversion="0" primary="false"/>
+  <Unit property_id="94" Text="mm/m²" name="millimeters per square meter" conversion="0" primary="false" UCUM="mm/m2"/>
+  <Unit property_id="95" Text="{119/129}" name="{CONCENTRATION/VOLUME}" conversion="0" primary="false"/>
+  <Unit property_id="95" Text="ng/mL/cm³" name="nanograms per millilitre per cubic centimetre" conversion="0" primary="false" UCUM="ng/mL/cm3"/>
+  <Unit property_id="95" Text="μg/L/cm³" name="micrograms per litre per cubic centimetre" conversion="0" primary="false" UCUM="ug/L/cm3"/>
 </PropertyUnits>

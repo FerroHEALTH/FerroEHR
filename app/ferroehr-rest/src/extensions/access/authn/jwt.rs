@@ -26,7 +26,7 @@ use std::time::Duration;
 use jsonwebtoken::jwk::JwkSet;
 use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header};
 
-use super::{AuthError, AuthMethod, Principal, TokenRejection};
+use super::{AuthError, AuthMethod, KeyResolutionError, Principal, TokenRejection};
 use ferroehr::config::auth::OidcConfig;
 
 /// A configured bearer-token validator.
@@ -53,6 +53,34 @@ pub(super) struct JwtValidator {
 /// case-insensitive.
 const AT_JWT_TYP: &str = "at+jwt";
 
+/// A JWK Set document that does not parse, reduced to the parser's failure
+/// class and position.
+///
+/// `serde_json`'s own message can quote the offending value, which may be key
+/// material, and a fetched set's failure reaches the `503` body, so only the
+/// category, line and column are kept (the shape the boot validation of
+/// `auth.oidc.jwks_json` reports).
+#[derive(Debug, Clone, Copy, thiserror::Error)]
+#[error("not a JWK Set (RFC 7517 §5): {category:?} error at line {line}, column {column}")]
+struct JwksUnparsable {
+    /// What kind of failure the parser reported.
+    category: serde_json::error::Category,
+    /// The 1-based line of the failure.
+    line: usize,
+    /// The 1-based column of the failure.
+    column: usize,
+}
+
+impl From<serde_json::Error> for JwksUnparsable {
+    fn from(e: serde_json::Error) -> Self {
+        Self {
+            category: e.classify(),
+            line: e.line(),
+            column: e.column(),
+        }
+    }
+}
+
 // The role model lives in `access::authz` so the REST layer and the RBAC gate
 // share one implementation.
 use crate::extensions::access::authz::roles::extract_roles;
@@ -67,11 +95,15 @@ enum KeySource {
 }
 
 impl JwtValidator {
-    /// Builds a validator with explicit RBAC role-claim paths, from
+    /// Builds a validator with explicit role-claim paths, from
     /// `authz.rbac.role_claims`.
     ///
+    /// The key source is the HMAC secret, else the inline `jwks_json`, else the
+    /// issuer's discovered JWKS.
+    ///
     /// # Errors
-    /// Returns a message when the algorithm list or key material is invalid.
+    /// Returns a message when the algorithm list or key material is invalid;
+    /// an unparsable `jwks_json` is named by failure class and position only.
     pub(super) fn with_role_claims(
         cfg: &OidcConfig,
         role_claims: Vec<String>,
@@ -97,7 +129,7 @@ impl JwtValidator {
             KeySource::Hmac(DecodingKey::from_secret(secret.expose().as_bytes()))
         } else if let Some(jwks_json) = &cfg.jwks_json {
             let set: JwkSet = serde_json::from_str(jwks_json)
-                .map_err(|e| format!("invalid oidc.jwks_json: {e}"))?;
+                .map_err(|e| format!("invalid oidc.jwks_json: {}", JwksUnparsable::from(e)))?;
             KeySource::Static(set)
         } else {
             KeySource::Remote(RemoteJwks::new(cfg)?)
@@ -366,27 +398,48 @@ impl RemoteJwks {
         self.cache.get_with(CACHE_KEY, self.fetch()).await
     }
 
+    /// Discovers the issuer's JWKS URI, then fetches and parses the key set.
+    ///
+    /// Every refusal's message is a curated step name; a discovery or
+    /// transport failure, which names the identity provider's URLs, rides the
+    /// source only.
+    ///
+    /// # Errors
+    /// [`AuthError::KeyResolution`] when discovery, the fetch or the parse
+    /// fails; a parse failure is named by failure class and position only.
     async fn fetch(&self) -> Result<Arc<JwkSet>, AuthError> {
         let issuer_url = openidconnect::IssuerUrl::new(self.issuer.clone())
-            .map_err(|e| AuthError::KeyResolution(format!("issuer URL: {e}")))?;
+            .map_err(|e| key_resolution("the issuer URL is invalid", e))?;
         let metadata =
             openidconnect::core::CoreProviderMetadata::discover_async(issuer_url, &self.http)
                 .await
-                .map_err(|e| AuthError::KeyResolution(format!("OIDC discovery: {e}")))?;
+                .map_err(|e| key_resolution("OIDC discovery failed", e))?;
         let jwks_uri = metadata.jwks_uri().url().clone();
         let body = self
             .http
             .get(jwks_uri)
             .send()
             .await
-            .map_err(|e| AuthError::KeyResolution(format!("JWKS fetch: {e}")))?
+            .map_err(|e| key_resolution("the identity provider's key set could not be fetched", e))?
             .text()
             .await
-            .map_err(|e| AuthError::KeyResolution(format!("JWKS body: {e}")))?;
-        let set: JwkSet = serde_json::from_str(&body)
-            .map_err(|e| AuthError::KeyResolution(format!("JWKS parse: {e}")))?;
+            .map_err(|e| key_resolution("the key set response could not be read", e))?;
+        let set: JwkSet = serde_json::from_str(&body).map_err(|e| {
+            AuthError::KeyResolution(KeyResolutionError::new(format!(
+                "JWKS parse: {}",
+                JwksUnparsable::from(e)
+            )))
+        })?;
         Ok(Arc::new(set))
     }
+}
+
+/// A key-set refusal naming the failed `step`, carrying `cause` for the log.
+fn key_resolution(
+    step: &'static str,
+    cause: impl std::error::Error + Send + Sync + 'static,
+) -> AuthError {
+    AuthError::KeyResolution(KeyResolutionError::caused(step, cause))
 }
 
 #[cfg(test)]
@@ -445,6 +498,27 @@ mod tests {
             "exp": now() + 3600,
             "scope": "openid profile",
         })
+    }
+
+    /// An unparsable inline `jwks_json` is refused with its failure class and
+    /// position, never with the parser's message, which quotes the offending
+    /// value.
+    #[test]
+    fn unparsable_inline_jwks_does_not_quote_its_input() {
+        let Err(message) = JwtValidator::with_role_claims(
+            &OidcConfig {
+                issuer: ISSUER.to_owned(),
+                audiences: vec![AUDIENCE.to_owned()],
+                algorithms: vec!["RS256".to_owned()],
+                jwks_json: Some(r#"{"keys":[{"kty":"s3cr3t-key-material"}]}"#.to_owned()),
+                ..OidcConfig::default()
+            },
+            ferroehr::config::authz::RbacConfig::default().role_claims,
+        ) else {
+            panic!("the inline set does not parse");
+        };
+        assert!(!message.contains("s3cr3t"), "{message}");
+        assert!(message.contains("line 1"), "{message}");
     }
 
     #[tokio::test]
@@ -870,6 +944,103 @@ mod tests {
                 .respond_with(ResponseTemplate::new(200).set_body_json(jwks_body()))
                 .mount(server)
                 .await;
+        }
+
+        /// A fetched JWKS that does not parse is refused with its failure
+        /// class and position, never with the parser's message, which quotes
+        /// the offending value.
+        #[tokio::test]
+        async fn unparsable_fetched_jwks_does_not_quote_its_input() {
+            let server = MockServer::start().await;
+            Mock::given(method("GET"))
+                .and(path(DISCOVERY_PATH))
+                .respond_with(ResponseTemplate::new(200).set_body_json(metadata(&server.uri())))
+                .mount(&server)
+                .await;
+            Mock::given(method("GET"))
+                .and(path(JWKS_PATH))
+                .respond_with(
+                    ResponseTemplate::new(200)
+                        .set_body_json(json!({ "keys": [{ "kty": "s3cr3t-key-material" }] })),
+                )
+                .mount(&server)
+                .await;
+
+            let remote = RemoteJwks::new(&oidc(&server.uri(), 10, 5_000)).expect("client");
+            let err = remote.jwks().await.expect_err("the set does not parse");
+            let AuthError::KeyResolution(resolution) = &err else {
+                panic!("got {err:?}");
+            };
+            let message = resolution.to_string();
+            assert!(!message.contains("s3cr3t"), "{message}");
+            assert!(message.contains("line 1"), "{message}");
+        }
+
+        /// A key set that cannot be fetched answers a curated `503` body that
+        /// names neither the identity provider's URL nor the transport error,
+        /// while the log can walk to the concrete `reqwest::Error`.
+        #[tokio::test]
+        async fn a_failed_key_set_fetch_keeps_its_cause_out_of_the_body() {
+            let server = MockServer::start().await;
+            let mut discovered = metadata(&server.uri());
+            // Port 1 refuses the connection, so the key-set fetch itself fails.
+            discovered["jwks_uri"] = json!("http://127.0.0.1:1/jwks");
+            Mock::given(method("GET"))
+                .and(path(DISCOVERY_PATH))
+                .respond_with(ResponseTemplate::new(200).set_body_json(discovered))
+                .mount(&server)
+                .await;
+
+            let remote = RemoteJwks::new(&oidc(&server.uri(), 10, 5_000)).expect("client");
+            let err = remote.jwks().await.expect_err("the fetch is refused");
+            let AuthError::KeyResolution(resolution) = &err else {
+                panic!("got {err:?}");
+            };
+            let transport = std::error::Error::source(resolution)
+                .and_then(|cause| cause.downcast_ref::<reqwest::Error>())
+                .expect("the transport error is the source");
+
+            let api = err.to_api_error();
+            assert_eq!(api.status(), http::StatusCode::SERVICE_UNAVAILABLE);
+            let body = api.to_string();
+            assert!(
+                body.contains("the identity provider's key set could not be fetched"),
+                "{body}"
+            );
+            assert!(
+                !body.contains("127.0.0.1"),
+                "the body names the URL: {body}"
+            );
+            assert!(
+                !body.contains(&transport.to_string()),
+                "the body quotes the transport error: {body}"
+            );
+        }
+
+        /// A failed discovery names the step, never the issuer's discovery URL.
+        #[tokio::test]
+        async fn a_failed_discovery_keeps_the_issuer_url_out_of_the_body() {
+            let server = MockServer::start().await;
+            Mock::given(method("GET"))
+                .and(path(DISCOVERY_PATH))
+                .respond_with(ResponseTemplate::new(500))
+                .mount(&server)
+                .await;
+
+            let remote = RemoteJwks::new(&oidc(&server.uri(), 10, 5_000)).expect("client");
+            let err = remote.jwks().await.expect_err("discovery fails");
+            assert!(
+                std::error::Error::source(&err)
+                    .and_then(std::error::Error::source)
+                    .is_some(),
+                "the discovery error rides the chain: {err:?}"
+            );
+            let body = err.to_api_error().to_string();
+            assert!(body.contains("OIDC discovery failed"), "{body}");
+            assert!(
+                !body.contains(&server.uri()),
+                "the body names the issuer: {body}"
+            );
         }
 
         #[tokio::test]

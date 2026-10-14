@@ -328,7 +328,7 @@ impl FerroEhrService {
             ));
         };
         audit_store.search(filter).await.map_err(|e| {
-            crate::service::error::internal_fault("search the audit record repository", &e)
+            crate::service::error::internal_fault_caused("search the audit record repository", &e)
         })
     }
 }

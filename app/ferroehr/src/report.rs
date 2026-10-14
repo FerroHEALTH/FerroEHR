@@ -37,6 +37,7 @@ use crate::config::secret::{REDACTED, redact_userinfo};
 use crate::db::domain::Domain;
 use crate::db::{DatabaseLevels, DbError};
 use crate::licence::state::{LicenceState, LicenceStatus};
+use crate::service::error::ErrorChain;
 use crate::system_log::config::AuditPosture;
 use crate::telemetry::build_info::BuildInfo;
 
@@ -238,7 +239,7 @@ fn licence_part(
                 "licence",
                 format!(
                     "the embedded licence anchors do not parse: {}",
-                    chain(&error)
+                    ErrorChain::new(&error)
                 ),
             ));
             None
@@ -320,6 +321,13 @@ enum DatabaseFailure {
 
 impl DatabaseFailure {
     /// The reason as the manifest states it, with every credential masked.
+    ///
+    /// A read is `unreachable` when no connection was ever made: a failure
+    /// only opening a connection produces
+    /// ([`crate::storage::error::is_connect_failure`], the storage bridge's own
+    /// connect-phase classifier), or a pool that handed out none within its
+    /// acquire timeout. Anything else failed on a connection that worked, so
+    /// the database is `unreadable`.
     fn describe(&self, scrubber: &Scrubber) -> String {
         match self {
             Self::TimedOut => format!(
@@ -328,12 +336,16 @@ impl DatabaseFailure {
             ),
             Self::Failed(error) => {
                 let verdict = match error {
-                    DbError::Sqlx(
-                        sqlx::Error::Io(_) | sqlx::Error::Tls(_) | sqlx::Error::PoolTimedOut,
-                    ) => "unreachable",
+                    DbError::Sqlx(e)
+                        if matches!(e, sqlx::Error::PoolTimedOut)
+                            || crate::storage::error::is_connect_failure(e) =>
+                    {
+                        "unreachable"
+                    }
                     _ => "unreadable",
                 };
-                format!("{verdict}: {}", scrubber.scrub(&chain(error)))
+                let chain = ErrorChain::new(error).to_string();
+                format!("{verdict}: {}", scrubber.scrub(&chain))
             }
         }
     }
@@ -359,18 +371,6 @@ async fn read_facts(config: &FerroEhrConfig) -> Result<DatabaseFacts, DbError> {
     let facts = crate::db::database_facts(&db, &config.storage, &pools).await;
     pools.close().await;
     facts
-}
-
-/// Renders an error and every cause under it on one line, colon-separated.
-fn chain(error: &dyn std::error::Error) -> String {
-    let mut text = error.to_string();
-    let mut cause = error.source();
-    while let Some(next) = cause {
-        text.push_str(": ");
-        text.push_str(&next.to_string());
-        cause = next.source();
-    }
-    text
 }
 
 /// The optional-integration cargo features compiled into this build.

@@ -677,11 +677,11 @@ fn emit_read_loop(b: &mut String, fields: &[XmlField], attrs: &BTreeSet<String>)
         let wire = &f.wire_name;
         match read_shape(f, attrs) {
             ReadShape::Attribute | ReadShape::ComplexHash => {}
-            // StringDictionaryItem: `<name id="key">value</name>`.
+            // StringDictionaryItem: `<name id="key">value</name>`, `id` use="required".
             ReadShape::StringHash { .. } => {
                 let _ = writeln!(
                     b,
-                    "\"{wire}\" => {{ let __k = __c.attr(\"id\").unwrap_or(\"\").to_string(); let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?; {var}.insert(__k, __v); }}"
+                    "\"{wire}\" => {{ let __k = __c.attr(\"id\").ok_or_else(|| reader.missing_attribute(\"StringDictionaryItem\", \"id\"))?.to_string(); let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?; {var}.insert(__k, __v); }}"
                 );
             }
             ReadShape::Multiple => {

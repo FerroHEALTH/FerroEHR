@@ -75,7 +75,7 @@ pub enum ServeError {
     #[error("authentication configuration error: {0}")]
     Auth(String),
     /// Binding the listener or serving failed.
-    #[error("server I/O error: {0}")]
+    #[error("binding or serving the listener failed")]
     Io(#[from] std::io::Error),
 }
 
@@ -88,7 +88,7 @@ pub fn build_with(
     config: AppConfig,
     backend: Arc<FerroEhrService>,
 ) -> Result<axum::Router, ServeError> {
-    let authenticator = Authenticator::new(config.auth.clone()).map_err(ServeError::Auth)?;
+    let authenticator = build_authenticator(&config)?;
     let state = AppState::with_backend(config, backend);
     Ok(router(state, authenticator))
 }
@@ -126,23 +126,23 @@ pub fn build_full(
     authz: Option<Arc<AuthzHandle>>,
     observability: Observability,
 ) -> Result<axum::Router, ServeError> {
-    let authenticator = build_authenticator(&config, authz.as_deref())?;
+    let authenticator = build_authenticator(&config)?;
     let state = AppState::with_parts(config, backend, authz, observability);
     Ok(router(state, authenticator))
 }
 
-/// Build the [`Authenticator`], threading the RBAC role-claim paths from the
-/// authorization handle (default paths when none is wired) so Bearer role
-/// extraction matches the gate's configuration.
-fn build_authenticator(
-    config: &AppConfig,
-    authz: Option<&AuthzHandle>,
-) -> Result<Arc<Authenticator>, ServeError> {
-    let role_claims = authz.map_or_else(
-        || ferroehr::config::authz::RbacConfig::default().role_claims,
-        AuthzHandle::role_claims,
-    );
-    Authenticator::with_role_claims(config.auth.clone(), role_claims).map_err(ServeError::Auth)
+/// Builds the [`Authenticator`] with the configured role-claim paths.
+///
+/// The paths are `[authz.rbac] role_claims` as lifted into
+/// [`AppConfig::role_claims`], whether or not an authorization gate is wired,
+/// so Bearer role extraction never falls back to the defaults behind the
+/// operator's back.
+///
+/// # Errors
+/// [`ServeError::Auth`] if the OIDC key material/algorithms are invalid.
+fn build_authenticator(config: &AppConfig) -> Result<Arc<Authenticator>, ServeError> {
+    Authenticator::with_role_claims(config.auth.clone(), config.role_claims.clone())
+        .map_err(ServeError::Auth)
 }
 
 /// Builds and serves the application with full observability.
@@ -160,7 +160,7 @@ pub async fn serve_full(
     authz: Option<Arc<AuthzHandle>>,
     observability: Observability,
 ) -> Result<(), ServeError> {
-    let authenticator = build_authenticator(&config, authz.as_deref())?;
+    let authenticator = build_authenticator(&config)?;
     let bind = config.server.bind.clone();
     let tls = config.server.tls.clone();
     let connection = config.server.connection;
@@ -424,4 +424,68 @@ async fn shutdown_signal() {
         () = terminate => {},
     }
     tracing::info!("shutdown signal received");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ferroehr::config::auth::{AuthConfig, OidcConfig};
+    use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
+
+    const SECRET: &str = "role-claims-secret";
+
+    /// The claim set the test token carries, roles under a custom path.
+    #[derive(serde::Serialize)]
+    struct Claims {
+        sub: &'static str,
+        iss: &'static str,
+        aud: &'static str,
+        exp: i64,
+        app_roles: [&'static str; 1],
+    }
+
+    /// The configured `[authz.rbac] role_claims` reach the authenticator with
+    /// no authorization handle wired (RBAC, ABAC and the per-EHR default all
+    /// off), so a role under a custom claim path is extracted.
+    #[tokio::test]
+    async fn configured_role_claims_apply_without_an_authz_handle() {
+        let config = AppConfig {
+            auth: AuthConfig {
+                enabled: true,
+                basic: None,
+                oidc: Some(OidcConfig {
+                    issuer: "https://issuer.example".to_owned(),
+                    audiences: vec!["ferroehr".to_owned()],
+                    algorithms: vec!["HS256".to_owned()],
+                    hmac_secret: Some(ferroehr::config::secret::Secret::new(SECRET.to_owned())),
+                    jwks_json: None,
+                    ..OidcConfig::default()
+                }),
+                ..AuthConfig::default()
+            },
+            role_claims: vec!["app_roles".to_owned()],
+            ..AppConfig::default()
+        };
+        let authenticator = build_authenticator(&config).expect("authenticator");
+        let exp = jiff::Timestamp::now().as_second() + 3600;
+        let token = encode(
+            &Header::new(Algorithm::HS256),
+            &Claims {
+                sub: "alice",
+                iss: "https://issuer.example",
+                aud: "ferroehr",
+                exp,
+                app_roles: ["CLINICIAN"],
+            },
+            &EncodingKey::from_secret(SECRET.as_bytes()),
+        )
+        .expect("encode");
+        let mut headers = http::HeaderMap::new();
+        headers.insert(
+            http::header::AUTHORIZATION,
+            http::HeaderValue::from_str(&format!("Bearer {token}")).expect("header"),
+        );
+        let authenticated = authenticator.authenticate(&headers).await.expect("valid");
+        assert_eq!(authenticated.principal.roles, vec!["CLINICIAN".to_owned()]);
+    }
 }

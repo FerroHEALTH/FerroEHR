@@ -102,9 +102,7 @@ impl BlobStore {
             // No credentials → run unsigned/anonymous (dev SeaweedFS).
             _ => builder = builder.with_skip_signature(true),
         }
-        let store = builder
-            .build()
-            .map_err(|e| MultimediaError::ConfigFailed(e.to_string(), e))?;
+        let store = builder.build().map_err(MultimediaError::ConfigFailed)?;
         Ok(Self {
             inner: Arc::new(store),
             bucket: params.bucket,

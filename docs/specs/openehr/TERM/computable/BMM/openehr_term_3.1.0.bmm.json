@@ -7,6 +7,11 @@
     "schema_lifecycle_state": "stable",
     "schema_description": "term",
     "schema_author": "Thomas Beale <thomas.beale@openehr.org>, code-generator",
+    "includes": {
+        "openehr_base_1.3.0": {
+            "id": "openehr_base_1.3.0"
+        }
+    },
     "packages": {
         "org.openehr.term.terminology": {
             "name": "org.openehr.term.terminology",
@@ -70,7 +75,7 @@
                     "name": "status",
                     "documentation": "Status of this code set.",
                     "type": "TERMINOLOGY_STATUS",
-                    "default": ""
+                    "default": "active"
                 }
             }
         },
@@ -110,7 +115,7 @@
                     "name": "status",
                     "documentation": "Status of this vocabulary.",
                     "type": "TERMINOLOGY_STATUS",
-                    "default": ""
+                    "default": "active"
                 }
             }
         },
@@ -136,7 +141,7 @@
                     "name": "status",
                     "documentation": "Status of this code within the code set.",
                     "type": "TERMINOLOGY_STATUS",
-                    "default": ""
+                    "default": "active"
                 }
             }
         },
@@ -163,7 +168,7 @@
                     "name": "status",
                     "documentation": "Status of this concept within the vocabulary.",
                     "type": "TERMINOLOGY_STATUS",
-                    "default": ""
+                    "default": "active"
                 }
             }
         },

@@ -139,6 +139,7 @@ impl FerroEhrConfig {
         );
         self.validate_cohort(&mut errors);
         self.validate_deployment(&mut errors);
+        self.validate_ehr_access(&mut errors);
         errors.extend(self.usage_report.errors());
         errors.extend(multimedia_endpoint_errors(&self.multimedia));
         // management.port must differ from the server.bind port.
@@ -339,6 +340,26 @@ impl FerroEhrConfig {
                 "deployment_accepts is set under deployment_profile = \"sandbox\", which accepts \
                  every gap already; the key belongs to a production deployment that runs \
                  without a named separation"
+                    .to_owned(),
+            ));
+        }
+    }
+
+    /// A `restricted` per-EHR default needs authentication to be enforced.
+    ///
+    /// With `auth.enabled = false` the server wires no authorization at all and
+    /// no caller carries a role, so the default could only be ignored, which is
+    /// the silent opposite of what the key says. The combination is refused
+    /// instead. No openEHR spec governs configuration — our own design.
+    fn validate_ehr_access(&self, errors: &mut Vec<ConfigError>) {
+        if !self.auth.enabled
+            && self.authz.rbac.ehr_access_default == authz::EhrAccessDefault::Restricted
+        {
+            errors.push(ConfigError::semantic(
+                "authz.rbac.ehr_access_default = \"restricted\" cannot be enforced with \
+                 auth.enabled = false: no caller is authenticated, so none holds \
+                 authz.rbac.admin_role; enable authentication, or set \
+                 ehr_access_default = \"open\""
                     .to_owned(),
             ));
         }
@@ -1986,6 +2007,37 @@ mod tests {
 
         config.audit.purpose_codes.push("ETREAT".to_owned());
         config.validate().expect("ETREAT is agreed");
+    }
+
+    /// A `restricted` EHR default with authentication off is a boot error, since
+    /// nothing could enforce it; with authentication on it validates, RBAC on or
+    /// off, and an `open` default never trips the check.
+    #[test]
+    fn a_restricted_ehr_default_without_authentication_is_refused() {
+        let mut config = FerroEhrConfig::default();
+        config.authz.rbac.ehr_access_default = authz::EhrAccessDefault::Restricted;
+        config
+            .validate()
+            .expect("restricted with authentication validates");
+        config.authz.rbac.enabled = false;
+        config
+            .validate()
+            .expect("restricted with RBAC off validates: the per-EHR gate applies it");
+
+        config.auth.enabled = false;
+        let text = config
+            .validate()
+            .expect_err("restricted cannot be enforced without authentication")
+            .to_string();
+        assert!(
+            text.contains("ehr_access_default") && text.contains("auth.enabled = false"),
+            "{text}"
+        );
+
+        config.authz.rbac.ehr_access_default = authz::EhrAccessDefault::Open;
+        config
+            .validate()
+            .expect("an open default needs no authentication");
     }
 
     /// The `[usage_report]` section maps from the environment, the switch

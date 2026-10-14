@@ -144,10 +144,7 @@ fn parse_tree(xml: &str) -> Result<El, FlatError> {
     let mut root: Option<El> = None;
 
     loop {
-        match reader
-            .read_event()
-            .map_err(|e| FlatError::Conversion(format!("TDD is not well-formed XML: {e}")))?
-        {
+        match reader.read_event().map_err(FlatError::TddXml)? {
             Event::Start(e) => stack.push(start_element(&e)?),
             Event::Empty(e) => {
                 stack.push(start_element(&e)?);
@@ -172,12 +169,11 @@ fn parse_tree(xml: &str) -> Result<El, FlatError> {
 /// Reads one start tag into a childless [`El`].
 ///
 /// # Errors
-/// Returns [`FlatError::Conversion`] if an attribute is malformed.
+/// Returns [`FlatError::TddAttribute`] if an attribute is malformed.
 fn start_element(e: &quick_xml::events::BytesStart<'_>) -> Result<El, FlatError> {
     let mut attrs = Vec::new();
     for a in e.attributes() {
-        let a =
-            a.map_err(|err| FlatError::Conversion(format!("malformed TDD attribute: {err}")))?;
+        let a = a.map_err(FlatError::TddAttribute)?;
         let key = a.key.as_ref().to_owned();
         let val = a.value.as_ref().to_owned();
         attrs.push((key, val));
@@ -283,7 +279,6 @@ fn xml_escape(s: &str) -> String {
 /// content, which is what the `400`/`422` body must show the caller.
 fn parse_typed(el: &El, type_name: &str) -> Result<Value, FlatError> {
     use openehr_base::prelude::UidBasedId;
-    use openehr_its::xml::from_canonical_xml as fx;
     use openehr_rm::prelude::{
         CodePhrase, DataValue, DvBoolean, DvCodedText, DvCount, DvDate, DvDateTime, DvDuration,
         DvEhrUri, DvIdentifier, DvMultimedia, DvOrdinal, DvParagraph, DvParsable, DvProportion,
@@ -295,8 +290,12 @@ fn parse_typed(el: &El, type_name: &str) -> Result<Value, FlatError> {
     let xml = to_canonical_xml(el, Some(resolved));
     macro_rules! p {
         ($t:ty) => {{
-            let v: $t = fx(&xml)
-                .map_err(|e| FlatError::Conversion(format!("TDD {}: {e}", stringify!($t))))?;
+            let v: $t = openehr_its::xml::from_canonical_xml(&xml).map_err(|source| {
+                FlatError::TddElement {
+                    rm_type: stringify!($t),
+                    source,
+                }
+            })?;
             openehr_its::json::to_canonical_value(&v)
         }};
     }
@@ -403,9 +402,11 @@ fn is_locatable(rm_type: &str) -> bool {
 /// Convert a TDD XML instance to a canonical-JSON `COMPOSITION`, guided by `wt`.
 ///
 /// # Errors
-/// [`FlatError::Conversion`] if the TDD is not well-formed XML, its root does not
-/// match the template, or a leaf/attribute fragment cannot be parsed as its RM
-/// type.
+/// [`FlatError::TddXml`] if the TDD is not well-formed XML,
+/// [`FlatError::TddAttribute`] on a malformed attribute,
+/// [`FlatError::TddElement`] if a leaf fragment cannot be parsed as its RM
+/// type, and [`FlatError::Conversion`] if its root does not match the
+/// template.
 pub fn from_tdd(tdd_xml: &str, wt: &WebTemplate) -> Result<Value, FlatError> {
     let root_el = parse_tree(tdd_xml)?;
     let root_id = &wt.tree.id;

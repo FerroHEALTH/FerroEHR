@@ -1,20 +1,22 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! WHERE-clause lowering (QUERY master03 §WHERE, §Operators, §Logical
-//! operators), the whitelisted scalar functions (§Functions), and the node/
-//! source predicate conditions (§Standard predicate, §Node predicate).
+//! The scalar WHERE tests (QUERY master03 §WHERE, §Operators), the
+//! whitelisted scalar functions (§Functions), and the node/source predicate
+//! conditions (§Standard predicate, §Node predicate).
 //!
-//! No openEHR spec governs the SQL shapes — this is our own design. Every operator maps to a typed `sea-query`
-//! binary op; string functions extract as text and numeric functions through the
-//! magnitude coercion, following each function's declared signature.
+//! No openEHR spec governs the SQL shapes — this is our own design. Every
+//! operator maps to a typed `sea-query` binary op; string functions extract as
+//! text and numeric functions through the magnitude coercion, following each
+//! function's declared signature. The WHERE clause's boolean structure and
+//! its step bindings live in the `condition` module.
 
-use sea_query::{Expr, ExprTrait as _};
+use sea_query::{Expr, ExprTrait};
 
 use crate::aql::error::{AqlError, SqlError};
 use crate::aql::ir::{
-    ArchetypeConstraint, Bind, Coercion, EhrField, Expr as IrExpr, LeafPath, LikePattern,
-    NameConstraint, NodeConstraint, Operand, PathTarget, StdPredicate, TypedLit,
+    ArchetypeConstraint, Bind, Coercion, EhrField, LikePattern, NameConstraint, NodeConstraint,
+    Operand, PathTarget, StdPredicate, TypedLit,
 };
 use crate::db::iden::{Ehr, Node};
 use openehr_query::ast::{BuiltinFunction, DateTimeFunction, NumericFunction, StringFunction};
@@ -27,97 +29,75 @@ use super::{Builder, ValueMode};
 impl Builder<'_> {
     // ── WHERE ──────────────────────────────────────────────────────────────────
 
+    /// Adds the WHERE clause ([`Self::where_condition`]).
+    ///
+    /// # Errors
+    /// [`AqlError`] from the path, parameter and function lowerings.
     pub(super) fn build_where(&mut self) -> Result<(), AqlError> {
-        let Some(filter) = self.ir.filter.clone() else {
-            return Ok(());
-        };
-        let cond = self.where_expr(&filter, true)?;
-        self.q.and_where(cond);
+        if let Some(cond) = self.where_condition()? {
+            self.q.and_where(cond);
+        }
         Ok(())
     }
 
-    /// Lower one WHERE expression. `positive` tracks the polarity (flipped
-    /// under `NOT`): the existential anchored-leaf lowering
-    /// ([`data_leaf_exists`](Self::data_leaf_exists)) applies only in
-    /// positive positions, so `NOT (path > x)` keeps the scalar shape and
-    /// its SQL three-valued behaviour for absent leaves is unchanged.
-    pub(super) fn where_expr(&mut self, expr: &IrExpr, positive: bool) -> Result<Expr, AqlError> {
+    /// Lowers one comparison, `EXISTS`, `LIKE` or `matches` to its scalar
+    /// shape: the path reads one value per row (the bound node, or the first
+    /// match below it) and the test applies to that value.
+    ///
+    /// # Errors
+    /// [`AqlError`] from the operand and parameter lowerings.
+    pub(super) fn scalar_test(&mut self, expr: &crate::aql::ir::Expr) -> Result<Expr, AqlError> {
         match expr {
-            IrExpr::And(a, b) => Ok(self
-                .where_expr(a, positive)?
-                .and(self.where_expr(b, positive)?)),
-            IrExpr::Or(a, b) => Ok(self
-                .where_expr(a, positive)?
-                .or(self.where_expr(b, positive)?)),
-            IrExpr::Not(a) => Ok(self.where_expr(a, !positive)?.not()),
-            IrExpr::Compare {
+            crate::aql::ir::Expr::Compare {
                 lhs,
                 op,
                 rhs,
                 coercion,
-            } => self.compare_expr(lhs, *op, rhs, *coercion, positive),
-            IrExpr::Exists(target) => self.exists_path_expr(target),
-            IrExpr::Like { path, pattern } => self.like_expr(path, pattern, positive),
-            IrExpr::Const(b) => Ok(Expr::val(*b)),
-            IrExpr::Matches {
+            } => self.compare_expr(lhs, *op, rhs, *coercion),
+            crate::aql::ir::Expr::Exists(target) => Ok(self
+                .value_expr(target, ValueMode::Projection)?
+                .is_not_null()),
+            crate::aql::ir::Expr::Like { path, pattern } => {
+                let pat = self.like_pattern(pattern)?;
+                Ok(self
+                    .value_expr(path, ValueMode::Value(Coercion::Text))?
+                    .like(pat))
+            }
+            crate::aql::ir::Expr::Matches {
                 path,
                 values,
                 coercion,
-            } => self.matches_expr(path, values, *coercion, positive),
-        }
-    }
-
-    /// Lowers `EXISTS <path>` (QUERY master03 §EXISTS): true when the path has
-    /// a value on ANY node the anchored walk matches / ANY fragment item — the
-    /// existential shape is exact for pure existence in BOTH polarities (the
-    /// test is boolean, so the three-valued caveat on comparisons does not
-    /// apply). A leaf the existential lowering declines (uid synthesis, a
-    /// promoted column, a single-valued inline read) keeps the scalar
-    /// `IS NOT NULL` shape, which is exact there.
-    ///
-    /// # Errors
-    /// [`AqlError`] from the path lowerings.
-    fn exists_path_expr(&mut self, target: &PathTarget) -> Result<Expr, AqlError> {
-        if let Some(leaf) = Self::existential_leaf(target) {
-            let leaf = leaf.clone();
-            self.ensure_leaf_root(target)?;
-            if let Some(expr) = self.data_leaf_exists(
-                &leaf,
-                ValueMode::Projection,
-                sea_query::ExprTrait::is_not_null,
-            )? {
-                return Ok(expr);
+            } => {
+                let (mode, members) = self.matches_members(values, *coercion)?;
+                Ok(self.value_expr(path, mode)?.is_in(members))
             }
+            crate::aql::ir::Expr::And(..)
+            | crate::aql::ir::Expr::Or(..)
+            | crate::aql::ir::Expr::Not(_)
+            | crate::aql::ir::Expr::Const(_) => Err(SqlError::Unsupported(
+                "a compound expression as a scalar test".to_owned(),
+            )
+            .into()),
         }
-        Ok(self
-            .value_expr(target, ValueMode::Projection)?
-            .is_not_null())
     }
 
-    /// Lowers a comparison, taking the first lowering that applies: the typed
-    /// EHR-id fast path, the existential anchored-leaf shape, then the generic
+    /// Lowers a comparison: the typed EHR-id fast path, else the generic
     /// operand comparison.
     ///
     /// # Errors
     /// [`AqlError`] from the operand lowerings.
-    fn compare_expr(
+    pub(super) fn compare_expr(
         &mut self,
         lhs: &Operand,
         op: CompOp,
         rhs: &Operand,
         coercion: Coercion,
-        positive: bool,
     ) -> Result<Expr, AqlError> {
         // `e/ehr_id/value = <uuid>` compares as uuid on `ehr.id`, keeping the
         // btree usable where a two-sided text cast would not. uuid equality is
         // case-insensitive, which is also the identifier-equality semantics
         // (BASE base_types master05 §Composite Identifiers and Case).
         if let Some(expr) = self.ehr_id_typed_compare(lhs, op, rhs)? {
-            return Ok(expr);
-        }
-        // Existential lowering for an anchored data leaf compared to a bound
-        // value (any matched node satisfies) — positive polarity only.
-        if positive && let Some(expr) = self.exists_compare(lhs, op, rhs, coercion)? {
             return Ok(expr);
         }
         // A mixed-type (`Raw`) leaf compared to a numeric literal is compared
@@ -138,56 +118,29 @@ impl Builder<'_> {
         Ok(l.binary(binoper(op), r))
     }
 
-    /// Lowers a LIKE, with the existential anchored-leaf shape in positive
-    /// positions.
-    ///
-    /// The existential lowering is the any-match unification `exists_compare`
-    /// applies: the scalar LIMIT-1 extraction's matched-node choice is
-    /// order-undefined when the path matches several nodes, so it fires in
-    /// positive polarity only, like every existential arm.
+    /// The SQL `LIKE` pattern of an AQL pattern (QUERY master03
+    /// §Operators/LIKE).
     ///
     /// # Errors
-    /// [`AqlError`] from the parameter and path lowerings.
-    fn like_expr(
-        &mut self,
-        path: &PathTarget,
-        pattern: &LikePattern,
-        positive: bool,
-    ) -> Result<Expr, AqlError> {
-        let pat = match pattern {
+    /// [`SqlError::UnboundParameter`] for an unbound pattern parameter.
+    pub(super) fn like_pattern(&self, pattern: &LikePattern) -> Result<String, AqlError> {
+        Ok(match pattern {
             LikePattern::Literal(s) => aql_like_to_sql(s),
             LikePattern::Param(p) => aql_like_to_sql(&self.param_str(p)?),
-        };
-        if positive && let Some(leaf) = Self::existential_leaf(path) {
-            let leaf = leaf.clone();
-            self.ensure_leaf_root(path)?;
-            let pat = pat.clone();
-            if let Some(expr) =
-                self.data_leaf_exists(&leaf, ValueMode::Value(Coercion::Text), |extract| {
-                    extract.like(pat)
-                })?
-            {
-                return Ok(expr);
-            }
-        }
-        let lhs = self.value_expr(path, ValueMode::Value(Coercion::Text))?;
-        Ok(lhs.like(pat))
+        })
     }
 
-    /// Lowers a MATCHES (QUERY master03 §matches), with the same existential
-    /// anchored-leaf shape LIKE uses.
-    ///
-    /// A mixed-type leaf matched against numeric literals compares numerically.
+    /// The extraction mode and the coerced members of a `matches` value list
+    /// (QUERY master03 §matches): a mixed-type leaf matched against numeric
+    /// literals compares numerically.
     ///
     /// # Errors
-    /// [`AqlError`] from the member-value and path lowerings.
-    fn matches_expr(
-        &mut self,
-        path: &PathTarget,
+    /// [`AqlError`] from binding or coercing a member.
+    pub(super) fn matches_members(
+        &self,
         values: &[Bind],
         coercion: Coercion,
-        positive: bool,
-    ) -> Result<Expr, AqlError> {
+    ) -> Result<(ValueMode, Vec<Expr>), AqlError> {
         let numeric = coercion == Coercion::Raw
             && values
                 .iter()
@@ -206,18 +159,7 @@ impl Builder<'_> {
                 coerce_rhs(v, coercion)?
             });
         }
-        if positive && let Some(leaf) = Self::existential_leaf(path) {
-            let leaf = leaf.clone();
-            self.ensure_leaf_root(path)?;
-            let members = members.clone();
-            if let Some(expr) =
-                self.data_leaf_exists(&leaf, mode, |extract| extract.is_in(members))?
-            {
-                return Ok(expr);
-            }
-        }
-        let lhs = self.value_expr(path, mode)?;
-        Ok(lhs.is_in(members))
+        Ok((mode, members))
     }
 
     /// The typed EHR-id comparison fast path: fires only for
@@ -382,74 +324,6 @@ impl Builder<'_> {
         })
     }
 
-    /// The existential lowering of `path OP bound` / `bound OP path` where
-    /// the path is an anchored data leaf and the other operand is a
-    /// literal/param/scalar-function (never a second path — correlating two
-    /// walks stays scalar). Returns `Ok(None)` where the lowering does not
-    /// apply; the caller falls back to the scalar comparison.
-    /// The anchored data leaf of an existential-lowering candidate path —
-    /// the same `PathTarget` arms [`exists_compare`](Self::exists_compare)
-    /// admits. `None` falls back to the scalar lowering.
-    fn existential_leaf(target: &PathTarget) -> Option<&LeafPath> {
-        match target {
-            PathTarget::Data(leaf) | PathTarget::EhrStatus(leaf) => Some(leaf),
-            _ => None,
-        }
-    }
-
-    /// The `EHR_STATUS` root join an existential `EhrStatus` leaf needs before
-    /// its walk (the `exists_compare` preamble, shared by LIKE/matches).
-    fn ensure_leaf_root(&mut self, target: &PathTarget) -> Result<(), AqlError> {
-        if let PathTarget::EhrStatus(leaf) = target {
-            self.ensure_ehr_status_root(leaf.source.0)?;
-        }
-        Ok(())
-    }
-
-    fn exists_compare(
-        &mut self,
-        lhs: &Operand,
-        op: CompOp,
-        rhs: &Operand,
-        coercion: Coercion,
-    ) -> Result<Option<Expr>, AqlError> {
-        // Exactly one side a path; the extract keeps its written orientation.
-        let (leaf_target, bound, path_is_lhs) = match (lhs, rhs) {
-            (Operand::Path(t), b) if !matches!(b, Operand::Path(_)) => (t, b, true),
-            (b, Operand::Path(t)) if !matches!(b, Operand::Path(_)) => (t, b, false),
-            _ => return Ok(None),
-        };
-        let leaf = match leaf_target {
-            PathTarget::Data(leaf) => leaf.clone(),
-            PathTarget::EhrStatus(leaf) => {
-                self.ensure_ehr_status_root(leaf.source.0)?;
-                leaf.clone()
-            }
-            _ => return Ok(None),
-        };
-        // The same numeric-vs-text branch as the scalar comparison (QUERY
-        // master03 §Comparison operators).
-        let raw_numeric = coercion == Coercion::Raw && raw_numeric_wanted(&[lhs, rhs]);
-        let (mode, bound_expr) = if raw_numeric {
-            (
-                ValueMode::RawNumeric,
-                self.operand_value_raw_numeric(bound)?,
-            )
-        } else {
-            (
-                ValueMode::Value(coercion),
-                self.operand_value(bound, coercion)?,
-            )
-        };
-        self.data_leaf_exists(&leaf, mode, |extract| {
-            if path_is_lhs {
-                extract.binary(binoper(op), bound_expr)
-            } else {
-                bound_expr.binary(binoper(op), extract)
-            }
-        })
-    }
-
     pub(super) fn operand_value(
         &mut self,
         op: &Operand,
@@ -476,7 +350,7 @@ impl Builder<'_> {
     /// Lower a comparison operand for the numeric branch of a mixed-type (`Raw`)
     /// comparison: the path side extracts through the NULL-guarded numeric
     /// mode, literals/params cast to `numeric` (QUERY master03 §Comparison operators).
-    fn operand_value_raw_numeric(&mut self, op: &Operand) -> Result<Expr, AqlError> {
+    pub(super) fn operand_value_raw_numeric(&mut self, op: &Operand) -> Result<Expr, AqlError> {
         match op {
             Operand::Path(t) => self.value_expr(t, ValueMode::RawNumeric),
             Operand::Literal(lit) => {
@@ -552,7 +426,7 @@ impl Builder<'_> {
 /// when a comparison partner is a numeric literal — "numeric for numbers, text
 /// otherwise" (QUERY master03 §Comparison operators). Parameters are untyped at
 /// plan time and keep the text path.
-fn raw_numeric_wanted(operands: &[&Operand]) -> bool {
+pub(super) fn raw_numeric_wanted(operands: &[&Operand]) -> bool {
     operands.iter().any(|o| {
         matches!(
             o,

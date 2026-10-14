@@ -2,7 +2,7 @@
 
 - Source: https://github.com/openEHR/specifications-AM
 - Ref: master (AM 2.4.0 + ADL/AOM/OPT 1.4)
-- Commit: `da06d63297e8549a351c854d8b1c45cd9f1d577c`
+- Commit: `82284df6c0f68aef48eb9bb48344972b9d385a42`
 - License: CC-BY-SA 3.0 Unported — the upstream `LICENSE` is vendored verbatim alongside
   this file, from the same pinned commit. Root reference copies:
   `LICENSE-CC-BY-SA-3.0` / `LICENSE-APACHE-2.0`.
@@ -17,6 +17,9 @@
   `image::{images_uri}/<name>`, taken byte-for-byte from the same pinned
   commit. Referenced files only — the upstream figure directories are not
   mirrored wholesale.
+- Upstream repo tooling excluded: `.git`, `.github`, `.claude`, `.junie`,
+  `AGENTS.md`, `CLAUDE.md`, `tmp-*` scratch notes, the top-level
+  `development/` build-tooling directory and dependency manifests.
 - Unreferenced figures, UML `.xmi`/`.mdzip`, XSDs and other binaries
   excluded — fetch from the repo at the pinned commit.
 

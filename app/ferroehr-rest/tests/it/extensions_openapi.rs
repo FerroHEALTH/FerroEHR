@@ -409,6 +409,35 @@ fn document_operations(doc: &Value) -> Vec<(String, String)> {
     out
 }
 
+/// Every operation of the served document declares an `operationId`, and no
+/// id occurs twice: OpenAPI 3.1.0 §4.8.10.1 requires it to be "unique among
+/// all operations described in the API", and the EHR and demographic APIs
+/// share the released `contribution_create` / `contribution_get`.
+#[test]
+fn every_operation_id_is_unique_in_the_served_document() {
+    let doc = serde_json::to_value(extensions_document(&app_config())).expect("serialise doc");
+    let mut owners: std::collections::BTreeMap<String, Vec<String>> =
+        std::collections::BTreeMap::new();
+    for (path, method) in document_operations(&doc) {
+        let id = doc["paths"][&path][&method]["operationId"]
+            .as_str()
+            .unwrap_or_else(|| panic!("{method} {path} declares no operationId"))
+            .to_owned();
+        owners
+            .entry(id)
+            .or_default()
+            .push(format!("{method} {path}"));
+    }
+    let duplicated: Vec<(&String, &Vec<String>)> = owners
+        .iter()
+        .filter(|(_, routes)| routes.len() > 1)
+        .collect();
+    assert!(
+        duplicated.is_empty(),
+        "operationIds carried by more than one operation: {duplicated:#?}"
+    );
+}
+
 // ── Test 4: the once-built served document equals a fresh extensions_document ─
 
 /// the `OpenAPI` document is built once at router assembly and served as
@@ -541,6 +570,7 @@ fn app_config() -> AppConfig {
         terminology_api_enabled: true,
         events_admin_api: true,
         audit_organization_claim: None,
+        role_claims: ferroehr::config::authz::RbacConfig::default().role_claims,
         spec_profile: ferroehr::config::profile::SpecProfile::default(),
     }
 }

@@ -11,6 +11,9 @@
   reference none.
 - No per-document figures: the vendored chapters of this component
   reference no `{diagrams_uri}`/`{images_uri}` file.
+- Upstream repo tooling excluded: `.git`, `.github`, `.claude`, `.junie`,
+  `AGENTS.md`, `CLAUDE.md`, `tmp-*` scratch notes, the top-level
+  `development/` build-tooling directory and dependency manifests.
 - Unreferenced figures, UML `.xmi`/`.mdzip`, XSDs and other binaries
   excluded — fetch from the repo at the pinned commit.
 

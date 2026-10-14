@@ -14,6 +14,11 @@
 //! the value shape is RM data types `DV_MULTIMEDIA`
 //! (`docs/specs/openehr/RM/docs/data_types/master09-encapsulated_package.adoc`).
 
+#![expect(
+    clippy::disallowed_types,
+    reason = "test fixtures and wire assertions are raw JSON by the testing rule (.claude/rules/testing.md §Test-fixture construction): a canonical composition is bytes a client sends, and building it through a typed model would test the model instead of the code under test"
+)]
+
 use std::sync::Arc;
 
 use base64::Engine;

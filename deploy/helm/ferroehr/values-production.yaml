@@ -35,6 +35,9 @@
 #   migrate_on_runtime_credential made: db.migrate is `verify`; the migration Job
 #                                prepares the schema on its own credential.
 #   auth_off                     made: authentication on, through OIDC.
+#   rbac_off                     made: authorization stays on through the chart
+#                                default config.authz.rbac.enabled: true, which
+#                                this overlay leaves as it is.
 #   plaintext_listener           ACCEPTED by name: TLS terminates at the Ingress,
 #                                and the pod listener speaks plain HTTP on the pod
 #                                network. The NetworkPolicy admits only the

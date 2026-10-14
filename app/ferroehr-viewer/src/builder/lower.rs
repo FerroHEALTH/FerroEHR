@@ -399,7 +399,7 @@ fn parse_path_rooted(rooted: &str) -> Result<IdentifiedPath, BuilderError> {
     let parsed =
         openehr_query::parser::parse_str(&probe).map_err(|e| BuilderError::InvalidPath {
             path: rooted.to_owned(),
-            detail: e.to_string(),
+            detail: crate::error::error_chain(&e),
         })?;
     match parsed.select.columns.into_iter().next() {
         Some(SelectExpr {

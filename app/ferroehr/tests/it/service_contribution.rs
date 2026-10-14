@@ -1793,6 +1793,101 @@ async fn a_delete_member_with_a_contradictory_lifecycle_state_is_refused() {
     );
 }
 
+/// A CONTRIBUTION deletion member whose preceding version is already deleted
+/// is refused with the `400` the `DELETE` route answers, and commits nothing.
+///
+/// The master06 §Version Lifecycle state machine has no `delete` edge out of
+/// `deleted` (only `revert`), and ITS-REST `responses/400_already_deleted.yaml`
+/// answers a repeated deletion with `400`. The `revert` edge stays open: a
+/// modification carrying data restores the composition as the next version.
+#[tokio::test]
+async fn deleting_an_already_deleted_composition_is_refused_on_both_routes() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr_id = create_ehr(&svc).await;
+    let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
+
+    let v1 = svc
+        .create_composition(ehr_uuid, uv(&composition("v1"), "249", None))
+        .await
+        .expect("create")
+        .version_uid();
+    let vo_id = vo_of(&v1).to_owned();
+    let delete_member = |preceding: &str| {
+        json!({
+            "versions": [{
+                "commit_audit": {
+                    "change_type": change_type("523", "deleted"),
+                    "committer": committer("author")
+                },
+                "preceding_version_uid": { "value": preceding },
+                "lifecycle_state": lifecycle("523")
+            }],
+            "audit": { "change_type": change_type("523", "deleted"), "committer": committer("author") }
+        })
+    };
+
+    let deleted = svc
+        .create_ehr_contribution(ehr_uuid, delete_member(&v1))
+        .await
+        .expect("the first deletion commits");
+    let v2 = first_version_uid(&deleted.body);
+    assert_eq!(lifecycle_code_of(&svc, &ehr_id, &vo_id, &v2).await, "523");
+
+    // The repeated deletion through a CONTRIBUTION: 400, nothing committed.
+    let err = svc
+        .create_ehr_contribution(ehr_uuid, delete_member(&v2))
+        .await
+        .expect_err("deleting a deleted composition is refused");
+    assert!(
+        matches!(
+            err,
+            SmError {
+                status: CallStatusType::PreconditionViolation,
+                ..
+            }
+        ) && err.message.contains("already deleted"),
+        "expected the 400 already-deleted refusal, got {err:?}"
+    );
+
+    // The same deletion through the DELETE route: the same refusal.
+    let deleted_uid: openehr_base::prelude::ObjectVersionId = v2.parse().expect("ovid");
+    let direct = svc
+        .delete_composition(ehr_uuid, &deleted_uid, None, None)
+        .await
+        .expect_err("the DELETE route refuses it too");
+    assert!(
+        matches!(direct, ServiceError::BadRequest(_)),
+        "expected the 400 already-deleted refusal, got {direct:?}"
+    );
+
+    // The refused deletions committed no version: the revert lands as v3.
+    let reverted = svc
+        .create_ehr_contribution(
+            ehr_uuid,
+            json!({
+                "versions": [{
+                    "commit_audit": {
+                        "change_type": change_type("251", "modification"),
+                        "committer": committer("author")
+                    },
+                    "preceding_version_uid": { "value": v2 },
+                    "lifecycle_state": lifecycle("532"),
+                    "data": composition("restored")
+                }],
+                "audit": { "change_type": change_type("251", "modification"), "committer": committer("author") }
+            }),
+        )
+        .await
+        .expect("the revert edge out of deleted commits");
+    let v3 = first_version_uid(&reverted.body);
+    assert!(
+        v3.ends_with("::3"),
+        "the revert is the third version, got {v3}"
+    );
+    assert_eq!(lifecycle_code_of(&svc, &ehr_id, &vo_id, &v3).await, "532");
+}
+
 /// A `553|incomplete|` COMPOSITION missing mandatory data commits; the
 /// `532|complete|` twin of the same content is refused; and `553` content that
 /// is WRONG rather than merely missing stays refused.

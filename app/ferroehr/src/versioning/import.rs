@@ -612,13 +612,28 @@ fn local_commit_instant(index: usize, base: jiff::Timestamp) -> jiff::Timestamp 
     base + jiff::SignedDuration::from_micros(i64::try_from(index).unwrap_or(0))
 }
 
-/// NOTE (local commit instants, master06 §Copying): all versions of an imported
-/// container are committed in the single local import act, so they get a
-/// synthetic strictly-increasing local `committed_at` chain (base = import
-/// time, 1 µs steps), which is §Copying's rule that "the commit times always
-/// reflect the local (more recent) act of committal"; the source chronology is
-/// not lost but moved inside the wrapped `ORIGINAL_VERSION`, where §Committal
+/// Replays the containers under one local import CONTRIBUTION, returning its
+/// id.
+///
+/// Every container's per-object lock is taken first, before its stored state
+/// is read, so a concurrent import or commit of the same container waits for
+/// this transaction and then numbers its versions after the ones landed here
+/// (a re-import of the same versions is then refused as the conflict
+/// [`append_to_existing_clone`] names). With `skip_existing`, a container
+/// already held locally is left untouched.
+///
+/// All versions of a container are committed in the single local import act,
+/// so they get a synthetic strictly-increasing local `committed_at` chain
+/// (base = import time, 1 µs steps): master06 §Copying, "the commit times
+/// always reflect the local (more recent) act of committal". The source
+/// chronology moves inside the wrapped `ORIGINAL_VERSION`, where §Committal
 /// and Audits puts it.
+///
+/// # Errors
+/// [`ServiceError::Conflict`] on a duplicated version identity, a foreign
+/// owner, a kind mismatch or a re-imported version;
+/// [`ServiceError::BadRequest`] on a copy-closure violation; decompose,
+/// signing and storage errors otherwise.
 async fn commit_import_scoped(
     tx: &mut PgConnection,
     ctx: &SigningCtx<'_>,
@@ -628,6 +643,11 @@ async fn commit_import_scoped(
     containers: Vec<ImportContainer>,
     skip_existing: bool,
 ) -> Result<Uuid, ServiceError> {
+    crate::storage::version_repo::import::lock_containers(
+        tx,
+        containers.iter().map(|container| container.vo_id),
+    )
+    .await?;
     // The DATABASE transaction timestamp anchors the whole import's temporal
     // chain, never the app clock: under skew an app-clock base could close an
     // open lineage before that row's lower bound. This ONE audit row is the

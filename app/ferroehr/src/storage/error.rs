@@ -85,14 +85,15 @@ pub enum StorageError {
         count: usize,
     },
 
-    /// A driver/pool/query error from `sqlx`.
-    #[error("database: {0}")]
+    /// A driver/pool/query error from `sqlx`, carried as the source and kept
+    /// out of this variant's own message.
+    #[error("database operation failed")]
     Database(#[from] sqlx::Error),
 
     /// A stored `version.body` text failed to parse as JSON — storage
     /// corruption, never a caller error (the column holds the canonical bytes
-    /// the commit serialized).
-    #[error("stored canonical body does not parse: {0}")]
+    /// the commit serialized); the parser's error is the source.
+    #[error("stored canonical body does not parse")]
     BodyDecode(#[source] serde_json::Error),
 }
 
@@ -132,10 +133,9 @@ impl From<StorageError> for crate::service::status::SmError {
             | StorageError::InvalidRows(_)
             | StorageError::TrunklessContainer { .. }
             | StorageError::BodyDecode(_) => {
-                tracing::error!(
-                    error = %e,
-                    "storage bridge: node-codec invariant violated → 500"
-                );
+                // A `dyn Error` field records the source chain beside the message.
+                let error: &(dyn std::error::Error + 'static) = &e;
+                tracing::error!(error, "storage bridge: node-codec invariant violated → 500");
                 SmError::new(CallStatusType::Exception, CODEC_MESSAGE.to_owned())
             }
         }
@@ -159,6 +159,10 @@ const RETRYABLE_CONFLICT_MESSAGE: &str =
 /// the client cannot act on it, and the diagnosis belongs in the server's own
 /// logs.
 const INTERNAL_MESSAGE: &str = "the server encountered an internal database error";
+
+/// The client-visible message of a database the server could not connect to.
+/// Nothing ran, so the request can be repeated once the database answers.
+const UNAVAILABLE_MESSAGE: &str = "the server cannot reach its database; retry shortly";
 
 /// The client-visible message of a node-codec fault — a versioned-object tree
 /// the decomposer could not take apart, or stored node rows that do not
@@ -200,9 +204,24 @@ const CODEC_MESSAGE: &str = "the server encountered an internal storage-codec er
 ///   `CallStatusType::Conflict` (`409`, retryable).
 /// - [`sqlx::Error::PoolTimedOut`] → `CallStatusType::ServiceOverloaded` (`503`
 ///   plus `Retry-After`, the admission contract).
-/// - anything else → `CallStatusType::Exception` (`500`, a genuine fault).
+/// - a failure only opening a connection can produce ([`is_connect_failure`])
+///   → `CallStatusType::ServiceOverloaded` (`503` plus `Retry-After`): no
+///   statement ran, so repeating the request is safe once the database answers.
+/// - anything else → `CallStatusType::Exception` (`500`, a genuine fault). That
+///   includes an I/O or protocol error on an established connection, after
+///   which the statement's outcome is unknown and a retry hint would be wrong.
 pub(crate) fn classify_sqlx(e: &sqlx::Error) -> crate::service::status::SmError {
     use crate::service::status::{CallStatusType, SmError};
+    if is_connect_failure(e) {
+        tracing::error!(
+            error = %e,
+            "storage bridge: the database refused or could not take a new connection → 503"
+        );
+        return SmError::new(
+            CallStatusType::ServiceOverloaded,
+            UNAVAILABLE_MESSAGE.to_owned(),
+        );
+    }
     match e {
         sqlx::Error::PoolTimedOut => {
             tracing::warn!(
@@ -277,6 +296,38 @@ pub(crate) fn classify_sqlx(e: &sqlx::Error) -> crate::service::status::SmError 
             );
             SmError::new(CallStatusType::Exception, INTERNAL_MESSAGE.to_owned())
         }
+    }
+}
+
+/// Whether `e` is a failure that only establishing a new connection produces,
+/// so no statement of the request reached the database.
+///
+/// The error carries no phase, so this is decided by identity, and only the
+/// identities an established session cannot produce qualify:
+///
+/// - [`sqlx::Error::Tls`]: raised only while configuring and negotiating TLS at
+///   connect time (sqlx 0.9, <https://docs.rs/sqlx/0.9.0/sqlx/enum.Error.html>).
+/// - an I/O error of kind `ConnectionRefused` or `AddrNotAvailable`: the
+///   `connect(2)` errors `ECONNREFUSED` and `EADDRNOTAVAIL`; a peer resetting an
+///   established session reports `ConnectionReset` instead.
+/// - a server refusal of a new session's start-up, by SQLSTATE
+///   (<https://www.postgresql.org/docs/18/errcodes-appendix.html>): class `28`
+///   (invalid authorization), `3D000` `invalid_catalog_name`, `53300`
+///   `too_many_connections` and `57P03` `cannot_connect_now`. None of them
+///   answers a statement this server issues on an open session.
+///
+/// No openEHR spec governs this — our own design.
+pub(crate) fn is_connect_failure(e: &sqlx::Error) -> bool {
+    match e {
+        sqlx::Error::Tls(_) => true,
+        sqlx::Error::Io(io) => matches!(
+            io.kind(),
+            std::io::ErrorKind::ConnectionRefused | std::io::ErrorKind::AddrNotAvailable
+        ),
+        sqlx::Error::Database(db) => db.code().is_some_and(|code| {
+            code.starts_with("28") || matches!(&*code, "3D000" | "53300" | "57P03")
+        }),
+        _ => false,
     }
 }
 
@@ -377,6 +428,73 @@ mod tests {
             sm.message,
             "the server is temporarily overloaded; retry shortly"
         );
+    }
+
+    /// A failure only opening a connection produces answers `503`: nothing
+    /// ran, so the request may be repeated (#3659).
+    #[test]
+    fn a_connect_time_failure_is_service_unavailable() {
+        let failures = [
+            sqlx::Error::Io(std::io::Error::from(std::io::ErrorKind::ConnectionRefused)),
+            sqlx::Error::Io(std::io::Error::from(std::io::ErrorKind::AddrNotAvailable)),
+            sqlx::Error::Tls("server does not support TLS".into()),
+            db_error("28P01"),
+            db_error("28000"),
+            db_error("3D000"),
+            db_error("53300"),
+            db_error("57P03"),
+        ];
+        for failure in failures {
+            let sm = classify_sqlx(&failure);
+            assert_eq!(
+                sm.status,
+                CallStatusType::ServiceOverloaded,
+                "a connect-time failure is a temporary unavailability: {failure}"
+            );
+            assert_eq!(sm.message, super::UNAVAILABLE_MESSAGE);
+        }
+    }
+
+    /// A failure on an established connection stays `500`: the statement may
+    /// have run, so no retry hint is given (#3659).
+    #[test]
+    fn a_failure_after_connecting_stays_an_exception() {
+        let failures = [
+            sqlx::Error::Io(std::io::Error::from(std::io::ErrorKind::ConnectionReset)),
+            sqlx::Error::Io(std::io::Error::from(std::io::ErrorKind::BrokenPipe)),
+            sqlx::Error::Io(std::io::Error::from(std::io::ErrorKind::UnexpectedEof)),
+            sqlx::Error::Protocol("unexpected message".to_owned()),
+            db_error("08006"),
+            db_error("57P01"),
+            db_error("42P01"),
+        ];
+        for failure in failures {
+            let sm = classify_sqlx(&failure);
+            assert_eq!(
+                sm.status,
+                CallStatusType::Exception,
+                "a failure on an open session is a server fault: {failure}"
+            );
+        }
+    }
+
+    /// The storage and database errors keep their cause as the source and out
+    /// of their own message, so a chain printer shows it once (#3684).
+    #[test]
+    fn the_cause_is_the_source_and_not_repeated_in_the_message() {
+        use std::error::Error as _;
+        let driver = sqlx::Error::Protocol("driver detail".to_owned());
+        let error = StorageError::Database(driver);
+        let source = error.source().expect("the driver error is the source");
+        assert!(source.downcast_ref::<sqlx::Error>().is_some());
+        assert!(!error.to_string().contains("driver detail"), "{error}");
+
+        let parse = serde_json::from_str::<u8>("{").expect_err("not JSON");
+        let parse_text = parse.to_string();
+        let error = StorageError::BodyDecode(parse);
+        let source = error.source().expect("the parser error is the source");
+        assert!(source.downcast_ref::<serde_json::Error>().is_some());
+        assert!(!error.to_string().contains(&parse_text), "{error}");
     }
 
     #[test]

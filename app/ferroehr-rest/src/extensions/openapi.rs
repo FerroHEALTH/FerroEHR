@@ -380,8 +380,8 @@ fn redirect_to_index(ui_path: &str) -> Response {
 #[expect(
     dead_code,
     reason = "the documentation twin of a live route: the served routes are the \
-              twelve static per-family routes built in `swagger_router`, so only \
-              the `#[utoipa::path]` attribute on this stub is consumed"
+              static per-family routes built in `swagger_router`, one per `FAMILIES` \
+              entry, so only the `#[utoipa::path]` attribute on this stub is consumed"
 )]
 fn family_openapi_json() {}
 
@@ -837,5 +837,49 @@ fn serve_ui_file(file: &str, config: &Arc<Config<'static>>) -> Response {
         })) => ([(header::CONTENT_TYPE, content_type)], bytes.into_owned()).into_response(),
         Ok(None) => StatusCode::NOT_FOUND.into_response(),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The served families are the shared vocabulary the viewer compiles, in
+    /// the same order, so a family added on one side alone fails here.
+    #[test]
+    fn families_match_the_served_vocabulary() {
+        let served: Vec<(&str, &str)> = FAMILIES
+            .iter()
+            .map(|(name, slug, _)| (*slug, *name))
+            .collect();
+        assert_eq!(
+            served,
+            ferroehr::served_vocabulary::OPENAPI_FAMILIES.to_vec()
+        );
+    }
+
+    /// The documented `family` parameter names exactly the served slugs, in
+    /// [`FAMILIES`] order, because the attribute carries them as a literal.
+    #[test]
+    fn the_family_parameter_names_every_served_slug() {
+        let mut cfg = AppConfig::default();
+        cfg.server.swagger_ui = ferroehr::config::management::AccessLevel::Public;
+        let doc = meta_openapi(&cfg);
+        let description = doc
+            .paths
+            .paths
+            .iter()
+            .find(|(path, _)| path.contains("{family}"))
+            .and_then(|(_, item)| item.get.as_ref())
+            .and_then(|operation| operation.parameters.as_ref())
+            .and_then(|parameters| parameters.first())
+            .and_then(|parameter| match parameter {
+                utoipa::openapi::RefOr::T(parameter) => parameter.description.clone(),
+                utoipa::openapi::RefOr::Ref(_) => None,
+            })
+            .expect("the family parameter is documented");
+        let named: Vec<&str> = description.split('`').skip(1).step_by(2).collect();
+        let slugs: Vec<&str> = FAMILIES.iter().map(|(_, slug, _)| *slug).collect();
+        assert_eq!(named, slugs);
     }
 }

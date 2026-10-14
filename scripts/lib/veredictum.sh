@@ -43,7 +43,7 @@
 # bumping PR refreshes docs/conformance/ferroehr/ or carries the
 # `no-conformance-run` deferral label.
 VEREDICTUM_VERSION="0.1.6"
-VEREDICTUM_REPO="https://github.com/rubentalstra/Veredictum"
+VEREDICTUM_REPO="https://github.com/Vernum-Projecten/Veredictum"
 
 veredictum_cache_root() {
   local base="${VEREDICTUM_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/ferroehr-veredictum}"

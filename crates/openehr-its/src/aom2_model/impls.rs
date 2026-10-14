@@ -929,7 +929,10 @@ impl crate::xml::runtime::FromXml for crate::aom2_model::types::AuthoredArchetyp
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
                     "other_metadata" => {
-                        let __k = __c.attr("id").unwrap_or("").to_string();
+                        let __k = __c
+                            .attr("id")
+                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .to_string();
                         let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
                         __other_metadata.insert(__k, __v);
                     }
@@ -1119,7 +1122,10 @@ impl crate::xml::runtime::FromXml for crate::aom2_model::types::Annotationpathse
             match reader.read()? {
                 crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
                     "items" => {
-                        let __k = __c.attr("id").unwrap_or("").to_string();
+                        let __k = __c
+                            .attr("id")
+                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .to_string();
                         let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
                         __items.insert(__k, __v);
                     }
@@ -4019,7 +4025,10 @@ impl crate::xml::runtime::FromXml for crate::aom2_model::types::ResourceDescript
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
                     "original_author" => {
-                        let __k = __c.attr("id").unwrap_or("").to_string();
+                        let __k = __c
+                            .attr("id")
+                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .to_string();
                         let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
                         __original_author.insert(__k, __v);
                     }
@@ -4042,7 +4051,10 @@ impl crate::xml::runtime::FromXml for crate::aom2_model::types::ResourceDescript
                         __licence = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
                     "ip_acknowledgements" => {
-                        let __k = __c.attr("id").unwrap_or("").to_string();
+                        let __k = __c
+                            .attr("id")
+                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .to_string();
                         let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
                         __ip_acknowledgements.insert(__k, __v);
                     }
@@ -4051,12 +4063,18 @@ impl crate::xml::runtime::FromXml for crate::aom2_model::types::ResourceDescript
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
                     "references" => {
-                        let __k = __c.attr("id").unwrap_or("").to_string();
+                        let __k = __c
+                            .attr("id")
+                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .to_string();
                         let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
                         __references.insert(__k, __v);
                     }
                     "other_details" => {
-                        let __k = __c.attr("id").unwrap_or("").to_string();
+                        let __k = __c
+                            .attr("id")
+                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .to_string();
                         let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
                         __other_details.insert(__k, __v);
                     }
@@ -4187,12 +4205,18 @@ impl crate::xml::runtime::FromXml for crate::aom2_model::types::ResourceDescript
                         __keywords.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
                     "original_resource_uri" => {
-                        let __k = __c.attr("id").unwrap_or("").to_string();
+                        let __k = __c
+                            .attr("id")
+                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .to_string();
                         let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
                         __original_resource_uri.insert(__k, __v);
                     }
                     "other_details" => {
-                        let __k = __c.attr("id").unwrap_or("").to_string();
+                        let __k = __c
+                            .attr("id")
+                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .to_string();
                         let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
                         __other_details.insert(__k, __v);
                     }
@@ -4538,7 +4562,10 @@ impl crate::xml::runtime::FromXml for crate::aom2_model::types::TranslationDetai
                         __language = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
                     "author" => {
-                        let __k = __c.attr("id").unwrap_or("").to_string();
+                        let __k = __c
+                            .attr("id")
+                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .to_string();
                         let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
                         __author.insert(__k, __v);
                     }
@@ -4547,7 +4574,10 @@ impl crate::xml::runtime::FromXml for crate::aom2_model::types::TranslationDetai
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
                     "other_details" => {
-                        let __k = __c.attr("id").unwrap_or("").to_string();
+                        let __k = __c
+                            .attr("id")
+                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .to_string();
                         let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
                         __other_details.insert(__k, __v);
                     }
@@ -4627,7 +4657,10 @@ impl crate::xml::runtime::FromXml for crate::aom2_model::types::Termbindingset {
             match reader.read()? {
                 crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
                     "items" => {
-                        let __k = __c.attr("id").unwrap_or("").to_string();
+                        let __k = __c
+                            .attr("id")
+                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .to_string();
                         let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
                         __items.insert(__k, __v);
                     }

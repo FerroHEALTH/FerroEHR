@@ -1873,8 +1873,8 @@ async fn distinct_order_by_limit_and_now_comparison() {
 /// satisfies the predicate, the row must still return. The scalar LIMIT-1
 /// extraction this replaces picked an order-undefined single node and could
 /// silently miss it. (QUERY master03 is silent on predicates over
-/// multi-valued paths — any-match is the adjudicated own-design semantics
-/// recorded on `data_leaf_exists`.)
+/// multi-valued paths; the WHERE bindings of the `condition` module make the
+/// test hold when some binding of the repeated step satisfies it.)
 #[tokio::test]
 async fn like_and_matches_are_any_match_on_multi_valued_paths() {
     let db = testkit::db().await.expect("testkit database");
@@ -2025,8 +2025,8 @@ fn multi_fragment_composition() -> Value {
 /// only the LAST element satisfies each predicate, the row must return for
 /// `=`, `LIKE`, `MATCHES` and `EXISTS` alike — the first-match scalar
 /// extraction this replaces saw only element one. (QUERY master03 §WHERE is
-/// silent on multi-valued predicates — the any-match adjudication on
-/// `data_leaf_exists` covers the fragment half too.)
+/// silent on multi-valued predicates; a list attribute inside one node is
+/// tested on any element, as the `condition` module records.)
 #[tokio::test]
 async fn multi_valued_fragment_predicates_are_any_match() {
     let db = testkit::db().await.expect("testkit database");
@@ -2722,4 +2722,895 @@ async fn an_explicit_page_above_the_result_ceiling_is_refused() {
         rows(&run_aql(&unbounded, aql, scoped(Some(1_000))).await).len(),
         4
     );
+}
+
+// ── row grain, strict containment, deleted versions, OR-branch reads ─────────
+
+/// An ELEMENT `at` code with a `DV_QUANTITY` value.
+fn quantity_element(code: &str, magnitude: f64) -> Value {
+    json!({
+        "_type": "ELEMENT",
+        "name": { "_type": "DV_TEXT", "value": code },
+        "archetype_node_id": code,
+        "value": { "_type": "DV_QUANTITY", "magnitude": magnitude, "units": "mm[Hg]" }
+    })
+}
+
+/// The observation of the QUERY master03 §Variables example measured twice:
+/// the 08:00 event carries only the diastolic (`at0005`, 95), the 09:00 event
+/// only the systolic (`at0004`, 150).
+fn two_event_composition() -> Value {
+    let mut c = composition("two events", 1.0);
+    let events = c["content"][0]["data"]["events"]
+        .as_array_mut()
+        .expect("events");
+    let mut first = events[0].clone();
+    first["time"]["value"] = json!("2026-10-01T08:00:00Z");
+    first["data"]["items"] = json!([quantity_element("at0005", 95.0)]);
+    let mut second = events[0].clone();
+    second["time"]["value"] = json!("2026-10-01T09:00:00Z");
+    second["data"]["items"] = json!([quantity_element("at0004", 150.0)]);
+    *events = vec![first, second];
+    c
+}
+
+/// Two leaves below one repeated EVENT read the SAME event in a row: one row
+/// per event, a NULL where that event lacks the leaf, and never a pair of
+/// values two different events carry. The SELECT is the QUERY master03
+/// §Variables example; the row grain is the engine's documented design (the
+/// specification is silent on it).
+#[tokio::test]
+async fn sibling_leaves_under_a_repeated_event_share_its_binding() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr_id = create_ehr(&svc).await;
+    create_comp_body(&svc, &ehr_id, two_event_composition(), "two events").await;
+
+    let r = run_aql(
+        &svc,
+        &format!(
+            "SELECT o/data[at0001]/events[at0002]/data[at0003]/items[at0004]/value/magnitude, \
+                    o/data[at0001]/events[at0002]/data[at0003]/items[at0005]/value/magnitude \
+             FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[{OBS_ARCHETYPE}]"
+        ),
+        ehr_scope(&ehr_id),
+    )
+    .await;
+    let mut pairs: Vec<(Option<f64>, Option<f64>)> = rows(&r)
+        .iter()
+        .map(|row| (row[0].as_f64(), row[1].as_f64()))
+        .collect();
+    pairs.sort_by(|a, b| a.partial_cmp(b).expect("comparable"));
+    assert_eq!(
+        pairs,
+        vec![(None, Some(95.0)), (Some(150.0), None)],
+        "one row per event, never 150/95 from two events: {r}"
+    );
+
+    // Without predicates on the repeated step, the time and the systolic of a
+    // row still come from one event.
+    let r = run_aql(
+        &svc,
+        &format!(
+            "SELECT o/data/events/time/value, o/data/events/data/items[at0004]/value/magnitude \
+             FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[{OBS_ARCHETYPE}]"
+        ),
+        ehr_scope(&ehr_id),
+    )
+    .await;
+    let mut timed: Vec<(String, Option<f64>)> = rows(&r)
+        .iter()
+        .map(|row| {
+            (
+                row[0].as_str().expect("event time").to_owned(),
+                row[1].as_f64(),
+            )
+        })
+        .collect();
+    timed.sort_by(|a, b| a.0.cmp(&b.0));
+    assert_eq!(
+        timed,
+        vec![
+            ("2026-10-01T08:00:00Z".to_owned(), None),
+            ("2026-10-01T09:00:00Z".to_owned(), Some(150.0)),
+        ],
+        "each row pairs an event's time with that event's own value: {r}"
+    );
+
+    // A WHERE on the bound leaf filters the row of its own event.
+    let r = run_aql(
+        &svc,
+        &format!(
+            "SELECT o/data[at0001]/events[at0002]/time/value \
+             FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[{OBS_ARCHETYPE}] \
+             WHERE o/data[at0001]/events[at0002]/data[at0003]/items[at0004]/value/magnitude >= 140"
+        ),
+        ehr_scope(&ehr_id),
+    )
+    .await;
+    assert_eq!(
+        rows(&r),
+        &vec![json!(["2026-10-01T09:00:00Z"])],
+        "only the event that carries the abnormal value: {r}"
+    );
+}
+
+/// A composition whose `ITEM_TREE` holds CLUSTER `at0010` ("outer"), which
+/// holds CLUSTER `at0011` ("inner"), which holds one ELEMENT ("leaf").
+fn nested_cluster_composition() -> Value {
+    let mut c = composition("nested clusters", 1.0);
+    let mut leaf = quantity_element("at0004", 1.0);
+    leaf["name"]["value"] = json!("leaf");
+    c["content"][0]["data"]["events"][0]["data"]["items"] = json!([{
+        "_type": "CLUSTER",
+        "name": { "_type": "DV_TEXT", "value": "outer" },
+        "archetype_node_id": "at0010",
+        "items": [{
+            "_type": "CLUSTER",
+            "name": { "_type": "DV_TEXT", "value": "inner" },
+            "archetype_node_id": "at0011",
+            "items": [leaf]
+        }]
+    }]);
+    c
+}
+
+/// QUERY master03 §Containment: the left operand is the PARENT of the right,
+/// so no node contains itself — `CLUSTER CONTAINS CLUSTER` reaches only the
+/// inner cluster, `NOT CONTAINS` holds for the cluster with no nested
+/// cluster, and a path step reads a child, never the node it starts from
+/// (BASE `architecture_overview` §Paths: a step follows one attribute).
+#[tokio::test]
+async fn containment_and_path_steps_exclude_the_node_itself() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr_id = create_ehr(&svc).await;
+    create_comp_body(&svc, &ehr_id, nested_cluster_composition(), "nested").await;
+
+    let codes = |r: &Value| -> Vec<Value> {
+        let mut v: Vec<Value> = rows(r).iter().map(|row| row[0].clone()).collect();
+        v.sort_by_key(ToString::to_string);
+        v
+    };
+
+    let all = run_aql(
+        &svc,
+        "SELECT cl/archetype_node_id FROM EHR e CONTAINS COMPOSITION c CONTAINS CLUSTER cl",
+        ehr_scope(&ehr_id),
+    )
+    .await;
+    assert_eq!(codes(&all), vec![json!("at0010"), json!("at0011")], "{all}");
+
+    let nested = run_aql(
+        &svc,
+        "SELECT cl2/archetype_node_id FROM EHR e CONTAINS COMPOSITION c \
+         CONTAINS CLUSTER cl1 CONTAINS CLUSTER cl2",
+        ehr_scope(&ehr_id),
+    )
+    .await;
+    assert_eq!(
+        codes(&nested),
+        vec![json!("at0011")],
+        "only the inner cluster lies inside another: {nested}"
+    );
+
+    let leaves = run_aql(
+        &svc,
+        "SELECT cl1/archetype_node_id FROM EHR e CONTAINS COMPOSITION c \
+         CONTAINS CLUSTER cl1 NOT CONTAINS CLUSTER cl2",
+        ehr_scope(&ehr_id),
+    )
+    .await;
+    assert_eq!(
+        codes(&leaves),
+        vec![json!("at0011")],
+        "the inner cluster contains no cluster: {leaves}"
+    );
+
+    let step = run_aql(
+        &svc,
+        "SELECT cl/items/name/value FROM EHR e CONTAINS COMPOSITION c CONTAINS CLUSTER cl[at0010]",
+        ehr_scope(&ehr_id),
+    )
+    .await;
+    assert_eq!(
+        codes(&step),
+        vec![json!("inner")],
+        "`items` is the direct child, not the cluster itself or a grandchild: {step}"
+    );
+}
+
+/// RM common master06 §Logical Deletion: a deleted version's data is Void.
+/// The unscoped streaming plan answers what the EHR-scoped flat plan answers,
+/// so the deleting version never comes back as a row, whatever the SELECT
+/// reads.
+#[tokio::test]
+async fn deleted_compositions_stay_out_of_unscoped_streaming_queries() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr_id = create_ehr(&svc).await;
+    let doomed = create_comp(&svc, &ehr_id, "doomed", 1.0).await;
+    let kept = create_comp(&svc, &ehr_id, "kept", 2.0).await;
+    svc.delete_composition(
+        ferroehr::ids::EhrId(ehr_id.parse().expect("ehr_id uuid")),
+        &doomed.parse().expect("ovid"),
+        None,
+        None,
+    )
+    .await
+    .expect("delete_composition");
+
+    for select in ["c/uid/value", "e/ehr_id/value", "1"] {
+        let aql = format!(
+            "SELECT {select} FROM EHR e CONTAINS COMPOSITION c \
+             WHERE e/ehr_id/value = '{ehr_id}' LIMIT 100"
+        );
+        let unscoped = run_aql(&svc, &aql, AqlQueryRequest::default()).await;
+        let scoped = run_aql(&svc, &aql, ehr_scope(&ehr_id)).await;
+        assert_eq!(rows(&unscoped).len(), 1, "{select}: {unscoped}");
+        assert_eq!(
+            rows(&unscoped),
+            rows(&scoped),
+            "{select}: one query, one answer"
+        );
+    }
+    let uid = run_aql(
+        &svc,
+        &format!(
+            "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c \
+             WHERE e/ehr_id/value = '{ehr_id}' LIMIT 100"
+        ),
+        AqlQueryRequest::default(),
+    )
+    .await;
+    assert_eq!(
+        rows(&uid)[0][0],
+        json!(kept),
+        "the surviving composition: {uid}"
+    );
+}
+
+/// QUERY master03 §Containment's `OR` example binds a variable per branch: a
+/// path through either is readable, and a row whose branch did not match
+/// reads NULL there.
+#[tokio::test]
+async fn or_branch_variables_are_projected() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr_id = create_ehr(&svc).await;
+    create_comp(&svc, &ehr_id, "observed", 1.0).await;
+
+    let r = run_aql(
+        &svc,
+        "SELECT o/archetype_node_id, ev/archetype_node_id FROM EHR e CONTAINS COMPOSITION c \
+         CONTAINS (OBSERVATION o OR EVALUATION ev)",
+        ehr_scope(&ehr_id),
+    )
+    .await;
+    assert_eq!(
+        rows(&r),
+        &vec![json!([OBS_ARCHETYPE, null])],
+        "the observation branch matched, the evaluation branch reads NULL: {r}"
+    );
+
+    let none = run_aql(
+        &svc,
+        "SELECT ev/archetype_node_id FROM EHR e CONTAINS COMPOSITION c \
+         CONTAINS (OBSERVATION o OR EVALUATION ev) WHERE EXISTS ev/archetype_node_id",
+        ehr_scope(&ehr_id),
+    )
+    .await;
+    assert!(rows(&none).is_empty(), "no evaluation, no row: {none}");
+}
+
+/// An observation measured twice, the systolic (`at0004`) of each event set.
+fn two_reading_composition(first: f64, second: f64) -> Value {
+    let mut c = two_event_composition();
+    c["content"][0]["data"]["events"][0]["data"]["items"] =
+        json!([quantity_element("at0004", first)]);
+    c["content"][0]["data"]["events"][1]["data"]["items"] =
+        json!([quantity_element("at0004", second)]);
+    c
+}
+
+/// QUERY master03 §Aggregate functions: the input values are the data items
+/// a path selects in the rows FROM and WHERE define, and §COUNT: `COUNT(*)`
+/// counts the rows. Aggregating every event therefore leaves `COUNT(*)` alone,
+/// and two aggregates over repeated paths never inflate each other.
+#[tokio::test]
+async fn aggregates_read_every_item_without_adding_rows() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr_id = create_ehr(&svc).await;
+    create_comp_body(
+        &svc,
+        &ehr_id,
+        two_reading_composition(120.0, 160.0),
+        "two readings",
+    )
+    .await;
+    let from = format!("FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[{OBS_ARCHETYPE}]");
+    let sys = "o/data[at0001]/events[at0002]/data[at0003]/items[at0004]/value/magnitude";
+
+    let alone = run_aql(&svc, &format!("SELECT COUNT(*) {from}"), ehr_scope(&ehr_id)).await;
+    assert_eq!(rows(&alone), &vec![json!([1])], "{alone}");
+
+    let r = run_aql(
+        &svc,
+        &format!(
+            "SELECT COUNT(*), MAX({sys}), MIN({sys}), SUM({sys}), AVG({sys}), \
+                    COUNT(o/data[at0001]/events[at0002]/time/value), COUNT(DISTINCT {sys}) {from}"
+        ),
+        ehr_scope(&ehr_id),
+    )
+    .await;
+    let row = &rows(&r)[0];
+    assert_eq!(row[0], json!(1), "COUNT(*) still counts the one row: {r}");
+    assert_eq!(
+        row[1].as_f64(),
+        Some(160.0),
+        "MAX sees the second event: {r}"
+    );
+    assert_eq!(row[2].as_f64(), Some(120.0), "MIN: {r}");
+    assert_eq!(row[3].as_f64(), Some(280.0), "SUM is not inflated: {r}");
+    assert_eq!(row[4].as_f64(), Some(140.0), "AVG over both events: {r}");
+    assert_eq!(row[5].as_f64(), Some(2.0), "COUNT over both events: {r}");
+    assert_eq!(row[6].as_f64(), Some(2.0), "COUNT(DISTINCT): {r}");
+}
+
+/// `sys >= 140 AND dia >= 90` holds only for an event carrying both, whatever
+/// the SELECT reads: on the two-event observation (diastolic only at 08:00,
+/// systolic only at 09:00) no row qualifies, with or without the event time
+/// selected.
+#[tokio::test]
+async fn a_conjunction_tests_one_node_whatever_the_select() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr_id = create_ehr(&svc).await;
+    create_comp_body(&svc, &ehr_id, two_event_composition(), "two events").await;
+    let from = format!("FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[{OBS_ARCHETYPE}]");
+    let sys = "o/data[at0001]/events[at0002]/data[at0003]/items[at0004]/value/magnitude";
+    let dia = "o/data[at0001]/events[at0002]/data[at0003]/items[at0005]/value/magnitude";
+
+    for select in ["c/uid/value", "o/data[at0001]/events[at0002]/time/value"] {
+        let both = run_aql(
+            &svc,
+            &format!("SELECT {select} {from} WHERE {sys} >= 140 AND {dia} >= 90"),
+            ehr_scope(&ehr_id),
+        )
+        .await;
+        assert!(
+            rows(&both).is_empty(),
+            "{select}: no event has both: {both}"
+        );
+    }
+    let either = run_aql(
+        &svc,
+        &format!("SELECT c/uid/value {from} WHERE {sys} >= 140 OR {dia} >= 90"),
+        ehr_scope(&ehr_id),
+    )
+    .await;
+    assert_eq!(rows(&either).len(), 1, "{either}");
+}
+
+/// A composition holding two `minimal` observations and one `other`.
+fn three_observation_composition() -> Value {
+    let mut c = composition("three observations", 1.0);
+    let first = c["content"][0].clone();
+    let mut other = first.clone();
+    other["archetype_node_id"] = json!("openEHR-EHR-OBSERVATION.other.v1");
+    other["archetype_details"]["archetype_id"]["value"] = json!("openEHR-EHR-OBSERVATION.other.v1");
+    c["content"] = json!([first.clone(), first, other]);
+    c
+}
+
+/// The row grain over independent bindings: two OR branches that both match
+/// and two paths through different `content` steps each give the cross
+/// product of their matches; a whole-object path that reaches nothing keeps
+/// its row with a NULL cell.
+#[tokio::test]
+async fn independent_bindings_cross_and_absent_paths_read_null() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr_id = create_ehr(&svc).await;
+    create_comp_body(&svc, &ehr_id, three_observation_composition(), "three").await;
+    let pair = json!([OBS_ARCHETYPE, "openEHR-EHR-OBSERVATION.other.v1"]);
+
+    let branches = run_aql(
+        &svc,
+        &format!(
+            "SELECT o1/archetype_node_id, o2/archetype_node_id FROM EHR e CONTAINS COMPOSITION c \
+             CONTAINS (OBSERVATION o1[{OBS_ARCHETYPE}] OR \
+                       OBSERVATION o2[openEHR-EHR-OBSERVATION.other.v1])"
+        ),
+        ehr_scope(&ehr_id),
+    )
+    .await;
+    assert_eq!(
+        rows(&branches),
+        &vec![pair.clone(), pair.clone()],
+        "two by one: {branches}"
+    );
+
+    let steps = run_aql(
+        &svc,
+        &format!(
+            "SELECT c/content[{OBS_ARCHETYPE}]/archetype_node_id, \
+                    c/content[openEHR-EHR-OBSERVATION.other.v1]/archetype_node_id \
+             FROM EHR e CONTAINS COMPOSITION c"
+        ),
+        ehr_scope(&ehr_id),
+    )
+    .await;
+    assert_eq!(
+        rows(&steps),
+        &vec![pair.clone(), pair],
+        "two by one: {steps}"
+    );
+
+    let absent = run_aql(
+        &svc,
+        &format!(
+            "SELECT c/uid/value, o/data[at0001]/events[at0999] \
+             FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[{OBS_ARCHETYPE}]"
+        ),
+        ehr_scope(&ehr_id),
+    )
+    .await;
+    assert_eq!(
+        rows(&absent).len(),
+        2,
+        "one row per minimal observation: {absent}"
+    );
+    assert!(
+        rows(&absent).iter().all(|row| row[1].is_null()),
+        "the absent event reads NULL: {absent}"
+    );
+}
+
+/// A path step follows one attribute (BASE `architecture_overview` §Paths):
+/// `c/content[…]` reads the composition's own content, so an observation
+/// nested in a SECTION is not there, while `CONTAINS` still finds it.
+#[tokio::test]
+async fn a_content_step_does_not_reach_into_a_section() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr_id = create_ehr(&svc).await;
+    let mut c = composition("sectioned", 1.0);
+    let observation = c["content"][0].clone();
+    c["content"] = json!([{
+        "_type": "SECTION",
+        "name": { "_type": "DV_TEXT", "value": "section" },
+        "archetype_node_id": "openEHR-EHR-SECTION.adhoc.v1",
+        "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-SECTION.adhoc.v1" },
+            "rm_version": "1.1.0"
+        },
+        "items": [observation]
+    }]);
+    create_comp_body(&svc, &ehr_id, c, "sectioned").await;
+
+    let step = run_aql(
+        &svc,
+        &format!("SELECT c/content[{OBS_ARCHETYPE}] FROM EHR e CONTAINS COMPOSITION c"),
+        ehr_scope(&ehr_id),
+    )
+    .await;
+    assert_eq!(rows(&step), &vec![json!([null])], "{step}");
+
+    let contained = run_aql(
+        &svc,
+        &format!(
+            "SELECT o/archetype_node_id FROM EHR e CONTAINS COMPOSITION c \
+             CONTAINS OBSERVATION o[{OBS_ARCHETYPE}]"
+        ),
+        ehr_scope(&ehr_id),
+    )
+    .await;
+    assert_eq!(
+        rows(&contained),
+        &vec![json!([OBS_ARCHETYPE])],
+        "{contained}"
+    );
+}
+
+/// QUERY master03 §Aggregate functions: the input values are the data items
+/// "filtered by FROM and WHERE". With systolics 120 and 160, `WHERE sys >= 140`
+/// leaves one item, as a plain projection of `sys` would leave one row; a WHERE
+/// on a path the aggregate does not share keeps both items.
+#[tokio::test]
+async fn aggregates_read_only_items_the_where_keeps() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr_id = create_ehr(&svc).await;
+    create_comp_body(
+        &svc,
+        &ehr_id,
+        two_reading_composition(120.0, 160.0),
+        "two readings",
+    )
+    .await;
+    let from = format!("FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[{OBS_ARCHETYPE}]");
+    let sys = "o/data[at0001]/events[at0002]/data[at0003]/items[at0004]/value/magnitude";
+
+    let plain = run_aql(
+        &svc,
+        &format!("SELECT {sys} {from} WHERE {sys} >= 140"),
+        ehr_scope(&ehr_id),
+    )
+    .await;
+    assert_eq!(rows(&plain).len(), 1, "{plain}");
+
+    let filtered = run_aql(
+        &svc,
+        &format!("SELECT COUNT({sys}), AVG({sys}) {from} WHERE {sys} >= 140"),
+        ehr_scope(&ehr_id),
+    )
+    .await;
+    assert_eq!(rows(&filtered)[0][0].as_f64(), Some(1.0), "{filtered}");
+    assert_eq!(rows(&filtered)[0][1].as_f64(), Some(160.0), "{filtered}");
+
+    let unshared = run_aql(
+        &svc,
+        &format!("SELECT COUNT({sys}), AVG({sys}) {from} WHERE c/name/value = 'two events'"),
+        ehr_scope(&ehr_id),
+    )
+    .await;
+    assert_eq!(rows(&unshared)[0][0].as_f64(), Some(2.0), "{unshared}");
+    assert_eq!(rows(&unshared)[0][1].as_f64(), Some(140.0), "{unshared}");
+}
+
+/// The WHERE grain under OR and NOT: the whole boolean structure over one
+/// event's values is evaluated per event (our own design; QUERY master03
+/// §WHERE is silent on paths that reach several nodes).
+#[tokio::test]
+async fn or_and_not_are_evaluated_per_event() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr_id = create_ehr(&svc).await;
+    create_comp_body(&svc, &ehr_id, two_event_composition(), "two events").await;
+    let from = format!("FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[{OBS_ARCHETYPE}]");
+    let event = "o/data[at0001]/events[at0002]";
+    let sys = format!("{event}/data[at0003]/items[at0004]/value/magnitude");
+    let dia = format!("{event}/data[at0003]/items[at0005]/value/magnitude");
+    let times = |r: &Value| -> Vec<Value> { rows(r).iter().map(|row| row[0].clone()).collect() };
+
+    // Under OR: the 09:00 event has no diastolic, the 08:00 event no systolic.
+    let or = run_aql(
+        &svc,
+        &format!("SELECT c/uid/value {from} WHERE {sys} >= 140 AND ({dia} >= 90 OR {dia} < 0)"),
+        ehr_scope(&ehr_id),
+    )
+    .await;
+    assert!(rows(&or).is_empty(), "no event has both: {or}");
+
+    // Under NOT, three-valued: the 09:00 event has no diastolic, so
+    // `NOT (dia < 90)` is NULL there; the 08:00 event has no systolic. No
+    // event makes the clause true, and the 08:00 diastolic never pairs with
+    // the 09:00 systolic.
+    let not = run_aql(
+        &svc,
+        &format!("SELECT {event}/time/value {from} WHERE {sys} >= 140 AND NOT ({dia} < 90)"),
+        ehr_scope(&ehr_id),
+    )
+    .await;
+    assert!(rows(&not).is_empty(), "{not}");
+
+    // A comparison of two paths of one event: none carries both values.
+    let pair = run_aql(
+        &svc,
+        &format!("SELECT c/uid/value {from} WHERE {sys} > {dia}"),
+        ehr_scope(&ehr_id),
+    )
+    .await;
+    assert!(
+        rows(&pair).is_empty(),
+        "150 and 95 sit on different events: {pair}"
+    );
+
+    // Distributing an AND over an OR does not change the answer.
+    let a = format!("EXISTS {event}/time/value");
+    for select in ["c/uid/value", "o/data[at0001]/events[at0002]/time/value"] {
+        let spread = run_aql(
+            &svc,
+            &format!(
+                "SELECT {select} {from} \
+                 WHERE ({a} AND {sys} >= 140) OR ({a} AND {dia} >= 90)"
+            ),
+            ehr_scope(&ehr_id),
+        )
+        .await;
+        let factored = run_aql(
+            &svc,
+            &format!("SELECT {select} {from} WHERE {a} AND ({sys} >= 140 OR {dia} >= 90)"),
+            ehr_scope(&ehr_id),
+        )
+        .await;
+        let mut left = times(&spread);
+        let mut right = times(&factored);
+        left.sort_by_key(ToString::to_string);
+        right.sort_by_key(ToString::to_string);
+        assert_eq!(left, right, "{select}: {spread} vs {factored}");
+        assert!(!left.is_empty(), "{select}: {spread}");
+    }
+
+    // `events` and `events[at0002]` are two steps, so these two tests may
+    // read different events.
+    let unshared = run_aql(
+        &svc,
+        &format!(
+            "SELECT c/uid/value {from} \
+             WHERE o/data[at0001]/events/data[at0003]/items[at0004]/value/magnitude >= 140 \
+               AND {dia} >= 90"
+        ),
+        ehr_scope(&ehr_id),
+    )
+    .await;
+    assert_eq!(rows(&unshared).len(), 1, "{unshared}");
+}
+
+/// Aggregate edge cases: `COUNT(DISTINCT)` compares numbers by value; over
+/// zero rows `COUNT` is 0 and `SUM`/`AVG`/`MIN`/`MAX` are NULL (QUERY master03
+/// §COUNT); a list-valued fragment tail counts its elements.
+#[tokio::test]
+async fn aggregate_edge_cases() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let sys = "o/data[at0001]/events[at0002]/data[at0003]/items[at0004]/value/magnitude";
+    let from = format!("FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[{OBS_ARCHETYPE}]");
+
+    let empty = create_ehr(&svc).await;
+    let none = run_aql(
+        &svc,
+        &format!(
+            "SELECT COUNT(*), COUNT({sys}), SUM({sys}), AVG({sys}), MIN({sys}), MAX({sys}) {from}"
+        ),
+        ehr_scope(&empty),
+    )
+    .await;
+    assert_eq!(
+        rows(&none),
+        &vec![json!([0, 0, null, null, null, null])],
+        "{none}"
+    );
+
+    let same = create_ehr(&svc).await;
+    let mut c = two_reading_composition(120.0, 120.0);
+    // One reading written as the integer 120, the other as 120.0.
+    c["content"][0]["data"]["events"][0]["data"]["items"][0]["value"]["magnitude"] = json!(120);
+    create_comp_body(&svc, &same, c, "same value").await;
+    let distinct = run_aql(
+        &svc,
+        &format!("SELECT COUNT({sys}), COUNT(DISTINCT {sys}) {from}"),
+        ehr_scope(&same),
+    )
+    .await;
+    assert_eq!(rows(&distinct), &vec![json!([2, 1])], "{distinct}");
+
+    let listed = create_ehr(&svc).await;
+    create_comp_body(&svc, &listed, multi_fragment_composition(), "links").await;
+    let links = run_aql(
+        &svc,
+        "SELECT COUNT(c/links/target/value) FROM EHR e CONTAINS COMPOSITION c",
+        ehr_scope(&listed),
+    )
+    .await;
+    assert_eq!(
+        rows(&links),
+        &vec![json!([2])],
+        "every link element: {links}"
+    );
+}
+
+/// The WHERE clause keeps AQL's operators boolean (QUERY master03 §Logical
+/// operators): a row is kept when SOME assignment of the clause's step
+/// bindings makes it true under three-valued logic (our own grain design;
+/// §WHERE is silent on paths that reach several nodes).
+///
+/// * `NOT (sys > 140)` over systolics 120 and 150 holds (the 120 event fails
+///   `sys > 140`); over a path that reaches nothing it is NULL, and the row is
+///   dropped.
+/// * `AND` narrows: `EXISTS time AND NOT (sys >= 140)` returns a subset of
+///   `NOT (sys >= 140)`.
+/// * De Morgan: `NOT (sys >= 140 OR dia >= 90)` and
+///   `NOT (sys >= 140) AND NOT (dia >= 90)` return the same rows, on the
+///   readings and on an observation without the events.
+#[tokio::test]
+async fn where_keeps_the_boolean_laws() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let readings = create_ehr(&svc).await;
+    create_comp_body(
+        &svc,
+        &readings,
+        two_reading_composition(120.0, 150.0),
+        "two readings",
+    )
+    .await;
+    let bare = create_ehr(&svc).await;
+    create_comp(&svc, &bare, "no readings", 1.0).await;
+    let from = format!("FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[{OBS_ARCHETYPE}]");
+    let event = "o/data[at0001]/events[at0002]";
+    let sys = format!("{event}/data[at0003]/items[at0004]/value/magnitude");
+    let dia = format!("{event}/data[at0003]/items[at0005]/value/magnitude");
+    let count = |r: &Value| rows(r).len();
+
+    let not = run_aql(
+        &svc,
+        &format!("SELECT c/uid/value {from} WHERE NOT ({sys} > 140)"),
+        ehr_scope(&readings),
+    )
+    .await;
+    assert_eq!(count(&not), 1, "the 120 event fails sys > 140: {not}");
+    let absent = run_aql(
+        &svc,
+        &format!(
+            "SELECT c/uid/value {from} \
+             WHERE NOT (o/data[at0001]/events[at0099]/time/value = '2026-10-01T08:00:00Z')"
+        ),
+        ehr_scope(&readings),
+    )
+    .await;
+    assert!(
+        rows(&absent).is_empty(),
+        "NOT over an absent path is NULL: {absent}"
+    );
+
+    let narrowed = run_aql(
+        &svc,
+        &format!("SELECT c/uid/value {from} WHERE EXISTS {event}/time AND NOT ({sys} >= 140)"),
+        ehr_scope(&readings),
+    )
+    .await;
+    let wide = run_aql(
+        &svc,
+        &format!("SELECT c/uid/value {from} WHERE NOT ({sys} >= 140)"),
+        ehr_scope(&readings),
+    )
+    .await;
+    assert!(count(&narrowed) <= count(&wide), "{narrowed} vs {wide}");
+    assert_eq!(count(&narrowed), 1, "{narrowed}");
+
+    for ehr in [&readings, &bare] {
+        let negated_or = run_aql(
+            &svc,
+            &format!("SELECT c/uid/value {from} WHERE NOT ({sys} >= 140 OR {dia} >= 90)"),
+            ehr_scope(ehr),
+        )
+        .await;
+        let and_of_nots = run_aql(
+            &svc,
+            &format!("SELECT c/uid/value {from} WHERE NOT ({sys} >= 140) AND NOT ({dia} >= 90)"),
+            ehr_scope(ehr),
+        )
+        .await;
+        assert_eq!(
+            rows(&negated_or),
+            rows(&and_of_nots),
+            "{negated_or} vs {and_of_nots}"
+        );
+    }
+}
+
+/// QUERY master03 §Aggregate functions: inputs are data items "filtered by
+/// FROM and WHERE". With systolics 120 and 160, `WHERE NOT (sys < 140)` keeps
+/// the 160 reading: one row for the plain projection, one item for the
+/// aggregates.
+#[tokio::test]
+async fn aggregates_follow_a_negated_where() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr_id = create_ehr(&svc).await;
+    create_comp_body(
+        &svc,
+        &ehr_id,
+        two_reading_composition(120.0, 160.0),
+        "two readings",
+    )
+    .await;
+    let from = format!("FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[{OBS_ARCHETYPE}]");
+    let sys = "o/data[at0001]/events[at0002]/data[at0003]/items[at0004]/value/magnitude";
+
+    let plain = run_aql(
+        &svc,
+        &format!("SELECT {sys} {from} WHERE NOT ({sys} < 140)"),
+        ehr_scope(&ehr_id),
+    )
+    .await;
+    assert_eq!(rows(&plain).len(), 1, "{plain}");
+    assert_eq!(rows(&plain)[0][0].as_f64(), Some(160.0), "{plain}");
+
+    let agg = run_aql(
+        &svc,
+        &format!("SELECT COUNT({sys}), AVG({sys}) {from} WHERE NOT ({sys} < 140)"),
+        ehr_scope(&ehr_id),
+    )
+    .await;
+    assert_eq!(rows(&agg)[0][0].as_f64(), Some(1.0), "{agg}");
+    assert_eq!(rows(&agg)[0][1].as_f64(), Some(160.0), "{agg}");
+}
+
+/// QUERY master03 §EXISTS: "true means the data associated with the specified
+/// path exists", a property of the path, not of one assignment of the WHERE
+/// bindings. On the two-event observation the diastolic exists on the 08:00
+/// event only.
+#[tokio::test]
+async fn exists_is_path_level() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr_id = create_ehr(&svc).await;
+    create_comp_body(&svc, &ehr_id, two_event_composition(), "two events").await;
+    let from = format!("FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[{OBS_ARCHETYPE}]");
+    let event = "o/data[at0001]/events[at0002]";
+    let dia = format!("{event}/data[at0003]/items[at0005]");
+    let absent = format!("{event}/data[at0003]/items[at0099]");
+    let count = |r: &Value| rows(r).len();
+    let run = |clause: String, select: &'static str| {
+        let svc = &svc;
+        let from = from.clone();
+        let ehr_id = ehr_id.clone();
+        async move {
+            run_aql(
+                svc,
+                &format!("SELECT {select} {from} WHERE {clause}"),
+                ehr_scope(&ehr_id),
+            )
+            .await
+        }
+    };
+
+    let present = run(format!("EXISTS {dia}"), "c/uid/value").await;
+    assert_eq!(count(&present), 1, "partly present path exists: {present}");
+    let not_present = run(format!("NOT EXISTS {dia}"), "c/uid/value").await;
+    assert_eq!(count(&not_present), 0, "{not_present}");
+
+    let missing = run(format!("EXISTS {absent}"), "c/uid/value").await;
+    assert_eq!(count(&missing), 0, "{missing}");
+    let not_missing = run(format!("NOT EXISTS {absent}"), "c/uid/value").await;
+    assert_eq!(count(&not_missing), 1, "{not_missing}");
+
+    // With the event bound by the SELECT, existence is asked per event.
+    let per_event = run(
+        format!("EXISTS {dia}"),
+        "o/data[at0001]/events[at0002]/time/value",
+    )
+    .await;
+    assert_eq!(
+        rows(&per_event),
+        &vec![json!(["2026-10-01T08:00:00Z"])],
+        "{per_event}"
+    );
+    let per_event_not = run(
+        format!("NOT EXISTS {dia}"),
+        "o/data[at0001]/events[at0002]/time/value",
+    )
+    .await;
+    assert_eq!(
+        rows(&per_event_not),
+        &vec![json!(["2026-10-01T09:00:00Z"])],
+        "{per_event_not}"
+    );
+}
+
+/// A test of a list attribute inside one node is unknown over an empty or
+/// absent list, as every absent path is under three-valued logic: `NOT (link
+/// = 'x')` drops a composition without links and keeps one whose links all
+/// differ from `'x'`.
+#[tokio::test]
+async fn a_list_test_over_no_elements_is_unknown() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let aql = "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c \
+               WHERE NOT (c/links/target/value = 'ehr://x/none')";
+
+    let bare = create_ehr(&svc).await;
+    create_comp(&svc, &bare, "no links", 1.0).await;
+    let none = run_aql(&svc, aql, ehr_scope(&bare)).await;
+    assert!(rows(&none).is_empty(), "no links, unknown, dropped: {none}");
+
+    let linked = create_ehr(&svc).await;
+    create_comp_body(&svc, &linked, multi_fragment_composition(), "links").await;
+    let some = run_aql(&svc, aql, ehr_scope(&linked)).await;
+    assert_eq!(rows(&some).len(), 1, "no link equals the value: {some}");
 }

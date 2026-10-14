@@ -104,7 +104,10 @@ fn flat_input_err(e: &openehr_sdt::flat::error::FlatError) -> RestError {
             | FlatError::UnknownContext(_)
             | FlatError::OtherSuffixConflict(_)
     );
-    let msg = format!("Simplified-Format conversion failed: {e}");
+    let msg = format!(
+        "Simplified-Format conversion failed: {}",
+        ferroehr::service::error::ErrorChain::new(e)
+    );
     if syntactic {
         RestError(ApiError::BadRequest(msg))
     } else {
@@ -118,7 +121,7 @@ fn flat_input_err(e: &openehr_sdt::flat::error::FlatError) -> RestError {
 /// a server fault → `500` (`Requests_and_responses.md §HTTP status codes`, row
 /// `500`).
 fn flat_output_err(e: &openehr_sdt::flat::error::FlatError) -> RestError {
-    internal(e)
+    internal(ferroehr::service::error::ErrorChain::new(e))
 }
 
 // ── COMPOSITION: request side ──────────────────────────────────────────────

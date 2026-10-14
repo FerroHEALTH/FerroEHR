@@ -549,9 +549,7 @@ fn build_children(
     if recurse_attrs {
         node.existence = existence_constraints(co, &node.aql_path);
         node.closed_attributes = closed_attributes(co, &node.aql_path);
-        if shape::is_entry_family(&node.rm_type) {
-            node.structural_stubs = structural_stubs(ctx, co, arch_id);
-        }
+        node.structural_stubs = structural_stubs(ctx, co, arch_id, &node.aql_path);
     }
     node.children = children;
     shape::post_process(node);
@@ -1007,19 +1005,23 @@ fn admissible_children(
     (allowed_ids, slots)
 }
 
-// ── structural stubs (constrained-but-content-less ENTRY structural attrs) ────
+// ── structural stubs (constrained-but-content-less structural attrs) ─────────
 
-/// The RM-mandatory / structural attributes of an ENTRY whose value the
-/// FLAT/TDD composition builder synthesises when the simplified form carries no
-/// content under them (`RM/docs/UML/classes/org.openehr.rm.composition.*`): the
-/// ENTRY `data`/`state`/`protocol` structural attributes plus `ACTION.description`
-/// (existence `1..1`, `RM/docs/UML/classes/org.openehr.rm.composition.action.adoc`).
-const ENTRY_STRUCTURAL_ATTRS: [&str; 4] = ["data", "description", "protocol", "state"];
+/// The structural attributes whose value the FLAT/TDD composition builder and the
+/// example generator synthesise when the simplified form carries no content under
+/// them: the ENTRY `data`/`state`/`protocol`, `ACTION.description` (existence
+/// `1..1`, `RM/docs/UML/classes/org.openehr.rm.composition.action.adoc`), the
+/// EVENT `data`/`state` and `ACTIVITY.description`
+/// (`RM/docs/UML/classes/org.openehr.rm.data_structures.event.adoc`,
+/// `…org.openehr.rm.composition.activity.adoc`).
+const STRUCTURAL_ATTRS: [&str; 4] = ["data", "description", "protocol", "state"];
 
-/// Capture the [`WebTemplateStructuralStub`]s for an ENTRY node: for each
-/// structural attribute (`data`/`description`/`protocol`/`state`) the OPT
-/// constrains with a node-identified structural child, record its RM type,
-/// archetype node id, and rubric name. When the attribute has no leaf content the
+/// Captures the [`WebTemplateStructuralStub`]s of a structural node.
+///
+/// For each structural attribute (`data`/`description`/`protocol`/`state`) the
+/// OPT constrains with a node-identified structural child, the stub records its
+/// absolute attribute path (under `node_path`), RM type, archetype node id and
+/// rubric name. When the attribute has no leaf content the
 /// compactor drops the wrapper, so this is the only surviving record of the
 /// *constrained* identity — the composition builder synthesises the empty
 /// attribute from it (AOM 1.4 `master04-constraint_model_package.adoc`
@@ -1030,11 +1032,16 @@ const ENTRY_STRUCTURAL_ATTRS: [&str; 4] = ["data", "description", "protocol", "s
 /// recorded; unresolved refs / slots yield no stub (the attribute then keeps its
 /// spec-legal `at0001` "Any" placeholder — ADL 1.4 `master05-cadl.adoc` §"Any"
 /// Constraints).
-fn structural_stubs(ctx: &Ctx, co: &CObject, arch_id: &str) -> Vec<WebTemplateStructuralStub> {
+fn structural_stubs(
+    ctx: &Ctx,
+    co: &CObject,
+    arch_id: &str,
+    node_path: &str,
+) -> Vec<WebTemplateStructuralStub> {
     let mut out = Vec::new();
     for attr in inputs::attributes(co) {
         let attr_name = inputs::attribute_name(attr);
-        if !ENTRY_STRUCTURAL_ATTRS.contains(&attr_name) {
+        if !STRUCTURAL_ATTRS.contains(&attr_name) {
             continue;
         }
         for child in inputs::attribute_children(attr) {
@@ -1054,6 +1061,7 @@ fn structural_stubs(ctx: &Ctx, co: &CObject, arch_id: &str) -> Vec<WebTemplateSt
             }
             out.push(WebTemplateStructuralStub {
                 attr: attr_name.to_owned(),
+                path: format!("{node_path}/{attr_name}"),
                 rm_type: object_rm_type(child).to_owned(),
                 node_id,
                 name: ctx.text(arch_id, object_node_id(child), &ctx.default_language),

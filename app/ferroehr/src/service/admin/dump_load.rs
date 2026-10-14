@@ -1006,7 +1006,7 @@ fn version_document(kind: &str, envelope: &Value) -> Result<String, ServiceError
 #[derive(Debug, thiserror::Error)]
 enum VersionPayloadError {
     /// The entry is not a readable canonical-XML `ORIGINAL_VERSION`.
-    #[error("{0}")]
+    #[error(transparent)]
     Xml(#[from] openehr_its::xml::runtime::XmlError),
     /// The document parsed, but carries no `data` to restore.
     #[error("the ORIGINAL_VERSION document carries no `data`")]
@@ -1589,7 +1589,7 @@ impl FerroEhrService {
         keys.dedup();
         for hex in &keys {
             let bytes = engine.store().get(hex).await.map_err(|e| {
-                crate::service::error::internal_fault("export a multimedia blob", &e)
+                crate::service::error::internal_fault_caused("export a multimedia blob", &e)
             })?;
             archive.write(&format!("{BLOB_PREFIX}{hex}"), &bytes)?;
         }
@@ -1652,7 +1652,7 @@ impl FerroEhrService {
                 .put_if_absent(hex, bytes)
                 .await
                 .map_err(|e| {
-                    crate::service::error::internal_fault("import a multimedia blob", &e)
+                    crate::service::error::internal_fault_caused("import a multimedia blob", &e)
                 })?;
         }
         Ok(())

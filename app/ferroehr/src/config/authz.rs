@@ -51,9 +51,12 @@ pub enum EhrAccessDefault {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct RbacConfig {
-    /// Master switch; the coarse role gate is active only when auth is enabled
-    /// (`FERROEHR__AUTHZ__RBAC__ENABLED`, default `true`). Disabling restores
-    /// authentication-only behaviour.
+    /// Master switch of the coarse role gate, active only when auth is enabled
+    /// (`FERROEHR__AUTHZ__RBAC__ENABLED`, default `true`).
+    ///
+    /// Disabling it lets every authenticated caller use every enabled surface,
+    /// which the deployment posture reports as `rbac_off`. The per-EHR keys
+    /// [`Self::ehr_access_default`] and [`Self::admin_role`] apply either way.
     pub enabled: bool,
     /// The role required for Admin-class operations (default `ADMIN`).
     pub admin_role: String,
@@ -99,6 +102,10 @@ pub struct RbacConfig {
     /// asymmetry this key removes (OWASP Insecure Direct Object Reference
     /// Prevention Cheat Sheet: an unpredictable id is not itself an access
     /// control).
+    ///
+    /// It applies whether or not [`Self::enabled`] is set, because the per-EHR
+    /// gate runs without the coarse one; with authentication off nothing could
+    /// enforce `restricted`, so that combination is refused at boot.
     pub ehr_access_default: EhrAccessDefault,
 }
 

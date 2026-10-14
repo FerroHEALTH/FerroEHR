@@ -9,8 +9,8 @@
 //! (no randomness, no current-time), at one of three [`DetailLevel`]s:
 //!
 //! * [`Required`](DetailLevel::Required) — only the mandatory skeleton (nodes on
-//!   a fully-mandatory chain, plus whatever a min-cardinality forces). Intended
-//!   to be committable as-is.
+//!   a fully-mandatory chain, plus whatever a min-cardinality or a mandatory
+//!   attribute existence forces). Intended to be committable as-is.
 //! * [`Medium`](DetailLevel::Medium) — the fully-populated single-instance
 //!   document: every optional branch descended to its leaves, one occurrence of
 //!   each node, the first alternative of any choice. Intended to be committable
@@ -44,13 +44,16 @@
               (#1694)"
 )]
 
-use std::collections::HashSet;
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 
+use openehr_rm::v1_2::paths::{PathSegment, RmPath};
 use serde_json::{Map, Value, json};
 
+use crate::flat::build::structural_from;
 use crate::flat::convert::composition_from_flat;
 use crate::flat::webtemplate::model::{
     WebTemplate, WebTemplateInput, WebTemplateInputType, WebTemplateNode, WebTemplateRange,
+    WebTemplateStructuralStub,
 };
 
 /// Fixed example instants used for the RM temporal leaves (deterministic).
@@ -129,11 +132,14 @@ impl ExampleType {
     }
 }
 
-/// Generate an example (input-form) COMPOSITION from `wt` at `level`.
+/// Generates an example (input-form) COMPOSITION from `wt` at `level`.
 ///
 /// The result is canonical openEHR JSON that deserialises as an `openehr-rm`
-/// `Composition`. For the `output` form, additionally call
-/// [`apply_output_uid`].
+/// `Composition`. Every attribute the template makes mandatory is present: a
+/// leaf-bearing one through the forced walk, a content-less structural one (an
+/// EVENT `state`, an ENTRY `protocol`) as the empty node its structural stub
+/// constrains (AOM 1.4 `master04-constraint_model_package.adoc` §existence).
+/// For the `output` form, additionally call [`apply_output_uid`].
 #[must_use]
 pub fn example_composition(wt: &WebTemplate, level: DetailLevel) -> Value {
     let mut flat: Map<String, Value> = Map::new();
@@ -153,7 +159,10 @@ pub fn example_composition(wt: &WebTemplate, level: DetailLevel) -> Value {
     walk(&wt.tree, &wt.tree.id, 0, level, false, &mut flat);
 
     match composition_from_flat(&flat, wt, EXAMPLE_DATE_TIME) {
-        Ok(value) => value,
+        Ok(mut value) => {
+            fill_mandatory_structures(&mut value, &wt.tree);
+            value
+        }
         // The build does not fail for a well-formed tree; keep a total function.
         Err(_) => Value::Object(Map::new()),
     }
@@ -178,12 +187,18 @@ pub fn apply_output_uid(composition: &mut Value, template_id: &str) {
 
 // ── the tree walk ──────────────────────────────────────────────────────────────
 
-/// Walk a container node, emitting the flat entries for its included leaves.
-/// Returns whether anything was emitted under this node.
+/// Walks a container node, emitting the flat entries for its included leaves,
+/// and returns whether anything was emitted under this node.
 ///
 /// `opt_depth` is the number of optional (`min < 1`) nodes on the path to this
 /// node inclusive; it drives which optional branches each level includes.
-/// `force` requests that a (mandatory) container not be left empty.
+/// `force` requests that a (mandatory) container not be left empty. A child
+/// under a mandatory container cardinality or a mandatory attribute existence
+/// is walked even where the level would skip it. An ELEMENT's `null_flavour`
+/// is emitted only when its `value` is not: RM `data_structures` §ELEMENT
+/// `Inv_null_flavour_indicated` (`is_null() xor null_flavour = Void`) makes the
+/// two mutually exclusive, and requires the null flavour on a value-less
+/// ELEMENT.
 fn walk(
     node: &WebTemplateNode,
     prefix: &str,
@@ -196,14 +211,15 @@ fn walk(
         return emit_leaf(node, prefix, out);
     }
 
-    let groups = child_groups(node);
+    let (groups, null_branch) = split_null_branch(node);
     let cx = WalkCtx {
         prefix,
         opt_depth,
         level,
     };
-    let (mut emitted, included) = walk_children(node, &groups, &cx, out);
-    emitted |= satisfy_cardinalities(node, &groups, &included, &cx, out);
+    let (mut emitted, mut included) = walk_children(node, &groups, &cx, out);
+    emitted |= satisfy_cardinalities(node, &groups, &mut included, &cx, out);
+    emitted |= satisfy_existence(node, &groups, &mut included, &cx, out);
 
     // A forced (mandatory) container with nothing yet: drill its first child to a
     // leaf so the node is not emitted empty.
@@ -215,6 +231,9 @@ fn walk(
         emitted |= walk(child, &child_prefix, opt_depth, level, true, out);
     }
 
+    if !null_branch.is_empty() && (emitted || force) && !value_emitted(&groups, prefix, out) {
+        emitted |= walk_null_flavour(&null_branch, &cx, out);
+    }
     emitted
 }
 
@@ -338,12 +357,14 @@ fn walk_child(
 }
 
 /// Cardinality satisfaction: for every container attribute constrained to
-/// `min >= 1`, ensure at least one child under it is materialised (a
+/// `min >= 1`, ensures at least one child under it is materialised (a
 /// committable skeleton), even where the level would otherwise skip it.
-fn satisfy_cardinalities(
+///
+/// A child walked here joins `included`.
+fn satisfy_cardinalities<'a>(
     node: &WebTemplateNode,
-    groups: &[&WebTemplateNode],
-    included: &[&str],
+    groups: &[&'a WebTemplateNode],
+    included: &mut Vec<&'a str>,
     cx: &WalkCtx<'_>,
     out: &mut Map<String, Value>,
 ) -> bool {
@@ -357,10 +378,199 @@ fn satisfy_cardinalities(
             && let Some(child) = groups.iter().find(|c| c.aql_path.starts_with(&card.path))
         {
             let child_prefix = format!("{}/{}", cx.prefix, seg_for(child));
+            included.push(child.aql_path.as_str());
             emitted |= walk(child, &child_prefix, cx.opt_depth, cx.level, true, out);
         }
     }
     emitted
+}
+
+/// Existence satisfaction: for every attribute the template makes mandatory
+/// (AOM 1.4 `master04-constraint_model_package.adoc` §existence, `min >= 1`),
+/// ensures a child under it is materialised when one is reachable.
+///
+/// A mandatory attribute with no reachable child (a structural node carrying no
+/// leaf content) is filled from its structural stub by
+/// [`fill_mandatory_structures`] instead. A child walked here joins `included`.
+fn satisfy_existence<'a>(
+    node: &WebTemplateNode,
+    groups: &[&'a WebTemplateNode],
+    included: &mut Vec<&'a str>,
+    cx: &WalkCtx<'_>,
+    out: &mut Map<String, Value>,
+) -> bool {
+    let mut emitted = false;
+    for ex in &node.existence {
+        if ex.min < 1 || included.iter().any(|p| under_attribute(p, &ex.path)) {
+            continue;
+        }
+        if let Some(child) = groups.iter().find(|c| {
+            under_attribute(&c.aql_path, &ex.path) && rm_declares(&c.aql_path) && !skips_optional(c)
+        }) {
+            let child_prefix = format!("{}/{}", cx.prefix, seg_for(child));
+            included.push(child.aql_path.as_str());
+            emitted |= walk(child, &child_prefix, cx.opt_depth, cx.level, true, out);
+        }
+    }
+    emitted
+}
+
+/// Whether `path` lies under the attribute at `attribute_path`: the attribute
+/// itself, or a node or attribute beneath it.
+fn under_attribute(path: &str, attribute_path: &str) -> bool {
+    path.strip_prefix(attribute_path)
+        .is_some_and(|rest| rest.is_empty() || rest.starts_with(['[', '/']))
+}
+
+/// The RM attribute an `aql_path` ends in, its predicate stripped.
+fn tail_attribute(aql_path: &str) -> &str {
+    let tail = aql_path.rsplit('/').next().unwrap_or(aql_path);
+    tail.split('[').next().unwrap_or(tail)
+}
+
+/// The ELEMENT attributes that describe a value-less ELEMENT: RM
+/// `data_structures` §ELEMENT `null_flavour`, and `null_reason`, which
+/// `Inv_null_reason_valid` admits only on a null ELEMENT.
+const NULL_BRANCH: [&str; 2] = ["null_flavour", "null_reason"];
+
+/// Splits a node's child groups into the ones walked as data and, for an
+/// ELEMENT, its null branch ([`NULL_BRANCH`]), which [`walk_null_flavour`]
+/// emits only for a value-less ELEMENT.
+fn split_null_branch(node: &WebTemplateNode) -> (Vec<&WebTemplateNode>, Vec<&WebTemplateNode>) {
+    let groups = child_groups(node);
+    if node.rm_type != "ELEMENT" {
+        return (groups, Vec::new());
+    }
+    groups
+        .into_iter()
+        .partition(|c| !NULL_BRANCH.contains(&tail_attribute(&c.aql_path)))
+}
+
+/// Whether a `value` child of `groups` emitted a flat entry under `prefix`.
+fn value_emitted(groups: &[&WebTemplateNode], prefix: &str, out: &Map<String, Value>) -> bool {
+    groups.iter().any(|c| {
+        if tail_attribute(&c.aql_path) != "value" {
+            return false;
+        }
+        let base = format!("{prefix}/{}", seg_for(c));
+        out.keys().any(|k| {
+            k.strip_prefix(base.as_str())
+                .is_some_and(|rest| rest.is_empty() || rest.starts_with(['|', '/', ':']))
+        })
+    })
+}
+
+/// Emits the `null_flavour` of a value-less ELEMENT, the one shape in which RM
+/// `data_structures` §ELEMENT `Inv_null_flavour_indicated` requires it.
+fn walk_null_flavour(
+    null_branch: &[&WebTemplateNode],
+    cx: &WalkCtx<'_>,
+    out: &mut Map<String, Value>,
+) -> bool {
+    null_branch
+        .iter()
+        .find(|c| tail_attribute(&c.aql_path) == "null_flavour")
+        .is_some_and(|child| {
+            let child_prefix = format!("{}/{}", cx.prefix, seg_for(child));
+            walk(child, &child_prefix, cx.opt_depth, cx.level, true, out)
+        })
+}
+
+/// Fills every mandatory structural attribute the FLAT build left absent with
+/// the empty node its structural stub constrains.
+///
+/// An attribute the template makes mandatory (AOM 1.4
+/// `master04-constraint_model_package.adoc` §existence) whose structural child
+/// carries no leaf content has no web-template node to walk, so the FLAT map
+/// cannot express it. The stub records the constrained identity (RM type,
+/// archetype node id, rubric), the value the closed-archetype walk admits
+/// (§`Valid_value`); stubs and existence constraints meet on the attribute's
+/// absolute archetype path.
+fn fill_mandatory_structures(composition: &mut Value, tree: &WebTemplateNode) {
+    let mut mandatory: BTreeSet<&str> = BTreeSet::new();
+    let mut stubs: BTreeMap<&str, &WebTemplateStructuralStub> = BTreeMap::new();
+    collect_mandatory_structures(tree, &mut mandatory, &mut stubs);
+    for path in mandatory {
+        let Some(stub) = stubs.get(path) else {
+            continue;
+        };
+        let Some(owner) = path
+            .strip_suffix(stub.attr.as_str())
+            .and_then(|p| p.strip_suffix('/'))
+        else {
+            continue;
+        };
+        let segments = if owner.is_empty() {
+            Vec::new()
+        } else {
+            match owner.parse::<RmPath>() {
+                Ok(p) => p.segments,
+                // NOTE: no openEHR spec governs example generation — an owner
+                // path that does not parse locates nothing, so nothing is filled.
+                Err(_) => continue,
+            }
+        };
+        let default_name = if stub.rm_type == "HISTORY" {
+            "History"
+        } else {
+            "Tree"
+        };
+        for_each_at_mut(composition, &segments, &mut |obj| {
+            if let Value::Object(m) = obj
+                && !m.contains_key(&stub.attr)
+            {
+                m.insert(stub.attr.clone(), structural_from(stub, default_name));
+            }
+        });
+    }
+}
+
+/// Collects the mandatory attribute paths and the structural stubs of the
+/// whole web-template tree.
+fn collect_mandatory_structures<'a>(
+    node: &'a WebTemplateNode,
+    mandatory: &mut BTreeSet<&'a str>,
+    stubs: &mut BTreeMap<&'a str, &'a WebTemplateStructuralStub>,
+) {
+    for ex in node.existence.iter().filter(|ex| ex.min >= 1) {
+        mandatory.insert(ex.path.as_str());
+    }
+    for stub in &node.structural_stubs {
+        stubs.entry(stub.path.as_str()).or_insert(stub);
+    }
+    for child in &node.children {
+        collect_mandatory_structures(child, mandatory, stubs);
+    }
+}
+
+/// Applies `f` to every canonical-JSON node `segments` reach from `node`.
+///
+/// Each step selects the values under the segment's attribute whose
+/// archetype-node-id and name conjuncts the segment predicate matches (BASE
+/// `master11-paths` §"Predicate Expressions"), descending into every element
+/// of a container attribute.
+fn for_each_at_mut(node: &mut Value, segments: &[PathSegment], f: &mut dyn FnMut(&mut Value)) {
+    let Some((segment, rest)) = segments.split_first() else {
+        f(node);
+        return;
+    };
+    let Some(child) = node.get_mut(&segment.attribute) else {
+        return;
+    };
+    match child {
+        Value::Array(items) => {
+            for item in items {
+                if segment.predicate.matches(item) {
+                    for_each_at_mut(item, rest, f);
+                }
+            }
+        }
+        single => {
+            if segment.predicate.matches(single) {
+                for_each_at_mut(single, rest, f);
+            }
+        }
+    }
 }
 
 /// The children to consider under a container: one per distinct `aql_path` (the
@@ -385,10 +595,6 @@ fn is_repeating(node: &WebTemplateNode) -> bool {
     node.max == -1 || node.max > 1
 }
 
-/// The flat path segment for a node: `id:0` for a repeating node (`max == -1 ||
-/// max > 1`), else the bare `id` — matching
-/// [`composition_to_flat`](crate::flat::convert::composition_to_flat) so the example
-/// round-trips.
 /// Does the generated RM model declare the attribute `aql_path` ends in?
 ///
 /// The tail of an AQL path is the RM attribute the node sits under (predicates
@@ -398,17 +604,19 @@ fn is_repeating(node: &WebTemplateNode) -> bool {
 /// Template child may sit several RM levels below its Web Template parent, so
 /// the parent's class is not the right scope to resolve against.
 fn rm_declares(aql_path: &str) -> bool {
-    static DECLARED: std::sync::LazyLock<std::collections::BTreeSet<&str>> =
-        std::sync::LazyLock::new(|| {
-            openehr_rm::v1_2::model::classes()
-                .flat_map(|c| c.attributes.iter().map(|a| a.name))
-                .collect()
-        });
-    let tail = aql_path.rsplit('/').next().unwrap_or(aql_path);
-    let attr = tail.split('[').next().unwrap_or(tail);
+    static DECLARED: std::sync::LazyLock<BTreeSet<&str>> = std::sync::LazyLock::new(|| {
+        openehr_rm::v1_2::model::classes()
+            .flat_map(|c| c.attributes.iter().map(|a| a.name))
+            .collect()
+    });
+    let attr = tail_attribute(aql_path);
     attr.is_empty() || DECLARED.contains(attr)
 }
 
+/// The flat path segment for a node: `id:0` for a repeating node (`max == -1 ||
+/// max > 1`), else the bare `id` — matching
+/// [`composition_to_flat`](crate::flat::convert::composition_to_flat) so the example
+/// round-trips.
 fn seg_for(node: &WebTemplateNode) -> String {
     if is_repeating(node) {
         format!("{}:0", node.id)

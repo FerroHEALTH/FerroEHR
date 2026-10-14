@@ -326,7 +326,9 @@ async fn next_version(
     let placement = if let Some(placement) = preplaced {
         placement
     } else {
-        // Serialize concurrent writers of the same object.
+        // Serialize concurrent writers of the same object. A multi-object
+        // CONTRIBUTION already holds it, and a repeated request by the holding
+        // session succeeds (PostgreSQL docs §13.3.5 Advisory Locks).
         crate::storage::version_repo::commit::advisory_lock(tx, vo_id).await?;
 
         // ONE statement: preceding tip + next ordinal + the transaction
@@ -662,6 +664,31 @@ pub(crate) async fn ensure_not_restricted_tx(
     Ok(())
 }
 
+/// Refuses a logical deletion whose preceding version is already deleted.
+///
+/// The master06 §Version Lifecycle state machine draws a `delete` edge out of
+/// every live state and none out of `deleted` (only `revert`), and ITS-REST
+/// answers the repeat as `400` (`responses/400_already_deleted.yaml`: "the
+/// resource identified by the request parameters is already deleted"). The
+/// check runs on the locked placement read, so the `DELETE` routes and a
+/// CONTRIBUTION deletion member reach the same refusal.
+///
+/// # Errors
+/// [`ServiceError::BadRequest`] when `preceding_lifecycle` is `523|deleted|`.
+fn refuse_already_deleted(
+    kind: Kind,
+    vo_id: VoId,
+    preceding_lifecycle: &str,
+) -> Result<(), ServiceError> {
+    if preceding_lifecycle != lifecycle::state::DELETED {
+        return Ok(());
+    }
+    Err(ServiceError::precondition(format!(
+        "{} {vo_id} is already deleted",
+        kind.as_str()
+    )))
+}
+
 #[expect(
     clippy::too_many_lines,
     reason = "the three change arms build one resolved write; splitting them \
@@ -805,10 +832,10 @@ async fn apply_change(
         } => {
             let next =
                 next_version(tx, ehr_id, vo_id, kind, expected, &ctx.system_id, preplaced).await?;
+            refuse_already_deleted(kind, vo_id, &next.preceding_lifecycle)?;
             // A deleted version carries no data — its `ORIGINAL_VERSION.data` is
             // Void (master06 §Logical Deletion); the signature is over the
-            // data-less version wrapper. Logical deletion is permitted from any
-            // live state, so no transition check runs here.
+            // data-less version wrapper.
             ResolvedWrite {
                 kind,
                 vo_id,
@@ -1293,7 +1320,8 @@ pub(crate) async fn update_with_placement(
 /// # Errors
 /// [`ServiceError::NotFound`] when `(ehr_id, kind, vo_id)` does not address a
 /// stored object; [`ServiceError::VersionConflict`] when `expected` is not the
-/// open lineage tip; plus the [`commit_resolved`] storage/signing errors.
+/// open lineage tip; [`ServiceError::BadRequest`] when the preceding version is
+/// already deleted; plus the [`commit_resolved`] storage/signing errors.
 #[expect(
     clippy::too_many_arguments,
     reason = "the write parameters, named individually; a parameter struct \
@@ -1331,17 +1359,24 @@ pub(crate) async fn delete(
     Ok(committed)
 }
 
-/// Commit a set of changes atomically under one CONTRIBUTION (RM common
+/// Commits a set of changes atomically under one CONTRIBUTION (RM common
 /// master06 §Committal and Audits — "similar to nested transactions").
-/// `contribution_audit` is the CONTRIBUTION's own audit; each change carries its
-/// VERSION `commit_audit`. `attests` are `666|attestation|` items — new
-/// `ATTESTATION`s attached to **existing** versions, committed in the
-/// same transaction but adding no new version.
+///
+/// `contribution_audit` is the CONTRIBUTION's own audit; each change carries
+/// its VERSION `commit_audit`. `attests` are `666|attestation|` items — new
+/// `ATTESTATION`s attached to **existing** versions, committed in the same
+/// transaction but adding no new version.
 ///
 /// Every audit of the set is stamped with the one commit instant this
 /// function reads (RM common master06 §Committal and Audits: `time_committed`
 /// "computed on the server"); each version and attestation keeps the
 /// committer its own audit states.
+///
+/// The per-object lock of every existing object the set modifies or deletes
+/// is taken up front, in ascending `vo_id` order — the order an import takes
+/// the same locks in
+/// ([`crate::storage::version_repo::import::lock_containers`]) — so two
+/// writers sharing several objects queue instead of deadlocking.
 ///
 /// # Errors
 /// The per-change [`apply_change`] errors; the attestation-completion
@@ -1356,6 +1391,13 @@ pub(crate) async fn commit_contribution(
     attests: Vec<PendingAttest>,
     ctx: &SigningCtx<'_>,
 ) -> Result<CommittedContribution, ServiceError> {
+    crate::storage::version_repo::import::lock_containers(
+        tx,
+        changes
+            .iter()
+            .filter_map(|(_, change)| change.target_vo_id()),
+    )
+    .await?;
     // The CONTRIBUTION's own audit + contribution rows in one round trip (the
     // per-version `commit_audit`s are inserted per change below). A uid the
     // client did not supply is minted here, stamped, never by the database.

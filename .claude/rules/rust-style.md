@@ -143,7 +143,7 @@ that a convention with no check is labelled as such rather than assumed.
 | 3373 | no `impl` inside a fn body | `non_local_definitions` (deny) |
 | 3389 | lints configured in the manifest, not `#![allow]` sprinkles | the `[workspace.lints]` table IS this |
 | — | zero re-exports: every import names its defining module | `clippy::pub_use` (deny) — the generated crates' preludes carry an emitter-stamped `#![expect]` |
-| 0201 + 0236 | **an error carries its cause** (`Error::source`) | `scripts/checks/error-source-chain.sh` — a per-tree RATCHET (counts may only fall) while the #2034 sweep runs |
+| 0201 + 0236 | **an error carries its cause** (`Error::source`), and prints it once: the cause is the source and stays out of the variant's own message, or the variant is `#[error(transparent)]` | `scripts/checks/error-source-chain.sh` — a per-tree RATCHET on flattened causes (`map_err(\|e\| …to_string())`, counts may only fall) and a HARD ZERO on double prints (an `#[error]` format string naming a `#[from]`/`#[source]`/`source` field), whose detector proves itself with its `--self-test` on every run |
 | 2294 | `if let` guards on match arms (stable 1.95.0, one release under our MSRV) | review-only — a genuine wish, labelled as one |
 
 **Rejected on merit, so nobody re-files them as gaps:**

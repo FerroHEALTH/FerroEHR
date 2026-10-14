@@ -6,17 +6,22 @@
 //! whole-object columns project four locator columns the executor reassembles
 //! through the node codec.
 //!
-//! No openEHR spec governs the projection mechanics — this is our own design. A scalar column is emitted as `to_jsonb(expr)`;
-//! a whole structure object emits (`vo_id`, `sys_version`, `num`, `num_cap`) and
-//! is reassembled at read time.
+//! No openEHR spec governs the projection mechanics — this is our own design.
+//! Every structure step a SELECT path descends through is bound once per row
+//! ([`Builder::bind_select_paths`] states the row grain). A scalar column is
+//! emitted as `to_jsonb(expr)`; a whole structure object emits (`vo_id`,
+//! `sys_version`, `num`, `num_cap`) and is reassembled at read time.
 
 use sea_query::{Alias, Expr, ExprTrait as _, Func};
 
-use crate::aql::error::AqlError;
-use crate::aql::ir::{AggFunc, Coercion, LeafPath, PathTarget, QueryIr, SelectColumn, SelectValue};
+use crate::aql::error::{AqlError, SqlError};
+use crate::aql::ir::{
+    AggFunc, Coercion, LeafPath, PathTarget, QueryIr, SelectColumn, SelectValue, StructureStep,
+};
 use crate::db::iden::Node;
 
 use super::expr::{col, leaf_path_string, literal_value, order_coercion, to_jsonb, type_cond};
+use super::from::BoundEdge;
 use super::{Builder, CellKind, ColumnSpec, ValueMode};
 
 impl Builder<'_> {
@@ -132,8 +137,8 @@ impl Builder<'_> {
                 arg,
                 distinct,
             } => {
-                let inner = match arg {
-                    None => None,
+                let agg = match arg {
+                    None => aggregate_expr(*func, None, *distinct),
                     Some(target) => {
                         let mode = match func {
                             AggFunc::Count => ValueMode::Projection,
@@ -148,10 +153,28 @@ impl Builder<'_> {
                             // magnitude coercion is always type-safe here.
                             AggFunc::Sum | AggFunc::Avg => ValueMode::Value(Coercion::Magnitude),
                         };
-                        Some(self.value_expr(target, mode)?)
+                        let count = matches!(func, AggFunc::Count);
+                        if let Some(mut walk) = self.leaf_items(target, mode)? {
+                            if let Some(filter) = self.where_filter_for(&walk)? {
+                                walk.sub.and_where(filter);
+                            }
+                            let item = if count {
+                                json_null_is_null(walk.item.clone())
+                            } else {
+                                walk.item.clone()
+                            };
+                            aggregate_over_items(*func, *distinct, &walk.sub, &item)
+                        } else {
+                            let value = self.value_expr(target, mode)?;
+                            let value = if count && self.reads_fragment(target, mode) {
+                                json_null_is_null(value)
+                            } else {
+                                value
+                            };
+                            aggregate_expr(*func, Some(value), *distinct)
+                        }
                     }
                 };
-                let agg = aggregate_expr(*func, inner, *distinct);
                 let sql_col = format!("col{i}");
                 self.q.expr_as(to_jsonb(agg), Alias::new(sql_col.as_str()));
                 Ok(ColumnSpec {
@@ -218,37 +241,186 @@ impl Builder<'_> {
         })
     }
 
-    /// Resolve a whole-object leaf to a node alias present in the FROM. Empty
-    /// anchor → the source node; otherwise the anchor chain is joined in and its
-    /// final node alias returned.
-    fn whole_object_alias(&mut self, leaf: &LeafPath) -> Result<String, AqlError> {
-        let src = self.source_node(leaf.source.0)?;
-        if leaf.anchor.is_empty() {
-            return Ok(src);
+    /// Resolves a whole-object leaf to the alias of the node it addresses:
+    /// the source node for an empty anchor, else the node
+    /// [`Self::bind_select_paths`] bound for the full anchor.
+    ///
+    /// # Errors
+    /// [`SqlError::Unsupported`] when the anchor was not bound (a lowering
+    /// defect: every SELECT path is bound before the columns are emitted).
+    fn whole_object_alias(&self, leaf: &LeafPath) -> Result<String, AqlError> {
+        let (start, rest) = self.walk_start(leaf)?;
+        if !rest.is_empty() {
+            return Err(SqlError::Unsupported(
+                "a whole-object projection whose structure steps are unbound".to_owned(),
+            )
+            .into());
         }
-        let mut prev = src;
-        for step in &leaf.anchor {
-            let alias = format!("w{}", self.next_ctr());
-            self.q.from_as(Node::Table, Alias::new(alias.as_str()));
-            self.q.and_where(super::expr::hot(&alias, Node::Tier));
-            self.q
-                .and_where(col(&alias, Node::VoId).eq(col(&prev, Node::VoId)));
-            self.q
-                .and_where(col(&alias, Node::SysVersion).eq(col(&prev, Node::SysVersion)));
-            self.q.and_where(
-                col(&alias, Node::Num).between(col(&prev, Node::Num), col(&prev, Node::NumCap)),
-            );
-            if let Some(cond) = type_cond(&alias, &step.node_types) {
-                self.q.and_where(cond);
+        Ok(start)
+    }
+
+    /// Binds, once per row, every structure step the SELECT paths descend
+    /// through (QUERY master03 §SELECT: "Where an identified path is specified,
+    /// the data item(s) having that archetype path are returned").
+    ///
+    /// The row grain is our own design, since the specification does not say
+    /// how rows multiply when a path crosses a multi-valued attribute: each
+    /// structure step a SELECT path (a column or a function argument)
+    /// descends through is bound as if it were a FROM variable, with [`Builder::left_bind`]. Paths rooted at the same
+    /// variable that share a step prefix share its binding, so two leaves
+    /// below one `EVENT` read the same `EVENT` in a row and never pair values
+    /// of different events; a step matching several nodes yields one row per
+    /// node (an archetype path "can correspond to more than one item in
+    /// runtime data", BASE `architecture_overview/master11-paths.adoc`
+    /// §Archetype path Predicate); a step matching none yields one row whose
+    /// cells below it are `NULL`, so the projection never removes a row the
+    /// FROM and WHERE clauses matched. WHERE and ORDER BY read through these
+    /// bindings wherever their own path shares the bound prefix.
+    ///
+    /// # Errors
+    /// [`AqlError`] from resolving a path's source node or a step predicate.
+    pub(super) fn bind_select_paths(&mut self) -> Result<(), AqlError> {
+        let mut leaves: Vec<(bool, LeafPath)> = Vec::new();
+        let mut collect = |t: &PathTarget| match t {
+            PathTarget::Data(leaf) => leaves.push((false, (**leaf).clone())),
+            PathTarget::EhrStatus(leaf) => leaves.push((true, (**leaf).clone())),
+            PathTarget::Version { .. } | PathTarget::Ehr { .. } => {}
+        };
+        // Aggregate arguments add no binding: an aggregate reads every data
+        // item of its own path per row (`aggregate_over_items`).
+        for column in &self.ir.select {
+            if !matches!(column.value, SelectValue::Aggregate { .. }) {
+                column.value.for_each_path(&mut collect);
             }
-            if let Some(pred) = &step.predicate {
-                for cond in self.node_constraint_conds(&alias, pred)? {
-                    self.q.and_where(cond);
+        }
+        for (ehr_status, leaf) in leaves {
+            if leaf.anchor.is_empty() {
+                continue;
+            }
+            if ehr_status {
+                self.ensure_ehr_status_root(leaf.source.0)?;
+            }
+            let mut parent = self.source_node(leaf.source.0)?;
+            let mut prefix: Vec<StructureStep> = Vec::with_capacity(leaf.anchor.len());
+            for step in &leaf.anchor {
+                prefix.push(step.clone());
+                let existing = self
+                    .step_bindings
+                    .iter()
+                    .find(|b| b.source == leaf.source.0 && b.steps == prefix)
+                    .map(|b| b.alias.clone());
+                if let Some(alias) = existing {
+                    parent = alias;
+                    continue;
                 }
+                let alias = self.left_bind(
+                    &parent,
+                    BoundEdge::Attribute(&step.attribute),
+                    |b, inner| {
+                        let mut conds: Vec<Expr> =
+                            type_cond(inner, &step.node_types).into_iter().collect();
+                        if let Some(pred) = &step.predicate {
+                            conds.extend(b.node_constraint_conds(inner, pred)?);
+                        }
+                        Ok(conds)
+                    },
+                )?;
+                self.step_bindings.push(super::StepBinding {
+                    source: leaf.source.0,
+                    steps: prefix.clone(),
+                    alias: alias.clone(),
+                });
+                parent = alias;
             }
-            prev = alias;
         }
-        Ok(prev)
+        Ok(())
+    }
+
+    /// The deepest node bound for `leaf`'s anchor prefix, and the anchor steps
+    /// left below it.
+    ///
+    /// The start is the leaf's source node when nothing of its anchor is
+    /// bound.
+    ///
+    /// # Errors
+    /// [`SqlError::Unsupported`] when the leaf's source has no node alias.
+    pub(super) fn walk_start<'l>(
+        &self,
+        leaf: &'l LeafPath,
+    ) -> Result<(String, &'l [StructureStep]), AqlError> {
+        let mut start = self.source_node(leaf.source.0)?;
+        let mut rest = leaf.anchor.as_slice();
+        let mut depth = 0;
+        for binding in &self.step_bindings {
+            if binding.source != leaf.source.0
+                || binding.steps.len() <= depth
+                || !leaf.anchor.starts_with(&binding.steps)
+            {
+                continue;
+            }
+            let Some(below) = leaf.anchor.get(binding.steps.len()..) else {
+                continue;
+            };
+            depth = binding.steps.len();
+            start.clone_from(&binding.alias);
+            rest = below;
+        }
+        Ok((start, rest))
+    }
+}
+
+/// Builds an aggregate over every data item a path selects, across all rows
+/// (QUERY master03 §Aggregate functions: the input values are "selected by an
+/// expression in a form of an identified path applied to data items filtered
+/// by `FROM` and `WHERE` clauses").
+///
+/// `items` is the per-row walk ([`Builder::leaf_items`]), already carrying the
+/// WHERE clause for the steps it shares with it ([`Builder::where_filter_for`]),
+/// and `item` the value of one item. Each row aggregates its own items in a correlated subquery and
+/// the rows combine: `COUNT` sums the per-row counts (0 over no rows, QUERY
+/// master03 §COUNT), `SUM` sums the sums, `MIN`/`MAX` take the extreme of the
+/// extremes, `AVG` divides the summed sums by the summed counts, and
+/// `COUNT(DISTINCT …)` collects each row's items as a jsonb array and counts
+/// the distinct elements of all of them. The walk adds no row to the result,
+/// so `COUNT(*)` and the other aggregates of the SELECT see the rows FROM and
+/// WHERE define. No openEHR spec governs the lowering — our own design.
+fn aggregate_over_items(
+    func: AggFunc,
+    distinct: bool,
+    items: &sea_query::SelectStatement,
+    item: &Expr,
+) -> Expr {
+    let per_row = |agg: Expr| -> Expr {
+        let mut sub = items.clone();
+        sub.expr(agg);
+        Expr::from(sub)
+    };
+    let count = || per_row(Expr::from(Func::count(item.clone())));
+    let sum = || per_row(Expr::from(Func::sum(item.clone())));
+    match func {
+        AggFunc::Count if distinct => {
+            // NOTE: QUERY master03 §COUNT does not define value equality for DISTINCT;
+            // ours is jsonb equality (numbers by value, so 120 and 120.0 are one).
+            let mut sub = items.clone();
+            sub.and_where(item.clone().is_not_null());
+            sub.expr(Expr::cust_with_exprs(
+                "COALESCE(jsonb_agg($1), '[]'::jsonb)",
+                [item.clone()],
+            ));
+            Expr::cust_with_exprs(
+                "(SELECT count(DISTINCT e.value) \
+                 FROM jsonb_array_elements(COALESCE(jsonb_agg($1), '[]'::jsonb)) AS a, \
+                 jsonb_array_elements(a.value) AS e)",
+                [Expr::from(sub)],
+            )
+        }
+        AggFunc::Count => Expr::cust_with_exprs("COALESCE(sum($1), 0)::int8", [count()]),
+        AggFunc::Sum => Expr::from(Func::sum(sum())),
+        AggFunc::Min => Expr::from(Func::min(per_row(Expr::from(Func::min(item.clone()))))),
+        AggFunc::Max => Expr::from(Func::max(per_row(Expr::from(Func::max(item.clone()))))),
+        // NOTE: QUERY master03 §AVG lets the input type "determine the return type";
+        // the mean stays numeric, since an integer mean would truncate a clinical value.
+        AggFunc::Avg => Expr::cust_with_exprs("sum($1) / NULLIF(sum($2), 0)", [sum(), count()]),
     }
 }
 
@@ -281,5 +453,25 @@ fn target_path_string(target: &PathTarget) -> Option<String> {
         // unused for them (a leaf under EHR_STATUS is rooted below `ehr_status`,
         // so its bare leaf path would omit that prefix).
         PathTarget::Version { .. } | PathTarget::Ehr { .. } | PathTarget::EhrStatus(_) => None,
+    }
+}
+
+/// Reads a JSON `null` fragment value as SQL `NULL`: QUERY master03
+/// §Aggregate functions, "Unless specified otherwise, these functions ignore
+/// `NULL` input values", and a stored `null` is no input value.
+fn json_null_is_null(value: Expr) -> Expr {
+    Expr::cust_with_exprs("NULLIF($1, 'null'::jsonb)", [value])
+}
+
+impl Builder<'_> {
+    /// Whether `target` is read as a jsonb fragment value (a data path that is
+    /// neither uid synthesis nor a promoted column).
+    fn reads_fragment(&mut self, target: &PathTarget, mode: ValueMode) -> bool {
+        match target {
+            PathTarget::Data(leaf) | PathTarget::EhrStatus(leaf) => {
+                !self.has_column_read(leaf, mode)
+            }
+            PathTarget::Version { .. } | PathTarget::Ehr { .. } => false,
+        }
     }
 }

@@ -425,6 +425,18 @@ job fails if the two disagree in either direction. So an advisory cannot be
 accepted without a justification reaching you, and a justification cannot claim
 something the gate does not do.
 
+The `ferroehr-os.openvex.json` statements argue from what the one program in
+each image loads and imports: `libgcc_s`, `libm`, `libc` and the loader, no
+RPATH or RUNPATH, no `dlopen`, no C++, and a named list of glibc functions it
+never calls. Each statement carries those facts as data in a `ferroehr:linkage`
+block, and the release pipeline reads them back off every `ferroehr` and
+`ferroehr-viewer` binary it builds, on amd64 and arm64, with `readelf` before
+the image is assembled. A binary that needs another library or imports a listed
+function stops the release, so the statement you read describes the binary in
+the image you pull. You can repeat the check on a binary you extracted from an
+image: `bash scripts/checks/vex-linkage.sh <path>/ferroehr` (it needs GNU
+`readelf` and `jq`).
+
 One asymmetry worth knowing, because it produces findings that are real reports
 of nothing. `Cargo.lock` records the union of every dependency any feature
 combination *could* pull, so a scanner reading the lock file alone reports

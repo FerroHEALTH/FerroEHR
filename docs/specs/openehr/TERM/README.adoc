@@ -1,4 +1,0 @@
-= specifications-TERM - openEHR Terminology Specifications
-
-This repository contains the document and model sources (Asciidoctor and MagicDraw) for the openEHR Terminology specifications. The published form may be accessed from the openEHR website https://specifications.openehr.org/releases/TERM/development[TERM component index page].
-

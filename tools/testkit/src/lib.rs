@@ -80,13 +80,13 @@ const SWEEP_GRACE: Duration = Duration::from_mins(30);
 #[derive(Debug, thiserror::Error)]
 pub enum TestkitError {
     /// Starting or adopting the reusable `PostgreSQL` container failed.
-    #[error("testkit: container: {0}")]
+    #[error("testkit: starting or adopting the container failed")]
     Container(#[from] testcontainers::TestcontainersError),
     /// A query/connection against the server failed.
-    #[error("testkit: database: {0}")]
+    #[error("testkit: a query or connection failed")]
     Sqlx(#[from] sqlx::Error),
     /// Pool construction or migration via the platform library failed.
-    #[error("testkit: platform db: {0}")]
+    #[error("testkit: building or migrating the platform pool failed")]
     Db(#[from] db::DbError),
     /// The server did not accept connections within the readiness deadline.
     #[error("testkit: server at {url} not ready within {seconds}s: {last}")]

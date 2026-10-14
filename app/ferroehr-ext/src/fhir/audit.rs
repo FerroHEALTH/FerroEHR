@@ -29,13 +29,14 @@ use fhir_model::{Base64Binary, Instant};
 #[derive(Debug, thiserror::Error)]
 pub enum AuditRenderError {
     /// The record's instant is outside the range a FHIR `instant` can carry.
-    #[error("audit timestamp is outside the representable FHIR instant range: {0}")]
+    #[error("audit timestamp is outside the representable FHIR instant range")]
     Timestamp(#[from] fhir_model::time::error::ComponentRange),
-    /// A resource element the FHIR model requires was not supplied.
-    #[error("building the FHIR AuditEvent: {0}")]
-    Build(String),
+    /// A resource element the FHIR model requires was not supplied; the
+    /// builder's error, which names the element, is the source.
+    #[error("building the FHIR AuditEvent failed")]
+    Build(#[source] fhir_model::BuilderError),
     /// The built resource could not be serialized to JSON.
-    #[error("serializing the FHIR AuditEvent: {0}")]
+    #[error("serializing the FHIR AuditEvent failed")]
     Serialize(#[from] serde_json::Error),
 }
 
@@ -235,11 +236,7 @@ pub fn render(record: &AuditRecord) -> Result<serde_json::Value, AuditRenderErro
     if let Some(description) = &record.outcome_desc {
         builder = builder.outcome_desc(description.clone());
     }
-    let resource = builder
-        .build()
-        // NOTE: carrying `fhir_model`'s builder error would leak a
-        // dependency type into ours, making its patch bumps breaking.
-        .map_err(|e| AuditRenderError::Build(e.to_string()))?;
+    let resource = builder.build().map_err(AuditRenderError::Build)?;
     Ok(serde_json::to_value(resource)?)
 }
 

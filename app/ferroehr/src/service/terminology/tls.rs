@@ -48,7 +48,7 @@ pub enum TlsMaterialError {
     )]
     IncompleteIdentity,
     /// A configured PEM file could not be read.
-    #[error("reading {role} '{}': {source}", path.display())]
+    #[error("reading {role} '{}'", path.display())]
     Read {
         /// Which configured key pointed at the unreadable file.
         role: MaterialRole,
@@ -77,7 +77,7 @@ pub enum TlsMaterialError {
         reason: String,
     },
     /// The HTTP client rejected the assembled material.
-    #[error("{role} was rejected by the TLS stack: {source}")]
+    #[error("{role} was rejected by the TLS stack")]
     Rejected {
         /// Which configured key produced the rejected material.
         role: MaterialRole,
@@ -252,5 +252,21 @@ mod tests {
             "got {err}"
         );
         assert!(err.to_string().contains("ca_bundle_path"), "got {err}");
+    }
+
+    /// The I/O failure is the source hop, kept out of the refusal's own
+    /// message, so a chain printer shows it once (RFC 0201).
+    #[test]
+    fn an_unreadable_file_carries_the_io_error_as_its_source() {
+        use std::error::Error;
+
+        let mut cfg = test_provider_config("https://ts.example.org/fhir");
+        cfg.ca_bundle_path = Some(PathBuf::from("/nonexistent/ca.pem"));
+        let err = apply(reqwest::Client::builder(), &cfg).expect_err("must fail");
+        let io = err
+            .source()
+            .and_then(|cause| cause.downcast_ref::<std::io::Error>())
+            .expect("the I/O failure is the source");
+        assert!(!err.to_string().contains(&io.to_string()), "got {err}");
     }
 }

@@ -1292,7 +1292,7 @@ async fn admin_operations_are_fully_documented() {
     );
 }
 
-/// The three admin extension routes are OUR OWN EXTENSION: the released Admin
+/// The four admin extension routes are OUR OWN EXTENSION: the released Admin
 /// API defines exactly two operations, both EHR deletes, so every other admin
 /// route must say so in its description and none may be counted towards a
 /// conformance-profile claim.
@@ -1302,11 +1302,12 @@ async fn admin_extension_operations_are_flagged_as_an_extension() {
 
     let doc = served_document().await;
 
-    // The three routes of the ADMIN group that no released operation governs
+    // The four routes of the ADMIN group that no released operation governs
     // (the other `/admin/*` surface — event subscriptions — belongs to its own
     // extension group and carries its own flag).
-    let extensions: [(String, &str); 3] = [
+    let extensions: [(String, &str); 4] = [
         (format!("{BASE}/template/{{template_id}}"), "delete"),
+        (format!("{BASE}/party/{{party_id}}"), "delete"),
         (
             format!("{BASE}/query/{{qualified_query_name}}/{{version}}"),
             "delete",
@@ -1429,10 +1430,11 @@ const NON_SPEC_FAMILIES: &[NonSpecFamily] = &[
         prefixes: &[
             "/ferroehr/rest/openehr/v1/admin/config",
             "/ferroehr/rest/openehr/v1/admin/template/",
+            "/ferroehr/rest/openehr/v1/admin/party/",
             "/ferroehr/rest/openehr/v1/admin/query/",
         ],
         flag: "no its-rest operation governs this",
-        operations: 3,
+        operations: 4,
     },
     NonSpecFamily {
         // SM I_ADMIN_SERVICE's four statistics calls; the released Admin API

@@ -9,7 +9,7 @@ surface and reads its database-side facts for whatever relations the catalogue
 reports, so the same file measures a rewritten schema unchanged.
 
 **A benchmark, not a conformance record.** Conformance is the CNF 2.0 suite
-[Veredictum](https://github.com/rubentalstra/Veredictum) runs, and its artifacts
+[Veredictum](https://github.com/Vernum-Projecten/Veredictum) runs, and its artifacts
 live under `docs/conformance/<sut>/` — including the earned performance classes.
 Nothing here earns a class, nothing here belongs beside `results.json`, and this
 directory sits outside `docs/conformance/` on purpose. No openEHR specification

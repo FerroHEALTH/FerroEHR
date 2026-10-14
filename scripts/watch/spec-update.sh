@@ -291,14 +291,24 @@ while IFS= read -r local_path; do
 done <<< "$amendment_files"
 
 # ── C. Commits-ahead cross-check (master-pinned components) ─────────────────
-# Release-tag pins (e.g. QUERY, ITS-REST) are deliberately excluded: master
-# being ahead of a release tag is the normal state between releases, and new
-# releases are the release watcher's job (spec-release-watcher.yml).
+# The human ref of each spec-docs.sh pin classifies it: `master…` is a branch
+# pin, `Release-…` a release-tag pin. Tag pins (QUERY, ITS-REST, ITS-XML) are
+# deliberately excluded: master being ahead of a release tag is the normal
+# state between releases, and new releases are the release watcher's job
+# (spec-release-watcher.yml). Any other ref word fails the run, so a mislabelled
+# pin cannot silently land in either class.
 echo "spec-update-watcher: commits-ahead cross-check against the vendored pins"
 ahead_created=0 ahead_updated=0 ahead_closed=0
 while IFS='|' read -r comp repo ref sha; do
   [[ -n "$comp" ]] || continue
-  case "$ref" in master*) ;; *) continue ;; esac
+  case "$ref" in
+    master*) ;;
+    Release-*) continue ;;
+    *)
+      echo "spec-update-watcher: $comp ref '$ref' names neither master nor a Release-* tag (scripts/vendor/spec-docs.sh)" >&2
+      exit 1
+      ;;
+  esac
   default=$(gh api "repos/openEHR/$repo" --jq '.default_branch') ||
     { echo "spec-update-watcher: failed to read openEHR/$repo default branch" >&2; exit 1; }
   ahead=$(gh api "repos/openEHR/$repo/compare/${sha}...${default}" --jq '.ahead_by') ||

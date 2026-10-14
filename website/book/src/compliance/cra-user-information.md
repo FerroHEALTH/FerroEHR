@@ -194,7 +194,7 @@ to be handled and to receive security updates;"
   period" section of that release's notes, and the running server states it on
   its boot banner, in `ferroehr --version`, under `support` in
   `GET /management/info` and as `support.status` in
-  `GET /ferroehr/rest/status`
+  `GET /management/status`
   ([how long the version you pinned is supported](../operations.md#how-long-the-version-you-pinned-is-supported)).
 - **The type of support:** Cadasto B.V. handles vulnerabilities in a release
   during its support period, and the security update ships in the newest

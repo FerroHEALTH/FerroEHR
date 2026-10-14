@@ -1,0 +1,67 @@
+# The server's own TLS overlay: `[server.tls]` on, with every in-chart client
+# of the CDR enabled beside it (the viewer, FerroBRIDGE, and the ServiceMonitor
+# scraping the API port). Without it the TLS branch of the origin and trust
+# helpers is one no golden and no gate sees, and the clients' URLs went on
+# saying `http://` while the listener spoke TLS.
+#
+# The key pair and the CA come from one Secret in the shape a cert-manager
+# Certificate writes (`tls.crt`, `tls.key`, `ca.crt`), mounted into the server
+# with extraVolumes and named to the clients with service.tls.caExistingSecret.
+# The Basic-auth shape is reused verbatim from basic-auth-values.yaml so no new
+# credential-shaped string enters the tree.
+database:
+  existingSecret: ferroehr-db
+  existingSecretKey: FERROEHR__DB__URL
+
+secrets:
+  basicUserPasswordHashes:
+    clinician: "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
+
+config:
+  auth:
+    enabled: true
+    basic:
+      users:
+        - username: clinician
+          roles: [ADMIN]
+  server:
+    tls:
+      enabled: true
+      cert_file: /etc/ferroehr-tls/tls.crt
+      key_file: /etc/ferroehr-tls/tls.key
+
+extraVolumes:
+  - name: server-tls
+    secret:
+      secretName: ferroehr-server-tls
+      defaultMode: 0440
+      items:
+        - key: tls.crt
+          path: tls.crt
+        - key: tls.key
+          path: tls.key
+extraVolumeMounts:
+  - name: server-tls
+    mountPath: /etc/ferroehr-tls
+    readOnly: true
+
+service:
+  tls:
+    caExistingSecret: ferroehr-server-tls
+
+metrics:
+  serviceMonitor:
+    enabled: true
+
+viewer:
+  enabled: true
+
+bridge:
+  enabled: true
+  cdr:
+    existingSecret: ferroehr-bridge-cdr
+  networkPolicy:
+    ingressFrom:
+      - podSelector:
+          matchLabels:
+            ferrobridge.example/client: "true"

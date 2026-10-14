@@ -499,7 +499,7 @@ design. The build record is the closed issues + PR descriptions.
 - **Fidelity gates** (spec/serialization): canonical JSON read + lossless
   round-trip + ITS-JSON schema validation; XML round-trips.
 - **Conformance pipeline** (`scripts/conformance.sh`):
-  [Veredictum](https://github.com/rubentalstra/Veredictum), the independent
+  [Veredictum](https://github.com/Vernum-Projecten/Veredictum), the independent
   CNF 2.0 reference runner, over its committed machine-readable catalogue
   (Docker-composed SUT on fresh volumes) — the acceptance instrument, pinned
   in `scripts/lib/veredictum.sh`;

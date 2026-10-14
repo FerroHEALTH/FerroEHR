@@ -48,8 +48,20 @@ re-evaluate.
 
 The two OS documents argue from the bytes in the image, so they go stale when
 the image changes. `ferroehr-os.openvex.json` rests on the linked libraries
-and imported symbols of the two Rust programs; re-checking those against
-every new binary is tracked in #3694. `postgres-os.openvex.json` rests on what
+and imported symbols of the two Rust programs, and each statement that does
+carries those facts as data in a `ferroehr:linkage` block (our own extension,
+like `ferroehr:reachability`): the exact DT_NEEDED set with the loader per
+architecture, `rpath: false`, the imports it rules out by name
+(`forbidden_imports`) or prefix (`forbidden_import_prefixes`, `_Z` for any C++
+symbol), the symbol versions it rules out (`forbidden_version_prefixes`), and
+byte strings the file must not contain (`forbidden_strings`, the zlib
+copyright). `scripts/checks/vex-linkage.sh` reads those facts off each binary
+with `readelf` in the release lane, for both programs on both architectures,
+after the strip and before the image is built, and refuses the release when a
+binary contradicts a statement; its `--self-test` drives the detector over
+synthetic `readelf` listings and over every import the document rules out. A
+statement whose prose changes changes its block in the same edit, and the
+document's `version` and `timestamp` move with it. `postgres-os.openvex.json` rests on what
 the PostgreSQL 18 server, the upstream entrypoint and the `gosu` wrapper load
 and run, and on the configuration FerroEHR ships (`pg_hba.conf`, no XML in the
 schemas, no LDAP, Kerberos or PAM authentication). On every base bump or

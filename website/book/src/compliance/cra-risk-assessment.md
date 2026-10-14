@@ -98,7 +98,7 @@ on three levels (high, medium, low).
 | # | Risk | Magnitude | Likelihood with the shipped controls | Controls | Annex I Part I(2) |
 |---|---|---|---|---|---|
 | C1 | An unauthenticated caller reads or writes clinical data | high | low under the intended purpose; high when `auth.enabled = false` is misused under `sandbox` or accepted by name under `production` | authentication on by default with a boot refusal when no mechanism is configured; `production` refuses `auth.enabled = false` unless `auth_off` is accepted by name; per-request authorisation | (b), (d) |
-| C2 | An authenticated caller reaches EHRs outside their remit | high | medium: the shipped `EHR_ACCESS` default is `open`, which `production` refuses unless accepted by name | RBAC, ABAC, per-EHR `EHR_ACCESS`; every access recorded | (d), (l) |
+| C2 | An authenticated caller reaches EHRs outside their remit | high | medium: the shipped `EHR_ACCESS` default is `open`, which `production` refuses unless accepted by name | RBAC, ABAC, per-EHR `EHR_ACCESS`; `production` refuses the role gate off (`rbac_off`) and an `open` `EHR_ACCESS` default (`open_ehr_access_default`) unless each is accepted by name; every access recorded | (d), (l) |
 | C3 | Data in transit is read or altered on the network | high | low behind a TLS ingress or with the server's TLS; high on a plaintext listener | rustls TLS 1.3 and mutual TLS, off by default; `production` refuses a plaintext main listener on a routable address, a separate plain-HTTP management listener, a UDP syslog audit feed, and an AMQP integration on a plaintext `amqp://` broker, unless `plaintext_listener`, `audit_syslog_udp` or `plaintext_broker` is accepted by name; a boot warning on a plaintext routable bind | (e) |
 | C4 | Someone with a database connection reads, rewrites or deletes data, bypassing the API | high | depends on the deploying organisation's database protection | least-privilege roles per domain; append-only versions; version signatures verified on read; the hash-chained access log | (e), (f) |
 | C5 | An access happens and the log does not show it, or the log is altered | high | low with `fail_mode = "closed"` and an off-box sink; medium with the shipped `fail_mode = "open"` | refusals always recorded; `production` refuses audit off and audit failing open unless accepted; the hash chain | (f), (l) |
@@ -256,7 +256,7 @@ available updates to users, and the option to temporarily postpone them"
   are the subscription route `SECURITY.md` names. The running server states
   its support period (five years from the month of its release date) on the
   boot banner, in `ferroehr --version`, on `GET /management/info` and on
-  `GET {rest root}/status` as `support.status`, and once the period has ended
+  `GET /management/status` as `support.status`, and once the period has ended
   it logs a warning at boot and once a day (Art. 13(19)).
 - **No in-product update check.** The server does not contact anyone to learn
   of a newer release. The point names "the notification of available updates
@@ -296,12 +296,14 @@ systems, and report on possible unauthorised access"
   [authentication](../security.md#authentication),
   [authorization](../security.md#authorization);
   `app/ferroehr/src/config/deployment.rs`
-  (`production_refuses_auth_off_unless_accepted_by_name`);
+  (`production_refuses_auth_off_unless_accepted_by_name`,
+  `production_refuses_rbac_off_and_a_restricted_default_stays_closed`);
   [deployment profile](../installation/configuration.md#deployment_profile).
 - **Status:** met. Reporting is met. `production` refuses
-  `auth.enabled = false` at boot unless `auth_off` is accepted by name, and an
-  accepted gap is stated on every boot. The shipped `sandbox` profile accepts
-  it, which (b) records.
+  `auth.enabled = false` at boot unless `auth_off` is accepted by name, and
+  `[authz.rbac] enabled = false` unless `rbac_off` is; an accepted gap is
+  stated on every boot. The shipped `sandbox` profile accepts both, which (b)
+  records.
 - **Open:** none beyond (b).
 
 ### (e) Confidentiality of stored, transmitted and processed data

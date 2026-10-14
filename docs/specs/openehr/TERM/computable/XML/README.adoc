@@ -7,6 +7,9 @@ openEHR reference model terminology, and artefacts for binding or using standard
 
 == 3.1.0 (unreleased)
 
+- Added ng/mL/cm3 and μg/L/cm3 (PSA density) to PropertyUnitData.xml under a new property "Concentration per volume"; added missing property concepts 761-765 to the property vocabulary.
+See https://openehr.atlassian.net/browse/SPECPR-450
+
 - Added Chinese translation of the openehr_terminology.xml.
 See https://openehr.atlassian.net/browse/SPECTERM-34
 

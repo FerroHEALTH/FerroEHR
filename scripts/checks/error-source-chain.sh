@@ -25,16 +25,200 @@
 #
 # An entry added without one of those reasons makes this gate decoration.
 #
-# Usage: scripts/checks/error-source-chain.sh   (no arguments)
+# The second check is the converse defect: a cause carried as the source AND
+# interpolated into the variant's own message (`#[error("x: {0}")]` over a
+# `#[from]`/`#[source]` field, or `{source}` in a struct variant). A chain
+# printer then prints it twice; RFC 0201 keeps the cause out of the message, or
+# the variant is `#[error(transparent)]`. Every tree is clean, so that check is
+# a hard zero rather than a ratchet.
 #
-# The whole tree is always counted — there is no narrower scope to ask for, so
-# there is no flag to pass.
+# Usage: scripts/checks/error-source-chain.sh [--self-test]
+#
+# The whole tree is always counted. A plain run proves the double-print
+# detector first (`--self-test` runs only that), so CI exercises it too.
 set -euo pipefail
 
 # shellcheck source=scripts/lib/guard-args.sh
 . "$(dirname "$0")/../lib/guard-args.sh"
-guard_no_args "$@"
 cd "$(dirname "$0")/../.." || exit 1
+
+# Prints `file:line: attr` for every `#[error(...)]` whose format string
+# interpolates a field that is also the source: `#[from]`, `#[source]`, or a
+# struct field named `source`. Line-shaped like every guard here: it reads the
+# attribute and the variant after it, skipping comment lines in the variant.
+read -r -d '' DOUBLE_PRINT_AWK <<'AWK' || true
+function reset_state() { in_attr = 0; pending = 0; collecting = 0; attr = ""; body = ""; kind = "" }
+function balance(s,    i, c, n) {
+  n = 0
+  for (i = 1; i <= length(s); i++) {
+    c = substr(s, i, 1)
+    if (c == "(" || c == "[" || c == "{" || c == "<") n++
+    else if (c == ")" || c == "]" || c == "}" || c == ">") n--
+  }
+  return n
+}
+function refs(name,    s, p, prev, nxt) {
+  if (index(attr, "{" name "}") || index(attr, "{" name ":")) return 1
+  s = attr
+  while ((p = index(s, "." name)) > 0) {
+    prev = (p > 1) ? substr(s, p - 1, 1) : " "
+    nxt = substr(s, p + 1 + length(name), 1)
+    if (prev !~ /[A-Za-z0-9_]/ && nxt !~ /[A-Za-z0-9_]/) return 1
+    s = substr(s, p + 1)
+  }
+  return 0
+}
+function field_name(f,    t) {
+  t = f
+  gsub(/#\[[^]]*\]/, "", t)
+  gsub(/[\n\t ]+/, " ", t)
+  sub(/^ /, "", t)
+  sub(/^pub(\([a-z]+\))? /, "", t)
+  if (index(t, ":") == 0) return ""
+  t = substr(t, 1, index(t, ":") - 1)
+  gsub(/ /, "", t)
+  return t
+}
+function judge(f, idx,    is_src, name) {
+  is_src = (f ~ /#\[(from|source)\]/)
+  name = (kind == "tuple") ? idx : field_name(f)
+  if (kind == "struct" && name == "source") is_src = 1
+  if (is_src && name != "" && refs(name)) {
+    printf "%s:%d: %s\n", FILENAME, attr_line, attr
+    return 1
+  }
+  return 0
+}
+function finish(    i, c, depth, field, idx) {
+  collecting = 0
+  depth = 0; field = ""; idx = 0
+  for (i = 1; i <= length(body); i++) {
+    c = substr(body, i, 1)
+    if (c == "(" || c == "[" || c == "{" || c == "<") { depth++; if (depth == 1) continue }
+    else if (c == ")" || c == "]" || c == "}" || c == ">") {
+      depth--
+      if (depth == 0) { if (judge(field, idx)) return; break }
+    } else if (c == "," && depth == 1) {
+      if (judge(field, idx)) return
+      field = ""; idx++
+      continue
+    }
+    field = field c
+  }
+}
+FNR == 1 { reset_state() }
+{
+  line = $0
+  if (collecting) {
+    if (line ~ /^[ \t]*\/\//) next
+    body = body "\n" line
+    depth_total += balance(line)
+    if (depth_total <= 0) finish()
+    next
+  }
+  if (in_attr) {
+    attr = attr " " line
+    if (line ~ /\)\][ \t]*$/) { in_attr = 0; pending = 1 }
+    next
+  }
+  if (line ~ /^[ \t]*#\[error\(/) {
+    attr = line; attr_line = FNR
+    gsub(/^[ \t]+/, "", attr)
+    if (line ~ /\)\][ \t]*$/) pending = 1; else in_attr = 1
+    next
+  }
+  if (pending) {
+    if (line ~ /^[ \t]*(#\[|\/\/)/) next
+    pending = 0
+    if (attr ~ /#\[error\([ \t]*transparent/) next
+    if (line ~ /^[ \t]*(pub(\([a-z]+\))?[ \t]+)?(struct[ \t]+)?[A-Z][A-Za-z0-9_]*[ \t]*(<[^>]*>)?[ \t]*\(/) {
+      kind = "tuple"; body = substr(line, index(line, "("))
+    } else if (line ~ /^[ \t]*(pub(\([a-z]+\))?[ \t]+)?(struct[ \t]+)?[A-Z][A-Za-z0-9_]*[ \t]*(<[^>]*>)?[ \t]*\{/) {
+      kind = "struct"; body = substr(line, index(line, "{"))
+    } else next
+    depth_total = balance(body)
+    if (depth_total <= 0) finish(); else collecting = 1
+  }
+}
+AWK
+
+double_prints() {
+  find "$@" -name '*.rs' -not -path '*/target/*' -print0 \
+    | xargs -0 awk "$DOUBLE_PRINT_AWK"
+}
+
+# Proves the detector rather than trusting it: every banned spelling is caught,
+# and every legitimate one is not.
+self_test() {
+  local tmp found failures=0 expected
+  tmp="$(mktemp -d)"
+  # shellcheck disable=SC2064 # expand $tmp now, while it is still in scope
+  trap "rm -rf '$tmp'" RETURN
+  cat >"$tmp/bad.rs" <<'RS'
+enum Bad {
+    #[error("tuple from: {0}")]
+    TupleFrom(#[from] std::io::Error),
+    #[error("tuple source: {0:?}")]
+    TupleSource(#[source] std::io::Error),
+    #[error("dot arg: {}", .0)]
+    DotArg(#[from] std::fmt::Error),
+    #[error("named source: {source}")]
+    NamedSource { source: std::io::Error },
+    #[error(
+        "multi-line attr naming {cause}"
+    )]
+    AttributedField {
+        /// A doc line, with commas, (parens) and [brackets].
+        path: String,
+        #[source]
+        cause: std::io::Error,
+    },
+}
+RS
+  cat >"$tmp/good.rs" <<'RS'
+enum Good {
+    #[error(transparent)]
+    Forwarded(#[from] std::io::Error),
+    #[error("context: {0}")]
+    ContextThenSource(String, #[source] std::io::Error),
+    #[error("reading {path}")]
+    Struct {
+        path: String,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("{} items", .0.len())]
+    Plain(Vec<u8>),
+}
+RS
+  found="$(double_prints "$tmp")"
+  for expected in 'tuple from' 'tuple source' 'dot arg' 'named source' 'multi-line attr'; do
+    grep -q "$expected" <<<"$found" || {
+      echo "self-test: \"$expected\" was not caught" >&2
+      failures=1
+    }
+  done
+  if grep -q 'good.rs' <<<"$found"; then
+    echo "self-test: a legitimate shape was wrongly caught:" >&2
+    grep 'good.rs' <<<"$found" >&2
+    failures=1
+  fi
+  [[ "$failures" -eq 0 ]] || return 1
+  echo "error-source-chain: self-test OK (five double prints caught, four clean shapes allowed)."
+}
+
+case "${1:-}" in
+--self-test)
+  self_test
+  exit
+  ;;
+"")
+  self_test
+  ;;
+*)
+  guard_usage "[--self-test]"
+  ;;
+esac
 
 # The sweep (#2034) is CLOSED: every remaining site below was judged and carries
 # its `// NOTE:` reason at the site or on its error type. Each budget is a COUNT
@@ -44,8 +228,6 @@ cd "$(dirname "$0")/../.." || exit 1
 # What survives, and why each one is structural rather than unfinished:
 #
 #   app/ferroehr           `prometheus::Error` has no source-bearing variant.
-#   app/ferroehr-ext       `fhir_model`'s builder error is a dependency type
-#                          (RFC 1105 — see the site's NOTE).
 #   app/ferroehr-viewer  `ViewerError` crosses the server-fn boundary, so
 #                          `FromServerFnError` requires Serialize/Deserialize;
 #                          `LiftError` is held in an `RwSignal`, so it must be
@@ -63,8 +245,8 @@ cd "$(dirname "$0")/../.." || exit 1
 # a status code is chosen BY TYPE and a flattened cause actually costs something.
 declare -a BUDGETS=(
   "app/ferroehr:1"
-  "app/ferroehr-ext:1"
-  "app/ferroehr-viewer:6"
+  "app/ferroehr-ext:0"
+  "app/ferroehr-viewer:3"
 )
 
 fail=0
@@ -80,6 +262,16 @@ for entry in "${BUDGETS[@]}"; do
     fail=1
   fi
 done
+
+# No error variant anywhere prints its own source.
+found="$(double_prints app crates tools)"
+if [[ -n "$found" ]]; then
+  echo "::error::error variants print their source in their own message — keep the cause out of the message, or use #[error(transparent)] (RFC 0201)"
+  printf '%s\n' "$found" >&2
+  fail=1
+else
+  echo "double prints: none"
+fi
 
 [[ "$fail" -eq 0 ]] || exit 1
 echo "error-source-chain: no tree grew"

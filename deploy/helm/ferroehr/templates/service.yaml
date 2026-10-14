@@ -32,11 +32,12 @@ spec:
            protocol to Gateway API implementations and topology-aware proxies,
            which is how they know to speak HTTP rather than treat the port as
            opaque TCP
-           (https://kubernetes.io/docs/concepts/services-networking/service/#application-protocol). */}}
+           (https://kubernetes.io/docs/concepts/services-networking/service/#application-protocol).
+           With the server's own TLS on, that protocol is https. */}}
     - name: http
       port: {{ .Values.service.port }}
       targetPort: http
-      appProtocol: http
+      appProtocol: {{ ternary "https" "http" (eq (include "ferroehr.serverTls" .) "true") }}
     {{- if and .Values.config.management.enabled .Values.config.management.port }}
     - name: management
       port: {{ .Values.config.management.port }}

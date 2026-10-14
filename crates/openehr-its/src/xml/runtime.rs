@@ -60,14 +60,17 @@ impl Namespace {
 /// Errors from canonical-XML (de)serialization.
 #[derive(Debug, thiserror::Error)]
 pub enum XmlError {
-    /// The `quick-xml` writer rejected an event.
-    #[error("xml write error: {0}")]
+    /// The `quick-xml` writer rejected an event; its error is the whole
+    /// message.
+    #[error(transparent)]
     Write(#[from] quick_xml::Error),
-    /// The underlying byte sink or source failed.
-    #[error("xml io error: {0}")]
+    /// The underlying byte sink or source failed; its error is the whole
+    /// message.
+    #[error(transparent)]
     Io(#[from] std::io::Error),
-    /// The written bytes were not valid UTF-8.
-    #[error("xml output was not valid utf-8: {0}")]
+    /// The written bytes were not valid UTF-8; the decoder's error is the
+    /// whole message.
+    #[error(transparent)]
     Utf8(#[from] std::string::FromUtf8Error),
     /// The input was not well-formed, or did not match the expected canonical
     /// shape. Carries the diagnosis and nothing beneath it: a shape violation

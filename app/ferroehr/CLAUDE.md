@@ -11,7 +11,9 @@ period, embedded from the changelog by `build.rs`), `privacy`,
 erase` operation: blobs first, then `db::erase_schema` drops every schema,
 behind a confirmation naming the instance), `manufacturer` (the one source of
 the manufacturer every surface names; the viewer compiles this file through
-`#[path]`, so it stays dependency-free but for `serde`), `report` (the
+`#[path]`, so it stays dependency-free but for `serde`), `served_vocabulary`
+(the deployment gap codes and OpenAPI family slugs the viewer names; also
+compiled by the viewer through `#[path]`, so it depends on nothing), `report` (the
 redacted deployment report `ferroehr report` writes), `usage_report` (the outbound
 installation report to FerroPULSE: typed payload, cross-replica claims on the
 clinical pool, the in-process latency window fed by `ferroehr-rest`'s HTTP

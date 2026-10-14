@@ -189,6 +189,12 @@ impl FerroEhrService {
     /// into an existing EHR (master06 §Copying Cases 2/3). A completed import
     /// is audited for non-repudiation (inbound → `EventActionCode::Create`).
     ///
+    /// The import transaction locks the EHR row before it checks the singleton
+    /// containers and holds it to commit, so a concurrent import into the same
+    /// EHR waits and is then judged against what this one landed. The row lock
+    /// comes before the per-object locks, the order the CONTRIBUTION path takes
+    /// them in.
+    ///
     /// # Errors
     /// - `ehr_id_does_not_exist` — no EHR with `an_ehr_id` (`has_ehr` false).
     /// - `precondition_violation` (`400`) — duplicate singleton containers, or
@@ -212,32 +218,23 @@ impl FerroEhrService {
         let (containers, parties) = parse_import_containers(&an_extract)?;
         reject_duplicate_singleton_containers(&containers)?;
 
-        // A *new* singleton container cannot be added when the EHR already holds
-        // one of that kind under a different object id (EHR.ehr_status /
-        // ehr_access 1..1 — RM ehr, EHR class). A matching object id is an
-        // append (master06 §Copying Case 3), handled in `commit_import`. FOLDERs
-        // are NOT singletons: each first-received hierarchy joins `EHR.folders`
-        // (RM ehr master04 §Folders).
-        for container in &containers {
-            if matches!(container.kind, Kind::EhrStatus | Kind::EhrAccess)
-                && let Some((existing_vo, _)) = self.current_vo(an_ehr_id, container.kind).await?
-                && existing_vo != container.vo_id
-            {
-                return Err(ServiceError::conflict(format!(
-                    "EHR {an_ehr_id} already has a {} ({existing_vo}); cannot import a \
-                     second one ({})",
-                    container.kind.as_str(),
-                    container.vo_id
-                ))
-                .into());
-            }
+        let mut tx = self.pool.begin().await.map_err(ServiceError::from)?;
+        // Exclusive, because the import re-derives the promoted `ehr` columns
+        // before it commits; the flag the read returns is not an import gate.
+        let locked = crate::storage::ehr_repo::ehr_is_modifiable_locked(&mut tx, an_ehr_id, true)
+            .await
+            .map_err(ServiceError::from)?;
+        if locked.is_none() {
+            return Err(SmError::ehr_not_found(format!(
+                "no EHR with id {an_ehr_id}"
+            )));
         }
+        self.reject_second_singleton(an_ehr_id, &containers).await?;
 
         let audit = self.audit(change_type::CREATION, "EHR Extract import");
         let signing = self.signing_ctx();
         self.import_parties(&signing, &audit, parties).await?;
 
-        let mut tx = self.pool.begin().await.map_err(ServiceError::from)?;
         let touches_ehr_access = containers.iter().any(|c| c.kind == Kind::EhrAccess);
         let landed: Vec<VoId> = containers.iter().map(|c| c.vo_id).collect();
         commit_import(
@@ -265,6 +262,43 @@ impl FerroEhrService {
         Ok(())
     }
 
+    /// Refuses a singleton container (`EHR_STATUS`, `EHR_ACCESS`) whose object
+    /// id differs from the one the EHR already holds.
+    ///
+    /// `EHR.ehr_status` and `EHR.ehr_access` are 1..1 (RM ehr, EHR class), so a
+    /// matching id is an append (master06 §Copying Case 3, handled in
+    /// `commit_import`) and a different one is a second object. FOLDERs are not
+    /// singletons: each first-received hierarchy joins `EHR.folders` (RM ehr
+    /// master04 §Folders).
+    ///
+    /// The caller holds the EHR row lock. Outside EHR creation only an import
+    /// adds a singleton object, and every import holds that lock to commit, so
+    /// this read sees each one that finished first.
+    ///
+    /// # Errors
+    /// [`ServiceError::Conflict`] on a second singleton; a storage error if
+    /// the current object cannot be read.
+    async fn reject_second_singleton(
+        &self,
+        ehr_id: EhrId,
+        containers: &[ImportContainer],
+    ) -> Result<(), ServiceError> {
+        for container in containers {
+            if matches!(container.kind, Kind::EhrStatus | Kind::EhrAccess)
+                && let Some((existing_vo, _)) = self.current_vo(ehr_id, container.kind).await?
+                && existing_vo != container.vo_id
+            {
+                return Err(ServiceError::conflict(format!(
+                    "EHR {ehr_id} already has a {} ({existing_vo}); cannot import a \
+                     second one ({})",
+                    container.kind.as_str(),
+                    container.vo_id
+                )));
+            }
+        }
+        Ok(())
+    }
+
     /// What an import landed, for its access record's EHDS priority category
     /// (Annex II 3.2(c), `docs/law/eu/ehds/text.html`): the newest content of
     /// each received versioned object.
@@ -276,7 +310,7 @@ impl FerroEhrService {
             Ok(content) => AccessedContent::Objects(content),
             Err(e) => {
                 tracing::warn!(
-                    error = %e,
+                    error = %crate::service::error::ErrorChain::new(&e),
                     "reading the categories of an imported Extract failed; the access \
                      record is written unclassified"
                 );

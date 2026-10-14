@@ -230,17 +230,20 @@ makes cryptographic erasure possible at the end.
 
 ## Removing a single party
 
-The openEHR Admin API in ITS-REST defines deletion routes for EHRs only, so
-FerroEHR has no REST route that physically deletes a party. The service
-implements the specification's `physical_party_delete` operation, but no
-endpoint exposes it. What you can do without writing code:
+The openEHR Admin API in ITS-REST defines deletion routes for EHRs only.
+FerroEHR adds one of its own for a party: `DELETE {base}/admin/party/{party_id}`
+runs the specification's `physical_party_delete` operation, removing the party
+and every `PARTY_RELATIONSHIP` that names it, with all their versions. It sits
+behind the admin API switch and the admin role, like the EHR delete, and
+leaves the same access record. This is the route for an erasure request about
+one person's demographic record (GDPR Art. 17):
+[Physical deletion](operations-admin-apis.md#physical-deletion).
+
+The other two ways to remove a party:
 
 - `DELETE` on the demographic API removes a party logically: a new version
   marks it deleted, and its history stays.
 - `ferroehr db erase` removes every party along with the rest of the instance.
-
-EHRs have physical deletion over REST:
-[Physical deletion](operations-admin-apis.md#physical-deletion).
 
 ## How the procedure is tested
 

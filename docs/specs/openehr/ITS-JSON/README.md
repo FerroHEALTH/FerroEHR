@@ -1,16 +1,17 @@
-= specifications-ITS-JSON
+# specifications-ITS-JSON
 
-JSON schemas for use with openEHR systems and tools. See https://specifications.openehr.org/release_baseline[release baseline] of current specifications.
+JSON schemas for use with openEHR systems and tools. See [release baseline](https://specifications.openehr.org/release_baseline) of current specifications.
 
-Schema format is based on https://json-schema.org/specification.html[draft-07 of JSON-Schema specifications].
+Schema format is based on [draft-07 of JSON-Schema specifications](https://json-schema.org/specification.html).
 
-== Releases and IM Versions
+## Releases and IM Versions
 
-NOTE: These schemas are in *DEVELOPMENT* state and subject to change.
+> [!NOTE]
+> These schemas are in **DEVELOPMENT** state and subject to change.
 
 The repository is structured as follows:
 
-----
+```
 /examples                # JSON examples
 /components
     /AM                  # schemas for AM component
@@ -23,23 +24,23 @@ The repository is structured as follows:
         /Release-1.0.3   # schemas for Release-1.0.3 of RM
         /Release-1.0.4   # schemas for Release-1.0.4 of RM
         /Release-1.1.0   # schemas for Release-1.1.0 of RM
-----
+```
 
-== Structure
+## Structure
 
 Schemas are organized in directories considering openEHR components (e.g. `AM`, `RM`, etc.), release name and package (e.g. `/components/RM/Release-1.1.0/Data_Structures`). Each directory contains several json schema files named as `[type].json`, while packages contains also a `main.json` file. On the component level there is also few files containing all types of that package, i.e. `openehr_rm_1.1.0_all.json`.
 
-== Known issues
+## Known issues
 
 The followings are some known issues of openEHR JSON-Schema. These will be addressed in the near future and will cause the schemas to be changed before it reaches maturity.
 
-A longer discussion on this subject can be found at https://discourse.openehr.org/t/json-schema-and-openapi-current-state-and-how-to-progress/1385[openEHR forum].
+A longer discussion on this subject can be found at [openEHR forum](https://discourse.openehr.org/t/json-schema-and-openapi-current-state-and-how-to-progress/1385).
 
-=== Available components, packages and versions
+### Available components, packages and versions
 
 There is only one BASE version currently available, Release-1.1.0. The BASE Release-1.0.0 is also possible to generate, but there is no BASE Release-1.2.0 BMM file available to generate the JSON schema from.
 
-=== Design choices
+### Design choices
 
 - no inheritance in definitions, so definitions contain all their fields directly. This is according to json schema recommendations.
 - no abstract classes are generated, as they cannot appear in json schema - so no LOCATABLE.json!
@@ -48,12 +49,12 @@ There is only one BASE version currently available, Release-1.1.0. The BASE Rele
 - one _all file per RM version, which contains the entire schema and works with many validators. Recommended for automated use!
 - A split in classes generated one, with one main.json per RM version. The main.json defines which json can appear at the root level. This one will have some problems with some validators, and will work fine with others.
 
-=== OpenAPI
+### OpenAPI
 
-There is currently an experiment (demo) of this https://github.com/nedap/openehr-openapi[on a project to show how OpenAPI can work with openEHR].
+There is currently an experiment (demo) of this [on a project to show how OpenAPI can work with openEHR](https://github.com/nedap/openehr-openapi).
 
-== Acknowledgements
+## Acknowledgements
 
-The initial JSON schema was authored by https://www.code24.nl[Code24], generated from openEHR UMLs.
-The current version is generated from openEHR BMM files with https://github.com/openEHR/archie[Archie] by https://nedap-healthcare.com[Nedap].
+The initial JSON schema was authored by [Code24](https://www.code24.nl), generated from openEHR UMLs.
+The current version is generated from openEHR BMM files with [Archie](https://github.com/openEHR/archie) by [Nedap](https://nedap-healthcare.com).
 

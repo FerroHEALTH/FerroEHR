@@ -127,14 +127,19 @@ impl AuditMessage {
         // `AuditEnterpriseSiteID` names the REPORTING source's site rather
         // than the caller's organisation
         // (https://dicom.nema.org/medical/dicom/current/output/chtml/part15/sect_A.5.html).
-        let mut participants = source_participants(event, user_id, client_ip);
-        // Destination (this server).
+        let (client_role, server_role) = if event.server_is_data_source() {
+            (codes::ROLE_DESTINATION, codes::ROLE_SOURCE)
+        } else {
+            (codes::ROLE_SOURCE, codes::ROLE_DESTINATION)
+        };
+        let mut participants = requesting_participants(event, user_id, client_ip, client_role);
+        // This server.
         participants.push(ActiveParticipant {
             user_id: nonempty(&ctx.source_id, missing),
             alternative_user_id: None,
             user_is_requestor: false,
             network_access_point_id: Some(nonempty(&ctx.server_ip, missing)),
-            role: Some(codes::ROLE_DESTINATION),
+            role: Some(server_role),
             roles: Vec::new(),
         });
 
@@ -236,12 +241,15 @@ impl AuditMessage {
 ///
 /// A client application acting for a named professional yields two: the
 /// person as requestor with the security roles, and the application at the
-/// network address with the source role. A professional identifier other than
-/// the token subject becomes `UserID`, the subject `AlternativeUserID`.
-fn source_participants(
+/// network address with `client_role`, the data-flow role
+/// [`AuditEvent::server_is_data_source`] selects. A professional identifier
+/// other than the token subject becomes `UserID`, the subject
+/// `AlternativeUserID`.
+fn requesting_participants(
     event: &AuditEvent,
     user_id: String,
     client_ip: String,
+    client_role: Code,
 ) -> Vec<ActiveParticipant> {
     let professional = event
         .actor
@@ -263,7 +271,7 @@ fn source_participants(
                 alternative_user_id: None,
                 user_is_requestor: false,
                 network_access_point_id: Some(client_ip),
-                role: Some(codes::ROLE_SOURCE),
+                role: Some(client_role),
                 roles: Vec::new(),
             },
         ];
@@ -277,7 +285,7 @@ fn source_participants(
         alternative_user_id,
         user_is_requestor: event.user_is_requestor,
         network_access_point_id: Some(client_ip),
-        role: Some(codes::ROLE_SOURCE),
+        role: Some(client_role),
         roles: event.roles.clone(),
     }]
 }

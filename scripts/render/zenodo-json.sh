@@ -99,10 +99,13 @@ cff_creators() {
 }
 
 SPECS='[
-  "https://specifications.openehr.org/releases/RM/Release-1.1.0",
-  "https://specifications.openehr.org/releases/ITS-REST/Release-1.1.0",
+  "https://specifications.openehr.org/releases/RM/development",
+  "https://specifications.openehr.org/releases/BASE/Release-1.3.0",
+  "https://specifications.openehr.org/releases/TERM/Release-3.1.0",
+  "https://specifications.openehr.org/releases/AM/Release-1.4",
+  "https://specifications.openehr.org/releases/AM/Release-2.4.0",
   "https://specifications.openehr.org/releases/QUERY/Release-1.1.0",
-  "https://specifications.openehr.org/releases/AM/Release-2.3.0"
+  "https://specifications.openehr.org/releases/ITS-REST/Release-1.1.0"
 ]'
 CRATES='["openehr-base","openehr-rm","openehr-am","openehr-term",
          "openehr-lang","openehr-query","openehr-its","openehr-adl"]'
@@ -135,10 +138,13 @@ rendered="$(
   license: $license,
   keywords: $keywords,
   references: [
-    "openEHR Reference Model (RM) Release 1.1.0. openEHR International. https://specifications.openehr.org/releases/RM/Release-1.1.0",
+    "openEHR Reference Model (RM) 1.2.0, development generation. openEHR International. https://specifications.openehr.org/releases/RM/development",
+    "openEHR Base Model (BASE) Release 1.3.0. openEHR International. https://specifications.openehr.org/releases/BASE/Release-1.3.0",
+    "openEHR Terminology (TERM) Release 3.1.0. openEHR International. https://specifications.openehr.org/releases/TERM/Release-3.1.0",
+    "openEHR Archetype Model (AM) Release 1.4. openEHR International. https://specifications.openehr.org/releases/AM/Release-1.4",
+    "openEHR Archetype Model (AM) Release 2.4.0. openEHR International. https://specifications.openehr.org/releases/AM/Release-2.4.0",
     "openEHR Archetype Query Language (AQL), QUERY Release 1.1.0. openEHR International. https://specifications.openehr.org/releases/QUERY/Release-1.1.0",
-    "openEHR REST API (ITS-REST) Release 1.1.0. openEHR International. https://specifications.openehr.org/releases/ITS-REST/Release-1.1.0",
-    "openEHR Archetype Model (AM) Release 2.3.0. openEHR International. https://specifications.openehr.org/releases/AM/Release-2.3.0"
+    "openEHR REST API (ITS-REST) Release 1.1.0. openEHR International. https://specifications.openehr.org/releases/ITS-REST/Release-1.1.0"
   ],
   related_identifiers: (
     # A supplied related_identifiers list REPLACES the ones the GitHub
@@ -159,7 +165,7 @@ rendered="$(
                        relation: "hasPart",
                        resource_type: "software" }))
   ),
-  notes: "Implements the openEHR specifications at these pinned versions: Reference Model 1.2.0, BASE 1.3.0, Archetype Model 1.4.0 and 2.4.0, Terminology 3.1.0, AQL (QUERY) 1.1.0, ITS-REST 1.1.0 and ITS-XML. The specification layer is generated from the official machine-readable specifications rather than hand-written, and conformance is measured per release by a built-in openEHR CNF conformance runner whose results are committed alongside the source. Requires PostgreSQL 18. Licensing: the recorded licence covers this project'\''s own code; vendored third-party material keeps its upstream terms — Apache-2.0 for the openEHR machine-readable artifacts and test corpora, CC-BY-SA-3.0 for the openEHR specification text and CKM-derived clinical models — each recorded in the PROVENANCE.md of the tree that carries it."
+  notes: "Implements the openEHR specifications at these pinned versions: Reference Model 1.2.0, BASE 1.3.0, Archetype Model 1.4.0 and 2.4.0, Terminology 3.1.0, AQL (QUERY) 1.1.0, ITS-REST 1.1.0 and ITS-XML. The specification layer is generated from the official machine-readable specifications, and conformance is measured with Veredictum, a separate openEHR CNF 2.0 runner (https://github.com/Vernum-Projecten/Veredictum), whose run records are committed alongside the source. Requires PostgreSQL 18. Licensing: the recorded licence covers this project'\''s own code; vendored third-party material keeps its upstream terms — Apache-2.0 for the openEHR machine-readable artifacts and test corpora, CC-BY-SA-3.0 for the openEHR specification text and CKM-derived clinical models — each recorded in the PROVENANCE.md of the tree that carries it."
 }'
 )"
 

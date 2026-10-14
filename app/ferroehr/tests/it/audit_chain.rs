@@ -551,3 +551,236 @@ async fn the_audit_subsystem_schedules_the_chain_check() {
     handle.shutdown(std::time::Duration::from_secs(5)).await;
     off_handle.shutdown(std::time::Duration::from_secs(5)).await;
 }
+
+/// The columns no chain digest hashes: the digest itself and the two forwarding
+/// stamps, the one permitted change to a stored record.
+const UNHASHED_COLUMNS: [&str; 3] = ["row_hash", "delivered_syslog_at", "delivered_fhir_feed_at"];
+
+/// The original (version 1) digest of a stored record, as the chain wrote it
+/// before the versioned digest existed.
+const V1_DIGEST: &str = "audit.audit_event_digest(prev_hash, chain_seq, id, recorded_at, \
+                         stored_at, action, outcome, event_code, operation, principal, \
+                         patient_id, resource_class, resource_id, client_ip, token_id, fhir)";
+
+/// Every column of `audit.audit_event` with its `information_schema` data type,
+/// in table order.
+async fn audit_event_columns(pool: &PgPool) -> Vec<(String, String)> {
+    sqlx::query_as(
+        "SELECT column_name::text, data_type::text FROM information_schema.columns \
+         WHERE table_schema = 'audit' AND table_name = 'audit_event' \
+         ORDER BY ordinal_position",
+    )
+    .fetch_all(pool)
+    .await
+    .expect("read the audit_event columns")
+}
+
+/// Run `statements` with the user triggers off inside a transaction, read the
+/// verifier's findings as `(chain_seq, finding)`, and roll everything back.
+async fn findings_after(pool: &PgPool, statements: &[String]) -> Vec<(Option<i64>, String)> {
+    let mut tx = pool.begin().await.expect("begin");
+    sqlx::query("ALTER TABLE audit.audit_event DISABLE TRIGGER USER")
+        .execute(&mut *tx)
+        .await
+        .expect("disable the append-only triggers");
+    for statement in statements {
+        sqlx::query(AssertSqlSafe(statement.clone()))
+            .execute(&mut *tx)
+            .await
+            .expect("the tampering statement itself must succeed");
+    }
+    let findings: Vec<(Option<i64>, String)> =
+        sqlx::query_as("SELECT chain_seq, finding FROM audit.verify_audit_chain()")
+            .fetch_all(&mut *tx)
+            .await
+            .expect("verify");
+    tx.rollback().await.expect("rollback");
+    findings
+}
+
+/// Returns an `UPDATE` right-hand side that changes a value of `data_type`,
+/// NULL included, or `None` for a type this helper does not know yet.
+fn changed_value(column: &str, data_type: &str) -> Option<String> {
+    let value = match data_type {
+        "text" => format!("coalesce(\"{column}\", '') || 'x'"),
+        "jsonb" => format!("jsonb_build_array(\"{column}\")"),
+        "smallint" | "integer" | "bigint" => format!("coalesce(\"{column}\", 0) + 1000"),
+        "uuid" => "uuidv7()".to_owned(),
+        "timestamp with time zone" => {
+            format!("coalesce(\"{column}\", now()) + interval '1 second'")
+        }
+        "boolean" => format!("NOT coalesce(\"{column}\", false)"),
+        "bytea" => format!("coalesce(\"{column}\", '\\x'::bytea) || '\\x00'::bytea"),
+        _ => return None,
+    };
+    Some(value)
+}
+
+/// The current digest version lists every column of the record but the
+/// unhashed three, so a migration that adds a column fails here until it adds
+/// a digest version covering it.
+#[tokio::test]
+async fn the_current_digest_covers_every_column() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = testdb.pool();
+
+    let mut covered: Vec<String> = sqlx::query_scalar(
+        "SELECT unnest(audit.audit_event_digest_columns(audit.audit_chain_digest_version()))",
+    )
+    .fetch_all(&pool)
+    .await
+    .expect("the current digest's columns");
+    covered.sort();
+
+    let mut expected: Vec<String> = audit_event_columns(&pool)
+        .await
+        .into_iter()
+        .map(|(name, _)| name)
+        .filter(|name| !UNHASHED_COLUMNS.contains(&name.as_str()))
+        .collect();
+    expected.sort();
+
+    assert_eq!(
+        covered, expected,
+        "every column of audit.audit_event outside {UNHASHED_COLUMNS:?} must be in the \
+         current chain digest: a new column needs a new digest version \
+         (audit.audit_event_digest_columns + audit.audit_chain_digest_version)"
+    );
+}
+
+/// Changing any hashed column of a stored record, with the append-only triggers
+/// and the CHECK constraints out of the way, is reported by the verifier.
+#[tokio::test]
+async fn every_hashed_column_is_tamper_evident() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = testdb.pool();
+    let store = AuditStore::new(pool.clone());
+    seed(&store, 3).await;
+
+    let version: i16 = sqlx::query_scalar(
+        "SELECT chain_digest_version FROM audit.audit_event WHERE chain_seq = 2",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("the target record");
+    let current: i16 = sqlx::query_scalar("SELECT audit.audit_chain_digest_version()")
+        .fetch_one(&pool)
+        .await
+        .expect("the current digest version");
+    assert_eq!(
+        version, current,
+        "a new record is written under the current digest"
+    );
+    assert!(
+        store.verify_chain().await.expect("verify").is_empty(),
+        "a freshly written trail must verify clean"
+    );
+
+    // The owner can drop a CHECK as easily as disable a trigger, and a value the
+    // constraints refuse is still a change the chain must see.
+    let checks: Vec<String> = sqlx::query_scalar(
+        "SELECT conname::text FROM pg_constraint \
+         WHERE conrelid = 'audit.audit_event'::regclass AND contype = 'c'",
+    )
+    .fetch_all(&pool)
+    .await
+    .expect("the CHECK constraints");
+
+    for (column, data_type) in audit_event_columns(&pool).await {
+        if UNHASHED_COLUMNS.contains(&column.as_str()) {
+            continue;
+        }
+        let mut statements: Vec<String> = checks
+            .iter()
+            .map(|name| format!("ALTER TABLE audit.audit_event DROP CONSTRAINT \"{name}\""))
+            .collect();
+        let value = changed_value(&column, &data_type);
+        assert!(
+            value.is_some(),
+            "no tampering expression for column `{column}` of type `{data_type}`: extend \
+             changed_value so the new column is exercised"
+        );
+        let value = value.expect("checked above");
+        statements.push(format!(
+            "UPDATE audit.audit_event SET \"{column}\" = {value} WHERE chain_seq = 2"
+        ));
+        let findings = findings_after(&pool, &statements).await;
+        assert!(
+            !findings.is_empty(),
+            "changing `{column}` of a stored record must be reported by verify_audit_chain()"
+        );
+    }
+}
+
+/// A trail written under the original digest keeps verifying after records
+/// under the current digest join it, a change to a column the original digest
+/// covers is still reported, and moving a record back to the original digest is
+/// reported even when its hash is recomputed to match.
+#[tokio::test]
+async fn records_under_the_original_digest_still_verify() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = testdb.pool();
+    let store = AuditStore::new(pool.clone());
+    seed(&store, 2).await;
+
+    // Rewrite the two records into the shape the chain wrote before the
+    // versioned digest: version 1, hashed and linked with the original digest.
+    for statement in [
+        format!(
+            "UPDATE audit.audit_event SET chain_digest_version = 1, row_hash = {V1_DIGEST} WHERE chain_seq = 1"
+        ),
+        "UPDATE audit.audit_event SET chain_digest_version = 1, prev_hash = \
+         (SELECT row_hash FROM audit.audit_event WHERE chain_seq = 1) WHERE chain_seq = 2"
+            .to_owned(),
+        format!("UPDATE audit.audit_event SET row_hash = {V1_DIGEST} WHERE chain_seq = 2"),
+        "UPDATE audit.audit_chain_state SET head_hash = \
+         (SELECT row_hash FROM audit.audit_event WHERE chain_seq = 2)"
+            .to_owned(),
+    ] {
+        with_triggers_disabled(&pool, &statement).await;
+    }
+    seed(&store, 2).await;
+
+    let versions: Vec<i16> =
+        sqlx::query_scalar("SELECT chain_digest_version FROM audit.audit_event ORDER BY chain_seq")
+            .fetch_all(&pool)
+            .await
+            .expect("versions");
+    assert_eq!(versions, vec![1, 1, 2, 2]);
+    assert!(
+        store.verify_chain().await.expect("verify").is_empty(),
+        "a trail spanning both digest versions must verify clean"
+    );
+
+    let findings = findings_after(
+        &pool,
+        &["UPDATE audit.audit_event SET principal = 'nobody' WHERE chain_seq = 1".to_owned()],
+    )
+    .await;
+    assert!(
+        findings
+            .iter()
+            .any(|(seq, finding)| *seq == Some(1) && finding.contains("modified")),
+        "a version 1 record is still verified under its own digest: {findings:?}"
+    );
+
+    let findings = findings_after(
+        &pool,
+        &[
+            "UPDATE audit.audit_event SET chain_digest_version = 1, \
+             professional_id = 'someone-else' WHERE chain_seq = 4"
+                .to_owned(),
+            format!("UPDATE audit.audit_event SET row_hash = {V1_DIGEST} WHERE chain_seq = 4"),
+            "UPDATE audit.audit_chain_state SET head_hash = \
+             (SELECT row_hash FROM audit.audit_event WHERE chain_seq = 4)"
+                .to_owned(),
+        ],
+    )
+    .await;
+    assert!(
+        findings
+            .iter()
+            .any(|(seq, finding)| *seq == Some(4) && finding.contains("older digest version")),
+        "a record moved back to the original digest must be reported: {findings:?}"
+    );
+}

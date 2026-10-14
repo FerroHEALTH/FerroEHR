@@ -1,6 +1,6 @@
 = Referencing
 
-This section describes how artefact are referenced, by other artefacts and software. The general principal for referencing is that references based on human-readable identifiers are used between source artefacts, in the same way as for software, while references in operational forms of the artefacts or from data may be in the form of either HRIDs or machine identifiers.
+This section describes how artefacts are referenced, by other artefacts and software. The general principal for referencing is that references based on human-readable identifiers are used between source artefacts, in the same way as for software, while references in operational forms of the artefacts or from data may be in the form of either HRIDs or machine identifiers.
 
 A key semantic difference exists with references as opposed to identifiers. A reference is either a full physical artefact identifier, or else an identifier with partial version information. In both cases, a reference is used to match artefacts carrying full identification. In general, there can be several candidate matches, and therefore a matching algorithm has to be specified in each case, in order to ensure constant meaning for a given reference in all modelling and computing environments.
 
@@ -234,10 +234,10 @@ The semantics of referencing in queries differ from those of the archetype-to-ar
 
 [source, cadl]
 --------
-    [openEHR-EHR-OBSERVATION.pulse.v1]/data/events[at0006]/data/items[at0004]/value/value
+    [openEHR-EHR-OBSERVATION.pulse.v1]/data/events[at0005]/data/items[at0003]/value/value
 --------
 
-For this to be valid, the path `/data/events[at0006]/data/items[at0004]/value/value` must exist within the earliest v1.x release of the archetype openEHR-EHR-OBSERVATION.pulse.v1, i.e. v1.0.0. If this path happened to have been added in a more recent minor release, the archetype reference would need to include the first minor version containing that path.
+For this to be valid, the path `/data/events[at0005]/data/items[at0003]/value/value` must exist within the earliest v1.x release of the archetype openEHR-EHR-OBSERVATION.pulse.v1, i.e. v1.0.0. If this path happened to have been added in a more recent minor release, the archetype reference would need to include the first minor version containing that path.
 
 Once an AQL query processor can work with a valid path, it will match the following data:
 
@@ -387,8 +387,8 @@ A formal definition of reference catering to the above requirements is as follow
 
 [source, ebnf]
 --------
-    archetype_data_ref  =   archetype_ver_ref { ',' archteype_ver_ref } ;
-    archteype_ver_ref   =   hrid_root '.' version_id_ref ;
+    archetype_data_ref  =   archetype_ver_ref { ',' archetype_ver_ref } ;
+    archetype_ver_ref   =   hrid_root '.' version_id_ref ;
     version_id_ref      =   'v' version_id ;
 --------
 

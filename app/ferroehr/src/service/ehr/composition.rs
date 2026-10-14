@@ -25,9 +25,9 @@ use serde_json::Value;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::datetime::parse_at_time;
-#[cfg(feature = "multimedia")]
-use crate::service::error::internal_fault;
 use crate::service::error::{ServiceError, Violation};
+#[cfg(feature = "multimedia")]
+use crate::service::error::{internal_fault, internal_fault_caused};
 use crate::service::response::{RawServiceResponse, ReadBody, ResourceMeta, ServiceResponse};
 use crate::service::status::{CallStatusType, SmError};
 use crate::versioning::Kind;
@@ -1147,7 +1147,7 @@ impl FerroEhrService {
         engine
             .expand(&mut body)
             .await
-            .map_err(|e| internal_fault("expand a multimedia reference", &e))?;
+            .map_err(|e| internal_fault_caused("expand a multimedia reference", &e))?;
         Ok(body)
     }
 

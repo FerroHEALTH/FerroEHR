@@ -176,7 +176,7 @@ impl TokenSource {
                 // governs 500 body content — our own design/extension.)
                 tracing::error!(
                     oauth2_client = %self.name,
-                    error = %e,
+                    error = %crate::service::error::ErrorChain::new(&e),
                     "terminology oauth2 client-credentials grant failed → 500"
                 );
                 SmError::exception(crate::service::error::INTERNAL_MESSAGE.to_owned())
@@ -232,10 +232,10 @@ impl<'c> oauth2::AsyncHttpClient<'c> for Oauth2HttpClient {
 #[derive(Debug, thiserror::Error)]
 enum TokenTransportError {
     /// The request could not be sent or its body could not be read.
-    #[error("token endpoint request failed: {0}")]
+    #[error("token endpoint request failed")]
     Reqwest(#[from] reqwest::Error),
     /// The response could not be reassembled as an `http::Response`.
-    #[error("token endpoint response was malformed: {0}")]
+    #[error("token endpoint response was malformed")]
     Http(#[from] http::Error),
 }
 

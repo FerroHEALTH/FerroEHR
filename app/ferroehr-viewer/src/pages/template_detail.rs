@@ -86,8 +86,13 @@ pub struct TemplateDetail {
 pub fn template_detail_from_opt(source: String) -> Result<TemplateDetail, ViewerError> {
     let opt = openehr_its::opt14::from_xml(&source)
         .map_err(|e| ViewerError::Internal(format!("OPT 1.4 parse: {e}")))?;
-    let web_template = openehr_sdt::flat::webtemplate::builder::build_web_template(&opt)
-        .map_err(|e| ViewerError::Internal(format!("WebTemplate build: {e}")))?;
+    let web_template =
+        openehr_sdt::flat::webtemplate::builder::build_web_template(&opt).map_err(|e| {
+            ViewerError::Internal(format!(
+                "WebTemplate build: {}",
+                crate::error::error_chain(&e)
+            ))
+        })?;
     Ok(TemplateDetail {
         meta: TemplateMeta {
             template_id: opt.template_id.value.clone(),

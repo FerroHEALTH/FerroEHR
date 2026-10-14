@@ -6,7 +6,7 @@
   <title value="Property"/>
   <status value="active"/>
   <experimental value="false"/>
-  <date value="2024-08-22"/>
+  <date value="2026-10-09"/>
   <publisher value="openEHR International"/>
   <contact>
     <name value="openEHR TERM specifications"/>
@@ -17,7 +17,7 @@
   </contact>
   <caseSensitive value="true"/>
   <content value="complete"/>
-  <count value="86"/>
+  <count value="91"/>
   <concept>
     <code value="339"/>
     <display value="Acceleration"/>
@@ -176,6 +176,14 @@
     <designation>
       <language value="zh"/>
       <value value="浓度"/>
+    </designation>
+  </concept>
+  <concept>
+    <code value="765"/>
+    <display value="Concentration per volume"/>
+    <designation>
+      <language value="ja"/>
+      <value value="Concentration per volume (en)"/>
     </designation>
   </concept>
   <concept>
@@ -436,6 +444,14 @@
     <designation>
       <language value="zh"/>
       <value value="能量, 线性"/>
+    </designation>
+  </concept>
+  <concept>
+    <code value="761"/>
+    <display value="Flow rate (volume) per area"/>
+    <designation>
+      <language value="ja"/>
+      <value value="Flow rate (volume) per area (en)"/>
     </designation>
   </concept>
   <concept>
@@ -719,6 +735,14 @@
     </designation>
   </concept>
   <concept>
+    <code value="764"/>
+    <display value="Length per area"/>
+    <designation>
+      <language value="ja"/>
+      <value value="Length per area (en)"/>
+    </designation>
+  </concept>
+  <concept>
     <code value="499"/>
     <display value="Light intensity"/>
     <designation>
@@ -896,6 +920,14 @@
     <designation>
       <language value="zh"/>
       <value value="质量单位面积"/>
+    </designation>
+  </concept>
+  <concept>
+    <code value="763"/>
+    <display value="Mitotic count"/>
+    <designation>
+      <language value="ja"/>
+      <value value="Mitotic count (en)"/>
     </designation>
   </concept>
   <concept>
@@ -1496,6 +1528,14 @@
     <designation>
       <language value="zh"/>
       <value value="体积"/>
+    </designation>
+  </concept>
+  <concept>
+    <code value="762"/>
+    <display value="Volume per area"/>
+    <designation>
+      <language value="ja"/>
+      <value value="Volume per area (en)"/>
     </designation>
   </concept>
   <concept>

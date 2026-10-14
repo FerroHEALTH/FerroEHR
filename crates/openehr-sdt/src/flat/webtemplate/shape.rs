@@ -32,7 +32,7 @@ use indexmap::IndexMap;
 
 use super::model::{
     WebTemplateCardinality, WebTemplateClosedAttribute, WebTemplateExistence, WebTemplateInput,
-    WebTemplateInputType, WebTemplateNode, WebTemplateSlot,
+    WebTemplateInputType, WebTemplateNode, WebTemplateSlot, WebTemplateStructuralStub,
 };
 
 /// The Web-Template metadata **format** version string emitted by both front
@@ -77,7 +77,7 @@ pub(super) fn tree_placeholder() -> WebTemplateNode {
     WebTemplateNode::new("COMPOSITION".to_owned(), String::new())
 }
 
-pub(super) fn is_entry_family(rm_type: &str) -> bool {
+fn is_entry_family(rm_type: &str) -> bool {
     matches!(
         rm_type,
         "OBSERVATION" | "EVALUATION" | "INSTRUCTION" | "ACTION" | "ADMIN_ENTRY" | "GENERIC_ENTRY"
@@ -563,6 +563,7 @@ pub(super) fn compact(mut node: WebTemplateNode, depth: usize) -> Option<WebTemp
         card_all: std::mem::take(&mut node.card_all),
         slots: std::mem::take(&mut node.slots),
         closed_attributes: std::mem::take(&mut node.closed_attributes),
+        structural_stubs: std::mem::take(&mut node.structural_stubs),
     };
     node.children = get_compacted(children, &mut hoisted);
     node.cardinalities = hoisted.cardinalities;
@@ -570,6 +571,7 @@ pub(super) fn compact(mut node: WebTemplateNode, depth: usize) -> Option<WebTemp
     node.card_all = hoisted.card_all;
     node.slots = hoisted.slots;
     node.closed_attributes = hoisted.closed_attributes;
+    node.structural_stubs = hoisted.structural_stubs;
     // Recurse into the (post-hoist) children.
     let children = std::mem::take(&mut node.children);
     node.children = children
@@ -587,6 +589,7 @@ struct Hoisted {
     card_all: Vec<WebTemplateCardinality>,
     slots: Vec<WebTemplateSlot>,
     closed_attributes: Vec<WebTemplateClosedAttribute>,
+    structural_stubs: Vec<WebTemplateStructuralStub>,
 }
 
 fn get_compacted(children: Vec<WebTemplateNode>, parent: &mut Hoisted) -> Vec<WebTemplateNode> {
@@ -614,6 +617,9 @@ fn get_compacted(children: Vec<WebTemplateNode>, parent: &mut Hoisted) -> Vec<We
             parent
                 .closed_attributes
                 .append(&mut std::mem::take(&mut child.closed_attributes));
+            parent
+                .structural_stubs
+                .append(&mut std::mem::take(&mut child.structural_stubs));
             // The hoisted wrapper's own RM type is an archetype constraint the
             // compacted tree would otherwise lose: record it as a slot so the
             // walk still rejects a sibling subtype in a narrowed

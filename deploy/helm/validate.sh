@@ -97,6 +97,7 @@ declare -a CASES=(
   "terminology:${CI_DIR}/terminology-values.yaml"
   "bridge:${CI_DIR}/bridge-values.yaml"
   "audit-categories:${CI_DIR}/audit-categories-values.yaml"
+  "server-tls:${CI_DIR}/server-tls-values.yaml"
   # The user-facing production overlay ships INSIDE the chart (#3678), so it is
   # rendered from there rather than from a ci/ copy that could drift from it.
   "production:${CHART_DIR}/values-production.yaml"
@@ -593,6 +594,9 @@ refusal_registry_gate() {
     "bridge.yaml|with an empty bridge.cdr.existingSecret|${bridge}|--set bridge.cdr.existingSecret=|bridge.cdr.existingSecret;bearer_token"
     "bridge.yaml|with an empty bridge.mappings.files|${bridge}|--set bridge.mappings.files=null|bridge.mappings.files;..data"
     "bridge.yaml|with an empty bridge.mappings.existingConfigMap|${bridge}|--set bridge.mappings.existingConfigMap=|bridge.mappings.existingConfigMap"
+    "_helpers.tpl|service.tls.caExistingSecret is empty|${bridge}|--set config.server.tls.enabled=true|FerroBRIDGE (bridge.enabled);service.tls.caExistingSecret;DNS SAN"
+    "_helpers.tpl|service.tls.caExistingSecret is empty|${viewer}|--set config.server.tls.enabled=true|the viewer (viewer.enabled);service.tls.caExistingSecret"
+    "_helpers.tpl|service.tls.caExistingSecret is empty|${base}|--set config.server.tls.enabled=true --set metrics.serviceMonitor.enabled=true|the ServiceMonitor scrape;service.tls.caExistingSecret"
     "_helpers.tpl|the chart injects both|${base}|--set-string config.usage_report.deployment=compose|config.usage_report.deployment;usageReport.enabled"
     "networkpolicy.yaml|networkPolicy.ingressAllowAll=false with an empty|${base}|--set networkPolicy.ingressAllowAll=false|networkPolicy.ingressFrom;hardening-network-policy.md"
     "networkpolicy.yaml|with no destination for the database|${base}|--set networkPolicy.egress.enabled=true|networkPolicy.egress.database.to;hardening-network-policy.md"
@@ -996,6 +1000,7 @@ audit|enabled|true
 audit|fail_mode|"closed"
 audit.store|enabled|true
 authz.rbac|ehr_access_default|"restricted"
+authz.rbac|enabled|true
 auth|enabled|true
 server.tls|enabled|
 management|port|
@@ -1023,6 +1028,70 @@ CLAIMS
   fi
 }
 production_overlay_gate
+
+# ── The server's own TLS: every in-chart client follows the listener ─────────
+# With config.server.tls.enabled the CDR listener speaks TLS, so each client the
+# chart wires to it (the viewer, FerroBRIDGE, the ServiceMonitor scrape, the
+# kubelet's probes) must speak it too, and the first three must trust the CA
+# named by service.tls.caExistingSecret. Judged on the TLS overlay AND on the
+# same clients with TLS off, so a scheme hard-wired to either value fails one
+# half. Each fact is read from the parsed object (gates/tls-clients.jq).
+tls_client_facts() { # <rendered>: one "<fact> <value>" line per client fact
+  yq -o=json -I0 '.' "$1" | jq -s -r --arg release "$RELEASE_NAME" -f "$(dirname "$0")/gates/tls-clients.jq"
+}
+server_tls_gate() {
+  bold "── server TLS: the in-chart clients follow the listener ─"
+  local on off facts missing=0 want got
+  on="$(mktemp)"; off="$(mktemp)"
+  helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "${CI_DIR}/server-tls-values.yaml" > "$on"
+  helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "${CI_DIR}/server-tls-values.yaml" \
+    --set config.server.tls.enabled=false > "$off"
+  facts="$(tls_client_facts "$on")"
+  # <fact>|<expected value>, one line per object the fact is read from.
+  while IFS='|' read -r want got; do
+    [[ -n "$want" ]] || continue
+    grep -qxF "${want} ${got}" <<<"$facts" \
+      || { red "  TLS on: ${want} is not '${got}'"; missing=1; }
+  done <<CLAIMS
+viewer-url|https://${RELEASE_NAME}:8080
+bridge-url|https://${RELEASE_NAME}:8080/ferroehr/rest/openehr/v1
+viewer-certdir|/etc/ssl/certs:/etc/ferroehr-cdr-ca
+bridge-certdir|/etc/ssl/certs:/etc/ferroehr-cdr-ca
+viewer-ca-secret|ferroehr-server-tls
+bridge-ca-secret|ferroehr-server-tls
+viewer-ca-mount|/etc/ferroehr-cdr-ca
+bridge-ca-mount|/etc/ferroehr-cdr-ca
+service-appprotocol|https
+scrape-scheme|https
+scrape-ca-secret|ferroehr-server-tls
+CLAIMS
+  [[ "$(grep -c -xF "probe-scheme HTTPS" <<<"$facts")" -eq 3 ]] \
+    || { red "  TLS on: the server's three probes do not all use scheme HTTPS"; missing=1; }
+  ! grep -qE '^(viewer|bridge)-url http://' <<<"$facts" \
+    || { red "  TLS on: a client still calls the CDR over http://"; missing=1; }
+  facts="$(tls_client_facts "$off")"
+  while IFS='|' read -r want got; do
+    [[ -n "$want" ]] || continue
+    grep -qxF "${want} ${got}" <<<"$facts" \
+      || { red "  TLS off: ${want} is not '${got}'"; missing=1; }
+  done <<CLAIMS
+viewer-url|http://${RELEASE_NAME}:8080
+bridge-url|http://${RELEASE_NAME}:8080/ferroehr/rest/openehr/v1
+service-appprotocol|http
+scrape-scheme|http
+CLAIMS
+  [[ "$(grep -c -xF "probe-scheme HTTP" <<<"$facts")" -eq 3 ]] \
+    || { red "  TLS off: the server's three probes do not all use scheme HTTP"; missing=1; }
+  ! grep -qE '^(viewer|bridge)-(certdir|ca-secret|ca-mount) ' <<<"$facts" \
+    || { red "  TLS off: a client still mounts or names the CDR CA"; missing=1; }
+  rm -f "$on" "$off"
+  if [[ "$missing" -eq 0 ]]; then
+    echo "  TLS on: viewer, FerroBRIDGE and the scrape call https and trust the named CA; the probes use HTTPS. TLS off: all http, no CA"
+  else
+    FAIL=1
+  fi
+}
+server_tls_gate
 
 for case in "${CASES[@]}"; do
   label="${case%%:*}"

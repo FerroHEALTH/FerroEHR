@@ -198,18 +198,20 @@ impl DbConfig {
 /// Errors produced by the persistence foundation.
 #[derive(Debug, thiserror::Error)]
 pub enum DbError {
-    /// A driver/pool/query error from `sqlx`.
-    #[error("database: {0}")]
+    /// A driver/pool/query error from `sqlx`, carried as the source and kept
+    /// out of this variant's own message.
+    #[error("database operation failed")]
     Sqlx(#[from] sqlx::Error),
 
-    /// A schema migration failed to apply.
-    #[error("migration: {0}")]
+    /// A schema migration failed to apply; the migrator's error is the source.
+    #[error("applying the schema migrations failed")]
     Migrate(#[from] sqlx::migrate::MigrateError),
 
     /// The database does not carry exactly this build's migrations, and
-    /// [`MigrationMode::Verify`] forbids applying them.
+    /// [`MigrationMode::Verify`] forbids applying them; the divergence found is
+    /// the source.
     #[error(
-        "the database is not migrated to this build ({0}). \
+        "the database is not migrated to this build. \
          [db].migrate is `verify`, so this server will not issue DDL: apply the \
          migrations out of band with the migrator role, then start it again"
     )]
@@ -422,9 +424,12 @@ fn pool_options(settings: &DbConfig, domain: Domain) -> PgPoolOptions {
         .max_connections(settings.max_connections)
         .min_connections(settings.min_connections)
         .acquire_timeout(Duration::from_secs(settings.acquire_timeout_secs))
-        // No liveness ping per checkout: the default `test_before_acquire`
-        // adds one round trip to EVERY acquisition; a broken connection is
-        // detected by its first real statement and retried by the pool.
+        // No liveness ping per checkout: `test_before_acquire` (default true)
+        // pings each connection before handing it out, one round trip per
+        // acquisition (https://docs.rs/sqlx/0.9.0/sqlx/pool/struct.PoolOptions.html#method.test_before_acquire).
+        // A connection that broke while idle therefore fails its first real
+        // statement, and that statement's error reaches the caller: sqlx does
+        // not retry it.
         .test_before_acquire(false)
         .after_connect(move |conn, _meta| {
             // Cloned per call: `after_connect` takes an `Fn`, so the captured
@@ -1858,6 +1863,35 @@ pub async fn non_pseudonym_subjects(pool: &PgPool) -> Result<i64, DbError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Every `DbError` variant wrapping a cause keeps it as the source and out
+    /// of its own message, so a chain printer shows it once (#3684).
+    #[test]
+    fn wrapped_causes_are_sources_and_not_repeated() {
+        use std::error::Error as _;
+        let error = DbError::from(sqlx::Error::Protocol("driver detail".to_owned()));
+        let source = error.source().expect("the driver error is the source");
+        assert!(source.downcast_ref::<sqlx::Error>().is_some());
+        assert!(!error.to_string().contains("driver detail"), "{error}");
+
+        let error = DbError::from(sqlx::migrate::MigrateError::VersionMissing(7));
+        let source = error.source().expect("the migrator error is the source");
+        assert!(
+            source
+                .downcast_ref::<sqlx::migrate::MigrateError>()
+                .is_some()
+        );
+        assert!(!error.to_string().contains('7'), "{error}");
+
+        let mismatch = SchemaMismatch::NeverMigrated {
+            schema: "clinical".to_owned(),
+        };
+        let mismatch_text = mismatch.to_string();
+        let error = DbError::SchemaNotReady(mismatch);
+        let source = error.source().expect("the divergence is the source");
+        assert!(source.downcast_ref::<SchemaMismatch>().is_some());
+        assert!(!error.to_string().contains(&mismatch_text), "{error}");
+    }
 
     #[test]
     fn defaults_applied() {

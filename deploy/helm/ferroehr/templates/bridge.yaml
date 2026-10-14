@@ -31,6 +31,7 @@ carries its own copy and the chart's security gate checks all of them.
 {{- if and .Values.bridge.mappings.files (not .Values.bridge.mappings.existingConfigMap) }}
 {{- fail "bridge.mappings.files is set with an empty bridge.mappings.existingConfigMap: name the ConfigMap those keys belong to." }}
 {{- end }}
+{{- include "ferroehr.cdrTrustRequired" (dict "root" . "client" "FerroBRIDGE (bridge.enabled)") }}
 {{- $configToml := include "ferroehr.bridgeConfigToml" . }}
 apiVersion: v1
 kind: ServiceAccount
@@ -133,6 +134,9 @@ spec:
                   name: {{ .Values.bridge.cdr.existingSecret }}
                   key: user
             {{- end }}
+            {{- if eq (include "ferroehr.serverTls" .) "true" }}
+            {{- include "ferroehr.cdrTrustEnv" . | nindent 12 }}
+            {{- end }}
             {{- with .Values.bridge.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -184,6 +188,9 @@ spec:
               subPath: {{ . | quote }}
               readOnly: true
             {{- end }}
+            {{- if eq (include "ferroehr.serverTls" .) "true" }}
+            {{- include "ferroehr.cdrTrustVolumeMount" . | nindent 12 }}
+            {{- end }}
             {{- with .Values.bridge.extraVolumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -208,6 +215,9 @@ spec:
         - name: mappings
           configMap:
             name: {{ . }}
+        {{- end }}
+        {{- if eq (include "ferroehr.serverTls" .) "true" }}
+        {{- include "ferroehr.cdrTrustVolume" . | nindent 8 }}
         {{- end }}
         {{- with .Values.bridge.extraVolumes }}
         {{- toYaml . | nindent 8 }}

@@ -67,6 +67,10 @@ pub mod pages;
 pub mod queries_api;
 pub mod query_namespace;
 pub mod scopes;
+// NOTE: no openEHR spec governs this — our own design; the gap codes and the
+// OpenAPI family slugs come from the one file the server holds itself to.
+#[path = "../../ferroehr/src/served_vocabulary.rs"]
+pub mod served_vocabulary;
 pub mod session_client;
 pub mod subscriptions;
 pub mod system_api;

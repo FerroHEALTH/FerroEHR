@@ -409,9 +409,7 @@ fn build_children(
     if recurse_attrs {
         node.existence = existence_constraints(co, &node.aql_path);
         node.closed_attributes = closed_attributes(co, &node.aql_path);
-        if shape::is_entry_family(&node.rm_type) {
-            node.structural_stubs = structural_stubs(ctx, term, co);
-        }
+        node.structural_stubs = structural_stubs(ctx, term, co, &node.aql_path);
     }
     node.children = children;
     shape::post_process(node);
@@ -1163,28 +1161,33 @@ fn delimited_regex_body(entry: &str) -> Option<&str> {
     })
 }
 
-/// The RM-mandatory structural attributes of an ENTRY whose value the FLAT/TDD
-/// composition builder synthesises when the simplified form carries no content
-/// under them (the ENTRY `data`/`state`/`protocol` plus `ACTION.description`;
-/// RM `composition`).
-const ENTRY_STRUCTURAL_ATTRS: [&str; 4] = ["data", "description", "protocol", "state"];
+/// The structural attributes whose value the FLAT/TDD composition builder and the
+/// example generator synthesise when the simplified form carries no content under
+/// them (the ENTRY `data`/`state`/`protocol`, `ACTION.description`, the EVENT
+/// `data`/`state` and `ACTIVITY.description`; RM `composition`, RM
+/// `data_structures`).
+const STRUCTURAL_ATTRS: [&str; 4] = ["data", "description", "protocol", "state"];
 
-/// Capture the structural stubs for an ENTRY node (mirrors the OPT-1.4 front
-/// end): for each RM-mandatory structural attribute the OPT constrains with a
-/// node-identified structural child, record its RM type, archetype node id, and
-/// rubric name. The compactor drops such a wrapper when it carries no leaf
-/// content, so this is the only surviving record of the *constrained* identity —
-/// the composition builder synthesises the empty attribute from it (AOM2
-/// §C_ATTRIBUTE: a constrained attribute must be filled by a conforming value)
-/// rather than a blind `at0001`/`id1` placeholder a closed-archetype walk rejects.
+/// Captures the structural stubs of a structural node (mirrors the OPT-1.4 front
+/// end).
+///
+/// For each structural attribute the archetype constrains with a
+/// node-identified structural child, the stub records its absolute attribute
+/// path (under `node_path`), RM type, archetype node id and rubric name. The
+/// compactor drops such a wrapper when it carries no leaf content, so this is the
+/// only surviving record of the *constrained* identity — the composition builder
+/// synthesises the empty attribute from it (AOM2 §C_ATTRIBUTE: a constrained
+/// attribute must be filled by a conforming value) rather than a blind
+/// `at0001`/`id1` placeholder a closed-archetype walk rejects.
 fn structural_stubs(
     ctx: &Ctx,
     term: &ArchetypeTerminology,
     co: &CObject,
+    node_path: &str,
 ) -> Vec<WebTemplateStructuralStub> {
     let mut out = Vec::new();
     for attr in co_attributes(co) {
-        if !ENTRY_STRUCTURAL_ATTRS.contains(&attr.rm_attribute_name.as_str()) {
+        if !STRUCTURAL_ATTRS.contains(&attr.rm_attribute_name.as_str()) {
             continue;
         }
         for child in attr.children.iter().flatten() {
@@ -1199,6 +1202,7 @@ fn structural_stubs(
             }
             out.push(WebTemplateStructuralStub {
                 attr: attr.rm_attribute_name.clone(),
+                path: format!("{node_path}/{}", attr.rm_attribute_name),
                 rm_type: object_rm_type(child).to_owned(),
                 node_id,
                 name: rubric_text(term, object_node_id(child), &ctx.default_language),

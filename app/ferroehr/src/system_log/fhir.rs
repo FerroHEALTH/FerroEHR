@@ -14,11 +14,11 @@
 //!
 //! - `RESTful` operations: `type` = `rest`, `subtype` = the FHIR
 //!   restful-interaction class + the concrete ITS-REST operation id.
-//! - Role direction per BALP: on a **Read** the server is the *source* of
-//!   the data (DCM 110153) and the client the *destination* (DCM 110152);
-//!   on every other action the client initiates as source
-//!   (`IHE.BasicAudit.PatientRead` vs `IHE.BasicAudit.PatientQuery`
-//!   agent:client/agent:server fixed codings).
+//! - Role direction per BALP, shared with the DICOM message: on a **Read**
+//!   the server is the *source* of the data (DCM 110153) and the client the
+//!   *destination* (DCM 110152); on a query and every other action the
+//!   client is the source (`IHE.BasicAudit.PatientRead` vs
+//!   `IHE.BasicAudit.PatientQuery` agent:client/agent:server fixed codings).
 //! - Patient entity: `audit-entity-type` code `1` (Person) +
 //!   `object-role` code `1` (Patient), the resolved EHR subject as an
 //!   identifier-only reference.
@@ -194,13 +194,14 @@ fn type_and_interaction(event: &AuditEvent) -> (AuditCoding, Option<AuditCoding>
 
 /// The client/server agents (+ the OAuth token agent when a `jti` is known).
 ///
-/// Role direction per the BALP fixed codings: on a **Read** the server is the
-/// source of the data (DCM 110153 "Source Role ID") and the client the
-/// destination (110152); on every other action the initiating client is the
-/// source (`IHE.BasicAudit.PatientRead` vs `PatientQuery` agent slices).
+/// Role direction follows [`AuditEvent::server_is_data_source`], the rule
+/// the DICOM message applies too: on a read the server is the source of the
+/// data (DCM 110153 "Source Role ID") and the client the destination
+/// (110152), as the BALP `Read`/`PatientRead` agent slices fix; on a query
+/// and every other action the client is the source, as the `Query`,
+/// `Create` and `Update` slices fix.
 fn build_agents(event: &AuditEvent, ctx: &AuditContext, missing: &str) -> Vec<AuditAgent> {
-    let read = matches!(event.action, EventActionCode::Read);
-    let (client_role, server_role) = if read {
+    let (client_role, server_role) = if event.server_is_data_source() {
         (
             coding(SYS_DCM, "110152", "Destination Role ID"),
             coding(SYS_DCM, "110153", "Source Role ID"),
@@ -655,6 +656,81 @@ mod tests {
             v["entity"][1]["what"]["identifier"]["value"],
             "8fa1::ferroehr::1"
         );
+    }
+
+    /// The DICOM message and the FHIR document give the client and the server
+    /// the same data-flow role for one record: on a read (and an export) the
+    /// server is Source (110153) and the client Destination (110152), per
+    /// DICOM PS3.15 §A.5.2.7 and the BALP `Read` agent slices; on a write and
+    /// on a query (§A.5.3.10, BALP `Query`) the client is Source.
+    #[test]
+    fn dicom_and_fhir_agree_on_the_data_flow_direction() {
+        let cases = [
+            (
+                EventActionCode::Read,
+                ObjectClass::Composition,
+                "110152",
+                "110153",
+            ),
+            (
+                EventActionCode::Read,
+                ObjectClass::Extract,
+                "110152",
+                "110153",
+            ),
+            (
+                EventActionCode::Create,
+                ObjectClass::Composition,
+                "110153",
+                "110152",
+            ),
+            (
+                EventActionCode::Update,
+                ObjectClass::Ehr,
+                "110153",
+                "110152",
+            ),
+            (
+                EventActionCode::Execute,
+                ObjectClass::Query,
+                "110153",
+                "110152",
+            ),
+            (
+                EventActionCode::Read,
+                ObjectClass::Query,
+                "110153",
+                "110152",
+            ),
+        ];
+        for (action, object, client, server) in cases {
+            let e = event(action, object, EventOutcome::Success);
+            let v = json(&e, Some("patient-42"));
+            let agents = v["agent"].as_array().expect("agents");
+            assert_eq!(
+                agents[0]["type"]["coding"][0]["code"], client,
+                "FHIR client {action:?} {object:?}"
+            );
+            assert_eq!(
+                agents[1]["type"]["coding"][0]["code"], server,
+                "FHIR server {action:?} {object:?}"
+            );
+
+            let xml =
+                crate::system_log::message::AuditMessage::build(&e, &ctx(), Some("patient-42"))
+                    .to_xml()
+                    .expect("xml");
+            let roles: Vec<&str> = xml
+                .split("<RoleIDCode csd-code=\"")
+                .skip(1)
+                .filter_map(|rest| rest.split('"').next())
+                .collect();
+            assert_eq!(
+                roles,
+                vec![client, server],
+                "DICOM participants {action:?} {object:?}"
+            );
+        }
     }
 
     #[test]

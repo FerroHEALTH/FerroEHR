@@ -1164,7 +1164,7 @@ pub enum EhrUriError {
     #[error("malformed version identifier in locator: {0:?}")]
     MalformedVersion(String),
     /// The `path_inside_top_level_structure` did not parse.
-    #[error("invalid path inside top-level structure: {0}")]
+    #[error("invalid path inside top-level structure")]
     Path(#[from] PathError),
 }
 

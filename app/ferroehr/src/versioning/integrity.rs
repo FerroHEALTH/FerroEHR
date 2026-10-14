@@ -119,11 +119,11 @@ fn sign_canonical_with_data(
         openehr_rm::v1_2::common::change_control::version_impl::canonical_form_of_json_with_data(
             ov, data,
         )
-        .map_err(|e| ServiceError::SigningCanonical(e.to_string(), e))?;
+        .map_err(ServiceError::SigningCanonical)?;
     let signature = ctx
         .signer
         .sign(&canonical)
-        .map_err(|e| ServiceError::SigningFailed(e.to_string(), e))?;
+        .map_err(ServiceError::SigningFailed)?;
     Ok(Some(signature))
 }
 
@@ -172,11 +172,11 @@ pub(crate) fn sign_imported_version(
 fn sign_canonical(ctx: &SigningCtx<'_>, value: &Value) -> Result<Option<String>, ServiceError> {
     let canonical =
         openehr_rm::v1_2::common::change_control::version_impl::canonical_form_of_json(value)
-            .map_err(|e| ServiceError::SigningCanonical(e.to_string(), e))?;
+            .map_err(ServiceError::SigningCanonical)?;
     let signature = ctx
         .signer
         .sign(&canonical)
-        .map_err(|e| ServiceError::SigningFailed(e.to_string(), e))?;
+        .map_err(ServiceError::SigningFailed)?;
     Ok(Some(signature))
 }
 
@@ -210,7 +210,7 @@ pub(crate) fn verify_on_read(
     };
     let canonical =
         openehr_rm::v1_2::common::change_control::version_impl::canonical_form_of_json(ov)
-            .map_err(|e| ServiceError::SigningCanonical(e.to_string(), e))?;
+            .map_err(ServiceError::SigningCanonical)?;
     let verdict = signer.verify(&canonical, signature);
     if verdict.is_failure() {
         crate::telemetry::metrics::metrics()

@@ -77,7 +77,7 @@ The archetype identifier of any specialised archetype, including all templates, 
 
 === Version Identifiers
 
-ADL 2 Archetypes contain 3-part version identifiers, with optional qualifiers, following the openEHR Artefact Knowledge Identification specification. Examples below:
+ADL 2 Archetypes contain 3-part version identifiers, with optional qualifiers, following the openEHR Archetype Identification specification. Examples below:
 
 [source, adl]
 --------

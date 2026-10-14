@@ -45,8 +45,9 @@ const WILDCARD: &str = "*";
 /// An eventing failure — either the broker transport or a negative confirm.
 #[derive(Debug, thiserror::Error)]
 pub enum EventError {
-    /// The AMQP transport failed (connect, channel, publish).
-    #[error("amqp transport: {0}")]
+    /// The AMQP transport failed (connect, channel, publish); the `lapin`
+    /// error, which names which, is the source.
+    #[error("amqp transport failed")]
     Amqp(#[from] lapin::Error),
     /// The broker negatively acknowledged the publish (could not route/store);
     /// the row stays pending for retry (at-least-once).

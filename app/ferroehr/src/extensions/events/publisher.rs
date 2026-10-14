@@ -49,6 +49,7 @@ use tokio::task::JoinHandle;
 
 use super::config::EventsConfig;
 use crate::extensions::outbox;
+use crate::service::error::ErrorChain;
 use ferroehr_ext::events::amqp::AmqpPublisher;
 use ferroehr_ext::events::{EventError, EventPublisher};
 
@@ -154,7 +155,7 @@ impl std::fmt::Display for SyncError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             SyncError::Db(e) => write!(f, "subscription store: {e}"),
-            SyncError::Broker(e) => write!(f, "broker declare: {e}"),
+            SyncError::Broker(e) => write!(f, "broker declare: {}", ErrorChain::new(e)),
         }
     }
 }
@@ -273,7 +274,10 @@ async fn drain_until_caught_up(
             }
             Err(DrainError::Publish(e)) => {
                 healthy.store(false, Ordering::Relaxed);
-                tracing::warn!("event publish stalled (broker unavailable?): {e}");
+                tracing::warn!(
+                    "event publish stalled (broker unavailable?): {}",
+                    ErrorChain::new(&e)
+                );
                 return;
             }
             Err(DrainError::Db(e)) => {
@@ -488,6 +492,6 @@ async fn publish_with_retry(
 ) -> Result<(), EventError> {
     (|| async { publisher.publish(routing_key, payload).await })
         .retry(ExponentialBuilder::default().with_max_times(config.publish_max_retries))
-        .notify(|e, d| tracing::warn!("event publish retry in {d:?}: {e}"))
+        .notify(|e, d| tracing::warn!("event publish retry in {d:?}: {}", ErrorChain::new(e)))
         .await
 }

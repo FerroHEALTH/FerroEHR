@@ -45,7 +45,7 @@ pub enum SigningError {
     #[error("signing mode is `pgp` but no key_path is configured (FERROEHR_SIGNING_KEY_PATH)")]
     MissingKeyPath,
     /// The configured `OpenPGP` key could not be loaded or used.
-    #[error("loading the OpenPGP signing key: {0}")]
+    #[error("loading the OpenPGP signing key")]
     Key(#[from] KeyError),
 }
 

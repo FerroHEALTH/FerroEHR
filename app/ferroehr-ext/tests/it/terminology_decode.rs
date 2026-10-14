@@ -14,6 +14,11 @@
 //! (<https://hl7.org/fhir/R4B/parameters.html>,
 //! <https://hl7.org/fhir/R4B/valueset.html>).
 
+#![expect(
+    clippy::disallowed_types,
+    reason = "test fixtures and wire assertions are raw JSON by the testing rule (.claude/rules/testing.md §Test-fixture construction): a FHIR response body is bytes a server sends, and building it through a typed model would test the model instead of the code under test"
+)]
+
 use ferroehr_ext::fhir::terminology::{
     ExpansionMember, TerminologyDecodeError, TranslateMatch, decode_expansion, decode_parameters,
 };
@@ -157,9 +162,12 @@ fn a_body_that_is_not_a_parameters_resource_is_refused_not_partially_read() {
             matches!(err, TerminologyDecodeError::Malformed(_)),
             "got {err:?}"
         );
+        // The parser's diagnosis is the source, kept out of the message.
+        assert_eq!(err.to_string(), "malformed FHIR response");
         assert!(
-            err.to_string().starts_with("malformed FHIR response: "),
-            "{err}"
+            std::error::Error::source(&err)
+                .is_some_and(|cause| cause.downcast_ref::<serde_json::Error>().is_some()),
+            "{err:?}"
         );
     }
 }

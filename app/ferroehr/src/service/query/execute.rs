@@ -31,7 +31,7 @@ use crate::aql::error::{AqlError, ExecError};
 use crate::aql::ir::{Params, QueryIr};
 use crate::aql::sql::SqlCtx;
 use crate::service::FerroEhrService;
-use crate::service::error::internal_fault;
+use crate::service::error::{ErrorChain, internal_fault_caused};
 use crate::service::query::request::{AqlQueryRequest, QueryOutcome};
 use crate::service::status::{QUERY_TIMEOUT_TAG, SmError};
 use crate::system_log::categories::{AccessedContent, ContentIds};
@@ -245,7 +245,7 @@ impl FerroEhrService {
         }
         // Miss: full parse → terminology expansion → lowering.
         let mut ast = parse_str(aql).map_err(|e| {
-            let message = format!("invalid AQL: {e}");
+            let message = format!("invalid AQL: {}", ErrorChain::new(&e));
             Failure::analysis(SmError::precondition(message).with_source(e))
         })?;
         // Semantic-analysis pre-pass: resolve every `TERMINOLOGY('expand', …)`
@@ -304,7 +304,7 @@ impl FerroEhrService {
                 .fetch_all(&self.pool)
                 .await
                 .map_err(|e| {
-                    Failure::analysis(internal_fault("resolve the requested ehr_ids", &e))
+                    Failure::analysis(internal_fault_caused("resolve the requested ehr_ids", &e))
                 })?
                 .into_iter()
                 .map(|id| id.0)
@@ -543,7 +543,7 @@ fn map_plan_error(e: AqlError) -> SmError {
 /// schema objects the generated SQL touched, an assembly failure names the
 /// internal node-row shape, and a missing column alias names a generated SQL
 /// alias — server-internal detail that goes to `tracing` instead
-/// ([`internal_fault`]).
+/// ([`internal_fault_caused`]).
 fn map_exec_error(e: AqlError) -> SmError {
     match e {
         // A data-exception the DRIVER raises here is the caller's own binding
@@ -565,14 +565,16 @@ fn map_exec_error(e: AqlError) -> SmError {
             .with_source(db)
         }
         AqlError::Exec(ExecError::Database(db)) => crate::storage::error::classify_sqlx(&db),
-        AqlError::Exec(ExecError::Assembly(a)) => internal_fault("assemble the RESULT_SET", &a),
+        AqlError::Exec(ExecError::Assembly(a)) => {
+            internal_fault_caused("assemble the RESULT_SET", &a)
+        }
         AqlError::Exec(ExecError::Terminology(msg)) => SmError::exception(msg),
         // The `spec_profile` refusal is already the SM `conflict` the resource
         // reads carry (→ `409`), so it crosses unchanged: same cause, same
         // status, same remedy, whichever route reached the stored body.
         AqlError::Exec(ExecError::Profile(e)) => SmError::from(e),
         AqlError::Exec(e @ ExecError::MissingColumnAlias { .. }) => {
-            internal_fault("bind a RESULT_SET column to its generated SQL alias", &e)
+            internal_fault_caused("bind a RESULT_SET column to its generated SQL alias", &e)
         }
         AqlError::Feature(_) | AqlError::Analysis(_) | AqlError::Sql(_) => {
             SmError::precondition(e.to_string()).with_source(e)

@@ -30,6 +30,63 @@ workflow refuses a tag that has no matching section here.
   or an admit-everything peer is refused. The image is listed in
   `artifacthub.io/images`, so Artifact Hub scans it.
 
+- **AQL reads variables declared inside an `OR` containment branch** (#3736).
+  `CONTAINS (OBSERVATION o[...] OR EVALUATION ev[...])` with paths through `o`
+  and `ev` in `SELECT`, `WHERE` or `ORDER BY` answers one row per match, with
+  null for the branch that did not match; it was refused with "not supported
+  yet". Reading a variable declared under `NOT CONTAINS`, or an `OR` branch
+  that is its own versioned object (#3745), is refused with a named `400`.
+
+- **An admin route physically deletes one demographic party** (#3683).
+  `DELETE {base}/admin/party/{party_id}` removes the party and its
+  relationships (SM `physical_party_delete`), admin-gated and recorded like
+  the EHR physical delete. It is our own extension; no ITS-REST operation
+  governs it.
+
+### Changed
+
+- **AQL result row counts change for paths through repeated nodes** (#3733,
+  #3734). A `SELECT` path through a repeated step returns one row per node
+  where it returned one row with an arbitrary node's value; a whole-object
+  projection of an absent path keeps its row with a null cell; a path step
+  no longer reaches past its direct child, so `c/content[...]` does not find
+  an entry inside a SECTION. Clients that counted rows per composition need
+  to group them. The rules are under Fixed.
+
+- **An AQL text that does not tokenise names the pass in its `400`** (#3684).
+  The body reads `invalid AQL: the query could not be tokenised: <lexer
+  diagnostic>`, and a stored query the same after its own prefix; the
+  diagnostic is unchanged. Bearer-token refusals log which check refused the
+  token and its cause, each once; the `401` body is unchanged.
+
+- **The conformance pipeline fetches Veredictum from its new home** (#3594),
+  `https://github.com/Vernum-Projecten/Veredictum`.
+
+### Security
+
+- **An unresolvable signing key set no longer discloses the identity
+  provider's URLs** (#3666). The `503` names only the failed step (issuer URL,
+  OIDC discovery, key-set fetch or read); it quoted the transport error, which
+  named the provider's discovery and JWKS URLs. The cause is still logged.
+
+- **`ehr_access_default = "restricted"` holds with RBAC off** (#3742).
+  `[authz.rbac] ehr_access_default = "restricted"` was ignored when
+  `[authz.rbac] enabled = false`, leaving every EHR without
+  `ACCESS_CONTROL_SETTINGS` open on its path and in AQL, while the deployment
+  posture check stopped reporting the open default. The default is now
+  enforced with RBAC on or off. With `[auth] enabled = false` the combination
+  is refused at boot, since no caller carries a role. A new deployment gap,
+  `rbac_off`, is reported when authentication is on and the RBAC gate is off;
+  `production` refuses it unless it is accepted by name. `[authz.rbac]
+  role_claims` now applies to role extraction with RBAC off as well.
+- **The audit hash chain covers every column of an access record** (#3686).
+  Digest version 2 hashes every column (purpose, legal basis, categories,
+  assurance level and value, professional, the emergency mark and the rest),
+  so a change to any of them shows in `audit.verify_audit_chain()`. Records
+  written before the upgrade keep verifying under version 1, and the
+  verifier reports a record moved back to an older digest version. A test
+  fails when a migration adds a column the digest does not cover.
+
 ### Fixed
 
 - **The chart's SBOM is attested** (#3710). The CycloneDX SBOM the chart lane
@@ -38,6 +95,144 @@ workflow refuses a tag that has no matching section here.
   attestation. The generator now writes a `urn:uuid:` serial number and
   refuses to hand on a document without `bomFormat`, `serialNumber` and
   `specVersion`. Chart 11.0.2 carries the attestation.
+- **The `POST /query/aql` example in the served OpenAPI runs** (#3737). Its request
+  and response examples sorted on the `SELECT` alias (`ORDER BY temperature
+  DESC`), which the server refuses with `400`: AQL 1.1.0 §ORDER BY sorts on an
+  identified path. The examples now sort on
+  `o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude`.
+- **Stale statements corrected** (#3743). `CITATION.cff` and the Zenodo record no
+  longer say a built-in runner verifies conformance at every release; they
+  name Veredictum, the separate CNF 2.0 runner, and the committed run records.
+  The Helm chart description drops "hardened-by-default" and states that the
+  default NetworkPolicy admits every source until `networkPolicy.ingressFrom`
+  is set and that the default-deny egress policy is off. `SECURITY.md` names
+  `GET /management/status` as the endpoint that reports `support.status`, and
+  the README calls Veredictum separate rather than independent.
+- **More stale statements corrected** (#3743). The operations guide and the CRA user
+  information and risk assessment pages name `GET /management/status` as the
+  endpoint that reports `support.status`; the public
+  `GET /ferroehr/rest/status` carries only `status`, `server_version`,
+  `openehr_rest_api_version`, `timestamp` and `deployment.profile`. The
+  Conformance and Benchmarks pages call Veredictum a separate runner instead
+  of an independent or built-in one. `MAINTAINERS.md` states the support
+  period as `SECURITY.md` does: five years per release, with every fix in the
+  newest release. The conformance statement no longer declares the `tenancy`
+  extension, which was removed in 4.3.1. The Zenodo record's references and
+  related identifiers cite the pinned specification releases (RM 1.2.0
+  development, BASE 1.3.0, TERM 3.1.0, AM 1.4 and 2.4.0, QUERY 1.1.0,
+  ITS-REST 1.1.0), and its notes name Veredictum. The provenance record of
+  Delegated Regulation (EU) 2026/881 names the FerroHEALTH post-market page as
+  the page that cites it (#3706).
+- **AQL no longer pairs values from different nodes in one row** (#3733). Two
+  paths in `SELECT` under one repeated node (the systolic and diastolic of an
+  EVENT) read the same node: each structure step a `SELECT` path descends is
+  bound once per row, one row per node, and paths through different repeated
+  steps give every combination of their nodes. A path that reaches nothing
+  reads null and keeps its row; a whole-object projection used to drop that
+  row. In `WHERE`, every step a path descends that `SELECT` has not bound is
+  bound once for the whole clause, and a row is kept when some assignment of
+  those bindings makes the clause true under SQL three-valued logic, so
+  `sys >= 140 AND dia >= 90` needs both readings on one event, De Morgan's
+  laws hold, and `NOT (x > 140)` over readings 120 and 150 holds. Aggregates
+  read the items of their path that a projection under the same `WHERE`
+  would keep, without adding rows, so `COUNT(*)` next to `MAX`, `SUM` or
+  `AVG` is unchanged; `COUNT` over a list attribute counts its elements and
+  ignores a stored JSON `null`. `EXISTS` is path-level (AQL 1.1.0 §EXISTS):
+  it holds when data at the path exists, read per node only where `SELECT`
+  binds the path's prefix. A test of a list attribute inside one node's data
+  (`links`, `participations`) holds when any element satisfies it and is
+  unknown when the list is empty, so `NOT (c/links/target/value = 'x')` drops
+  a composition without links. AQL 1.1.0 does not define the grain over a
+  repeated attribute; the book states the rules.
+- **AQL `CONTAINS` and path steps no longer match the node itself** (#3734).
+  `CLUSTER c1 CONTAINS CLUSTER c2` returned each cluster as its own child,
+  `NOT CONTAINS` of the node's own class never held, and a path step could
+  bind the node it started from. A path step now follows exactly one
+  attribute to a direct child (BASE paths §Basic Syntax), so
+  `c/content[openEHR-EHR-OBSERVATION.x.v1]` no longer finds an observation
+  nested inside a SECTION and `items[at0004]` no longer finds an element in a
+  sub-cluster; `CONTAINS` still finds both.
+- **A deleted composition stays out of unscoped AQL queries** (#3735). A query
+  with no EHR scope that read nothing from the composition's content
+  (`SELECT c/uid/value`, `SELECT e/ehr_id/value`, `SELECT 1`) returned a row
+  for the deleting version.
+- **A CONTRIBUTION cannot delete an already deleted version** (#3738). It was
+  accepted with `201` and added another deleted version, while the `DELETE`
+  route answered `400`. Both now answer `400` with the same message (ITS-REST
+  `400_already_deleted`), and nothing is committed. A second `DELETE` of an
+  already deleted directory answers `400` as well.
+- **Example compositions pass the server's own validation** (#3739, #3740).
+  `GET /definition/template/adl1.4/{template_id}/example` now carries every
+  attribute the template makes mandatory, an EVENT `state` or ENTRY
+  `protocol` without data points included, and never sets `value` and
+  `null_flavour` on one ELEMENT (RM `Inv_null_flavour_indicated`).
+- **XML without the required `id` of a key/value element is refused** (#3741).
+  An OPT 1.4, archetype or RM XML document whose `original_author`,
+  `other_details` or other `StringDictionaryItem` element has no `id`
+  attribute is refused with `400`, as the ITS-XML schema requires, instead of
+  being stored under an empty key. `id=""` is still accepted.
+- **`[events] tls = true` upgrades a broker URL in any case** (#3690).
+  `AMQP://` and `Amqp://` now become `amqps://`, as `amqp://` did; the URL
+  scheme is case-insensitive (RFC 3986 §3.1).
+- **A database the server cannot connect to answers `503`** (#3659). A
+  refused connection, a TLS setup failure, an authentication or
+  unknown-database refusal, too many connections and a database still
+  starting answer `503` with `Retry-After` instead of `500`. A failure on an
+  established connection stays `500`.
+- **Concurrent imports into one container are serialised** (#3658). The second
+  EHR Extract import waits for the first and lands after it, or is refused as a
+  re-import with the specific `409`, instead of failing on a unique-index
+  collision.
+- **Errors print their cause once** (#3684). A chained error report repeated
+  the cause in the wrapper's own message for database, storage, service, AQL,
+  terminology, multimedia, eventing, XML, Simplified Format and BMM errors;
+  each now carries the cause as its source only, and response bodies are
+  unchanged. A version-signing failure and a RESULT_SET assembly failure now
+  log their cause, and a failed terminology OAuth2 token grant logs its
+  transport cause. `scripts/checks/error-source-chain.sh` refuses the shape.
+- **A CONTRIBUTION and an import can no longer deadlock** (#3658). A
+  CONTRIBUTION that changes several objects locks them in object-id order, the
+  order an import uses, and an import takes the EHR row lock first. The check
+  that an EHR has no second EHR_STATUS or EHR_ACCESS now runs inside the
+  import's transaction, so two concurrent imports cannot both add one.
+- **`ferroehr report` separates an unreachable database from a failed read**
+  (#3659). It says "unreachable" only when no connection could be opened, and
+  "unreadable" when a connected read failed.
+- **The operations guide no longer calls a partial schema drop a supported
+  reset** (#3685). Dropping `clinical`, `ext` and `audit` also drops the
+  `btree_gist` extension the `linkage` constraint depends on, and the next boot
+  does not recreate it; the guide now says to drop the database.
+- **`ferroehr-ext` compiles cleanly in every feature combination** (#3703), and
+  CI runs clippy over each one, and over the server's `multimedia` lane.
+- **The viewer's `/system` page links the Messaging OpenAPI family** (#3704).
+  The viewer and the server now read one shared family list, and a test on
+  each side fails when they disagree; the deployment gap codes the sandbox
+  notice names, `rbac_off` included, follow the same shared list.
+- **The operations panel shows every object of `/management/info`** (#3632).
+  The build card listed only top-level values, so the manufacturer, the
+  support period and the audit posture never appeared; each now has its own
+  heading.
+- **A JWK Set that fails to parse is reported without its content** (#3666).
+  The error carries the parser's error class, line and column only, for an
+  inline `jwks_json` and for a set fetched from the issuer, so a `503` body
+  can no longer quote key material.
+- **The DICOM audit message and the FHIR AuditEvent agree on the data flow**
+  (#3687). On a read the server is the source and the client the
+  destination; on a write or a query the client is the source (DICOM PS3.15
+  §A.5.2.7 and §A.5.3.10, IHE BALP).
+- **The served OpenAPI document repeats no operationId** (#3691). The
+  demographic CONTRIBUTION operations are served as
+  `demographic_contribution_create` and `demographic_contribution_get`, the
+  names of the released operation files; the access record keeps the released
+  ids `contribution_create` and `contribution_get`.
+- **`[authz.rbac] role_claims` applies with every gate off** (#3742). Bearer
+  role extraction read the default claims when RBAC, ABAC and a restricted
+  per-EHR default were all off; the boot log now also says when only a
+  restricted per-EHR default switches authorization on.
+- **The compose image-tag guard covers the terminology overlay** (#3605).
+  `scripts/checks/compose-image-tags.sh` checks every FerroEHR image tag in
+  every root and `docker/` compose file, `docker-compose.terminology.yml`
+  included, and proves it with a `--self-test`.
 
 ## [4.3.6] - 2026-10-08
 

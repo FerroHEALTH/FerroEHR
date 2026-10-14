@@ -9,10 +9,10 @@ expression: xml
     <EventOutcomeDescription>Operation performed successfully</EventOutcomeDescription>
   </EventIdentification>
   <ActiveParticipant UserID="john doe" UserIsRequestor="true" NetworkAccessPointID="10.216.24.150" NetworkAccessPointTypeCode="2">
-    <RoleIDCode csd-code="110153" codeSystemName="DCM" originalText="Source Role ID"/>
+    <RoleIDCode csd-code="110152" codeSystemName="DCM" originalText="Destination Role ID"/>
   </ActiveParticipant>
   <ActiveParticipant UserID="ferroehr" UserIsRequestor="false" NetworkAccessPointID="10.42.23.77" NetworkAccessPointTypeCode="2">
-    <RoleIDCode csd-code="110152" codeSystemName="DCM" originalText="Destination Role ID"/>
+    <RoleIDCode csd-code="110153" codeSystemName="DCM" originalText="Source Role ID"/>
   </ActiveParticipant>
   <AuditSourceIdentification AuditEnterpriseSiteID="1f332a66-0000-0000-0000-000000000001" AuditSourceID="ferroehr">
     <AuditSourceTypeCode csd-code="4" codeSystemName="DCM" originalText="Application Server Process or Thread"/>

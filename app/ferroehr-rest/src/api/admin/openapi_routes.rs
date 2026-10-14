@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Native `utoipa-axum` routing for the **Admin API group** — the two released
-//! ITS-REST admin operations plus three of our own extension routes.
+//! ITS-REST admin operations plus four of our own extension routes.
 //!
 //! Each `#[utoipa::path]` handler single-sources its route and its `OpenAPI`
 //! path, then forwards to the group dispatcher ([`super::dispatch::dispatch`])
@@ -14,7 +14,7 @@
 //! every MUST and SHOULD below binds as it would on a STABLE group.
 //!
 //! `specifications/admin.openapi.yaml` mounts exactly two operations, `DELETE
-//! /admin/ehr/{ehr_id}` and `DELETE /admin/ehr/all{?ehr_id*}`. The other three
+//! /admin/ehr/{ehr_id}` and `DELETE /admin/ehr/all{?ehr_id*}`. The other four
 //! routes below are our own extension, governed by no ITS-REST operation and
 //! excluded from any conformance-profile claim.
 //!
@@ -35,7 +35,7 @@
 //! while off every route answers `405` with the openEHR error body before the
 //! backend is touched. The ground differs per route and each declaration cites
 //! its own: `admin_ehr_delete_all` has released provenance (its own NOTE plus
-//! `responses/405.yaml`), while `admin_ehr_delete` and the three extensions rest
+//! `responses/405.yaml`), while `admin_ehr_delete` and the four extensions rest
 //! on the cross-cutting "If a method is recognized but not allowed for the
 //! target resource, the response SHOULD be `405 Method Not Allowed`"
 //! (`Requests_and_responses.md` §"HTTP Methods"). Because that `405` comes from
@@ -44,7 +44,7 @@
 //! §10.2.1 defines for a resource "temporarily disabled by configuration".
 //!
 //! Every released admin operation carries `security: []` and declares no
-//! `401`/`403`, so the branches declared on all five routes are our own design:
+//! `401`/`403`, so the branches declared on all six routes are our own design:
 //! everything under `/admin/` is `OperationClass::Admin` to the RBAC gate
 //! ([`crate::extensions::access::authz`]), which runs before the config gate, so
 //! an unauthenticated caller sees `401` and a non-admin principal `403` whether
@@ -80,6 +80,7 @@ pub(crate) fn routes() -> OpenApiRouter<AppState> {
         .routes(routes!(admin_ehr_delete_all))
         .routes(routes!(admin_ehr_delete))
         .routes(routes!(admin_template_delete))
+        .routes(routes!(admin_party_delete))
         .routes(routes!(admin_query_delete))
         .routes(routes!(admin_config))
 }
@@ -540,6 +541,107 @@ pub(crate) async fn admin_template_delete(
     guarded_dispatch(
         state,
         "admin_template_delete",
+        parts,
+        super::dispatch::dispatch,
+    )
+    .await
+}
+
+/// Physically delete one demographic `PARTY` and the `PARTY_RELATIONSHIP`s
+/// that name it (`DELETE /admin/party/{party_id}`).
+///
+/// **Our own extension — no ITS-REST operation governs this.** The released
+/// Admin API (`specifications/admin.openapi.yaml`) defines exactly two
+/// operations, both EHR deletes; the released Demographic API's `DELETE`s are
+/// logical (they add a deleted version). This route is excluded from any
+/// conformance-profile claim.
+///
+/// It realizes SM `I_ADMIN_SERVICE.physical_party_delete`
+/// (`docs/specs/openehr/SM/docs/UML/classes/i_admin_service.adoc`): "Physical
+/// delete of specified Party, along with related Party relationships", error
+/// `party_id_does_not_exist`. Every version of the party and of each
+/// relationship naming it as `source` or `target` is removed, with their
+/// contributions and audits. The access records naming the party stay, as for
+/// the EHR physical delete.
+///
+/// The access record is the one `admin_ehr_delete` writes for an EHR: a DICOM
+/// `D` on the deleted record, here the demographic resource class with the
+/// party id as its object.
+#[utoipa::path(
+    delete, path = "/admin/party/{party_id}", tag = "ADMIN",
+    params(
+        ("party_id" = String, Path,
+         description = "The versioned-object id of the demographic `PARTY`                         (`AGENT`, `GROUP`, `ORGANISATION`, `PERSON` or `ROLE`):                         the SM `a_party_id: UUID`. A value that is not a UUID                         is `400`.",
+         example = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")
+    ),
+    responses(
+        (status = 204, description = "Deleted (bodyless). Extension route — no \
+                                      released response file governs this; the \
+                                      status mirrors the released hard-delete \
+                                      `204` (`responses/204_deleted_hard.yaml`). \
+                                      No response header: a deleted party has \
+                                      nothing to tag, and §\"Deprecated \
+                                      headers\" deprecates `Location` on \
+                                      `DELETE`."),
+        (status = 400, description = "`party_id` is not a UUID (SM \
+                                      `a_party_id: UUID`).",
+         body = serde_json::Value,
+         example = json!({ "error": "Bad Request", "message": "invalid party id: not-a-uuid" })),
+        (status = 401, description = "Unauthenticated (auth enabled, no valid \
+                                      principal). Our own authorization design.",
+         body = serde_json::Value,
+         example = json!({ "error": "Unauthorized", "message": "no credentials supplied" })),
+        (status = 403, description = "Authenticated but not in the Admin class. \
+                                      Our own authorization design.",
+         body = serde_json::Value,
+         example = json!({ "error": "Forbidden", "message": "operation requires the 'ADMIN' role" })),
+        (status = 404, description = "No demographic `PARTY` with that id (SM \
+                                      `party_id_does_not_exist`); a \
+                                      `PARTY_RELATIONSHIP` id is this failure \
+                                      too. The status follows the overview \
+                                      table's `404` row \
+                                      (`Requests_and_responses.md` §\"HTTP \
+                                      status codes\"), by convention, not by \
+                                      obligation.",
+         body = serde_json::Value,
+         example = json!({
+             "error": "Not Found",
+             "message": "party aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+         })),
+        (status = 405, description = "The admin API is disabled on this server \
+                                      (`AppConfig::admin.enabled`, default \
+                                      false). This route has no released file, \
+                                      so its ground is the cross-cutting \
+                                      overview rule — \"If a method is \
+                                      recognized but not allowed for the target \
+                                      resource, the response SHOULD be `405 \
+                                      Method Not Allowed` status code\" \
+                                      (`Requests_and_responses.md` §\"HTTP \
+                                      Methods\").",
+         body = serde_json::Value,
+         headers(
+             ("Allow" = String,
+              description = "EMPTY — mandatory on every `405` (RFC 9110 \
+                             §15.5.6) and emitted here explicitly because the \
+                             status comes from a matched handler; the empty \
+                             field value is RFC 9110 §10.2.1's own case for a \
+                             resource \"temporarily disabled by \
+                             configuration\".")
+         ),
+         example = json!({
+             "error": "Method Not Allowed",
+             "message": "the admin API is disabled on this server"
+         }))
+    )
+)]
+pub(crate) async fn admin_party_delete(
+    State(state): State<AppState>,
+    request: axum::extract::Request,
+) -> Response {
+    let parts = crate::api::into_parts(request).await;
+    guarded_dispatch(
+        state,
+        "admin_party_delete",
         parts,
         super::dispatch::dispatch,
     )

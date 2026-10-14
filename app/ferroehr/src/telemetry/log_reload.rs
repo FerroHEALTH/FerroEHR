@@ -29,10 +29,10 @@ pub type ApplyFilter = Arc<dyn Fn(&str) -> Result<(), FilterReloadError> + Send 
 #[derive(Debug, thiserror::Error)]
 pub enum FilterReloadError {
     /// The submitted directives are not a valid `env-filter` expression.
-    #[error("the filter directives are not valid: {0}")]
+    #[error("the filter directives are not valid")]
     Directives(#[from] tracing_subscriber::filter::ParseError),
     /// The subscriber's reload layer refused the new filter — it is gone.
-    #[error("the subscriber's reload handle refused the new filter: {0}")]
+    #[error("the subscriber's reload handle refused the new filter")]
     Handle(#[from] tracing_subscriber::reload::Error),
 }
 
@@ -136,5 +136,21 @@ mod tests {
         let (reload, _state) = fake("info");
         assert!(reload.set("ferroehr=!!bad").is_err());
         assert_eq!(reload.current(), "info");
+    }
+
+    /// The parser's diagnosis is the source hop, not part of the refusal's own
+    /// message, so a chain printer shows it once (RFC 0201).
+    #[test]
+    fn a_bad_filter_carries_its_diagnosis_as_the_source() {
+        use std::error::Error;
+
+        let (reload, _state) = fake("info");
+        let err = reload.set("ferroehr=!!bad").expect_err("refused");
+        assert!(matches!(err, FilterReloadError::Directives(_)));
+        let cause = err
+            .source()
+            .expect("the parse error is the source")
+            .to_string();
+        assert!(!err.to_string().contains(&cause), "{err}");
     }
 }

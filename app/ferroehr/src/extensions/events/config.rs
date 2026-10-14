@@ -29,8 +29,8 @@ pub struct EventsConfig {
     pub url_file: Option<PathBuf>,
     /// Topic exchange to publish to (the PHI-free envelope stream).
     pub exchange: String,
-    /// Use TLS: when `true` an `amqp://` URL is upgraded to `amqps://` (an
-    /// already-`amqps://` URL is TLS regardless).
+    /// Use TLS: when `true` an `amqp://` URL (scheme in any case) is upgraded to
+    /// `amqps://` (an already-`amqps://` URL is TLS regardless).
     pub tls: bool,
     /// Rows drained per poll.
     pub batch_size: i64,
@@ -65,15 +65,19 @@ impl Default for EventsConfig {
 }
 
 impl EventsConfig {
-    /// The effective broker URL, upgraded to `amqps://` when [`Self::tls`] is set
-    /// and the URL is a plain `amqp://`.
+    /// The effective broker URL: with [`Self::tls`] set, a plain `amqp` scheme
+    /// becomes `amqps`.
+    ///
+    /// The scheme compares case-insensitively (RFC 3986 §3.1), so `AMQP://` and
+    /// `Amqp://` upgrade as `amqp://` does; the rest of the URL is kept verbatim.
     #[must_use]
     pub fn effective_url(&self) -> String {
         let url = self.url.expose();
-        if self.tls && url.starts_with("amqp://") {
-            url.replacen("amqp://", "amqps://", 1)
-        } else {
-            url.to_owned()
+        match url.split_once("://") {
+            Some((scheme, rest)) if self.tls && scheme.eq_ignore_ascii_case("amqp") => {
+                format!("amqps://{rest}")
+            }
+            _ => url.to_owned(),
         }
     }
 }
@@ -104,6 +108,28 @@ mod tests {
             ..EventsConfig::default()
         };
         assert_eq!(c.effective_url(), "amqps://guest:guest@host:5672/%2f");
+    }
+
+    #[test]
+    fn tls_upgrades_amqp_scheme_in_any_case() {
+        for url in ["AMQP://host:5672/%2f", "Amqp://host:5672/%2f"] {
+            let c = EventsConfig {
+                tls: true,
+                url: SecretUrl::new(url),
+                ..EventsConfig::default()
+            };
+            assert_eq!(c.effective_url(), "amqps://host:5672/%2f", "{url}");
+        }
+    }
+
+    #[test]
+    fn no_tls_keeps_the_url() {
+        let c = EventsConfig {
+            tls: false,
+            url: SecretUrl::new("AMQP://host:5672/%2f"),
+            ..EventsConfig::default()
+        };
+        assert_eq!(c.effective_url(), "AMQP://host:5672/%2f");
     }
 
     #[test]
