@@ -157,7 +157,12 @@ impl FerroEhrService {
         let ctx = SqlCtx {
             system_id: self.effective_system_id(),
             ehr_ids,
-            subject_scope: request.subject_scope.clone(),
+            subject_scope: request.subject_scope.clone().map(|id| {
+                aql::sql::subject::SubjectScope {
+                    id,
+                    namespace: request.subject_namespace.clone(),
+                }
+            }),
             ehr_access: request.ehr_access.clone(),
             limit,
             offset,
@@ -566,7 +571,9 @@ fn map_exec_error(e: AqlError) -> SmError {
             ) =>
         {
             SmError::precondition(
-                "a query parameter value cannot be coerced to the type its                  predicate compares against (an invalid date/time or text                  representation); correct the parameter value",
+                "a query parameter value cannot be coerced to the type its \
+                 predicate compares against (an invalid date/time or text \
+                 representation); correct the parameter value",
             )
             .with_source(db)
         }
@@ -575,9 +582,7 @@ fn map_exec_error(e: AqlError) -> SmError {
         AqlError::Exec(
             ExecError::Acquire(e)
             | ExecError::Assembly(crate::storage::error::StorageError::Acquire(e)),
-        ) => {
-            SmError::from(e)
-        }
+        ) => SmError::from(e),
         AqlError::Exec(ExecError::Database(db)) => crate::storage::error::classify_sqlx(&db),
         AqlError::Exec(ExecError::Assembly(a)) => {
             internal_fault_caused("assemble the RESULT_SET", &a)
@@ -593,6 +598,15 @@ fn map_exec_error(e: AqlError) -> SmError {
         AqlError::Feature(_) | AqlError::Analysis(_) | AqlError::Sql(_) => {
             SmError::precondition(e.to_string()).with_source(e)
         }
+    }
+}
+
+impl From<AqlError> for SmError {
+    /// Bridges an AQL-engine failure to the SM call-status model as a query
+    /// execution reports it ([`map_exec_error`]): a connection that cannot be
+    /// obtained is `service_overloaded` (`503` plus `Retry-After`).
+    fn from(e: AqlError) -> Self {
+        map_exec_error(e)
     }
 }
 

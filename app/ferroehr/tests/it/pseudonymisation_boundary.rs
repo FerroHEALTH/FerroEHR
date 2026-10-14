@@ -39,6 +39,7 @@ use uuid::Uuid;
 use crate::typed_body::typed;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
+use ferroehr::service::status::CallStatusType;
 
 /// Write the audit and contribution rows every version row needs, leaving the
 /// boundary constraints exactly as the migrated clone carries them.
@@ -870,6 +871,29 @@ fn protection_engine(
     .expect("protection is enabled")
 }
 
+/// A PERSON with `family` as its family name, carrying one `DV_IDENTIFIER` per
+/// `(type, id)` pair.
+fn person_carrying(family: &str, identifiers: &[(&str, &str)]) -> serde_json::Value {
+    let mut person = a_person();
+    *person
+        .pointer_mut("/identities/0/details/items/0/value/value")
+        .expect("the family name") = serde_json::Value::from(family);
+    let items = person
+        .pointer_mut("/identities/0/details/items")
+        .and_then(serde_json::Value::as_array_mut)
+        .expect("the identity items");
+    for (scheme, id) in identifiers {
+        items.push(serde_json::json!({
+            "_type": "ELEMENT",
+            "archetype_node_id": "at0004",
+            "name": { "_type": "DV_TEXT", "value": "identifier" },
+            "value": { "_type": "DV_IDENTIFIER", "type": scheme,
+                       "id": id, "issuer": "RvIG", "assigner": "RvIG" }
+        }));
+    }
+    person
+}
+
 /// A demographic CONTRIBUTION creating one PERSON per family name, each
 /// carrying `bsn` as a protected `nl-bsn` identifier.
 fn persons_with_bsn(families: &[&str], bsn: &str) -> serde_json::Value {
@@ -887,21 +911,7 @@ fn persons_with_bsn(families: &[&str], bsn: &str) -> serde_json::Value {
     let versions: Vec<serde_json::Value> = families
         .iter()
         .map(|family| {
-            let mut person = a_person();
-            *person
-                .pointer_mut("/identities/0/details/items/0/value/value")
-                .expect("the family name") = serde_json::Value::from(*family);
-            person
-                .pointer_mut("/identities/0/details/items")
-                .and_then(serde_json::Value::as_array_mut)
-                .expect("the identity items")
-                .push(serde_json::json!({
-                    "_type": "ELEMENT",
-                    "archetype_node_id": "at0004",
-                    "name": { "_type": "DV_TEXT", "value": "bsn" },
-                    "value": { "_type": "DV_IDENTIFIER", "type": "nl-bsn",
-                               "id": bsn, "issuer": "RvIG", "assigner": "RvIG" }
-                }));
+            let person = person_carrying(family, &[("nl-bsn", bsn)]);
             serde_json::json!({
                 "_type": "ORIGINAL_VERSION",
                 "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
@@ -939,10 +949,15 @@ async fn sealed_and_versions(pool: &PgPool) -> (i64, i64) {
 /// hits the one-party-per-value index after the first member's seal already
 /// ran, so the commit fails with a sealed row in hand.
 async fn a_failed_commit_leaves_no_sealed_identifier(service: &FerroEhrService, harness: &PgPool) {
-    service
+    let refused = service
         .demographic_contribution_create(persons_with_bsn(&["Lovelace", "Byron"], SYNTHETIC_BSN))
         .await
         .expect_err("two parties cannot hold one national identifier");
+    assert_eq!(
+        refused.status,
+        CallStatusType::Conflict,
+        "a value another party holds is the 409 conflict, never a 500: {refused:?}"
+    );
     assert_eq!(
         sealed_and_versions(harness).await,
         (0, 0),
@@ -1019,6 +1034,357 @@ async fn a_failed_party_commit_leaves_no_sealed_identifier_on_separated_credenti
     let harness = ferroehr::db::domain_pool_from(&db.pool(), ferroehr::db::domain::Domain::Party);
     a_failed_commit_leaves_no_sealed_identifier(&service, &harness).await;
     pools.close().await;
+}
+
+/// A second synthetic BSN, for a party whose identifier changes: constructed by
+/// running the elfproef forward, issued to nobody.
+const SECOND_SYNTHETIC_BSN: &str = "123456782"; // privacy-allow: synthetic
+
+/// A service sealing `nl-bsn` on the shared credential, its engine, and the
+/// party-domain pool the assertions read through.
+fn protected_service(
+    db: &testkit::TestDb,
+) -> (
+    FerroEhrService,
+    std::sync::Arc<ferroehr::service::demographic::identifier::engine::IdentifierProtection>,
+    PgPool,
+) {
+    let pool = db.pool();
+    let party_pool = ferroehr::db::domain_pool_from(&pool, ferroehr::db::domain::Domain::Party);
+    let engine = std::sync::Arc::new(protection_engine(party_pool.clone()));
+    let service = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+        .with_identifier_protection(std::sync::Arc::clone(&engine));
+    (service, engine, party_pool)
+}
+
+/// The versioned-object uuid and the version uid of a committed party.
+fn committed_ids(body: &serde_json::Value) -> (String, String) {
+    let version = body
+        .pointer("/uid/value")
+        .and_then(serde_json::Value::as_str)
+        .expect("uid.value")
+        .to_owned();
+    let vo = version
+        .split("::")
+        .next()
+        .expect("the versioned-object uuid")
+        .to_owned();
+    (vo, version)
+}
+
+/// Every stored version body of `vo`, oldest first, each expanded back to the
+/// values its own identifier rows hold.
+async fn expanded_versions(
+    engine: &ferroehr::service::demographic::identifier::engine::IdentifierProtection,
+    pool: &PgPool,
+    vo: &str,
+) -> Vec<serde_json::Value> {
+    let texts: Vec<String> = sqlx::query_scalar(
+        "SELECT body::text FROM party.version WHERE vo_id = $1::uuid ORDER BY sys_version",
+    )
+    .bind(vo)
+    .fetch_all(pool)
+    .await
+    .expect("the stored version bodies");
+    let mut bodies = Vec::with_capacity(texts.len());
+    for text in texts {
+        let mut body: serde_json::Value = serde_json::from_str(&text).expect("a stored body");
+        engine.expand(&mut body).await.expect("expand the body");
+        bodies.push(body);
+    }
+    bodies
+}
+
+/// The `DV_IDENTIFIER.id` the identity item of [`person_carrying`] holds.
+fn identifier_id(body: &serde_json::Value) -> &str {
+    body.pointer("/identities/0/details/items/1/value/id")
+        .and_then(serde_json::Value::as_str)
+        .expect("the identifier item")
+}
+
+/// Each party version keeps the identifier it committed: a changed BSN gives
+/// version 2 a row of its own and leaves version 1's row untouched, while
+/// resolution answers the latest version only.
+///
+/// RM common `master06-change_control_package.adoc` §Contributions: the
+/// repository "is by definition indelible", and a modification is "achieved
+/// by physically committing new Versions".
+#[tokio::test]
+async fn each_party_version_keeps_the_identifier_it_committed() {
+    let db = testkit::db().await.expect("testkit database");
+    let (service, engine, party_pool) = protected_service(&db);
+
+    let created = service
+        .party_create(
+            PartyKind::Person,
+            typed(&person_carrying("Lovelace", &[("nl-bsn", SYNTHETIC_BSN)])),
+            None,
+        )
+        .await
+        .expect("create the person");
+    let (vo, v1) = committed_ids(&created.body);
+    service
+        .party_update(
+            PartyKind::Person,
+            vo.clone(),
+            v1,
+            typed(&person_carrying(
+                "Lovelace",
+                &[("nl-bsn", SECOND_SYNTHETIC_BSN)],
+            )),
+            None,
+        )
+        .await
+        .expect("change the person's identifier");
+
+    let versions = expanded_versions(&engine, &party_pool, &vo).await;
+    assert_eq!(versions.len(), 2, "two versions committed");
+    assert_eq!(
+        identifier_id(&versions[0]),
+        SYNTHETIC_BSN,
+        "version 1 expands to the value it committed"
+    );
+    assert_eq!(
+        identifier_id(&versions[1]),
+        SECOND_SYNTHETIC_BSN,
+        "version 2 expands to its own value"
+    );
+
+    let party: Uuid = vo.parse().expect("a uuid");
+    assert_eq!(
+        engine
+            .resolve("nl-bsn", SECOND_SYNTHETIC_BSN)
+            .await
+            .expect("resolve"),
+        Some(party),
+        "resolution answers the latest version's value"
+    );
+    assert_eq!(
+        engine
+            .resolve("nl-bsn", SYNTHETIC_BSN)
+            .await
+            .expect("resolve"),
+        None,
+        "a value only an earlier version held resolves to nobody"
+    );
+
+    let refused = service
+        .party_create(
+            PartyKind::Person,
+            typed(&person_carrying(
+                "Byron",
+                &[("nl-bsn", SECOND_SYNTHETIC_BSN)],
+            )),
+            None,
+        )
+        .await
+        .expect_err("another party may not take a live value");
+    assert_eq!(refused.status, CallStatusType::Conflict, "{refused:?}");
+    service
+        .party_create(
+            PartyKind::Person,
+            typed(&person_carrying("Byron", &[("nl-bsn", SYNTHETIC_BSN)])),
+            None,
+        )
+        .await
+        .expect("a value no latest version holds is free for another party");
+}
+
+/// A version that sends the served reference back unchanged gets a row of its
+/// own holding the same value, so the identifier keeps resolving and neither
+/// version shares a row with the other.
+#[tokio::test]
+async fn a_carried_reference_is_sealed_again_for_the_new_version() {
+    let db = testkit::db().await.expect("testkit database");
+    let (service, engine, party_pool) = protected_service(&db);
+
+    let created = service
+        .party_create(
+            PartyKind::Person,
+            typed(&person_carrying("Lovelace", &[("nl-bsn", SYNTHETIC_BSN)])),
+            None,
+        )
+        .await
+        .expect("create the person");
+    let (vo, v1) = committed_ids(&created.body);
+    let served = service
+        .party_get(PartyKind::Person, vo.clone(), None)
+        .await
+        .expect("read the person back");
+    let carried = identifier_id(&served.body).to_owned();
+    assert!(
+        carried.starts_with("urn:ferroehr:protected-identifier:"),
+        "the served form carries the reference: {carried}"
+    );
+    let mut resent = served.body.clone();
+    resent
+        .as_object_mut()
+        .expect("a PERSON object")
+        .remove("uid");
+    service
+        .party_update(PartyKind::Person, vo.clone(), v1, typed(&resent), None)
+        .await
+        .expect("commit the served body unchanged");
+
+    let stored: Vec<String> = sqlx::query_scalar(
+        "SELECT body::text FROM party.version WHERE vo_id = $1::uuid ORDER BY sys_version",
+    )
+    .bind(&vo)
+    .fetch_all(&party_pool)
+    .await
+    .expect("the stored bodies");
+    let references: Vec<String> = stored
+        .iter()
+        .map(|text| {
+            let body: serde_json::Value = serde_json::from_str(text).expect("a stored body");
+            identifier_id(&body).to_owned()
+        })
+        .collect();
+    assert_eq!(references.len(), 2, "two versions committed");
+    assert_ne!(
+        references[0], references[1],
+        "each version references a row of its own"
+    );
+    for body in expanded_versions(&engine, &party_pool, &vo).await {
+        assert_eq!(identifier_id(&body), SYNTHETIC_BSN);
+    }
+    assert_eq!(
+        engine
+            .resolve("nl-bsn", SYNTHETIC_BSN)
+            .await
+            .expect("resolve"),
+        Some(vo.parse().expect("a uuid")),
+        "the identifier still resolves to the party"
+    );
+}
+
+/// A body referencing another party's sealed row is refused as `422`, so no
+/// party can expand to a value it does not hold.
+#[tokio::test]
+async fn a_reference_to_another_partys_identifier_is_refused() {
+    let db = testkit::db().await.expect("testkit database");
+    let (service, _engine, party_pool) = protected_service(&db);
+
+    let created = service
+        .party_create(
+            PartyKind::Person,
+            typed(&person_carrying("Lovelace", &[("nl-bsn", SYNTHETIC_BSN)])),
+            None,
+        )
+        .await
+        .expect("create the person");
+    let (vo, _) = committed_ids(&created.body);
+    let stored = service
+        .party_get(PartyKind::Person, vo, None)
+        .await
+        .expect("read the person back");
+    let foreign = identifier_id(&stored.body).to_owned();
+    assert!(
+        foreign.starts_with("urn:ferroehr:protected-identifier:"),
+        "the stored form carries the reference: {foreign}"
+    );
+
+    let refused = service
+        .party_create(
+            PartyKind::Person,
+            typed(&person_carrying("Byron", &[("nl-bsn", &foreign)])),
+            None,
+        )
+        .await
+        .expect_err("another party's row cannot be carried");
+    assert_eq!(
+        refused.status,
+        CallStatusType::ContentInvalid,
+        "{refused:?}"
+    );
+    assert_eq!(
+        sealed_and_versions(&party_pool).await,
+        (1, 1),
+        "the refusal wrote nothing"
+    );
+}
+
+/// Two different values in one scheme are refused as `422`: a party holds one
+/// value per scheme.
+#[tokio::test]
+async fn two_values_in_one_scheme_are_refused() {
+    let db = testkit::db().await.expect("testkit database");
+    let (service, _engine, party_pool) = protected_service(&db);
+
+    let refused = service
+        .party_create(
+            PartyKind::Person,
+            typed(&person_carrying(
+                "Lovelace",
+                &[("nl-bsn", SYNTHETIC_BSN), ("nl-bsn", SECOND_SYNTHETIC_BSN)],
+            )),
+            None,
+        )
+        .await
+        .expect_err("one party, two values in one scheme");
+    assert_eq!(
+        refused.status,
+        CallStatusType::ContentInvalid,
+        "{refused:?}"
+    );
+    assert_eq!(sealed_and_versions(&party_pool).await, (0, 0));
+}
+
+/// A configured scheme the registry does not hold is a configuration fault:
+/// the boot check names it, and a commit reaching it answers `500` and writes
+/// nothing, rather than storing the identifier unprotected.
+#[tokio::test]
+async fn an_unregistered_configured_scheme_is_a_configuration_fault() {
+    use ferroehr::service::demographic::identifier::config::IdentifierProtectionConfig;
+    use ferroehr::service::demographic::identifier::engine::IdentifierProtection;
+    use ferroehr::service::demographic::identifier::store::StoreError;
+
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let party_pool = ferroehr::db::domain_pool_from(&pool, ferroehr::db::domain::Domain::Party);
+    protection_engine(party_pool.clone())
+        .verify_registered()
+        .await
+        .expect("the shipped registry holds nl-bsn");
+
+    let engine = IdentifierProtection::from_config(
+        &IdentifierProtectionConfig {
+            enabled: true,
+            schemes: vec!["zz-invented".to_owned()],
+            key: Some(ferroehr::config::secret::Secret::new(TEST_ROOT_KEY)),
+            key_file: None,
+        },
+        Some(&ferroehr::config::secret::Secret::new(TEST_ROOT_KEY)),
+        party_pool.clone(),
+    )
+    .expect("the engine builds")
+    .expect("protection is enabled");
+    let checked = engine.verify_registered().await;
+    assert!(
+        matches!(checked, Err(StoreError::UnknownScheme { ref scheme }) if scheme == "zz-invented"),
+        "the boot check names the unregistered scheme: {checked:?}"
+    );
+
+    let service = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+        .with_identifier_protection(std::sync::Arc::new(engine));
+    let refused = service
+        .party_create(
+            PartyKind::Person,
+            typed(&person_carrying("Lovelace", &[("zz-invented", "AB-12")])),
+            None,
+        )
+        .await
+        .expect_err("an unregistered scheme cannot be sealed");
+    assert_eq!(
+        refused.status,
+        CallStatusType::Exception,
+        "the client cannot fix the deployment's configuration: {refused:?}"
+    );
+    assert_eq!(
+        sealed_and_versions(&party_pool).await,
+        (0, 0),
+        "nothing is stored, least of all the identifier unprotected"
+    );
 }
 
 /// Resolving an identifier to its party is recorded as a linkage-domain access,

@@ -274,6 +274,9 @@ pub(crate) struct AbacGate {
     /// The JWT claim carrying the patient id; its presence enables the subject
     /// gate.
     pub(crate) patient_claim: Option<String>,
+    /// The subject namespace patient-claim ids are read in
+    /// (`abac.patient_namespace`); `None` reads the id alone.
+    pub(crate) patient_namespace: Option<String>,
     /// Whether DIRECTORY (FOLDER) operations reach the PDP — the
     /// `abac.check_directory` switch, so the opt-in is engine-independent
     /// rather than inferred from a remote-PDP-shaped policy map.
@@ -285,6 +288,7 @@ impl std::fmt::Debug for AbacGate {
         f.debug_struct("AbacGate")
             .field("organization_claim", &self.organization_claim)
             .field("patient_claim", &self.patient_claim)
+            .field("patient_namespace", &self.patient_namespace)
             .field("directory_checked", &self.directory_checked)
             .finish_non_exhaustive()
     }
@@ -297,6 +301,7 @@ impl AbacGate {
             resolvers,
             organization_claim: config.organization_claim().map(str::to_owned),
             patient_claim: config.patient_claim().map(str::to_owned),
+            patient_namespace: config.patient_namespace().map(str::to_owned),
             directory_checked: config.check_directory,
         }
     }

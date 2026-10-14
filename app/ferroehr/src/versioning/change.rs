@@ -27,8 +27,9 @@ use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::ids::{EhrId, VoId};
-use crate::service::error::ServiceError;
-use crate::service::status::CallStatusType;
+use crate::service::demographic::identifier::store::{IdentifierStore, StoreError};
+use crate::service::error::{ServiceError, Violation};
+use crate::service::status::{CallStatusType, SmError};
 use crate::storage::codec::{decompose, reassemble};
 use crate::storage::row::NodeRow;
 use crate::versioning::attestation::{self, PendingAttest};
@@ -587,8 +588,9 @@ struct CommitScope<'a> {
     preplaced: Option<crate::storage::version_repo::placement::Placement>,
 }
 
-/// Seal every configured-scheme national identifier out of a demographic body,
-/// on the commit transaction `tx`, before the body is decomposed and signed.
+/// Seal every protected national identifier of a demographic body into rows
+/// of this version, on the commit transaction `tx`, before the body is
+/// decomposed and signed.
 ///
 /// Runs on the demographic kinds only: a party's identifiers are the point of
 /// that domain, and clinical content carrying one is a different rule
@@ -605,9 +607,11 @@ struct CommitScope<'a> {
 /// design/extension.
 ///
 /// # Errors
-/// [`ServiceError`] when a value cannot be sealed or stored. The commit fails
-/// rather than proceeding, because proceeding would store the body with the
-/// identifier still in it.
+/// The [`protection_refusal`] mapping of the store's refusals: `409` for a
+/// value another party holds, `422` for a body the store cannot hold, `500`
+/// for a configuration or storage fault. The commit fails rather than
+/// proceeding, because proceeding would store the body with the identifier
+/// still in it.
 async fn seal_protected_identifiers(
     tx: &mut PgConnection,
     ctx: &SigningCtx<'_>,
@@ -624,8 +628,67 @@ async fn seal_protected_identifiers(
     engine
         .externalize(tx, vo_id.0, canonical)
         .await
-        .map_err(|e| ServiceError::internal("seal a protected national identifier", e))?;
+        .map_err(protection_refusal)?;
     Ok(())
+}
+
+/// Take a logically deleted party's identifiers out of resolution, on the
+/// commit transaction `tx`.
+///
+/// A deleted version carries no data (RM common
+/// `master06-change_control_package.adoc` §Logical Deletion), so the party
+/// holds no identifier from it on; the earlier versions keep their rows. No
+/// openEHR spec governs identifier protection — our own design/extension.
+///
+/// # Errors
+/// The [`protection_refusal`] mapping of a failed update.
+async fn retire_protected_identifiers(
+    tx: &mut PgConnection,
+    ctx: &SigningCtx<'_>,
+    kind: Kind,
+    vo_id: VoId,
+) -> Result<(), ServiceError> {
+    if ctx.identifiers.is_none() || !kind.is_demographic() {
+        return Ok(());
+    }
+    IdentifierStore::retire_live(tx, vo_id.0)
+        .await
+        .map_err(protection_refusal)?;
+    Ok(())
+}
+
+/// Map a protected-identifier store refusal onto the commit's answer.
+///
+/// A value another party holds is ITS-REST `409 Conflict` ("the request could
+/// not be processed because it might generate a duplicate or a conflict",
+/// `ITS-REST/specifications/docs/overview/Requests_and_responses.md` §HTTP
+/// status codes). A body that repeats a scheme or carries a reference the
+/// party does not hold is `422` (`responses/422.yaml`: semantic errors in a
+/// resource that parsed). An unregistered scheme is the deployment's own
+/// configuration disagreeing with its registry, which the client cannot act
+/// on, so it stays a `500` whose logged context names the scheme. No message
+/// carries an identifier value.
+fn protection_refusal(error: StoreError) -> ServiceError {
+    match error {
+        StoreError::ValueTaken { ref scheme } => ServiceError::Conflict(
+            SmError::new(
+                CallStatusType::Conflict,
+                format!("a `{scheme}` identifier of this party is already held by another party"),
+            )
+            .with_source(error),
+        ),
+        StoreError::SchemeRepeated { .. } | StoreError::ForeignReference => {
+            ServiceError::content_invalid(Violation::new(error.to_string()))
+        }
+        StoreError::UnknownScheme { ref scheme } => ServiceError::internal(
+            format!(
+                "identifier scheme `{scheme}` is configured for protection but absent from \
+                 the identifier_scheme registry"
+            ),
+            error,
+        ),
+        other => ServiceError::internal("seal a protected national identifier", other),
+    }
 }
 
 /// Refuse a write that would process an object whose processing is restricted.
@@ -838,6 +901,7 @@ async fn apply_change(
             let next =
                 next_version(tx, ehr_id, vo_id, kind, expected, &ctx.system_id, preplaced).await?;
             refuse_already_deleted(kind, vo_id, &next.preceding_lifecycle)?;
+            retire_protected_identifiers(tx, ctx, kind, vo_id).await?;
             // A deleted version carries no data — its `ORIGINAL_VERSION.data` is
             // Void (master06 §Logical Deletion); the signature is over the
             // data-less version wrapper.

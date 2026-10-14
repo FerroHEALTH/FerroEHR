@@ -1,25 +1,40 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Reading and writing `demographic.national_identifier`.
+//! Reading and writing `party.national_identifier`.
 //!
-//! **No openEHR spec governs this — our own design/extension.** Three
-//! operations, and the split between them is the access-control boundary:
+//! **No openEHR spec governs this — our own design/extension.** The split
+//! between the operations is the access-control boundary:
 //! [`IdentifierStore::seal`] writes a value, [`IdentifierStore::open`] reads
 //! one back for the audited expansion, and [`IdentifierStore::resolve`] goes
 //! from an identifier to a party WITHOUT decrypting anything, through the
 //! `SECURITY DEFINER` function, so a caller that only needs the mapping never
 //! touches the ciphertext.
 //!
-//! The write runs on the caller's connection, never on the store's pool: a
+//! Every row belongs to the one party version whose body references it, and
+//! is never rewritten, so expanding an older version yields the value that
+//! version committed: a versioned repository "is by definition indelible", and
+//! every modification is "achieved by physically committing new Versions" (RM
+//! common `master06-change_control_package.adoc` §Contributions). The rows of
+//! the party's latest version are LIVE (`retired_at IS NULL`); resolution and
+//! the one-party-per-value rule read the live rows only.
+//!
+//! The writes run on the caller's connection, never on the store's pool: a
 //! sealed row exists only for a party version that commits, because it is
-//! written inside that version's own transaction. The reads use the pool.
+//! written inside that version's own transaction. The audited reads use the
+//! pool.
 
 use sqlx::{PgConnection, PgPool, Row as _};
 use uuid::Uuid;
 
 use crate::db::acquire::acquire;
 use crate::service::demographic::identifier::crypto::{CryptoError, DomainKeys};
+
+/// The partial unique index holding one live row per value and scheme.
+const VALUE_INDEX: &str = "uq_national_identifier_value";
+
+/// The partial unique index holding one live row per party and scheme.
+const PARTY_INDEX: &str = "uq_national_identifier_party";
 
 /// What went wrong holding or reading a protected identifier.
 ///
@@ -35,22 +50,53 @@ pub enum StoreError {
     /// The value could not be sealed or opened.
     #[error(transparent)]
     Crypto(#[from] CryptoError),
-    /// The scheme is not in `demographic.identifier_scheme`.
+    /// The scheme is not in `party.identifier_scheme`.
     ///
     /// A foreign-key refusal read back as its own variant, because "this
     /// deployment does not hold identifiers of that kind" is a configuration
-    /// answer rather than a database fault.
+    /// answer rather than a database fault: the configured scheme list and the
+    /// registry disagree, which the boot check
+    /// ([`IdentifierStore::unregistered`]) exists to catch first.
     #[error("`{scheme}` is not a registered identifier scheme in this deployment")]
     UnknownScheme {
         /// The scheme code as configured.
         scheme: String,
     },
+    /// The value is live for another party in this scheme.
+    ///
+    /// One value identifies one party: a commit giving a second party a value
+    /// another party's latest version holds is a conflict with stored state,
+    /// not a database fault.
+    #[error("the `{scheme}` identifier is already held by another party")]
+    ValueTaken {
+        /// The scheme code.
+        scheme: String,
+    },
+    /// One body carries two different values in one scheme.
+    ///
+    /// A party holds one value per scheme; two would leave resolution unable
+    /// to say which is the party's.
+    #[error("the party carries more than one `{scheme}` identifier")]
+    SchemeRepeated {
+        /// The scheme code.
+        scheme: String,
+    },
+    /// A body references a sealed row that is not this party's, or whose
+    /// scheme differs from the `DV_IDENTIFIER.type` beside it.
+    ///
+    /// Carrying such a reference forward would let this party's expansion
+    /// reveal another party's value.
+    #[error(
+        "the party references a protected identifier it does not hold, or one of another scheme"
+    )]
+    ForeignReference,
 }
 
 impl From<sqlx::Error> for StoreError {
     fn from(error: sqlx::Error) -> Self {
         // 23503 foreign_key_violation on the scheme reference is the one
-        // database refusal with a configuration meaning worth separating.
+        // database refusal with a configuration meaning worth separating; the
+        // two unique refusals are separated by their constraint at the write.
         let unknown_scheme = error
             .as_database_error()
             .and_then(sqlx::error::DatabaseError::code)
@@ -64,8 +110,8 @@ impl From<sqlx::Error> for StoreError {
     }
 }
 
-/// The protected-identifier store: reads over the demographic pool, writes on
-/// the caller's commit transaction.
+/// The protected-identifier store: audited reads over the demographic pool,
+/// writes on the caller's commit transaction.
 #[derive(Debug, Clone)]
 pub struct IdentifierStore {
     pool: PgPool,
@@ -83,25 +129,66 @@ impl IdentifierStore {
         Self { pool }
     }
 
-    /// Seal `value` for `party` on `conn` and return the row id the body will
-    /// reference.
+    /// The first of `schemes` absent from `party.identifier_scheme`, if any.
+    ///
+    /// The boot check behind the configuration rule that an unregistered
+    /// scheme is a boot error rather than a first-write surprise.
+    ///
+    /// # Errors
+    /// [`StoreError::Acquire`] or [`StoreError::Database`] when the registry
+    /// cannot be read.
+    pub async fn unregistered(&self, schemes: &[String]) -> Result<Option<String>, StoreError> {
+        let missing: Option<String> = sqlx::query_scalar(
+            "SELECT configured FROM unnest($1::text[]) AS configured \
+             WHERE NOT EXISTS (SELECT 1 FROM identifier_scheme WHERE code = configured) \
+             LIMIT 1",
+        )
+        .bind(schemes)
+        .fetch_optional(&mut *acquire(&self.pool).await?)
+        .await?;
+        Ok(missing)
+    }
+
+    /// Retire every live row of `party` on `conn`, the party commit's
+    /// transaction, and return how many were retired.
+    ///
+    /// Runs once per party commit before the new version's rows are sealed, so
+    /// the live rows are always exactly the latest version's. A retired row
+    /// stays: the version that references it still expands to its value.
+    ///
+    /// # Errors
+    /// [`StoreError::Database`] when the update fails; the caller's
+    /// transaction is then aborted and its commit must fail.
+    pub async fn retire_live(conn: &mut PgConnection, party: Uuid) -> Result<u64, StoreError> {
+        let retired = sqlx::query(
+            "UPDATE national_identifier SET retired_at = now() \
+             WHERE party_id = $1 AND retired_at IS NULL",
+        )
+        .bind(party)
+        .execute(&mut *conn)
+        .await?;
+        Ok(retired.rows_affected())
+    }
+
+    /// Seal `value` for `party` on `conn` as a new live row and return the row
+    /// id the body will reference.
     ///
     /// `conn` is the party domain's commit transaction: the
     /// `national_identifier` relation is created by the party migration set, so
     /// it lives in whichever database serves that domain, beside the party's
-    /// own `version` rows. Writing on that transaction is what makes the seal
-    /// and the commit one act; a rolled-back commit leaves no sealed row, and a
-    /// replaced row gets its previous value back. There is deliberately no
-    /// pool-backed variant, so no caller can seal outside a commit.
-    ///
-    /// Re-sealing the same party and scheme replaces the row: a party's
-    /// identifier is a fact about that party, and a second row would leave the
-    /// store unable to say which is current.
+    /// own `version` rows. Writing on that transaction makes the seal and the
+    /// commit one act, and a rolled-back commit leaves no sealed row. There is
+    /// deliberately no pool-backed variant, so no caller can seal outside a
+    /// commit. The row is always new and never rewritten, which keeps every
+    /// earlier version's value; [`Self::retire_live`] must have run first.
     ///
     /// # Errors
-    /// [`StoreError`] when the scheme is unregistered, the value cannot be
-    /// sealed, or the write fails. A database refusal aborts the caller's
-    /// transaction, so the caller must fail its commit.
+    /// [`StoreError::ValueTaken`] when the value is live for another party,
+    /// [`StoreError::SchemeRepeated`] when this party already has a live row in
+    /// the scheme, [`StoreError::UnknownScheme`] for an unregistered scheme,
+    /// and [`StoreError`] when the value cannot be sealed or the write fails.
+    /// A database refusal aborts the caller's transaction, so the caller must
+    /// fail its commit.
     pub async fn seal(
         conn: &mut PgConnection,
         keys: &DomainKeys,
@@ -115,10 +202,6 @@ impl IdentifierStore {
             "INSERT INTO national_identifier \
                  (party_id, scheme, nonce, ciphertext, lookup_digest) \
              VALUES ($1, $2, $3, $4, $5) \
-             ON CONFLICT (scheme, party_id) DO UPDATE \
-                 SET nonce = EXCLUDED.nonce, \
-                     ciphertext = EXCLUDED.ciphertext, \
-                     lookup_digest = EXCLUDED.lookup_digest \
              RETURNING id",
         )
         .bind(party)
@@ -128,20 +211,69 @@ impl IdentifierStore {
         .bind(&digest)
         .fetch_one(&mut *conn)
         .await
-        .map_err(|error| match StoreError::from(error) {
-            StoreError::UnknownScheme { .. } => StoreError::UnknownScheme {
-                scheme: scheme.to_owned(),
-            },
-            other => other,
+        .map_err(|error| {
+            let constraint = error
+                .as_database_error()
+                .and_then(sqlx::error::DatabaseError::constraint)
+                .map(str::to_owned);
+            match (constraint.as_deref(), StoreError::from(error)) {
+                (_, StoreError::UnknownScheme { .. }) => StoreError::UnknownScheme {
+                    scheme: scheme.to_owned(),
+                },
+                (Some(VALUE_INDEX), _) => StoreError::ValueTaken {
+                    scheme: scheme.to_owned(),
+                },
+                (Some(PARTY_INDEX), _) => StoreError::SchemeRepeated {
+                    scheme: scheme.to_owned(),
+                },
+                (_, other) => other,
+            }
         })?;
         row.try_get::<Uuid, _>("id").map_err(StoreError::Database)
     }
 
+    /// Open the sealed value of a row `party` holds, on `conn`, returning its
+    /// scheme and value.
+    ///
+    /// The write path's read: a new version that carries a reference forward
+    /// re-seals the referenced value into a row of its own, and only a row of
+    /// this party may be carried. `None` when the row is absent or another
+    /// party's. Retired rows qualify, because an earlier version of this party
+    /// may be what the client sent back.
+    ///
+    /// # Errors
+    /// [`StoreError`] when the read fails or the record does not authenticate.
+    pub async fn open_held(
+        conn: &mut PgConnection,
+        keys: &DomainKeys,
+        party: Uuid,
+        row_id: Uuid,
+    ) -> Result<Option<(String, String)>, StoreError> {
+        let Some(row) = sqlx::query(
+            "SELECT scheme, nonce, ciphertext FROM national_identifier \
+             WHERE id = $1 AND party_id = $2",
+        )
+        .bind(row_id)
+        .bind(party)
+        .fetch_optional(&mut *conn)
+        .await?
+        else {
+            return Ok(None);
+        };
+        let scheme: String = row.try_get("scheme").map_err(StoreError::Database)?;
+        let nonce: Vec<u8> = row.try_get("nonce").map_err(StoreError::Database)?;
+        let ciphertext: Vec<u8> = row.try_get("ciphertext").map_err(StoreError::Database)?;
+        let value = keys.open(&scheme, &nonce, &ciphertext)?;
+        Ok(Some((scheme, value)))
+    }
+
     /// Open the sealed value of one row.
     ///
-    /// The audited expansion path. `None` when no such row exists, which is a
-    /// body referencing a row that was removed — reported as absent rather
-    /// than as a decryption failure, because the two have different causes.
+    /// The audited expansion path. Retired rows open like live ones: each is
+    /// the value an earlier version committed. `None` when no such row exists,
+    /// which is a body referencing a row that was removed — reported as absent
+    /// rather than as a decryption failure, because the two have different
+    /// causes.
     ///
     /// # Errors
     /// [`StoreError`] when the read fails or the record does not authenticate.
@@ -164,11 +296,14 @@ impl IdentifierStore {
         Ok(Some(keys.open(&scheme, &nonce, &ciphertext)?))
     }
 
-    /// The party holding `value` in `scheme`, without decrypting anything.
+    /// The party whose latest version holds `value` in `scheme`, without
+    /// decrypting anything.
     ///
     /// Goes through `party.resolve_national_identifier`, which takes the
-    /// keyed digest rather than the value: the caller proves it already knows
-    /// the identifier, and the plaintext never crosses into the database.
+    /// keyed digest rather than the value and matches live rows only: the
+    /// caller proves it already knows the identifier, the plaintext never
+    /// crosses into the database, and a value a party held only in an earlier
+    /// version resolves to nobody.
     ///
     /// # Errors
     /// [`StoreError::Acquire`] when no connection can be obtained, and

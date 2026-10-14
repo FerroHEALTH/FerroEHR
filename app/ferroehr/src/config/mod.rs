@@ -1450,9 +1450,9 @@ mod tests {
         );
     }
 
-    /// The `[auth.oidc]` RFC-posture keys and the ABAC directory switch are
-    /// reachable through the one env grammar — a documented env spelling that
-    /// binds nothing would ship dead.
+    /// The `[auth.oidc]` RFC-posture keys, the ABAC directory switch and the
+    /// ABAC patient namespace are reachable through the one env grammar — a
+    /// documented env spelling that binds nothing would ship dead.
     #[test]
     fn env_mapping_auth_and_authz_posture_keys() {
         let c = assemble_ok(
@@ -1463,6 +1463,10 @@ mod tests {
                 ("FERROEHR__AUTH__OIDC__CLOCK_SKEW_LEEWAY_SECONDS", "120"),
                 ("FERROEHR__AUTH__OIDC__ALLOW_INSECURE_ISSUER", "true"),
                 ("FERROEHR__AUTHZ__ABAC__CHECK_DIRECTORY", "true"),
+                (
+                    "FERROEHR__AUTHZ__ABAC__PATIENT_NAMESPACE",
+                    "nl.example.patients",
+                ),
             ]),
             &[],
         );
@@ -1470,10 +1474,15 @@ mod tests {
         assert_eq!(oidc.clock_skew_leeway_seconds, 120);
         assert!(oidc.allow_insecure_issuer);
         assert!(c.authz.abac.check_directory);
+        assert_eq!(
+            c.authz.abac.patient_namespace(),
+            Some("nl.example.patients")
+        );
 
         // Unset, both carry their documented defaults.
         let d = assemble_ok(None, &env(&[]), &[]);
         assert!(!d.authz.abac.check_directory);
+        assert_eq!(d.authz.abac.patient_namespace(), None);
         assert_eq!(
             auth::OidcConfig::default().clock_skew_leeway_seconds,
             60,

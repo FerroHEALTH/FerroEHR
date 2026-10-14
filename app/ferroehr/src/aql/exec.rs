@@ -23,7 +23,7 @@ use uuid::Uuid;
 use super::error::{AqlError, ExecError};
 use super::ir::{Params, QueryIr};
 use super::sql::{CellKind, ColumnSpec, SqlCtx};
-use super::subject::TouchedSubjects;
+use super::subject::EhrSubject;
 use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::storage::node_repo::SubtreeAnchor;
@@ -315,9 +315,10 @@ pub struct QueryScope {
     pub ehr_ids: Vec<String>,
     /// Distinct touched template ids.
     pub template_ids: Vec<String>,
-    /// The subjects of the touched EHRs, the query post-check's patient
-    /// attribute.
-    pub subjects: TouchedSubjects,
+    /// The distinct subjects of the touched EHRs, from which the query
+    /// post-check folds its patient attribute
+    /// ([`super::subject::TouchedSubjects::fold`]).
+    pub subjects: Vec<EhrSubject>,
 }
 
 /// Run the scope-collection query for `ir` and return the distinct EHR ids,
@@ -369,7 +370,11 @@ pub async fn collect_scope(
     Ok(QueryScope {
         ehr_ids: ehr_ids.iter().map(ToString::to_string).collect(),
         template_ids: template_ids.into_iter().collect(),
-        subjects: TouchedSubjects::from_subjects(subjects.values()),
+        subjects: subjects
+            .into_values()
+            .collect::<std::collections::BTreeSet<_>>()
+            .into_iter()
+            .collect(),
     })
 }
 

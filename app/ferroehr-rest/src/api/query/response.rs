@@ -31,6 +31,7 @@ use crate::api::RequestParts;
 use crate::negotiate;
 use crate::overview::error::RestError;
 use ferroehr::aql::sql::EhrAccessScope;
+use ferroehr::aql::sql::subject::SubjectScope;
 use ferroehr::service::query::request::AqlQueryRequest;
 
 /// The access pre-filter derived from the request: the ABAC patient
@@ -41,8 +42,8 @@ use ferroehr::service::query::request::AqlQueryRequest;
 /// before execution. No openEHR spec governs how they reach a query — our own
 /// access-control extension.
 pub(super) struct QueryScope {
-    /// The ABAC patient subject-scope id, if a scoped principal is configured.
-    pub(super) subject_scope: Option<String>,
+    /// The ABAC patient scope, if a scoped principal is configured.
+    pub(super) subject_scope: Option<SubjectScope>,
     /// Whether the executor must collect the touched EHR/template ids for the
     /// ABAC post-check.
     pub(super) collect: bool,
@@ -54,7 +55,11 @@ impl QueryScope {
     /// Stamps the ABAC scope, the collection flag and the per-EHR access
     /// decision onto a normalized request.
     pub(super) fn apply(&self, mut request: AqlQueryRequest) -> AqlQueryRequest {
-        request.subject_scope.clone_from(&self.subject_scope);
+        request.subject_scope = self.subject_scope.as_ref().map(|s| s.id.clone());
+        request.subject_namespace = self
+            .subject_scope
+            .as_ref()
+            .and_then(|s| s.namespace.clone());
         request.ehr_access.clone_from(&self.ehr_access);
         request.collect_attributes = self.collect;
         request
@@ -510,12 +515,19 @@ mod tests {
     fn query_scope_apply_stamps_subject_collect_and_ehr_access() {
         let withheld = ferroehr::ids::EhrId(Uuid::nil());
         let scope = QueryScope {
-            subject_scope: Some("patient-1".to_owned()),
+            subject_scope: Some(SubjectScope {
+                id: "patient-1".to_owned(),
+                namespace: Some("nl.example.patients".to_owned()),
+            }),
             collect: true,
             ehr_access: EhrAccessScope::Excluding(vec![withheld]),
         };
         let req = scope.apply(AqlQueryRequest::default());
         assert_eq!(req.subject_scope.as_deref(), Some("patient-1"));
+        assert_eq!(
+            req.subject_namespace.as_deref(),
+            Some("nl.example.patients")
+        );
         assert!(req.collect_attributes);
         assert_eq!(req.ehr_access, EhrAccessScope::Excluding(vec![withheld]));
     }

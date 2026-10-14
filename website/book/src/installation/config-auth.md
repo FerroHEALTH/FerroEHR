@@ -215,8 +215,27 @@ order and design rationale are in [Security](../security.md).
 | `enabled` | bool | `false` | Master ABAC switch. |
 | `engine` | enum{cedar,remote} | `cedar` | Embedded Cedar, or a remote decision point. |
 | `organization_claim` | string | `organization_id` | JWT claim carrying the caller's organization. |
-| `patient_claim` | string | `patient_id` | JWT claim carrying the patient id. |
+| `patient_claim` | string | `patient_id` | JWT claim carrying the patient id. Set, it scopes every request to the patient it names (see below). Empty turns the patient scope off. |
+| `patient_namespace` | string | unset | The subject namespace (`EHR_STATUS.subject.external_ref.namespace`) the patient ids in `patient_claim` are issued in. Set, a claim names the EHR whose subject is that id under this namespace. Unset, a claim names the EHR holding that id only when no other namespace holds the same id. |
 | `check_directory` | bool | `false` | Submit DIRECTORY (`FOLDER`) operations to the decision point. Engine-independent, so it works under Cedar as well as a remote PDP. |
+
+**The patient scope.** With ABAC on and `patient_claim` set, a token
+without that claim is refused with `403`. With the claim:
+
+- A route that names an EHR (`/ehr/{ehr_id}/…`) answers `403` unless the
+  claim names that EHR's subject. An EHR that records no subject is in no
+  patient's scope and is refused.
+- Without `patient_namespace`, an id held under two or more namespaces names
+  none of those subjects, so it reaches none of their EHRs. Set
+  `patient_namespace` to read the claim in one namespace.
+- An AQL query returns rows only from EHRs the claim names, whatever the query
+  selects, including `SELECT e/ehr_id/value FROM EHR e`.
+
+After a query runs, the decision point receives the subject ids of every EHR
+the query touched as its `patient` attribute, so a patient-keyed policy
+applies to queries whether or not `patient_claim` is set. Without
+`patient_namespace`, a query that touches a subject id held under several
+namespaces is refused with `403`, because a bare id would name both subjects.
 
 - **`[authz.abac.cedar]`:** `policy_dir` (path, required when
   `engine = "cedar"` and ABAC is on) and `reload_secs` (int, unset, an

@@ -76,11 +76,12 @@ pub struct SqlCtx {
     /// ITS-REST single `ehr_id` parameter is the one-element case. Empty = no
     /// explicit scope (the population gate over `is_queryable` EHRs applies).
     pub ehr_ids: Vec<EhrId>,
-    /// The ABAC patient-scope subject id (no openEHR spec governs this, our own
+    /// The ABAC patient scope (no openEHR spec governs this, our own
     /// extension): when set, every VO root and every EHR source is restricted
-    /// to EHRs whose `subject_id` equals it, so rows the caller may not see are
-    /// never fetched, independent of what the query projects.
-    pub subject_scope: Option<String>,
+    /// to EHRs whose subject it names ([`subject::SubjectScope`]), so rows the
+    /// caller may not see are never fetched, independent of what the query
+    /// projects.
+    pub subject_scope: Option<subject::SubjectScope>,
     /// The per-EHR access decision the caller's principal is held to
     /// (`EHR_ACCESS`, RM ehr `ehr_access.adoc`: "All access decisions to data
     /// in the EHR must be made in accordance with the policies and rules in

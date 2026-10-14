@@ -21,18 +21,18 @@ use crate::ids::EhrId;
 
 /// The subject of one EHR (RM ehr master04 §EHR Status, `EHR_STATUS.subject`),
 /// as a patient claim can address it.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum EhrSubject {
     /// The EHR records no subject, so no patient claim names it.
     Absent,
-    /// The subject id is held under this one namespace, so the id names it.
+    /// No other namespace holds this subject id.
     Unique {
         /// `subject.external_ref.id.value`.
         id: String,
         /// `subject.external_ref.namespace`.
         namespace: Option<String>,
     },
-    /// Another namespace holds the same subject id, so the id names no subject.
+    /// Another namespace holds the same subject id.
     Shared {
         /// `subject.external_ref.id.value`.
         id: String,
@@ -42,11 +42,22 @@ pub enum EhrSubject {
 }
 
 impl EhrSubject {
-    /// Whether the patient claim `claim` names this subject: only a
-    /// [`Self::Unique`] subject whose id equals it.
+    /// Whether the patient claim `claim`, read in the configured patient
+    /// `namespace`, names this subject.
+    ///
+    /// With a namespace the subject's (id, namespace) pair must equal
+    /// (`claim`, `namespace`); without one only a [`Self::Unique`] subject whose
+    /// id equals `claim` is named, because a shared id names no subject.
     #[must_use]
-    pub fn is_named_by(&self, claim: &str) -> bool {
-        matches!(self, Self::Unique { id, .. } if id == claim)
+    pub fn is_named_by(&self, claim: &str, namespace: Option<&str>) -> bool {
+        match (self, namespace) {
+            (
+                Self::Unique { id, namespace: own } | Self::Shared { id, namespace: own },
+                Some(configured),
+            ) => id == claim && own.as_deref() == Some(configured),
+            (Self::Unique { id, .. }, None) => id == claim,
+            (Self::Absent, _) | (Self::Shared { .. }, None) => false,
+        }
     }
 }
 
@@ -99,33 +110,51 @@ pub async fn ehr_subject(pool: &PgPool, id: EhrId) -> Result<Option<EhrSubject>,
 pub struct TouchedSubjects {
     /// The distinct subject ids of the touched EHRs a claim can name.
     pub ids: Vec<String>,
-    /// Whether a touched EHR records no subject.
-    pub absent: bool,
-    /// The distinct subject ids of touched EHRs another namespace also holds.
+    /// Whether a touched EHR has a subject no claim can name: none recorded,
+    /// or, with a configured namespace, one under another namespace.
+    pub unnamed: bool,
+    /// The distinct subject ids, held under several namespaces, that no claim
+    /// can name because no namespace is configured.
     pub shared: Vec<String>,
 }
 
 impl TouchedSubjects {
-    /// Folds the subjects `subjects` of the touched EHRs into the attribute.
+    /// Folds the subjects of the touched EHRs into the attribute, reading
+    /// subject ids in the configured patient `namespace`, as
+    /// [`EhrSubject::is_named_by`] does.
     #[must_use]
-    pub fn from_subjects<'a>(subjects: impl IntoIterator<Item = &'a EhrSubject>) -> Self {
+    pub fn fold<'a>(
+        subjects: impl IntoIterator<Item = &'a EhrSubject>,
+        namespace: Option<&str>,
+    ) -> Self {
         let mut ids = std::collections::BTreeSet::new();
         let mut shared = std::collections::BTreeSet::new();
-        let mut absent = false;
+        let mut unnamed = false;
         for subject in subjects {
-            match subject {
-                EhrSubject::Absent => absent = true,
-                EhrSubject::Unique { id, .. } => {
+            match (subject, namespace) {
+                (EhrSubject::Absent, _) => unnamed = true,
+                (
+                    EhrSubject::Unique { id, namespace: own }
+                    | EhrSubject::Shared { id, namespace: own },
+                    Some(configured),
+                ) => {
+                    if own.as_deref() == Some(configured) {
+                        ids.insert(id.clone());
+                    } else {
+                        unnamed = true;
+                    }
+                }
+                (EhrSubject::Unique { id, .. }, None) => {
                     ids.insert(id.clone());
                 }
-                EhrSubject::Shared { id, .. } => {
+                (EhrSubject::Shared { id, .. }, None) => {
                     shared.insert(id.clone());
                 }
             }
         }
         Self {
             ids: ids.into_iter().collect(),
-            absent,
+            unnamed,
             shared: shared.into_iter().collect(),
         }
     }
@@ -135,46 +164,58 @@ impl TouchedSubjects {
 mod tests {
     use super::*;
 
-    #[test]
-    fn only_a_unique_subject_is_named_by_its_id() {
-        let unique = EhrSubject::Unique {
-            id: "p-1".to_owned(),
-            namespace: Some("a".to_owned()),
-        };
-        let shared = EhrSubject::Shared {
-            id: "p-1".to_owned(),
-            namespace: Some("a".to_owned()),
-        };
-        assert!(unique.is_named_by("p-1"));
-        assert!(!unique.is_named_by("p-2"));
-        assert!(!shared.is_named_by("p-1"));
-        assert!(!EhrSubject::Absent.is_named_by("p-1"));
+    fn unique(id: &str, namespace: &str) -> EhrSubject {
+        EhrSubject::Unique {
+            id: id.to_owned(),
+            namespace: Some(namespace.to_owned()),
+        }
+    }
+
+    fn shared(id: &str, namespace: &str) -> EhrSubject {
+        EhrSubject::Shared {
+            id: id.to_owned(),
+            namespace: Some(namespace.to_owned()),
+        }
     }
 
     #[test]
-    fn touched_subjects_fold_by_kind() {
+    fn without_a_namespace_only_a_unique_subject_is_named_by_its_id() {
+        assert!(unique("p-1", "a").is_named_by("p-1", None));
+        assert!(!unique("p-1", "a").is_named_by("p-2", None));
+        assert!(!shared("p-1", "a").is_named_by("p-1", None));
+        assert!(!EhrSubject::Absent.is_named_by("p-1", None));
+    }
+
+    #[test]
+    fn with_a_namespace_the_pair_must_match() {
+        assert!(unique("p-1", "a").is_named_by("p-1", Some("a")));
+        assert!(!unique("p-1", "a").is_named_by("p-1", Some("b")));
+        assert!(shared("p-1", "a").is_named_by("p-1", Some("a")));
+        assert!(!shared("p-1", "b").is_named_by("p-1", Some("a")));
+        assert!(!EhrSubject::Absent.is_named_by("p-1", Some("a")));
+    }
+
+    #[test]
+    fn touched_subjects_fold_without_a_namespace() {
         let subjects = [
-            EhrSubject::Unique {
-                id: "b".to_owned(),
-                namespace: None,
-            },
-            EhrSubject::Unique {
-                id: "a".to_owned(),
-                namespace: None,
-            },
-            EhrSubject::Unique {
-                id: "a".to_owned(),
-                namespace: None,
-            },
-            EhrSubject::Shared {
-                id: "x".to_owned(),
-                namespace: None,
-            },
+            unique("b", "a"),
+            unique("a", "a"),
+            shared("x", "a"),
+            shared("x", "b"),
             EhrSubject::Absent,
         ];
-        let touched = TouchedSubjects::from_subjects(&subjects);
+        let touched = TouchedSubjects::fold(&subjects, None);
         assert_eq!(touched.ids, vec!["a".to_owned(), "b".to_owned()]);
         assert_eq!(touched.shared, vec!["x".to_owned()]);
-        assert!(touched.absent);
+        assert!(touched.unnamed);
+    }
+
+    #[test]
+    fn touched_subjects_fold_with_a_namespace() {
+        let subjects = [unique("b", "a"), shared("x", "a"), shared("x", "other")];
+        let touched = TouchedSubjects::fold(&subjects, Some("a"));
+        assert_eq!(touched.ids, vec!["b".to_owned(), "x".to_owned()]);
+        assert!(touched.shared.is_empty());
+        assert!(touched.unnamed, "the other namespace's subject is unnamed");
     }
 }

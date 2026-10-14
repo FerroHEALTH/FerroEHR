@@ -39,6 +39,7 @@ use ferroehr::config::auth::AuthConfig;
 use ferroehr::config::authz::AuthzConfig;
 use ferroehr::config::server::ServerConfig;
 use ferroehr::service::FerroEhrService;
+use ferroehr::service::status::SmError;
 use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig, SyslogConfig, Transport};
 use ferroehr::system_log::sender::{AuditSender, start};
 use ferroehr_rest::config::AppConfig;
@@ -954,8 +955,9 @@ const EHR_UNIQUE: &str = "aaaaaaaa-0000-4000-8000-000000000004";
 
 /// An ABAC app whose subject resolver reads the database through
 /// `ferroehr::aql::subject::ehr_subject`, as the binary wires it, plus the
-/// auth-off seed app over the same service.
-async fn db_resolved_apps() -> (testkit::TestDb, Router, Router) {
+/// auth-off seed app over the same service; `patient_namespace` is the
+/// `[authz.abac] patient_namespace` setting.
+async fn db_resolved_apps(patient_namespace: Option<&str>) -> (testkit::TestDb, Router, Router) {
     let (pg, pool) = common::migrated_pool().await;
     let svc = Arc::new(FerroEhrService::new(
         &ferroehr::db::domain::DomainPools::from_shared(&pool),
@@ -970,18 +972,22 @@ async fn db_resolved_apps() -> (testkit::TestDb, Router, Router) {
                     .map_err(|e| ResolveError::new("ehr id", e))?;
                 ferroehr::aql::subject::ehr_subject(&pool, id)
                     .await
-                    .map_err(|e| ResolveError::new("ehr subject lookup", e))
+                    .map_err(|e| ResolveError::new("ehr subject lookup", SmError::from(e)))
             })
         }),
         ..resolvers()
     };
-    let app = build_full(
-        rest_config(),
-        svc,
-        authz_with(Arc::new(PermitAll), resolvers),
-        Observability::default(),
+    let mut cfg = AuthzConfig::default();
+    cfg.abac.enabled = true;
+    cfg.abac.patient_namespace = patient_namespace.map(str::to_owned);
+    let handle = AuthzHandle::build(
+        &cfg,
+        &rest_config().server.base_path,
+        Some(Arc::new(PermitAll)),
+        resolvers,
     )
-    .expect("build app");
+    .map(Arc::new);
+    let app = build_full(rest_config(), svc, handle, Observability::default()).expect("build app");
     (pg, seed, app)
 }
 
@@ -991,7 +997,7 @@ async fn db_resolved_apps() -> (testkit::TestDb, Router, Router) {
 /// spec governs the patient claim).
 #[tokio::test]
 async fn the_direct_route_gate_refuses_ambiguous_and_subject_less_ehrs() {
-    let (_pg, seed, app) = db_resolved_apps().await;
+    let (_pg, seed, app) = db_resolved_apps(None).await;
     seed_ehr_in(&seed, EHR_SHARED_A, "test.patients", "PATIENT-X").await;
     seed_ehr_in(&seed, EHR_SHARED_B, "other.patients", "PATIENT-X").await;
     seed_ehr(&seed, EHR_ANONYMOUS).await;
@@ -1081,4 +1087,39 @@ async fn a_patient_keyed_rule_applies_to_the_touched_subjects_without_a_claim() 
         StatusCode::OK,
         "a query touching only PATIENT_OTHER's EHR is permitted"
     );
+}
+
+/// With `[authz.abac] patient_namespace` set, the claim names the (id,
+/// namespace) pair: an id held under two namespaces reaches exactly the EHR
+/// under the configured one, on a direct route and through a query.
+#[tokio::test]
+async fn a_configured_patient_namespace_names_the_pair_exactly() {
+    let (_pg, seed, app) = db_resolved_apps(Some("test.patients")).await;
+    seed_ehr_in(&seed, EHR_SHARED_A, "test.patients", "PATIENT-X").await;
+    seed_ehr_in(&seed, EHR_SHARED_B, "other.patients", "PATIENT-X").await;
+
+    assert_eq!(
+        probe(
+            &app,
+            "POST",
+            &format!("/ehr/{EHR_SHARED_A}/composition"),
+            Some("PATIENT-X")
+        )
+        .await,
+        StatusCode::CREATED,
+        "the subject under the configured namespace is the caller's"
+    );
+    assert_eq!(
+        probe(
+            &app,
+            "POST",
+            &format!("/ehr/{EHR_SHARED_B}/composition"),
+            Some("PATIENT-X")
+        )
+        .await,
+        StatusCode::FORBIDDEN,
+        "the same id under another namespace is another subject"
+    );
+    let served = query_first_column(&app, "SELECT e/ehr_id/value FROM EHR e", "PATIENT-X").await;
+    assert_eq!(served, vec![json!(EHR_SHARED_A)]);
 }

@@ -3967,3 +3967,46 @@ async fn the_patient_scope_refuses_an_id_held_under_two_namespaces() {
         );
     }
 }
+
+/// With a configured patient namespace the claim names the (id, namespace)
+/// pair, so an id held under two namespaces admits exactly the EHR under the
+/// configured one. No openEHR spec governs the patient scope — our own
+/// access-control extension.
+#[tokio::test]
+async fn a_configured_patient_namespace_admits_the_pair_exactly() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+
+    let mut by_namespace = Vec::new();
+    for namespace in ["test.patients", "other.patients"] {
+        let ehr = svc
+            .create_ehr(Some(status_with_subject(namespace, "PATIENT-X")))
+            .await
+            .expect("create an EHR under the shared id")
+            .to_string();
+        create_comp(&svc, &ehr, "BP", 80.0).await;
+        by_namespace.push(ehr);
+    }
+    let scoped = |namespace: &str| AqlQueryRequest {
+        subject_scope: Some("PATIENT-X".to_owned()),
+        subject_namespace: Some(namespace.to_owned()),
+        ..AqlQueryRequest::default()
+    };
+    for aql in [
+        "SELECT e/ehr_id/value FROM EHR e",
+        "SELECT e/ehr_id/value FROM EHR e CONTAINS COMPOSITION c",
+        "SELECT e/ehr_id/value, c/name/value FROM EHR e CONTAINS COMPOSITION c LIMIT 10",
+    ] {
+        for (namespace, expected) in ["test.patients", "other.patients"]
+            .into_iter()
+            .zip(&by_namespace)
+        {
+            let r = run_aql(&svc, aql, scoped(namespace)).await;
+            assert_eq!(rows(&r).len(), 1, "{aql} in {namespace}: {r}");
+            assert_eq!(rows(&r)[0][0], json!(expected), "{aql} in {namespace}");
+        }
+        let none = run_aql(&svc, aql, scoped("third.patients")).await;
+        assert!(rows(&none).is_empty(), "{aql}: no EHR in a third namespace");
+    }
+}

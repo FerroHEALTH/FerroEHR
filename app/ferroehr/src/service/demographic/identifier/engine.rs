@@ -12,6 +12,8 @@
 //! Built once at boot, like every other configured collaborator, so a
 //! misconfigured key is a boot error rather than a first-write surprise.
 
+use std::collections::BTreeMap;
+
 use serde_json::Value;
 use sqlx::PgConnection;
 use uuid::Uuid;
@@ -91,41 +93,99 @@ impl IdentifierProtection {
         &self.schemes
     }
 
-    /// Take every protected identifier out of `body`, leaving a reference,
-    /// and seal the values on `conn`.
+    /// The first configured scheme the database registry does not hold.
     ///
-    /// `conn` is the party commit's own transaction ([`IdentifierStore::seal`]),
-    /// so the sealed rows commit or roll back with the version that references
-    /// them. Runs before the body is decomposed and signed, so the stored,
-    /// signed and served form is one and the same — the invariant the commit
-    /// path already keeps for externalized multimedia.
+    /// The boot check behind the rule that an unregistered scheme is a boot
+    /// error rather than a first-write surprise: a deployment that names a
+    /// scheme the registry refuses would otherwise fail its first party commit
+    /// carrying one.
     ///
     /// # Errors
-    /// [`StoreError`] when a value cannot be sealed or stored. The write fails
-    /// rather than proceeding: storing the body with the value still in it is
-    /// precisely what this exists to prevent.
+    /// [`StoreError::UnknownScheme`] naming the first unregistered scheme, and
+    /// [`StoreError::Acquire`] or [`StoreError::Database`] when the registry
+    /// cannot be read.
+    pub async fn verify_registered(&self) -> Result<(), StoreError> {
+        match self.store.unregistered(&self.schemes).await? {
+            Some(scheme) => Err(StoreError::UnknownScheme { scheme }),
+            None => Ok(()),
+        }
+    }
+
+    /// Seal the protected identifiers of a new party version on `conn`, the
+    /// party commit's own transaction, and leave references in `body`.
+    ///
+    /// Every version gets rows of its own: the party's live rows are retired
+    /// first, then each identifier the body carries is sealed into a new live
+    /// row — a plaintext value of a configured scheme, and a reference carried
+    /// forward from an earlier version of this party alike, so no row is ever
+    /// shared or rewritten and every version keeps the values it committed.
+    /// The rows commit or roll back with the version that references them.
+    /// Runs before the body is decomposed and signed, so the stored, signed and
+    /// served form is one and the same — the invariant the commit path already
+    /// keeps for externalized multimedia.
+    ///
+    /// # Errors
+    /// [`StoreError::ForeignReference`] when the body references a row that is
+    /// not this party's or that holds another scheme,
+    /// [`StoreError::SchemeRepeated`] when it carries two values in one scheme,
+    /// [`StoreError::ValueTaken`] when a value is live for another party, and
+    /// [`StoreError`] when a value cannot be opened, sealed or stored. The
+    /// write fails rather than proceeding: storing the body with the value
+    /// still in it is precisely what this exists to prevent.
     pub async fn externalize(
         &self,
         conn: &mut PgConnection,
         party: Uuid,
         body: &mut Value,
     ) -> Result<usize, StoreError> {
-        let found = body::find(body, &self.schemes);
-        if found.is_empty() {
-            return Ok(0);
-        }
         let keys = DomainKeys::derive(&self.root, KeyDomain::Demographic);
-        let mut references = Vec::with_capacity(found.len());
-        for identifier in &found {
-            let row = IdentifierStore::seal(
-                &mut *conn,
-                &keys,
-                party,
-                &identifier.scheme,
-                &identifier.value,
-            )
-            .await?;
-            references.push((identifier.pointer.clone(), row));
+        let mut identifiers: Vec<body::FoundIdentifier> = body::find(body, &self.schemes);
+        for (pointer, row) in referenced(body) {
+            let written = body
+                .pointer(&format!("{pointer}/type"))
+                .and_then(Value::as_str)
+                .map(str::to_owned);
+            let Some((scheme, value)) =
+                IdentifierStore::open_held(&mut *conn, &keys, party, row).await?
+            else {
+                return Err(StoreError::ForeignReference);
+            };
+            if written.as_deref() != Some(scheme.as_str()) {
+                return Err(StoreError::ForeignReference);
+            }
+            identifiers.push(body::FoundIdentifier {
+                scheme,
+                value,
+                pointer,
+            });
+        }
+        IdentifierStore::retire_live(&mut *conn, party).await?;
+        // One row per scheme: the same value written twice shares it, and two
+        // values in one scheme are refused before anything is written.
+        let mut sealed: BTreeMap<String, (String, Uuid)> = BTreeMap::new();
+        let mut references = Vec::with_capacity(identifiers.len());
+        for identifier in identifiers {
+            let row = match sealed.get(&identifier.scheme) {
+                Some((value, row)) if *value == identifier.value => *row,
+                Some(_) => {
+                    return Err(StoreError::SchemeRepeated {
+                        scheme: identifier.scheme,
+                    });
+                }
+                None => {
+                    let row = IdentifierStore::seal(
+                        &mut *conn,
+                        &keys,
+                        party,
+                        &identifier.scheme,
+                        &identifier.value,
+                    )
+                    .await?;
+                    sealed.insert(identifier.scheme, (identifier.value, row));
+                    row
+                }
+            };
+            references.push((identifier.pointer, row));
         }
         body::substitute(body, &references);
         Ok(references.len())

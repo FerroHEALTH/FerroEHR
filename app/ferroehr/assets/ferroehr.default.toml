@@ -350,6 +350,9 @@ enabled = false
 engine = "cedar"             # cedar | remote
 organization_claim = "organization_id"
 patient_claim = "patient_id"
+#? patient_namespace = "nl.example.patients"  # the subject namespace patient-claim ids
+                             # are issued in; unset, an id held under two
+                             # namespaces matches no EHR
 check_directory = false      # submit DIRECTORY (FOLDER) operations to the PDP;
                              # engine-independent, so it works under cedar too
 

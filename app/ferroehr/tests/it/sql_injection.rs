@@ -86,6 +86,7 @@ use ferroehr::aql::error::{AnalysisError, AqlError, AqlFeatureError};
 use ferroehr::aql::ir::{ParamValue, Params, QueryIr};
 use ferroehr::aql::lineage::ArchetypeLineage;
 use ferroehr::aql::plan;
+use ferroehr::aql::sql::subject::SubjectScope;
 use ferroehr::aql::sql::{PreparedQuery, SqlCtx};
 use openehr_query::parser::parse_str;
 
@@ -657,18 +658,24 @@ fn every_quoted_identifier_comes_from_the_closed_set() {
         {
             statements.push((format!("{query} [scope]"), scope.sql));
         }
-        // The ABAC patient scope adds the subject-identity subqueries to both
-        // statements, so each is scanned under a scoped context too.
-        let scoped = SqlCtx {
-            subject_scope: Some("patient-1".to_owned()),
-            ..ctx()
-        };
-        let prepared = build_with(query, &Params::new(), &scoped);
-        statements.push((format!("{query} [patient scope]"), prepared.sql));
-        if let Some(scope) = ferroehr::aql::sql::build_scope(&ir, &Params::new(), &scoped)
-            .unwrap_or_else(|e| panic!("scope build failed for {query:?}: {e}"))
-        {
-            statements.push((format!("{query} [patient scope, scope]"), scope.sql));
+        // The ABAC patient scope adds the subject-identity conditions to both
+        // statements, so each is scanned under a scoped context too, with and
+        // without a configured patient namespace.
+        for namespace in [None, Some("nl.example.patients".to_owned())] {
+            let scoped = SqlCtx {
+                subject_scope: Some(SubjectScope {
+                    id: "patient-1".to_owned(),
+                    namespace,
+                }),
+                ..ctx()
+            };
+            let prepared = build_with(query, &Params::new(), &scoped);
+            statements.push((format!("{query} [patient scope]"), prepared.sql));
+            if let Some(scope) = ferroehr::aql::sql::build_scope(&ir, &Params::new(), &scoped)
+                .unwrap_or_else(|e| panic!("scope build failed for {query:?}: {e}"))
+            {
+                statements.push((format!("{query} [patient scope, scope]"), scope.sql));
+            }
         }
     }
     // The subject lookup the direct-route gate and the post-check read.
@@ -748,7 +755,10 @@ fn hostile_execution_context_values_bind() {
     for payload in HOSTILE {
         let mut hostile_ctx = ctx();
         hostile_ctx.system_id = (*payload).to_owned();
-        hostile_ctx.subject_scope = Some((*payload).to_owned());
+        hostile_ctx.subject_scope = Some(SubjectScope {
+            id: (*payload).to_owned(),
+            namespace: Some((*payload).to_owned()),
+        });
         let hostile = build_with(query, &Params::new(), &hostile_ctx);
         assert!(
             !hostile.sql.contains(MARKER),
@@ -766,7 +776,10 @@ fn hostile_execution_context_values_bind() {
         // the payload changes nothing structural between two hostile builds.
         let mut second_ctx = ctx();
         second_ctx.system_id = format!("{payload}{payload}");
-        second_ctx.subject_scope = Some(format!("{payload}{payload}"));
+        second_ctx.subject_scope = Some(SubjectScope {
+            id: format!("{payload}{payload}"),
+            namespace: Some(format!("{payload}{payload}")),
+        });
         let second = build_with(query, &Params::new(), &second_ctx);
         assert_eq!(
             hostile.sql, second.sql,

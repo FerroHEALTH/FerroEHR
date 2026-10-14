@@ -32,6 +32,7 @@ use ferroehr::decommission::{Decommission, Erasure};
 use ferroehr::ids::EhrId;
 use ferroehr::manufacturer::MANUFACTURER;
 use ferroehr::report::Report;
+use ferroehr::service::status::SmError;
 use ferroehr::support::{SupportPeriod, today_utc};
 use ferroehr::system_log::config::AuditConfig;
 use ferroehr::system_log::config::AuditPosture;
@@ -1344,7 +1345,8 @@ pub fn build_authz(
 /// the rule the AQL patient scope applies) and the committed template of a
 /// COMPOSITION version (`version.template_id` via the service read-back).
 /// Failures are typed [`ResolveError`]s — the PEP fails closed on them, never
-/// silently permits.
+/// silently permits; a subject lookup that cannot obtain a connection carries
+/// the `service_overloaded` call status, which the PEP answers with `503`.
 #[must_use]
 pub fn authz_resolvers(pool: PgPool, service: Arc<FerroEhrService>) -> AuthzResolvers {
     AuthzResolvers {
@@ -1355,7 +1357,7 @@ pub fn authz_resolvers(pool: PgPool, service: Arc<FerroEhrService>) -> AuthzReso
                     .map_err(|e| ResolveError::new(format!("ehr id {ehr_id}"), e))?;
                 ehr_subject(&pool, EhrId(id))
                     .await
-                    .map_err(|e| ResolveError::new("ehr subject lookup", e))
+                    .map_err(|e| ResolveError::new("ehr subject lookup", SmError::from(e)))
             })
         }),
         template_of_version: Arc::new(move |vo: String, version: Option<String>| {

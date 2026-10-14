@@ -34,6 +34,7 @@ use ferroehr::aql::ir::{ParamValue, Params};
 use ferroehr::aql::lineage::ArchetypeLineage;
 use ferroehr::aql::plan;
 use ferroehr::aql::sql::SqlCtx;
+use ferroehr::aql::sql::subject::SubjectScope;
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -2073,7 +2074,10 @@ fn prepare(
     let ctx = SqlCtx {
         system_id: "sys.example.com".to_owned(),
         ehr_ids,
-        subject_scope: subject_scope.map(str::to_owned),
+        subject_scope: subject_scope.map(|id| SubjectScope {
+            id: id.to_owned(),
+            namespace: None,
+        }),
         ehr_access: ferroehr::aql::sql::EhrAccessScope::Unrestricted,
         limit,
         offset: None,
@@ -2544,4 +2548,34 @@ fn the_scope_collection_reports_the_ehr_status_template() {
         "{}",
         scope.sql
     );
+}
+
+/// With a configured patient namespace the claim names the (id, namespace)
+/// pair exactly, so the patient scope compares both columns and carries no
+/// ambiguity guard (our own extension; no openEHR spec governs the claim).
+#[test]
+fn a_configured_patient_namespace_matches_the_pair_exactly() {
+    let ctx = SqlCtx {
+        subject_scope: Some(SubjectScope {
+            id: "patient-1".to_owned(),
+            namespace: Some("nl.example.patients".to_owned()),
+        }),
+        ..scope_ctx()
+    };
+    for q in [
+        "SELECT e/ehr_id/value FROM EHR e",
+        "SELECT c/uid/value FROM COMPOSITION c",
+    ] {
+        let sql = ferroehr::aql::sql::build(&plan_ok(q), &Params::new(), &ctx)
+            .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"))
+            .sql;
+        assert!(
+            sql.contains(r#""subject_namespace" = $"#),
+            "{q}: the namespace is compared: {sql}"
+        );
+        assert!(
+            !sql.contains(r#""subject_other""#),
+            "{q}: no ambiguity guard: {sql}"
+        );
+    }
 }

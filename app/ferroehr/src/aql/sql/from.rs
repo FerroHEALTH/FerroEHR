@@ -1476,19 +1476,19 @@ impl Builder<'_> {
         // NOTE: the ABAC patient scope restricts every VO root and EHR source to
         // the caller's patient EHRs whatever the projection (no openEHR spec
         // governs this — our own extension).
-        let claim = self.ctx.subject_scope.as_deref()?;
+        let scope = self.ctx.subject_scope.as_ref()?;
         let mut sub = Query::select();
         sub.expr(col(subject::SUBJECT_ROW, Ehr::Id))
             .from_as(Ehr::Table, Alias::new(subject::SUBJECT_ROW))
-            .and_where(subject::matches(subject::SUBJECT_ROW, claim));
+            .and_where(subject::matches(subject::SUBJECT_ROW, scope));
         Some(target.in_subquery(sub))
     }
 
     /// The ABAC patient scope on the `ehr` row bound as `alias`, when one is
     /// set: [`subject::matches`] on that row itself.
     fn ehr_subject_cond(&self, alias: &str) -> Option<Expr> {
-        let claim = self.ctx.subject_scope.as_deref()?;
-        Some(subject::matches(alias, claim))
+        let scope = self.ctx.subject_scope.as_ref()?;
+        Some(subject::matches(alias, scope))
     }
 
     /// Every [`Self::apply_ehr_scope`] condition a versioned-object root puts

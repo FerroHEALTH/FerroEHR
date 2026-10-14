@@ -192,7 +192,9 @@ impl FerroEhrService {
     ) -> Result<SubscriptionRecord, ServiceError> {
         let Some(enabled) = body.enabled else {
             return Err(ServiceError::precondition(
-                "event subscription update is a full replace: 'enabled' must be                  stated explicitly — omitting it would silently re-enable a                  disabled subscription"
+                "event subscription update is a full replace: 'enabled' must be \
+                 stated explicitly — omitting it would silently re-enable a \
+                 disabled subscription"
                     .to_owned(),
             ));
         };

@@ -405,7 +405,14 @@ workflow refuses a tag that has no matching section here.
   `Retry-After` (#3749).
 - **Protected national identifiers are sealed inside the party commit**
   (#3772). A failed demographic commit no longer leaves a sealed identifier
-  behind, and a failed update no longer replaces the party's stored one.
+  behind, and a failed update no longer replaces the party's stored one. Each
+  version of a party keeps the identifier it was committed with: a changed
+  identifier is sealed into a new row instead of overwriting the old one, so
+  an earlier version shows the value it held, and lookup by identifier
+  answers the latest version only (party migration `0010_identifier_versions`).
+  A party whose identifier another party already holds answers `409`; two
+  values in one scheme, or a reference to an identifier the party does not
+  hold, answer `422`.
 - **The compose image-tag guard covers the terminology overlay** (#3605).
   `scripts/checks/compose-image-tags.sh` checks every FerroEHR image tag in
   every root and `docker/` compose file, `docker-compose.terminology.yml`

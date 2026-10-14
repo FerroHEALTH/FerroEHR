@@ -571,7 +571,10 @@ pub(crate) async fn admin_template_delete(
     delete, path = "/admin/party/{party_id}", tag = "ADMIN",
     params(
         ("party_id" = String, Path,
-         description = "The versioned-object id of the demographic `PARTY`                         (`AGENT`, `GROUP`, `ORGANISATION`, `PERSON` or `ROLE`):                         the SM `a_party_id: UUID`. A value that is not a UUID                         is `400`.",
+         description = "The versioned-object id of the demographic `PARTY` \
+                        (`AGENT`, `GROUP`, `ORGANISATION`, `PERSON` or `ROLE`): \
+                        the SM `a_party_id: UUID`. A value that is not a UUID \
+                        is `400`.",
          example = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")
     ),
     responses(
