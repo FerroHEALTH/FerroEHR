@@ -30,6 +30,7 @@ use crate::aql;
 use crate::aql::error::{AqlError, ExecError};
 use crate::aql::ir::{Params, QueryIr};
 use crate::aql::sql::SqlCtx;
+use crate::db::acquire::acquire;
 use crate::service::FerroEhrService;
 use crate::service::error::{ErrorChain, internal_fault_caused};
 use crate::service::query::request::{AqlQueryRequest, QueryOutcome};
@@ -302,7 +303,11 @@ impl FerroEhrService {
         let present: std::collections::HashSet<Uuid> =
             sqlx::query_scalar::<_, EhrId>("SELECT id FROM ehr WHERE id = ANY($1)")
                 .bind(&ids)
-                .fetch_all(&self.pool)
+                .fetch_all(
+                    &mut *acquire(&self.pool)
+                        .await
+                        .map_err(|e| Failure::analysis(SmError::from(e)))?,
+                )
                 .await
                 .map_err(|e| {
                     Failure::analysis(internal_fault_caused("resolve the requested ehr_ids", &e))
@@ -565,6 +570,14 @@ fn map_exec_error(e: AqlError) -> SmError {
             )
             .with_source(db)
         }
+        // No connection could be obtained: no statement ran, so the request can
+        // be repeated (`503` plus `Retry-After`).
+        AqlError::Exec(
+            ExecError::Acquire(e)
+            | ExecError::Assembly(crate::storage::error::StorageError::Acquire(e)),
+        ) => {
+            SmError::from(e)
+        }
         AqlError::Exec(ExecError::Database(db)) => crate::storage::error::classify_sqlx(&db),
         AqlError::Exec(ExecError::Assembly(a)) => {
             internal_fault_caused("assemble the RESULT_SET", &a)
@@ -616,5 +629,67 @@ mod tests {
             !fault.message.contains("RowNotFound"),
             "the driver diagnostic never reaches the wire body, got {fault:?}"
         );
+    }
+
+    /// A closed pool: every acquire on it fails before any statement runs.
+    async fn closed_pool() -> sqlx::PgPool {
+        let options = sqlx::postgres::PgConnectOptions::new()
+            .host("ferroehr-acquire-test.invalid")
+            .username("nobody")
+            .database("nothing");
+        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy_with(options);
+        pool.close().await;
+        pool
+    }
+
+    /// An AQL execution that cannot obtain a connection fails in the acquire
+    /// phase and answers `service_overloaded` (→ `503` plus `Retry-After`): no
+    /// statement ran, so the request can be repeated.
+    #[tokio::test]
+    async fn an_acquire_failure_on_execution_answers_503() {
+        let ast = super::parse_str("SELECT e/ehr_id/value FROM EHR e").expect("the query parses");
+        let params = crate::aql::ir::Params::new();
+        let profile = crate::config::profile::SpecProfile::default();
+        let ir = crate::aql::plan(&ast, &params, profile).expect("the query plans");
+        let ctx = crate::aql::sql::SqlCtx {
+            system_id: "sys.example.com".to_owned(),
+            ehr_ids: Vec::new(),
+            subject_scope: None,
+            ehr_access: crate::aql::sql::EhrAccessScope::Unrestricted,
+            limit: None,
+            offset: None,
+            archetype_lineage: std::sync::Arc::new(crate::aql::lineage::ArchetypeLineage::default()),
+        };
+        let pool = closed_pool().await;
+        let failure = crate::aql::exec::execute(&pool, &ir, &params, &ctx, profile)
+            .await
+            .expect_err("a closed pool yields no connection");
+        assert!(
+            matches!(failure, AqlError::Exec(ExecError::Acquire(_))),
+            "the failure carries the acquire phase, got {failure:?}"
+        );
+        assert_eq!(
+            map_exec_error(failure).status,
+            CallStatusType::ServiceOverloaded
+        );
+        let collected = crate::aql::exec::collect_scope(&pool, &ir, &params, &ctx)
+            .await
+            .expect_err("the scope collection acquires too");
+        assert!(
+            matches!(collected, AqlError::Exec(ExecError::Acquire(_))),
+            "got {collected:?}"
+        );
+    }
+
+    /// A node-codec read that cannot obtain a connection answers `503` too.
+    #[tokio::test]
+    async fn an_acquire_failure_while_assembling_answers_503() {
+        let failure = crate::db::acquire::acquire(&closed_pool().await)
+            .await
+            .expect_err("a closed pool yields no connection");
+        let sm = map_exec_error(AqlError::Exec(ExecError::Assembly(
+            crate::storage::error::StorageError::Acquire(failure),
+        )));
+        assert_eq!(sm.status, CallStatusType::ServiceOverloaded);
     }
 }

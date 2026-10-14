@@ -24,6 +24,7 @@ use super::error::{AqlError, ExecError};
 use super::ir::{Params, QueryIr};
 use super::sql::{CellKind, ColumnSpec, SqlCtx};
 use super::subject::TouchedSubjects;
+use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::storage::node_repo::SubtreeAnchor;
 
@@ -108,7 +109,7 @@ pub async fn execute(
     // PREPARE / plan caching).
     let rows = sqlx::query_with(sqlx::AssertSqlSafe(prepared.sql), prepared.values)
         .persistent(false)
-        .fetch_all(pool)
+        .fetch_all(&mut *acquire(pool).await.map_err(ExecError::from)?)
         .await
         .map_err(ExecError::from)?;
 
@@ -339,7 +340,7 @@ pub async fn collect_scope(
     // SQL, unnamed statement, custom plan per execution.
     let rows = sqlx::query_with(sqlx::AssertSqlSafe(scope.sql), scope.values)
         .persistent(false)
-        .fetch_all(pool)
+        .fetch_all(&mut *acquire(pool).await.map_err(ExecError::from)?)
         .await
         .map_err(ExecError::from)?;
     let mut ehr_ids = std::collections::BTreeSet::new();

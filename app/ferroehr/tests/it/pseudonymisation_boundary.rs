@@ -613,17 +613,20 @@ async fn a_sealed_identifier_round_trips_and_resolves_to_its_party() {
     use ferroehr::service::demographic::identifier::store::IdentifierStore;
 
     let db = testkit::db().await.expect("testkit database");
-    let store = IdentifierStore::new(ferroehr::db::domain_pool_from(
-        &db.pool(),
-        ferroehr::db::domain::Domain::Party,
-    ));
+    let party_pool =
+        ferroehr::db::domain_pool_from(&db.pool(), ferroehr::db::domain::Domain::Party);
+    let store = IdentifierStore::new(party_pool.clone());
     let keys = test_keys();
     let party = Uuid::now_v7();
 
-    let row = store
-        .seal(&keys, party, "nl-bsn", SYNTHETIC_BSN)
+    let mut conn = party_pool
+        .acquire()
+        .await
+        .expect("a party-domain connection");
+    let row = IdentifierStore::seal(&mut conn, &keys, party, "nl-bsn", SYNTHETIC_BSN)
         .await
         .expect("seal the identifier");
+    drop(conn);
 
     assert_eq!(
         store.open(&keys, row).await.expect("open"),
@@ -671,13 +674,18 @@ async fn an_unregistered_scheme_is_refused() {
     use ferroehr::service::demographic::identifier::store::{IdentifierStore, StoreError};
 
     let db = testkit::db().await.expect("testkit database");
-    let store = IdentifierStore::new(ferroehr::db::domain_pool_from(
-        &db.pool(),
-        ferroehr::db::domain::Domain::Party,
-    ));
-    let refused = store
-        .seal(&test_keys(), Uuid::now_v7(), "zz-invented", SYNTHETIC_BSN)
-        .await;
+    let mut conn = ferroehr::db::domain_pool_from(&db.pool(), ferroehr::db::domain::Domain::Party)
+        .acquire()
+        .await
+        .expect("a party-domain connection");
+    let refused = IdentifierStore::seal(
+        &mut conn,
+        &test_keys(),
+        Uuid::now_v7(),
+        "zz-invented",
+        SYNTHETIC_BSN,
+    )
+    .await;
     assert!(
         matches!(refused, Err(StoreError::UnknownScheme { ref scheme }) if scheme == "zz-invented"),
         "an identifier kind nobody registered is refused, naming the scheme: {refused:?}"
@@ -839,6 +847,178 @@ async fn a_protected_identifier_never_reaches_the_versioned_body() {
         Some(vo_id),
         "the identifier resolves to the party that holds it"
     );
+}
+
+/// The protection engine over `party_pool`, sealing `nl-bsn` under the test key.
+fn protection_engine(
+    party_pool: PgPool,
+) -> ferroehr::service::demographic::identifier::engine::IdentifierProtection {
+    use ferroehr::service::demographic::identifier::config::IdentifierProtectionConfig;
+    use ferroehr::service::demographic::identifier::engine::IdentifierProtection;
+
+    IdentifierProtection::from_config(
+        &IdentifierProtectionConfig {
+            enabled: true,
+            schemes: vec!["nl-bsn".to_owned()],
+            key: Some(ferroehr::config::secret::Secret::new(TEST_ROOT_KEY)),
+            key_file: None,
+        },
+        Some(&ferroehr::config::secret::Secret::new(TEST_ROOT_KEY)),
+        party_pool,
+    )
+    .expect("the engine builds")
+    .expect("protection is enabled")
+}
+
+/// A demographic CONTRIBUTION creating one PERSON per family name, each
+/// carrying `bsn` as a protected `nl-bsn` identifier.
+fn persons_with_bsn(families: &[&str], bsn: &str) -> serde_json::Value {
+    let coded = |code: &str, value: &str| {
+        serde_json::json!({
+            "_type": "DV_CODED_TEXT", "value": value,
+            "defining_code": {
+                "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+                "code_string": code
+            }
+        })
+    };
+    let committer = serde_json::json!({ "_type": "PARTY_IDENTIFIED", "name": "tester" });
+    let versions: Vec<serde_json::Value> = families
+        .iter()
+        .map(|family| {
+            let mut person = a_person();
+            *person
+                .pointer_mut("/identities/0/details/items/0/value/value")
+                .expect("the family name") = serde_json::Value::from(*family);
+            person
+                .pointer_mut("/identities/0/details/items")
+                .and_then(serde_json::Value::as_array_mut)
+                .expect("the identity items")
+                .push(serde_json::json!({
+                    "_type": "ELEMENT",
+                    "archetype_node_id": "at0004",
+                    "name": { "_type": "DV_TEXT", "value": "bsn" },
+                    "value": { "_type": "DV_IDENTIFIER", "type": "nl-bsn",
+                               "id": bsn, "issuer": "RvIG", "assigner": "RvIG" }
+                }));
+            serde_json::json!({
+                "_type": "ORIGINAL_VERSION",
+                "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
+                "commit_audit": {
+                    "change_type": coded("249", "creation"),
+                    "committer": committer
+                },
+                "data": person
+            })
+        })
+        .collect();
+    serde_json::json!({
+        "_type": "CONTRIBUTION",
+        "versions": versions,
+        "audit": { "change_type": coded("249", "creation"), "committer": committer }
+    })
+}
+
+/// The sealed rows and the party versions in the clone, read on the harness
+/// credential.
+async fn sealed_and_versions(pool: &PgPool) -> (i64, i64) {
+    sqlx::query_as(
+        "SELECT (SELECT count(*) FROM party.national_identifier), \
+                (SELECT count(*) FROM party.version)",
+    )
+    .fetch_one(pool)
+    .await
+    .expect("count the sealed rows and the party versions")
+}
+
+/// Drives one layout: a commit that fails after its first member was sealed
+/// leaves no sealed row, and a commit that succeeds keeps its row.
+///
+/// The failure is a second PERSON carrying the first one's identifier: its seal
+/// hits the one-party-per-value index after the first member's seal already
+/// ran, so the commit fails with a sealed row in hand.
+async fn a_failed_commit_leaves_no_sealed_identifier(service: &FerroEhrService, harness: &PgPool) {
+    service
+        .demographic_contribution_create(persons_with_bsn(&["Lovelace", "Byron"], SYNTHETIC_BSN))
+        .await
+        .expect_err("two parties cannot hold one national identifier");
+    assert_eq!(
+        sealed_and_versions(harness).await,
+        (0, 0),
+        "a commit that failed after sealing leaves neither a sealed row nor a version"
+    );
+
+    service
+        .demographic_contribution_create(persons_with_bsn(&["Lovelace"], SYNTHETIC_BSN))
+        .await
+        .expect("a party carrying a protected identifier commits");
+    assert_eq!(
+        sealed_and_versions(harness).await,
+        (1, 1),
+        "a committed party keeps its sealed row"
+    );
+    assert_eq!(
+        protection_engine(harness.clone())
+            .resolve("nl-bsn", SYNTHETIC_BSN)
+            .await
+            .expect("resolve"),
+        sqlx::query_scalar::<_, Uuid>("SELECT vo_id FROM party.version")
+            .fetch_optional(harness)
+            .await
+            .expect("the committed party"),
+        "the kept row belongs to the party that committed"
+    );
+}
+
+/// Sealing and the commit succeed or fail together on the shared credential:
+/// the seal runs on the party commit's own transaction.
+#[tokio::test]
+async fn a_failed_party_commit_leaves_no_sealed_identifier() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let party_pool = ferroehr::db::domain_pool_from(&pool, ferroehr::db::domain::Domain::Party);
+    let service = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+        .with_identifier_protection(std::sync::Arc::new(protection_engine(party_pool.clone())));
+
+    a_failed_commit_leaves_no_sealed_identifier(&service, &party_pool).await;
+}
+
+/// The same with each domain on its own runtime credential: the party
+/// commit's transaction runs as `ferroehr_party`, which writes the sealed rows,
+/// so separated credentials need no second connection and no cleanup.
+#[tokio::test]
+async fn a_failed_party_commit_leaves_no_sealed_identifier_on_separated_credentials() {
+    use ferroehr::config::secret::SecretUrl;
+    use ferroehr::db::DbConfig;
+
+    let db = testkit::db().await.expect("testkit database");
+    let settings = DbConfig {
+        url: SecretUrl::new(crate::fixtures::dsn_as(&db, "rbclin", "ferroehr_clinical").await),
+        ..DbConfig::default()
+    };
+    let storage = ferroehr::db::domain::StorageConfig {
+        party: ferroehr::db::domain::DomainDsn {
+            url: Some(SecretUrl::new(
+                crate::fixtures::dsn_as(&db, "rbdemo", "ferroehr_party").await,
+            )),
+            url_file: None,
+        },
+        ..ferroehr::db::domain::StorageConfig::default()
+    };
+    assert!(
+        storage.is_separated(ferroehr::db::domain::Domain::Party),
+        "the fixture must actually separate the credentials"
+    );
+    let pools = ferroehr::db::connect_domains(&settings, &storage)
+        .await
+        .expect("each pool connects on its own credential");
+    let service = FerroEhrService::new(&pools)
+        .with_identifier_protection(std::sync::Arc::new(protection_engine(pools.party.clone())));
+
+    let harness = ferroehr::db::domain_pool_from(&db.pool(), ferroehr::db::domain::Domain::Party);
+    a_failed_commit_leaves_no_sealed_identifier(&service, &harness).await;
+    pools.close().await;
 }
 
 /// Resolving an identifier to its party is recorded as a linkage-domain access,
@@ -1051,14 +1231,15 @@ async fn a_sealed_identifier_resolves_on_the_separated_demographic_credential() 
         ferroehr::db::connect_domain(&settings, &storage, ferroehr::db::domain::Domain::Party)
             .await
             .expect("the party pool connects on its own credential");
+    let mut conn = demographic.acquire().await.expect("a party connection");
     let store = IdentifierStore::new(demographic);
     let keys = test_keys();
     let party = Uuid::now_v7();
 
-    let row = store
-        .seal(&keys, party, "nl-bsn", SYNTHETIC_BSN)
+    let row = IdentifierStore::seal(&mut conn, &keys, party, "nl-bsn", SYNTHETIC_BSN)
         .await
         .expect("the separated credential seals an identifier");
+    drop(conn);
     assert_eq!(
         store.open(&keys, row).await.expect("open"),
         Some(SYNTHETIC_BSN.to_owned()),
@@ -1377,10 +1558,15 @@ async fn an_identity_resolves_to_an_ehr_across_three_separated_credentials() {
     // The identity half: a sealed identifier held on the demographic
     // credential, resolvable by keyed digest without decryption.
     let party = ferroehr::ids::VoId(Uuid::now_v7());
-    IdentifierStore::new(demographic.clone())
-        .seal(&test_keys(), party.0, "nl-bsn", SYNTHETIC_BSN)
-        .await
-        .expect("the separated demographic credential seals an identifier");
+    IdentifierStore::seal(
+        &mut demographic.acquire().await.expect("a party connection"),
+        &test_keys(),
+        party.0,
+        "nl-bsn",
+        SYNTHETIC_BSN,
+    )
+    .await
+    .expect("the separated demographic credential seals an identifier");
 
     let engine = IdentifierProtection::from_config(
         &IdentifierProtectionConfig {

@@ -16,6 +16,7 @@ use uuid::Uuid;
 
 use super::error::{AqlError, ExecError};
 use super::sql::subject::{SHARED_COLUMN, lookup};
+use crate::db::acquire::acquire;
 use crate::ids::EhrId;
 
 /// The subject of one EHR (RM ehr master04 §EHR Status, `EHR_STATUS.subject`),
@@ -66,7 +67,7 @@ pub async fn ehr_subjects(
     let (sql, values) = lookup(&uuids);
     let rows = sqlx::query_with(sqlx::AssertSqlSafe(sql), values)
         .persistent(false)
-        .fetch_all(pool)
+        .fetch_all(&mut *acquire(pool).await.map_err(ExecError::from)?)
         .await
         .map_err(ExecError::from)?;
     let mut out = BTreeMap::new();

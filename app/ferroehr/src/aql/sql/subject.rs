@@ -7,8 +7,8 @@
 //! is the pair (`subject_id`, `subject_namespace`) (RM ehr master04 §EHR Status:
 //! `subject.external_ref` is a `PARTY_REF` with its own `namespace`). An id
 //! held under one namespace names that subject; an id held under two or more
-//! names none of them. The query scope ([`super::from`]), the scope collection
-//! and the direct-route patient gate all decide through [`shared`], so the
+//! names none of them. The query scope (`aql::sql::from`), the scope collection
+//! and the direct-route patient gate all decide through `shared`, so the
 //! three agree. No openEHR spec governs the claim — our own extension.
 
 use sea_query::extension::postgres::PgFunc;
@@ -25,7 +25,7 @@ const SUBJECT_OTHER: &str = "subject_other";
 /// The `ehr` alias the subject lookup reads its rows from.
 pub(super) const SUBJECT_ROW: &str = "subject_row";
 
-/// The column the subject lookup reports [`shared`] under.
+/// The column the subject lookup reports `shared` under.
 pub const SHARED_COLUMN: &str = "subject_shared";
 
 /// Whether another EHR holds the subject id of the `ehr` row bound as `alias`

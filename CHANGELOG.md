@@ -120,6 +120,12 @@ workflow refuses a tag that has no matching section here.
   for those queries too, and a subject id held under two namespaces admits
   neither EHR, since the patient claim carries no namespace. A touched EHR or
   template id that cannot be read fails the query instead of being left out.
+  The direct EHR, composition and status routes apply the same rule: an EHR
+  that records no subject, or whose subject id another namespace also holds,
+  answers `403` to a caller with a patient claim. The query policy check now
+  receives the subjects of the touched EHRs as its patient attribute, so a
+  patient-keyed rule applies even without a configured claim, and it sees the
+  EHR_STATUS template on `e/ehr_status/...` paths.
 
 - **The viewer's Basic sign-in follows only a same-origin `next`.** After a
   successful or refused sign-in, an absolute, scheme-relative or backslash
@@ -394,6 +400,9 @@ workflow refuses a tag that has no matching section here.
   It is given `FERROEHR_VIEWER__CDR__MANAGEMENT_BASE_URL`, and its
   NetworkPolicy admits the management port when `config.management.port` is
   set.
+- **AQL SQL generation is deterministic with several EHR sources**, and an
+  AQL execution that cannot obtain a database connection answers `503` with
+  `Retry-After` (#3749).
 - **The compose image-tag guard covers the terminology overlay** (#3605).
   `scripts/checks/compose-image-tags.sh` checks every FerroEHR image tag in
   every root and `docker/` compose file, `docker-compose.terminology.yml`

@@ -373,6 +373,11 @@ pub enum SqlError {
 /// An execution / `RESULT_SET` assembly failure.
 #[derive(Debug, Error)]
 pub enum ExecError {
+    /// No connection could be obtained from the pool, so no statement reached
+    /// the database.
+    #[error("query execution could not obtain a database connection")]
+    Acquire(#[from] crate::db::acquire::AcquireError),
+
     /// The database rejected or failed the generated query.
     #[error("query execution failed")]
     Database(#[from] sqlx::Error),

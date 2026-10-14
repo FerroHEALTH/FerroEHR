@@ -27,7 +27,6 @@ use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::ids::{EhrId, VoId};
-use crate::service::demographic::identifier::store::StoreError;
 use crate::service::error::ServiceError;
 use crate::service::status::CallStatusType;
 use crate::storage::codec::{decompose, reassemble};
@@ -588,12 +587,16 @@ struct CommitScope<'a> {
     preplaced: Option<crate::storage::version_repo::placement::Placement>,
 }
 
-/// Seal every configured-scheme national identifier out of a demographic body
-/// before it is decomposed and signed.
+/// Seal every configured-scheme national identifier out of a demographic body,
+/// on the commit transaction `tx`, before the body is decomposed and signed.
 ///
 /// Runs on the demographic kinds only: a party's identifiers are the point of
 /// that domain, and clinical content carrying one is a different rule
 /// altogether ([`crate::privacy`] refuses it outright rather than sealing it).
+/// A demographic kind's commit transaction is always on the party domain's
+/// pool, the one database that holds `national_identifier` in every layout,
+/// so the sealed rows commit or roll back with the version that references
+/// them and no compensating cleanup is needed.
 ///
 /// Placed before `decompose` and the signature for the same reason the
 /// multimedia offload is: the stored, signed and served body must be one form,
@@ -606,6 +609,7 @@ struct CommitScope<'a> {
 /// rather than proceeding, because proceeding would store the body with the
 /// identifier still in it.
 async fn seal_protected_identifiers(
+    tx: &mut PgConnection,
     ctx: &SigningCtx<'_>,
     kind: Kind,
     vo_id: VoId,
@@ -618,12 +622,9 @@ async fn seal_protected_identifiers(
         return Ok(());
     }
     engine
-        .externalize(vo_id.0, canonical)
+        .externalize(tx, vo_id.0, canonical)
         .await
-        .map_err(|e| match e {
-            StoreError::Acquire(acquire) => ServiceError::Acquire(acquire),
-            other => ServiceError::internal("seal a protected national identifier", other),
-        })?;
+        .map_err(|e| ServiceError::internal("seal a protected national identifier", e))?;
     Ok(())
 }
 
@@ -738,7 +739,7 @@ async fn apply_change(
             // a first version can only be `complete`/`incomplete`.
             validate_transition(None, &lifecycle)?;
             let vo_id = VoId::minted(ctx.stamp);
-            seal_protected_identifiers(ctx, kind, vo_id, &mut canonical).await?;
+            seal_protected_identifiers(tx, ctx, kind, vo_id, &mut canonical).await?;
             stamp_version_uid(
                 &mut canonical,
                 &object_version_id(vo_id, &ctx.system_id, TreeId::trunk(1)),
@@ -800,7 +801,7 @@ async fn apply_change(
             // the transition from the preceding version's state must be
             // legal (master06 §Version Lifecycle state machine).
             validate_transition(Some(&next.preceding_lifecycle), &lifecycle)?;
-            seal_protected_identifiers(ctx, kind, vo_id, &mut canonical).await?;
+            seal_protected_identifiers(tx, ctx, kind, vo_id, &mut canonical).await?;
             stamp_version_uid(
                 &mut canonical,
                 &object_version_id(vo_id, &ctx.system_id, next.tree),

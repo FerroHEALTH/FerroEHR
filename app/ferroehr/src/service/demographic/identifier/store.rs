@@ -10,8 +10,12 @@
 //! from an identifier to a party WITHOUT decrypting anything, through the
 //! `SECURITY DEFINER` function, so a caller that only needs the mapping never
 //! touches the ciphertext.
+//!
+//! The write runs on the caller's connection, never on the store's pool: a
+//! sealed row exists only for a party version that commits, because it is
+//! written inside that version's own transaction. The reads use the pool.
 
-use sqlx::{PgPool, Row as _};
+use sqlx::{PgConnection, PgPool, Row as _};
 use uuid::Uuid;
 
 use crate::db::acquire::acquire;
@@ -60,24 +64,35 @@ impl From<sqlx::Error> for StoreError {
     }
 }
 
-/// The protected-identifier store over the demographic pool.
+/// The protected-identifier store: reads over the demographic pool, writes on
+/// the caller's commit transaction.
 #[derive(Debug, Clone)]
 pub struct IdentifierStore {
     pool: PgPool,
 }
 
 impl IdentifierStore {
-    /// Bind the store to the demographic pool.
+    /// Bind the store's reads to the demographic pool.
     ///
     /// The pool is the domain: the clinical pool's role has no grant on these
     /// relations, so handing the wrong one in fails loudly at the first
-    /// statement rather than reading across the boundary.
+    /// statement rather than reading across the boundary. Writes take the
+    /// commit's own connection instead ([`Self::seal`]).
     #[must_use]
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
 
-    /// Seal `value` for `party` and return the row id the body will reference.
+    /// Seal `value` for `party` on `conn` and return the row id the body will
+    /// reference.
+    ///
+    /// `conn` is the party domain's commit transaction: the
+    /// `national_identifier` relation is created by the party migration set, so
+    /// it lives in whichever database serves that domain, beside the party's
+    /// own `version` rows. Writing on that transaction is what makes the seal
+    /// and the commit one act; a rolled-back commit leaves no sealed row, and a
+    /// replaced row gets its previous value back. There is deliberately no
+    /// pool-backed variant, so no caller can seal outside a commit.
     ///
     /// Re-sealing the same party and scheme replaces the row: a party's
     /// identifier is a fact about that party, and a second row would leave the
@@ -85,9 +100,10 @@ impl IdentifierStore {
     ///
     /// # Errors
     /// [`StoreError`] when the scheme is unregistered, the value cannot be
-    /// sealed, or the write fails.
+    /// sealed, or the write fails. A database refusal aborts the caller's
+    /// transaction, so the caller must fail its commit.
     pub async fn seal(
-        &self,
+        conn: &mut PgConnection,
         keys: &DomainKeys,
         party: Uuid,
         scheme: &str,
@@ -110,7 +126,7 @@ impl IdentifierStore {
         .bind(&nonce)
         .bind(&ciphertext)
         .bind(&digest)
-        .fetch_one(&mut *acquire(&self.pool).await?)
+        .fetch_one(&mut *conn)
         .await
         .map_err(|error| match StoreError::from(error) {
             StoreError::UnknownScheme { .. } => StoreError::UnknownScheme {
