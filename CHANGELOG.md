@@ -318,6 +318,10 @@ workflow refuses a tag that has no matching section here.
   `SSL_CERT_FILE`) instead of the bundled web roots only.
 - **A wrong password at the viewer's Basic sign-in returns to the sign-in card
   with the refusal** (#3759) instead of answering `500`.
+- **The CRA provenance record lists the eighth corrigendum** (#3732).
+  `32024R2847R(08)` corrects the Slovenian version only (Art. 3(17), Art.
+  14(7) and the titles of Articles 21 and 22); it has no English version and
+  changes no text FerroEHR cites.
 - **The compose image-tag guard covers the terminology overlay** (#3605).
   `scripts/checks/compose-image-tags.sh` checks every FerroEHR image tag in
   every root and `docker/` compose file, `docker-compose.terminology.yml`

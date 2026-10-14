@@ -762,9 +762,9 @@ impl Builder<'_> {
         ehr: Option<&str>,
         vo: Option<&VoGroup>,
     ) -> Result<Option<VoGroup>, AqlError> {
-        let anchor = match (vo, ehr) {
-            (Some(g), _) => ExistsAnchor::Vo(g.node.clone(), g.types.clone()),
-            (None, Some(e)) => ExistsAnchor::Ehr(e.to_owned()),
+        let parent = match (vo, ehr) {
+            (Some(g), _) => BranchParent::Group(g.clone()),
+            (None, Some(e)) => BranchParent::Ehr(e.to_owned()),
             (None, None) => {
                 return Err(SqlError::Unsupported(
                     "OR at the top of the FROM tree without a containing object".to_owned(),
@@ -772,15 +772,11 @@ impl Builder<'_> {
                 .into());
             }
         };
+        let anchor = parent.exists_anchor();
         let left = self.contained_exists(&anchor, a)?;
         let right = self.contained_exists(&anchor, b)?;
         self.q.and_where(left.or(right));
         let referenced = referenced_sources(self.ir);
-        let parent = match (vo, ehr) {
-            (Some(g), _) => BranchParent::Group(g.clone()),
-            (None, Some(e)) => BranchParent::Ehr(e.to_owned()),
-            (None, None) => return Ok(None),
-        };
         self.bind_branch(&parent, a, &[], &referenced, ehr)?;
         self.bind_branch(&parent, b, &[], &referenced, ehr)?;
         Ok(None)

@@ -81,7 +81,7 @@ opentelemetry-otlp = { workspace = true }
 tracing-opentelemetry = { workspace = true }
 
 # Authentication: Basic (argon2) + OAuth2/OIDC bearer (jsonwebtoken over a JWKS,
-# issuer discovery via openidconnect, whose bundled reqwest does the network I/O).
+# issuer discovery via openidconnect over the workspace reqwest).
 # See src/auth for the resource-server scope decision.
 jsonwebtoken = { workspace = true }
 argon2 = { workspace = true }

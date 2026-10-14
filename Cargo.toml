@@ -217,7 +217,7 @@ async-trait = "0.1"                 # still handy for dyn traits; native async-f
 # ── Authentication & authorization (do NOT hand-roll) ────────────────────────
 jsonwebtoken = { version = "11.0.0", features = ["aws_lc_rs"] }   # JWT encode/decode/validate; aws-lc-rs crypto provider (matches the rustls stack)
 oauth2 = { version = "5", default-features = false } # OAuth2 client (HTTP-client agnostic: we supply the pinned reqwest)
-openidconnect = "4"                 # OIDC / Keycloak          (verify latest 4.x)
+openidconnect = { version = "4", default-features = false }   # OIDC discovery + code flow; HTTP-client agnostic: we supply the pinned reqwest (platform trust store)
 argon2 = "0.6"                      # password hashing (Argon2id); its `password-hash` feature re-exports the PHC string traits
 cookie = { version = "0.18", features = ["private"] } # sealed session cookies: AES-256-GCM private jar (the viewer's multi-instance session, #2949)
 secrecy = "0.10"                   # wrap secrets, avoid logging
