@@ -266,16 +266,18 @@ separate-port management listener always stays plain HTTP, so under
 enabled = false
 client_auth = "off"
 min_version = "1.3"
+reload_interval_secs = 60
 ```
 
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `enabled` | bool | `false` | Terminate TLS natively on the main listener. |
 | `cert_file` | path | unset | Server certificate chain (PEM). Required when enabled; a missing, unreadable or certificate-less file stops startup. |
-| `key_file` | path | unset | Server private key (PEM). Required when enabled. |
+| `key_file` | path | unset | Server private key (PEM): PKCS#8, SEC1 (`EC PRIVATE KEY`) or PKCS#1. Required when enabled; a key that does not belong to the first certificate in `cert_file` stops startup. |
 | `client_auth` | enum{off,optional,required} | `off` | Client-certificate policy. `optional` verifies a certificate when one is presented and still accepts connections without; `required` rejects any client without a verified certificate at the handshake. |
 | `client_ca_file` | path | unset | The explicit CA bundle client certificates must chain to, never the web PKI. Required unless `client_auth = "off"`. |
 | `min_version` | enum{"1.3","1.2"} | `"1.3"` | The lowest TLS version this listener negotiates. |
+| `reload_interval_secs` | integer | `60` | How often `cert_file` and `key_file` are re-read while the server runs. A changed pair is served to every new handshake without a restart; a pair that fails to load is logged with its cause and the previous pair stays in service. `0` reads them once, at startup. |
 
 > [!NOTE]
 > `min_version` defaults to **1.3 only**, following the OWASP Transport Layer
@@ -285,6 +287,14 @@ min_version = "1.3"
 > do 1.3, such as an older integration engine or a pinned Java runtime.
 > TLS 1.1 and 1.0 are not selectable at all: RFC 8996 deprecates them, and
 > neither this key nor the TLS library offers them.
+
+> [!NOTE]
+> An EC certificate must name its curve. RFC 5480 §2.1.1 forbids explicit
+> curve parameters, TLS clients refuse such a certificate, and the server
+> refuses it at startup with a message saying so. LibreSSL (the `openssl`
+> that ships with macOS) writes explicit parameters from `genpkey` and
+> `req -newkey ec` unless you add `-pkeyopt ec_param_enc:named_curve`;
+> `openssl ecparam -name prime256v1 -genkey` writes a named curve.
 
 ### `[server.identity]`
 

@@ -10,7 +10,7 @@ The horizontal cybersecurity regulation for products with digital elements, whic
 | Fetched from | https://publications.europa.eu/resource/celex/32024R2847 (`Accept: application/xhtml+xml`) |
 | Resolved to | https://publications.europa.eu/resource/cellar/21b7d4eb-a6e2-11ef-85f0-01aa75ed71a1.0006.03/DOC_1 |
 | Human-readable at | https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32024R2847 |
-| Fetched | 2026-10-06 (UTC) |
+| Fetched | 2026-10-14 (UTC) |
 | Vendored by | `scripts/vendor/law-eu.sh` |
 
 ## Files
@@ -68,8 +68,8 @@ apply.
 
 ## The corrigenda, and which file to cite for what
 
-The Publications Office records seven corrigenda to this Regulation, CELEX
-`32024R2847R(01)` to `32024R2847R(07)` (read 2026-10-06). Three have an
+The Publications Office records eight corrigenda to this Regulation, CELEX
+`32024R2847R(01)` to `32024R2847R(08)` (read 2026-10-14). Three have an
 English version, and all three are vendored beside the OJ text:
 
 - `corrigendum-2024-12-05.html`, CELEX `32024R2847R(01)`, OJ L, 2024/90780:
@@ -82,8 +82,12 @@ English version, and all three are vendored beside the OJ text:
   the point Article 67 adds to Annex I to Directive (EU) 2020/1828 is
   numbered "72." in place of "69.".
 
-The other four correct other language versions only: `R(03)` French and
-Hungarian, `R(05)` Slovak, `R(06)` French, `R(07)` German.
+The other five correct other language versions only: `R(03)` French and
+Hungarian, `R(05)` Slovak, `R(06)` French, `R(07)` German, `R(08)` Slovenian.
+`R(08)` (OJ L, 2026/90847, 9.10.2026) corrects the Slovenian wording of
+Article 3(17), Article 14(7), third subparagraph, point (c), and the titles
+of Articles 21 and 22. The Publications Office records no English version of
+it, so the English text of those provisions is not affected (#3732).
 
 `text.html` is the OJ text of 20 November 2024 and includes none of the three
 English corrigenda: its Article 64(10) still reads "paragraphs 3 to 9".

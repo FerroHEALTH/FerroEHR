@@ -46,12 +46,12 @@ impl Builder<'_> {
             .select
             .iter()
             .any(|column| matches!(column.value, SelectValue::Aggregate { .. }));
-        if ir.distinct || aggregates || self.group_roots.is_empty() {
+        let roots = self.served_roots();
+        if ir.distinct || aggregates || roots.is_empty() {
             return Vec::new();
         }
-        let roots = self.group_roots.clone();
         let mut aliases = Vec::with_capacity(roots.len());
-        for (i, root) in roots.iter().enumerate() {
+        for (i, (root, _)) in roots.iter().enumerate() {
             let alias = format!("{}{i}", super::ACCESS_EHR_PREFIX);
             self.q
                 .expr_as(col(root, Node::EhrId), Alias::new(alias.as_str()));
@@ -69,12 +69,12 @@ impl Builder<'_> {
             .select
             .iter()
             .any(|column| matches!(column.value, SelectValue::Aggregate { .. }));
-        if ir.distinct || aggregates || self.group_roots.is_empty() {
+        let roots = self.served_roots();
+        if ir.distinct || aggregates || roots.is_empty() {
             return Vec::new();
         }
-        let roots = self.group_roots.clone();
         let mut aliases = Vec::with_capacity(roots.len());
-        for (i, root) in roots.iter().enumerate() {
+        for (i, (root, _)) in roots.iter().enumerate() {
             let vo = format!("{}{i}", super::ACCESS_VO_PREFIX);
             let sv = format!("{}{i}", super::ACCESS_SV_PREFIX);
             self.q

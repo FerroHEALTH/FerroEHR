@@ -20,9 +20,12 @@
 //! A variable declared inside an `OR` branch and read by an identified path is
 //! additionally LEFT-bound under the shared anchor ([`Builder::left_bind`]):
 //! one row per matching node, a `NULL` binding where its branch did not match,
-//! so a row never carries a value from a branch that did not hold. QUERY
-//! master03 §Variables lets any FROM variable be read and is silent on the row
-//! shape of a disjunction, so that shape is our own design.
+//! so a row never carries a value from a branch that did not hold. A branch
+//! that is its own versioned object (under an `EHR`, or referenced from a
+//! `FOLDER`) binds its node together with its version row, in the scope the
+//! same object would have outside the `OR` ([`Builder::bind_versioned_branch`]).
+//! QUERY master03 §Variables lets any FROM variable be read and is silent on the
+//! row shape of a disjunction, so that shape is our own design.
 
 use sea_query::extension::postgres::PgFunc;
 use sea_query::{Alias, Asterisk, Expr, ExprTrait as _, JoinType, Query, SelectStatement};
@@ -421,6 +424,36 @@ fn referenced_sources(ir: &QueryIr) -> std::collections::BTreeSet<usize> {
     out
 }
 
+/// The parent an `OR` branch binds under ([`Builder::bind_branch`]).
+#[derive(Debug, Clone)]
+enum BranchParent {
+    /// A node of a versioned-object group (a shared COMPOSITION, a FOLDER).
+    Group(VoGroup),
+    /// The `ehr` alias of an EHR source: the branch operand is a node of any
+    /// versioned object of that EHR.
+    Ehr(String),
+}
+
+impl BranchParent {
+    /// The `EXISTS` anchor the containment filters of the branch correlate to.
+    fn exists_anchor(&self) -> ExistsAnchor {
+        match self {
+            Self::Group(g) => ExistsAnchor::Vo(g.node.clone(), g.types.clone()),
+            Self::Ehr(e) => ExistsAnchor::Ehr(e.clone()),
+        }
+    }
+}
+
+/// The relation a left binding ([`Builder::left_bind_rows`]) draws its rows
+/// from.
+#[derive(Debug, Clone, Copy)]
+pub(super) enum BoundTable {
+    /// `node` rows, in document order.
+    Node,
+    /// `version` rows (a binding of at most one row per outer row).
+    Version,
+}
+
 /// The variable of the first source in `tree` (nested containment included)
 /// that `referenced` names, if any.
 fn first_referenced_var(
@@ -442,38 +475,6 @@ fn first_referenced_var(
                     .as_deref()
                     .and_then(|c| first_referenced_var(ir, &c.tree, referenced))
             })
-        }
-    }
-}
-
-/// The top-level operand of `tree` whose subtree holds a variable that
-/// `referenced` names, if any.
-fn read_operand(
-    ir: &QueryIr,
-    tree: &ContainsTree,
-    referenced: &std::collections::BTreeSet<usize>,
-) -> Option<usize> {
-    match tree {
-        ContainsTree::And(a, b) | ContainsTree::Or(a, b) => {
-            read_operand(ir, a, referenced).or_else(|| read_operand(ir, b, referenced))
-        }
-        ContainsTree::Operand { source, .. } => {
-            first_referenced_var(ir, tree, referenced).map(|_| source.0)
-        }
-    }
-}
-
-/// The refusal for reading a variable of the `OR` branch operand `sid`,
-/// which is a versioned object of its own.
-fn or_branch_refusal(ir: &QueryIr, sid: usize) -> AqlError {
-    match ir.sources.get(sid) {
-        Some(Source::Rm(r)) => AqlFeatureError::OrBranchVersionedObject {
-            variable: r.var.clone(),
-            class: r.rm_type.names().join("|"),
-        }
-        .into(),
-        Some(Source::Ehr(_) | Source::Version(_)) | None => {
-            SqlError::Unsupported("an OR branch operand that is no RM class".to_owned()).into()
         }
     }
 }
@@ -745,16 +746,15 @@ impl Builder<'_> {
     /// AND and OR").
     ///
     /// The enclosing object satisfies either branch's containment, so each
-    /// branch lowers to a correlated `EXISTS` over the shared anchor, combined
-    /// with `OR`. A branch variable an identified path reads is then
-    /// left-bound under the anchor ([`Self::bind_branch`], the row shape the
-    /// module documentation states); a branch nobody reads stays a filter.
+    /// branch lowers to a correlated `EXISTS` over the shared anchor (an
+    /// enclosing versioned object, else the EHR), combined with `OR`. A branch
+    /// variable an identified path reads is then left-bound under the anchor
+    /// ([`Self::bind_branch`], the row shape the module documentation states);
+    /// a branch nobody reads stays a filter.
     ///
     /// # Errors
     /// [`SqlError::Unsupported`] for a top-level `OR` with no enclosing object
-    /// (there is no row scope to correlate to);
-    /// [`AqlFeatureError::OrBranchVersionedObject`] for a read branch variable
-    /// that is its own versioned object; plus the branch lowerings.
+    /// (there is no row scope to correlate to); plus the branch lowerings.
     fn walk_or(
         &mut self,
         a: &ContainsTree,
@@ -776,51 +776,49 @@ impl Builder<'_> {
         let right = self.contained_exists(&anchor, b)?;
         self.q.and_where(left.or(right));
         let referenced = referenced_sources(self.ir);
-        match vo {
-            Some(g) => {
-                self.bind_branch(g, a, &[], &referenced)?;
-                self.bind_branch(g, b, &[], &referenced)?;
-            }
-            None => {
-                for tree in [a, b] {
-                    if let Some(sid) = read_operand(self.ir, tree, &referenced) {
-                        return Err(or_branch_refusal(self.ir, sid));
-                    }
-                }
-            }
-        }
+        let parent = match (vo, ehr) {
+            (Some(g), _) => BranchParent::Group(g.clone()),
+            (None, Some(e)) => BranchParent::Ehr(e.to_owned()),
+            (None, None) => return Ok(None),
+        };
+        self.bind_branch(&parent, a, &[], &referenced, ehr)?;
+        self.bind_branch(&parent, b, &[], &referenced, ehr)?;
         Ok(None)
     }
 
     /// Left-binds every operand of the `OR` branch `tree` whose subtree holds
-    /// a variable an identified path reads, under the branch's anchor group
-    /// `parent`.
+    /// a variable an identified path reads, under the branch's `parent`.
     ///
     /// A bound operand yields one row per node that matches it, its own nested
     /// containment and `siblings` (the other halves of an enclosing `AND`
-    /// inside the branch, correlated to the anchor), and one `NULL` row where
+    /// inside the branch, correlated to the parent), and one `NULL` row where
     /// none does: a value never comes from a branch that did not hold. Its
-    /// node alias then serves paths exactly as a joined variable's does.
+    /// node alias then serves paths exactly as a joined variable's does. An
+    /// operand that is a node inside the parent's own tree binds through
+    /// [`Self::left_bind`]; one that is a versioned object of its own (any
+    /// operand under an EHR, a `FOLDER` reference) through
+    /// [`Self::bind_versioned_branch`]. `ehr` is the enclosing EHR alias, if
+    /// any.
     ///
     /// # Errors
-    /// [`AqlFeatureError::OrBranchVersionedObject`] when a read operand is a
-    /// versioned object of its own (an `EHR` or `FOLDER` anchor), plus the
-    /// condition lowerings.
+    /// [`SqlError::Unsupported`] for an operand that is no RM class, plus the
+    /// edge classification and the condition lowerings.
     fn bind_branch(
         &mut self,
-        parent: &VoGroup,
+        parent: &BranchParent,
         tree: &ContainsTree,
         siblings: &[Expr],
         referenced: &std::collections::BTreeSet<usize>,
+        ehr: Option<&str>,
     ) -> Result<(), AqlError> {
         if first_referenced_var(self.ir, tree, referenced).is_none() {
             return Ok(());
         }
-        let anchor = ExistsAnchor::Vo(parent.node.clone(), parent.types.clone());
+        let anchor = parent.exists_anchor();
         match tree {
             ContainsTree::Or(a, b) => {
-                self.bind_branch(parent, a, siblings, referenced)?;
-                self.bind_branch(parent, b, siblings, referenced)
+                self.bind_branch(parent, a, siblings, referenced, ehr)?;
+                self.bind_branch(parent, b, siblings, referenced, ehr)
             }
             ContainsTree::And(a, b) => {
                 let needs_b = self.contained_exists(&anchor, b)?;
@@ -829,8 +827,8 @@ impl Builder<'_> {
                 for_a.push(needs_b);
                 let mut for_b = siblings.to_vec();
                 for_b.push(needs_a);
-                self.bind_branch(parent, a, &for_a, referenced)?;
-                self.bind_branch(parent, b, &for_b, referenced)
+                self.bind_branch(parent, a, &for_a, referenced, ehr)?;
+                self.bind_branch(parent, b, &for_b, referenced, ehr)
             }
             ContainsTree::Operand { source, contained } => {
                 let sid = source.0;
@@ -840,42 +838,130 @@ impl Builder<'_> {
                     )
                     .into());
                 };
-                if classify_edge(&parent.types, &r.rm_type)? != EdgeKind::Structural {
-                    return Err(or_branch_refusal(self.ir, sid));
-                }
                 let contained = contained.as_deref();
-                let siblings = siblings.to_vec();
-                let alias = self.left_bind(&parent.node, BoundEdge::Descendant, |b, inner| {
-                    let mut conds = b.rm_conds(inner, &r)?;
-                    conds.extend(siblings);
-                    if let Some(c) = contained {
-                        let nested = b.contained_exists(
-                            &ExistsAnchor::Vo(inner.to_owned(), r.rm_type.clone()),
-                            &c.tree,
-                        )?;
-                        conds.push(match c.link {
-                            Link::Contains => nested,
-                            Link::NotContains => nested.not(),
-                        });
+                let group = match parent {
+                    BranchParent::Group(g)
+                        if classify_edge(&g.types, &r.rm_type)? == EdgeKind::Structural =>
+                    {
+                        let siblings = siblings.to_vec();
+                        let alias = self.left_bind(&g.node, BoundEdge::Descendant, |b, inner| {
+                            let mut conds = b.rm_conds(inner, &r)?;
+                            conds.extend(siblings);
+                            conds.extend(b.nested_condition(inner, &r, contained)?);
+                            Ok(conds)
+                        })?;
+                        self.node_alias.insert(sid, alias.clone());
+                        VoGroup {
+                            node: alias,
+                            vo: g.vo.clone(),
+                            types: r.rm_type.clone(),
+                        }
                     }
-                    Ok(conds)
-                })?;
-                self.node_alias.insert(sid, alias.clone());
+                    BranchParent::Group(_) | BranchParent::Ehr(_) => {
+                        self.bind_versioned_branch(&anchor, sid, &r, siblings, contained, ehr)?
+                    }
+                };
                 if let Some(Contained {
                     link: Link::Contains,
                     tree: nested,
                 }) = contained
                 {
-                    let group = VoGroup {
-                        node: alias,
-                        vo: parent.vo.clone(),
-                        types: r.rm_type.clone(),
-                    };
-                    self.bind_branch(&group, nested, &[], referenced)?;
+                    self.bind_branch(&BranchParent::Group(group), nested, &[], referenced, ehr)?;
                 }
                 Ok(())
             }
         }
+    }
+
+    /// The condition an operand's own nested `[NOT] CONTAINS` puts on its node
+    /// `inner`, if it carries one.
+    ///
+    /// # Errors
+    /// The containment lowerings of [`Self::contained_exists`].
+    fn nested_condition(
+        &mut self,
+        inner: &str,
+        r: &RmSource,
+        contained: Option<&Contained>,
+    ) -> Result<Option<Expr>, AqlError> {
+        let Some(c) = contained else {
+            return Ok(None);
+        };
+        let nested =
+            self.contained_exists(&ExistsAnchor::Vo(inner.to_owned(), r.rm_type.clone()), &c.tree)?;
+        Ok(Some(match c.link {
+            Link::Contains => nested,
+            Link::NotContains => nested.not(),
+        }))
+    }
+
+    /// Left-binds an `OR` branch operand `sid` that is a node of a versioned
+    /// object of its own, and returns the group its nested containment binds
+    /// under.
+    ///
+    /// The node binding admits exactly the nodes the branch's containment
+    /// filter admits under `anchor` ([`Self::anchor_correlation`]): the
+    /// object's version in the operand's scope, `LATEST_VERSION` being the
+    /// trunk head, and no restricted object. A logically deleted version has
+    /// no node rows (RM common master06 §Logical Deletion: its data is Void),
+    /// so it binds nothing, as on the non-`OR` path. Under an EHR the node's
+    /// `ehr_id` is that EHR, whose own gates then cover it, as they cover a
+    /// joined root; otherwise the binding carries the root gates of
+    /// [`Self::apply_ehr_scope`] and [`Self::apply_population_gate`] itself.
+    /// The node's version row is then bound one-to-one beside it, so the
+    /// server-assigned `uid` synthesizes as for a joined root (RM common
+    /// master06 §Version Identification), and the pair is reported to the
+    /// access log and the ABAC scope collection. A row where the branch did
+    /// not match carries `NULL` in both bindings.
+    ///
+    /// # Errors
+    /// [`SqlError::Unsupported`] for a version predicate on the operand, plus
+    /// the condition lowerings.
+    fn bind_versioned_branch(
+        &mut self,
+        anchor: &ExistsAnchor,
+        sid: usize,
+        r: &RmSource,
+        siblings: &[Expr],
+        contained: Option<&Contained>,
+        ehr: Option<&str>,
+    ) -> Result<VoGroup, AqlError> {
+        let siblings = siblings.to_vec();
+        let node = self.left_bind_rows(BoundTable::Node, |b, inner| {
+            let mut on = vec![hot(inner, Node::Tier)];
+            if let Some(e) = ehr {
+                on.push(col(inner, Node::EhrId).eq(col(e, Ehr::Id)));
+            }
+            on.extend(b.rm_conds(inner, r)?);
+            let mut scope = Query::select();
+            scope.expr(Expr::val(1));
+            b.anchor_correlation(&mut scope, anchor, inner, &r.rm_type, &r.scope)?;
+            on.push(Expr::exists(scope));
+            on.extend(siblings);
+            on.extend(b.nested_condition(inner, r, contained)?);
+            if ehr.is_some() {
+                on.extend(b.subject_cond(col(inner, Node::EhrId)));
+            } else {
+                on.extend(b.root_scope_conds(col(inner, Node::EhrId)));
+                on.extend(b.population_cond(inner));
+            }
+            Ok(on)
+        })?;
+        let vo = self.left_bind_rows(BoundTable::Version, |_, inner| {
+            Ok(vec![
+                hot(inner, VersionRow::Tier),
+                col(inner, VersionRow::VoId).eq(col(&node, Node::VoId)),
+                col(inner, VersionRow::SysVersion).eq(col(&node, Node::SysVersion)),
+            ])
+        })?;
+        self.node_alias.insert(sid, node.clone());
+        self.vo_alias.insert(sid, vo.clone());
+        self.branch_roots.push((node.clone(), vo.clone()));
+        Ok(VoGroup {
+            node,
+            vo,
+            types: r.rm_type.clone(),
+        })
     }
 
     /// Left-binds the nodes reached from `parent` over `edge` that also meet
@@ -901,21 +987,46 @@ impl Builder<'_> {
         edge: BoundEdge<'_>,
         conds: impl FnOnce(&mut Self, &str) -> Result<Vec<Expr>, AqlError>,
     ) -> Result<String, AqlError> {
+        self.left_bind_rows(BoundTable::Node, |b, inner| {
+            let edge = match edge {
+                BoundEdge::Attribute(attribute) => attribute_child(inner, parent, attribute),
+                BoundEdge::Descendant => strict_descendant(inner, parent),
+            };
+            let mut on = vec![hot(inner, Node::Tier), edge];
+            on.extend(conds(b, inner)?);
+            Ok(on)
+        })
+    }
+
+    /// Left-binds the rows of `table` that meet every condition `conds` builds
+    /// over the inner alias it is handed, and returns the alias whose columns
+    /// are those of `table`.
+    ///
+    /// One row per admitted row, and a single all-`NULL` row when none is
+    /// admitted, in the two shapes [`Self::left_bind`] describes.
+    ///
+    /// # Errors
+    /// Whatever `conds` returns.
+    fn left_bind_rows(
+        &mut self,
+        table: BoundTable,
+        conds: impl FnOnce(&mut Self, &str) -> Result<Vec<Expr>, AqlError>,
+    ) -> Result<String, AqlError> {
         let alias = format!("b{}", self.next_ctr());
         let inner = format!("{alias}_n");
-        let edge = match edge {
-            BoundEdge::Attribute(attribute) => attribute_child(&inner, parent, attribute),
-            BoundEdge::Descendant => strict_descendant(&inner, parent),
-        };
         let on = conds(self, &inner)?
             .into_iter()
-            .fold(hot(&inner, Node::Tier).and(edge), sea_query::ExprTrait::and);
+            .reduce(sea_query::ExprTrait::and)
+            .unwrap_or_else(|| Expr::val(true));
         if self.streaming {
             let mut sub = Query::select();
             sub.column((Alias::new(inner.as_str()), Asterisk))
-                .from_as(Node::Table, Alias::new(inner.as_str()))
                 .and_where(on)
                 .offset(0);
+            match table {
+                BoundTable::Node => sub.from_as(Node::Table, Alias::new(inner.as_str())),
+                BoundTable::Version => sub.from_as(VersionRow::Table, Alias::new(inner.as_str())),
+            };
             self.q.join_lateral(
                 JoinType::LeftJoin,
                 sub,
@@ -924,7 +1035,7 @@ impl Builder<'_> {
             );
         } else {
             self.q.from_function(
-                left_binding_rows(&alias, &inner, on),
+                binding_rows(table, &alias, &inner, on),
                 Alias::new(alias.as_str()),
             );
         }
@@ -1292,60 +1403,103 @@ impl Builder<'_> {
         // <https://www.postgresql.org/docs/18/protocol-message-formats.html>).
         // The single-`ehr_id` REST case is the one-element set; empty = no
         // explicit scope (the population gate takes over).
-        if !self.ctx.ehr_ids.is_empty() {
-            let ids: Vec<Uuid> = self.ctx.ehr_ids.iter().map(|id| id.0).collect();
-            for root in self.group_roots.clone() {
-                self.q.and_where(
-                    col(&root, Node::EhrId).eq(Expr::from(PgFunc::any(Expr::val(ids.clone())))),
-                );
-            }
-            // A bare `FROM EHR e` (no CONTAINS) has no VO root — the scope
-            // must bind the EHR source itself, or a scoped query would run
-            // over the whole population (ITS-REST query Request.md: `ehr_id`
-            // "used to execute the query within a single EHR context").
-            for alias in self.ehr_alias.values().cloned().collect::<Vec<_>>() {
-                self.q.and_where(
-                    col(&alias, Ehr::Id).eq(Expr::from(PgFunc::any(Expr::val(ids.clone())))),
-                );
-            }
+        // A bare `FROM EHR e` (no CONTAINS) has no VO root — the scope
+        // must bind the EHR source itself, or a scoped query would run
+        // over the whole population (ITS-REST query Request.md: `ehr_id`
+        // "used to execute the query within a single EHR context").
+        let roots = self.group_roots.clone();
+        let ehrs = self.ehr_alias.values().cloned().collect::<Vec<_>>();
+        let scoped = roots
+            .iter()
+            .map(|root| col(root, Node::EhrId))
+            .chain(ehrs.iter().map(|alias| col(alias, Ehr::Id)));
+        for cond in scoped.filter_map(|target| self.ehr_ids_cond(target)).collect::<Vec<_>>() {
+            self.q.and_where(cond);
         }
         // The per-EHR access decision binds every VO root and EHR source the
         // same way the explicit scope does, so no query shape reaches a
         // withheld EHR (RM ehr `ehr_access.adoc` §`EHR_ACCESS` Class).
-        let access = match &self.ctx.ehr_access {
-            EhrAccessScope::Unrestricted => None,
-            EhrAccessScope::Excluding(ids) => Some((false, ids)),
-            EhrAccessScope::Only(ids) => Some((true, ids)),
-        };
-        if let Some((only, ids)) = access {
-            let ids: Vec<Uuid> = ids.iter().map(|id| id.0).collect();
-            let targets = self
-                .group_roots
-                .iter()
-                .map(|root| col(root, Node::EhrId))
-                .chain(self.ehr_alias.values().map(|alias| col(alias, Ehr::Id)))
-                .collect::<Vec<_>>();
-            for target in targets {
-                let condition = if only {
-                    target.eq(Expr::from(PgFunc::any(Expr::val(ids.clone()))))
-                } else {
-                    target.ne(Expr::from(PgFunc::all(Expr::val(ids.clone()))))
-                };
-                self.q.and_where(condition);
+        let accessed = roots
+            .iter()
+            .map(|root| col(root, Node::EhrId))
+            .chain(ehrs.iter().map(|alias| col(alias, Ehr::Id)));
+        for cond in accessed.filter_map(|target| self.access_cond(target)).collect::<Vec<_>>() {
+            self.q.and_where(cond);
+        }
+        for root in &roots {
+            if let Some(cond) = self.subject_cond(col(root, Node::EhrId)) {
+                self.q.and_where(cond);
             }
         }
+    }
+
+    /// The explicit `ehr_ids` scope on the EHR id `target`, when the query is
+    /// scoped (see [`Self::apply_ehr_scope`]).
+    fn ehr_ids_cond(&self, target: Expr) -> Option<Expr> {
+        if self.ctx.ehr_ids.is_empty() {
+            return None;
+        }
+        let ids: Vec<Uuid> = self.ctx.ehr_ids.iter().map(|id| id.0).collect();
+        Some(target.eq(Expr::from(PgFunc::any(Expr::val(ids)))))
+    }
+
+    /// The caller's per-EHR access decision on the EHR id `target`, when it
+    /// restricts anything (RM ehr `ehr_access.adoc` §`EHR_ACCESS` Class).
+    fn access_cond(&self, target: Expr) -> Option<Expr> {
+        match &self.ctx.ehr_access {
+            EhrAccessScope::Unrestricted => None,
+            EhrAccessScope::Excluding(ids) => {
+                let ids: Vec<Uuid> = ids.iter().map(|id| id.0).collect();
+                Some(target.ne(Expr::from(PgFunc::all(Expr::val(ids)))))
+            }
+            EhrAccessScope::Only(ids) => {
+                let ids: Vec<Uuid> = ids.iter().map(|id| id.0).collect();
+                Some(target.eq(Expr::from(PgFunc::any(Expr::val(ids)))))
+            }
+        }
+    }
+
+    /// The ABAC patient scope on the EHR id `target`, when one is set.
+    fn subject_cond(&self, target: Expr) -> Option<Expr> {
         // NOTE: the ABAC patient scope restricts every VO root to the caller's
         // patient EHRs, so out-of-scope rows are never fetched whatever the
         // projection (no openEHR spec governs this — our own extension).
-        if let Some(subject) = self.ctx.subject_scope.clone() {
-            for root in self.group_roots.clone() {
-                let mut sub = Query::select();
-                sub.column(Ehr::Id)
-                    .from(Ehr::Table)
-                    .and_where(Expr::col(Ehr::SubjectId).eq(Expr::val(subject.clone())));
-                self.q.and_where(col(&root, Node::EhrId).in_subquery(sub));
-            }
+        let subject = self.ctx.subject_scope.clone()?;
+        let mut sub = Query::select();
+        sub.column(Ehr::Id)
+            .from(Ehr::Table)
+            .and_where(Expr::col(Ehr::SubjectId).eq(Expr::val(subject)));
+        Some(target.in_subquery(sub))
+    }
+
+    /// Every [`Self::apply_ehr_scope`] condition a versioned-object root puts
+    /// on its EHR id `target`, for a root no bound EHR alias covers.
+    fn root_scope_conds(&self, target: Expr) -> Vec<Expr> {
+        [
+            self.ehr_ids_cond(target.clone()),
+            self.access_cond(target.clone()),
+            self.subject_cond(target),
+        ]
+        .into_iter()
+        .flatten()
+        .collect()
+    }
+
+    /// The population gate of [`Self::gate_vo_root`] for the node `root`, as
+    /// one `EXISTS` a left binding can carry; `None` on a scoped query.
+    fn population_cond(&mut self, root: &str) -> Option<Expr> {
+        if !self.ctx.ehr_ids.is_empty() {
+            return None;
         }
+        let alias = format!("qg{}", self.next_ctr());
+        let mut sub = Query::select();
+        sub.expr(Expr::val(1))
+            .from_as(Ehr::Table, Alias::new(alias.as_str()))
+            .and_where(col(&alias, Ehr::Id).eq(col(root, Node::EhrId)))
+            .and_where(col(&alias, Ehr::IsQueryable).eq(true))
+            .and_where(col(&alias, Ehr::RestrictedAt).is_null())
+            .and_where(research_objection_clear(&alias));
+        Some(Expr::exists(sub))
     }
 
     /// The query-population gate (SM `I_QUERY_SERVICE.execute_ad_hoc_query` /
@@ -1593,13 +1747,25 @@ pub(super) fn is_vo_root_type(t: &str) -> bool {
 /// type's (PostgreSQL 18 §7.2.1.4 Table Functions, §7.2.1.5 LATERAL
 /// Subqueries). `inner` is the node alias `on` is written over.
 pub(super) fn left_binding_rows(alias: &str, inner: &str, on: Expr) -> sea_query::FunctionCall {
+    binding_rows(BoundTable::Node, alias, inner, on)
+}
+
+/// The implicitly lateral FROM function of a left binding over `table`, in the
+/// shape [`left_binding_rows`] describes; `node` rows come in document order.
+fn binding_rows(table: BoundTable, alias: &str, inner: &str, on: Expr) -> sea_query::FunctionCall {
     let mut one = Query::select();
     one.expr(Expr::val(1));
     let mut rows = Query::select();
     rows.expr(Expr::col(Alias::new(inner)))
-        .from_subquery(one, Alias::new(format!("{alias}_one")))
-        .join_as(JoinType::LeftJoin, Node::Table, Alias::new(inner), on)
-        .order_by_expr(col(inner, Node::Num), sea_query::Order::Asc);
+        .from_subquery(one, Alias::new(format!("{alias}_one")));
+    match table {
+        BoundTable::Node => rows
+            .join_as(JoinType::LeftJoin, Node::Table, Alias::new(inner), on)
+            .order_by_expr(col(inner, Node::Num), sea_query::Order::Asc),
+        BoundTable::Version => {
+            rows.join_as(JoinType::LeftJoin, VersionRow::Table, Alias::new(inner), on)
+        }
+    };
     let array = Expr::cust_with_exprs("ARRAY$1", [Expr::from(rows)]);
     sea_query::Func::cust(Alias::new("unnest")).arg(array)
 }

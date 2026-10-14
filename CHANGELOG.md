@@ -303,6 +303,21 @@ workflow refuses a tag that has no matching section here.
   `Assumed_value_valid`), for OPT 1.4 and ADL2/OPT2 templates alike.
 - **OPT 1.4 conversion keeps enumerated integer and real lists** (#3752); only
   the range was carried.
+- **The server serves a renewed TLS certificate without a restart** (#3765).
+  It re-reads `[server.tls]` `cert_file` and `key_file` every
+  `reload_interval_secs` (new key, default 60; 0 reads them once at boot); a
+  pair that fails to load is logged with its cause and the previous pair
+  stays in service. Pods stayed Ready on an expired certificate because the
+  kubelet's HTTPS probes do not verify it.
+- **An EC private key loads for `[server.tls]` in SEC1 or PKCS#8** (#3761), and
+  a certificate whose EC key carries explicit curve parameters (RFC 5480
+  §2.1.1) is refused with the cause and the named-curve remedy instead of a
+  bare key mismatch.
+- **The viewer trusts an identity provider behind a private CA** (#3767). Its
+  OIDC client verifies against the platform trust store (`SSL_CERT_DIR`,
+  `SSL_CERT_FILE`) instead of the bundled web roots only.
+- **A wrong password at the viewer's Basic sign-in returns to the sign-in card
+  with the refusal** (#3759) instead of answering `500`.
 - **The compose image-tag guard covers the terminology overlay** (#3605).
   `scripts/checks/compose-image-tags.sh` checks every FerroEHR image tag in
   every root and `docker/` compose file, `docker-compose.terminology.yml`

@@ -278,6 +278,11 @@ struct Builder<'a> {
     /// The `version` alias for each entry in `group_roots` (parallel vec) —
     /// the source of the touched `template_id` for the ABAC scope collection.
     group_vos: Vec<String>,
+    /// The `(node, version)` left-binding aliases of each `OR` branch operand
+    /// bound as a versioned object of its own: reported to the access log and
+    /// the ABAC scope collection like a group root, but never filtered as one,
+    /// since a `NULL` binding is a row whose branch did not match.
+    branch_roots: Vec<(String, String)>,
     /// Fresh-alias counter for anchor subqueries / anti-joins.
     sub_ctr: usize,
     /// Whether the FROM was built in the STREAMING shape (one `version`
@@ -316,10 +321,22 @@ impl<'a> Builder<'a> {
             group_roots: Vec::new(),
             roots_linked_to_ehr: std::collections::HashSet::new(),
             group_vos: Vec::new(),
+            branch_roots: Vec::new(),
             sub_ctr: 0,
             streaming: false,
             step_bindings: Vec::new(),
         }
+    }
+
+    /// Every bound versioned-object root as a `(node, version)` alias pair:
+    /// the group roots, then the `OR` branch roots.
+    fn served_roots(&self) -> Vec<(String, String)> {
+        self.group_roots
+            .iter()
+            .cloned()
+            .zip(self.group_vos.iter().cloned())
+            .chain(self.branch_roots.iter().cloned())
+            .collect()
     }
 
     pub(super) fn next_ctr(&mut self) -> usize {
@@ -381,9 +398,8 @@ fn streaming_eligible(ir: &QueryIr, ctx: &SqlCtx) -> bool {
 /// # Errors
 ///
 /// [`crate::aql::error::AqlFeatureError`] for a read of a variable that binds
-/// no row (`NOT CONTAINS`) or of a versioned object declared in an `OR`
-/// branch, and [`SqlError`] for a planner-accepted construct the SQL
-/// generator does not render.
+/// no row (`NOT CONTAINS`), and [`SqlError`] for a planner-accepted construct
+/// the SQL generator does not render.
 pub fn build(ir: &QueryIr, params: &Params, ctx: &SqlCtx) -> Result<PreparedQuery, AqlError> {
     from::refuse_negated_reads(ir)?;
     let mut b = Builder::new(ir, params, ctx);
@@ -436,12 +452,7 @@ pub fn build_scope(
     b.apply_population_gate();
     b.bind_select_paths()?;
     b.build_where()?;
-    let roots: Vec<(String, String)> = b
-        .group_roots
-        .clone()
-        .into_iter()
-        .zip(b.group_vos.clone())
-        .collect();
+    let roots = b.served_roots();
     if roots.is_empty() {
         return Ok(None);
     }

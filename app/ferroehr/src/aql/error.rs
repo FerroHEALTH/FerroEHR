@@ -210,23 +210,6 @@ pub enum AqlFeatureError {
          holds, so no path can read it (QUERY §FROM/Containment)"
     )]
     NegatedContainmentVariable(String),
-
-    /// A path reading a variable declared in an `OR` containment branch whose
-    /// operand is a versioned object of its own (directly under an `EHR`, or
-    /// referenced from a `FOLDER`). Variables of an `OR` branch inside one
-    /// versioned object are readable; a branch that is a versioned object
-    /// filters only. QUERY §FROM/Containment.
-    #[error(
-        "OR branch {} is a versioned object; variables declared in it cannot be read \
-         (query each branch separately; QUERY §FROM/Containment)",
-        branch_label(variable.as_deref(), class)
-    )]
-    OrBranchVersionedObject {
-        /// The branch operand's variable, if it declares one.
-        variable: Option<String>,
-        /// The branch operand's RM class.
-        class: String,
-    },
 }
 
 /// A path-analysis / typing failure against the generated RM model
@@ -428,13 +411,4 @@ pub enum ExecError {
         /// The alias position the executor needed.
         index: usize,
     },
-}
-
-/// Names an `OR` branch operand in [`AqlFeatureError::OrBranchVersionedObject`]:
-/// its variable, else its class.
-fn branch_label(variable: Option<&str>, class: &str) -> String {
-    match variable {
-        Some(variable) => format!("`{variable}`"),
-        None => format!("of class {class}"),
-    }
 }

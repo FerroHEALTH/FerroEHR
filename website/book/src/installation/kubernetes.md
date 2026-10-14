@@ -617,6 +617,12 @@ ingress:
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
 ```
 
+When cert-manager renews the certificate, the kubelet updates the mounted
+files and the server serves the new pair within
+`config.server.tls.reload_interval_secs` (60 seconds by default), with no
+restart; a renewed pair that fails to load is logged and the old one stays in
+service.
+
 The viewer and FerroBRIDGE read the CA through `SSL_CERT_DIR`, which the chart
 sets to the image's system roots plus the mounted CA, so their other peers
 that verify through the platform verifier stay trusted. The viewer's OIDC
