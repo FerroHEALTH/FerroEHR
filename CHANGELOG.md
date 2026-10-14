@@ -103,12 +103,23 @@ workflow refuses a tag that has no matching section here.
 
 ### Security
 
+- **The runtime roles can no longer write their migration bookkeeping.** The
+  shipped grants on every table of a domain schema covered its
+  `_sqlx_migrations`; new migrations (clinical 0014, party 0009, linkage 0005)
+  leave the runtime roles SELECT only, and the server refuses to start while a
+  runtime role can write a bookkeeping table. The boot check of database
+  grants now runs in every database a domain pool reaches, so a domain in its
+  own database is no longer left unchecked.
+
 - **ABAC patient scoping covers queries that read only the EHR row** (#3771).
   With `[authz.abac]` on, `SELECT e/ehr_id/value FROM EHR e`,
   `COUNT(*) FROM EHR e`, `e/ehr_status/...` paths, `EHR e CONTAINS (A OR B)`
   and an `ehr_id`-scoped query naming another patient's EHR returned EHRs of
   other patients. The patient scope now applies to the EHR row and to every
-  versioned object, on every query plan.
+  versioned object, on every query plan; the policy-decision post-check runs
+  for those queries too, and a subject id held under two namespaces admits
+  neither EHR, since the patient claim carries no namespace. A touched EHR or
+  template id that cannot be read fails the query instead of being left out.
 
 - **The viewer's Basic sign-in follows only a same-origin `next`.** After a
   successful or refused sign-in, an absolute, scheme-relative or backslash
@@ -362,6 +373,13 @@ workflow refuses a tag that has no matching section here.
   out on write, as the LANG BMM persistence syntax chapter's example and every
   published openEHR BMM do; the class table's `1..1` is reported upstream
   (#3770).
+- **A database that holds some of the storage domains gets only their
+  schemas** (plus `ext`); schemas only a shipped grant file names are created
+  for the run and dropped afterwards, and `ferroehr db erase` removes empty
+  schemas of other domains that earlier releases left in such a database.
+- **PostgreSQL healthchecks check over TCP** in the compose files, the hosted
+  sandbox and CI, so a container is no longer reported healthy while the
+  image's initialisation server still runs.
 - **The compose image-tag guard covers the terminology overlay** (#3605).
   `scripts/checks/compose-image-tags.sh` checks every FerroEHR image tag in
   every root and `docker/` compose file, `docker-compose.terminology.yml`

@@ -67,7 +67,7 @@ spec:
             - containerPort: 5432
           readinessProbe:
             exec:
-              command: ["pg_isready", "-U", "ferroehr", "-d", "ferroehr"]
+              command: ["pg_isready", "-h", "127.0.0.1", "-U", "ferroehr", "-d", "ferroehr"]
             initialDelaySeconds: 5
             periodSeconds: 5
           volumeMounts:
