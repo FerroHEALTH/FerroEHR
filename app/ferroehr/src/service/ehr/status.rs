@@ -18,12 +18,14 @@
               fragment the seam produced once; stored-content serving"
 )]
 
+use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::response::{ResourceMeta, ServiceResponse};
 use crate::service::status::{CallStatusType, SmError};
 use openehr_its::rest::generated::common::UpdateVersion;
 use openehr_rm::prelude::EhrStatus;
 use serde_json::Value;
+use sqlx::Connection as _;
 use sqlx::PgConnection;
 
 use crate::service::FerroEhrService;
@@ -142,8 +144,8 @@ impl FerroEhrService {
         self.validate_for_commit(Kind::EhrStatus, &body, incomplete)
             .await?;
         let expected = expected_from_if_match(if_match)?;
-
-        let mut tx = self.pool.begin().await?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
         let committed = update(
             &mut tx,
             Some(ehr_id),

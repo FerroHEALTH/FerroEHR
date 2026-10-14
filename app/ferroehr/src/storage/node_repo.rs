@@ -15,6 +15,7 @@
               round-trip drops forward-compatible keys (the openEHR release strategy: minors are compatible supersets)"
 )]
 
+use crate::db::acquire::acquire;
 use std::collections::{BTreeMap, HashMap};
 
 use serde_json::Value;
@@ -441,7 +442,7 @@ pub async fn read_version_rows_all(
     )
     .bind(&vo_ids)
     .bind(&sys_versions)
-    .fetch_all(pool)
+    .fetch_all(&mut *acquire(pool).await?)
     .await?;
 
     let mut grouped: BTreeMap<(VoId, i32), Vec<ReadRow>> = BTreeMap::new();
@@ -560,7 +561,7 @@ pub async fn read_subtrees_canonical(
     .bind(&sys_versions)
     .bind(&anums)
     .bind(&acaps)
-    .fetch_all(pool)
+    .fetch_all(&mut *acquire(pool).await?)
     .await?;
 
     // Bucket the returned node rows by anchor index.
@@ -639,7 +640,7 @@ async fn read_root_bodies(
     )
     .bind(&vo_ids)
     .bind(&sys_versions)
-    .fetch_all(pool)
+    .fetch_all(&mut *acquire(pool).await?)
     .await?;
     let mut by_key: HashMap<(Uuid, i32), Value> = rows
         .into_iter()

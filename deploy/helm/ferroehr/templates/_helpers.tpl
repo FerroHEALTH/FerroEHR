@@ -884,6 +884,22 @@ because a client speaking plain HTTP to a TLS listener fails every call.
 {{- end }}
 
 {{/*
+The in-cluster root of the release's own CDR management surface, its base path
+included, as the viewer's `[cdr] management_base_url` names it. On the API port
+it is the CDR origin; on its own port (config.management.port) the Service
+publishes that port and the listener serves plain HTTP whatever
+config.server.tls says, so the scheme there is always http.
+*/}}
+{{- define "ferroehr.cdrManagementUrl" -}}
+{{- $basePath := .Values.config.management.base_path | trimSuffix "/" }}
+{{- if .Values.config.management.port }}
+{{- printf "http://%s:%v%s" (include "ferroehr.fullname" .) .Values.config.management.port $basePath }}
+{{- else }}
+{{- printf "%s%s" (include "ferroehr.cdrOrigin" .) $basePath }}
+{{- end }}
+{{- end }}
+
+{{/*
 The in-cluster ITS-REST root of the release's own CDR, as FerroBRIDGE's `[cdr]
 base_url` names it: the origin plus the REST base path, which is the server's
 own default when config.server.base_path is unset.

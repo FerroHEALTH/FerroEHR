@@ -23,6 +23,8 @@
     )
 )]
 
+use crate::db::acquire::acquire;
+use sqlx::Connection as _;
 use uuid::Uuid;
 
 use crate::ids::{EhrId, VoId};
@@ -112,7 +114,8 @@ impl FerroEhrService {
     /// (`clinical/0006_definitions.sql`, NO ACTION) is the underlying guard that
     /// makes orphaning impossible even under a concurrent commit.
     async fn delete_template_by_id(&self, template_id: &str) -> Result<(), ServiceError> {
-        let mut tx = self.pool.begin().await?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
         // Resolve the stored (case-preserved) id; absent → 404 (§Composite
         // Identifiers and Case: compare case-insensitively).
         let stored: Option<String> = sqlx::query_scalar(
@@ -223,8 +226,8 @@ impl FerroEhrService {
         // references a blob and there is nothing to collect.
         #[cfg(not(feature = "multimedia"))]
         let candidate_blobs: Vec<String> = Vec::new();
-
-        let mut tx = self.pool.begin().await?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
 
         // Capture the audit ids the EHR's versions and contributions reference,
         // before the cascade deletes those referencing rows. Read over BOTH
@@ -302,7 +305,7 @@ impl FerroEhrService {
         // non-empty selector deletes exactly the named EHRs.
         let targets: Vec<EhrId> = if ehr_ids.is_empty() {
             sqlx::query_scalar("SELECT id FROM ehr")
-                .fetch_all(&self.pool)
+                .fetch_all(&mut *acquire(&self.pool).await?)
                 .await?
         } else {
             ehr_ids.to_vec()
@@ -318,7 +321,8 @@ impl FerroEhrService {
             // version references a blob and there is nothing to collect.
             #[cfg(not(feature = "multimedia"))]
             let candidate_blobs: Vec<String> = Vec::new();
-            let mut tx = self.pool.begin().await?;
+            let mut conn = acquire(&self.pool).await?;
+            let mut tx = conn.begin().await?;
             let commit_audit_ids: Vec<Uuid> = sqlx::query_scalar(
                 "SELECT commit_audit_id FROM version WHERE ehr_id = ANY($1) \
                  UNION \
@@ -386,7 +390,7 @@ impl FerroEhrService {
              WHERE v.ehr_id = ANY($1)",
         )
         .bind(ehr_ids)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *acquire(&self.pool).await?)
         .await?)
     }
 
@@ -496,7 +500,8 @@ impl FerroEhrService {
     /// markers. `audit` has no FK from `version` (NO ACTION), so those rows
     /// are swept explicitly, as in the EHR delete.
     async fn physical_delete_party(&self, party_id: VoId) -> Result<(), ServiceError> {
-        let mut tx = self.demographic_pool.begin().await?;
+        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut tx = conn.begin().await?;
 
         // The target must be a demographic PARTY (ehr-less; any version exists),
         // in either storage tier — an archived party is still deletable.

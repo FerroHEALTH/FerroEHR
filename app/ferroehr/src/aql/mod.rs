@@ -23,6 +23,7 @@ pub mod ir;
 pub mod lineage;
 mod lower;
 pub mod sql;
+pub mod subject;
 pub mod terminology;
 
 use std::collections::BTreeSet;

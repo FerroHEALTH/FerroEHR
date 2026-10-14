@@ -22,6 +22,7 @@ use std::path::PathBuf;
 
 use openehr_lang::v1_1::bmm_persistence::create_bmm3_model::create_bmm3_model_reporting;
 use openehr_lang::v1_1::bmm_persistence::error::PBmmReadError;
+use openehr_lang::v1_1::bmm_persistence::json_reader::read_schema_json;
 use openehr_lang::v1_1::bmm_persistence::p_bmm_schema::PBmmSchema;
 use openehr_lang::v1_1::bmm_persistence::reader::read_schema;
 use openehr_lang::v1_1::bmm_persistence::validate::AssertionKind;
@@ -118,30 +119,26 @@ fn syntax(src: &str) -> Result<String, ElError> {
 
 // ── the grammar, over the pinned production schemas ──────────────────────
 
-/// The ODIN serialisations of the component schemas `docs/VERSIONS.md` pins.
-///
-/// For BASE 1.3.0, RM 1.2.0 and TERM 3.1.0 these are the ITS-BMM copies, which
-/// predate the component-repo json overlays codegen reads
-/// (`tools/openehr-codegen/vendor/bmm/PROVENANCE.md`); the overlays cannot
-/// stand in because the generated strict `P_BMM_SCHEMA` reader refuses them (a
-/// leaf package omits `packages`, which `P_BMM_PACKAGE_CONTAINER` declares
-/// mandatory).
+/// The json serialisations of the component schemas `docs/VERSIONS.md` pins,
+/// the files `openehr-codegen` itself reads.
 const PINNED_SCHEMAS: &[&str] = &[
-    "BASE/odin/openehr_base_1.3.0.bmm",
-    "RM/odin/openehr_rm_1.2.0.bmm",
-    "AM/odin/openehr_am_1.4.0.bmm",
-    "AM/odin/openehr_am_2.4.0.bmm",
-    "TERM/odin/openehr_term_3.1.0.bmm",
-    "LANG/odin/openehr_lang_1.1.0.bmm",
-    "LANG/odin/openehr_lang_1.1.0-bmm3.bmm",
+    "BASE/json/openehr_base_1.3.0.bmm.json",
+    "RM/json/openehr_rm_1.2.0.bmm.json",
+    "AM/json/openehr_am_1.4.0.bmm.json",
+    "AM/json/openehr_am_2.4.0.bmm.json",
+    "TERM/json/openehr_term_3.1.0.bmm.json",
+    "LANG/json/openehr_lang_1.1.0.bmm.json",
+    "LANG/json/openehr_lang_1.1.0-bmm3.bmm.json",
 ];
 
 /// How many of the pinned schemas' assertion strings the EL grammar accepts.
 ///
 /// The number only ever ratchets UP: a grammar change that accepts fewer is a
 /// regression, one that accepts more updates this line together with
-/// [`UNPARSABLE`].
-const PARSING_ASSERTIONS: usize = 319;
+/// [`UNPARSABLE`]. A change of input moves it too: the component-repo BASE
+/// 1.3.0 file replaces the typographic quotes of three invariants with ASCII
+/// ones and adds three invariants, all of which parse.
+const PARSING_ASSERTIONS: usize = 325;
 
 /// Every DISTINCT assertion string in the pinned schemas that the EL grammar
 /// refuses, adjudicated.
@@ -170,8 +167,8 @@ const PARSING_ASSERTIONS: usize = 319;
 ///   …`, `arity in |1..2|`, `s in {"=", …}`) — `ElParser.g4` `assertion` is
 ///   `LC_ID ':' elBooleanExpr`; `:=` belongs to `assignment` and `in` outside
 ///   a quantifier has no production.
-/// * **Truncated multi-line ODIN values** — two rows are the fragments the
-///   published schemas leave after a line break inside the quoted string.
+/// * **Truncated multi-line values** — two rows are the fragments the
+///   published schemas leave after a line break inside the string.
 ///
 /// The register is exhaustive: any other refusal fails the sweep.
 const UNPARSABLE: &[&str] = &[
@@ -225,7 +222,6 @@ const UNPARSABLE: &[&str] = &[
     "match = ‘?’ implies Result",
     "media_type /= Void and then code_set (Code_set_id_media_types).has_code (media_type)",
     "normal_status /= Void implies normal_status.code_string.is_equal (“N”)",
-    "not is_first xor trunk_version.is_equal(“1”)",
     "offset /= Void and then offset = time.diff (parent.origin)",
     "operator_def /= Void implies arity in |1..2|",
     "original_language /= void and then language /= Void",
@@ -242,8 +238,6 @@ const UNPARSABLE: &[&str] = &[
     "translations /= Void implies (description.details.for_all (d &#124;\ntranslations.has_key (d.language.code_string)))",
     "translations /= Void implies (description.details.for_all (d |\ntranslations.has_key (d.language.code_string)))",
     "trunk_version /= Void and then trunk_version.is_integer and then trunk_version.as_integer >= 1",
-    "type.is_equal (“ACCESS_GROUP”)",
-    "type.is_equal(“PERSON”) or type.is_equal(“ORGANISATION”) or type.is_equal(“GROUP”) or type.is_equal(“AGENT”)or type.is_equal(“ROLE”) or type.is_equal(“PARTY”) or type.is_equal(“ACTOR”)",
     "value.formalism.is_equal (“HL7:PIVL”) or value.formalism. is_equal (“HL7:EIVL”)",
     "version /= Void and then version.is_equal(archetype_id.version_id)",
 ];
@@ -254,7 +248,7 @@ fn read_pinned(file: &str) -> PBmmSchema {
         .join(file);
     let src =
         std::fs::read_to_string(&full).unwrap_or_else(|e| panic!("read {}: {e}", full.display()));
-    read_schema(&src).unwrap_or_else(|e| panic!("{file}: the pinned schema reads: {e}"))
+    read_schema_json(&src).unwrap_or_else(|e| panic!("{file}: the pinned schema reads: {e}"))
 }
 
 /// Every assertion string of `schema`: class invariants plus routine pre- and

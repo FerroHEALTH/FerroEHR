@@ -17,6 +17,19 @@
 
 use sqlx::PgPool;
 
+use crate::db::acquire::{AcquireError, acquire};
+
+/// A failure of an outbox registry or prune statement.
+#[derive(Debug, thiserror::Error)]
+pub enum OutboxError {
+    /// No connection could be obtained from the pool.
+    #[error(transparent)]
+    Acquire(#[from] AcquireError),
+    /// The statement failed on the acquired connection.
+    #[error("outbox statement failed")]
+    Database(#[from] sqlx::Error),
+}
+
 /// A registered cursor reader over `event_outbox`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct OutboxReader(&'static str);
@@ -45,12 +58,13 @@ impl OutboxReader {
 ///
 /// # Errors
 ///
-/// Returns the database error when the registry cannot be written.
+/// [`OutboxError::Acquire`] when no connection can be obtained, and
+/// [`OutboxError::Database`] when the registry cannot be written.
 pub async fn reconcile(
     pool: &PgPool,
     reader: OutboxReader,
     active: bool,
-) -> Result<(), sqlx::Error> {
+) -> Result<(), OutboxError> {
     sqlx::query(
         "INSERT INTO event_outbox_reader (reader, active) VALUES ($1, $2) \
          ON CONFLICT (reader) DO UPDATE \
@@ -58,7 +72,7 @@ pub async fn reconcile(
     )
     .bind(reader.name())
     .bind(active)
-    .execute(pool)
+    .execute(&mut *acquire(pool).await?)
     .await?;
     Ok(())
 }
@@ -68,12 +82,13 @@ pub async fn reconcile(
 ///
 /// # Errors
 ///
-/// Returns the database error when the registry cannot be read.
-pub async fn cursor(pool: &PgPool, reader: OutboxReader) -> Result<i64, sqlx::Error> {
+/// [`OutboxError::Acquire`] when no connection can be obtained, and
+/// [`OutboxError::Database`] when the registry cannot be read.
+pub async fn cursor(pool: &PgPool, reader: OutboxReader) -> Result<i64, OutboxError> {
     let last: Option<i64> =
         sqlx::query_scalar("SELECT last_seq FROM event_outbox_reader WHERE reader = $1")
             .bind(reader.name())
-            .fetch_optional(pool)
+            .fetch_optional(&mut *acquire(pool).await?)
             .await?;
     Ok(last.unwrap_or(0))
 }
@@ -86,8 +101,9 @@ pub async fn cursor(pool: &PgPool, reader: OutboxReader) -> Result<i64, sqlx::Er
 ///
 /// # Errors
 ///
-/// Returns the database error when the registry cannot be written.
-pub async fn advance(pool: &PgPool, reader: OutboxReader, seq: i64) -> Result<(), sqlx::Error> {
+/// [`OutboxError::Acquire`] when no connection can be obtained, and
+/// [`OutboxError::Database`] when the registry cannot be written.
+pub async fn advance(pool: &PgPool, reader: OutboxReader, seq: i64) -> Result<(), OutboxError> {
     sqlx::query(
         "INSERT INTO event_outbox_reader (reader, last_seq, active) \
          VALUES ($1, $2, true) \
@@ -97,7 +113,7 @@ pub async fn advance(pool: &PgPool, reader: OutboxReader, seq: i64) -> Result<()
     )
     .bind(reader.name())
     .bind(seq)
-    .execute(pool)
+    .execute(&mut *acquire(pool).await?)
     .await?;
     Ok(())
 }
@@ -111,8 +127,9 @@ pub async fn advance(pool: &PgPool, reader: OutboxReader, seq: i64) -> Result<()
 ///
 /// # Errors
 ///
-/// Returns the database error when the delete fails.
-pub async fn prune(pool: &PgPool, retention_days: i64) -> Result<u64, sqlx::Error> {
+/// [`OutboxError::Acquire`] when no connection can be obtained, and
+/// [`OutboxError::Database`] when the delete fails.
+pub async fn prune(pool: &PgPool, retention_days: i64) -> Result<u64, OutboxError> {
     let cutoff = format!("{retention_days} days");
     let result = sqlx::query(
         "DELETE FROM event_outbox \
@@ -122,7 +139,7 @@ pub async fn prune(pool: &PgPool, retention_days: i64) -> Result<u64, sqlx::Erro
                  (SELECT min(last_seq) FROM event_outbox_reader WHERE active), seq)",
     )
     .bind(cutoff)
-    .execute(pool)
+    .execute(&mut *acquire(pool).await?)
     .await?;
     let pruned = result.rows_affected();
     if pruned > 0 {

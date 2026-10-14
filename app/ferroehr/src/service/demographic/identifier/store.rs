@@ -11,6 +11,7 @@
 //! `SECURITY DEFINER` function, so a caller that only needs the mapping never
 //! touches the ciphertext.
 
+use crate::db::acquire::acquire;
 use sqlx::{PgPool, Row as _};
 use uuid::Uuid;
 
@@ -24,6 +25,9 @@ pub enum StoreError {
     /// The database refused or failed.
     #[error("the protected-identifier store is unavailable")]
     Database(#[source] sqlx::Error),
+    /// No connection to the store could be obtained, so nothing ran.
+    #[error("the protected-identifier store is unavailable")]
+    Acquire(#[from] crate::db::acquire::AcquireError),
     /// The value could not be sealed or opened.
     #[error(transparent)]
     Crypto(#[from] CryptoError),
@@ -106,7 +110,7 @@ impl IdentifierStore {
         .bind(&nonce)
         .bind(&ciphertext)
         .bind(&digest)
-        .fetch_one(&self.pool)
+        .fetch_one(&mut *acquire(&self.pool).await?)
         .await
         .map_err(|error| match StoreError::from(error) {
             StoreError::UnknownScheme { .. } => StoreError::UnknownScheme {
@@ -133,7 +137,7 @@ impl IdentifierStore {
         let Some(row) =
             sqlx::query("SELECT scheme, nonce, ciphertext FROM national_identifier WHERE id = $1")
                 .bind(row_id)
-                .fetch_optional(&self.pool)
+                .fetch_optional(&mut *acquire(&self.pool).await?)
                 .await?
         else {
             return Ok(None);
@@ -151,6 +155,7 @@ impl IdentifierStore {
     /// the identifier, and the plaintext never crosses into the database.
     ///
     /// # Errors
+    /// [`StoreError::Acquire`] when no connection can be obtained, and
     /// [`StoreError::Database`] when the function call fails.
     pub async fn resolve(
         &self,
@@ -162,7 +167,7 @@ impl IdentifierStore {
         let party: Option<Uuid> = sqlx::query_scalar("SELECT resolve_national_identifier($1, $2)")
             .bind(scheme)
             .bind(&digest)
-            .fetch_optional(&self.pool)
+            .fetch_optional(&mut *acquire(&self.pool).await?)
             .await?
             .flatten();
         Ok(party)

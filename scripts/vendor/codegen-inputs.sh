@@ -160,6 +160,23 @@ for entry in "${SETS[@]}"; do
   esac
 done
 
+# A BMM overlay replaces one release's json with the component repo's file.
+# The set's ODIN serialisation of that release predates the overlay, so it is
+# dropped rather than vendored as a second, different text of the release.
+for entry in "${OVERLAYS[@]}"; do
+  IFS='|' read -r dest _repo _sha _path _record <<<"$entry"
+  case "$dest" in
+    */json/*.bmm.json)
+      stale="$STAGE/${dest%/json/*}/odin/$(basename "$dest" .json)"
+      if [[ ! -f "$stale" ]]; then
+        echo "ERROR: the overlay $dest has no ODIN twin in its set to drop ($stale)" >&2
+        exit 1
+      fi
+      rm "$stale"
+      ;;
+  esac
+done
+
 for entry in "${OVERLAYS[@]}"; do
   IFS='|' read -r dest repo sha path _record <<<"$entry"
   echo "==> overlay $(basename "$dest") ($repo @ ${sha:0:12})"

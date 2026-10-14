@@ -18,9 +18,11 @@
               fragment the seam produced once; stored-content serving"
 )]
 
+use crate::db::acquire::acquire;
 use openehr_base::prelude::ObjectVersionId;
 use openehr_base::v1_3::base_types::identification::lexical::composite_ids_equal;
 use serde_json::Value;
+use sqlx::Connection as _;
 
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
@@ -451,7 +453,8 @@ impl FerroEhrService {
             ),
             Err(_) => None,
         };
-        let mut tx = self.pool.begin().await?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
         // Serialize concurrent writers of the same object, then read the
         // placement + every pre-check column in ONE statement (thaw riding).
         crate::storage::version_repo::commit::advisory_lock(&mut tx, vo_id).await?;
@@ -723,8 +726,8 @@ impl FerroEhrService {
             )));
         }
         let _ = expected;
-
-        let mut tx = self.pool.begin().await?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
         // A DELETE is a commit on a change-controlled resource, so the
         // committal request headers merge here too (ITS-REST overview
         // §"openehr-version and openehr-audit-details": the headers MUST be

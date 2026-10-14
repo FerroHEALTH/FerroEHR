@@ -40,7 +40,7 @@ use crate::db::iden::{CommitAudit, Ehr, Node, VersionRow, VoHead};
 
 use super::expr::{cast, col, hot, hot_unaliased, type_cond};
 use super::value::version_field_expr;
-use super::{Builder, EhrAccessScope, VoGroup};
+use super::{Builder, EhrAccessScope, VoGroup, subject};
 
 /// The correlation anchor for an `OR` / `NOT CONTAINS` `EXISTS` subquery.
 enum ExistsAnchor {
@@ -1471,24 +1471,24 @@ impl Builder<'_> {
 
     /// The ABAC patient scope on the EHR id `target` of a versioned-object
     /// root, when one is set: `target` is the id of an `ehr` row
-    /// [`subject_match`] admits.
+    /// [`subject::matches`] admits.
     fn subject_cond(&self, target: Expr) -> Option<Expr> {
         // NOTE: the ABAC patient scope restricts every VO root and EHR source to
         // the caller's patient EHRs whatever the projection (no openEHR spec
         // governs this — our own extension).
-        let subject = self.ctx.subject_scope.as_deref()?;
+        let claim = self.ctx.subject_scope.as_deref()?;
         let mut sub = Query::select();
-        sub.expr(col(SUBJECT_ROW, Ehr::Id))
-            .from_as(Ehr::Table, Alias::new(SUBJECT_ROW))
-            .and_where(subject_match(SUBJECT_ROW, subject));
+        sub.expr(col(subject::SUBJECT_ROW, Ehr::Id))
+            .from_as(Ehr::Table, Alias::new(subject::SUBJECT_ROW))
+            .and_where(subject::matches(subject::SUBJECT_ROW, claim));
         Some(target.in_subquery(sub))
     }
 
     /// The ABAC patient scope on the `ehr` row bound as `alias`, when one is
-    /// set: [`subject_match`] on that row itself.
+    /// set: [`subject::matches`] on that row itself.
     fn ehr_subject_cond(&self, alias: &str) -> Option<Expr> {
-        let subject = self.ctx.subject_scope.as_deref()?;
-        Some(subject_match(alias, subject))
+        let claim = self.ctx.subject_scope.as_deref()?;
+        Some(subject::matches(alias, claim))
     }
 
     /// Every [`Self::apply_ehr_scope`] condition a versioned-object root puts
@@ -1637,6 +1637,7 @@ impl Builder<'_> {
         self.bind_head(&vo, true);
         self.q.and_where(col(&node, Node::Num).eq(Expr::val(0)));
         self.ehr_status_node.insert(ehr_sid, node.clone());
+        self.ehr_status_vo.insert(ehr_sid, vo);
         // Register as the source node so `source_node`/`whole_object_alias`/
         // `data_leaf_expr` (which start from the leaf's source node) resolve the
         // EHR_STATUS root; the EHR source has no other node entry.
@@ -1755,42 +1756,6 @@ impl Builder<'_> {
 /// as [`crate::aql::error::AqlFeatureError::UnsupportedSourceClass`] before any
 /// SQL is built. So the exclusion is that gate's consequence, stated here
 /// explicitly, not a second opinion about what a versioned object is.
-/// The `ehr` alias the patient-scope subquery of [`Builder::subject_cond`]
-/// binds its candidate row to.
-const SUBJECT_ROW: &str = "subject_row";
-
-/// The `ehr` alias [`subject_match`] binds every other holder of the claimed
-/// subject id to.
-const SUBJECT_OTHER: &str = "subject_other";
-
-/// Whether the `ehr` row bound as `alias` is the one subject the patient claim
-/// `subject` names.
-///
-/// The claim carries a subject id and no namespace, while an EHR subject is the
-/// pair (`subject_id`, `subject_namespace`) (RM ehr master04 §EHR Status:
-/// `subject.external_ref` is a `PARTY_REF` with its own `namespace`). An id held
-/// under one namespace names that subject; an id held under two or more names
-/// none of them, so the match is refused for every holder rather than granting
-/// the caller another namespace's patient. A NULL namespace counts as distinct
-/// from any other. No openEHR spec governs the claim — our own extension.
-fn subject_match(alias: &str, subject: &str) -> Expr {
-    let mut other = Query::select();
-    other
-        .expr(Expr::val(1))
-        .from_as(Ehr::Table, Alias::new(SUBJECT_OTHER))
-        .and_where(col(SUBJECT_OTHER, Ehr::SubjectId).eq(Expr::val(subject)))
-        .and_where(col(SUBJECT_OTHER, Ehr::Id).ne(col(alias, Ehr::Id)))
-        .and_where(
-            col(SUBJECT_OTHER, Ehr::SubjectNamespace)
-                .ne(col(alias, Ehr::SubjectNamespace))
-                .or(col(SUBJECT_OTHER, Ehr::SubjectNamespace).is_null())
-                .or(col(alias, Ehr::SubjectNamespace).is_null()),
-        );
-    col(alias, Ehr::SubjectId)
-        .eq(Expr::val(subject))
-        .and(Expr::exists(other).not())
-}
-
 pub(super) fn is_vo_root_type(t: &str) -> bool {
     crate::versioning::Kind::from_type(t).is_some_and(|kind| !kind.is_demographic())
 }

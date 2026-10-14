@@ -13,6 +13,8 @@
 //! `crate::service::ehr::tags::validate_item_tag`, so this family and the EHR
 //! family cannot drift apart.
 
+use crate::db::acquire::acquire;
+use sqlx::Connection as _;
 use std::collections::BTreeMap;
 
 use openehr_base::prelude::{
@@ -172,7 +174,8 @@ impl FerroEhrService {
                 target_path: target_path.as_deref(),
             })
             .collect();
-        let mut tx = self.demographic_pool.begin().await?;
+        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut tx = conn.begin().await?;
         // The replace RETURNS the stored collection (list order), so the
         // response never re-reads the rows the transaction just wrote.
         let stored = tag_repo::replace_tags(

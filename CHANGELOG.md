@@ -372,7 +372,12 @@ workflow refuses a tag that has no matching section here.
   schema without `packages` as an empty package map and leaves an empty map
   out on write, as the LANG BMM persistence syntax chapter's example and every
   published openEHR BMM do; the class table's `1..1` is reported upstream
-  (#3770).
+  (#3770). `openehr-lang` also reads P_BMM schemas from their JSON
+  serialisation (`json_reader::read_schema_json`), producing the same
+  `P_BMM_SCHEMA` as the ODIN reader, `uid` and `source_schema_id` stamping
+  included; its BMM tests now read the JSON files the generator reads, and the
+  stale ITS-BMM ODIN copies of BASE 1.3.0, RM 1.2.0 and TERM 3.1.0 are no
+  longer vendored.
 - **A database that holds some of the storage domains gets only their
   schemas** (plus `ext`); schemas only a shipped grant file names are created
   for the run and dropped afterwards, and `ferroehr db erase` removes empty

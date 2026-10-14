@@ -11,6 +11,7 @@
 //! (a tag may address a specific VERSION), so target-ownership checks also
 //! live with the callers.
 
+use crate::db::acquire::acquire;
 use std::collections::BTreeMap;
 
 use sqlx::{PgConnection, PgPool, Row};
@@ -107,7 +108,7 @@ pub async fn list_tags(
     .bind(key)
     .bind(value)
     .bind(target_path)
-    .fetch_all(pool)
+    .fetch_all(&mut *acquire(pool).await?)
     .await?;
     rows.iter().map(tag_row).collect()
 }
@@ -288,7 +289,7 @@ pub async fn delete_tag(
     .bind(target_vo_id)
     .bind(target_version)
     .bind(key)
-    .execute(pool)
+    .execute(&mut *acquire(pool).await?)
     .await?;
     Ok(deleted.rows_affected() > 0)
 }

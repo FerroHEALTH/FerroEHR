@@ -100,6 +100,13 @@ spec:
             {{- if eq (include "ferroehr.serverTls" .) "true" }}
             {{- include "ferroehr.cdrTrustEnv" . | nindent 12 }}
             {{- end }}
+            {{- if .Values.config.management.enabled }}
+            # The management surface as the CDR serves it: on its own port when
+            # config.management.port is set, under config.management.base_path
+            # either way, so the viewer never guesses either.
+            - name: FERROEHR_VIEWER__CDR__MANAGEMENT_BASE_URL
+              value: {{ include "ferroehr.cdrManagementUrl" . | quote }}
+            {{- end }}
             {{- with (dig "server" "base_path" "" (.Values.config | default dict)) }}
             # The viewer's base path mirrors the CDR's own, so shortening
             # config.server.base_path cannot leave the two disagreeing.
@@ -258,7 +265,7 @@ metadata:
            same honesty the CDR's policy carries, because `kubectl describe` is
            where an operator reads a policy back. */}}
     kubernetes.io/description: >-
-      {{ if .Values.viewer.networkPolicy.ingressFrom }}Ingress for the viewer: only its HTTP port, and only from the viewer.networkPolicy.ingressFrom peers. Egress admits the CDR Service and DNS only.{{ else }}Ingress for the viewer: only its HTTP port, but from EVERY source — this policy narrows ports, NOT sources (viewer.networkPolicy.ingressAllowAll=true). Set viewer.networkPolicy.ingressFrom for a PHI workload. Egress admits the CDR Service and DNS only.{{ end }}
+      {{ if .Values.viewer.networkPolicy.ingressFrom }}Ingress for the viewer: only its HTTP port, and only from the viewer.networkPolicy.ingressFrom peers. Egress admits the CDR (its API port, and its management port when that is its own) and DNS only.{{ else }}Ingress for the viewer: only its HTTP port, but from EVERY source — this policy narrows ports, NOT sources (viewer.networkPolicy.ingressAllowAll=true). Set viewer.networkPolicy.ingressFrom for a PHI workload. Egress admits the CDR (its API port, and its management port when that is its own) and DNS only.{{ end }}
   labels:
     {{- include "ferroehr.viewerLabels" . | nindent 4 }}
 spec:
@@ -291,6 +298,11 @@ spec:
       ports:
         - protocol: TCP
           port: 8080
+        {{- if and .Values.config.management.enabled .Values.config.management.port }}
+        # The management surface on its own listener, which the env above names.
+        - protocol: TCP
+          port: {{ .Values.config.management.port }}
+        {{- end }}
     # DNS. Without this the Service name above does not resolve and the viewer
     # fails in a way that looks like the CDR being down.
     - to:

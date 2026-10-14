@@ -11,6 +11,8 @@
 //! once at DEBUG; the background task is detached from boot, health and
 //! readiness, so a slow or unreachable collector reaches none of them.
 
+use crate::db::acquire::acquire;
+use sqlx::Connection as _;
 use std::time::{Duration, Instant};
 
 use http::StatusCode;
@@ -201,7 +203,8 @@ impl UsageReporter {
     /// # Errors
     /// [`ReportError::Store`] when the database cannot be read.
     pub async fn preview(&self, kind: EventKind) -> Result<Preview, ReportError> {
-        let mut tx = self.pool.begin().await.map_err(StoreError::from)?;
+        let mut conn = acquire(&self.pool).await.map_err(StoreError::from)?;
+        let mut tx = conn.begin().await.map_err(StoreError::from)?;
         let instance = store::ensure_instance_on(&mut tx).await?;
         tx.rollback().await.map_err(StoreError::from)?;
         let event = match kind {

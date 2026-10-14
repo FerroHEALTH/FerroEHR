@@ -16,6 +16,8 @@
               ADL/OPT wire envelopes"
 )]
 
+use crate::db::acquire::acquire;
+use sqlx::Connection as _;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -242,7 +244,7 @@ impl FerroEhrService {
         )
         .bind(rdn)
         .bind(semantic)
-        .fetch_one(&self.pool)
+        .fetch_one(&mut *acquire(&self.pool).await?)
         .await?)
     }
 
@@ -300,7 +302,7 @@ impl FerroEhrService {
         .bind(rdn)
         .bind(semantic)
         .bind(version)
-        .fetch_optional(&self.pool)
+        .fetch_optional(&mut *acquire(&self.pool).await?)
         .await?
         .ok_or_else(|| {
             ServiceError::sm(
@@ -325,7 +327,7 @@ impl FerroEhrService {
         )
         .bind(offset)
         .bind(limit)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *acquire(&self.pool).await?)
         .await?;
         rows.iter().map(descriptor_from_row).collect()
     }
@@ -354,7 +356,7 @@ impl FerroEhrService {
              FROM stored_query \
              ORDER BY reverse_domain_name, semantic_id, string_to_array(semver, '.')::int[]",
         )
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *acquire(&self.pool).await?)
         .await?;
         // Decode every row up front so a decode failure surfaces (500) rather
         // than silently dropping a query from the match set.
@@ -395,7 +397,7 @@ impl FerroEhrService {
         .bind(rdn)
         .bind(semantic)
         .bind(version)
-        .execute(&self.pool)
+        .execute(&mut *acquire(&self.pool).await?)
         .await?
         .rows_affected();
         if deleted == 0 {
@@ -418,7 +420,7 @@ impl FerroEhrService {
         )
         .bind(rdn)
         .bind(semantic)
-        .execute(&self.pool)
+        .execute(&mut *acquire(&self.pool).await?)
         .await?
         .rows_affected();
         if deleted == 0 {
@@ -436,7 +438,7 @@ impl FerroEhrService {
             "SELECT count(*) FROM \
              (SELECT DISTINCT reverse_domain_name, semantic_id FROM stored_query) t",
         )
-        .fetch_one(&self.pool)
+        .fetch_one(&mut *acquire(&self.pool).await?)
         .await?)
     }
 }
@@ -499,7 +501,8 @@ impl FerroEhrService {
         let (rdn, semantic) = split_qualified(&qualified);
         let Some(v) = version else {
             // No-version store: case-insensitive upsert at the default version.
-            let mut tx = self.pool.begin().await?;
+            let mut conn = acquire(&self.pool).await?;
+            let mut tx = conn.begin().await?;
             sqlx::query(
                 "DELETE FROM stored_query \
                  WHERE lower(reverse_domain_name) = lower($1) \
@@ -553,7 +556,7 @@ impl FerroEhrService {
         .bind(rdn)
         .bind(semantic)
         .bind(v)
-        .fetch_one(&self.pool)
+        .fetch_one(&mut *acquire(&self.pool).await?)
         .await?;
         if exists {
             return Err(ServiceError::conflict(format!(
@@ -570,7 +573,7 @@ impl FerroEhrService {
         .bind(semantic)
         .bind(v)
         .bind(query_text)
-        .execute(&self.pool)
+        .execute(&mut *acquire(&self.pool).await?)
         .await?
         .rows_affected();
         if inserted == 0 {
@@ -682,7 +685,7 @@ impl FerroEhrService {
             .bind(rdn)
             .bind(semantic),
         }
-        .fetch_optional(&self.pool)
+        .fetch_optional(&mut *acquire(&self.pool).await?)
         .await?
         .ok_or_else(|| {
             ServiceError::sm(
@@ -719,7 +722,7 @@ impl FerroEhrService {
              ORDER BY reverse_domain_name, semantic_id, string_to_array(semver, '.')::int[]",
         )
         .bind(name_pattern)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *acquire(&self.pool).await?)
         .await?;
         rows.iter().map(stored_query_json).collect()
     }

@@ -1094,6 +1094,7 @@ server_tls_gate() {
       || { red "  TLS on: ${want} is not '${got}'"; missing=1; }
   done <<CLAIMS
 viewer-url|https://${RELEASE_NAME}:8080
+viewer-management-url|https://${RELEASE_NAME}:8080/management
 bridge-url|https://${RELEASE_NAME}:8080/ferroehr/rest/openehr/v1
 viewer-certdir|/etc/ssl/certs:/etc/ferroehr-cdr-ca
 bridge-certdir|/etc/ssl/certs:/etc/ferroehr-cdr-ca
@@ -1109,7 +1110,7 @@ ingress-backend-protocol|HTTPS
 CLAIMS
   [[ "$(grep -c -xF "probe-scheme HTTPS" <<<"$facts")" -eq 3 ]] \
     || { red "  TLS on: the server's three probes do not all use scheme HTTPS"; missing=1; }
-  ! grep -qE '^(viewer|bridge)-url http://' <<<"$facts" \
+  ! grep -qE '^(viewer|viewer-management|bridge)-url http://' <<<"$facts" \
     || { red "  TLS on: a client still calls the CDR over http://"; missing=1; }
   facts="$(tls_client_facts "$off")"
   while IFS='|' read -r want got; do
@@ -1118,6 +1119,7 @@ CLAIMS
       || { red "  TLS off: ${want} is not '${got}'"; missing=1; }
   done <<CLAIMS
 viewer-url|http://${RELEASE_NAME}:8080
+viewer-management-url|http://${RELEASE_NAME}:8080/management
 bridge-url|http://${RELEASE_NAME}:8080/ferroehr/rest/openehr/v1
 service-appprotocol|http
 scrape-scheme|http
@@ -1136,6 +1138,47 @@ CLAIMS
   fi
 }
 server_tls_gate
+
+# ── The viewer reaches the management surface where the CDR serves it ────────
+# The viewer derives `{base_url}/management` when it is told nothing, which is
+# wrong twice over once config.management.port moves the surface to its own
+# listener: another port, and an egress policy admitting only the API port.
+# Both halves are read from the render, with and without the separate port.
+viewer_management_gate() {
+  bold "── viewer: the management surface's URL and egress ─────"
+  local viewer="${CI_DIR}/viewer-values.yaml" render wrong=0 url ports port
+  local -a extra
+  for port in "" 9464; do
+    extra=()
+    [[ -z "$port" ]] || extra=(--set "config.management.port=${port}")
+    if ! render="$(helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "$viewer" \
+                   "${extra[@]}" -s templates/viewer.yaml 2>&1)"; then
+      red "  viewer: the viewer overlay no longer renders${port:+ with config.management.port=$port}:"
+      printf '%s\n' "$render" | head -4
+      FAIL=1
+      return
+    fi
+    url="$(printf '%s' "$render" | yq -r 'select(.kind == "Deployment") | .spec.template.spec.containers[0].env[] | select(.name == "FERROEHR_VIEWER__CDR__MANAGEMENT_BASE_URL") | .value')"
+    ports="$(printf '%s' "$render" | yq -r 'select(.kind == "NetworkPolicy") | [.spec.egress[] | select(.to[0].podSelector.matchLabels["app.kubernetes.io/name"] == "ferroehr") | .ports[].port] | join(",")')"
+    if [[ -z "$port" ]]; then
+      [[ "$url" == "http://${RELEASE_NAME}:8080/management" ]] \
+        || { red "  viewer, shared port: the management URL is '${url}', not http://${RELEASE_NAME}:8080/management"; wrong=1; }
+      [[ "$ports" == "8080" ]] \
+        || { red "  viewer, shared port: egress to the CDR is '${ports}', not the API port alone"; wrong=1; }
+    else
+      [[ "$url" == "http://${RELEASE_NAME}:${port}/management" ]] \
+        || { red "  viewer, own port: the management URL is '${url}', not http://${RELEASE_NAME}:${port}/management"; wrong=1; }
+      [[ "$ports" == "8080,${port}" ]] \
+        || { red "  viewer, own port: egress to the CDR is '${ports}', not the API port and ${port}"; wrong=1; }
+    fi
+  done
+  if [[ "$wrong" -eq 0 ]]; then
+    echo "  viewer: the management URL names the listener that serves it, and egress admits its port when it has its own"
+  else
+    FAIL=1
+  fi
+}
+viewer_management_gate
 
 for case in "${CASES[@]}"; do
   label="${case%%:*}"

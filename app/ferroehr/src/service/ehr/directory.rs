@@ -27,6 +27,7 @@
               fragment the seam produced once; stored-content serving"
 )]
 
+use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::response::ResourceMeta;
 use crate::service::response::ServiceResponse;
@@ -35,6 +36,7 @@ use openehr_base::prelude::ObjectVersionId;
 use openehr_its::rest::generated::common::UpdateVersion;
 use openehr_rm::prelude::Folder;
 use serde_json::Value;
+use sqlx::Connection as _;
 
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
@@ -94,8 +96,8 @@ impl FerroEhrService {
                 "EHR {ehr_id} already has a directory"
             )));
         }
-
-        let mut tx = self.pool.begin().await?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
         let committed = create(
             &mut tx,
             Some(ehr_id),
@@ -306,8 +308,8 @@ impl FerroEhrService {
         if !is_modifiable {
             return Err(crate::versioning::change::not_modifiable_error(ehr_id));
         }
-
-        let mut tx = self.pool.begin().await?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
         let committed = update(
             &mut tx,
             Some(ehr_id),
@@ -348,8 +350,8 @@ impl FerroEhrService {
         if !is_modifiable {
             return Err(crate::versioning::change::not_modifiable_error(ehr_id));
         }
-
-        let mut tx = self.pool.begin().await?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
         // The committal request headers merge into the delete audit too
         // (ITS-REST overview §"openehr-version and openehr-audit-details":
         // accepted on PUT, POST and DELETE).

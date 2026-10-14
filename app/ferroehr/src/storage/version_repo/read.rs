@@ -23,6 +23,7 @@
               round-trip drops forward-compatible keys (the openEHR release strategy: minors are compatible supersets)"
 )]
 
+use crate::db::acquire::acquire;
 use serde_json::Value;
 use sqlx::postgres::PgRow;
 use sqlx::{PgPool, Row};
@@ -411,7 +412,7 @@ pub async fn read_profile_gate_candidates(
     )
     .bind(&vo_ids)
     .bind(&sys_versions)
-    .fetch_all(pool)
+    .fetch_all(&mut *acquire(pool).await?)
     .await?;
     let mut out = Vec::with_capacity(rows.len());
     for row in rows {
@@ -446,7 +447,7 @@ pub async fn read_current(
 ) -> Result<Option<StoredVersion>, StorageError> {
     sqlx::query(READ_CURRENT_SQL)
         .bind(vo_id)
-        .fetch_optional(pool)
+        .fetch_optional(&mut *acquire(pool).await?)
         .await?
         .map(|row| stored_version(vo_id, &row))
         .transpose()
@@ -466,7 +467,7 @@ pub async fn read_current_raw(
         version_select_raw!("WHERE v.vo_id = $1 AND h.trunk_head_sys_version = v.sys_version");
     sqlx::query(SQL)
         .bind(vo_id)
-        .fetch_optional(pool)
+        .fetch_optional(&mut *acquire(pool).await?)
         .await?
         .map(|row| stored_version_raw(vo_id, &row))
         .transpose()
@@ -493,7 +494,7 @@ pub async fn read_version_raw(
         .bind(trunk_version)
         .bind(branch_number)
         .bind(branch_version)
-        .fetch_optional(pool)
+        .fetch_optional(&mut *acquire(pool).await?)
         .await?
         .map(|row| stored_version_raw(vo_id, &row))
         .transpose()
@@ -517,7 +518,10 @@ pub async fn read_currents(
         return Ok(Vec::new());
     }
     let ids: Vec<Uuid> = vo_ids.iter().map(|id| id.0).collect();
-    let rows = sqlx::query(SQL).bind(&ids).fetch_all(pool).await?;
+    let rows = sqlx::query(SQL)
+        .bind(&ids)
+        .fetch_all(&mut *acquire(pool).await?)
+        .await?;
     rows.into_iter()
         .map(|row| {
             let vo_id: VoId = row.try_get("vo_id")?;
@@ -540,7 +544,7 @@ pub async fn read_version_by_ordinal(
     sqlx::query(READ_VERSION_BY_ORDINAL_SQL)
         .bind(vo_id)
         .bind(ordinal)
-        .fetch_optional(pool)
+        .fetch_optional(&mut *acquire(pool).await?)
         .await?
         .map(|row| stored_version(vo_id, &row))
         .transpose()
@@ -567,7 +571,7 @@ pub async fn read_version(
         .bind(trunk_version)
         .bind(branch_number)
         .bind(branch_version)
-        .fetch_optional(pool)
+        .fetch_optional(&mut *acquire(pool).await?)
         .await?
         .map(|row| stored_version(vo_id, &row))
         .transpose()
@@ -604,7 +608,7 @@ pub async fn read_versions_by_tree(
         .bind(&trunks)
         .bind(&branches)
         .bind(&branch_versions)
-        .fetch_all(pool)
+        .fetch_all(&mut *acquire(pool).await?)
         .await?;
     rows.into_iter()
         .map(|row| {
@@ -649,7 +653,7 @@ pub async fn version_at(
     sqlx::query(VERSION_AT_SQL)
         .bind(vo_id)
         .bind(&at)
-        .fetch_optional(pool)
+        .fetch_optional(&mut *acquire(pool).await?)
         .await?
         .map(|row| stored_version(vo_id, &row))
         .transpose()
@@ -683,7 +687,7 @@ pub async fn read_current_of_kind(
     sqlx::query(SQL)
         .bind(ehr_id)
         .bind(kind)
-        .fetch_optional(pool)
+        .fetch_optional(&mut *acquire(pool).await?)
         .await?
         .as_ref()
         .map(stored_version_by_row)
@@ -714,7 +718,7 @@ pub async fn version_at_of_kind(
         .bind(ehr_id)
         .bind(kind)
         .bind(&at)
-        .fetch_optional(pool)
+        .fetch_optional(&mut *acquire(pool).await?)
         .await?
         .as_ref()
         .map(stored_version_by_row)
@@ -741,7 +745,7 @@ pub async fn read_current_directory(
     );
     sqlx::query(SQL)
         .bind(ehr_id)
-        .fetch_optional(pool)
+        .fetch_optional(&mut *acquire(pool).await?)
         .await?
         .as_ref()
         .map(stored_version_by_row)
@@ -768,7 +772,7 @@ pub async fn stored_body_all(
         sqlx::query_as("SELECT body FROM version WHERE vo_id = $1 AND sys_version = $2")
             .bind(vo_id)
             .bind(sys_version)
-            .fetch_optional(pool)
+            .fetch_optional(&mut *acquire(pool).await?)
             .await?;
     match row.and_then(|(body,)| body) {
         Some(text) => serde_json::from_str(&text).map_err(StorageError::BodyDecode),
@@ -838,7 +842,7 @@ pub async fn content_of_objects(
          ORDER BY c.ehr_id, c.kind, c.template_id, c.archetype",
     )
     .bind(&ids)
-    .fetch_all(pool)
+    .fetch_all(&mut *acquire(pool).await?)
     .await?;
     rows.iter().map(served_content_row).collect()
 }
@@ -868,7 +872,7 @@ pub async fn content_of_contribution(
          ORDER BY v.ehr_id, v.kind, c.template_id, c.archetype",
     )
     .bind(contribution_id)
-    .fetch_all(pool)
+    .fetch_all(&mut *acquire(pool).await?)
     .await?;
     rows.iter().map(served_content_row).collect()
 }
@@ -930,7 +934,7 @@ pub async fn read_served(
     .bind(&vo_ids)
     .bind(&sys_versions)
     .bind(i64::try_from(cap).unwrap_or(i64::MAX))
-    .fetch_one(pool)
+    .fetch_one(&mut *acquire(pool).await?)
     .await?;
     let total: i64 = row.try_get("total")?;
     let set: Value = row.try_get("origins")?;

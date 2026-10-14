@@ -71,6 +71,7 @@
 pub mod cohort;
 pub(crate) mod store;
 
+use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::ehr_index::types::SubjectRef;
@@ -78,6 +79,7 @@ use crate::service::status::SmError;
 use crate::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, ObjectClass,
 };
+use sqlx::Connection as _;
 
 /// The subject reference a party is known by on the clinical side: an opaque
 /// pseudonym in a declared namespace, minted by the server (#3232).
@@ -127,6 +129,9 @@ pub enum LinkageError {
     /// The linkage store refused or failed.
     #[error("the linkage store is unavailable")]
     Database(#[source] sqlx::Error),
+    /// No connection to the linkage store could be obtained, so nothing ran.
+    #[error("the linkage store is unavailable")]
+    Acquire(#[from] crate::db::acquire::AcquireError),
     /// No pseudonym namespace is declared, so there is nothing to mint a
     /// subject reference in.
     ///
@@ -175,7 +180,8 @@ impl FerroEhrService {
     /// # Errors
     /// [`LinkageError::AlreadyLinked`] when the party already holds a mapping
     /// in force — close it with [`Self::merge`] or [`Self::split`] first —
-    /// and [`LinkageError::Database`] when the write fails.
+    /// [`LinkageError::Acquire`] when no connection can be obtained, and
+    /// [`LinkageError::Database`] when the write fails.
     pub async fn link(&self, party_id: VoId, ehr_id: EhrId) -> Result<(), LinkageError> {
         self.open_mapping_row(party_id, ehr_id, None).await
     }
@@ -205,7 +211,7 @@ impl FerroEhrService {
         ehr_id: EhrId,
         subject: Option<SubjectRef>,
     ) -> Result<(), LinkageError> {
-        let mut conn = self.linkage_pool.acquire().await.map_err(classify)?;
+        let mut conn = acquire(&self.linkage_pool).await?;
         let outcome = store::open(&mut conn, party_id, ehr_id, subject.as_ref())
             .await
             .map_err(|error| classify_for(error, party_id));
@@ -226,6 +232,7 @@ impl FerroEhrService {
     /// or a demographic read that is already entitled to the party.
     ///
     /// # Errors
+    /// [`LinkageError::Acquire`] when no connection can be obtained, and
     /// [`LinkageError::Database`] when the read fails.
     pub async fn resolve_ehr_for_party(
         &self,
@@ -233,7 +240,7 @@ impl FerroEhrService {
     ) -> Result<Option<EhrId>, LinkageError> {
         let resolved = store::open_mapping(&self.linkage_pool, party_id)
             .await
-            .map_err(classify)?;
+            .map_err(LinkageError::from)?;
         self.emit_linkage_access(
             EventActionCode::Read,
             format!("party-ehr:{party_id}"),
@@ -259,8 +266,9 @@ impl FerroEhrService {
     /// # Errors
     /// [`LinkageError::Identity`] when the identity cannot be resolved —
     /// including a deployment that configures no identifier protection, which
-    /// has no sealed identifier to resolve — and [`LinkageError::Database`]
-    /// when the linkage read fails.
+    /// has no sealed identifier to resolve — [`LinkageError::Acquire`] when no
+    /// linkage connection can be obtained, and [`LinkageError::Database`] when
+    /// the linkage read fails.
     pub async fn resolve_ehr_for_identity(
         &self,
         scheme: &str,
@@ -406,6 +414,7 @@ impl FerroEhrService {
     /// can attribute, which is the worse of the two half-states.
     ///
     /// # Errors
+    /// [`LinkageError::Acquire`] when no connection can be obtained,
     /// [`LinkageError::Database`] when the call fails — including the privilege
     /// refusal of a deployment that granted the role no `EXECUTE` — and
     /// [`LinkageError::Unrecorded`] when the access record is refused under
@@ -413,7 +422,7 @@ impl FerroEhrService {
     pub async fn erase_ehr_linkage(&self, ehr_id: EhrId) -> Result<u64, LinkageError> {
         let outcome = store::erase_ehr(&self.linkage_pool, ehr_id)
             .await
-            .map_err(classify);
+            .map_err(LinkageError::from);
         self.emit_linkage_access(
             EventActionCode::Delete,
             format!("ehr:{ehr_id}"),
@@ -437,8 +446,9 @@ impl FerroEhrService {
     /// [`LinkageError::NotLinked`] when `from_party` holds no mapping to
     /// move, [`LinkageError::AlreadyLinked`] when `into_party` already holds
     /// one — two parties each with their own EHR need those EHRs merged
-    /// first, which this map cannot decide — and [`LinkageError::Database`]
-    /// when the transaction fails.
+    /// first, which this map cannot decide — [`LinkageError::Acquire`] when no
+    /// connection can be obtained, and [`LinkageError::Database`] when the
+    /// transaction fails.
     pub async fn merge(&self, from_party: VoId, into_party: VoId) -> Result<(), LinkageError> {
         let outcome = self.move_mapping(from_party, into_party, None).await;
         self.emit_linkage_access(
@@ -460,7 +470,8 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// [`LinkageError::NotLinked`] when the party holds no mapping to split,
-    /// and [`LinkageError::Database`] when the transaction fails.
+    /// [`LinkageError::Acquire`] when no connection can be obtained, and
+    /// [`LinkageError::Database`] when the transaction fails.
     pub async fn split(&self, party_id: VoId, new_ehr_id: EhrId) -> Result<(), LinkageError> {
         let outcome = self
             .move_mapping(party_id, party_id, Some(new_ehr_id))
@@ -488,7 +499,8 @@ impl FerroEhrService {
         to_party: VoId,
         to_ehr: Option<EhrId>,
     ) -> Result<EhrId, LinkageError> {
-        let mut tx = self.linkage_pool.begin().await.map_err(classify)?;
+        let mut conn = acquire(&self.linkage_pool).await?;
+        let mut tx = conn.begin().await.map_err(classify)?;
         let closed = store::close(&mut tx, from_party)
             .await
             .map_err(classify)?
@@ -571,6 +583,15 @@ fn stamp_requester(event: &mut AuditEvent) {
         event.user_id = committer.subject;
     }
     event.purpose = crate::system_log::access_context::current_purpose();
+}
+
+impl From<store::StoreError> for LinkageError {
+    fn from(error: store::StoreError) -> Self {
+        match error {
+            store::StoreError::Acquire(e) => LinkageError::Acquire(e),
+            store::StoreError::Database(e) => LinkageError::Database(e),
+        }
+    }
 }
 
 /// A driver error that carries no domain meaning beyond "the store failed".

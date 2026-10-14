@@ -21,9 +21,9 @@ file is vendored verbatim from the component repo ITS-BMM redistributes from.
 Each is byte-identical to its reference twin under
 `docs/specs/openehr/<C>/computable/BMM/`, and `codegen-inputs.sh` fails when a
 twin is missing or differs. The component repos publish json only, so the
-`odin/` serializations of these three versions stay the ITS-BMM copies and do
-NOT carry the overlay changes: they are reference only, never codegen input
-(see "The odin serialization" below). Fold each back to a plain ITS-BMM pin at
+ITS-BMM `odin/` serialization of each of these three versions predates the
+overlay; `codegen-inputs.sh` drops it rather than vendor a second, different
+text of the release (see "The odin serialization" below). Fold each back to a plain ITS-BMM pin at
 the next ITS-BMM bump.
 
 | File | Component repo | Commit | Adopted | Why |
@@ -38,7 +38,8 @@ the 2026-07-04 note below); the specifications-BASE file still carries the
 typo, so the generated doc comment regresses to authentic component-repo text.
 
 The ITS-BMM `components/` tree is vendored under `components/` here — all
-released versions in two serializations (**json**, **odin**: 18 files each).
+released versions in two serializations (**json**: 18 files; **odin**: 15, the
+three overlaid versions dropped).
 The `json` files are upstream's source of truth (`odin`/`yaml` are generated
 from them by `bmm-publisher`); we consume **json** for codegen. Upstream's
 `yaml/` serialization is excluded by `codegen-inputs.sh` because no code,
@@ -70,25 +71,19 @@ Neither alone resolves every AM reference, so both are merged
 
 All other versions are present for completeness / future spec bumps: RM
 1.0.2/1.0.3/1.0.4/1.1.0; BASE 1.0.4/1.1.0/1.2.0; AM 2.2.0/2.3.0; LANG 1.0.0;
-TERM 3.0.0 — plus every version's `odin/` serialization.
+TERM 3.0.0, plus the `odin/` serialization of every version not overlaid.
 
 The json files are the deterministic input to `openehr-codegen`.
 
 ## The odin serialization (reference, read by `openehr-lang` tests)
 
-The `odin/` files are not codegen input. Two `openehr-lang` integration tests
-read them through `openehr-lang`'s ODIN BMM reader:
-`tests/it/vendor_bmm_schema.rs` (every vendored ODIN file materialised as a
-model, with its adjudicated outcome) and `tests/it/el_assertions.rs` (the
-pinned versions' assertion strings against the EL grammar). For BASE 1.3.0, RM 1.2.0 and TERM 3.1.0 those ODIN files
-are the ITS-BMM copies at `37b31739…`, which predate the json overlays above,
-so they do not carry the overlay changes. Those tests cannot read the json
-overlays instead: `openehr-lang`'s P_BMM pipeline reads ODIN only, and its
-generated strict JSON reader is a codec for the whole `P_BMM_CLASS` object,
-whose `uid` and `source_schema_id` are set while a schema is read and appear in
-no persisted file. (A leaf package without `packages` is not the obstacle:
-the generated reader takes it as the empty package map.) The stale copies stay
-until the pipeline reads the json serialization.
+The `odin/` files are not codegen input. `openehr-lang`'s
+`tests/it/bmm_json_reader.rs` reads every json/odin pair of one release through
+both P_BMM readers and requires the same `P_BMM_SCHEMA` value. The other
+`openehr-lang` tests over the component schemas (`tests/it/vendor_bmm_schema.rs`,
+`tests/it/el_assertions.rs`) read the json files codegen reads. For BASE 1.3.0,
+RM 1.2.0 and TERM 3.1.0 no ODIN file is vendored: the ITS-BMM copies at
+`37b31739…` predate the json overlays above, and `codegen-inputs.sh` drops them.
 
 Note (drift caught 2026-07-04): re-vendoring verbatim at this commit corrected a
 one-character doc typo (`senstive`->`sensitive`) in BASE's

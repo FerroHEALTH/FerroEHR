@@ -24,11 +24,13 @@
               already-rendered FHIR document, never a typed resource"
 )]
 
+use crate::db::acquire::acquire;
 use jiff_sqlx::Timestamp;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 use crate::config::auth::AssuranceLevel;
+use crate::service::error::ErrorChain;
 use crate::system_log::AuditError;
 use crate::system_log::codes::AtnaAction;
 use crate::system_log::event::{ActingMode, AuditEvent, EventType, ObjectClass};
@@ -116,7 +118,7 @@ impl AuditStore {
             .bind(event.actor.assurance_value.as_deref())
             .bind(event.actor.professional_id.as_deref())
             .bind(event.emergency_access)
-            .fetch_one(&self.pool)
+            .fetch_one(&mut *acquire(&self.pool).await?)
             .await?
             .try_get::<Uuid, _>("id")
             .map_err(AuditError::Store)
@@ -229,7 +231,7 @@ impl AuditStore {
             .bind(actors.values)
             .bind(actors.professionals)
             .bind(emergency)
-            .execute(&self.pool)
+            .execute(&mut *acquire(&self.pool).await?)
             .await?;
         Ok(())
     }
@@ -238,28 +240,44 @@ impl AuditStore {
     /// best-effort bookkeeping: a failure is logged, never propagated (the
     /// record itself is already durable).
     pub async fn mark_syslog_delivered(&self, id: Uuid) {
-        let outcome =
-            sqlx::query("UPDATE audit.audit_event SET delivered_syslog_at = now() WHERE id = $1")
-                .bind(id)
-                .execute(&self.pool)
-                .await;
+        let outcome = self
+            .stamp(
+                "UPDATE audit.audit_event SET delivered_syslog_at = now() WHERE id = $1",
+                id,
+            )
+            .await;
         if let Err(e) = outcome {
-            tracing::warn!("audit store: stamping delivered_syslog_at failed: {e}");
+            tracing::warn!(
+                "audit store: stamping delivered_syslog_at failed: {}",
+                ErrorChain::new(&e)
+            );
         }
     }
 
     /// Stamp a row as delivered by the FHIR feed sink (see
     /// [`Self::mark_syslog_delivered`] for the best-effort semantics).
     pub async fn mark_fhir_feed_delivered(&self, id: Uuid) {
-        let outcome = sqlx::query(
-            "UPDATE audit.audit_event SET delivered_fhir_feed_at = now() WHERE id = $1",
-        )
-        .bind(id)
-        .execute(&self.pool)
-        .await;
+        let outcome = self
+            .stamp(
+                "UPDATE audit.audit_event SET delivered_fhir_feed_at = now() WHERE id = $1",
+                id,
+            )
+            .await;
         if let Err(e) = outcome {
-            tracing::warn!("audit store: stamping delivered_fhir_feed_at failed: {e}");
+            tracing::warn!(
+                "audit store: stamping delivered_fhir_feed_at failed: {}",
+                ErrorChain::new(&e)
+            );
         }
+    }
+
+    /// Runs one delivery-stamp `UPDATE` binding the row id.
+    async fn stamp(&self, sql: &'static str, id: Uuid) -> Result<(), AuditError> {
+        sqlx::query(sql)
+            .bind(id)
+            .execute(&mut *acquire(&self.pool).await?)
+            .await?;
+        Ok(())
     }
 
     /// The oldest rows not yet delivered by the FHIR feed sink (the ITI-20
@@ -277,7 +295,7 @@ impl AuditStore {
              ORDER BY stored_at ASC LIMIT $1",
         )
         .bind(limit.max(1))
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *acquire(&self.pool).await?)
         .await?;
         rows.into_iter()
             .map(|row| {
@@ -306,7 +324,7 @@ impl AuditStore {
         }
         let removed: i64 = sqlx::query_scalar("SELECT audit.reap_audit_events($1)")
             .bind(i32::try_from(retention_days).unwrap_or(i32::MAX))
-            .fetch_one(&self.pool)
+            .fetch_one(&mut *acquire(&self.pool).await?)
             .await?;
         Ok(u64::try_from(removed).unwrap_or(0))
     }
@@ -327,7 +345,7 @@ impl AuditStore {
         }
         let removed: i64 = sqlx::query_scalar("SELECT audit.reap_audit_events_years($1)")
             .bind(i32::try_from(retention_years).unwrap_or(i32::MAX))
-            .fetch_one(&self.pool)
+            .fetch_one(&mut *acquire(&self.pool).await?)
             .await?;
         u64::try_from(removed).map_err(|e| AuditError::Store(sqlx::Error::Decode(Box::new(e))))
     }
@@ -354,7 +372,7 @@ impl AuditStore {
             "SELECT chain_seq, record_id, recorded_at, finding \
              FROM audit.verify_audit_chain() ORDER BY chain_seq NULLS FIRST",
         )
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *acquire(&self.pool).await?)
         .await?;
         rows.into_iter()
             .map(|row| {
@@ -382,11 +400,11 @@ impl AuditStore {
     ) -> Result<(i64, Vec<serde_json::Value>), AuditError> {
         let (count_sql, count_values, sql, values) = build_search_statements(filter);
         let total: i64 = sqlx::query_scalar_with(sqlx::AssertSqlSafe(count_sql), count_values)
-            .fetch_one(&self.pool)
+            .fetch_one(&mut *acquire(&self.pool).await?)
             .await?;
 
         let rows = sqlx::query_with(sqlx::AssertSqlSafe(sql), values)
-            .fetch_all(&self.pool)
+            .fetch_all(&mut *acquire(&self.pool).await?)
             .await?;
         let documents = rows
             .into_iter()

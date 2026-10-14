@@ -20,6 +20,7 @@
 // The CRUD helpers below read the `pub(crate)` `pool` field of
 // `crate::service::FerroEhrService`.
 
+use crate::db::acquire::acquire;
 use sqlx::Row;
 use uuid::Uuid;
 
@@ -134,7 +135,7 @@ impl FerroEhrService {
             "SELECT id, name, kind, change_type, template_id, enabled, created_at \
              FROM event_subscription ORDER BY created_at DESC, id",
         )
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *acquire(&self.pool).await?)
         .await?;
         rows.iter().map(Self::subscription_row).collect()
     }
@@ -146,7 +147,7 @@ impl FerroEhrService {
              FROM event_subscription WHERE id = $1",
         )
         .bind(id)
-        .fetch_optional(&self.pool)
+        .fetch_optional(&mut *acquire(&self.pool).await?)
         .await?
         .ok_or_else(|| {
             ServiceError::sm(
@@ -176,7 +177,7 @@ impl FerroEhrService {
         .bind(predicate(body.change_type.as_deref()))
         .bind(predicate(body.template_id.as_deref()))
         .bind(body.enabled)
-        .fetch_one(&self.pool)
+        .fetch_one(&mut *acquire(&self.pool).await?)
         .await
         .map_err(map_insert_error)?;
         Self::subscription_row(&row)
@@ -206,7 +207,7 @@ impl FerroEhrService {
         .bind(predicate(body.change_type.as_deref()))
         .bind(predicate(body.template_id.as_deref()))
         .bind(enabled)
-        .fetch_optional(&self.pool)
+        .fetch_optional(&mut *acquire(&self.pool).await?)
         .await?
         .ok_or_else(|| {
             ServiceError::sm(
@@ -226,7 +227,7 @@ impl FerroEhrService {
     async fn delete_subscription(&self, id: Uuid) -> Result<(), ServiceError> {
         let deleted = sqlx::query("DELETE FROM event_subscription WHERE id = $1")
             .bind(id)
-            .execute(&self.pool)
+            .execute(&mut *acquire(&self.pool).await?)
             .await?
             .rows_affected();
         if deleted == 0 {

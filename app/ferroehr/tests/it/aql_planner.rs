@@ -2178,8 +2178,8 @@ fn a_folder_referenced_or_branch_is_readable() {
 const EHR_SUBJECT: &str = r#""e0"."subject_id" = $"#;
 /// The patient-scope test inside a versioned-object root's subquery.
 const ROOT_SUBJECT: &str = r#""subject_row"."subject_id" = $"#;
-/// The ambiguity guard every patient-scope test carries.
-const SUBJECT_GUARD: &str = r#""subject_other"."subject_id" = $"#;
+/// The ambiguity guard the patient-scope test on `e0` carries.
+const SUBJECT_GUARD: &str = r#""subject_other"."subject_id" = "e0"."subject_id""#;
 
 /// A branch binding under the EHR is a node of that EHR, so the patient scope
 /// on the EHR row covers it, and a row whose branches all miss stays in scope:
@@ -2526,5 +2526,22 @@ fn exists_is_path_level() {
         anchor_exists(&sql),
         2,
         "the assignment EXISTS plus the operand's own: {sql}"
+    );
+}
+
+/// An `e/ehr_status/...` path joins the EHR's current `EHR_STATUS`, whose
+/// template the scope collection reports beside the EHR's id.
+#[test]
+fn the_scope_collection_reports_the_ehr_status_template() {
+    let ir = plan_ok("SELECT e/ehr_status/subject FROM EHR e");
+    let scope = ferroehr::aql::sql::build_scope(&ir, &Params::new(), &scope_ctx())
+        .unwrap_or_else(|e| panic!("scope build failed: {e}"))
+        .unwrap_or_else(|| panic!("an EHR source is something to collect"));
+    assert_eq!(scope.ehr_columns, vec!["scope_ehr_0".to_owned()]);
+    assert_eq!(scope.template_columns, vec!["scope_template_1".to_owned()]);
+    assert!(
+        scope.sql.contains(r#""template_id" AS "scope_template_1""#),
+        "{}",
+        scope.sql
     );
 }

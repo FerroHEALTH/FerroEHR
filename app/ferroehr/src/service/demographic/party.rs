@@ -16,7 +16,9 @@
               fragment the seam produced once; stored-content serving"
 )]
 
+use crate::db::acquire::acquire;
 use serde_json::Value;
+use sqlx::Connection as _;
 
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
@@ -183,7 +185,8 @@ impl FerroEhrService {
             .then(|| body.clone());
         #[cfg(not(feature = "multimedia"))]
         let repr_body = Some(body.clone());
-        let mut tx = self.demographic_pool.begin().await?;
+        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut tx = conn.begin().await?;
         let committed = create(
             &mut tx,
             None,
@@ -315,7 +318,8 @@ impl FerroEhrService {
             .then(|| body.clone());
         #[cfg(not(feature = "multimedia"))]
         let repr_body = Some(body.clone());
-        let mut tx = self.demographic_pool.begin().await?;
+        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut tx = conn.begin().await?;
         let committed = update(
             &mut tx,
             None,
@@ -402,7 +406,8 @@ impl FerroEhrService {
 
         let audit = self.demographic_audit(update_audit, change_type::DELETED, "PARTY delete")?;
         let ctx = CommitEnv::signing_ctx(self);
-        let mut tx = self.demographic_pool.begin().await?;
+        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut tx = conn.begin().await?;
         let committed = delete(
             &mut tx,
             None,

@@ -17,6 +17,7 @@
 //! invalidated on every local artefact write, with a short time-to-live that
 //! doubles as the convergence window for an upload made on another instance.
 
+use crate::db::acquire::acquire;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -75,7 +76,7 @@ impl FerroEhrService {
         let edges: Vec<(String, String)> = sqlx::query_as(
             "SELECT hrid, parent_hrid FROM adl2_artefact WHERE parent_hrid IS NOT NULL",
         )
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *acquire(&self.pool).await?)
         .await?;
         Ok(Arc::new(ArchetypeLineage::from_parent_edges(edges)))
     }

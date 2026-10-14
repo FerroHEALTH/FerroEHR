@@ -23,11 +23,13 @@ use std::time::Duration;
 
 use anyhow::Context as _;
 use clap::{Parser, Subcommand};
+use ferroehr::aql::subject::ehr_subject;
 use ferroehr::config::deployment::{DatabaseFacts, DeploymentPosture, DeploymentProfile};
 use ferroehr::config::management::EndpointLevels;
 use ferroehr::config::management::ManagementConfig;
 use ferroehr::db::domain::{Domain, DomainPools};
 use ferroehr::decommission::{Decommission, Erasure};
+use ferroehr::ids::EhrId;
 use ferroehr::manufacturer::MANUFACTURER;
 use ferroehr::report::Report;
 use ferroehr::support::{SupportPeriod, today_utc};
@@ -1338,8 +1340,8 @@ pub fn build_authz(
 /// The DB-backed ABAC attribute resolvers.
 ///
 /// Builds `ferroehr_rest::extensions::access::authz::AuthzResolvers`: the EHR
-/// subject external-ref id (the promoted `ehr.subject_id` column — the same
-/// query the audit [`SubjectResolver`] runs) and the committed template of a
+/// subject as the patient scope addresses it (`ferroehr::aql::subject::ehr_subject`,
+/// the rule the AQL patient scope applies) and the committed template of a
 /// COMPOSITION version (`version.template_id` via the service read-back).
 /// Failures are typed [`ResolveError`]s — the PEP fails closed on them, never
 /// silently permits.
@@ -1351,11 +1353,8 @@ pub fn authz_resolvers(pool: PgPool, service: Arc<FerroEhrService>) -> AuthzReso
             Box::pin(async move {
                 let id = Uuid::parse_str(&ehr_id)
                     .map_err(|e| ResolveError::new(format!("ehr id {ehr_id}"), e))?;
-                sqlx::query_scalar::<_, Option<String>>("SELECT subject_id FROM ehr WHERE id = $1")
-                    .bind(id)
-                    .fetch_optional(&pool)
+                ehr_subject(&pool, EhrId(id))
                     .await
-                    .map(Option::flatten)
                     .map_err(|e| ResolveError::new("ehr subject lookup", e))
             })
         }),

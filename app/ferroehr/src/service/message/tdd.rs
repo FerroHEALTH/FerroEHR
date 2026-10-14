@@ -49,6 +49,7 @@
               verbatim stored content (RM common master06 §Copying)"
 )]
 
+use crate::db::acquire::acquire;
 use quick_xml::Reader;
 use quick_xml::events::Event;
 use serde_json::Value;
@@ -283,7 +284,7 @@ impl FerroEhrService {
     async fn require_tdd_target_ehr(&self, ehr_id: EhrId) -> Result<(), SmError> {
         let ehr_exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM ehr WHERE id = $1)")
             .bind(ehr_id)
-            .fetch_one(&self.pool)
+            .fetch_one(&mut *acquire(&self.pool).await?)
             .await
             .map_err(ServiceError::from)?;
         if ehr_exists {

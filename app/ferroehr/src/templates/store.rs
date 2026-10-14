@@ -32,7 +32,9 @@
               (families 1/8)"
 )]
 
+use crate::db::acquire::acquire;
 use serde_json::{Value, json};
+use sqlx::Connection as _;
 use sqlx::Row;
 
 use super::ingest;
@@ -120,7 +122,8 @@ impl FerroEhrService {
         // index (`lower(template_id)`) rejects exact and case-variant duplicates
         // alike (a case variant is the *same* id, §Composite Identifiers
         // and Case) — no row returned means the template already exists → 409.
-        let mut tx = self.pool.begin().await?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
         let row = sqlx::query(
             "INSERT INTO template_store (template_id, concept, root_archetype, content) \
              VALUES ($1, $2, $3, $4) \
@@ -171,7 +174,7 @@ impl FerroEhrService {
             "SELECT content FROM template_store WHERE lower(template_id) = lower($1)",
         )
         .bind(template_id)
-        .fetch_optional(&self.pool)
+        .fetch_optional(&mut *acquire(&self.pool).await?)
         .await?
         .ok_or_else(|| {
             ServiceError::sm(
@@ -195,7 +198,7 @@ impl FerroEhrService {
             "SELECT EXISTS(SELECT 1 FROM template_store WHERE lower(template_id) = lower($1))",
         )
         .bind(template_id)
-        .fetch_one(&self.pool)
+        .fetch_one(&mut *acquire(&self.pool).await?)
         .await?)
     }
 
@@ -212,7 +215,7 @@ impl FerroEhrService {
             "SELECT template_id, concept, root_archetype, created_at \
              FROM template_store ORDER BY template_id",
         )
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *acquire(&self.pool).await?)
         .await?;
         rows.iter().map(Self::template_json).collect()
     }

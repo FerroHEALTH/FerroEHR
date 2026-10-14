@@ -21,6 +21,7 @@
 //! "the `at0012` ELEMENT under an `openEHR-DEMOGRAPHIC-ADDRESS.address.v1`
 //! node" is one integer join, not a JSON walk.
 
+use crate::db::acquire::acquire;
 use std::collections::BTreeSet;
 
 use sqlx::PgPool;
@@ -84,7 +85,8 @@ pub fn predicate_sql(kind: PredicateKind) -> &'static str {
 /// Run one bound predicate and return the parties it matches.
 ///
 /// # Errors
-/// [`CohortError::InvalidValue`] when an age band does not parse, and
+/// [`CohortError::InvalidValue`] when an age band does not parse,
+/// [`CohortError::Acquire`] when no connection can be obtained, and
 /// [`CohortError::Database`] when the read fails.
 pub(crate) async fn matching_parties(
     pool: &PgPool,
@@ -106,7 +108,10 @@ pub(crate) async fn matching_parties(
             query.bind(min).bind(max)
         }
     };
-    let ids: Vec<Uuid> = query.fetch_all(pool).await.map_err(CohortError::Database)?;
+    let ids: Vec<Uuid> = query
+        .fetch_all(&mut *acquire(pool).await?)
+        .await
+        .map_err(CohortError::Database)?;
     Ok(ids.into_iter().map(VoId).collect())
 }
 

@@ -47,6 +47,7 @@ use crate::overview::error::RestError;
 use crate::smart::enforce::{self, GateConfig, ScopeDecision};
 use crate::state::AppState;
 use crate::{negotiate, params};
+use ferroehr::aql::subject::EhrSubject;
 use ferroehr::config::smart::SmartConfig;
 use ferroehr::versioning::object_version_id::parse_uid_based_id;
 use openehr_sdt::smart_scopes::SmartScope;
@@ -115,18 +116,21 @@ pub(crate) fn query_pre(
     Ok((patient, true))
 }
 
-/// Post-checks a query execution: one PDP decision over the touched EHR and
-/// template sets.
+/// Post-checks a query execution: the PDP decides over the touched patients
+/// and templates.
 ///
 /// The executor collects every EHR the query touches, from its EHR sources as
-/// well as its versioned-object roots, so a query reading only the `ehr` row
-/// reaches the PDP too; a query touching nothing asks nothing of the PDP. The
-/// patient gate is the subject-scope pre-filter, which binds every EHR source
-/// and root, so it is not re-run here.
+/// well as its versioned-object roots, and reads their subjects. The patient
+/// attribute is the set of those subject ids (a set for query, as
+/// [`AuthzRequest::patient`] states), so a patient-keyed rule applies whether
+/// or not a patient claim is configured; a touched EHR with no subject is asked
+/// once more with no patient. A touched subject whose id another namespace also
+/// holds is refused: the bare id the PDP sees would name both. A query touching
+/// nothing asks nothing of the PDP.
 ///
 /// # Errors
-/// A ready `403` when the PDP denies or the patient claim is missing, or a
-/// `500` when the PDP fails.
+/// A ready `403` when the PDP denies, a touched subject id is ambiguous or the
+/// patient claim is missing, or a `500` when the PDP fails.
 pub(crate) async fn query_post(
     state: &AppState,
     op: &'static str,
@@ -148,21 +152,39 @@ pub(crate) async fn query_post(
     let principal = current_principal().ok_or_else(|| {
         forbidden_unauthenticated("authentication required for attribute-based access control")
     })?;
-    let patient = resolve_patient_claim(abac, &principal)?;
+    // The claim gate stays: a configured claim the token lacks is a 403 here too.
+    resolve_patient_claim(abac, &principal)?;
+    let subjects = &outcome.subjects;
+    if !subjects.shared.is_empty() {
+        return Err(forbidden(
+            &principal,
+            "patient scope (a touched subject id is held under several namespaces)",
+        ));
+    }
     let template =
         (!outcome.template_ids.is_empty()).then(|| Attr::Set(outcome.template_ids.clone()));
-    let req = AuthzRequest {
-        operation_id: op,
-        subject: &principal.subject,
-        roles: &principal.roles,
-        scopes: &principal.scopes,
-        kind: ResourceKind::Query,
-        access: AccessMode::Execute,
-        organization: organization(abac, &principal),
-        patient: patient.map(Attr::One),
-        template,
-    };
-    decide(abac, &principal, &req).await
+    let mut patients = Vec::with_capacity(2);
+    if !subjects.ids.is_empty() {
+        patients.push(Some(Attr::Set(subjects.ids.clone())));
+    }
+    if subjects.absent || subjects.ids.is_empty() {
+        patients.push(None);
+    }
+    for patient in patients {
+        let req = AuthzRequest {
+            operation_id: op,
+            subject: &principal.subject,
+            roles: &principal.roles,
+            scopes: &principal.scopes,
+            kind: ResourceKind::Query,
+            access: AccessMode::Execute,
+            organization: organization(abac, &principal),
+            patient,
+            template: template.clone(),
+        };
+        decide(abac, &principal, &req).await?;
+    }
+    Ok(())
 }
 
 /// Pre-check the request. `Err(response)` short-circuits the dispatch with a
@@ -355,8 +377,16 @@ async fn patient_gate(
     subject_gate(abac, principal, patient, ehr_id).await
 }
 
-/// Gates a target EHR on the subject match: the claim must equal the EHR's
-/// subject external ref (a subject-less EHR passes).
+/// Gates a target EHR on the patient claim: the claim must name the EHR's
+/// subject ([`EhrSubject::is_named_by`]), the rule the query patient scope
+/// applies.
+///
+/// A subject-less EHR is refused, as is one whose subject id another namespace
+/// also holds; an id no EHR has passes, so the route answers it. No openEHR spec
+/// governs the patient scope — our own extension.
+///
+/// # Errors
+/// A ready `403` on a refusal, or a `500` when the subject cannot be resolved.
 async fn subject_gate(
     abac: &AbacGate,
     principal: &Principal,
@@ -370,10 +400,19 @@ async fn subject_gate(
         .await
         .map_err(|e| engine_error(principal, "resolve the EHR subject attribute", &e))?;
     match subject {
-        Some(subject) if subject != patient => {
+        None => Ok(()),
+        Some(subject) if subject.is_named_by(patient) => Ok(()),
+        Some(EhrSubject::Absent) => Err(forbidden(
+            principal,
+            "patient scope (the EHR records no subject)",
+        )),
+        Some(EhrSubject::Shared { .. }) => Err(forbidden(
+            principal,
+            "patient scope (the subject id is held under several namespaces)",
+        )),
+        Some(EhrSubject::Unique { .. }) => {
             Err(forbidden(principal, "patient scope (subject mismatch)"))
         }
-        _ => Ok(()),
     }
 }
 
@@ -751,8 +790,9 @@ mod tests {
         }
     }
 
-    fn gate_with_subject(subject: Option<&'static str>, calls: Arc<AtomicUsize>) -> AbacGate {
-        let subject = subject.map(str::to_owned);
+    /// A gate whose resolver answers `subject` for every EHR id (`None`: no EHR
+    /// has the id).
+    fn gate_with_subject(subject: Option<EhrSubject>, calls: Arc<AtomicUsize>) -> AbacGate {
         AbacGate {
             engine: Arc::new(CountingEngine(calls)),
             resolvers: AuthzResolvers {
@@ -785,7 +825,7 @@ mod tests {
     #[tokio::test]
     async fn subject_mismatch_denies_without_engine_call() {
         let calls = Arc::new(AtomicUsize::new(0));
-        let gate = gate_with_subject(Some("P2"), Arc::clone(&calls));
+        let gate = gate_with_subject(Some(unique("P2")), Arc::clone(&calls));
         let principal = principal_with_patient("P1");
         let err = subject_gate(&gate, &principal, Some("P1"), Some("ehr-1"))
             .await
@@ -801,7 +841,7 @@ mod tests {
     #[tokio::test]
     async fn subject_match_passes_gate() {
         let calls = Arc::new(AtomicUsize::new(0));
-        let gate = gate_with_subject(Some("P1"), calls);
+        let gate = gate_with_subject(Some(unique("P1")), calls);
         let principal = principal_with_patient("P1");
         assert!(
             subject_gate(&gate, &principal, Some("P1"), Some("ehr-1"))
@@ -810,11 +850,64 @@ mod tests {
         );
     }
 
+    /// A subject the claim id names under one namespace.
+    fn unique(id: &str) -> EhrSubject {
+        EhrSubject::Unique {
+            id: id.to_owned(),
+            namespace: Some("test.patients".to_owned()),
+        }
+    }
+
     #[tokio::test]
-    async fn null_subject_passes_gate() {
+    async fn caller_without_patient_scope_passes_gate() {
         // A caller with no patient scope is unaffected by the subject gate, so
         // an anonymous EHR stays fully operable for it (RM ehr
         // `master04-ehr_package.adoc` §EHR Status).
+        let calls = Arc::new(AtomicUsize::new(0));
+        let gate = gate_with_subject(Some(EhrSubject::Absent), calls);
+        let principal = principal_with_patient("P1");
+        assert!(
+            subject_gate(&gate, &principal, None, Some("ehr-1"))
+                .await
+                .is_ok()
+        );
+    }
+
+    /// A subject-less EHR is outside every patient scope, as the query scope
+    /// excludes it.
+    #[tokio::test]
+    async fn subject_less_ehr_is_refused_without_engine_call() {
+        let calls = Arc::new(AtomicUsize::new(0));
+        let gate = gate_with_subject(Some(EhrSubject::Absent), Arc::clone(&calls));
+        let principal = principal_with_patient("P1");
+        let err = subject_gate(&gate, &principal, Some("P1"), Some("ehr-1"))
+            .await
+            .expect_err("a subject-less EHR must deny");
+        assert_eq!(err.status(), StatusCode::FORBIDDEN);
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+    }
+
+    /// The claim carries no namespace, so an id another namespace also holds
+    /// names neither subject.
+    #[tokio::test]
+    async fn subject_id_held_under_two_namespaces_is_refused() {
+        let calls = Arc::new(AtomicUsize::new(0));
+        let shared = EhrSubject::Shared {
+            id: "P1".to_owned(),
+            namespace: Some("test.patients".to_owned()),
+        };
+        let gate = gate_with_subject(Some(shared), Arc::clone(&calls));
+        let principal = principal_with_patient("P1");
+        let err = subject_gate(&gate, &principal, Some("P1"), Some("ehr-1"))
+            .await
+            .expect_err("an ambiguous subject id must deny");
+        assert_eq!(err.status(), StatusCode::FORBIDDEN);
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+    }
+
+    /// An id no EHR has passes, so the route answers it.
+    #[tokio::test]
+    async fn unknown_ehr_passes_gate() {
         let calls = Arc::new(AtomicUsize::new(0));
         let gate = gate_with_subject(None, calls);
         let principal = principal_with_patient("P1");
@@ -828,7 +921,7 @@ mod tests {
     #[test]
     fn missing_patient_claim_is_forbidden() {
         let calls = Arc::new(AtomicUsize::new(0));
-        let gate = gate_with_subject(Some("P1"), calls);
+        let gate = gate_with_subject(Some(unique("P1")), calls);
         // A principal with no patient claim configured-but-absent → 403.
         let principal = Principal {
             subject: "alice".to_owned(),

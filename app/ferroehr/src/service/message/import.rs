@@ -61,6 +61,8 @@
               verbatim stored content (RM common master06 §Copying)"
 )]
 
+use crate::db::acquire::acquire;
+use sqlx::Connection as _;
 use std::collections::BTreeMap;
 
 use serde_json::Value;
@@ -132,8 +134,8 @@ impl FerroEhrService {
         let audit = self.audit(change_type::CREATION, "EHR Extract import");
         let signing = self.signing_ctx();
         self.import_parties(&signing, &audit, parties).await?;
-
-        let mut tx = self.pool.begin().await.map_err(ServiceError::from)?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await.map_err(ServiceError::from)?;
         // Into an *empty* target: a duplicate EHR id is
         // `ehr_create_fail_duplicate_id`. The EHR is created locally, so its
         // immutable `system_id` is ours (master06 §Distributed Versioning — the
@@ -217,8 +219,8 @@ impl FerroEhrService {
         }
         let (containers, parties) = parse_import_containers(&an_extract)?;
         reject_duplicate_singleton_containers(&containers)?;
-
-        let mut tx = self.pool.begin().await.map_err(ServiceError::from)?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await.map_err(ServiceError::from)?;
         // Exclusive, because the import re-derives the promoted `ehr` columns
         // before it commits; the flag the read returns is not an import gate.
         let locked = crate::storage::ehr_repo::ehr_is_modifiable_locked(&mut tx, an_ehr_id, true)
@@ -345,7 +347,8 @@ impl FerroEhrService {
         if parties.is_empty() {
             return Ok(());
         }
-        let mut tx = self.demographic_pool.begin().await?;
+        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut tx = conn.begin().await?;
         commit_demographic_import(&mut tx, signing, &self.privacy, audit, parties).await?;
         tx.commit().await?;
         Ok(())
@@ -357,7 +360,7 @@ impl FerroEhrService {
         Ok(
             sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM ehr WHERE id = $1)")
                 .bind(ehr_id)
-                .fetch_one(&self.pool)
+                .fetch_one(&mut *acquire(&self.pool).await?)
                 .await?,
         )
     }

@@ -34,6 +34,7 @@ use std::time::Duration;
 use async_trait::async_trait;
 use axum::Router;
 use axum::body::Body;
+use ferroehr::aql::subject::EhrSubject;
 use ferroehr::config::auth::AuthConfig;
 use ferroehr::config::authz::AuthzConfig;
 use ferroehr::config::server::ServerConfig;
@@ -147,14 +148,22 @@ fn seed_config() -> AppConfig {
     c
 }
 
+/// A subject the claim id names under one namespace.
+fn unique(id: &str) -> EhrSubject {
+    EhrSubject::Unique {
+        id: id.to_owned(),
+        namespace: Some("test.patients".to_owned()),
+    }
+}
+
 /// The in-memory subject resolver: EHR → patient subject.
 fn resolvers() -> AuthzResolvers {
     AuthzResolvers {
         subject: Arc::new(|ehr_id: String| {
             Box::pin(async move {
                 let subject = match ehr_id.as_str() {
-                    EHR_OWN => Some(PATIENT_OWN.to_owned()),
-                    EHR_OTHER => Some(PATIENT_OTHER.to_owned()),
+                    EHR_OWN => Some(unique(PATIENT_OWN)),
+                    EHR_OTHER => Some(unique(PATIENT_OTHER)),
                     _ => None,
                 };
                 Ok::<_, ResolveError>(subject)
@@ -767,8 +776,14 @@ async fn template_scoped_rule_does_not_bind_a_templateless_composition() {
 // ── the query subject scope ───────────────────────────────────────────────────
 
 /// Create an EHR with a chosen id whose `EHR_STATUS.subject` refers to
-/// `patient` (`PUT /ehr/{id}` with a status body → 201).
+/// `patient` under `test.patients` (`PUT /ehr/{id}` with a status body → 201).
 async fn seed_ehr_for(seed: &Router, ehr_id: &str, patient: &str) {
+    seed_ehr_in(seed, ehr_id, "test.patients", patient).await;
+}
+
+/// Create an EHR with a chosen id whose `EHR_STATUS.subject` refers to
+/// `patient` under `namespace` (`PUT /ehr/{id}` with a status body → 201).
+async fn seed_ehr_in(seed: &Router, ehr_id: &str, namespace: &str, patient: &str) {
     let status = json!({
         "_type": "EHR_STATUS",
         "archetype_node_id": "openEHR-EHR-EHR_STATUS.generic.v1",
@@ -783,7 +798,7 @@ async fn seed_ehr_for(seed: &Router, ehr_id: &str, patient: &str) {
             "_type": "PARTY_SELF",
             "external_ref": {
                 "_type": "PARTY_REF",
-                "namespace": "test.patients",
+                "namespace": namespace,
                 "type": "PERSON",
                 "id": { "_type": "GENERIC_ID", "value": patient, "scheme": "test" }
             }
@@ -930,4 +945,140 @@ async fn the_query_post_check_applies_to_an_ehr_only_query() {
             "{aql}: another patient's query is permitted"
         );
     }
+}
+
+const EHR_SHARED_A: &str = "aaaaaaaa-0000-4000-8000-000000000001";
+const EHR_SHARED_B: &str = "aaaaaaaa-0000-4000-8000-000000000002";
+const EHR_ANONYMOUS: &str = "aaaaaaaa-0000-4000-8000-000000000003";
+const EHR_UNIQUE: &str = "aaaaaaaa-0000-4000-8000-000000000004";
+
+/// An ABAC app whose subject resolver reads the database through
+/// `ferroehr::aql::subject::ehr_subject`, as the binary wires it, plus the
+/// auth-off seed app over the same service.
+async fn db_resolved_apps() -> (testkit::TestDb, Router, Router) {
+    let (pg, pool) = common::migrated_pool().await;
+    let svc = Arc::new(FerroEhrService::new(
+        &ferroehr::db::domain::DomainPools::from_shared(&pool),
+    ));
+    let seed = build_with(seed_config(), Arc::clone(&svc)).expect("seed app");
+    let resolvers = AuthzResolvers {
+        subject: Arc::new(move |ehr_id: String| {
+            let pool = pool.clone();
+            Box::pin(async move {
+                let id = ehr_id
+                    .parse::<ferroehr::ids::EhrId>()
+                    .map_err(|e| ResolveError::new("ehr id", e))?;
+                ferroehr::aql::subject::ehr_subject(&pool, id)
+                    .await
+                    .map_err(|e| ResolveError::new("ehr subject lookup", e))
+            })
+        }),
+        ..resolvers()
+    };
+    let app = build_full(
+        rest_config(),
+        svc,
+        authz_with(Arc::new(PermitAll), resolvers),
+        Observability::default(),
+    )
+    .expect("build app");
+    (pg, seed, app)
+}
+
+/// The direct-route patient gate applies the rule the query patient scope
+/// applies: an id held under two namespaces names neither subject, and a
+/// subject-less EHR is in no patient's scope (our own extension; no openEHR
+/// spec governs the patient claim).
+#[tokio::test]
+async fn the_direct_route_gate_refuses_ambiguous_and_subject_less_ehrs() {
+    let (_pg, seed, app) = db_resolved_apps().await;
+    seed_ehr_in(&seed, EHR_SHARED_A, "test.patients", "PATIENT-X").await;
+    seed_ehr_in(&seed, EHR_SHARED_B, "other.patients", "PATIENT-X").await;
+    seed_ehr(&seed, EHR_ANONYMOUS).await;
+    seed_ehr_in(&seed, EHR_UNIQUE, "test.patients", "PATIENT-U").await;
+
+    for ehr in [EHR_SHARED_A, EHR_SHARED_B] {
+        assert_eq!(
+            probe(
+                &app,
+                "POST",
+                &format!("/ehr/{ehr}/composition"),
+                Some("PATIENT-X")
+            )
+            .await,
+            StatusCode::FORBIDDEN,
+            "{ehr}: an id held under two namespaces names neither subject"
+        );
+    }
+    assert_eq!(
+        probe(
+            &app,
+            "POST",
+            &format!("/ehr/{EHR_ANONYMOUS}/composition"),
+            Some("PATIENT-U")
+        )
+        .await,
+        StatusCode::FORBIDDEN,
+        "a subject-less EHR is in no patient's scope"
+    );
+    assert_eq!(
+        probe(
+            &app,
+            "POST",
+            &format!("/ehr/{EHR_UNIQUE}/composition"),
+            Some("PATIENT-U")
+        )
+        .await,
+        StatusCode::CREATED,
+        "an id held under one namespace names its subject"
+    );
+}
+
+/// Run `aql` through `POST /query/aql` with a token that carries no patient
+/// claim, returning the status only.
+async fn unscoped_query_status(app: &Router, aql: &str) -> StatusCode {
+    let req = Request::builder()
+        .method("POST")
+        .uri(format!("{BASE}/query/aql"))
+        .header("authorization", bearer(None))
+        .header("content-type", "application/json")
+        .body(Body::from(json!({ "q": aql }).to_string()))
+        .expect("request");
+    status(app, req).await
+}
+
+/// With no patient claim configured, the query post-check's patient attribute
+/// is the set of the touched EHRs' subjects, so a patient-keyed PDP rule fires
+/// on a query that reads only the `ehr` row (our own extension; no openEHR spec
+/// governs ABAC).
+#[tokio::test]
+async fn a_patient_keyed_rule_applies_to_the_touched_subjects_without_a_claim() {
+    let (_pg, svc, seed) = service_and_seed_app().await;
+    seed_ehr_for(&seed, EHR_OWN, PATIENT_OWN).await;
+    seed_ehr_for(&seed, EHR_OTHER, PATIENT_OTHER).await;
+
+    let mut cfg = AuthzConfig::default();
+    cfg.abac.enabled = true;
+    cfg.abac.patient_claim = String::new();
+    let handle = AuthzHandle::build(
+        &cfg,
+        &rest_config().server.base_path,
+        Some(Arc::new(DenyOwnPatientQueries)),
+        resolvers(),
+    )
+    .map(Arc::new);
+    let app = build_full(rest_config(), svc, handle, Observability::default()).expect("build app");
+
+    assert_eq!(
+        unscoped_query_status(&app, "SELECT e/ehr_id/value FROM EHR e").await,
+        StatusCode::FORBIDDEN,
+        "the query touches PATIENT_OWN's EHR, which the rule denies"
+    );
+    let other_only =
+        format!("SELECT e/ehr_id/value FROM EHR e WHERE e/ehr_id/value = '{EHR_OTHER}'");
+    assert_eq!(
+        unscoped_query_status(&app, &other_only).await,
+        StatusCode::OK,
+        "a query touching only PATIENT_OTHER's EHR is permitted"
+    );
 }

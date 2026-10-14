@@ -112,7 +112,7 @@ metadata:
   name: ferroehr-viewer
   annotations:
     kubernetes.io/description: >-
-      Ingress for the viewer: only its HTTP port, but from EVERY source — this policy narrows ports, NOT sources (viewer.networkPolicy.ingressAllowAll=true). Set viewer.networkPolicy.ingressFrom for a PHI workload. Egress admits the CDR Service and DNS only.
+      Ingress for the viewer: only its HTTP port, but from EVERY source — this policy narrows ports, NOT sources (viewer.networkPolicy.ingressAllowAll=true). Set viewer.networkPolicy.ingressFrom for a PHI workload. Egress admits the CDR (its API port, and its management port when that is its own) and DNS only.
   labels:
     helm.sh/chart: ferroehr-11.1.1
     app.kubernetes.io/name: ferroehr-viewer
@@ -920,6 +920,11 @@ spec:
               value: "https://ferroehr:8080"
             - name: SSL_CERT_DIR
               value: "/etc/ssl/certs:/etc/ferroehr-cdr-ca"
+            # The management surface as the CDR serves it: on its own port when
+            # config.management.port is set, under config.management.base_path
+            # either way, so the viewer never guesses either.
+            - name: FERROEHR_VIEWER__CDR__MANAGEMENT_BASE_URL
+              value: "https://ferroehr:8080/management"
             # The viewer's base path mirrors the CDR's own, so shortening
             # config.server.base_path cannot leave the two disagreeing.
             - name: FERROEHR_VIEWER__CDR__BASE_PATH

@@ -20,6 +20,7 @@
               round-trip drops forward-compatible keys (the openEHR release strategy: minors are compatible supersets)"
 )]
 
+use crate::db::acquire::acquire;
 use serde_json::Value;
 use sqlx::{PgConnection, PgExecutor, PgPool, Row};
 use uuid::Uuid;
@@ -171,7 +172,7 @@ pub async fn ehr_header(
 ) -> Result<Option<(String, jiff::Timestamp)>, StorageError> {
     let Some(row) = sqlx::query("SELECT system_id, time_created FROM ehr WHERE id = $1")
         .bind(ehr_id)
-        .fetch_optional(pool)
+        .fetch_optional(&mut *acquire(pool).await?)
         .await?
     else {
         return Ok(None);
@@ -225,7 +226,7 @@ pub async fn ehr_summary_read(
          WHERE e.id = $1",
     )
     .bind(ehr_id)
-    .fetch_optional(pool)
+    .fetch_optional(&mut *acquire(pool).await?)
     .await?
     else {
         return Ok(None);
@@ -305,7 +306,7 @@ pub async fn directory_vo(pool: &PgPool, ehr_id: EhrId) -> Result<Option<VoId>, 
          LIMIT 1",
     )
     .bind(ehr_id)
-    .fetch_optional(pool)
+    .fetch_optional(&mut *acquire(pool).await?)
     .await?)
 }
 
@@ -345,7 +346,7 @@ pub async fn directory_current_meta(
          LIMIT 1",
     )
     .bind(ehr_id)
-    .fetch_optional(pool)
+    .fetch_optional(&mut *acquire(pool).await?)
     .await?
     else {
         return Ok(None);
@@ -378,7 +379,7 @@ pub async fn ehr_is_modifiable(pool: &PgPool, ehr_id: EhrId) -> Result<Option<bo
     Ok(
         sqlx::query_scalar("SELECT is_modifiable FROM ehr WHERE id = $1")
             .bind(ehr_id)
-            .fetch_optional(pool)
+            .fetch_optional(&mut *acquire(pool).await?)
             .await?,
     )
 }
@@ -466,7 +467,7 @@ pub async fn live_directory_exists(pool: &PgPool, ehr_id: EhrId) -> Result<bool,
            WHERE f.ehr_id = $1 AND v.lifecycle_state <> '523')",
     )
     .bind(ehr_id)
-    .fetch_one(pool)
+    .fetch_one(&mut *acquire(pool).await?)
     .await?)
 }
 
@@ -522,6 +523,6 @@ pub async fn live_folder_root_exists(
     .bind(ehr_id)
     .bind(root_archetype_node_id)
     .bind(root_name)
-    .fetch_one(pool)
+    .fetch_one(&mut *acquire(pool).await?)
     .await?)
 }

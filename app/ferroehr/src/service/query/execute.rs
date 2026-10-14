@@ -216,6 +216,7 @@ impl FerroEhrService {
         if let Some(scope) = scope {
             outcome.ehr_ids = scope.ehr_ids;
             outcome.template_ids = scope.template_ids;
+            outcome.subjects = scope.subjects;
         }
         Ok(outcome)
     }

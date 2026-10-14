@@ -25,6 +25,7 @@ pub mod store;
 
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
+use crate::service::demographic::identifier::store::StoreError;
 use crate::service::status::SmError;
 use crate::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, ObjectClass,
@@ -59,6 +60,9 @@ impl FerroEhrService {
             ));
         };
         let resolved = engine.resolve(scheme, value).await.map_err(|error| {
+            if let StoreError::Acquire(acquire) = error {
+                return SmError::from(acquire);
+            }
             // The client is told the scheme and nothing else; the cause rides
             // as a source so an operator can walk the chain without a database
             // error text reaching a caller.

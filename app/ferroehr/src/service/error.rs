@@ -253,6 +253,9 @@ pub enum ServiceError {
     /// A database failure.
     #[error(transparent)]
     Database(#[from] sqlx::Error),
+    /// No database connection could be obtained, so nothing ran.
+    #[error(transparent)]
+    Acquire(#[from] crate::db::acquire::AcquireError),
     /// A JSON payload the server was asked to READ is malformed — a
     /// client-caused refusal (`400`) whose wire message NAMES the defect
     /// (offset, expected token), because that is the only thing the caller can
@@ -745,6 +748,7 @@ impl From<ServiceError> for SmError {
             // (integrity/serialization conflict → 409, pool exhaustion → 503)
             // instead of collapsing every database error to a blanket 500.
             ServiceError::Database(e) => crate::storage::error::classify_sqlx(&e),
+            ServiceError::Acquire(e) => crate::storage::error::classify_acquire(&e).with_source(e),
             // A malformed payload the server was asked to read names its own
             // defect (`400`); a failure to serialize the server's own data is
             // a server fault whose diagnostic stays in the log (`500`).
@@ -795,6 +799,9 @@ impl From<ServiceError> for ApiError {
             ServiceError::Storage(e) => sqlx_conflict_api_error(SmError::from(e)),
             ServiceError::Database(e) => {
                 sqlx_conflict_api_error(crate::storage::error::classify_sqlx(&e))
+            }
+            ServiceError::Acquire(e) => {
+                sqlx_conflict_api_error(crate::storage::error::classify_acquire(&e))
             }
             // A malformed payload the server was asked to read is a client
             // defect → `400`, and the body names it (that IS the strict

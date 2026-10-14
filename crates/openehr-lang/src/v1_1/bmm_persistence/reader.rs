@@ -13,7 +13,9 @@
 //! parses the text with [`crate::v1_1::odin::parse`] and walks the resulting value
 //! tree into the generated `P_BMM_*` types, attribute by attribute, per the
 //! class docs under
-//! `LANG/docs/UML/classes/org.openehr.lang.bmm_persistence.*.adoc`.
+//! `LANG/docs/UML/classes/org.openehr.lang.bmm_persistence.*.adoc`. The JSON
+//! serialisation maps onto the same value tree
+//! ([`crate::v1_1::bmm_persistence::json_reader`]) and is read by the same walk.
 //!
 //! It is the first of the three stages `master02-overview.adoc` §Conceptual
 //! Approach describes — "A schema reading component has to resolve the schema
@@ -121,13 +123,16 @@ pub const TOLERATED_SCHEMA_ATTRIBUTES: &[&str] = &["model_name"];
 /// read rather than being refused wholesale.
 pub const TOLERATED_PROPERTY_ATTRIBUTES: &[&str] = &["default"];
 
-/// Read a P_BMM schema from its ODIN serialisation.
+/// Reads a P_BMM schema from its ODIN serialisation.
 ///
 /// The returned `P_BMM_SCHEMA` is the *unresolved* persisted form: its
 /// `includes` are recorded but not merged (that is
 /// [`crate::v1_1::bmm_persistence::include_resolution::resolve_includes`]) and its
 /// `bmm_*` in-memory caches are `None` (that is
-/// [`crate::v1_1::bmm_persistence::create_model::create_bmm_model`]).
+/// [`crate::v1_1::bmm_persistence::create_model::create_bmm_model`]). The JSON
+/// serialisation reads through
+/// [`crate::v1_1::bmm_persistence::json_reader::read_schema_json`] into the same
+/// value.
 ///
 /// # Errors
 /// Returns [`PBmmReadError::Odin`] when the text is not well-formed ODIN, and
@@ -137,9 +142,25 @@ pub const TOLERATED_PROPERTY_ATTRIBUTES: &[&str] = &["default"];
 /// the P_BMM class model.
 pub fn read_schema(src: &str) -> Result<PBmmSchema, PBmmReadError> {
     let root = crate::v1_1::odin::parse(src)?;
-    let OdinValue::Object(members) = &root else {
+    read_schema_tree(&root)
+}
+
+/// Reads a P_BMM schema from a value tree in the ODIN data model, whichever
+/// serialisation the tree was read from.
+///
+/// This is the one walk both serialisations share
+/// (`master04-syntax.adoc` §Serialisation Formats: "Whatever the format, the
+/// same serialisation rules apply"), including the stamping of
+/// `P_BMM_CLASS.source_schema_id` and `uid` described in the module docs.
+///
+/// # Errors
+/// Returns [`PBmmReadError::NotASchemaObject`] when the root is not an
+/// attribute object, and the schema-shape variants [`read_schema`] lists when
+/// the tree does not match the P_BMM class model.
+pub(super) fn read_schema_tree(root: &OdinValue) -> Result<PBmmSchema, PBmmReadError> {
+    let OdinValue::Object(members) = root else {
         return Err(PBmmReadError::NotASchemaObject {
-            found: kind_name(&root),
+            found: kind_name(root),
         });
     };
     let mut block = Block::new(String::new(), members);
@@ -238,7 +259,7 @@ fn key_text(key: &OdinKey) -> String {
 }
 
 /// Joins an ODIN attribute path segment onto a parent path.
-fn join_path(parent: &str, segment: &str) -> String {
+pub(super) fn join_path(parent: &str, segment: &str) -> String {
     if parent.is_empty() {
         segment.to_owned()
     } else {

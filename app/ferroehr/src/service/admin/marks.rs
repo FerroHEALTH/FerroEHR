@@ -21,6 +21,7 @@
 //! account for. GDPR Art. 18(3) (`docs/law/eu/gdpr/text.html`) makes the
 //! sequence itself the obligation.
 
+use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
@@ -29,6 +30,7 @@ use crate::storage::marks;
 use crate::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, ObjectClass,
 };
+use sqlx::Connection as _;
 
 /// The grounds a restriction may rest on, as the register's CHECK spells them.
 ///
@@ -77,7 +79,8 @@ impl FerroEhrService {
             )));
         }
         self.check_mark_target(ehr_id, vo_id).await?;
-        let mut tx = self.pool.begin().await.map_err(ServiceError::Database)?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
         marks::record_restriction(&mut tx, ehr_id, vo_id, ground, note)
             .await
             .map_err(ServiceError::Storage)?;
@@ -100,7 +103,8 @@ impl FerroEhrService {
             .map(|raw| super::parse_uuid(raw, "versioned object").map(VoId))
             .transpose()?;
         self.check_mark_target(ehr_id, vo_id).await?;
-        let mut tx = self.pool.begin().await.map_err(ServiceError::Database)?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
         marks::lift_restriction(&mut tx, ehr_id, vo_id)
             .await
             .map_err(ServiceError::Storage)?;
@@ -154,7 +158,8 @@ impl FerroEhrService {
             ));
         }
         self.check_mark_target(ehr_id, None).await?;
-        let mut tx = self.pool.begin().await.map_err(ServiceError::Database)?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
         if objected {
             marks::set_research_objection(&mut tx, ehr_id, ground)
                 .await
@@ -207,7 +212,8 @@ impl FerroEhrService {
             crate::system_log::categories::Category::parse(category)
                 .map_err(|e| SmError::precondition(e.to_string()).with_source(e))?;
         }
-        let mut tx = self.pool.begin().await.map_err(ServiceError::Database)?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
         marks::put_retention_policy(
             &mut tx,
             kind,
@@ -270,7 +276,8 @@ impl FerroEhrService {
     ) -> Result<(), SmError> {
         let ehr_id = EhrId(super::parse_uuid(ehr_id, "EHR")?);
         self.check_mark_target(ehr_id, None).await?;
-        let mut tx = self.pool.begin().await.map_err(ServiceError::Database)?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
         marks::put_retention_anchor(&mut tx, ehr_id, jurisdiction, anchored_at, hold)
             .await
             .map_err(|e| {
@@ -293,7 +300,8 @@ impl FerroEhrService {
     /// - `exception` — a database fault mid-transaction (rolled back).
     pub async fn set_retention_hold(&self, vo_id: &str, held: bool) -> Result<(), SmError> {
         let vo_id = VoId(super::parse_uuid(vo_id, "versioned object")?);
-        let mut tx = self.pool.begin().await.map_err(ServiceError::Database)?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
         let found = marks::set_retention_hold(&mut tx, vo_id, held)
             .await
             .map_err(ServiceError::Storage)?;

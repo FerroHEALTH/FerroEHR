@@ -24,9 +24,11 @@
 //! in [`iden`]. This is the defining module for the whole bootstrap surface,
 //! with no re-exports.
 
+pub mod acquire;
 pub mod domain;
 pub mod iden;
 
+use crate::db::acquire::acquire;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -202,6 +204,11 @@ pub enum DbError {
     /// out of this variant's own message.
     #[error("database operation failed")]
     Sqlx(#[from] sqlx::Error),
+
+    /// No connection could be obtained from the pool; the pool's error is the
+    /// source.
+    #[error(transparent)]
+    Acquire(#[from] acquire::AcquireError),
 
     /// A schema migration failed to apply; the migrator's error is the source.
     #[error("applying the schema migrations failed")]
@@ -751,14 +758,15 @@ pub fn migration_fingerprint() -> String {
 ///
 /// # Errors
 ///
-/// Returns [`DbError::Sqlx`] when no connection can be acquired within the
-/// acquire timeout or a bootstrap/`search_path` statement fails (e.g. the
+/// Returns [`DbError::Acquire`] when no connection can be acquired within the
+/// acquire timeout, [`DbError::Sqlx`] when a bootstrap/`search_path` statement
+/// fails (e.g. the
 /// role lacks `CREATE` on the database, or `btree_gist` is unavailable), and
 /// [`DbError::Migrate`] when a migration fails to apply or an
 /// already-applied migration fails checksum validation against the embedded
 /// source.
 pub async fn run_migrations(pool: &PgPool) -> Result<(), DbError> {
-    let mut conn = pool.acquire().await?.detach();
+    let mut conn = acquire(pool).await?.detach();
     let outcome = apply_migrations(&mut conn, &Domain::ALL).await;
     close_quietly(conn).await;
     outcome
@@ -1216,10 +1224,11 @@ pub async fn prepare(
 ///
 /// [`DbError::SchemaNotReady`] naming the first divergence found,
 /// [`DbError::SchemaUnreadable`] when this pool's credential cannot read a
-/// set's bookkeeping at all, or [`DbError::Sqlx`] when a connection or the
-/// bookkeeping read fails for any other reason.
+/// set's bookkeeping at all, [`DbError::Acquire`] when no connection can be
+/// acquired, or [`DbError::Sqlx`] when the bookkeeping read fails for any other
+/// reason.
 pub async fn verify_migrations(pool: &PgPool) -> Result<(), DbError> {
-    let mut conn = pool.acquire().await?;
+    let mut conn = acquire(pool).await?;
     verify_recorded_state(&mut conn, &Domain::ALL).await
 }
 
@@ -1300,7 +1309,7 @@ pub async fn verify_domain_isolation(
         let database: (String, String) = sqlx::query_as(
             "SELECT system_identifier::text, current_database()::text FROM pg_control_system()",
         )
-        .fetch_one(pool)
+        .fetch_one(&mut *acquire(pool).await?)
         .await?;
         if swept.contains(&database) {
             continue;
@@ -1338,7 +1347,7 @@ async fn verify_role_barriers(pool: &PgPool, profile: DeploymentProfile) -> Resu
             let present: bool =
                 sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM pg_roles WHERE rolname = $1)")
                     .bind(role)
-                    .fetch_one(pool)
+                    .fetch_one(&mut *acquire(pool).await?)
                     .await?;
             if !present {
                 if profile == DeploymentProfile::Production {
@@ -1371,7 +1380,7 @@ async fn verify_role_barriers(pool: &PgPool, profile: DeploymentProfile) -> Resu
             )
             .bind(role)
             .bind(&bookkeeping_schemas)
-            .fetch_optional(pool)
+            .fetch_optional(&mut *acquire(pool).await?)
             .await?;
             if let Some(relation) = writable {
                 return Err(DbError::BookkeepingWritable {
@@ -1412,7 +1421,7 @@ async fn verify_role_barriers(pool: &PgPool, profile: DeploymentProfile) -> Resu
             )
             .bind(role)
             .bind(&forbidden)
-            .fetch_optional(pool)
+            .fetch_optional(&mut *acquire(pool).await?)
             .await?;
             if let Some((kind, relation)) = breach {
                 return Err(DbError::DomainIsolationBreached {
@@ -1978,7 +1987,7 @@ async fn drop_owned_schemas(
 /// from the function is reported, never read as a distinct cluster.
 pub async fn cluster_identity(pool: &PgPool) -> Result<String, DbError> {
     let id: String = sqlx::query_scalar("SELECT system_identifier::text FROM pg_control_system()")
-        .fetch_one(pool)
+        .fetch_one(&mut *acquire(pool).await?)
         .await?;
     Ok(id)
 }
@@ -2036,7 +2045,7 @@ pub async fn stamp_subject_posture(pool: &PgPool, required: bool) -> Result<(), 
     let value = if required { "required" } else { "open" };
     sqlx::query("SELECT ext.stamp_posture('subject_pseudonyms', $1)")
         .bind(value)
-        .execute(pool)
+        .execute(&mut *acquire(pool).await?)
         .await?;
     Ok(())
 }
@@ -2054,7 +2063,7 @@ pub async fn non_pseudonym_subjects(pool: &PgPool) -> Result<i64, DbError> {
         "SELECT count(*) FROM ehr WHERE subject_id IS NOT NULL \
          AND subject_id !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'",
     )
-    .fetch_one(pool)
+    .fetch_one(&mut *acquire(pool).await?)
     .await?;
     Ok(count)
 }

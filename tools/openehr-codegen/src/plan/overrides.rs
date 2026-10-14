@@ -958,7 +958,17 @@ pub(crate) const SPEC_CONTRADICTIONS: &[SpecContradiction] = &[
         owner: "P_BMM_GENERIC_TYPE",
         field: "generic_parameter_defs",
         kind: ContradictionKind::LowerBound,
-        citation: "docs/specs/openehr/LANG/docs/bmm_persistence/master04-syntax.adoc \u{a7}Generic                Classes: \"within `P_BMM_GENERIC_TYPE`, use `_generic_parameters_` for a list of                string types; use `_generic_parameter_defs_` for a list of complex type                references\" \u{2014} the two are ALTERNATIVES, and the chapter\u{2019}s own                example writes `root_type = <\"DV_INTERVAL\"> generic_parameters =                <\"DV_QUANTITY\">` with no `generic_parameter_defs` at all. The UML class table                (docs/specs/openehr/LANG/docs/UML/classes/org.openehr.lang.bmm_persistence.p_bmm_generic_type.adoc)                states 1..1 for the same attribute, which would make that example \u{2014} and                every string-parameterised generic type in a real .bmm schema \u{2014} invalid,                and would leave the 0..1 `generic_parameters` attribute dead. The syntax                chapter governs.",
+        citation: "docs/specs/openehr/LANG/docs/bmm_persistence/master04-syntax.adoc \u{a7}Generic \
+                   Classes: \"within `P_BMM_GENERIC_TYPE`, use `_generic_parameters_` for a list of \
+                   string types; use `_generic_parameter_defs_` for a list of complex type \
+                   references\" \u{2014} the two are ALTERNATIVES, and the chapter\u{2019}s own \
+                   example writes `root_type = <\"DV_INTERVAL\"> generic_parameters = \
+                   <\"DV_QUANTITY\">` with no `generic_parameter_defs` at all. The UML class table \
+                   (docs/specs/openehr/LANG/docs/UML/classes/org.openehr.lang.bmm_persistence.p_bmm_generic_type.adoc) \
+                   states 1..1 for the same attribute, which would make that example \u{2014} and \
+                   every string-parameterised generic type in a real .bmm schema \u{2014} invalid, \
+                   and would leave the 0..1 `generic_parameters` attribute dead. The syntax \
+                   chapter governs.",
         reason: "Reported upstream as a spec defect (tracker issue #1717); the syntax chapter's reading is emitted.",
     },
     SpecContradiction {

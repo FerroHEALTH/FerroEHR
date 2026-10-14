@@ -59,6 +59,8 @@
               verbatim stored content (RM common master06 §Copying)"
 )]
 
+use crate::db::acquire::acquire;
+use sqlx::Connection as _;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
@@ -1622,7 +1624,7 @@ impl FerroEhrService {
         )
         .bind(&vo_ids)
         .bind(&sys_versions)
-        .fetch_all(pool)
+        .fetch_all(&mut *acquire(pool).await?)
         .await?)
     }
 
@@ -1663,7 +1665,7 @@ impl FerroEhrService {
         Ok(
             sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM ehr WHERE id = $1)")
                 .bind(ehr_id)
-                .fetch_one(&self.pool)
+                .fetch_one(&mut *acquire(&self.pool).await?)
                 .await?,
         )
     }
@@ -1674,7 +1676,7 @@ impl FerroEhrService {
             "SELECT EXISTS(SELECT 1 FROM version WHERE vo_id = $1 AND ehr_id IS NULL)",
         )
         .bind(vo_id)
-        .fetch_one(&self.demographic_pool)
+        .fetch_one(&mut *acquire(&self.demographic_pool).await?)
         .await?)
     }
 
@@ -1686,7 +1688,8 @@ impl FerroEhrService {
         &self,
         commons: &DemographicCommons,
     ) -> Result<(), ServiceError> {
-        let mut tx = self.demographic_pool.begin().await?;
+        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut tx = conn.begin().await?;
         insert_audit_rows(&mut tx, &commons.audits, true).await?;
         if !commons.contributions.is_empty() {
             let ids: Vec<Uuid> = commons.contributions.iter().map(|c| c.id).collect();
@@ -1714,7 +1717,8 @@ impl FerroEhrService {
     /// attestations, demographic tags and archive rows — one transaction, so
     /// a failed container commits nothing.
     async fn load_one_demographic(&self, record: DemographicRecord) -> Result<(), ServiceError> {
-        let mut tx = self.demographic_pool.begin().await?;
+        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut tx = conn.begin().await?;
         insert_audit_rows(&mut tx, &record.audits, true).await?;
         load_versions(&mut tx, &self.privacy, None, record.versions).await?;
         load_attestations(&mut tx, &record.attestations).await?;
@@ -1728,7 +1732,7 @@ impl FerroEhrService {
     /// deterministic archive).
     async fn collect_ehr_records(&self) -> Result<Vec<EhrRecord>, ServiceError> {
         let ehr_ids: Vec<EhrId> = sqlx::query_scalar("SELECT id FROM ehr ORDER BY id")
-            .fetch_all(&self.pool)
+            .fetch_all(&mut *acquire(&self.pool).await?)
             .await?;
         let mut records = Vec::with_capacity(ehr_ids.len());
         for ehr_id in ehr_ids {
@@ -1752,7 +1756,7 @@ impl FerroEhrService {
              WHERE id IN (SELECT commit_audit_id FROM contribution WHERE ehr_id IS NULL) \
              ORDER BY id",
         )
-        .fetch_all(&self.demographic_pool)
+        .fetch_all(&mut *acquire(&self.demographic_pool).await?)
         .await?;
         let mut commons_audits = Vec::with_capacity(audit_rows.len());
         for r in audit_rows {
@@ -1761,7 +1765,7 @@ impl FerroEhrService {
         let contribution_rows = sqlx::query(
             "SELECT id, commit_audit_id FROM contribution WHERE ehr_id IS NULL ORDER BY id",
         )
-        .fetch_all(&self.demographic_pool)
+        .fetch_all(&mut *acquire(&self.demographic_pool).await?)
         .await?;
         let mut contributions = Vec::with_capacity(contribution_rows.len());
         for r in contribution_rows {
@@ -1779,7 +1783,7 @@ impl FerroEhrService {
             "SELECT DISTINCT vo_id, kind FROM version WHERE ehr_id IS NULL \
              ORDER BY vo_id",
         )
-        .fetch_all(&self.demographic_pool)
+        .fetch_all(&mut *acquire(&self.demographic_pool).await?)
         .await?;
         let mut records = Vec::with_capacity(container_rows.len());
         for c in container_rows {
@@ -1805,7 +1809,7 @@ impl FerroEhrService {
              ORDER BY id",
         )
         .bind(vo_id)
-        .fetch_all(&self.demographic_pool)
+        .fetch_all(&mut *acquire(&self.demographic_pool).await?)
         .await?;
         let mut audits = Vec::with_capacity(audit_rows.len());
         for r in audit_rows {
@@ -1822,7 +1826,7 @@ impl FerroEhrService {
              ORDER BY sys_version",
         )
         .bind(vo_id)
-        .fetch_all(&self.demographic_pool)
+        .fetch_all(&mut *acquire(&self.demographic_pool).await?)
         .await?;
         let mut versions = Vec::with_capacity(version_rows.len());
         for r in version_rows {
@@ -1835,7 +1839,7 @@ impl FerroEhrService {
              ORDER BY sys_version, time_committed, id",
         )
         .bind(vo_id)
-        .fetch_all(&self.demographic_pool)
+        .fetch_all(&mut *acquire(&self.demographic_pool).await?)
         .await?;
         let mut attestations = Vec::with_capacity(attestation_rows.len());
         for r in attestation_rows {
@@ -1848,7 +1852,7 @@ impl FerroEhrService {
              WHERE ehr_id IS NULL AND target_vo_id = $1 ORDER BY id",
         )
         .bind(vo_id)
-        .fetch_all(&self.demographic_pool)
+        .fetch_all(&mut *acquire(&self.demographic_pool).await?)
         .await?;
         let mut item_tags = Vec::with_capacity(tag_rows.len());
         for r in tag_rows {
@@ -1860,7 +1864,7 @@ impl FerroEhrService {
              FROM vo_head WHERE vo_id = $1 AND archived_at IS NOT NULL ORDER BY vo_id",
         )
         .bind(vo_id)
-        .fetch_all(&self.demographic_pool)
+        .fetch_all(&mut *acquire(&self.demographic_pool).await?)
         .await?;
         let mut archives = Vec::with_capacity(archive_rows.len());
         for r in archive_rows {
@@ -1934,7 +1938,7 @@ impl FerroEhrService {
              FROM ehr WHERE id = $1",
         )
         .bind(ehr_id)
-        .fetch_one(&self.pool)
+        .fetch_one(&mut *acquire(&self.pool).await?)
         .await?;
         let ehr = EhrRow {
             id: ehr_id,
@@ -1953,7 +1957,7 @@ impl FerroEhrService {
              ORDER BY id",
         )
         .bind(ehr_id)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *acquire(&self.pool).await?)
         .await?;
         let mut audits = Vec::with_capacity(audit_rows.len());
         for r in audit_rows {
@@ -1975,7 +1979,7 @@ impl FerroEhrService {
             "SELECT id, commit_audit_id FROM contribution WHERE ehr_id = $1 ORDER BY id",
         )
         .bind(ehr_id)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *acquire(&self.pool).await?)
         .await?;
         let mut contributions = Vec::with_capacity(contribution_rows.len());
         for r in contribution_rows {
@@ -1994,7 +1998,7 @@ impl FerroEhrService {
              FROM version WHERE ehr_id = $1 ORDER BY vo_id, sys_version",
         )
         .bind(ehr_id)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *acquire(&self.pool).await?)
         .await?;
         let mut versions = Vec::with_capacity(version_rows.len());
         for r in version_rows {
@@ -2004,7 +2008,7 @@ impl FerroEhrService {
         let folder_rank_rows =
             sqlx::query("SELECT rank, vo_id FROM ehr_folder WHERE ehr_id = $1 ORDER BY rank")
                 .bind(ehr_id)
-                .fetch_all(&self.pool)
+                .fetch_all(&mut *acquire(&self.pool).await?)
                 .await?;
         let mut folder_ranks = Vec::with_capacity(folder_rank_rows.len());
         for r in folder_rank_rows {
@@ -2019,7 +2023,7 @@ impl FerroEhrService {
              created_at::text AS created_at FROM item_tag WHERE ehr_id = $1 ORDER BY id",
         )
         .bind(ehr_id)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *acquire(&self.pool).await?)
         .await?;
         let mut item_tags = Vec::with_capacity(tag_rows.len());
         for r in tag_rows {
@@ -2031,7 +2035,7 @@ impl FerroEhrService {
              FROM vo_head WHERE ehr_id = $1 AND archived_at IS NOT NULL ORDER BY vo_id",
         )
         .bind(ehr_id)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *acquire(&self.pool).await?)
         .await?;
         let mut archives = Vec::with_capacity(archive_rows.len());
         for r in archive_rows {
@@ -2049,7 +2053,7 @@ impl FerroEhrService {
              ORDER BY vo_id, sys_version, time_committed, id",
         )
         .bind(ehr_id)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *acquire(&self.pool).await?)
         .await?;
         let mut attestations = Vec::with_capacity(attestation_rows.len());
         for r in attestation_rows {
@@ -2074,7 +2078,8 @@ impl FerroEhrService {
     /// preserved ids, provenance and commit times (a lossless migration; RM
     /// common master06 §Copying "the `ORIGINAL_VERSION` is never modified").
     async fn load_one_ehr(&self, record: EhrRecord) -> Result<(), ServiceError> {
-        let mut tx = self.pool.begin().await?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
         let ehr_id = record.ehr.id;
 
         insert_ehr_row(&mut tx, &record.ehr).await?;

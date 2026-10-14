@@ -47,6 +47,7 @@ pub mod roles;
 use crate::extensions::access::authz::classify::{OperationClass, class_of, is_write};
 use crate::extensions::access::authz::engine::{AuthzError, PolicyEngine};
 use crate::extensions::access::authz::roles::{RbacDecision, authorize, authorize_readonly};
+use ferroehr::aql::subject::EhrSubject;
 use ferroehr::config::authz::{
     AbacConfig, AbacEngineKind, AuthzConfig, EhrAccessDefault, RbacConfig,
 };
@@ -97,10 +98,11 @@ impl ResolveError {
 /// The future a resolver closure returns.
 pub type ResolverFuture<T> = Pin<Box<dyn Future<Output = Result<T, ResolveError>> + Send>>;
 
-/// `ehr_id → EHR subject external-ref id` (the promoted `ehr.subject_id`
-/// column; the audit `SubjectResolver` query). Ids are passed as strings so the
-/// REST layer stays `uuid`-free (the binary parses).
-pub type SubjectFn = Arc<dyn Fn(String) -> ResolverFuture<Option<String>> + Send + Sync>;
+/// `ehr_id → EHR subject` as the patient scope addresses it
+/// ([`ferroehr::aql::subject::ehr_subject`]), or `None` when no EHR has the id.
+/// Ids are passed as strings so the REST layer stays `uuid`-free (the binary
+/// parses).
+pub type SubjectFn = Arc<dyn Fn(String) -> ResolverFuture<Option<EhrSubject>> + Send + Sync>;
 
 /// `(vo_id, version) → template_id` (`version.template_id`, read back via
 /// `ferroehr::service` in the binary).
@@ -118,7 +120,7 @@ pub type TemplateOfVersionFn =
 /// precedent.
 #[derive(Clone)]
 pub struct AuthzResolvers {
-    /// EHR subject external-ref id lookup.
+    /// EHR subject lookup.
     pub subject: SubjectFn,
     /// COMPOSITION version → template id lookup.
     pub template_of_version: TemplateOfVersionFn,
@@ -741,7 +743,12 @@ mod tests {
         // with in-memory stand-ins (the binary supplies pool-backed ones).
         let resolvers = AuthzResolvers {
             subject: Arc::new(|ehr_id: String| {
-                Box::pin(async move { Ok((ehr_id == "known").then(|| "subject-1".to_owned())) })
+                Box::pin(async move {
+                    Ok((ehr_id == "known").then(|| EhrSubject::Unique {
+                        id: "subject-1".to_owned(),
+                        namespace: None,
+                    }))
+                })
             }),
             template_of_version: Arc::new(|_vo: String, version: Option<String>| {
                 Box::pin(async move { Ok(version.map(|v| format!("t.v{v}"))) })
@@ -749,7 +756,10 @@ mod tests {
         };
         assert_eq!(
             (resolvers.subject)("known".to_owned()).await.unwrap(),
-            Some("subject-1".to_owned())
+            Some(EhrSubject::Unique {
+                id: "subject-1".to_owned(),
+                namespace: None,
+            })
         );
         assert_eq!((resolvers.subject)("other".to_owned()).await.unwrap(), None);
         assert_eq!(

@@ -77,6 +77,21 @@ impl From<sqlx::Error> for IndexError {
     }
 }
 
+impl From<crate::service::linkage::store::StoreError> for IndexError {
+    fn from(e: crate::service::linkage::store::StoreError) -> Self {
+        match e {
+            crate::service::linkage::store::StoreError::Acquire(e) => Self::from(e),
+            crate::service::linkage::store::StoreError::Database(e) => Self::from(e),
+        }
+    }
+}
+
+impl From<crate::db::acquire::AcquireError> for IndexError {
+    fn from(e: crate::db::acquire::AcquireError) -> Self {
+        IndexError::Service(ServiceError::from(e))
+    }
+}
+
 impl From<IndexError> for SmError {
     /// Map the precise EHR-index errors onto their dedicated SM statuses
     /// (`master07 §Errors`), bypassing the generic

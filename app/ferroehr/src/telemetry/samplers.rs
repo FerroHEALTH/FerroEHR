@@ -17,8 +17,6 @@ use std::time::Duration;
 use opentelemetry::KeyValue;
 use opentelemetry::metrics::Meter;
 use sqlx::PgPool;
-use sqlx::pool::PoolConnection;
-use sqlx::postgres::Postgres;
 use tokio::task::JoinHandle;
 
 use super::metrics::{
@@ -40,21 +38,6 @@ pub(super) fn pool_gauge(meter: &Meter) -> opentelemetry::metrics::Gauge<u64> {
         .u64_gauge(DB_POOL_CONNECTIONS)
         .with_description("Connection pool connections by state")
         .build()
-}
-
-/// Acquire a pooled connection, recording the wait on
-/// [`DB_POOL_ACQUIRE_DURATION`](crate::telemetry::metrics::DB_POOL_ACQUIRE_DURATION). Use in place of `pool.acquire()` on measured
-/// hot paths.
-///
-/// # Errors
-/// Propagates the underlying [`sqlx::Error`] from `pool.acquire()`.
-pub async fn acquire(pool: &PgPool) -> Result<PoolConnection<Postgres>, sqlx::Error> {
-    let started = std::time::Instant::now();
-    let result = pool.acquire().await;
-    crate::telemetry::metrics::metrics()
-        .db_pool_acquire_duration
-        .record(started.elapsed().as_secs_f64(), &[]);
-    result
 }
 
 /// Spawn the background sampler.

@@ -27,6 +27,7 @@ use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::ids::{EhrId, VoId};
+use crate::service::demographic::identifier::store::StoreError;
 use crate::service::error::ServiceError;
 use crate::service::status::CallStatusType;
 use crate::storage::codec::{decompose, reassemble};
@@ -619,7 +620,10 @@ async fn seal_protected_identifiers(
     engine
         .externalize(vo_id.0, canonical)
         .await
-        .map_err(|e| ServiceError::internal("seal a protected national identifier", e))?;
+        .map_err(|e| match e {
+            StoreError::Acquire(acquire) => ServiceError::Acquire(acquire),
+            other => ServiceError::internal("seal a protected national identifier", other),
+        })?;
     Ok(())
 }
 

@@ -38,6 +38,8 @@
               multimedia offload over stored fragments (families 3/6/8)"
 )]
 
+use crate::db::acquire::{AcquireError, acquire};
+use sqlx::Connection as _;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
@@ -139,6 +141,8 @@ pub fn subscription_queue_name(exchange: &str, name: &str) -> String {
 enum DrainError {
     /// A DB error reading/marking the outbox.
     Db(sqlx::Error),
+    /// No connection could be obtained to read the outbox.
+    Acquire(AcquireError),
     /// A broker publish failure; the drainer should back off before retrying.
     Publish(EventError),
 }
@@ -147,6 +151,8 @@ enum DrainError {
 enum SyncError {
     /// Reading the subscription rows failed.
     Db(sqlx::Error),
+    /// No connection could be obtained to read the subscription rows.
+    Acquire(AcquireError),
     /// Declaring/binding a queue on the broker failed.
     Broker(EventError),
 }
@@ -155,6 +161,7 @@ impl std::fmt::Display for SyncError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             SyncError::Db(e) => write!(f, "subscription store: {e}"),
+            SyncError::Acquire(e) => write!(f, "subscription store: {}", ErrorChain::new(e)),
             SyncError::Broker(e) => write!(f, "broker declare: {}", ErrorChain::new(e)),
         }
     }
@@ -224,7 +231,10 @@ async fn run(
         if last_prune.elapsed() >= prune_every {
             for (domain, _) in pools {
                 if let Err(e) = outbox::prune(domain, config.retention_days).await {
-                    tracing::warn!("event outbox retention prune failed: {e}");
+                    tracing::warn!(
+                        "event outbox retention prune failed: {}",
+                        ErrorChain::new(&e)
+                    );
                 }
             }
             last_prune = tokio::time::Instant::now();
@@ -284,6 +294,13 @@ async fn drain_until_caught_up(
                 tracing::warn!("event outbox drain DB error: {e}");
                 return;
             }
+            Err(DrainError::Acquire(e)) => {
+                tracing::warn!(
+                    "event outbox drain DB error: {}",
+                    ErrorChain::new(&e)
+                );
+                return;
+            }
         }
     }
 }
@@ -304,7 +321,7 @@ async fn sync_subscriptions(
     let rows = sqlx::query(
         "SELECT name, kind, change_type, template_id FROM event_subscription WHERE enabled",
     )
-    .fetch_all(pool)
+    .fetch_all(&mut *acquire(pool).await.map_err(SyncError::Acquire)?)
     .await
     .map_err(SyncError::Db)?;
     let mut desired: Vec<(String, String)> = Vec::with_capacity(rows.len());
@@ -366,7 +383,8 @@ async fn drain_batch(
     publisher: &dyn EventPublisher,
     config: &EventsConfig,
 ) -> Result<usize, DrainError> {
-    let mut tx = pool.begin().await.map_err(DrainError::Db)?;
+    let mut conn = acquire(pool).await.map_err(DrainError::Acquire)?;
+    let mut tx = conn.begin().await.map_err(DrainError::Db)?;
     // A mark recorded after the commit withholds the row instead of dropping
     // it: it stays pending and publishes if the restriction is lifted (GDPR
     // Art. 18(3) contemplates exactly that) or if the controller records an

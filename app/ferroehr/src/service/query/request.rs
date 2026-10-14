@@ -18,6 +18,8 @@ use std::collections::BTreeMap;
 
 use serde_json::Value;
 
+use crate::aql::subject::TouchedSubjects;
+
 /// A normalized AQL query request: the paging window, the EHR scope, and the
 /// `$parameter` bindings.
 ///
@@ -77,8 +79,8 @@ impl AqlQueryRequest {
 ///
 /// Carries the assembled `RESULT_SET` (`result_set.adoc`; rendered as ITS-REST
 /// canonical JSON) plus — when the caller asked for them
-/// ([`AqlQueryRequest::collect_attributes`]) — the distinct EHR ids and
-/// template ids the query touched, for the ABAC post-check.
+/// ([`AqlQueryRequest::collect_attributes`]) — the distinct EHR ids, template
+/// ids and EHR subjects the query touched, for the ABAC post-check.
 #[derive(Debug, Clone, Default)]
 pub struct QueryOutcome {
     /// The `RESULT_SET` (canonical JSON) the adapter renders.
@@ -87,6 +89,9 @@ pub struct QueryOutcome {
     pub ehr_ids: Vec<String>,
     /// The distinct template ids the query touched (empty unless collected).
     pub template_ids: Vec<String>,
+    /// The subjects of the EHRs the query touched (empty unless collected):
+    /// the patient attribute of the ABAC post-check.
+    pub subjects: TouchedSubjects,
     /// The EHRs this execution actually SERVED, each with its served-row count.
     ///
     /// Distinct from [`Self::ehr_ids`], and the difference is the point.
@@ -128,6 +133,7 @@ impl QueryOutcome {
             result_set,
             ehr_ids: Vec::new(),
             template_ids: Vec::new(),
+            subjects: TouchedSubjects::default(),
             served_ehrs: Vec::new(),
             served_rows: 0,
             served_origins: Vec::new(),
