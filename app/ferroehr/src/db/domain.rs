@@ -161,6 +161,24 @@ impl Domain {
             _ => None,
         }
     }
+
+    /// Returns the other domains whose SCHEMA this domain's migration set
+    /// names, so that schema must exist while the set applies.
+    ///
+    /// The shipped grant files revoke the runtime roles from the other
+    /// domains' schemas by name (`migrations/party/0008_grants.sql` from
+    /// `clinical`, `migrations/linkage/0004_grants.sql` from `clinical` and
+    /// `party`), and a `REVOKE` on a schema that does not exist fails. A
+    /// database that does not hold such a domain gets its schema only for the
+    /// duration of the run, empty, and loses it again afterwards.
+    #[must_use]
+    pub const fn names_schemas_of(self) -> &'static [Self] {
+        match self {
+            Self::Party => &[Self::Clinical],
+            Self::Linkage => &[Self::Clinical, Self::Party],
+            Self::Clinical | Self::Audit => &[],
+        }
+    }
 }
 
 impl std::fmt::Display for Domain {

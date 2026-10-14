@@ -960,8 +960,8 @@ fn warn_boot_postures(config: &ferroehr::config::FerroEhrConfig) {
 ///
 /// Schema preparation is [`ferroehr::db::prepare`], which spans every schema of
 /// each database on that database's migration DSN (`[db].migrate_url` for every
-/// domain reaching the database it reaches, the domain's own DSN otherwise) and
-/// then
+/// domain reaching the database it reaches, `[storage.migrate.<domain>].url`
+/// for a database of its own, the domain's own DSN when that is unset) and then
 /// measures the runtime pools' own reach with
 /// [`ferroehr::db::verify_domain_isolation`], refusing to boot a database whose
 /// grants let one runtime role read another domain.

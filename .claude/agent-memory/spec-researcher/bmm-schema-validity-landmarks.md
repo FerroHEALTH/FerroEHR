@@ -97,3 +97,14 @@ exists only in the codegen vendor tree).
 
 Related: [[adl2-parser-spec-location]], [[lexical-layer-per-language-location]],
 [[el-grammar-landmarks]].
+
+## P_BMM_PACKAGE_CONTAINER.packages existence contradiction (verified 2026-10-14, #3768)
+- Class table `…bmm_persistence.p_bmm_package_container.adoc` = `1..1` (+ `is_mandatory: true` in lang 1.0.0/1.1.0 json) vs
+  master04-syntax §Package Definition L106-123 whose ONLY example is a leaf WITHOUT `packages`, vs in-memory
+  `…bmm.bmm_package_container.adoc` / bmm3 twin = `0..1`. LANG 1.1.0's own `org.openehr.lang.bmm_persistence` package omits it.
+- All 18 vendored json BMMs (+ odin) omit `packages` on leaves; ZERO carry `{}`/`<>` (ODIN grammar odin.g4 L33 admits `<>`).
+- No LANG/ODIN text defines absent=empty (ODIN master05 §Void Objects L59 covers `<...>` only). Same pattern as #1717
+  (generic_parameter_defs) → generator `plan/overrides.rs` CARDINALITY_CONTRADICTIONS L919-961 is the precedent home.
+- Mechanism: Hash via P_BMM_GENERIC_PROPERTY → `Plain` (plan/mod.rs L313-330), while mandatory List → default-empty
+  (emit_json.rs L957); hand-written ODIN reader (reader.rs L665-668) silently defaults to empty.
+- `P_BMM_INDEXED_CONTAINER_PROPERTY` is used by NO published schema (0 of 18 json).

@@ -135,6 +135,12 @@ per incoming request, so callers get fast `401`s instead of slow ones. Keep the
 negative TTL short: it is also how long recovery takes to be noticed after the
 provider comes back.
 
+The discovery and JWKS fetches verify the identity provider's certificate
+against the platform trust store and follow no redirects. An identity provider
+whose certificate comes from a private CA is trusted once that CA is in the
+image's system store or in a directory or file named by `SSL_CERT_DIR` or
+`SSL_CERT_FILE`.
+
 ### `[auth.oidc.assurance]`: the assurance level patient data requires
 
 Off by default. What it refuses and the `401` challenge it sends are described

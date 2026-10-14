@@ -63,8 +63,11 @@ module.**
 - **One pool and one DSN per domain** (`db/domain.rs`): `[storage.<domain>]`
   carries `url`/`url_file` for `clinical`, `party`, `linkage` and `audit`, each
   defaulting to `[db].url`, and `db::connect_domains` opens the four
-  (`db::DomainPools`). Preparation is per DATABASE — the `ext` set by whichever
-  domain reaches it first, then each resident domain's own set. No statement
+  (`db::DomainPools`). Preparation is per DATABASE, on that database's migration
+  credential (`[db].migrate_url`, or `[storage.migrate.<domain>]` for a database
+  of its own): the `ext` set, then each resident domain's set, plus the party
+  set as a companion where linkage lives without party (the shipped linkage
+  grant file revokes a party function). No statement
   ever names two domains' relations; `tests/it/one_schema_per_statement.rs`
   refuses one that does.
 - **AQL engine** (`src/aql/`): typed IR over the BMM-generated RM model, lowered

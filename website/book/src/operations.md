@@ -86,10 +86,10 @@ A DSN that names another host moves the domain to a **database or cluster of its
 own**, which is the separation a schema cannot make: a base backup, WAL
 archiving and physical replication carry every schema of a database together
 ([PostgreSQL 18, Backup and
-Restore](https://www.postgresql.org/docs/18/backup-dump.html)). One constraint:
-the `linkage` migration set revokes a function the `party` set creates, so those
-two are prepared in the same database, and a layout that splits them is refused
-at boot with the remedy rather than failing partway through a migration.
+Restore](https://www.postgresql.org/docs/18/backup-dump.html)). A database that
+holds the `linkage` domain without the `party` domain also receives the party
+migration set, its schema and grants and never a row, because the linkage set
+revokes a function the party set creates.
 
 Two boot checks make the posture honest. Two domains configured on **different**
 DSNs that authenticate as the **same** database role are refused — a separation
@@ -126,9 +126,10 @@ url = "postgres://ferroehr_linkage:***@pg:5432/ferroehr"
 
 `migrate_url` prepares every domain that reaches the same DATABASE it does,
 which is all of them in the posture above: three credentials, one database. A
-domain whose DSN reaches a DIFFERENT database is prepared on its own DSN
-instead, because `migrate_url` names one database and a relocated domain is not
-in it. Which case a domain is in is read from the server itself
+domain whose DSN reaches a DIFFERENT database is prepared there on that
+database's own migrator, `[storage.migrate.<domain>] url`, because
+`migrate_url` names one database and a relocated domain is not in it; unset, it
+falls back to the domain's own DSN, which a DML-only role cannot use. Which case a domain is in is read from the server itself
 (`pg_control_system()` and `current_database()`), never from the DSN text — two
 DSNs that differ only in their credential reach the same database.
 
@@ -144,7 +145,9 @@ the fix is visible from the message:
 ```text
 database role `app_ehr` cannot read the migration state of schema
 `ext`: … point `[db] migrate_url` (or `migrate_url_file`) at the credential
-that prepares the schema — unset, it falls back to `[db] url`
+that prepares the schema — unset, it falls back to `[db] url` — and, for a
+domain in a database of its own, `[storage.migrate.<domain>] url` at that
+database's migration credential
 ```
 
 Either way the server **refuses to boot** when the grants themselves are wrong:
@@ -223,6 +226,14 @@ Exercised against a real PostgreSQL 18:
 - The boot sequence on separated credentials with `[db] migrate_url`, under
   both `verify` and `apply`, and the single-DSN fallback under both
   (`app/ferroehr/tests/it/schema_preparation_credential.rs`).
+- The linkage domain relocated to a second database, prepared and verified
+  there on `[storage.migrate.linkage]`, with the companion party set, and the
+  refusal when the domain's two DSNs reach different databases
+  (`app/ferroehr/tests/it/relocated_domain_preparation.rs`).
+- The chart's production overlay on four PostgreSQL clusters, one per domain,
+  prepared by the migration Job and booting under `production`
+  (`scripts/deploy-probe-k8s.sh --production-only`, probes P-K8S-PROD-BOOT and
+  P-K8S-PROD-SHARED).
 - The compose stack's grant boundary read back from the running database by
   `scripts/deploy-probe.sh`, which also records that the stack is
   single-credential by design.
@@ -231,9 +242,6 @@ Not exercised by anything, and stated rather than left to inference:
 
 - **A separated `migrate_url` alongside the linkage credential in one boot.**
   The preparation tests configure the clinical and party DSNs.
-- **A domain actually relocated to another database**, as opposed to a second
-  credential on the same one. The layout, the per-database preparation and the
-  refusals are covered in process; no suite runs two PostgreSQL databases.
 - **A real deployment on separated DSNs**: a container booting with the DSN
   files mounted, and the chart wiring them through
   `database.party.existingSecret`, `database.linkage.existingSecret` and

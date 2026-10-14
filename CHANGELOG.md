@@ -33,9 +33,12 @@ workflow refuses a tag that has no matching section here.
 - **AQL reads variables declared inside an `OR` containment branch** (#3736).
   `CONTAINS (OBSERVATION o[...] OR EVALUATION ev[...])` with paths through `o`
   and `ev` in `SELECT`, `WHERE` or `ORDER BY` answers one row per match, with
-  null for the branch that did not match; it was refused with "not supported
-  yet". Reading a variable declared under `NOT CONTAINS`, or an `OR` branch
-  that is its own versioned object (#3745), is refused with a named `400`.
+  null for the branch that did not match, and both branches matching pair up;
+  it was refused with "not supported yet". A branch that is its own versioned
+  object (`EHR e CONTAINS (COMPOSITION c1 OR COMPOSITION c2)`, or a
+  composition a FOLDER references) reads the current, unrestricted, undeleted
+  version with its `uid` (#3745). Reading a variable declared under
+  `NOT CONTAINS` is refused with a named `400`.
 
 - **An admin route physically deletes one demographic party** (#3683).
   `DELETE {base}/admin/party/{party_id}` removes the party and its
@@ -99,6 +102,12 @@ workflow refuses a tag that has no matching section here.
   `https://github.com/Vernum-Projecten/Veredictum`.
 
 ### Security
+
+- **The viewer's Basic sign-in follows only a same-origin `next`.** After a
+  successful or refused sign-in, an absolute, scheme-relative or backslash
+  destination lands on the dashboard instead (an open redirect).
+- **rustls 0.23.46** closes RUSTSEC-2026-0346, -0347, -0348 and -0349 in the
+  lockfile.
 
 - **The release pipeline checks the linkage the OS VEX statements rest on**
   (#3694). Each statement that argues from what the binary loads now carries
@@ -336,6 +345,10 @@ workflow refuses a tag that has no matching section here.
   refused at render, since kubelet probes present no client certificate; an
   Ingress in front of a TLS listener needs `ingress.backendTlsAnnotations`;
   `prometheus.io/scheme` follows the listener.
+- **The CDR trusts an identity provider behind a private CA** (#3767). OIDC
+  discovery and JWKS fetches verify against the platform trust store
+  (`SSL_CERT_DIR`, `SSL_CERT_FILE`), as the viewer now does; `reqwest` 0.12
+  and its bundled roots leave the dependency graph.
 - **The compose image-tag guard covers the terminology overlay** (#3605).
   `scripts/checks/compose-image-tags.sh` checks every FerroEHR image tag in
   every root and `docker/` compose file, `docker-compose.terminology.yml`

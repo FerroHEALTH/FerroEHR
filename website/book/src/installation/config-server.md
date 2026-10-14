@@ -333,7 +333,7 @@ statement_timeout_ms = 60000
 |---|---|---|---|
 | `url` | secret URL | `postgres://ferroehr:ferroehr@localhost:5432/ferroehr` | Connection DSN. The default suits a local from-source run against a localhost PostgreSQL, and the server logs a prominent warning at boot while it is in use; **production MUST set it**. Credentials are redacted from every rendering. `DATABASE_URL` is a recognized lower-priority alias. |
 | `url_file` | path | unset | Read the DSN from a file instead of the key above, for a mounted secret. Preferred over the environment form in Kubernetes: an environment value is readable through `/proc/<pid>/environ` and inherited by every child process. At most one of the pair, where the built-in development default does not count as "set". |
-| `migrate_url` | secret URL | unset | DSN that PREPARES the schema, used for that one boot step and then closed. Preparation spans every schema of a database at once, which no domain-scoped runtime credential can do, so a deployment separating the runtime roles names the credential that can here. It prepares every domain whose DSN reaches the SAME DATABASE — which is the whole of the separated-credential posture, where each domain has a login role of its own on one database; a domain whose DSN reaches a different database is prepared on that DSN. Which it is, is read from the server (`pg_control_system()` plus `current_database()`), never from the DSN text. Unset, it falls back to `url`. See [Operations → Which credential prepares the schema](../operations.md#which-credential-prepares-the-schema). |
+| `migrate_url` | secret URL | unset | DSN that PREPARES the schema, used for that one boot step and then closed. Preparation spans every schema of a database at once, which no domain-scoped runtime credential can do, so a deployment separating the runtime roles names the credential that can here. It prepares every domain whose DSN reaches the SAME DATABASE — which is the whole of the separated-credential posture, where each domain has a login role of its own on one database; a domain whose DSN reaches a different database is prepared on that database's `storage.migrate.<domain>.url` (on the domain's own DSN when that is unset). Which it is, is read from the server (`pg_control_system()` plus `current_database()`), never from the DSN text. Unset, it falls back to `url`. See [Operations → Which credential prepares the schema](../operations.md#which-credential-prepares-the-schema). |
 | `migrate_url_file` | path | unset | Read `migrate_url` from a file instead, for a mounted secret. At most one of the pair. |
 | `migrate` | enum{apply,verify} | `apply` | Whether the server applies its embedded migrations at boot. `apply` is what makes an empty configuration boot against an empty database. `verify` issues **no DDL at all**: it checks that the database already carries exactly this build's migrations and refuses to start otherwise, so the serving DSN can authenticate as a role with no DDL rights. That check still READS every `_sqlx_migrations` table of each database, which no least-privilege role can do, so pair it with `migrate_url` above and with `ferroehr db migrate` run out of band; see [Operations](../operations.md#which-credential-prepares-the-schema). |
 | `max_connections` | int | `20` | Pool ceiling. Write-heavy deployments benefit from raising it. |
@@ -395,9 +395,28 @@ What the server checks at boot:
   refusal under `production`, where there are no grants to separate anything
   with.
 
-One constraint on relocation: the `linkage` migration set revokes a function the
-`party` set creates, so those two domains are prepared in the same database. A
-layout that splits them is refused before anything connects, with the remedy.
+Each database is prepared on its own migration credential. `[db] migrate_url`
+names one database; a domain whose DSN reaches another database is prepared
+there, and verified there under `migrate = "verify"`, on the credential named in
+`[storage.migrate.<domain>]`:
+
+```toml
+[storage.linkage]
+url_file = "/run/secrets/db-linkage-dsn"           # postgres://ferroehr_linkage:…@linkage-db/…
+[storage.migrate.linkage]
+url_file = "/run/secrets/db-linkage-migrate-dsn"   # postgres://ferroehr_migrator:…@linkage-db/…
+```
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `storage.migrate.<domain>.url` | secret URL | unset | DSN that prepares the database the domain lives in, when that is not the database `db.migrate_url` reaches. Used for that one step and closed again. Unset, such a database is prepared on the domain's own `url`, which a DML-only runtime role cannot do: it is refused on the first bookkeeping table it cannot read. |
+| `storage.migrate.<domain>.url_file` | path | unset | Read it from a file instead, for a mounted secret. At most one of the pair. |
+
+The server refuses to start when a domain's `url` and its `storage.migrate`
+URL reach different databases. A database that holds the `linkage` domain
+without the `party` domain also receives the party migration set, its schema
+and grants and never a row, because the linkage set revokes a function the
+party set creates.
 
 ## `[log]`
 
