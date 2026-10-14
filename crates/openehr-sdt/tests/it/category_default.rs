@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The `COMPOSITION.category` a FLAT or TDD build supplies when the input names
-//! none comes from the template's constraint on `/category`: its single
-//! admitted code, `433` (event) when the template leaves it unconstrained, and
-//! a refusal naming the path when it admits several codes and fixes no default.
+//! none comes from the template's constraint on `/category`: its assumed
+//! value or single admitted code, `433` (event) when the template leaves it
+//! unconstrained, and a refusal naming the path when it admits several codes
+//! and fixes no default.
 //! `category` is mandatory (RM `UML/classes/org.openehr.rm.composition.composition.adoc`
 //! §Attributes, `1..1`), so the supplied value must satisfy the template.
 #![expect(
@@ -25,8 +26,9 @@ const CORPUS: &str = "../../docs/specs/openehr/CNF/tests/platform/robot/_resourc
 const NOW: &str = "2026-01-01T00:00:00Z";
 
 /// The persistent-only template (`category` code list `[431]`) with its
-/// category code list replaced by `codes` (empty: unconstrained).
-fn web_template(codes: &[&str]) -> WebTemplate {
+/// category code list replaced by `codes` (empty: unconstrained) and, when
+/// given, an `assumed_value` on the category's `C_CODE_PHRASE`.
+fn web_template(codes: &[&str], assumed: Option<&str>) -> WebTemplate {
     let path = format!("{CORPUS}/valid_templates/minimal_persistent/persistent_minimal.opt");
     let xml = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {path}: {e}"));
     let original = "<code_list>431</code_list>";
@@ -35,13 +37,32 @@ fn web_template(codes: &[&str]) -> WebTemplate {
         1,
         "the fixture constrains category once"
     );
+    let at = xml.find(original).expect("category code list");
+    // The OPT XSD orders `C_CODE_PHRASE` as `assumed_value`, `terminology_id`,
+    // `code_list`, so the assumed value goes before the terminology id.
+    let terminology = xml
+        .get(..at)
+        .and_then(|head| head.rfind("<terminology_id>"))
+        .expect("category terminology id");
     let replacement = codes.iter().fold(String::new(), |mut out, code| {
         out.push_str("<code_list>");
         out.push_str(code);
         out.push_str("</code_list>");
         out
     });
-    let xml = xml.replace(original, &replacement);
+    let mut edited = xml.get(..terminology).expect("head").to_owned();
+    if let Some(code) = assumed {
+        edited.push_str(
+            "<assumed_value><terminology_id><value>openehr</value></terminology_id>\
+             <code_string>",
+        );
+        edited.push_str(code);
+        edited.push_str("</code_string></assumed_value>");
+    }
+    edited.push_str(xml.get(terminology..at).expect("terminology id"));
+    edited.push_str(&replacement);
+    edited.push_str(xml.get(at + original.len()..).expect("tail"));
+    let xml = edited;
     build_web_template(&opt14::from_xml(&xml).expect("parse OPT")).expect("build WebTemplate")
 }
 
@@ -86,7 +107,7 @@ fn category_code(comp: &Value) -> (&str, &str, &str) {
 
 #[test]
 fn persistent_only_template_defaults_to_431() {
-    let wt = web_template(&["431"]);
+    let wt = web_template(&["431"], None);
     let flat = composition_from_flat(&flat_without_category(), &wt, NOW).expect("FLAT build");
     assert_eq!(category_code(&flat), ("431", "openehr", "persistent"));
     let tdd = from_tdd(&tdd_without_category(), &wt).expect("TDD build");
@@ -95,7 +116,7 @@ fn persistent_only_template_defaults_to_431() {
 
 #[test]
 fn unconstrained_category_defaults_to_433() {
-    let wt = web_template(&[]);
+    let wt = web_template(&[], None);
     let flat = composition_from_flat(&flat_without_category(), &wt, NOW).expect("FLAT build");
     assert_eq!(category_code(&flat), ("433", "openehr", "event"));
     let tdd = from_tdd(&tdd_without_category(), &wt).expect("TDD build");
@@ -104,7 +125,7 @@ fn unconstrained_category_defaults_to_433() {
 
 #[test]
 fn several_admitted_codes_without_default_refuse_naming_the_path() {
-    let wt = web_template(&["431", "433"]);
+    let wt = web_template(&["431", "433"], None);
     match composition_from_flat(&flat_without_category(), &wt, NOW) {
         Err(FlatError::MissingRequiredSuffix { key }) => {
             assert_eq!(key, "persistent_minimal/category|code");
@@ -122,7 +143,16 @@ fn several_admitted_codes_without_default_refuse_naming_the_path() {
 
 #[test]
 fn an_explicit_category_is_kept() {
-    let wt = web_template(&["431", "433"]);
+    let wt = web_template(&["431", "433"], None);
     let flat = composition_from_flat(&flat_document(), &wt, NOW).expect("FLAT build");
     assert_eq!(category_code(&flat).0, "431");
+}
+
+#[test]
+fn several_admitted_codes_take_the_assumed_value() {
+    let wt = web_template(&["431", "433"], Some("433"));
+    let flat = composition_from_flat(&flat_without_category(), &wt, NOW).expect("FLAT build");
+    assert_eq!(category_code(&flat), ("433", "openehr", "event"));
+    let tdd = from_tdd(&tdd_without_category(), &wt).expect("TDD build");
+    assert_eq!(category_code(&tdd), ("433", "openehr", "event"));
 }

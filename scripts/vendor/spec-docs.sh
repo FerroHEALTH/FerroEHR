@@ -59,8 +59,8 @@ COMPONENTS=(
   "ITS-XML|specifications-ITS-XML|Release-2.0.0v2 (tag; the XSD bundles are tags Release-1.0.2v2 + Release-2.0.0v2)|de8b37ba6c9a5e126623a063cafba3b58ebf1107"
   "ITS-JSON|specifications-ITS-JSON|master (development pin)|14387ce9191f228d768b6bade3308b79aaf87471"
 )
-# ITS-BMM is deliberately absent: it is already vendored verbatim (all
-# serializations) at tools/openehr-codegen/vendor/bmm/.
+# ITS-BMM is deliberately absent: scripts/vendor/codegen-inputs.sh vendors its
+# json and odin serializations (not yaml) at tools/openehr-codegen/vendor/bmm/.
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT

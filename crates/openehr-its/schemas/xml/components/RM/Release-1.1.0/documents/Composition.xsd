@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns="http://schemas.openehr.org/v2" targetNamespace="http://schemas.openehr.org/v2" elementFormDefault="qualified"
-           id="Composition.xsd" version="v1.1.0">
-    <!-- dependencies -->
-	<xs:include schemaLocation="../Ehr.xsd"/>
-	<xs:element name="composition" type="COMPOSITION"/>
-</xs:schema>

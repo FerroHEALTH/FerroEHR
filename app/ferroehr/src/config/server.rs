@@ -319,11 +319,12 @@ pub enum ClientAuth {
 /// `[server.tls]` — native TLS on the main listener.
 ///
 /// Off by default (deployments commonly terminate TLS at an ingress); with it
-/// on, the protocol floor is the rustls safe default (TLS 1.2+, strong suites
-/// — the IETF BCP 195 posture), and `client_auth` adds the IHE ATNA ITI-19
-/// mutual-TLS node authentication against an explicit trust anchor. The
+/// on, the protocol floor is [`TlsVersion`] (1.3 only unless widened to 1.2),
+/// and `client_auth` adds the IHE ATNA ITI-19 mutual-TLS node authentication
+/// against an explicit trust anchor. The certificate and key are re-read every
+/// `reload_interval_secs`, so a renewed pair is served without a restart. The
 /// separate-port management listener stays plain HTTP (an internal surface).
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct TlsConfig {
     /// Terminate TLS natively (`FERROEHR__SERVER__TLS__ENABLED`).
@@ -342,6 +343,41 @@ pub struct TlsConfig {
     /// The lowest TLS version this listener will negotiate
     /// (`FERROEHR__SERVER__TLS__MIN_VERSION`): `"1.3"` (default) or `"1.2"`.
     pub min_version: TlsVersion,
+    /// How often, in seconds, `cert_file` and `key_file` are re-read so a
+    /// renewed pair is served without a restart
+    /// (`FERROEHR__SERVER__TLS__RELOAD_INTERVAL_SECS`); `0` reads them once,
+    /// at boot.
+    pub reload_interval_secs: u64,
+}
+
+impl TlsConfig {
+    /// The interval the certificate and key files are re-read at, or `None`
+    /// when `reload_interval_secs` is `0` and they are read only at boot.
+    #[must_use]
+    pub const fn reload_interval(&self) -> Option<std::time::Duration> {
+        if self.reload_interval_secs > 0 {
+            Some(std::time::Duration::from_secs(self.reload_interval_secs))
+        } else {
+            None
+        }
+    }
+}
+
+impl Default for TlsConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            cert_file: None,
+            key_file: None,
+            client_auth: ClientAuth::Off,
+            client_ca_file: None,
+            min_version: TlsVersion::V1_3,
+            // Well inside any renewal window: cert-manager renews at two thirds
+            // of the lifetime, and the kubelet projects a changed Secret only
+            // after its sync period (one minute by default) anyway.
+            reload_interval_secs: 60,
+        }
+    }
 }
 
 /// The TLS protocol floor for the native listener.
@@ -504,7 +540,7 @@ impl Default for SystemOptionsConfig {
 
 #[cfg(test)]
 mod tests {
-    use crate::config::server::{ServerConfig, binds_loopback};
+    use crate::config::server::{ServerConfig, TlsConfig, binds_loopback};
 
     #[test]
     fn loopback_binds_are_recognized() {
@@ -553,5 +589,30 @@ mod tests {
                 format!("{expected}/api-docs/openapi.json")
             );
         }
+    }
+
+    /// `[server.tls] reload_interval_secs` arrives from its env form, and `0`
+    /// switches reloading off rather than meaning "re-read continuously".
+    #[test]
+    fn the_tls_reload_interval_maps_from_the_env_and_zero_turns_it_off() {
+        let assembled = |value: &str| {
+            let env = std::collections::HashMap::from([(
+                "FERROEHR__SERVER__TLS__RELOAD_INTERVAL_SECS".to_owned(),
+                value.to_owned(),
+            )]);
+            match crate::config::assemble(None, &env, &[]) {
+                Ok(config) => config.server.tls,
+                Err(e) => panic!("assemble failed: {e}"),
+            }
+        };
+        assert_eq!(
+            assembled("5").reload_interval(),
+            Some(std::time::Duration::from_secs(5))
+        );
+        assert_eq!(assembled("0").reload_interval(), None);
+        assert_eq!(
+            TlsConfig::default().reload_interval(),
+            Some(std::time::Duration::from_mins(1))
+        );
     }
 }

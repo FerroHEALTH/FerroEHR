@@ -658,3 +658,27 @@ fn strip_string_expressions(cco: &mut CComplexObject) {
         }
     }
 }
+
+#[test]
+fn an_assumed_at_code_of_the_value_set_becomes_the_default_value() {
+    // `defining_code matches {[ac1; at1002]}`: the assumed at-code is a member
+    // of ac1's value set (AM `UML/classes/org.openehr.am.aom2.c_terminology_code.adoc`),
+    // so the coded input offers it as `defaultValue`.
+    let wt = web_template(
+        "features/terminology/value_sets/openEHR-EHR-OBSERVATION.internal_value_set.v1.0.0.adls",
+    );
+    let position = find(&wt.tree, "position").expect("position DV_CODED_TEXT");
+    let defaults: Vec<Option<&str>> = position
+        .inputs
+        .iter()
+        .map(|input| input.default_value.as_ref().and_then(|v| v.as_str()))
+        .collect();
+    assert_eq!(defaults, vec![Some("at1002")], "{:?}", position.inputs);
+    // An ac-code without an assumed value offers none.
+    let cuff = find(&wt.tree, "cuff_size").expect("cuff_size DV_CODED_TEXT");
+    assert!(
+        cuff.inputs
+            .iter()
+            .all(|input| input.default_value.is_none())
+    );
+}

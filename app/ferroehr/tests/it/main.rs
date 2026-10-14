@@ -60,6 +60,7 @@ mod privacy_policy;
 mod privacy_rules;
 mod privacy_verbatim_replay;
 mod pseudonymisation_boundary;
+mod relocated_domain_preparation;
 mod report;
 mod schema_preparation_credential;
 mod service_admin;

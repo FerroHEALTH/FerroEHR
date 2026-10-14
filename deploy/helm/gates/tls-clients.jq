@@ -17,4 +17,9 @@ def container_of($name): deployment($name) | .spec.template.spec.containers[0];
 (container_of($release) | (.livenessProbe, .readinessProbe, .startupProbe) | select(. != null) | "probe-scheme " + (.httpGet.scheme // "HTTP")),
 (.[] | select(.kind == "Service" and .metadata.name == $release) | .spec.ports[] | select(.name == "http") | "service-appprotocol " + .appProtocol),
 (.[] | select(.kind == "ServiceMonitor") | .spec.endpoints[0]
-  | ("scrape-scheme " + .scheme), ("scrape-ca-secret " + (.tlsConfig.ca.secret.name // "")))
+  | ("scrape-scheme " + .scheme), ("scrape-ca-secret " + (.tlsConfig.ca.secret.name // ""))),
+(deployment($release) | .spec.template.metadata.annotations // {}
+  | select(.["prometheus.io/scrape"] == "true")
+  | "annotation-scheme " + (.["prometheus.io/scheme"] // "http")),
+(.[] | select(.kind == "Ingress" and .metadata.name == $release)
+  | "ingress-backend-protocol " + ((.metadata.annotations // {})["nginx.ingress.kubernetes.io/backend-protocol"] // "absent"))

@@ -2,7 +2,9 @@
 
 Source: https://github.com/openEHR/specifications-ITS-BMM
 Pinned commit: `37b317396eb9b5f03c4c422296a15bdd665028dd` (master)
-Fetched: 2026-07-04 · Layout: **verbatim upstream `components/`** mirror.
+Fetched: 2026-07-04 · Layout: **verbatim upstream `components/`** mirror,
+`json/` and `odin/` serializations (the `yaml/` one is not vendored: nothing
+here reads it).
 Reproduced by: `scripts/vendor/codegen-inputs.sh` (`--check` proves the
 committed tree, overlays included, matches the pins below byte for byte).
 License: Apache-2.0 (the ITS-BMM repo's `LICENSE`; root reference copy
@@ -17,11 +19,12 @@ republishes it.
 ITS-BMM had not republished these versions at our ITS-BMM pin, so the json
 file is vendored verbatim from the component repo ITS-BMM redistributes from.
 Each is byte-identical to its reference twin under
-`docs/specs/openehr/<C>/computable/BMM/`. The component repos publish json
-only, so the `odin/` and `yaml/` serializations of these three versions stay
-the ITS-BMM copies and do NOT carry the overlay changes (they are reference
-only; codegen reads json). Fold each back to a plain ITS-BMM pin at the next
-ITS-BMM bump.
+`docs/specs/openehr/<C>/computable/BMM/`, and `codegen-inputs.sh` fails when a
+twin is missing or differs. The component repos publish json only, so the
+`odin/` serializations of these three versions stay the ITS-BMM copies and do
+NOT carry the overlay changes: they are reference only, never codegen input
+(see "The odin serialization" below). Fold each back to a plain ITS-BMM pin at
+the next ITS-BMM bump.
 
 | File | Component repo | Commit | Adopted | Why |
 |---|---|---|---|---|
@@ -34,10 +37,12 @@ One knock-on of the BASE overlay: ITS-BMM had independently fixed a doc typo
 the 2026-07-04 note below); the specifications-BASE file still carries the
 typo, so the generated doc comment regresses to authentic component-repo text.
 
-The entire ITS-BMM `components/` tree is vendored under `components/` here —
-all released versions in all three serializations (**json**, **odin**, **yaml**:
-18 files each). The `json` files are upstream's source of truth (`odin`/`yaml`
-are generated from them by `bmm-publisher`); we consume **json** for codegen.
+The ITS-BMM `components/` tree is vendored under `components/` here — all
+released versions in two serializations (**json**, **odin**: 18 files each).
+The `json` files are upstream's source of truth (`odin`/`yaml` are generated
+from them by `bmm-publisher`); we consume **json** for codegen. Upstream's
+`yaml/` serialization is excluded by `codegen-inputs.sh` because no code,
+test or script reads it.
 
 ## Codegen input (the pinned versions `openehr-codegen` loads)
 
@@ -63,14 +68,21 @@ Neither alone resolves every AM reference, so both are merged
 
 ## Everything else vendored (available, not currently codegen input)
 
-All other versions are present for completeness / future spec bumps and the
-odin/yaml forms as reference: RM 1.0.2/1.0.3/1.0.4/1.1.0; BASE
-1.0.4/1.1.0/1.2.0; AM 2.2.0/2.3.0; LANG 1.0.0; TERM 3.0.0 — plus every version's
-`odin/` and `yaml/` serialization.
+All other versions are present for completeness / future spec bumps: RM
+1.0.2/1.0.3/1.0.4/1.1.0; BASE 1.0.4/1.1.0/1.2.0; AM 2.2.0/2.3.0; LANG 1.0.0;
+TERM 3.0.0 — plus every version's `odin/` serialization.
 
-These are the deterministic input to `openehr-codegen`. The ODIN
-reader in `openehr-lang::odin` is retained for ADL/ODIN *instance* parsing
-(P8/P9), not for BMM ingestion.
+The json files are the deterministic input to `openehr-codegen`.
+
+## The odin serialization (reference, read by `openehr-lang` tests)
+
+The `odin/` files are not codegen input. Two `openehr-lang` integration tests
+read them through `openehr-lang`'s ODIN BMM reader:
+`tests/it/vendor_bmm_schema.rs` (every vendored ODIN file materialised as a
+model, with its adjudicated outcome) and `tests/it/el_assertions.rs` (the
+pinned versions' assertion strings against the EL grammar). For BASE 1.3.0, RM 1.2.0 and TERM 3.1.0 those ODIN files
+are the ITS-BMM copies at `37b31739…`, which predate the json overlays above,
+so they do not carry the overlay changes.
 
 Note (drift caught 2026-07-04): re-vendoring verbatim at this commit corrected a
 one-character doc typo (`senstive`->`sensitive`) in BASE's

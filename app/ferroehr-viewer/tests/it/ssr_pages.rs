@@ -149,6 +149,21 @@ async fn the_login_screen_renders_the_wordmark_over_a_spinner_until_the_modes_re
     // Suspense — so neither form is in the server pass.
     assert!(!html.contains("id=\"login-username\""), "{html}");
     assert!(!html.contains("Sign in with OIDC"), "{html}");
+    // No refusal on a plain arrival.
+    assert!(!html.contains("id=\"login-refused\""), "{html}");
+}
+
+/// A `?refused=1` arrival — where a Basic sign-in the CDR refused lands —
+/// renders the refusal in the server pass, outside the modes `Suspense`, so it
+/// shows before the forms resolve and with no JavaScript at all.
+#[tokio::test]
+async fn a_refused_sign_in_renders_the_refusal_on_the_login_screen() {
+    let html = render_page("/login?refused=1&next=%2Fehrs", &[], || {
+        view! { <ferroehr_viewer::pages::login::LoginPage /> }.into_any()
+    });
+    assert!(html.contains("id=\"login-refused\""), "{html}");
+    assert!(html.contains("Wrong username or password."), "{html}");
+    assert!(html.contains("thaw-message-bar"), "{html}");
 }
 
 // -------------------------------------------------------------- templates

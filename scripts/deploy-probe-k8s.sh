@@ -1,3 +1,6 @@
+  for domain in "${K8S_PROD_DOMAINS[@]}"; do
+    k8s_pg_ready "$(k8s_prod_project "$domain")" || return 1
+  done
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
@@ -143,30 +146,15 @@ k8s_prod_owner_dsn() {
 
 # Four clusters, each initialised on its own, so four system identifiers.
 k8s_prod_db_up() {
-  local domain _i
+  local domain
   for domain in "${K8S_PROD_DOMAINS[@]}"; do
     FERROEHR_BIND_HOST=0.0.0.0 FERROEHR_DB_PORT="$(k8s_prod_port "$domain")" \
       docker compose -p "$(k8s_prod_project "$domain")" \
       -f docker-compose.yml -f docker-compose.db-publish.yml \
       up -d ferroehr-postgres >/dev/null 2>&1 || return 1
   done
-  # Three answers in a row: the image's init runs a temporary server that
-  # answers pg_isready and then stops for the real start, so one answer can
-  # land in that window.
-  local streak
   for domain in "${K8S_PROD_DOMAINS[@]}"; do
-    streak=0
-    for _i in $(seq 1 60); do
-      if docker compose -p "$(k8s_prod_project "$domain")" exec -T ferroehr-postgres \
-        pg_isready -U "${PG_INIT_USER:-ferroehr}" >/dev/null 2>&1; then
-        streak=$((streak + 1))
-        [[ "$streak" -ge 3 ]] && break
-      else
-        streak=0
-      fi
-      sleep 2
-    done
-    [[ "$streak" -ge 3 ]] || return 1
+    k8s_pg_ready "$(k8s_prod_project "$domain")" || return 1
   done
 }
 
@@ -199,9 +187,11 @@ k8s_prod_secret() {
     | kp apply -f - >/dev/null
 }
 
-# k8s_prod_secrets <separate|shared>: the five credentials the overlay names.
-# `separate` puts each domain on its own cluster; `shared` puts all four on the
-# clinical cluster, each still on its own login role.
+# k8s_prod_secrets <separate|shared>: the eight credentials the overlay names,
+# a runtime login per domain, the clinical cluster's migrator, and the migrator
+# of each other domain's cluster. `separate` puts each domain on its own
+# cluster; `shared` puts all four on the clinical cluster, each still on its
+# own login role.
 k8s_prod_secrets() {
   local domain cluster
   for domain in "${K8S_PROD_DOMAINS[@]}"; do
@@ -209,6 +199,8 @@ k8s_prod_secrets() {
     [[ "$1" == shared ]] && cluster=clinical
     k8s_prod_secret "probe-db-${domain}" \
       "$(k8s_prod_dsn "$(k8s_prod_login "$domain")" "$K8S_PROD_PASSWORD" "$cluster")" || return 1
+    [[ "$domain" == clinical ]] && continue
+    k8s_prod_secret "probe-db-${domain}-migrate" "$(k8s_prod_owner_dsn "$cluster")" || return 1
   done
   k8s_prod_secret probe-db-migrate "$(k8s_prod_owner_dsn clinical)"
 }
@@ -228,9 +220,12 @@ image:
 database:
   existingSecret: probe-db-clinical
   existingSecretKey: dsn
-  party: {existingSecret: probe-db-party, existingSecretKey: dsn}
-  linkage: {existingSecret: probe-db-linkage, existingSecretKey: dsn}
-  audit: {existingSecret: probe-db-audit, existingSecretKey: dsn}
+  party: {existingSecret: probe-db-party, existingSecretKey: dsn,
+    migrateExistingSecret: probe-db-party-migrate, migrateExistingSecretKey: dsn}
+  linkage: {existingSecret: probe-db-linkage, existingSecretKey: dsn,
+    migrateExistingSecret: probe-db-linkage-migrate, migrateExistingSecretKey: dsn}
+  audit: {existingSecret: probe-db-audit, existingSecretKey: dsn,
+    migrateExistingSecret: probe-db-audit-migrate, migrateExistingSecretKey: dsn}
   migrateExistingSecret: probe-db-migrate
   migrateExistingSecretKey: dsn
 migrations:
@@ -245,31 +240,6 @@ k8s_prod_helm_args() {
     -f "$K8S_PROD_VALUES" -f "$K8S_PROD_OVERRIDES"
   [[ -n "${PROBE_K8S_VALUES:-}" ]] && printf '%s\n' -f "$PROBE_K8S_VALUES"
   return 0
-}
-
-# Prepare a relocated domain's cluster out of band. The chart's migration Job
-# holds one credential and prepares the database it reaches; a domain in
-# another cluster is prepared on that cluster's own owner credential, the step
-# the server's refusal names ("prepare the database out of band").
-k8s_prod_prepare() {
-  local cluster="$1" name="probe-migrate-$1-$$" phase _i
-  kp run "$name" --image="${PROBE_K8S_IMAGE_REPO}:${PROBE_K8S_IMAGE_TAG}" \
-    --image-pull-policy=IfNotPresent --restart=Never \
-    --overrides='{"apiVersion":"v1","spec":{"enableServiceLinks":false}}' \
-    --env="FERROEHR__DB__URL=$(k8s_prod_owner_dsn "$cluster")" \
-    --env="FERROEHR__DB__MIGRATE=apply" \
-    -- db migrate >/dev/null 2>&1 || return 1
-  for _i in $(seq 1 90); do
-    phase="$(kp get pod "$name" -o jsonpath='{.status.phase}' 2>/dev/null)"
-    case "$phase" in Succeeded | Failed) break ;; *) ;; esac
-    sleep 2
-  done
-  if [[ "$phase" != "Succeeded" ]]; then
-    kp logs "$name" --tail=8 2>&1 | sed 's/^/      /'
-    kp delete pod "$name" --ignore-not-found --wait=false >/dev/null 2>&1
-    return 1
-  fi
-  kp delete pod "$name" --ignore-not-found --wait=false >/dev/null 2>&1
 }
 
 # The newest server pod's log, the previous container's when it restarted: a
@@ -311,30 +281,21 @@ probes_k8s_production() {
   k8s_prod_secrets separate
 
   probe "P-K8S-PROD-BOOT" "working" "server" "#3692" \
-    "values-production.yaml boots under production against four clusters, with no open gap but plaintext_listener"
-  local cluster prepared=1
-  for cluster in party linkage audit; do
-    k8s_prod_prepare "$cluster" || {
-      probe_fail "the ${cluster} cluster prepared out of band" \
-        "ferroehr db migrate failed on it (log above)"
-      prepared=0
-    }
-  done
+    "the chart's migration Job prepares four clusters on their own migrators, and values-production.yaml then boots under production with migrate = verify, its only gap plaintext_listener, accepted by name"
   local -a helm_args=()
   local line
   while IFS= read -r line; do helm_args+=("$line"); done < <(k8s_prod_helm_args)
   local report gaps accepted installed=0
-  if [[ "$prepared" -eq 1 ]]; then
-    if helm status "$K8S_PROD_RELEASE" -n "$K8S_PROD_NS" >/dev/null 2>&1; then
-      helm uninstall "$K8S_PROD_RELEASE" -n "$K8S_PROD_NS" --wait >/dev/null 2>&1
-    fi
-    if ! helm upgrade --install "${helm_args[@]}" --timeout 6m >"$PROBE_TMP/prod-helm.log" 2>&1; then
-      probe_fail "the release installed, its migration Job complete" "$(tail -4 "$PROBE_TMP/prod-helm.log")" \
-        "a failed pre-install Job lands here: kubectl -n $K8S_PROD_NS logs job/${K8S_PROD_RELEASE}-migrate"
-      kp logs "job/${K8S_PROD_RELEASE}-migrate" --tail=8 2>&1 | sed 's/^/      job: /'
-    else
-      installed=1
-    fi
+  if helm status "$K8S_PROD_RELEASE" -n "$K8S_PROD_NS" >/dev/null 2>&1; then
+    helm uninstall "$K8S_PROD_RELEASE" -n "$K8S_PROD_NS" --wait >/dev/null 2>&1
+  fi
+  if ! helm upgrade --install "${helm_args[@]}" --timeout 6m >"$PROBE_TMP/prod-helm.log" 2>&1; then
+    probe_fail "the release installed, its migration Job having prepared all four clusters" \
+      "$(tail -4 "$PROBE_TMP/prod-helm.log")" \
+      "a failed pre-install Job lands here: kubectl -n $K8S_PROD_NS logs job/${K8S_PROD_RELEASE}-migrate"
+    kp logs "job/${K8S_PROD_RELEASE}-migrate" --tail=8 2>&1 | sed 's/^/      job: /'
+  else
+    installed=1
   fi
   if [[ "$installed" -eq 1 ]]; then
     if ! kp rollout status "deploy/$K8S_PROD_RELEASE" --timeout=240s >/dev/null 2>&1; then
@@ -347,7 +308,7 @@ probes_k8s_production() {
       assert_eq "production" "$(jq -r '.deployment.profile' <<<"$report" 2>/dev/null)" \
         "ferroehr report inside the running pod, over its live pools"
       assert_eq "plaintext_listener" "$gaps" \
-        "the measured gaps include shared_cluster when two pools reach one cluster"
+        "the measured gaps over four clusters: shared_cluster must not be among them"
       assert_eq "plaintext_listener" "$accepted" \
         "the overlay accepts exactly this one gap by name"
     fi
@@ -356,12 +317,20 @@ probes_k8s_production() {
 
   probe "P-K8S-PROD-SHARED" "broken" "server" "#3692" \
     "with all four domains on one cluster, each on its own role, the production boot refuses and names shared_cluster"
-  if [[ "$prepared" -eq 0 || "$installed" -eq 0 ]]; then
-    probe_fail "an installed release on prepared clusters to re-point" "the preparation or the install failed above"
+  if [[ "$installed" -eq 0 ]]; then
+    probe_fail "an installed release to re-point" "the install failed above"
     probe_done
     return 0
   fi
+  # Re-pointed at the clinical cluster, the upgrade's Job prepares every set
+  # there, so the boot reaches the posture check instead of stopping at verify.
   k8s_prod_secrets shared
+  if ! helm upgrade "${helm_args[@]}" --timeout 6m >"$PROBE_TMP/prod-helm-shared.log" 2>&1; then
+    probe_fail "the upgrade's migration Job prepared the shared cluster" \
+      "$(tail -4 "$PROBE_TMP/prod-helm-shared.log")"
+    probe_done
+    return 0
+  fi
   kp rollout restart "deploy/$K8S_PROD_RELEASE" >/dev/null 2>&1
   local log="" _i
   for _i in $(seq 1 45); do

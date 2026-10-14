@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Cadasto B.V.
+// SPDX-FileCopyrightText: Cada.map(|assumed| assumed.symbol.defining_code.code_string.as_str()),|s| s.value.defining_code.code_string.as_str());to B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
 //! RM-type → `inputs` mapping.
@@ -17,8 +17,9 @@
 //!   (`assumed_value` on `C_PRIMITIVE`, `C_CODE_PHRASE`, `C_DV_QUANTITY`,
 //!   `C_DV_ORDINAL` and `C_DV_STATE`, AM `UML/classes/org.openehr.am.aom14.*`),
 //!   rendered as the string the released `web_template/Input.yaml` types it
-//!   as; an assumed code or unit outside the constraint's own list is not
-//!   offered. RM defaults are a composition-build concern.
+//!   as. An assumed value outside the constraint's own list or range is not
+//!   offered (AOM 1.4 `Assumed_value_valid`). RM defaults are a
+//!   composition-build concern.
 //! * Only archetype-`local` value sets become coded `list` entries; bindings to
 //!   external terminologies surface as `termBindings`, and validating an
 //!   external code is the terminology service's job.
@@ -34,6 +35,7 @@
 )]
 
 use indexmap::IndexMap;
+use openehr_base::v1_3::foundation_types::time::iso8601_duration::Iso8601Duration;
 use openehr_its::opt14::types::{
     CAttribute, CObject, CPrimitive, Intervalofinteger, Intervalofreal,
 };
@@ -159,27 +161,26 @@ fn text_input(cstring: Option<&CPrimitive>, suffix: Option<&str>) -> WebTemplate
             .assumed_value
             .as_deref()
             .filter(|v| cs.list.is_empty() || cs.list.iter().any(|item| item == v))
-            .and_then(default_value);
+            .map(|v| default_string(&v));
     }
     input
 }
 
 /// The `defaultValue` wire form of an assumed value: a string, as the released
 /// `web_template/Input.yaml` declares the member.
-fn default_value(value: impl ToString) -> Option<serde_json::Value> {
-    Some(serde_json::Value::String(value.to_string()))
+pub(super) fn default_string<T: ToString + ?Sized>(value: &T) -> serde_json::Value {
+    serde_json::Value::String(value.to_string())
 }
 
 /// The `defaultValue` of a coded input: the assumed code when the constraint
 /// lists it (or lists none).
-fn assumed_code(
-    assumed: Option<&openehr_base::v1_3::base_types::terminology::code_phrase::CodePhrase>,
+pub(super) fn assumed_code(
+    assumed: Option<&str>,
     code_list: &[String],
 ) -> Option<serde_json::Value> {
     assumed
-        .map(|cp| cp.code_string.as_str())
         .filter(|code| code_list.is_empty() || code_list.iter().any(|c| c == code))
-        .and_then(default_value)
+        .map(|v| default_string(&v))
 }
 
 // ── DV_CODED_TEXT ────────────────────────────────────────────────────────────
@@ -200,6 +201,13 @@ fn coded_text_inputs(
         Some(CObject::CCodeReference(r)) => {
             let uri = reference_set_uri(&r.referenceSetUri);
             inputs.extend(external_terminology_inputs(uri.as_deref()));
+            set_code_default(
+                &mut inputs,
+                assumed_code(
+                    r.assumed_value.as_ref().map(|a| a.code_string.as_str()),
+                    &[],
+                ),
+            );
         }
         Some(CObject::CCodePhrase(cp)) => {
             let terminology = cp.terminology_id.as_ref().map(|t| t.value.clone());
@@ -218,10 +226,26 @@ fn coded_text_inputs(
                 }
                 inputs.push(input);
             }
+            set_code_default(
+                &mut inputs,
+                assumed_code(
+                    cp.assumed_value.as_ref().map(|a| a.code_string.as_str()),
+                    &cp.code_list,
+                ),
+            );
         }
         // No `defining_code` constraint (or some other object): free-text coded
         // input pair (`code`/`value`, per master04 §"Attribute Suffixes").
-        None | Some(_) => inputs.extend(external_terminology_inputs(None)),
+        None | Some(_) => {
+            inputs.extend(external_terminology_inputs(None));
+            if let CObject::CDvState(state) = co {
+                let assumed = state
+                    .assumed_value
+                    .as_ref()
+                    .map(|s| s.value.defining_code.code_string.as_str());
+                set_code_default(&mut inputs, assumed_code(assumed, &[]));
+            }
+        }
     }
 
     // A `value` C_STRING with listOpen opens every input's list.
@@ -233,6 +257,16 @@ fn coded_text_inputs(
         }
     }
     inputs
+}
+
+/// Sets `default` on the `code` input of a coded input set.
+fn set_code_default(inputs: &mut [WebTemplateInput], default: Option<serde_json::Value>) {
+    if let Some(code) = inputs
+        .iter_mut()
+        .find(|input| input.suffix.as_deref() == Some("code"))
+    {
+        code.default_value = default;
+    }
 }
 
 fn external_terminology_inputs(terminology: Option<&str>) -> Vec<WebTemplateInput> {
@@ -344,6 +378,19 @@ fn quantity_inputs(co: &CObject, labels: &dyn Labels) -> Vec<WebTemplateInput> {
         if let [only] = units.list.as_slice() {
             magnitude.validation.clone_from(&only.validation);
         }
+        if let Some(assumed) = q.assumed_value.as_ref().filter(|a| {
+            q.list.is_empty()
+                || q.list.iter().any(|item| {
+                    item.units == a.units
+                        && item
+                            .magnitude
+                            .as_ref()
+                            .is_none_or(|iv| real_admits(iv, a.magnitude))
+                })
+        }) {
+            magnitude.default_value = Some(default_string(&assumed.magnitude));
+            units.default_value = Some(default_string(&assumed.units));
+        }
         vec![magnitude, units]
     } else {
         let units = WebTemplateInput::new(WebTemplateInputType::Text, Some("unit"));
@@ -355,13 +402,18 @@ fn quantity_inputs(co: &CObject, labels: &dyn Labels) -> Vec<WebTemplateInput> {
 
 fn count_input(co: &CObject) -> WebTemplateInput {
     let mut input = WebTemplateInput::new(WebTemplateInputType::Integer, None);
-    if let Some(CPrimitive::CInteger(ci)) = primitive_under(co, "magnitude")
-        && let Some(range) = ci.range.as_ref().and_then(int_range)
-    {
-        input.validation = Some(WebTemplateValidation {
-            range: Some(range),
-            ..Default::default()
-        });
+    if let Some(CPrimitive::CInteger(ci)) = primitive_under(co, "magnitude") {
+        if let Some(range) = ci.range.as_ref().and_then(int_range) {
+            input.validation = Some(WebTemplateValidation {
+                range: Some(range),
+                ..Default::default()
+            });
+        }
+        input.default_value = ci
+            .assumed_value
+            .filter(|v| ci.list.is_empty() || ci.list.contains(v))
+            .filter(|v| ci.range.as_ref().is_none_or(|iv| int_admits(iv, *v)))
+            .map(|v| default_string(&v));
     }
     input
 }
@@ -388,6 +440,17 @@ fn ordinal_input(co: &CObject, labels: &dyn Labels, scale: bool) -> WebTemplateI
         }
         input.list.push(cv);
     }
+    let listed: Vec<String> = ord
+        .list
+        .iter()
+        .map(|entry| entry.symbol.defining_code.code_string.clone())
+        .collect();
+    input.default_value = assumed_code(
+        ord.assumed_value
+            .as_ref()
+            .map(|assumed| assumed.symbol.defining_code.code_string.as_str()),
+        &listed,
+    );
     input
 }
 
@@ -418,6 +481,12 @@ fn push_generic_ordinal_codes(co: &CObject, labels: &dyn Labels, input: &mut Web
                 }
                 input.list.push(cv);
             }
+            if input.default_value.is_none() {
+                input.default_value = assumed_code(
+                    cp.assumed_value.as_ref().map(|a| a.code_string.as_str()),
+                    &cp.code_list,
+                );
+            }
         }
     }
 }
@@ -437,6 +506,10 @@ fn boolean_input(co: &CObject) -> WebTemplateInput {
                 .list
                 .push(WebTemplateCodedValue::new("true", Some("true".to_owned())));
         }
+        input.default_value = cb
+            .assumed_value
+            .filter(|v| if *v { cb.true_valid } else { cb.false_valid })
+            .map(|v| default_string(&v));
     }
     input
 }
@@ -445,21 +518,25 @@ fn boolean_input(co: &CObject) -> WebTemplateInput {
 
 fn temporal_input(co: &CObject, ty: WebTemplateInputType) -> WebTemplateInput {
     let mut input = WebTemplateInput::new(ty, None);
-    let (pattern, range) = match primitive_under(co, "value") {
+    let (pattern, range, assumed) = match primitive_under(co, "value") {
         Some(CPrimitive::CDate(c)) => (
             c.pattern.clone(),
             temporal_range(c.range.as_ref().map(iv_bounds_date)),
+            c.assumed_value.as_deref(),
         ),
         Some(CPrimitive::CDateTime(c)) => (
             c.pattern.clone(),
             temporal_range(c.range.as_ref().map(iv_bounds_datetime)),
+            c.assumed_value.as_deref(),
         ),
         Some(CPrimitive::CTime(c)) => (
             c.pattern.clone(),
             temporal_range(c.range.as_ref().map(iv_bounds_time)),
+            c.assumed_value.as_deref(),
         ),
-        _ => (None, None),
+        _ => (None, None, None),
     };
+    input.default_value = assumed.map(|v| default_string(&v));
     if pattern.is_some() || range.is_some() {
         input.validation = Some(WebTemplateValidation {
             pattern,
@@ -484,17 +561,45 @@ const DURATION_FIELDS: [(&str, char); 7] = [
     ("second", 'S'),
 ];
 
+/// The per-field `DV_DURATION` inputs, each field's `defaultValue` taken from
+/// the matching component of the constraint's assumed ISO 8601 duration.
 fn duration_inputs(co: &CObject) -> Vec<WebTemplateInput> {
-    let pattern = match primitive_under(co, "value") {
-        Some(CPrimitive::CDuration(d)) => d.pattern.clone(),
-        _ => None,
+    let (pattern, assumed) = match primitive_under(co, "value") {
+        Some(CPrimitive::CDuration(d)) => (
+            d.pattern.clone(),
+            d.assumed_value
+                .clone()
+                .map(|value| Iso8601Duration { value }),
+        ),
+        _ => (None, None),
     };
     let allowed = duration_allowed_fields(pattern.as_deref());
     DURATION_FIELDS
         .iter()
         .filter(|(name, _)| allowed.contains(name))
-        .map(|(name, _)| WebTemplateInput::new(WebTemplateInputType::Integer, Some(name)))
+        .map(|(name, _)| {
+            let mut input = WebTemplateInput::new(WebTemplateInputType::Integer, Some(name));
+            input.default_value = assumed
+                .as_ref()
+                .and_then(|d| duration_component(d, name))
+                .map(|v| default_string(&v));
+            input
+        })
         .collect()
+}
+
+/// The count of one named field of a duration, or `None` when it does not parse.
+fn duration_component(duration: &Iso8601Duration, field: &str) -> Option<u64> {
+    match field {
+        "year" => duration.years(),
+        "month" => duration.months(),
+        "week" => duration.weeks(),
+        "day" => duration.days(),
+        "hour" => duration.hours(),
+        "minute" => duration.minutes(),
+        "second" => duration.seconds(),
+        _ => None,
+    }
 }
 
 /// The duration fields allowed by an ISO-8601 duration pattern (a `P…` string
@@ -566,13 +671,17 @@ fn proportion_part(co: &CObject, suffix: &str, is_integral: bool) -> WebTemplate
         WebTemplateInputType::Decimal
     };
     let mut input = WebTemplateInput::new(ty, Some(suffix));
-    if let Some(CPrimitive::CReal(cr)) = primitive_under(co, suffix)
-        && let Some(range) = cr.range.as_ref().and_then(decimal_range)
-    {
-        input.validation = Some(WebTemplateValidation {
-            range: Some(range),
-            ..Default::default()
-        });
+    if let Some(CPrimitive::CReal(cr)) = primitive_under(co, suffix) {
+        if let Some(range) = cr.range.as_ref().and_then(decimal_range) {
+            input.validation = Some(WebTemplateValidation {
+                range: Some(range),
+                ..Default::default()
+            });
+        }
+        input.default_value = cr
+            .assumed_value
+            .filter(|v| cr.range.as_ref().is_none_or(|iv| real_admits(iv, *v)))
+            .map(|v| default_string(&v));
     }
     input
 }
@@ -632,6 +741,49 @@ fn json_i32(v: i32) -> serde_json::Value {
 
 fn json_f64(v: f64) -> serde_json::Value {
     serde_json::Number::from_f64(v).map_or(serde_json::Value::Null, serde_json::Value::Number)
+}
+
+/// Whether a real interval admits `value`; an absent or unbounded side admits
+/// everything and an absent `*_included` reads as included.
+fn real_admits(iv: &Intervalofreal, value: f64) -> bool {
+    let above = iv.lower_unbounded
+        || iv.lower.is_none_or(|lower| {
+            if iv.lower_included == Some(false) {
+                value > lower
+            } else {
+                value >= lower
+            }
+        });
+    let below = iv.upper_unbounded
+        || iv.upper.is_none_or(|upper| {
+            if iv.upper_included == Some(false) {
+                value < upper
+            } else {
+                value <= upper
+            }
+        });
+    above && below
+}
+
+/// Whether an integer interval admits `value`, under the [`real_admits`] reading.
+fn int_admits(iv: &Intervalofinteger, value: i32) -> bool {
+    let above = iv.lower_unbounded
+        || iv.lower.is_none_or(|lower| {
+            if iv.lower_included == Some(false) {
+                value > lower
+            } else {
+                value >= lower
+            }
+        });
+    let below = iv.upper_unbounded
+        || iv.upper.is_none_or(|upper| {
+            if iv.upper_included == Some(false) {
+                value < upper
+            } else {
+                value <= upper
+            }
+        });
+    above && below
 }
 
 /// `WebTemplateValidationIntegerRange`: min via lower, max via upper (minus one
@@ -778,5 +930,349 @@ mod tests {
         // group, has no group hint (rubric falls back to the global search).
         assert_eq!(openehr_group("ELEMENT", "value"), None);
         assert_eq!(openehr_group("ISM_TRANSITION", "careflow_step"), None);
+    }
+}
+
+#[cfg(test)]
+mod default_value_tests {
+    use indexmap::IndexMap;
+    use openehr_base::v1_3::base_types::identification::terminology_id::TerminologyId;
+    use openehr_its::opt14::types::{
+        CAttribute, CBoolean, CCodePhrase, CComplexObject, CDate, CDuration, CDvOrdinal,
+        CDvQuantity, CInteger, CObject, CPrimitive, CPrimitiveObject, CQuantityItem,
+        CSingleAttribute, CString, Intervalofinteger, Intervalofreal,
+    };
+    use openehr_rm::v1_2::data_types::quantity::dv_ordinal::DvOrdinal;
+    use openehr_rm::v1_2::data_types::quantity::dv_quantity::DvQuantity;
+    use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
+
+    use super::{Labels, WebTemplateBindingCodedValue, WebTemplateInput, build_inputs};
+
+    /// Labels that resolve nothing (every label falls back to its code).
+    struct NoLabels;
+
+    impl Labels for NoLabels {
+        fn text(&self, _terminology: &str, _code: &str) -> Option<String> {
+            None
+        }
+        fn localized(&self, _terminology: &str, _code: &str) -> IndexMap<String, String> {
+            IndexMap::new()
+        }
+        fn term_bindings(&self, _code: &str) -> IndexMap<String, WebTemplateBindingCodedValue> {
+            IndexMap::new()
+        }
+    }
+
+    fn one() -> Intervalofinteger {
+        Intervalofinteger {
+            lower_included: Some(true),
+            upper_included: Some(true),
+            lower_unbounded: false,
+            upper_unbounded: false,
+            lower: Some(1),
+            upper: Some(1),
+        }
+    }
+
+    fn from_zero() -> Intervalofreal {
+        Intervalofreal {
+            lower_included: Some(true),
+            upper_included: None,
+            lower_unbounded: false,
+            upper_unbounded: true,
+            lower: Some(0.0),
+            upper: None,
+        }
+    }
+
+    /// A `C_COMPLEX_OBJECT` of `rm_type` whose `attribute` holds `child`.
+    fn complex(rm_type: &str, attribute: &str, child: CObject) -> CObject {
+        CObject::CComplexObject(CComplexObject {
+            rm_type_name: rm_type.to_owned(),
+            occurrences: one(),
+            node_id: String::new(),
+            attributes: vec![CAttribute::CSingleAttribute(CSingleAttribute {
+                rm_attribute_name: attribute.to_owned(),
+                existence: one(),
+                children: vec![child],
+            })],
+        })
+    }
+
+    fn primitive(rm_type: &str, item: CPrimitive) -> CObject {
+        CObject::CPrimitiveObject(CPrimitiveObject {
+            rm_type_name: rm_type.to_owned(),
+            occurrences: one(),
+            node_id: String::new(),
+            item: Some(Box::new(item)),
+        })
+    }
+
+    fn defaults(rm_type: &str, co: &CObject) -> Vec<(Option<String>, Option<String>)> {
+        let (inputs, _) = build_inputs(rm_type, co, &NoLabels, None);
+        inputs
+            .iter()
+            .map(|input: &WebTemplateInput| {
+                (
+                    input.suffix.clone(),
+                    input
+                        .default_value
+                        .as_ref()
+                        .and_then(|v| v.as_str())
+                        .map(str::to_owned),
+                )
+            })
+            .collect()
+    }
+
+    fn some(suffix: Option<&str>, value: Option<&str>) -> (Option<String>, Option<String>) {
+        (suffix.map(str::to_owned), value.map(str::to_owned))
+    }
+
+    fn code_phrase(
+        code: &str,
+    ) -> openehr_base::v1_3::base_types::terminology::code_phrase::CodePhrase {
+        openehr_base::v1_3::base_types::terminology::code_phrase::CodePhrase {
+            terminology_id: TerminologyId {
+                value: "local".to_owned(),
+            },
+            code_string: code.to_owned(),
+            preferred_term: None,
+        }
+    }
+
+    fn coded_text(assumed: &str) -> CObject {
+        complex(
+            "DV_CODED_TEXT",
+            "defining_code",
+            CObject::CCodePhrase(CCodePhrase {
+                rm_type_name: "CODE_PHRASE".to_owned(),
+                occurrences: one(),
+                node_id: String::new(),
+                assumed_value: Some(code_phrase(assumed)),
+                terminology_id: Some(TerminologyId {
+                    value: "local".to_owned(),
+                }),
+                code_list: vec!["at1".to_owned(), "at2".to_owned()],
+            }),
+        )
+    }
+
+    #[test]
+    fn coded_text_offers_a_listed_assumed_code_only() {
+        let co = coded_text("at2");
+        assert_eq!(
+            defaults("DV_CODED_TEXT", &co),
+            vec![some(Some("code"), Some("at2"))]
+        );
+        let co = coded_text("at9");
+        assert_eq!(
+            defaults("DV_CODED_TEXT", &co),
+            vec![some(Some("code"), None)]
+        );
+    }
+
+    fn quantity(assumed_magnitude: f64) -> CObject {
+        CObject::CDvQuantity(CDvQuantity {
+            rm_type_name: "DV_QUANTITY".to_owned(),
+            occurrences: one(),
+            node_id: String::new(),
+            assumed_value: Some(DvQuantity {
+                normal_status: None,
+                normal_range: None,
+                other_reference_ranges: None,
+                magnitude_status: None,
+                accuracy: None,
+                accuracy_is_percent: None,
+                magnitude: assumed_magnitude,
+                precision: None,
+                units: "mg".to_owned(),
+                units_system: None,
+                units_display_name: None,
+            }),
+            property: None,
+            list: vec![CQuantityItem {
+                magnitude: Some(from_zero()),
+                precision: None,
+                units: "mg".to_owned(),
+            }],
+        })
+    }
+
+    #[test]
+    fn quantity_offers_an_admitted_assumed_value_only() {
+        assert_eq!(
+            defaults("DV_QUANTITY", &quantity(5.5)),
+            vec![
+                some(Some("magnitude"), Some("5.5")),
+                some(Some("unit"), Some("mg"))
+            ]
+        );
+        assert_eq!(
+            defaults("DV_QUANTITY", &quantity(-1.0)),
+            vec![some(Some("magnitude"), None), some(Some("unit"), None)]
+        );
+    }
+
+    #[test]
+    fn count_boolean_text_and_date_offer_their_assumed_values() {
+        let count = complex(
+            "DV_COUNT",
+            "magnitude",
+            primitive(
+                "INTEGER",
+                CPrimitive::CInteger(CInteger {
+                    list: Vec::new(),
+                    range: None,
+                    assumed_value: Some(3),
+                }),
+            ),
+        );
+        assert_eq!(defaults("DV_COUNT", &count), vec![some(None, Some("3"))]);
+
+        let boolean = complex(
+            "DV_BOOLEAN",
+            "value",
+            primitive(
+                "BOOLEAN",
+                CPrimitive::CBoolean(CBoolean {
+                    true_valid: true,
+                    false_valid: true,
+                    assumed_value: Some(true),
+                }),
+            ),
+        );
+        assert_eq!(
+            defaults("DV_BOOLEAN", &boolean),
+            vec![some(None, Some("true"))]
+        );
+
+        let text = complex(
+            "DV_TEXT",
+            "value",
+            primitive(
+                "STRING",
+                CPrimitive::CString(CString {
+                    pattern: None,
+                    list: vec!["a".to_owned(), "b".to_owned()],
+                    list_open: None,
+                    assumed_value: Some("b".to_owned()),
+                }),
+            ),
+        );
+        assert_eq!(defaults("DV_TEXT", &text), vec![some(None, Some("b"))]);
+
+        let date = complex(
+            "DV_DATE",
+            "value",
+            primitive(
+                "DATE",
+                CPrimitive::CDate(CDate {
+                    pattern: None,
+                    timezone_validity: None,
+                    range: None,
+                    assumed_value: Some("2020-01-31".to_owned()),
+                }),
+            ),
+        );
+        assert_eq!(
+            defaults("DV_DATE", &date),
+            vec![some(None, Some("2020-01-31"))]
+        );
+    }
+
+    #[test]
+    fn duration_fields_take_the_assumed_components() {
+        let duration = complex(
+            "DV_DURATION",
+            "value",
+            primitive(
+                "DURATION",
+                CPrimitive::CDuration(CDuration {
+                    pattern: Some("PYTH".to_owned()),
+                    range: None,
+                    assumed_value: Some("P2YT6H".to_owned()),
+                }),
+            ),
+        );
+        assert_eq!(
+            defaults("DV_DURATION", &duration),
+            vec![some(Some("year"), Some("2")), some(Some("hour"), Some("6"))]
+        );
+    }
+
+    #[test]
+    fn ordinal_offers_a_listed_assumed_symbol() {
+        let entry = |code: &str, value: i32| DvOrdinal {
+            normal_status: None,
+            normal_range: None,
+            other_reference_ranges: None,
+            symbol: DvCodedText {
+                value: code.to_owned(),
+                hyperlink: None,
+                formatting: None,
+                mappings: None,
+                language: None,
+                encoding: None,
+                defining_code: openehr_rm::v1_2::data_types::text::code_phrase::CodePhrase {
+                    terminology_id: TerminologyId {
+                        value: "local".to_owned(),
+                    },
+                    code_string: code.to_owned(),
+                    preferred_term: None,
+                },
+            },
+            value,
+        };
+        let co = CObject::CDvOrdinal(CDvOrdinal {
+            rm_type_name: "DV_ORDINAL".to_owned(),
+            occurrences: one(),
+            node_id: String::new(),
+            assumed_value: Some(entry("at2", 2)),
+            list: vec![entry("at1", 1), entry("at2", 2)],
+        });
+        assert_eq!(defaults("DV_ORDINAL", &co), vec![some(None, Some("at2"))]);
+    }
+
+    /// An externally bound coded text with an assumed code serializes the
+    /// string `defaultValue` the released `web_template/Input.yaml` declares;
+    /// the vendored EHRbase node vector
+    /// (`corpus/fixtures/service/webtemplate_nodes`, prior art only) carries the
+    /// same shape.
+    #[test]
+    fn external_coded_text_default_matches_the_vendored_node_vector() {
+        let co = complex(
+            "DV_CODED_TEXT",
+            "defining_code",
+            CObject::CCodePhrase(CCodePhrase {
+                rm_type_name: "CODE_PHRASE".to_owned(),
+                occurrences: one(),
+                node_id: String::new(),
+                assumed_value: Some(
+                    openehr_base::v1_3::base_types::terminology::code_phrase::CodePhrase {
+                        terminology_id: TerminologyId {
+                            value: "ICD10".to_owned(),
+                        },
+                        code_string: "E10.0".to_owned(),
+                        preferred_term: None,
+                    },
+                ),
+                terminology_id: Some(TerminologyId {
+                    value: "ICD10".to_owned(),
+                }),
+                code_list: Vec::new(),
+            }),
+        );
+        let (inputs, _) = build_inputs("DV_CODED_TEXT", &co, &NoLabels, None);
+        let path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../corpus/fixtures/service/webtemplate_nodes/dv_codedtext_unsupported.json"
+        );
+        let text = std::fs::read_to_string(path).expect("vendored node vector");
+        let node: serde_json::Value = serde_json::from_str(&text).expect("node JSON");
+        assert_eq!(
+            serde_json::to_value(&inputs).expect("serialize inputs"),
+            node["inputs"]
+        );
     }
 }

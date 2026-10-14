@@ -226,7 +226,8 @@ pub enum DbError {
          this credential holds no privilege on `{schema}`. Under the separated-domain posture \
          no runtime credential ever can, because each holds one domain: point `[db] \
          migrate_url` (or `migrate_url_file`) at the credential that prepares the schema — \
-         unset, it falls back to `[db] url`"
+         unset, it falls back to `[db] url` — and, for a domain in a database of its own, \
+         `[storage.migrate.<domain>] url` at that database's migration credential"
     )]
     SchemaUnreadable {
         /// The schema whose migration bookkeeping could not be read.
@@ -308,18 +309,16 @@ pub enum DbError {
         domain: Domain,
     },
 
-    /// A domain was placed on a DSN of its own, but its migration set names
-    /// another domain's objects.
+    /// A domain's `[storage.migrate.<domain>]` credential reaches a different
+    /// database from the one the domain is served from.
     #[error(
-        "the `{domain}` domain cannot be prepared without the `{required}` domain in the same \
-         database: its grant file revokes a function only the `{required}` set creates. Place \
-         both on one DSN, or prepare the `{domain}` database out of band"
+        "`[storage.migrate.{domain}] url` reaches a different database from `[storage.{domain}] \
+         url`: the migration credential prepares the database the {domain} domain lives in, so it \
+         must reach the same one. Point both at that database"
     )]
-    DomainCannotBeRelocated {
-        /// The domain that was relocated.
+    DomainMigratorElsewhere {
+        /// The domain whose two credentials disagree.
         domain: Domain,
-        /// The domain its migration set depends on.
-        required: Domain,
     },
 }
 
@@ -739,14 +738,54 @@ async fn migration_connection(dsn: &str) -> Result<PgConnection, DbError> {
     Ok(conn)
 }
 
-/// One database's share of the preparation: the DSN to connect on, and the
-/// domains that live there.
+/// The credential one database is prepared on, best first.
+///
+/// The order is the preference when several domains of one database name
+/// different credentials: the migration DSN of `[db]`, then a migration
+/// credential named for the database in `[storage.migrate.<domain>]`, and a
+/// runtime DSN only when the deployment named neither.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum PreparationCredential {
+    /// [`DbConfig::migrate_dsn`], for the database it reaches.
+    Migrator,
+    /// `[storage.migrate.<domain>].url`, for the database that domain lives in.
+    DomainMigrator,
+    /// A relocated domain's own runtime DSN.
+    Runtime,
+}
+
+/// One database's share of the preparation: the credential to connect on, and
+/// the domains that live there.
 #[derive(Debug)]
 struct PreparationGroup {
-    /// The credential this database is prepared with.
+    /// The DSN this database is prepared with.
     dsn: String,
+    /// Which kind of credential [`Self::dsn`] is.
+    credential: PreparationCredential,
     /// The domains resident in it, in [`Domain::ALL`] order.
     domains: Vec<Domain>,
+}
+
+impl PreparationGroup {
+    /// The domain sets `apply` runs in this database, in [`Domain::ALL`] order:
+    /// each resident domain's, plus each companion set a resident one needs
+    /// ([`Domain::prepares_with`]).
+    ///
+    /// `verify` compares the resident sets only: a companion set serves no
+    /// pool, and the resident set that needs it could not have been applied
+    /// without it.
+    fn sets(&self) -> Vec<Domain> {
+        let mut sets = self.domains.clone();
+        for domain in &self.domains {
+            if let Some(required) = domain.prepares_with()
+                && !sets.contains(&required)
+            {
+                sets.push(required);
+            }
+        }
+        sets.sort_unstable();
+        sets
+    }
 }
 
 /// The database a connection reaches: its cluster and the database inside it.
@@ -766,123 +805,133 @@ async fn database_identity(conn: &mut PgConnection) -> Result<(String, String), 
     Ok(identity)
 }
 
-/// Which credential prepares which domains.
+/// The database `dsn` reaches, read once per distinct DSN text.
+async fn database_of(
+    dsn: &str,
+    seen: &mut Vec<(String, (String, String))>,
+) -> Result<(String, String), DbError> {
+    if let Some((_, identity)) = seen.iter().find(|(known, _)| known == dsn) {
+        return Ok(identity.clone());
+    }
+    let mut conn = migration_connection(dsn).await?;
+    let identity = database_identity(&mut conn).await;
+    close_quietly(conn).await;
+    let identity = identity?;
+    seen.push((dsn.to_owned(), identity.clone()));
+    Ok(identity)
+}
+
+/// Which credential prepares which domains, one group per database.
 ///
-/// The migration DSN ([`DbConfig::migrate_dsn`]) prepares every domain whose own
-/// DSN reaches the SAME DATABASE — which is the whole of the documented
-/// separated-credential posture, where each domain has a login role of its own
-/// on one database. A domain whose DSN reaches a different database is prepared
-/// on that DSN instead, because `[db].migrate_url` names one database and a
-/// relocated domain is not in it.
+/// A domain's candidate credential is `[storage.migrate.<domain>].url` when the
+/// deployment names one, its own runtime DSN when it is relocated without one,
+/// and the migration DSN ([`DbConfig::migrate_dsn`]) otherwise. Candidates are
+/// then grouped by the DATABASE they reach, never by DSN text, and each
+/// database is prepared on the best credential among its domains'
+/// ([`PreparationCredential`]): the migration DSN prepares every domain in the
+/// database it reaches, which is the whole of the separated-credential posture
+/// on one database.
 ///
-/// Identity decides, never DSN text: a second credential on one database is a
-/// different DSN and the same database, and preparing it separately would ask a
-/// domain-scoped runtime role to read a bookkeeping table it holds no privilege
-/// on.
+/// With nothing relocated and no domain migrator named, the plan is the one
+/// database the migration DSN reaches, and no connection is opened.
+///
+/// # Errors
+///
+/// [`DbError::DomainMigratorElsewhere`] when a domain's migration credential
+/// and its runtime DSN reach different databases, and [`DbError::Sqlx`] when a
+/// connection or an identity read fails.
 async fn preparation_plan(
     settings: &DbConfig,
     storage: &StorageConfig,
 ) -> Result<Vec<PreparationGroup>, DbError> {
-    let layout = storage.layout(settings);
-    let groups = layout.groups();
-    let migration_dsn = settings.migrate_dsn().to_owned();
-    if groups.len() < 2 {
-        let plan = vec![PreparationGroup {
-            dsn: migration_dsn,
-            domains: Domain::ALL.to_vec(),
-        }];
-        check_preparation_dependencies(&plan)?;
-        return Ok(plan);
-    }
-
-    let mut conn = migration_connection(&migration_dsn).await?;
-    let migration_database = database_identity(&mut conn).await;
-    close_quietly(conn).await;
-    let migration_database = migration_database?;
-
-    // Keyed on the DATABASE, not on the DSN: two domains relocated to one
-    // database through two credentials are one preparation, and their sets must
-    // see each other's objects.
-    let mut plan: Vec<(String, String, Vec<Domain>)> = Vec::new();
-    for group in groups {
-        let mut database = migration_database.clone();
-        let mut dsn = migration_dsn.clone();
-        if group
-            .domains
-            .first()
-            .is_some_and(|domain| layout.placement(*domain).separated)
-        {
-            let mut conn = migration_connection(group.dsn()).await?;
-            let reached = database_identity(&mut conn).await;
-            close_quietly(conn).await;
-            let reached = reached?;
-            if reached != migration_database {
-                database = reached;
-                dsn = group.dsn().to_owned();
-            }
-        }
-        let key = format!("{}/{}", database.0, database.1);
-        if let Some((_, _, domains)) = plan.iter_mut().find(|(seen, _, _)| *seen == key) {
-            domains.extend(group.domains);
-        } else {
-            plan.push((key, dsn, group.domains));
-        }
-    }
-    let mut plan: Vec<PreparationGroup> = plan
+    let migration_dsn = settings.migrate_dsn();
+    let candidates: Vec<(Domain, &str, PreparationCredential)> = Domain::ALL
         .into_iter()
-        .map(|(_, dsn, mut domains)| {
-            domains.sort_unstable();
-            PreparationGroup { dsn, domains }
+        .map(|domain| {
+            if let Some(dsn) = storage.migrate_dsn(domain) {
+                (domain, dsn, PreparationCredential::DomainMigrator)
+            } else if storage.is_separated(domain) {
+                (
+                    domain,
+                    storage.dsn(domain, settings),
+                    PreparationCredential::Runtime,
+                )
+            } else {
+                (domain, migration_dsn, PreparationCredential::Migrator)
+            }
         })
         .collect();
+    if candidates
+        .iter()
+        .all(|(_, _, credential)| *credential == PreparationCredential::Migrator)
+    {
+        return Ok(vec![PreparationGroup {
+            dsn: migration_dsn.to_owned(),
+            credential: PreparationCredential::Migrator,
+            domains: Domain::ALL.to_vec(),
+        }]);
+    }
+
+    let mut seen = Vec::new();
+    let migration_database = database_of(migration_dsn, &mut seen).await?;
+    let mut plan: Vec<((String, String), PreparationGroup)> = Vec::new();
+    for (domain, candidate, kind) in candidates {
+        let database = database_of(candidate, &mut seen).await?;
+        if kind == PreparationCredential::DomainMigrator && storage.is_separated(domain) {
+            let served = database_of(storage.dsn(domain, settings), &mut seen).await?;
+            if served != database {
+                return Err(DbError::DomainMigratorElsewhere { domain });
+            }
+        }
+        let (dsn, credential) = if database == migration_database {
+            (migration_dsn, PreparationCredential::Migrator)
+        } else {
+            (candidate, kind)
+        };
+        if let Some((_, group)) = plan.iter_mut().find(|(known, _)| *known == database) {
+            group.domains.push(domain);
+            if credential < group.credential {
+                dsn.clone_into(&mut group.dsn);
+                group.credential = credential;
+            }
+        } else {
+            plan.push((
+                database,
+                PreparationGroup {
+                    dsn: dsn.to_owned(),
+                    credential,
+                    domains: vec![domain],
+                },
+            ));
+        }
+    }
+    let mut plan: Vec<PreparationGroup> = plan.into_iter().map(|(_, group)| group).collect();
     plan.sort_by(|a, b| a.domains.cmp(&b.domains));
-    check_preparation_dependencies(&plan)?;
     Ok(plan)
 }
 
-/// Refuse a plan that prepares a domain in a different database from the one
-/// its migration set needs ([`Domain::prepares_with`]).
+/// Applies the embedded migrations, one connection per database the domains
+/// reach.
 ///
-/// Checked before any DDL runs, so the refusal names the configuration rather
-/// than leaving a `PostgreSQL` error about a function nobody configured.
-fn check_preparation_dependencies(plan: &[PreparationGroup]) -> Result<(), DbError> {
-    for group in plan {
-        for domain in &group.domains {
-            let Some(required) = domain.prepares_with() else {
-                continue;
-            };
-            if !group.domains.contains(&required) {
-                return Err(DbError::DomainCannotBeRelocated {
-                    domain: *domain,
-                    required,
-                });
-            }
-        }
-    }
-    Ok(())
-}
-
-/// Applies the embedded migrations, one connection per distinct domain DSN.
-///
-/// The `ext` set is applied per DATABASE, by whichever domain group reaches it
-/// first: two domains sharing a DSN share one `ext`, and a relocated domain
-/// carries its own copy of the helper functions its storage code calls. Two
-/// DSNs that reach one database through different host names need no special
-/// handling — the second connection finds `ext` already recorded and applies
-/// nothing.
+/// The `ext` set is applied in every such database, then each resident
+/// domain's set and any companion set one of them needs
+/// ([`Domain::prepares_with`]), on the credential the plan chose for that
+/// database: the migration DSN where it reaches it, a domain's
+/// `[storage.migrate.<domain>]` credential elsewhere, and a relocated domain's
+/// runtime DSN when neither is named.
 ///
 /// # Errors
 ///
-/// [`DbError::DomainCannotBeRelocated`] when the layout splits a domain from
-/// the one its set depends on, [`DbError::Sqlx`] when a DSN does not parse, a
-/// connection fails, or a bootstrap statement is refused (a credential without
-/// `CREATE` on the database or on a schema), and [`DbError::Migrate`] when a
-/// migration fails to apply or an already-applied one fails checksum
-/// validation.
+/// [`DbError::DomainMigratorElsewhere`] when a domain's migration credential
+/// and its runtime DSN reach different databases, [`DbError::Sqlx`] when a DSN
+/// does not parse, a connection fails, or a bootstrap statement is refused (a
+/// credential without `CREATE` on the database or on a schema), and
+/// [`DbError::Migrate`] when a migration fails to apply or an already-applied
+/// one fails checksum validation.
 pub async fn apply_schema(settings: &DbConfig, storage: &StorageConfig) -> Result<(), DbError> {
     for group in preparation_plan(settings, storage).await? {
         let mut conn = migration_connection(&group.dsn).await?;
-        let outcome = apply_migrations(&mut conn, &group.domains).await;
+        let outcome = apply_migrations(&mut conn, &group.sets()).await;
         close_quietly(conn).await;
         outcome?;
     }
@@ -891,18 +940,19 @@ pub async fn apply_schema(settings: &DbConfig, storage: &StorageConfig) -> Resul
 
 /// Verifies the recorded migration state on every database the domains reach.
 ///
-/// The bookkeeping comparison over a connection per distinct DSN, for the same
-/// reason [`apply_schema`] takes one: the check reads each resident set's
-/// `_sqlx_migrations` table, which no single-domain runtime credential can do.
-/// Issues no DDL, so the credentials it names need read access and nothing
-/// more.
+/// The bookkeeping comparison over one connection per database, on the
+/// credential [`apply_schema`] would prepare it with: the check reads `ext`'s
+/// and each resident set's `_sqlx_migrations` table, which no single-domain
+/// runtime credential can do. Issues no DDL, so the credentials it names need
+/// read access and nothing more.
 ///
 /// # Errors
 ///
 /// [`DbError::SchemaNotReady`] naming the first divergence found,
 /// [`DbError::SchemaUnreadable`] when a credential cannot read a set's
-/// bookkeeping at all, or [`DbError::Sqlx`] when a connection or the read
-/// fails for any other reason.
+/// bookkeeping at all, [`DbError::DomainMigratorElsewhere`] when a domain's
+/// migration credential and its runtime DSN reach different databases, or
+/// [`DbError::Sqlx`] when a connection or the read fails for any other reason.
 pub async fn verify_schema(settings: &DbConfig, storage: &StorageConfig) -> Result<(), DbError> {
     for group in preparation_plan(settings, storage).await? {
         let mut conn = migration_connection(&group.dsn).await?;
@@ -941,16 +991,17 @@ pub struct DatabaseLevels {
 /// domains reach, issuing no DDL.
 ///
 /// The read [`verify_schema`] does, summarized rather than judged: it connects
-/// on the same credential per database (the migration DSN for every domain in
-/// its database, a relocated domain's own DSN otherwise), so the credentials it
-/// names need read access to the bookkeeping and nothing more.
+/// on the same credential per database as [`apply_schema`] (the migration DSN
+/// in the database it reaches, a `[storage.migrate.<domain>]` credential or a
+/// relocated domain's own DSN elsewhere), so the credentials it names need read
+/// access to the bookkeeping and nothing more.
 ///
 /// # Errors
 ///
 /// [`DbError::SchemaUnreadable`] when a credential cannot read a set's
-/// bookkeeping, [`DbError::DomainCannotBeRelocated`] when the layout splits a
-/// domain from the one its set depends on, or [`DbError::Sqlx`] when a
-/// connection or a read fails for any other reason.
+/// bookkeeping, [`DbError::DomainMigratorElsewhere`] when a domain's migration
+/// credential and its runtime DSN reach different databases, or
+/// [`DbError::Sqlx`] when a connection or a read fails for any other reason.
 pub async fn schema_levels(
     settings: &DbConfig,
     storage: &StorageConfig,
@@ -1588,8 +1639,9 @@ impl EraseReport {
     }
 }
 
-/// The schemas this build creates in a database holding `domains`, in the
-/// order an erasure drops them: the domains' own, then `ext`.
+/// Returns the schemas this build creates in a database where the sets of
+/// `domains` are applied, in the order an erasure drops them: the sets' own,
+/// then `ext`.
 ///
 /// The names are the [`domain_migrator`] literals and `ext`, never input.
 fn owned_schemas(domains: &[Domain]) -> Vec<&'static str> {
@@ -1640,15 +1692,15 @@ async fn stored_instance_id(conn: &mut PgConnection) -> Result<Option<uuid::Uuid
 /// Reports what [`erase_schema`] would drop, issuing no DDL and writing
 /// nothing.
 ///
-/// It connects as [`apply_schema`] does, on the migration DSN for every domain
-/// in its database and on a relocated domain's own DSN otherwise. No openEHR
-/// spec governs this — our own design.
+/// It connects as [`apply_schema`] does, one credential per database, and
+/// lists the schemas of every set `apply` runs there, companion sets included.
+/// No openEHR spec governs this — our own design.
 ///
 /// # Errors
 ///
-/// [`DbError::DomainCannotBeRelocated`] when the layout splits a domain from
-/// the one its set depends on, and [`DbError::Sqlx`] when a connection or a
-/// catalog read fails.
+/// [`DbError::DomainMigratorElsewhere`] when a domain's migration credential
+/// and its runtime DSN reach different databases, and [`DbError::Sqlx`] when a
+/// connection or a catalog read fails.
 pub async fn erase_inventory(
     settings: &DbConfig,
     storage: &StorageConfig,
@@ -1663,7 +1715,7 @@ pub async fn erase_inventory(
             let database: String = sqlx::query_scalar("SELECT current_database()::text")
                 .fetch_one(&mut conn)
                 .await?;
-            let schemas = present_schemas(&mut conn, &owned_schemas(&group.domains)).await?;
+            let schemas = present_schemas(&mut conn, &owned_schemas(&group.sets())).await?;
             let instance_id = if group.domains.contains(&Domain::Clinical) {
                 stored_instance_id(&mut conn).await?
             } else {
@@ -1703,8 +1755,9 @@ pub async fn erase_inventory(
 ///
 /// # Errors
 ///
-/// [`DbError::DomainCannotBeRelocated`] when the layout splits a domain from
-/// the one its set depends on, and [`DbError::Sqlx`] when a connection fails,
+/// [`DbError::DomainMigratorElsewhere`] when a domain's migration credential
+/// and its runtime DSN reach different databases, and [`DbError::Sqlx`] when a
+/// connection fails,
 /// the credential does not own a schema, or a lock is not granted within 30
 /// seconds (a server still connected). A database already erased stays
 /// erased; the failing one is rolled back.
@@ -1718,7 +1771,7 @@ pub async fn erase_schema(
     };
     for group in preparation_plan(settings, storage).await? {
         let mut conn = migration_connection(&group.dsn).await?;
-        let outcome = drop_owned_schemas(&mut conn, &group.domains).await;
+        let outcome = drop_owned_schemas(&mut conn, &group.sets()).await;
         close_quietly(conn).await;
         let (database, schemas, instance_id) = outcome?;
         report.instance_id = report.instance_id.or(instance_id);
@@ -1731,8 +1784,9 @@ pub async fn erase_schema(
     Ok(report)
 }
 
-/// One database's drop, in one transaction: its name, the schemas dropped, and
-/// the instance id it stored.
+/// Drops one database's schemas in one transaction, given the sets applied
+/// there, and returns its name, the schemas dropped and the instance id it
+/// stored.
 async fn drop_owned_schemas(
     conn: &mut PgConnection,
     domains: &[Domain],
@@ -1783,27 +1837,27 @@ pub async fn cluster_identity(pool: &PgPool) -> Result<String, DbError> {
     Ok(id)
 }
 
-/// The domains whose database schema preparation reaches on a credential that
-/// also serves requests.
+/// Returns the domains whose database schema preparation reaches on a
+/// credential that also serves requests.
 ///
-/// The posture used to ask one question — is `[db].migrate_url` set — which
-/// stopped being the whole answer once a domain could be relocated: the
-/// migration DSN names ONE database, so a domain living in another one is
-/// prepared on its own DSN, and that DSN is the credential serving its
-/// requests. The answer therefore comes from the preparation plan itself
-/// (the same private plan [`prepare`] runs), which resolves database identity
-/// rather than DSN text, so a second credential on the migrator's own database
-/// is correctly not counted.
+/// The migration DSN names ONE database, so a domain living in another one is
+/// prepared on that database's `[storage.migrate.<domain>]` credential when the
+/// deployment names one, and on the domain's own runtime DSN otherwise. The
+/// answer comes from the preparation plan itself (the same private plan
+/// [`prepare`] runs), which resolves database identity rather than DSN text, so
+/// a second credential on the migrator's own database is correctly not
+/// counted.
 ///
 /// Empty under [`MigrationMode::Verify`], which issues no DDL at all, and empty
-/// when every domain is prepared by the migration credential.
+/// when every database is prepared on a migration credential.
 ///
 /// No openEHR spec governs deployment posture — our own design/extension.
 ///
 /// # Errors
 /// [`DbError::Sqlx`] when a migration connection cannot be opened or its
-/// database identity cannot be read, and [`DbError::DomainCannotBeRelocated`]
-/// when a domain's database is not the one its migration set needs.
+/// database identity cannot be read, and [`DbError::DomainMigratorElsewhere`]
+/// when a domain's migration credential and its runtime DSN reach different
+/// databases.
 pub async fn domains_prepared_on_a_runtime_credential(
     settings: &DbConfig,
     storage: &StorageConfig,
@@ -1811,11 +1865,10 @@ pub async fn domains_prepared_on_a_runtime_credential(
     if settings.migrate != MigrationMode::Apply {
         return Ok(Vec::new());
     }
-    let migration_dsn = settings.migrate_dsn();
     let mut on_runtime: Vec<Domain> = preparation_plan(settings, storage)
         .await?
         .into_iter()
-        .filter(|group| group.dsn != migration_dsn)
+        .filter(|group| group.credential == PreparationCredential::Runtime)
         .flat_map(|group| group.domains)
         .collect();
     on_runtime.sort_unstable();
@@ -1891,6 +1944,46 @@ mod tests {
         let source = error.source().expect("the divergence is the source");
         assert!(source.downcast_ref::<SchemaMismatch>().is_some());
         assert!(!error.to_string().contains(&mismatch_text), "{error}");
+    }
+
+    /// A database holding linkage without party applies the party set as a
+    /// companion; one holding both, or neither, applies only its own.
+    #[test]
+    fn the_linkage_set_brings_the_party_set_as_a_companion() {
+        let group = |domains: Vec<Domain>| PreparationGroup {
+            dsn: String::new(),
+            credential: PreparationCredential::DomainMigrator,
+            domains,
+        };
+        assert_eq!(
+            group(vec![Domain::Linkage]).sets(),
+            [Domain::Party, Domain::Linkage]
+        );
+        assert_eq!(
+            group(vec![Domain::Linkage, Domain::Audit]).sets(),
+            [Domain::Party, Domain::Linkage, Domain::Audit]
+        );
+        assert_eq!(
+            group(vec![Domain::Party, Domain::Linkage]).sets(),
+            [Domain::Party, Domain::Linkage]
+        );
+        assert_eq!(group(vec![Domain::Audit]).sets(), [Domain::Audit]);
+        assert_eq!(group(Domain::ALL.to_vec()).sets(), Domain::ALL);
+    }
+
+    /// With no domain relocated and no domain migrator named, the plan is the
+    /// one database `[db]` prepares, and it opens no connection to find that
+    /// out (the DSN here reaches nothing).
+    #[tokio::test]
+    async fn a_co_located_layout_plans_one_database_without_connecting() {
+        let settings = DbConfig::new("postgres://nobody@unreachable.invalid:1/none");
+        let plan = preparation_plan(&settings, &StorageConfig::default())
+            .await
+            .expect("no connection is needed");
+        assert_eq!(plan.len(), 1);
+        let only = plan.first().expect("one group");
+        assert_eq!(only.domains, Domain::ALL);
+        assert_eq!(only.credential, PreparationCredential::Migrator);
     }
 
     #[test]

@@ -825,9 +825,10 @@ fn map_primitive_object(c: &opt14::types::CPrimitiveObject, cx: &mut RootCx) -> 
             c_string(rm, node_id, occ, constraint, p.assumed_value.clone())
         }
         opt14::types::CPrimitive::CInteger(p) => {
-            let constraint = openehr_base::containers::present(
-                p.range.as_ref().map(int_interval).into_iter().collect(),
-            );
+            let constraint = openehr_base::containers::present(enumerated_and_range(
+                &p.list,
+                p.range.as_ref().map(int_interval),
+            ));
             CObject::CInteger(CInteger {
                 parent: None,
                 soc_parent: None,
@@ -844,9 +845,10 @@ fn map_primitive_object(c: &opt14::types::CPrimitiveObject, cx: &mut RootCx) -> 
             })
         }
         opt14::types::CPrimitive::CReal(p) => {
-            let constraint = openehr_base::containers::present(
-                p.range.as_ref().map(real_interval).into_iter().collect(),
-            );
+            let constraint = openehr_base::containers::present(enumerated_and_range(
+                &p.list,
+                p.range.as_ref().map(real_interval),
+            ));
             CObject::CReal(CReal {
                 parent: None,
                 soc_parent: None,
@@ -1834,6 +1836,29 @@ fn map_cardinality(c: &opt14::types::Cardinality) -> Cardinality {
     }
 }
 
+/// Returns the AOM2 interval list for an AOM 1.4 numeric constraint: each
+/// enumerated `list` value as a point interval, then the `range`.
+///
+/// AOM 1.4 `C_INTEGER`/`C_REAL` carry a `list` and a `range`
+/// (AM `UML/classes/org.openehr.am.aom14.c_integer.adoc`); AOM2 has one
+/// `constraint: List<Interval<T>>`, any member of which admits a value
+/// (`org.openehr.am.aom2.c_integer.adoc`).
+fn enumerated_and_range<T: Copy>(list: &[T], range: Option<Interval<T>>) -> Vec<Interval<T>> {
+    list.iter()
+        .map(|&v| {
+            Interval::PointInterval(PointInterval {
+                lower: Some(v),
+                upper: Some(v),
+                lower_unbounded: false,
+                upper_unbounded: false,
+                lower_included: true,
+                upper_included: true,
+            })
+        })
+        .chain(range)
+        .collect()
+}
+
 fn int_interval(iv: &opt14::types::Intervalofinteger) -> Interval<i32> {
     if iv.lower == iv.upper && iv.lower.is_some() {
         let v = iv.lower.unwrap_or_default();
@@ -2264,7 +2289,7 @@ mod tests {
     #[test]
     fn temporal_range_and_pattern_both_carried() {
         let node = opt14::types::CPrimitiveObject {
-            rm_type_name: "DV_DURATION".to_owned(),
+            rm_type_name: "DURATION".to_owned(),
             occurrences: unbounded_occurrences(),
             node_id: String::new(),
             item: Some(Box::new(opt14::types::CPrimitive::CDuration(
@@ -2303,7 +2328,7 @@ mod tests {
     #[test]
     fn date_pattern_plus_range_keeps_range_and_reports() {
         let node = opt14::types::CPrimitiveObject {
-            rm_type_name: "DV_DATE".to_owned(),
+            rm_type_name: "DATE".to_owned(),
             occurrences: unbounded_occurrences(),
             node_id: String::new(),
             item: Some(Box::new(opt14::types::CPrimitive::CDate(
@@ -2355,6 +2380,60 @@ mod tests {
         };
         assert_eq!(d.pattern_constraint.as_deref(), Some("yyyy-??-??"));
         assert!(cx.notes.is_empty());
+    }
+
+    /// An enumerated AOM 1.4 integer/real `list` survives as AOM2 point
+    /// intervals beside the `range` (AM `org.openehr.am.aom2.c_integer.adoc`
+    /// `constraint: List<Interval<Integer>>`).
+    #[test]
+    fn integer_and_real_lists_become_point_intervals() {
+        let point = |iv: &Interval<i32>| match iv {
+            Interval::PointInterval(p) => p.lower,
+            Interval::ProperInterval(_) => None,
+        };
+        let node = opt14::types::CPrimitiveObject {
+            rm_type_name: "INTEGER".to_owned(),
+            occurrences: unbounded_occurrences(),
+            node_id: String::new(),
+            item: Some(Box::new(opt14::types::CPrimitive::CInteger(
+                opt14::types::CInteger {
+                    list: vec![1, 2, 3],
+                    range: None,
+                    assumed_value: None,
+                },
+            ))),
+        };
+        let mut cx = test_cx();
+        let CObject::CInteger(i) = map_primitive_object(&node, &mut cx) else {
+            panic!("expected a C_INTEGER");
+        };
+        let points: Vec<Option<i32>> = i.constraint.iter().flatten().map(point).collect();
+        assert_eq!(points, vec![Some(1), Some(2), Some(3)]);
+
+        let real = opt14::types::CPrimitiveObject {
+            rm_type_name: "REAL".to_owned(),
+            item: Some(Box::new(opt14::types::CPrimitive::CReal(
+                opt14::types::CReal {
+                    list: vec![0.5, 1.5],
+                    range: None,
+                    assumed_value: None,
+                },
+            ))),
+            ..node
+        };
+        let CObject::CReal(r) = map_primitive_object(&real, &mut cx) else {
+            panic!("expected a C_REAL");
+        };
+        let points: Vec<Option<f64>> = r
+            .constraint
+            .iter()
+            .flatten()
+            .map(|iv| match iv {
+                Interval::PointInterval(p) => p.lower,
+                Interval::ProperInterval(_) => None,
+            })
+            .collect();
+        assert_eq!(points, vec![Some(0.5), Some(1.5)]);
     }
 
     /// An item-less `C_PRIMITIVE_OBJECT` converts to the unconstrained

@@ -138,18 +138,22 @@ impl Domain {
         !self.barred_from().is_empty()
     }
 
-    /// The domain whose objects this domain's migration set names, and which
-    /// must therefore be prepared in the same database.
+    /// Returns the domain whose migration set must be applied before this
+    /// domain's set in every database this domain lives in.
     ///
-    ///
-    /// `linkage`'s grant file revokes `party.resolve_national_identifier` from
-    /// its own role, which is a function only the party set creates. Nothing
+    /// `linkage`'s grant file (`migrations/linkage/0004_grants.sql`) revokes
+    /// `party.resolve_national_identifier` from its own role, a function only
+    /// the party set creates, so a database holding the linkage domain without
+    /// the party domain is given the party SET as a companion: its schema,
+    /// relations and grants, and never a pool, a credential or a row. Nothing
     /// else crosses: every other cross-domain statement names a SCHEMA, and the
     /// bootstrap creates all four schema names in every database it prepares.
     ///
-    /// TODO(#3337): supersede the linkage grant file's function revoke with a
-    /// form that tolerates an absent party schema, so the linkage domain can be
-    /// prepared in a database of its own.
+    /// The grant file is in a release, and a released migration is never
+    /// edited (sqlx refuses a database whose recorded checksum no longer
+    /// matches, <https://docs.rs/sqlx/latest/sqlx/migrate/struct.Migrator.html>),
+    /// and a later file cannot repair a statement that fails before it, so the
+    /// companion set is how the linkage domain reaches a database of its own.
     #[must_use]
     pub const fn prepares_with(self) -> Option<Self> {
         match self {
@@ -185,7 +189,57 @@ pub struct DomainDsn {
     pub url_file: Option<PathBuf>,
 }
 
-/// The `[storage]` section: one DSN per domain.
+/// The `[storage.migrate]` section: per domain, the credential that prepares
+/// the database the domain lives in when that is not the database
+/// `[db].migrate_url` reaches.
+///
+/// `[db].migrate_url` names ONE database. A domain relocated to another one
+/// is prepared there, and its runtime DSN is the wrong credential for that:
+/// under the separated posture it is a DML-only role that can neither issue
+/// the DDL `apply` runs nor read the `ext` bookkeeping `verify` compares. Each
+/// key here names that database's migration credential instead; unset, the
+/// relocated domain's database is prepared on the domain's runtime DSN, which
+/// is what a single-role sandbox runs. No openEHR spec governs migration
+/// mechanics or database roles — our own design/extension.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct MigrateDsns {
+    /// `[storage.migrate.clinical]` — prepares the clinical domain's database.
+    pub clinical: DomainDsn,
+    /// `[storage.migrate.party]` — prepares the party domain's database.
+    pub party: DomainDsn,
+    /// `[storage.migrate.linkage]` — prepares the linkage domain's database.
+    pub linkage: DomainDsn,
+    /// `[storage.migrate.audit]` — prepares the audit domain's database.
+    pub audit: DomainDsn,
+}
+
+impl MigrateDsns {
+    /// One domain's migration credential settings.
+    #[must_use]
+    pub const fn domain(&self, domain: Domain) -> &DomainDsn {
+        match domain {
+            Domain::Clinical => &self.clinical,
+            Domain::Party => &self.party,
+            Domain::Linkage => &self.linkage,
+            Domain::Audit => &self.audit,
+        }
+    }
+
+    /// One domain's migration credential settings, mutably — the loader's seam
+    /// for resolving `url_file` into `url`.
+    pub const fn domain_mut(&mut self, domain: Domain) -> &mut DomainDsn {
+        match domain {
+            Domain::Clinical => &mut self.clinical,
+            Domain::Party => &mut self.party,
+            Domain::Linkage => &mut self.linkage,
+            Domain::Audit => &mut self.audit,
+        }
+    }
+}
+
+/// The `[storage]` section: one DSN per domain, and per domain the credential
+/// that prepares a relocated domain's database.
 ///
 /// Every field defaults to unset, so a configuration file that names no
 /// `[storage]` table at all runs the four domains on `[db].url` — the compose
@@ -201,9 +255,23 @@ pub struct StorageConfig {
     pub linkage: DomainDsn,
     /// `[storage.audit]` — the audit repository's DSN.
     pub audit: DomainDsn,
+    /// `[storage.migrate.<domain>]` — the migration credential of a relocated
+    /// domain's database.
+    pub migrate: MigrateDsns,
 }
 
 impl StorageConfig {
+    /// The migration credential configured for the database `domain` lives
+    /// in, when `[storage.migrate.<domain>].url` names one.
+    #[must_use]
+    pub fn migrate_dsn(&self, domain: Domain) -> Option<&str> {
+        self.migrate
+            .domain(domain)
+            .url
+            .as_ref()
+            .map(SecretUrl::expose)
+    }
+
     /// One domain's settings.
     #[must_use]
     pub const fn domain(&self, domain: Domain) -> &DomainDsn {
@@ -342,14 +410,13 @@ impl DomainLayout {
         [&self.clinical, &self.party, &self.linkage, &self.audit]
     }
 
-    /// The distinct DSNs, each with the domains placed on it, in domain order.
+    /// Returns the distinct DSNs, each with the domains placed on it, in domain
+    /// order.
     ///
-    /// This is the grouping schema preparation runs over: one connection per
-    /// DSN, the `ext` set applied once on it, then each resident domain's own
-    /// set. Two DSNs that reach one database through different host names are
-    /// not merged here and do not need to be — the second connection finds
-    /// `ext` already recorded in that database's `_sqlx_migrations` and applies
-    /// nothing (<https://docs.rs/sqlx/latest/sqlx/migrate/struct.Migrator.html>).
+    /// The grouping by configured DSN TEXT, which is what `config check`
+    /// describes. Schema preparation groups by the database a connection
+    /// reaches instead (`pg_control_system()` and `current_database()`), since
+    /// two DSNs that differ only in host name or credential reach one database.
     #[must_use]
     pub fn groups(&self) -> Vec<DomainGroup<'_>> {
         let mut groups: Vec<DomainGroup<'_>> = Vec::new();

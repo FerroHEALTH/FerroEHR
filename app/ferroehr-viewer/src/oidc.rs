@@ -6,6 +6,16 @@
 //!
 //! The bearer token is stored server-side in the session; the browser only
 //! ever holds the viewer's session cookie.
+//!
+//! The issuer is reached through the workspace `reqwest`, whose `rustls`
+//! backend verifies against the platform trust store
+//! (`rustls-platform-verifier`) exactly as the CDR client does, so an issuer
+//! behind a private CA mounted into that store (or named by `SSL_CERT_DIR` /
+//! `SSL_CERT_FILE`) is trusted. No openEHR spec governs this — our own
+//! design/extension.
+
+use std::future::Future;
+use std::pin::Pin;
 
 use axum::response::{IntoResponse, Redirect, Response};
 use http::StatusCode;
@@ -18,8 +28,51 @@ use crate::config::OidcConfig;
 #[derive(Debug)]
 pub struct OidcState {
     metadata: openidconnect::core::CoreProviderMetadata,
-    http: openidconnect::reqwest::Client,
+    http: OidcHttpClient,
     config: OidcConfig,
+}
+
+/// The issuer-facing HTTP transport: the workspace `reqwest` client as an
+/// `openidconnect` [`AsyncHttpClient`](openidconnect::AsyncHttpClient).
+///
+/// `openidconnect`'s own `reqwest` integration targets an older major version
+/// whose TLS trusts only the bundled web-PKI roots; this one sends the request
+/// the crate built and reassembles the reply as the `http::Response<Vec<u8>>`
+/// it parses.
+#[derive(Debug)]
+struct OidcHttpClient(reqwest::Client);
+
+impl<'c> openidconnect::AsyncHttpClient<'c> for OidcHttpClient {
+    type Error = OidcTransportError;
+    /// `Send` is declared, so the axum handlers that await it stay `Send`.
+    type Future = Pin<
+        Box<dyn Future<Output = Result<openidconnect::HttpResponse, Self::Error>> + Send + 'c>,
+    >;
+
+    fn call(&'c self, request: openidconnect::HttpRequest) -> Self::Future {
+        Box::pin(async move {
+            let response = self.0.execute(reqwest::Request::try_from(request)?).await?;
+            let mut builder = http::Response::builder().status(response.status());
+            for (name, value) in response.headers() {
+                builder = builder.header(name, value);
+            }
+            builder
+                .body(response.bytes().await?.to_vec())
+                .map_err(OidcTransportError::Http)
+        })
+    }
+}
+
+/// A transport failure while talking to the issuer; `openidconnect` requires
+/// the client's error to be a `std::error::Error`.
+#[derive(Debug, thiserror::Error)]
+enum OidcTransportError {
+    /// The request could not be sent or its body could not be read.
+    #[error("the request to the OIDC issuer failed")]
+    Reqwest(#[from] reqwest::Error),
+    /// The reply could not be reassembled as an `http::Response`.
+    #[error("the OIDC issuer's response was malformed")]
+    Http(#[from] http::Error),
 }
 
 /// The transient state parked in the session between login and callback.
@@ -65,14 +118,17 @@ fn same_origin_next(raw: Option<&str>) -> String {
     }
 }
 
-/// Run OIDC discovery against the configured issuer.
+/// Runs OIDC discovery against the configured issuer.
+///
+/// The issuer is reached over the platform trust store (module docs), never
+/// following redirects, and through the `resolve` override when one is
+/// configured.
 ///
 /// # Errors
 /// `anyhow::Error` on an unreachable/invalid issuer (boot-time failure —
 /// the binary refuses to start with a broken OIDC config).
 pub async fn discover(config: &OidcConfig) -> anyhow::Result<OidcState> {
-    let mut builder = openidconnect::reqwest::ClientBuilder::new()
-        .redirect(openidconnect::reqwest::redirect::Policy::none()); // SSRF hardening
+    let mut builder = reqwest::Client::builder().redirect(reqwest::redirect::Policy::none()); // SSRF hardening
     // Split-horizon issuer resolution (`host=ip:port`): the canonical
     // issuer hostname may only resolve inside a container network; the
     // override points this client at the mapped address while every URL
@@ -84,7 +140,7 @@ pub async fn discover(config: &OidcConfig) -> anyhow::Result<OidcState> {
             .ok_or_else(|| anyhow::anyhow!("auth.oidc.resolve must be `host=ip:port`"))?;
         builder = builder.resolve(host.trim(), addr.trim().parse()?);
     }
-    let http = builder.build()?;
+    let http = OidcHttpClient(builder.build()?);
     let issuer = openidconnect::IssuerUrl::new(config.issuer.clone())?;
     let metadata = openidconnect::core::CoreProviderMetadata::discover_async(issuer, &http).await?;
     Ok(OidcState {

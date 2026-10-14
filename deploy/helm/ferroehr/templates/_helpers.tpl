@@ -116,24 +116,33 @@ Secret. One helper rather than a branch per domain, so a new domain is a values
 block and a name in the list.
 */}}
 {{- define "ferroehr.hasInlineDomainDsn" -}}
+{{- $found := false -}}
 {{- range $domain := list "clinical" "party" "linkage" "audit" -}}
 {{- $dsn := index $.Values.database $domain -}}
 {{- if and (not $dsn.existingSecret) $dsn.url -}}
-true
+{{- $found = true -}}
 {{- end -}}
+{{- end -}}
+{{- if $found -}}
+true
 {{- end -}}
 {{- end }}
 
 {{/*
-Whether any storage domain names an operator-supplied Secret, which the chart
-projects as a file without creating a Secret of its own.
+Whether any storage domain names an operator-supplied Secret, its runtime DSN
+or its database's migration DSN, which the chart projects as a file without
+creating a Secret of its own.
 */}}
 {{- define "ferroehr.hasDomainSecret" -}}
+{{- $found := false -}}
 {{- range $domain := list "clinical" "party" "linkage" "audit" -}}
 {{- $dsn := index $.Values.database $domain -}}
-{{- if $dsn.existingSecret -}}
-true
+{{- if or $dsn.existingSecret $dsn.migrateExistingSecret -}}
+{{- $found = true -}}
 {{- end -}}
+{{- end -}}
+{{- if $found -}}
+true
 {{- end -}}
 {{- end }}
 
@@ -912,7 +921,10 @@ rustls-native-certs, and that crate reads ONLY the named directories once
 SSL_CERT_DIR is set
 (https://docs.rs/rustls-native-certs/0.8.4/rustls_native_certs/fn.load_native_certs.html).
 So the image's system directory stays listed beside the mounted CA, for the
-clients' other HTTPS peers (an OIDC issuer, an external terminology server).
+clients' other HTTPS peers that verify through the same platform verifier.
+The viewer's OIDC client (openidconnect over reqwest with
+the webpki-roots bundle) does not read SSL_CERT_DIR at all, so a private-CA
+OIDC issuer is not trusted by the viewer whatever this sets.
 */}}
 {{- define "ferroehr.cdrTrustEnv" -}}
 - name: SSL_CERT_DIR

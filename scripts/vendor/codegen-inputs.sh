@@ -5,15 +5,16 @@
 # openehr-its validation gates) verbatim from their pinned upstream commits:
 #
 #   BMM          specifications-ITS-BMM  components/   -> tools/openehr-codegen/vendor/bmm/components/
+#                (json + odin; the yaml serialization is read by nothing)
 #   ITS-JSON     specifications-ITS-JSON components/   -> crates/openehr-its/schemas/json/
 #   ITS-XML v1   specifications-ITS-XML  components/   -> crates/openehr-its/schemas/xml/its-xml-1.0.2-nsv1/
 #   ITS-XML v2   specifications-ITS-XML  components/   -> crates/openehr-its/schemas/xml/its-xml-2.0.0-nsv2/
-#                (and its XSD-only subset)             -> crates/openehr-its/schemas/xml/components/
 #   ITS-REST OAS specifications-ITS-REST computable/OAS/ -> crates/openehr-its/vendor/rest-oas/
 #
 # plus single-file OVERLAYS: a BMM file taken from its component repo where
 # ITS-BMM had not republished the version at our ITS-BMM pin. The overlay's
-# docs/specs/openehr twin (vendored by spec-docs.sh) must stay byte-identical.
+# docs/specs/openehr twin (vendored by spec-docs.sh) must exist and stay
+# byte-identical; the script fails otherwise.
 #
 # Each destination's PROVENANCE.md is the human record and is never touched
 # by a sync; the script refuses to run when a record does not name every pin
@@ -47,11 +48,10 @@ esac
 
 # name | upstream repo | pinned commit | upstream subdir | file filter | destination | provenance record
 SETS=(
-  "bmm|specifications-ITS-BMM|37b317396eb9b5f03c4c422296a15bdd665028dd|components|all|tools/openehr-codegen/vendor/bmm/components|tools/openehr-codegen/vendor/bmm/PROVENANCE.md"
+  "bmm|specifications-ITS-BMM|37b317396eb9b5f03c4c422296a15bdd665028dd|components|no-yaml|tools/openehr-codegen/vendor/bmm/components|tools/openehr-codegen/vendor/bmm/PROVENANCE.md"
   "its-json|specifications-ITS-JSON|5acae056248e917a4b4c56f7e712f4fcfeb616a6|components|all|crates/openehr-its/schemas/json|crates/openehr-its/schemas/json/PROVENANCE.md"
   "its-xml-nsv1|specifications-ITS-XML|f7a937778bf9ea43b01b0f9d8a616e47f35017c1|components|all|crates/openehr-its/schemas/xml/its-xml-1.0.2-nsv1|crates/openehr-its/schemas/xml/PROVENANCE.md"
   "its-xml-nsv2|specifications-ITS-XML|de8b37ba6c9a5e126623a063cafba3b58ebf1107|components|all|crates/openehr-its/schemas/xml/its-xml-2.0.0-nsv2|crates/openehr-its/schemas/xml/PROVENANCE.md"
-  "its-xml-components|specifications-ITS-XML|de8b37ba6c9a5e126623a063cafba3b58ebf1107|components|xsd|crates/openehr-its/schemas/xml/components|crates/openehr-its/schemas/xml/PROVENANCE.md"
   "rest-oas|specifications-ITS-REST|24058992d5fa96e8dfbd855d9c133f328387fc09|computable/OAS|all|crates/openehr-its/vendor/rest-oas|crates/openehr-its/vendor/rest-oas/PROVENANCE.md"
 )
 
@@ -122,7 +122,7 @@ for entry in "${SETS[@]}"; do
   mkdir -p "$STAGE/$dest"
   case "$filter" in
     all) rsync -a "$src/$sub/" "$STAGE/$dest/" ;;
-    xsd) rsync -a --prune-empty-dirs --include='*/' --include='*.xsd' --exclude='*' "$src/$sub/" "$STAGE/$dest/" ;;
+    no-yaml) rsync -a --exclude='yaml/' "$src/$sub/" "$STAGE/$dest/" ;;
     *)
       echo "ERROR: unknown file filter '$filter' for $name" >&2
       exit 1
@@ -140,15 +140,25 @@ done
 
 normalize "$STAGE"
 
-# A BMM overlay is the same artifact spec-docs.sh vendors as reference text.
+# A BMM overlay is the same artifact spec-docs.sh vendors as reference text:
+# a missing or differing twin means the two scripts pin different commits.
+twin_mismatch=0
 for entry in "${OVERLAYS[@]}"; do
   IFS='|' read -r dest repo _sha path _record <<<"$entry"
   component="${repo#specifications-}"
   twin="docs/specs/openehr/$component/$path"
-  if [[ -f "$twin" ]] && ! cmp -s "$STAGE/$dest" "$twin"; then
-    echo "WARNING: $twin differs from the codegen overlay $dest (different pins in spec-docs.sh and here)" >&2
+  if [[ ! -f "$twin" ]]; then
+    echo "ERROR: the codegen overlay $dest has no reference twin $twin (re-run spec-docs.sh)" >&2
+    twin_mismatch=1
+  elif ! cmp -s "$STAGE/$dest" "$twin"; then
+    echo "ERROR: $twin differs from the codegen overlay $dest (different pins in spec-docs.sh and here)" >&2
+    twin_mismatch=1
   fi
 done
+if [[ "$twin_mismatch" -ne 0 ]]; then
+  echo "Align each overlay pin here with its component pin in scripts/vendor/spec-docs.sh." >&2
+  exit 1
+fi
 
 drift=0
 for entry in "${SETS[@]}"; do

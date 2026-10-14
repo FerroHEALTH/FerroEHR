@@ -57,12 +57,35 @@ pub struct SessionInfo {
     pub expires_in_secs: u32,
 }
 
-/// Basic login: validate the credentials against the CDR (an authenticated
-/// ITS-REST call), then store them in the server-side session.
+/// The `/login` URL a refused Basic sign-in lands on.
+///
+/// `refused=1` is what makes the login screen say the credentials were
+/// refused, and `next` keeps the destination the user was signing in for (left
+/// off when it is the shell root, the screen's own default). The destination
+/// is percent-encoded with the `urlencoding` crate.
+#[must_use]
+pub fn refused_login_url(next: Option<&str>) -> String {
+    match next {
+        Some(next) if !next.is_empty() && next != "/" => {
+            format!("/login?refused=1&next={}", urlencoding::encode(next))
+        }
+        _ => "/login?refused=1".to_owned(),
+    }
+}
+
+/// Basic login: validates the credentials against the CDR (an authenticated
+/// ITS-REST call), then stores them in the server-side session.
+///
+/// Credentials the CDR refuses are not an error: the call succeeds and
+/// redirects to [`refused_login_url`], so the login screen renders the
+/// refusal from its URL — a document `302` for a form posted without
+/// JavaScript, the server-function redirect for a hydrated one — and never a
+/// `500`, which is how a server function transports an error value.
 ///
 /// # Errors
-/// [`ViewerError::Invalid`] on wrong credentials, [`ViewerError::Cdr`] /
-/// [`ViewerError::CdrUnreachable`] when the CDR misbehaves.
+/// [`ViewerError::Invalid`] when Basic login is disabled,
+/// [`ViewerError::Cdr`] / [`ViewerError::CdrUnreachable`] when the CDR
+/// misbehaves.
 #[server(client = crate::session_client::SessionAwareClient)]
 pub async fn login_basic(
     /// The CDR username the viewer authenticates as.
@@ -86,9 +109,8 @@ pub async fn login_basic(
     let url = state.cdr.rest_v1("definition/template/adl1.4");
     let probe = state.cdr.get(&credential, &url, "application/json").await?;
     if probe.is(http::StatusCode::UNAUTHORIZED) {
-        return Err(ViewerError::Invalid(
-            "wrong username or password".to_owned(),
-        ));
+        leptos_axum::redirect(&refused_login_url(next.as_deref()));
+        return Ok(());
     }
     if probe.status.is_server_error() {
         return Err(ViewerError::Cdr {
@@ -189,4 +211,20 @@ pub async fn fetch_status() -> Result<String, ViewerError> {
     let url = state.cdr.rest_root_url("status");
     let response = state.cdr.get_public(&url, "application/json").await?;
     Ok(crate::cdr::CdrClient::expect_success(response)?.body)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::refused_login_url;
+
+    #[test]
+    fn a_refused_sign_in_keeps_an_encoded_destination_and_omits_the_default_one() {
+        assert_eq!(refused_login_url(None), "/login?refused=1");
+        assert_eq!(refused_login_url(Some("/")), "/login?refused=1");
+        assert_eq!(refused_login_url(Some("")), "/login?refused=1");
+        assert_eq!(
+            refused_login_url(Some("/ehrs/01a06375?tab=status")),
+            "/login?refused=1&next=%2Fehrs%2F01a06375%3Ftab%3Dstatus"
+        );
+    }
 }

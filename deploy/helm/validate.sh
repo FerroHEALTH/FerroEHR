@@ -568,9 +568,12 @@ refusal_registry_gate() {
   local basic="${CI_DIR}/basic-auth-values.yaml"
   local viewer="${CI_DIR}/viewer-values.yaml"
   local bridge="${CI_DIR}/bridge-values.yaml"
+  local tls="${CI_DIR}/server-tls-values.yaml"
   local -a registry=(
     "deployment.yaml|no authentication mechanism is configured|${base}|--set config.auth.oidc.issuer=null|config.auth.basic.users;config.auth.oidc.issuer"
     "migration-job.yaml|requires migrations.job.existingSecret|${base}|--set migrations.job.enabled=true|migrations.job.existingSecret"
+    "deployment.yaml|server.tls.client_auth is|${tls}|--set config.server.tls.client_auth=required|config.server.tls.client_auth;optional"
+    "ingress.yaml|ingress.backendTlsAnnotations is empty|${tls}|--set ingress.backendTlsAnnotations=null|ingress.backendTlsAnnotations;nginx.ingress.kubernetes.io/backend-protocol"
     "hpa.yaml|with every target utilisation at 0|${base}|--set autoscaling.enabled=true --set autoscaling.targetCPUUtilizationPercentage=0 --set autoscaling.targetMemoryUtilizationPercentage=0|autoscaling.targetCPUUtilizationPercentage;autoscaling.targetMemoryUtilizationPercentage"
     "_helpers.tpl|multi-tenancy no longer exists|${base}|--set-string config.tenancy.enabled=true|config.tenancy;separate instances"
     "_helpers.tpl|refusing to render a secret into the ConfigMap|${base}|--set-string config.db.url=SENTINEL_PROBE|config.db.url;database.existingSecret"
@@ -1011,7 +1014,8 @@ CLAIMS
   ! grep -qE '^ *transport = "udp"' <<<"$toml" \
     || { red "  an audit syslog sink renders transport = \"udp\": audit_syslog_udp would refuse the boot"; missing=1; }
   local file
-  for file in DB__URL_FILE STORAGE__PARTY__URL_FILE STORAGE__LINKAGE__URL_FILE STORAGE__AUDIT__URL_FILE DB__MIGRATE_URL_FILE; do
+  for file in DB__URL_FILE STORAGE__PARTY__URL_FILE STORAGE__LINKAGE__URL_FILE STORAGE__AUDIT__URL_FILE DB__MIGRATE_URL_FILE \
+    STORAGE__MIGRATE__PARTY__URL_FILE STORAGE__MIGRATE__LINKAGE__URL_FILE STORAGE__MIGRATE__AUDIT__URL_FILE; do
     [[ "$(yq -r "select(.kind == \"Deployment\" and .metadata.name == \"${RELEASE_NAME}\") | .spec.template.spec.containers[0].env[] | select(.name == \"FERROEHR__${file}\") | .name" <<<"$rendered")" == "FERROEHR__${file}" ]] \
       || { red "  the Deployment does not carry FERROEHR__${file}: a domain or the migrator shares a credential"; missing=1; }
   done
@@ -1028,6 +1032,42 @@ CLAIMS
   fi
 }
 production_overlay_gate
+
+# ── The migration Job: its account, and every database it must prepare ───────
+# Two claims a golden cannot state. (1) The hook ServiceAccount survives a
+# failed or slow hook: Helm deletes the `hook-succeeded` hooks that ran before a
+# hook that fails (https://helm.sh/docs/topics/charts_hooks/), so the account
+# carries `before-hook-creation` alone, and with serviceAccount.create=false the
+# Job runs under the operator's named account and no hook account renders.
+# (2) Under the production overlay every relocated domain's migrator reaches the
+# Job, which is what prepares that cluster.
+migration_job_gate() {
+  bold "── migration Job: its account and the databases it prepares ─"
+  local values="${CHART_DIR}/values-production.yaml" rendered missing=0 domain
+  rendered="$(helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "$values")"
+  [[ "$(yq -r "select(.kind == \"ServiceAccount\" and .metadata.name == \"${RELEASE_NAME}-migrate\") | .metadata.annotations[\"helm.sh/hook-delete-policy\"]" <<<"$rendered")" == "before-hook-creation" ]] \
+    || { red "  the hook ServiceAccount's delete policy is not before-hook-creation alone: a failed hook would delete it under a running Job"; missing=1; }
+  [[ "$(yq -r 'select(.kind == "Job") | .spec.template.spec.serviceAccountName' <<<"$rendered")" == "${RELEASE_NAME}-migrate" ]] \
+    || { red "  with serviceAccount.create the Job does not run under the hook account"; missing=1; }
+  for domain in PARTY LINKAGE AUDIT; do
+    [[ "$(yq -r "select(.kind == \"Job\") | .spec.template.spec.containers[0].env[] | select(.name == \"FERROEHR__STORAGE__MIGRATE__${domain}__URL_FILE\") | .name" <<<"$rendered")" == "FERROEHR__STORAGE__MIGRATE__${domain}__URL_FILE" ]] \
+      || { red "  the Job lacks FERROEHR__STORAGE__MIGRATE__${domain}__URL_FILE: it cannot prepare that domain's cluster"; missing=1; }
+  done
+  [[ "$(yq -r 'select(.kind == "Job") | .spec.template.spec.volumes[] | select(.name == "migrator-secret") | .projected.sources | length' <<<"$rendered")" -eq 4 ]] \
+    || { red "  the Job's migrator volume does not project four Secrets (the shared migrator and three domain migrators)"; missing=1; }
+  rendered="$(helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "$values" \
+    --set serviceAccount.create=false --set serviceAccount.name=operator-account)"
+  [[ -z "$(yq -r "select(.kind == \"ServiceAccount\") | .metadata.name" <<<"$rendered")" ]] \
+    || { red "  serviceAccount.create=false still renders a ServiceAccount"; missing=1; }
+  [[ "$(yq -r 'select(.kind == "Job") | .spec.template.spec.serviceAccountName' <<<"$rendered")" == "operator-account" ]] \
+    || { red "  with serviceAccount.create=false the Job does not run under serviceAccount.name"; missing=1; }
+  if [[ "$missing" -eq 0 ]]; then
+    echo "  the hook account survives a failed hook, an operator account is used when named, and the Job holds all four migrators"
+  else
+    FAIL=1
+  fi
+}
+migration_job_gate
 
 # ── The server's own TLS: every in-chart client follows the listener ─────────
 # With config.server.tls.enabled the CDR listener speaks TLS, so each client the
@@ -1064,6 +1104,8 @@ bridge-ca-mount|/etc/ferroehr-cdr-ca
 service-appprotocol|https
 scrape-scheme|https
 scrape-ca-secret|ferroehr-server-tls
+annotation-scheme|https
+ingress-backend-protocol|HTTPS
 CLAIMS
   [[ "$(grep -c -xF "probe-scheme HTTPS" <<<"$facts")" -eq 3 ]] \
     || { red "  TLS on: the server's three probes do not all use scheme HTTPS"; missing=1; }
@@ -1079,6 +1121,8 @@ viewer-url|http://${RELEASE_NAME}:8080
 bridge-url|http://${RELEASE_NAME}:8080/ferroehr/rest/openehr/v1
 service-appprotocol|http
 scrape-scheme|http
+annotation-scheme|http
+ingress-backend-protocol|absent
 CLAIMS
   [[ "$(grep -c -xF "probe-scheme HTTP" <<<"$facts")" -eq 3 ]] \
     || { red "  TLS off: the server's three probes do not all use scheme HTTP"; missing=1; }

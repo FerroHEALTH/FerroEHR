@@ -6,7 +6,7 @@
 //! refusal says when it does not.
 //!
 //! The ITS-XML profile schema types `C_DV_ORDINAL.list` as the RM `DV_ORDINAL`
-//! (`components/AM/Release-1.4/OpenehrProfile.xsd`), whose `symbol` is a
+//! (`its-xml-2.0.0-nsv2/AM/Release-1.4/OpenehrProfile.xsd`), whose `symbol` is a
 //! `DV_CODED_TEXT`: `value` and `defining_code` are both mandatory. An empty
 //! `<value/>` satisfies the schema and carries nothing, which is what the
 //! exported templates in this corpus write, because AOM 1.4 models the symbol

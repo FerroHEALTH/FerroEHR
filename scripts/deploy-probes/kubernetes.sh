@@ -163,6 +163,28 @@ k8s_try_db_hosts() {
   printf '%s' "$out" | sed -n 's/.*HOST=\([^ ]*\).*/\1/p' | tr -d '\r' | head -1
 }
 
+# k8s_pg_ready <compose project>: wait for the FINAL PostgreSQL server of that
+# project's ferroehr-postgres. The image's entrypoint runs its init scripts on a
+# temporary server started with listen_addresses='' (docker-library/postgres,
+# docker-entrypoint.sh, docker_temp_server_start), which answers on the Unix
+# socket only and then stops for the real start. So the check is over TCP on
+# 127.0.0.1, which only the final server answers, and it must answer three
+# times in a row, so a restart between two answers resets the count.
+k8s_pg_ready() {
+  local project="$1" streak=0 _i
+  for _i in $(seq 1 60); do
+    if docker compose -p "$project" exec -T ferroehr-postgres \
+      pg_isready -h 127.0.0.1 -U "${PG_INIT_USER:-ferroehr}" >/dev/null 2>&1; then
+      streak=$((streak + 1))
+      [[ "$streak" -ge 3 ]] && return 0
+    else
+      streak=0
+    fi
+    sleep 2
+  done
+  return 1
+}
+
 k8s_db_up() {
   # The db-publish overlay is required here (#2879): the quickstart file
   # publishes no database port, and this probe is the one consumer that
@@ -172,13 +194,7 @@ k8s_db_up() {
     docker compose -p "$COMPOSE_PROJECT" \
     -f docker-compose.yml -f docker-compose.db-publish.yml \
     up -d ferroehr-postgres >/dev/null 2>&1
-  local _i
-  for _i in $(seq 1 40); do
-    docker compose -p "$COMPOSE_PROJECT" exec -T ferroehr-postgres \
-      pg_isready -U "${PG_INIT_USER:-ferroehr}" >/dev/null 2>&1 && return 0
-    sleep 2
-  done
-  return 1
+  k8s_pg_ready "$COMPOSE_PROJECT"
 }
 
 k8s_db_stop()  { docker compose -p "$COMPOSE_PROJECT" stop ferroehr-postgres >/dev/null 2>&1; }

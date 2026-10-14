@@ -1836,17 +1836,13 @@ fn every_request_body_has_its_media_types() {
 
 /// Every generated response body that is still an untyped
 /// `serde_json::Value`, with the reason it is not typed. A `oneOf` of a
-/// resource and `Identifier` is typed as `Representation`; a new untyped body
-/// fails here until it is typed or pinned with its reason.
+/// resource and `Identifier` is typed as `Representation`, and a `oneOf` of
+/// `_type`-tagged RM classes as a `_type`-dispatched enum (the template-example
+/// body); a new untyped body fails here until it is typed or pinned with its
+/// reason.
 #[test]
 fn untyped_response_bodies_are_pinned_with_their_reason() {
-    // `oneOf` eight RM classes with no discriminator (#3549).
-    const PINNED: &[&str] = &[
-        "DefinitionTemplateAdl14ExampleGetOutcome",
-        "DefinitionTemplateAdl14ExampleGetResponse",
-        "DefinitionTemplateAdl2ExampleGetOutcome",
-        "DefinitionTemplateAdl2ExampleGetResponse",
-    ];
+    const PINNED: &[&str] = &[];
     let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../crates/openehr-its/src/rest/generated");
     let mut untyped = std::collections::BTreeSet::new();

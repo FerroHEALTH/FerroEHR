@@ -50,6 +50,9 @@ service:
     caExistingSecret: ferroehr-server-tls
 
 metrics:
+  # The pod annotations too, so the gate reads their scheme beside the
+  # ServiceMonitor's.
+  enabled: true
   serviceMonitor:
     enabled: true
 
@@ -65,3 +68,10 @@ bridge:
       - podSelector:
           matchLabels:
             ferrobridge.example/client: "true"
+
+# The Ingress in front of a TLS listener names the backend protocol for its
+# controller; with server TLS off the annotation is not rendered.
+ingress:
+  enabled: true
+  backendTlsAnnotations:
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS

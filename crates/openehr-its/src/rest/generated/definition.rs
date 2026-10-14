@@ -853,6 +853,149 @@ pub struct StoredQuery {
 /// it is an alias rather than a struct).
 pub type QueryList = Vec<StoredQuery>;
 
+/// The `200_Template_example_retrieved` ITS-REST OAS response body: an inline `oneOf` over
+/// canonical-JSON RM classes, dispatched on each member's own `_type`.
+#[derive(Debug, Clone)]
+pub enum TemplateExampleRetrievedBody {
+    /// `_type: "COMPOSITION"`
+    Composition(openehr_rm::v1_2::composition::composition::Composition),
+    /// `_type: "EHR_STATUS"`
+    EhrStatus(openehr_rm::v1_2::ehr::ehr_status::EhrStatus),
+    /// `_type: "FOLDER"`
+    Folder(openehr_rm::v1_2::common::directory::folder::Folder),
+    /// `_type: "AGENT"`
+    Agent(openehr_rm::v1_2::demographic::agent::Agent),
+    /// `_type: "GROUP"`
+    Group(openehr_rm::v1_2::demographic::group::Group),
+    /// `_type: "ORGANISATION"`
+    Organisation(openehr_rm::v1_2::demographic::organisation::Organisation),
+    /// `_type: "PERSON"`
+    Person(openehr_rm::v1_2::demographic::person::Person),
+    /// `_type: "ROLE"`
+    Role(openehr_rm::v1_2::demographic::role::Role),
+}
+
+impl ::serde::Serialize for TemplateExampleRetrievedBody {
+    fn serialize<__S: ::serde::Serializer>(
+        &self,
+        __serializer: __S,
+    ) -> ::core::result::Result<__S::Ok, __S::Error> {
+        match self {
+            Self::Composition(__x) => ::serde::Serialize::serialize(__x, __serializer),
+            Self::EhrStatus(__x) => ::serde::Serialize::serialize(__x, __serializer),
+            Self::Folder(__x) => ::serde::Serialize::serialize(__x, __serializer),
+            Self::Agent(__x) => ::serde::Serialize::serialize(__x, __serializer),
+            Self::Group(__x) => ::serde::Serialize::serialize(__x, __serializer),
+            Self::Organisation(__x) => ::serde::Serialize::serialize(__x, __serializer),
+            Self::Person(__x) => ::serde::Serialize::serialize(__x, __serializer),
+            Self::Role(__x) => ::serde::Serialize::serialize(__x, __serializer),
+        }
+    }
+}
+
+impl<'de> ::serde::Deserialize<'de> for TemplateExampleRetrievedBody {
+    fn deserialize<__D: ::serde::Deserializer<'de>>(
+        __deserializer: __D,
+    ) -> ::core::result::Result<Self, __D::Error> {
+        const __TAGS: &[&str] = &[
+            "COMPOSITION",
+            "EHR_STATUS",
+            "FOLDER",
+            "AGENT",
+            "GROUP",
+            "ORGANISATION",
+            "PERSON",
+            "ROLE",
+        ];
+        struct __Visitor;
+        impl<'de> ::serde::de::Visitor<'de> for __Visitor {
+            type Value = TemplateExampleRetrievedBody;
+            fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                __f.write_str("an ITS-REST `200_Template_example_retrieved` object")
+            }
+            fn visit_map<__A: ::serde::de::MapAccess<'de>>(
+                self,
+                mut __map: __A,
+            ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let (__tag, __buffered) =
+                    ::openehr_base::serde_support::read_slot_tag(&mut __map, __TAGS)?;
+                match __tag {
+                    Some(::openehr_base::serde_support::TagMatch::Known(__t)) => {
+                        let __rest = ::openehr_base::serde_support::TaggedRest::new(
+                            Some(__t),
+                            __buffered,
+                            __map,
+                        );
+                        match __t {
+                            "COMPOSITION" => ::core::result::Result::Ok(
+                                TemplateExampleRetrievedBody::Composition(
+                                    ::serde::Deserialize::deserialize(__rest)?,
+                                ),
+                            ),
+                            "EHR_STATUS" => {
+                                ::core::result::Result::Ok(TemplateExampleRetrievedBody::EhrStatus(
+                                    ::serde::Deserialize::deserialize(__rest)?,
+                                ))
+                            }
+                            "FOLDER" => {
+                                ::core::result::Result::Ok(TemplateExampleRetrievedBody::Folder(
+                                    ::serde::Deserialize::deserialize(__rest)?,
+                                ))
+                            }
+                            "AGENT" => {
+                                ::core::result::Result::Ok(TemplateExampleRetrievedBody::Agent(
+                                    ::serde::Deserialize::deserialize(__rest)?,
+                                ))
+                            }
+                            "GROUP" => {
+                                ::core::result::Result::Ok(TemplateExampleRetrievedBody::Group(
+                                    ::serde::Deserialize::deserialize(__rest)?,
+                                ))
+                            }
+                            "ORGANISATION" => ::core::result::Result::Ok(
+                                TemplateExampleRetrievedBody::Organisation(
+                                    ::serde::Deserialize::deserialize(__rest)?,
+                                ),
+                            ),
+                            "PERSON" => {
+                                ::core::result::Result::Ok(TemplateExampleRetrievedBody::Person(
+                                    ::serde::Deserialize::deserialize(__rest)?,
+                                ))
+                            }
+                            "ROLE" => {
+                                ::core::result::Result::Ok(TemplateExampleRetrievedBody::Role(
+                                    ::serde::Deserialize::deserialize(__rest)?,
+                                ))
+                            }
+                            __other => ::core::result::Result::Err(
+                                ::openehr_base::serde_support::unexpected_type(
+                                    "200_Template_example_retrieved",
+                                    __other,
+                                    "COMPOSITION, EHR_STATUS, FOLDER, AGENT, GROUP, ORGANISATION, PERSON, ROLE",
+                                ),
+                            ),
+                        }
+                    }
+                    Some(::openehr_base::serde_support::TagMatch::Unknown(__other)) => {
+                        ::core::result::Result::Err(::openehr_base::serde_support::unexpected_type(
+                            "200_Template_example_retrieved",
+                            &__other,
+                            "COMPOSITION, EHR_STATUS, FOLDER, AGENT, GROUP, ORGANISATION, PERSON, ROLE",
+                        ))
+                    }
+                    None => {
+                        ::core::result::Result::Err(::openehr_base::serde_support::missing_type(
+                            "200_Template_example_retrieved",
+                            "COMPOSITION, EHR_STATUS, FOLDER, AGENT, GROUP, ORGANISATION, PERSON, ROLE",
+                        ))
+                    }
+                }
+            }
+        }
+        ::serde::Deserializer::deserialize_map(__deserializer, __Visitor)
+    }
+}
+
 /// Parameters for `definition_template_adl1.4_list` (path/query/header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DefinitionTemplateAdl14ListParams {
@@ -2336,7 +2479,7 @@ pub mod server {
         /// The `200` answer.
         Ok {
             /// The body, sent as canonical JSON.
-            body: serde_json::Value,
+            body: TemplateExampleRetrievedBody,
             /// The response headers the OAS declares for this answer.
             headers: DefinitionTemplateAdl14ExampleGetOkHeaders,
         },
@@ -2393,7 +2536,7 @@ pub mod server {
         /// The `200` answer.
         Ok {
             /// The body, sent as canonical JSON.
-            body: serde_json::Value,
+            body: TemplateExampleRetrievedBody,
             /// The response headers the OAS declares for this answer.
             headers: DefinitionTemplateAdl2ExampleGetOkHeaders,
         },
@@ -3201,7 +3344,7 @@ pub mod client {
         /// The `200` answer.
         Ok {
             /// The body, decoded from canonical JSON.
-            body: serde_json::Value,
+            body: TemplateExampleRetrievedBody,
             /// The response headers the OAS declares for this answer.
             headers: DefinitionTemplateAdl14ExampleGetOkHeaders,
         },
@@ -3293,7 +3436,7 @@ pub mod client {
         /// The `200` answer.
         Ok {
             /// The body, decoded from canonical JSON.
-            body: serde_json::Value,
+            body: TemplateExampleRetrievedBody,
             /// The response headers the OAS declares for this answer.
             headers: DefinitionTemplateAdl2ExampleGetOkHeaders,
         },

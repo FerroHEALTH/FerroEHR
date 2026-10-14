@@ -153,7 +153,8 @@ pub enum DeploymentGap {
     OpenEhrAccessDefault,
     /// Schema preparation runs on a credential that also serves requests —
     /// `db.migrate = "apply"` with no `db.migrate_url`, or a relocated domain
-    /// whose database is prepared on the domain's own runtime DSN.
+    /// whose database is prepared on the domain's own runtime DSN because no
+    /// `[storage.migrate.<domain>]` credential is named for it.
     MigrateOnRuntimeCredential,
     /// `auth.enabled` is `false`, so every request is served unauthenticated.
     ///
@@ -273,7 +274,8 @@ impl DeploymentGap {
             Self::MigrateOnRuntimeCredential => {
                 "[db] migrate is `apply` on a credential that also serves requests; set [db] \
                  migrate_url to the credential that prepares the schema, give a relocated domain \
-                 a migrator of its own, or run migrate = \"verify\""
+                 its database's migrator in [storage.migrate.<domain>] url, or run migrate = \
+                 \"verify\""
             }
             Self::AuthOff => {
                 "[auth] enabled is false, so every request is served unauthenticated; set [auth] \

@@ -349,12 +349,14 @@ pub(crate) fn hoist_set(bundles: &[(&str, Oas)], names: &RmNames) -> BTreeSet<St
 /// argument.
 #[must_use]
 pub(crate) fn emit_common(oas: &Oas, names: &RmNames, hoisted: &BTreeSet<String>) -> String {
+    let no_unions = BTreeMap::new();
     let ctx = Ctx {
         oas,
         names,
         dtos: hoisted,
         hoisted,
         in_common: true,
+        unions: &no_unions,
     };
     let mut b = String::new();
     let _ = write!(
@@ -405,12 +407,33 @@ pub(crate) fn emit_group(
                 && oas_monomorphization(n).is_none()
         })
         .collect();
+    let mut ops = oas.operations();
+    for op in &mut ops {
+        append_docs_text_headers(op);
+    }
+    let no_unions = BTreeMap::new();
+    let unions = response_unions(
+        &ops,
+        &Ctx {
+            oas,
+            names,
+            dtos: &dtos,
+            hoisted,
+            in_common: false,
+            unions: &no_unions,
+        },
+    );
+    let union_names: BTreeMap<String, String> = unions
+        .iter()
+        .map(|u| (u.repr.clone(), u.ty_name.clone()))
+        .collect();
     let ctx = Ctx {
         oas,
         names,
         dtos: &dtos,
         hoisted,
         in_common: false,
+        unions: &union_names,
     };
 
     let mut b = String::new();
@@ -464,11 +487,26 @@ pub(crate) fn emit_group(
         emit_dto(&mut b, &name, schema, &ctx);
     }
 
-    // ── per-operation param structs ──
-    let mut ops = oas.operations();
-    for op in &mut ops {
-        append_docs_text_headers(op);
+    // ── response unions (inline `oneOf` response bodies) ──
+    for union in &unions {
+        emit_tagged_enum(
+            &mut b,
+            &TaggedEnum {
+                label: &union.component,
+                ty_name: &union.ty_name,
+                summary: format!(
+                    "/// The `{}` ITS-REST OAS response body: an inline `oneOf` over\n\
+                     /// canonical-JSON RM classes, dispatched on each member's own `_type`.\n",
+                    union.component
+                ),
+                variants: &union.variants,
+                aliases: &[],
+                base: None,
+            },
+        );
     }
+
+    // ── per-operation param structs ──
     for op in &ops {
         emit_params_struct(&mut b, op, &ctx);
         emit_request_body_decoder(&mut b, op, &ctx);
@@ -558,6 +596,9 @@ struct Ctx<'a> {
     /// `super::common::…`, except a [`GENERIC_OVER`] name, which the group
     /// aliases locally).
     in_common: bool,
+    /// The group's response unions ([`response_unions`]): the stable form of
+    /// each typed inline `oneOf` schema → its emitted enum name.
+    unions: &'a BTreeMap<String, String>,
 }
 
 impl Ctx<'_> {
@@ -606,6 +647,9 @@ impl Ctx<'_> {
     fn rust_type(&self, schema: &Value) -> String {
         if let Some(name) = Oas::ref_name(schema) {
             return self.ref_type(&name, schema);
+        }
+        if let Some(union) = self.unions.get(&stable_repr(schema)) {
+            return union.clone();
         }
         // `oneOf` a resource and `Identifier`: the full and the identifier form
         // a `Prefer` header selects, read by the runtime's `Representation`.
@@ -818,7 +862,34 @@ fn emit_dto(b: &mut String, name: &str, schema: &Value, ctx: &Ctx) {
             }
             _ => None,
         };
-        emit_discriminator_enum(b, name, mapping, base.as_ref(), ctx);
+        let ty_name = dto_type(name);
+        let variants: Vec<(String, String, String)> = mapping
+            .iter()
+            .filter_map(|(tag, target)| {
+                let target = target.as_str()?;
+                let ref_name = target.rsplit('/').next()?.to_string();
+                let rust_ty = ctx.rust_type(&serde_json::json!({ "$ref": target }));
+                Some((tag.clone(), ref_name, rust_ty))
+            })
+            .collect();
+        // Docs-text aliases read as the instantiable base, keeping their own tag.
+        let aliases: Vec<&str> = crate::plan::overrides::rest_discriminator_aliases(name)
+            .map(|a| a.tag)
+            .collect();
+        emit_tagged_enum(
+            b,
+            &TaggedEnum {
+                label: name,
+                ty_name: &ty_name,
+                summary: format!(
+                    "/// The `{name}` ITS-REST OAS component schema: `_type`-discriminated\n\
+                     /// polymorphism over its OAS `discriminator.mapping` targets.\n"
+                ),
+                variants: &variants,
+                aliases: &aliases,
+                base: base.as_ref(),
+            },
+        );
         return;
     }
     // object with named properties → struct; everything else → an alias.
@@ -1004,48 +1075,51 @@ fn emit_struct_field(b: &mut String, f: &StructField<'_>, ctx: &Ctx) {
     let _ = writeln!(b, "    pub {ident}: {ty},");
 }
 
-/// Emit an OAS `discriminator.mapping` schema as a `_type`-dispatched enum.
+/// One `_type`-dispatched enum to emit: an OAS `discriminator.mapping`
+/// schema ([`emit_dto`]) or an inline response `oneOf` ([`response_unions`]).
+struct TaggedEnum<'a> {
+    /// The OAS name the decode error messages carry (the component schema or
+    /// the response component).
+    label: &'a str,
+    /// The emitted Rust type name.
+    ty_name: &'a str,
+    /// The type's doc comment, `///` lines ending in a newline.
+    summary: String,
+    /// `(tag, variant, rust type)` per member, in document order.
+    variants: &'a [(String, String, String)],
+    /// Docs-text alias tags that read as the instantiable base.
+    aliases: &'a [&'a str],
+    /// `(tag, data type)` of an instantiable base, if any.
+    base: Option<&'a (String, String)>,
+}
+
+/// Emit a `_type`-dispatched enum.
 ///
-/// One variant per mapping entry, in document order; each carries the mapped
-/// target's Rust type (an RM/BASE spec type or a local DTO, through
-/// [`Ctx::rust_type`]). Serialization delegates to the inner value (whose
-/// emitted impl writes its own `_type`); deserialization dispatches on the
-/// mapping keys with the shared strict tag-anywhere runtime
-/// (`openehr_base::serde_support`) — an unknown `_type` is refused naming the
-/// legal set, exactly like the spec crates' own closed-set enums.
+/// One variant per member, in document order; each carries the target's Rust
+/// type (an RM/BASE spec type or a local DTO, through [`Ctx::rust_type`]).
+/// Serialization delegates to the inner value (whose emitted impl writes its
+/// own `_type`); deserialization dispatches on the member tags with the shared
+/// strict tag-anywhere runtime (`openehr_base::serde_support`) — an unknown
+/// `_type` is refused naming the legal set, exactly like the spec crates' own
+/// closed-set enums.
 ///
-/// `base` is `Some((tag, data_type))` when the schema is INSTANTIABLE ITSELF
-/// (it carries `x-discriminator-value`): the base joins the union as a final
-/// variant over its own `…Data` struct, and — because the OAS leaves `_type`
-/// out of such a base's `required` list and gives it a `default` — an object
-/// with NO discriminator reads as that base variant instead of being refused.
-/// For a purely abstract base (no `x-discriminator-value`) a missing `_type` is
-/// still an error: nothing could be constructed from it.
-fn emit_discriminator_enum(
-    b: &mut String,
-    name: &str,
-    mapping: &serde_json::Map<String, Value>,
-    base: Option<&(String, String)>,
-    ctx: &Ctx,
-) {
-    let ty_name = dto_type(name);
-    let mut variants: Vec<(String, String, String)> = mapping
-        .iter()
-        .filter_map(|(tag, target)| {
-            let target = target.as_str()?;
-            let ref_name = target.rsplit('/').next()?.to_string();
-            let rust_ty = ctx.rust_type(&serde_json::json!({ "$ref": target }));
-            Some((tag.clone(), ref_name, rust_ty))
-        })
-        .collect();
+/// `base` is `Some((tag, data_type))` when a discriminator schema is
+/// INSTANTIABLE ITSELF (it carries `x-discriminator-value`): the base joins the
+/// union as a final variant over its own `…Data` struct, and — because the OAS
+/// leaves `_type` out of such a base's `required` list and gives it a
+/// `default` — an object with NO discriminator reads as that base variant
+/// instead of being refused. Without a base a missing `_type` is an error:
+/// nothing could be constructed from it.
+fn emit_tagged_enum(b: &mut String, e: &TaggedEnum<'_>) {
+    let name = e.label;
+    let ty_name = e.ty_name;
+    let base = e.base;
+    let aliases = e.aliases;
+    let mut variants: Vec<(String, String, String)> = e.variants.to_vec();
     if let Some((tag, data_ty)) = base {
-        variants.push((tag.clone(), ty_name.clone(), data_ty.clone()));
+        variants.push((tag.clone(), ty_name.to_owned(), data_ty.clone()));
     }
     let variants = variants;
-    // Docs-text aliases read as the instantiable base, keeping their own tag.
-    let aliases: Vec<&str> = crate::plan::overrides::rest_discriminator_aliases(name)
-        .map(|a| a.tag)
-        .collect();
     let tag_list = variants
         .iter()
         .map(|(t, _, _)| t.as_str())
@@ -1053,9 +1127,8 @@ fn emit_discriminator_enum(
         .join(", ");
     let _ = write!(
         b,
-        "/// The `{name}` ITS-REST OAS component schema: `_type`-discriminated\n\
-         /// polymorphism over its OAS `discriminator.mapping` targets.\n\
-         #[derive(Debug, Clone)]\npub enum {ty_name} {{\n"
+        "{}#[derive(Debug, Clone)]\npub enum {ty_name} {{\n",
+        e.summary
     );
     for (tag, ref_name, rust_ty) in &variants {
         let _ = writeln!(b, "    /// `_type: \"{tag}\"`\n    {ref_name}({rust_ty}),");
@@ -1113,7 +1186,7 @@ fn emit_discriminator_enum(
              ::serde::Deserialize::deserialize(__rest)?,\n                            )),\n"
         );
     }
-    for tag in &aliases {
+    for tag in aliases {
         if base.is_some() {
             let _ = write!(
                 b,
@@ -1163,6 +1236,87 @@ fn emit_discriminator_enum(
          }}\n                }}\n            }}\n        }}\n        \
          ::serde::Deserializer::deserialize_map(__deserializer, __Visitor)\n    }}\n}}\n\n"
     );
+}
+
+/// One inline response `oneOf` the group emits as a `_type`-dispatched enum.
+struct ResponseUnion {
+    /// The `#/components/responses` entry declaring the body.
+    component: String,
+    /// The emitted Rust type name.
+    ty_name: String,
+    /// The stable form of the `oneOf` schema ([`stable_repr`]).
+    repr: String,
+    /// `(tag, variant, rust type)` per member, in document order.
+    variants: Vec<(String, String, String)>,
+}
+
+/// The inline response-body `oneOf`s of `ops` that are `_type` unions, one per
+/// response component, in first-use order.
+///
+/// A `oneOf` without a `discriminator` qualifies when every member is a `$ref`
+/// to a schema whose own `_type` property is a single-valued `enum` (the RM
+/// class name the canonical JSON carries) and the tags are distinct: OAS 3.0
+/// §Discriminator Object says that without a discriminator "inline or
+/// referenced schema MUST be validated against all oneOf members"
+/// (<https://spec.openapis.org/oas/v3.0.3#discriminator-object>), and each
+/// member's closed `_type` enum makes the members mutually exclusive, so
+/// dispatching on `_type` selects the single member a valid body matches. A
+/// `oneOf` with `Identifier` is the `Prefer` [`Ctx::rust_type`] form instead.
+fn response_unions(ops: &[Operation], ctx: &Ctx) -> Vec<ResponseUnion> {
+    let mut out: Vec<ResponseUnion> = Vec::new();
+    for resp in ops.iter().flat_map(|op| op.responses.iter()) {
+        let (Some(component), [(mt, schema)]) = (&resp.component, resp.media.as_slice()) else {
+            continue;
+        };
+        if mt != "application/json" || out.iter().any(|u| &u.component == component) {
+            continue;
+        }
+        if let Some(variants) = union_variants(schema, ctx) {
+            let stem = component.trim_start_matches(|c: char| c.is_ascii_digit() || c == '_');
+            out.push(ResponseUnion {
+                component: component.clone(),
+                ty_name: format!("{}Body", type_id(stem)),
+                repr: stable_repr(schema),
+                variants,
+            });
+        }
+    }
+    out
+}
+
+/// The `(tag, variant, rust type)` members of a discriminator-less `oneOf`
+/// whose members all carry their own single `_type` tag, or `None` when the
+/// schema is not such a union ([`response_unions`]).
+fn union_variants(schema: &Value, ctx: &Ctx) -> Option<Vec<(String, String, String)>> {
+    if schema.get("$ref").is_some() || schema.get("discriminator").is_some() {
+        return None;
+    }
+    let members = schema.get("oneOf")?.as_array()?;
+    if members.len() < 2 {
+        return None;
+    }
+    let mut variants: Vec<(String, String, String)> = Vec::new();
+    for member in members {
+        let ref_name = Oas::ref_name(member)?;
+        if ref_name == "Identifier" {
+            return None;
+        }
+        let tag = match ctx
+            .oas
+            .resolve(member)
+            .pointer("/properties/_type/enum")?
+            .as_array()?
+            .as_slice()
+        {
+            [only] => only.as_str()?.to_owned(),
+            _ => return None,
+        };
+        if variants.iter().any(|(t, _, _)| *t == tag) {
+            return None;
+        }
+        variants.push((tag, ref_name, ctx.rust_type(member)));
+    }
+    Some(variants)
 }
 
 fn param_struct_name(op: &Operation) -> String {
@@ -2163,6 +2317,7 @@ fn client_responses(op: &Operation) -> Vec<Response> {
         .iter()
         .map(|r| Response {
             status: r.status,
+            component: r.component.clone(),
             media: r.media.clone(),
             headers: r.headers.clone(),
         })
@@ -2175,6 +2330,7 @@ fn client_responses(op: &Operation) -> Vec<Response> {
         let headers = created.headers.clone();
         out.push(Response {
             status: http::StatusCode::NO_CONTENT,
+            component: None,
             media: Vec::new(),
             headers,
         });

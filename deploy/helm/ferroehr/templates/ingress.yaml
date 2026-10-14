@@ -1,11 +1,25 @@
 {{- if .Values.ingress.enabled }}
+{{- $backendTls := eq (include "ferroehr.serverTls" .) "true" }}
+{{- /* With the server's own TLS on, the Service port speaks HTTPS, and an
+       Ingress controller sends plain HTTP to its backend unless told
+       otherwise (https://kubernetes.io/docs/concepts/services-networking/ingress/#tls
+       covers only the client side). How it is told is controller-specific,
+       so the operator names it; without it every external request fails while
+       the install and the probes succeed. */}}
+{{- if and $backendTls (empty .Values.ingress.backendTlsAnnotations) }}
+{{- fail "ingress.enabled with config.server.tls.enabled, but ingress.backendTlsAnnotations is empty: the Ingress controller would send plain HTTP to a TLS listener, so every external request fails while the install reports success.\n\nName how your controller reaches an HTTPS backend in ingress.backendTlsAnnotations, for example for ingress-nginx:\n  ingress.backendTlsAnnotations:\n    nginx.ingress.kubernetes.io/backend-protocol: HTTPS\n\nOr terminate TLS at the Ingress only and leave config.server.tls.enabled false." }}
+{{- end }}
+{{- $annotations := .Values.ingress.annotations | default dict }}
+{{- if $backendTls }}
+{{- $annotations = merge (dict) .Values.ingress.backendTlsAnnotations $annotations }}
+{{- end }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ include "ferroehr.fullname" . }}
   labels:
     {{- include "ferroehr.labels" . | nindent 4 }}
-  {{- with .Values.ingress.annotations }}
+  {{- with $annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}

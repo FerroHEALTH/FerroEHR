@@ -37,3 +37,7 @@ Chart.yaml bump separately; never report a chart change as clean on
 validate.sh alone.
 
 Related: [[deployment-schema-name-surfaces]]
+
+Observed 2026-10-14: `helm` was NOT on PATH on the review machine (no
+`/opt/homebrew/bin/helm`), so validate.sh could not run. Check `command -v
+helm` first and say plainly in the report when the gates were not run.

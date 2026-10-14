@@ -85,8 +85,10 @@ client_auth = "off"          # off | optional | required (required = IHE mTLS)
 # rustls offers them.
 min_version = "1.3"          # 1.3 | 1.2
 #? client_ca_file = "/etc/ferroehr/client-ca.pem"
-
-# [server.limits] — the largest request body each route family accepts. Two
+# How often cert_file and key_file are re-read, so a renewed pair (cert-manager,
+# a mounted Secret) is served without a restart. A pair that fails to load is
+# logged and the previous one stays in service. 0 reads them once, at boot.
+reload_interval_secs = 60 — the largest request body each route family accepts. Two
 # tiers: the clinical surface, and the routes that accept bulk by design
 # (operational-template upload, /message/import, /message/tdd). Over-limit is
 # refused 413. The defaults are sized against measured payloads — the largest
@@ -181,8 +183,13 @@ statement_timeout_ms = 60000
 # two separately-configured domains turn out to authenticate as one role, and —
 # under deployment_profile = "production" — when a domain role is missing.
 #
-# The linkage set names a function the party set creates, so those two are
-# prepared in the same database; the server refuses a layout that splits them.
+# Schema preparation runs per DATABASE: [db] migrate_url prepares the one it
+# reaches, and a domain in a database of its own is prepared on that database's
+# migration credential, [storage.migrate.<domain>] url, for both migrate =
+# "apply" and "verify". Unset, it falls back to the domain's own url, which a
+# DML-only runtime role cannot use. A database holding linkage without party
+# also receives the party migration set (empty, no pool), because the linkage
+# set names a function the party set creates.
 #? [storage.clinical]
 #? url = "postgres://ferroehr_clinical:...@localhost:5432/ferroehr"
 #? url_file = "/run/secrets/db-clinical-dsn"
@@ -195,6 +202,18 @@ statement_timeout_ms = 60000
 #? [storage.audit]
 #? url = "postgres://ferroehr_audit:...@localhost:5432/ferroehr_audit"
 #? url_file = "/run/secrets/db-audit-dsn"
+#? [storage.migrate.clinical]
+#? url = "postgres://ferroehr_migrator:...@clinical-db:5432/ferroehr"
+#? url_file = "/run/secrets/db-clinical-migrate-dsn"
+#? [storage.migrate.party]
+#? url = "postgres://ferroehr_migrator:...@party-db:5432/ferroehr"
+#? url_file = "/run/secrets/db-party-migrate-dsn"
+#? [storage.migrate.linkage]
+#? url = "postgres://ferroehr_migrator:...@linkage-db:5432/ferroehr"
+#? url_file = "/run/secrets/db-linkage-migrate-dsn"
+#? [storage.migrate.audit]
+#? url = "postgres://ferroehr_migrator:...@audit-db:5432/ferroehr_audit"
+#? url_file = "/run/secrets/db-audit-migrate-dsn"
 
 # ── [log] — logging ──────────────────────────────────────────────────────────
 [log]

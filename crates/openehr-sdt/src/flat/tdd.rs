@@ -78,6 +78,7 @@ use std::sync::LazyLock;
 use openehr_rm::v1_2::paths::{PathSegment, is_archetype_root_node_id};
 use serde_json::{Map, Value, json};
 
+use crate::flat::build::{code_phrase, dv_coded_text, template_category};
 use crate::flat::error::FlatError;
 use crate::flat::rmpath;
 use crate::flat::webtemplate::model::{WebTemplate, WebTemplateNode};
@@ -1134,18 +1135,6 @@ fn fill_structural_mandatory(obj: &mut Map<String, Value>, rm_type: &str) {
 
 // ── small canonical-JSON builders ────────────────────────────────────────────
 
-fn code_phrase(terminology: &str, code: &str) -> Value {
-    json!({
-        "_type": "CODE_PHRASE",
-        "terminology_id": {"_type": "TERMINOLOGY_ID", "value": terminology},
-        "code_string": code,
-    })
-}
-
-fn dv_coded_text(value: &str, terminology: &str, code: &str) -> Value {
-    json!({"_type": "DV_CODED_TEXT", "value": value, "defining_code": code_phrase(terminology, code)})
-}
-
 fn archetyped(archetype_id: &str, template_id: Option<&str>) -> Value {
     let mut a = Map::new();
     a.insert("_type".into(), json!("ARCHETYPED"));
@@ -1191,7 +1180,7 @@ fn ensure_category(comp: &mut Map<String, Value>, root: &WebTemplateNode) -> Res
     if comp.contains_key("category") {
         return Ok(());
     }
-    let category = crate::flat::build::template_category(root).map_err(|admitted| {
+    let category = template_category(root).map_err(|admitted| {
         FlatError::Conversion(format!(
             "COMPOSITION.category (/category) is required: the template admits {} and fixes \
              no default",

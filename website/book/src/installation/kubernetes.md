@@ -288,7 +288,7 @@ separation that profile checks made, except one it accepts by name:
 | Gap | In the overlay |
 |---|---|
 | `shared_credential` | the clinical, party and linkage domains each read their own Secret (`database.existingSecret`, `database.party.existingSecret`, `database.linkage.existingSecret`), and the audit domain reads `database.audit.existingSecret` |
-| `shared_cluster` | yours to make: the server compares the cluster each domain pool reaches, so the separation is four DSNs on four PostgreSQL clusters. This release cannot run that layout yet (it verifies the `linkage` schema only beside `party`, and a domain in another database on its runtime role, which cannot read the migration bookkeeping), so keep every domain in the database the migration Secret reaches and add `shared_cluster` to `config.deployment_accepts` as a recorded decision |
+| `shared_cluster` | yours to make: the server compares the cluster each domain pool reaches, so the separation is four DSNs on four PostgreSQL clusters. Each cluster is prepared on its own migrator: the migration Job applies the schema in every cluster, and the server verifies it there, on `database.<domain>.migrateExistingSecret` (`database.migrateExistingSecret` for the clinical cluster). The linkage cluster also receives the party migration set, schema only, because the linkage set names a function the party set creates |
 | `migrate_on_runtime_credential` | `config.db.migrate: verify`, with `migrations.job.enabled` preparing the schema on `database.migrateExistingSecret` |
 | `open_subject_namespace` | `config.privacy.subject_namespaces` declared |
 | `audit_off`, `audit_fails_open`, `audit_syslog_udp` | the audit trail on with its local store, `config.audit.fail_mode: closed`, no UDP syslog sink |
@@ -403,6 +403,26 @@ start. It is normally the same credential
 runs before the Deployment exists. Unset, preparation falls back to
 `database.existingSecret`, which is what a single-credential install has
 always done.
+
+`database.migrateExistingSecret` reaches one database. A domain whose DSN
+reaches another database or cluster is prepared there, on that database's own
+migrator, which `database.<domain>.migrateExistingSecret` names:
+
+```yaml
+database:
+  linkage:
+    existingSecret: ferroehr-db-linkage            # postgres://ferroehr_linkage:…@linkage-db/…
+    migrateExistingSecret: ferroehr-db-linkage-migrate   # postgres://ferroehr_migrator:…@linkage-db/…
+```
+
+The migration Job mounts it and applies the schema in that database; the server
+mounts it and verifies the schema there under `config.db.migrate: verify`. The
+domain's own role cannot do either, because it holds one domain and cannot read
+the `ext` set's bookkeeping. The server refuses to start when the two DSNs of
+one domain reach different databases. A database that holds the linkage domain
+without the party domain also receives the party migration set, its schema and
+grants and never a row, because the linkage set names a function the party set
+creates.
 
 Give the migrator DSN a short `lock_timeout`
 (`?options=-c%20lock_timeout%3D5s`) so DDL blocked behind live traffic fails
@@ -561,8 +581,15 @@ The clients check the server's certificate against a CA you name in
 (the release's full name, `ferroehr` for a release called `ferroehr`) as a DNS
 SAN, which no public CA issues, so the chart refuses to render a TLS listener
 beside an enabled viewer, FerroBRIDGE or API-port scrape while that value is
-empty. A cert-manager `Certificate` writes the key pair and the CA into one
-Secret (`tls.crt`, `tls.key`, `ca.crt`), so one Secret serves both sides:
+empty. Name a Secret that holds the CA certificate alone: every pod and the
+ServiceMonitor that read it then read no private key, and a ServiceMonitor in
+another namespace reads its own copy there. A cert-manager `Certificate`
+writes the key pair and the CA into one Secret (`tls.crt`, `tls.key`,
+`ca.crt`); copy `ca.crt` out of it (trust-manager's `Bundle` does this) rather
+than naming that Secret. The Ingress in front of the TLS listener must reach
+it over HTTPS too, and how a controller is told so is controller-specific, so
+the chart refuses to render the Ingress with server TLS on until
+`ingress.backendTlsAnnotations` names it:
 
 ```yaml
 config:
@@ -584,15 +611,22 @@ extraVolumeMounts:
   - { name: server-tls, mountPath: /etc/ferroehr-tls, readOnly: true }
 service:
   tls:
-    caExistingSecret: ferroehr-server-tls   # its ca.crt key
+    caExistingSecret: ferroehr-server-ca    # ca.crt alone
+ingress:
+  backendTlsAnnotations:                    # ingress-nginx
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
 ```
 
 The viewer and FerroBRIDGE read the CA through `SSL_CERT_DIR`, which the chart
-sets to the image's system roots plus the mounted CA, so their other HTTPS
-peers (an OIDC issuer, an external terminology server) stay trusted. The
-ServiceMonitor reads the Secret from its own namespace. With
-`config.server.tls.client_auth: required` the kubelet probes cannot present a
-client certificate, so keep it at `off` or `optional` under this chart.
+sets to the image's system roots plus the mounted CA, so their other peers
+that verify through the platform verifier stay trusted. The viewer's OIDC
+client does not read `SSL_CERT_DIR`: it trusts the public roots it is built
+with, so an OIDC issuer with a certificate from a private CA is not trusted by
+the viewer. The ServiceMonitor reads the Secret from its own namespace, and
+the `prometheus.io/scheme: https` pod annotation follows the listener when
+`metrics.enabled` is set. With `config.server.tls.client_auth: required` the
+kubelet probes cannot present a client certificate, so the chart refuses to
+render it; keep it at `off` or `optional`.
 `config.management.port` stays plain HTTP on its own listener.
 
 ## Health probes

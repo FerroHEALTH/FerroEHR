@@ -59,6 +59,13 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **`openehr-its`: the template-example response body is typed** (#3549).
+  `definition_template_adl1.4_example_get` and
+  `definition_template_adl2_example_get` answer a `_type`-dispatched
+  `TemplateExampleRetrievedBody` over their eight RM classes instead of
+  untyped JSON. The duplicate XSD tree `schemas/xml/components/`, which no code
+  read, is removed (#3753).
+
 - **The vendored openEHR specifications move to current upstream** (#3716,
   #3717, #3718, #3719, #3720, #3721, #3723). BASE, RM, AM, TERM, LANG, CNF and
   the ITS-JSON docs follow upstream master, as the development generations
@@ -286,8 +293,16 @@ workflow refuses a tag that has no matching section here.
 - **A composition built from FLAT, STRUCTURED or TDD input without a category
   takes it from the template** (#3652): its single admitted code, `433` when
   the template leaves the category open, and a refusal naming
-  `…/category|code` when several codes are admitted and none is assumed. It
-  was always `433`, even where the template admits only `431`.
+  `…/category|code` when several codes are admitted and none is assumed (an
+  assumed category value is taken). It was always `433`, even where the
+  template admits only `431`.
+- **The Web Template carries `defaultValue` from archetype assumed values.**
+  Coded text, quantity, ordinal, count, boolean, text, date/time and
+  duration inputs take the assumed value of their constraint, as a string
+  (ITS-REST `Input.yaml`), and only when the constraint admits it (AOM
+  `Assumed_value_valid`).
+- **OPT 1.4 conversion keeps enumerated integer and real lists** (#3752); only
+  the range was carried.
 - **The compose image-tag guard covers the terminology overlay** (#3605).
   `scripts/checks/compose-image-tags.sh` checks every FerroEHR image tag in
   every root and `docker/` compose file, `docker-compose.terminology.yml`

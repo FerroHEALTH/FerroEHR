@@ -682,7 +682,7 @@ impl std::fmt::Display for Location {
 ///
 /// One absent element has such a fix: the `<value>` of a `DV_CODED_TEXT` under
 /// a `<symbol>`. The ITS-XML profile schema types `C_DV_ORDINAL.list` as the RM
-/// `DV_ORDINAL` (`components/AM/Release-1.4/OpenehrProfile.xsd`), whose `symbol`
+/// `DV_ORDINAL` (`its-xml-2.0.0-nsv2/AM/Release-1.4/OpenehrProfile.xsd`), whose `symbol`
 /// is a `DV_CODED_TEXT` with a mandatory `value`, so a symbol without the
 /// element is not a document the format admits. The value itself carries
 /// nothing: AOM 1.4 models the symbol as a `CODE_PHRASE` and the rubric is

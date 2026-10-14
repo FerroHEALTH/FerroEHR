@@ -1228,7 +1228,8 @@ expression: wt
                                 "minOp": ">=",
                                 "min": 0
                               }
-                            }
+                            },
+                            "defaultValue": "1"
                           }
                         ]
                       },

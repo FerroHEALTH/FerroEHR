@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8" ?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns="http://schemas.openehr.org/v2" targetNamespace="http://schemas.openehr.org/v2" elementFormDefault="qualified"
-           id="Structure.xsd" version="v1.1.0">
-    <!-- dependencies -->
-	<xs:include schemaLocation="../DataStructures.xsd"/>
-
-	<xs:element name="items" type="LOCATABLE"/>
-</xs:schema>

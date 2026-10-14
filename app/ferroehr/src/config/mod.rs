@@ -1691,6 +1691,8 @@ mod tests {
              url_file = \"/dev/null\"\n",
             "[storage.linkage]\nurl = \"postgres://u:p@h:5432/d\"\n\
              url_file = \"/dev/null\"\n",
+            "[storage.migrate.party]\nurl = \"postgres://u:p@h:5432/d\"\n\
+             url_file = \"/dev/null\"\n",
             "[events]\nurl = \"amqp://u:p@h:5672/%2f\"\nurl_file = \"/dev/null\"\n",
             "[[auth.basic.users]]\nusername = \"a\"\npassword_hash = \"x\"\n\
              password_hash_file = \"/dev/null\"\n",
@@ -1739,6 +1741,10 @@ mod tests {
                     "FERROEHR__STORAGE__PARTY__URL_FILE",
                     &migrate.path().display().to_string(),
                 ),
+                (
+                    "FERROEHR__STORAGE__MIGRATE__LINKAGE__URL_FILE",
+                    &migrate.path().display().to_string(),
+                ),
             ]),
             &[],
         );
@@ -1749,6 +1755,12 @@ mod tests {
             "postgres://m:p@h:5432/d",
             "the party domain's own DSN arrives through the env grammar, rather than \
              falling back to db.url as an unwired key would"
+        );
+        assert_eq!(
+            c.storage
+                .migrate_dsn(crate::db::domain::Domain::Linkage),
+            Some("postgres://m:p@h:5432/d"),
+            "a relocated domain's migration credential arrives through the env grammar"
         );
         assert_eq!(c.events.url.expose(), "amqps://u:p@b:5671/%2f");
     }
@@ -1785,6 +1797,7 @@ mod tests {
         c.storage.party.url = Some(leaky(4));
         c.storage.linkage.url = Some(leaky(5));
         c.storage.audit.url = Some(leaky(6));
+        c.storage.migrate.party.url = Some(leaky(15));
         c.events.url = leaky(7);
         c.audit.fhir_feed.url = leaky(8);
         c.terminology.external.providers.insert(
@@ -1820,7 +1833,7 @@ mod tests {
                 !rendered.contains("URL_PW_SENTINEL"),
                 "URL userinfo leaked into the {surface} rendering: {rendered}"
             );
-            for n in 1..=14 {
+            for n in 1..=15 {
                 assert!(
                     rendered.contains(&format!("https://***@h{n}:1/p{n}")),
                     "URL {n} lost its host and path in the {surface} rendering: {rendered}"

@@ -480,6 +480,14 @@ fn resolve_secret_files(config: &mut FerroEhrConfig, errors: &mut Vec<ConfigErro
             file,
             errors,
         );
+        let migrator = config.storage.migrate.domain_mut(domain);
+        let file = migrator.url_file.take();
+        resolve_optional_secret_url(
+            &format!("storage.migrate.{domain}.url"),
+            &mut migrator.url,
+            file,
+            errors,
+        );
     }
     resolve_optional_secret_url(
         "db.migrate_url",
