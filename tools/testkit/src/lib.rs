@@ -18,7 +18,7 @@
 //! read via `shobj_description` because a connection to a template blocks
 //! cloning (`PostgreSQL` docs § CREATE DATABASE); the stamp carries the build
 //! time, so another fingerprint's sweep spares a template younger than
-//! [`TEMPLATE_GRACE`]. A clone is made under the
+//! `TEMPLATE_GRACE`. A clone is made under the
 //! same lock in shared mode and only from a stamped template. Clones are
 //! named `ferroehr_tk_<secs>_<rand>` and swept by [`sweep_stale`], which every
 //! test process runs once before it hands out a database.
@@ -571,7 +571,7 @@ async fn template_complete(
 /// staging database carries a clone-shaped name, so a concurrent process's
 /// sweep spares it for [`SWEEP_GRACE`] instead of dropping it mid-migration;
 /// another fingerprint's suite on the same server spares THIS template for
-/// [`TEMPLATE_GRACE`] after the stamp and sweeps it as stale after that, and
+/// `TEMPLATE_GRACE` after the stamp and sweeps it as stale after that, and
 /// nothing it drops can be half built.
 async fn build_template(
     admin: &mut PgConnection,
@@ -815,7 +815,7 @@ async fn startup_sweep(admin: &mut PgConnection) {
 
 /// Drops every stale harness database (clones older than [`SWEEP_GRACE`], and
 /// templates of another migration fingerprint stamped longer than
-/// [`TEMPLATE_GRACE`] ago or not stamped at all) plus the stale harness roles.
+/// `TEMPLATE_GRACE` ago or not stamped at all) plus the stale harness roles.
 ///
 /// The drops are force-free, so a database another process is connected to is
 /// refused with [`SQLSTATE_OBJECT_IN_USE`] and skipped as benign (`PostgreSQL`
@@ -910,7 +910,7 @@ fn refusal_is_benign(code: Option<&str>) -> bool {
 /// stale at `now_secs`.
 ///
 /// A template other than `current_template` is stale unless its completion
-/// stamp records a build time younger than [`TEMPLATE_GRACE`]; an unstamped
+/// stamp records a build time younger than `TEMPLATE_GRACE`; an unstamped
 /// template, or one whose stamp carries no build time, has no known age and
 /// is stale. A clone is stale when its name-embedded creation time is older
 /// than [`SWEEP_GRACE`]. The live template and names outside the harness

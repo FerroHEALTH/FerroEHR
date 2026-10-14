@@ -89,7 +89,7 @@ pub(crate) fn same_origin_next(raw: Option<&str>) -> String {
 ///
 /// `refused=1` is what makes the login screen say the credentials were
 /// refused, and `next` keeps the destination the user was signing in for,
-/// filtered through [`same_origin_next`] and left off when it is the shell
+/// filtered through `same_origin_next` and left off when it is the shell
 /// root (the screen's own default). The destination is percent-encoded with
 /// the `urlencoding` crate.
 #[must_use]
@@ -106,7 +106,7 @@ pub fn refused_login_url(next: Option<&str>) -> String {
 /// ITS-REST call), then stores them in the server-side session.
 ///
 /// Accepted credentials land on `next`, filtered through
-/// [`same_origin_next`] so a crafted link cannot send a freshly signed-in user
+/// `same_origin_next` so a crafted link cannot send a freshly signed-in user
 /// to another site. Credentials the CDR refuses are not an error: the call succeeds and
 /// redirects to [`refused_login_url`], so the login screen renders the
 /// refusal from its URL — a document `302` for a form posted without

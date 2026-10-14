@@ -1,6 +1,3 @@
-  for domain in "${K8S_PROD_DOMAINS[@]}"; do
-    k8s_pg_ready "$(k8s_prod_project "$domain")" || return 1
-  done
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
