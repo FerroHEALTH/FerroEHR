@@ -16,8 +16,6 @@ ITS-REST 1.1.0 &nbsp;·&nbsp; AQL 1.1 &nbsp;·&nbsp; RM 1.2.0 **+ 1.1.0** &nbsp;
 [![CodeQL](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/codeql.yml)
 [![GitHub Release](https://img.shields.io/github/release/FerroHEALTH/FerroEHR.svg?logo=github)](https://github.com/FerroHEALTH/FerroEHR/releases/latest)
 [![Image pulls](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fghcr-badge.elias.eu.org%2Fapi%2FFerroHEALTH%2FFerroEHR%2Fferroehr&query=downloadCount&label=image%20pulls&logo=github)](https://github.com/FerroHEALTH/FerroEHR/pkgs/container/ferroehr)
-[![FOSSA Status](https://app.fossa.com/api/projects/custom%2B63718%2FFerroEHR.svg?type=shield&issueType=license)](https://app.fossa.com/projects/custom%2B63718%2FFerroEHR?ref=badge_shield&issueType=license)
-[![FOSSA Status](https://app.fossa.com/api/projects/custom%2B63718%2FFerroEHR.svg?type=shield&issueType=security)](https://app.fossa.com/projects/custom%2B63718%2FFerroEHR?ref=badge_shield&issueType=security)
 
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=FerroHEALTH_FerroEHR&metric=coverage)](https://sonarcloud.io/component_measures?id=FerroHEALTH_FerroEHR&metric=coverage)
 [![Quality gate status](https://sonarcloud.io/api/project_badges/measure?project=FerroHEALTH_FerroEHR&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=FerroHEALTH_FerroEHR)
@@ -681,9 +679,6 @@ third-party tree, is on the documentation site's
 [Licensing & legal](https://ferroehr.eu/docs/latest/licensing.html) page.
 
 ## Acknowledgments and license
-
-
-[![FOSSA Status](https://app.fossa.com/api/projects/custom%2B63718%2FFerroEHR.svg?type=large&issueType=license)](https://app.fossa.com/projects/custom%2B63718%2FFerroEHR?ref=badge_large&issueType=license)
 
 ### Acknowledgments
 

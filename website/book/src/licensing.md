@@ -271,10 +271,6 @@ attach to those crates' own files, which are consumed unmodified. No strong
 copyleft (GPL, LGPL, AGPL, SSPL) is admitted, and a new dependency carrying one
 fails the build.
 
-A separate FOSSA lane publishes dependency and license analysis from the
-committed CLI configuration for review. It is analysis-only by design and gates
-no merge; `cargo deny` is the gate.
-
 ## Trademarks and lineage
 
 The trademarks of the FerroHEALTH family are on

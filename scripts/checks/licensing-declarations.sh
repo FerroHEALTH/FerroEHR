@@ -104,7 +104,6 @@ readonly -a STALE_EXCLUDED=(
   ':(exclude).github/cff-schema/**'
   ':(exclude)website/book/theme/mermaid.min.js'
   ':(exclude)website/book/src/katex/**'
-  ':(exclude)security/fossa-adjudications.md'
   ':(exclude)CHANGELOG.md'
   ':(exclude)scripts/checks/licensing-declarations.sh'
 )
