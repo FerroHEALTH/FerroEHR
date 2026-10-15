@@ -109,6 +109,21 @@ pub(super) fn validate_opt_structure(xml: &str) -> Result<(), ServiceError> {
 #[cfg(test)]
 mod tests {
     use super::validate_opt_structure;
+    use crate::service::error::ServiceError;
+
+    /// The refused element and the rule it broke, read from the violation.
+    fn refusal(xml: &str) -> String {
+        match validate_opt_structure(xml) {
+            Err(ServiceError::Unprocessable { violation, .. }) => {
+                format!(
+                    "{} {}",
+                    violation.path().unwrap_or_default(),
+                    violation.detail()
+                )
+            }
+            other => panic!("expected a content refusal, got {other:?}"),
+        }
+    }
 
     fn tmpl(children: &str) -> String {
         format!(
@@ -131,7 +146,7 @@ mod tests {
     fn rejects_a_foreign_top_level_element() {
         // CNF invalid_templates/alien_tags — a <bullfrog> tag at the top level.
         let xml = tmpl("<concept>C</concept><bullfrog>x</bullfrog>");
-        let err = validate_opt_structure(&xml).unwrap_err().to_string();
+        let err = refusal(&xml);
         assert!(err.contains("bullfrog"), "{err}");
     }
 
@@ -140,7 +155,7 @@ mod tests {
         // CNF invalid_templates/multiple_elements — concept/definition/template_id twice.
         for name in ["concept", "definition", "template_id"] {
             let xml = tmpl(&format!("<{name}>a</{name}><{name}>b</{name}>"));
-            let err = validate_opt_structure(&xml).unwrap_err().to_string();
+            let err = refusal(&xml);
             assert!(err.contains("duplicate"), "{name}: {err}");
         }
     }

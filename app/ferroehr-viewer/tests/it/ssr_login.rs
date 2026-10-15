@@ -84,7 +84,7 @@ async fn post_sign_in(
     let service = ferroehr_viewer::server::router(app_state(&cdr), options);
     let request = http::Request::builder()
         .method(http::Method::POST)
-        .uri("/api/login_basic")
+        .uri(<ferroehr_viewer::auth::LoginBasic as leptos::server_fn::ServerFn>::PATH)
         .header(
             http::header::CONTENT_TYPE,
             "application/x-www-form-urlencoded",

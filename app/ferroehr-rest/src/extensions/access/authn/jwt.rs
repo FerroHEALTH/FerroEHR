@@ -518,7 +518,7 @@ mod tests {
                 issuer: ISSUER.to_owned(),
                 audiences: vec![AUDIENCE.to_owned()],
                 algorithms: vec!["RS256".to_owned()],
-                jwks_json: Some(r#"{"keys":[{"kty":"s3cr3t-key-material"}]}"#.to_owned()),
+                jwks_json: Some(r#"{"keys":["s3cr3t-key-material"]}"#.to_owned()),
                 ..OidcConfig::default()
             },
             ferroehr::config::authz::RbacConfig::default().role_claims,
@@ -969,7 +969,7 @@ mod tests {
                 .and(path(JWKS_PATH))
                 .respond_with(
                     ResponseTemplate::new(200)
-                        .set_body_json(json!({ "keys": [{ "kty": "s3cr3t-key-material" }] })),
+                        .set_body_json(json!({ "keys": ["s3cr3t-key-material"] })),
                 )
                 .mount(&server)
                 .await;
@@ -987,6 +987,10 @@ mod tests {
         /// A key set that cannot be fetched answers a curated `503` body that
         /// names neither the identity provider's URL nor the transport error,
         /// while the log can walk to the concrete `reqwest::Error`.
+        ///
+        /// OIDC discovery fetches the key set itself
+        /// (<https://docs.rs/openidconnect/4.0.1/openidconnect/struct.ProviderMetadata.html#method.discover_async>),
+        /// so a dead key-set endpoint fails the discovery step.
         #[tokio::test]
         async fn a_failed_key_set_fetch_keeps_its_cause_out_of_the_body() {
             let server = MockServer::start().await;
@@ -1004,17 +1008,18 @@ mod tests {
             let AuthError::KeyResolution(resolution) = &err else {
                 panic!("got {err:?}");
             };
-            let transport = std::error::Error::source(resolution)
-                .and_then(|cause| cause.downcast_ref::<reqwest::Error>())
-                .expect("the transport error is the source");
+            let mut cause = std::error::Error::source(resolution);
+            let mut transport = None;
+            while let Some(current) = cause {
+                transport = transport.or_else(|| current.downcast_ref::<reqwest::Error>());
+                cause = current.source();
+            }
+            let transport = transport.expect("the chain reaches the transport error");
 
             let api = err.to_api_error();
             assert_eq!(api.status(), http::StatusCode::SERVICE_UNAVAILABLE);
             let body = api.to_string();
-            assert!(
-                body.contains("the identity provider's key set could not be fetched"),
-                "{body}"
-            );
+            assert!(body.contains("OIDC discovery failed"), "{body}");
             assert!(
                 !body.contains("127.0.0.1"),
                 "the body names the URL: {body}"

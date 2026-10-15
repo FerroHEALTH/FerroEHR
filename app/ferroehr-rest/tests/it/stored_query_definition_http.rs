@@ -297,7 +297,9 @@ async fn store_refuses_a_query_the_engine_refuses_and_stores_nothing() {
             .header(header::ACCEPT, "application/json")
             .body(Body::empty())
             .unwrap();
+        // definition_query_list declares `200` only: nothing stored is `[]`.
         let (status, _h, body) = send(&app, get).await;
-        assert_eq!(status, StatusCode::NOT_FOUND, "{name} was stored: {body}");
+        assert_eq!(status, StatusCode::OK, "{name}: {body}");
+        assert_eq!(body.trim(), "[]", "{name} was stored: {body}");
     }
 }

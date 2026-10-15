@@ -1389,7 +1389,7 @@ fn fill_time_anchor(obj: &mut Map<String, Value>, rm_type: &str) {
 }
 
 /// Stamps `archetype_details` on an archetype-root node.
-fn stamp_archetype_details(
+pub(crate) fn stamp_archetype_details(
     obj: &mut Map<String, Value>,
     node: &WebTemplateNode,
     is_root: bool,

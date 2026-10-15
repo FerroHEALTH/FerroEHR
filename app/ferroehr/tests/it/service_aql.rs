@@ -3716,7 +3716,7 @@ async fn a_variable_under_an_or_branch_composition_is_projected() {
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
     let aql = format!(
         "SELECT c1/uid/value, o/archetype_node_id FROM EHR e CONTAINS \
-         (COMPOSITION c1[openEHR-EHR-COMPOSITION.minimal.v1] CONTAINS OBSERVATION o \
+         ((COMPOSITION c1[openEHR-EHR-COMPOSITION.minimal.v1] CONTAINS OBSERVATION o) \
           OR COMPOSITION c2[{REFERRAL_ARCHETYPE}])"
     );
 

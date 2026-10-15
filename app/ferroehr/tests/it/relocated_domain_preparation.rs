@@ -292,8 +292,12 @@ async fn the_grant_sweep_reaches_a_relocated_database() {
     assert!(relation.starts_with("party."), "{relation}");
 }
 
-/// An erasure of the relocated layout leaves no schema of this build in
-/// either database.
+/// An erasure of the relocated layout leaves no schema of this build in the
+/// linkage database, and drops every set the first database is prepared with.
+///
+/// The first database is a migrated clone, so it also carries a populated
+/// `linkage` schema this layout places elsewhere; an erasure never drops a
+/// schema that holds objects outside its plan, so that one stays.
 #[tokio::test]
 async fn an_erasure_empties_the_relocated_database() {
     let db = testkit::db().await.expect("testkit database");
@@ -302,7 +306,10 @@ async fn an_erasure_empties_the_relocated_database() {
         .await
         .expect("the erasure runs");
     assert!(schemas_of_this_build(&second.pool()).await.is_empty());
-    assert!(schemas_of_this_build(&db.pool()).await.is_empty());
+    assert_eq!(
+        schemas_of_this_build(&db.pool()).await,
+        vec!["linkage".to_owned()]
+    );
 }
 
 /// `SQLSTATE` 42501 `insufficient_privilege` (`PostgreSQL` docs § Appendix A

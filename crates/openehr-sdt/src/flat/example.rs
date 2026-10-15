@@ -49,7 +49,7 @@ use std::collections::{BTreeMap, BTreeSet, HashSet};
 use openehr_rm::v1_2::paths::{PathSegment, RmPath};
 use serde_json::{Map, Value, json};
 
-use crate::flat::build::structural_from;
+use crate::flat::build::{stamp_archetype_details, structural_from};
 use crate::flat::convert::composition_from_flat;
 use crate::flat::webtemplate::model::{
     WebTemplate, WebTemplateInput, WebTemplateInputType, WebTemplateNode, WebTemplateRange,
@@ -161,6 +161,7 @@ pub fn example_composition(wt: &WebTemplate, level: DetailLevel) -> Value {
     match composition_from_flat(&flat, wt, EXAMPLE_DATE_TIME) {
         Ok(mut value) => {
             fill_mandatory_structures(&mut value, &wt.tree);
+            fill_content_less_sections(&mut value, &wt.tree);
             value
         }
         // The build does not fail for a well-formed tree; keep a total function.
@@ -523,6 +524,76 @@ fn fill_mandatory_structures(composition: &mut Value, tree: &WebTemplateNode) {
             }
         });
     }
+}
+
+/// Adds the occurrences a content-less mandatory SECTION is short of.
+///
+/// A SECTION the template constrains by its name alone has no leaf, so the FLAT
+/// map cannot express it. `SECTION.items` is optional
+/// (`RM/docs/UML/classes/org.openehr.rm.composition.section.adoc` §Attributes),
+/// so the empty node is a conforming instance, inserted up to its occurrences
+/// lower bound (AOM 1.4 `master04-constraint_model_package.adoc`
+/// §occurrences).
+fn fill_content_less_sections(composition: &mut Value, node: &WebTemplateNode) {
+    for child in &node.children {
+        if child.rm_type == "SECTION" && child.children.is_empty() {
+            insert_missing_occurrences(composition, child);
+        }
+        fill_content_less_sections(composition, child);
+    }
+}
+
+/// Inserts empty instances of `node` under every owner its `aql_path` reaches
+/// until each holds the node's occurrences lower bound.
+fn insert_missing_occurrences(composition: &mut Value, node: &WebTemplateNode) {
+    let Some(min) = node
+        .min
+        .and_then(|m| usize::try_from(m).ok())
+        .filter(|m| *m >= 1)
+    else {
+        return;
+    };
+    // NOTE: no openEHR spec governs example generation — a path that does not
+    // parse locates nothing, so nothing is inserted.
+    let Ok(path) = node.aql_path.parse::<RmPath>() else {
+        return;
+    };
+    let Some((last, owner)) = path.segments.split_last() else {
+        return;
+    };
+    let name = last
+        .predicate
+        .name_value
+        .clone()
+        .or_else(|| node.localized_name.clone())
+        .or_else(|| node.name.clone())
+        .unwrap_or_else(|| node.id.clone());
+    let mut instance = Map::new();
+    instance.insert("_type".into(), json!(node.rm_type));
+    instance.insert("name".into(), json!({"_type": "DV_TEXT", "value": name}));
+    if let Some(id) = &node.node_id {
+        instance.insert("archetype_node_id".into(), json!(id));
+    }
+    stamp_archetype_details(&mut instance, node, false, "");
+    let instance = Value::Object(instance);
+    for_each_at_mut(composition, owner, &mut |obj| {
+        let Value::Object(m) = obj else {
+            return;
+        };
+        let Value::Array(items) = m
+            .entry(last.attribute.clone())
+            .or_insert_with(|| Value::Array(Vec::new()))
+        else {
+            return;
+        };
+        let present = items
+            .iter()
+            .filter(|item| last.predicate.matches(item))
+            .count();
+        for _ in present..min {
+            items.push(instance.clone());
+        }
+    });
 }
 
 /// Collects the mandatory attribute paths and the structural stubs of the

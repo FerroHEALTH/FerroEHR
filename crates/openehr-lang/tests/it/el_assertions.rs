@@ -120,12 +120,13 @@ fn syntax(src: &str) -> Result<String, ElError> {
 // ── the grammar, over the pinned production schemas ──────────────────────
 
 /// The json serialisations of the component schemas `docs/VERSIONS.md` pins,
-/// the files `openehr-codegen` itself reads.
+/// the files `openehr-codegen` itself reads; AM 2.4.0 in its ODIN form, since
+/// its json does not read (`vendor_bmm_schema.rs`, its pinned row).
 const PINNED_SCHEMAS: &[&str] = &[
     "BASE/json/openehr_base_1.3.0.bmm.json",
     "RM/json/openehr_rm_1.2.0.bmm.json",
     "AM/json/openehr_am_1.4.0.bmm.json",
-    "AM/json/openehr_am_2.4.0.bmm.json",
+    "AM/odin/openehr_am_2.4.0.bmm",
     "TERM/json/openehr_term_3.1.0.bmm.json",
     "LANG/json/openehr_lang_1.1.0.bmm.json",
     "LANG/json/openehr_lang_1.1.0-bmm3.bmm.json",
@@ -248,7 +249,15 @@ fn read_pinned(file: &str) -> PBmmSchema {
         .join(file);
     let src =
         std::fs::read_to_string(&full).unwrap_or_else(|e| panic!("read {}: {e}", full.display()));
-    read_schema_json(&src).unwrap_or_else(|e| panic!("{file}: the pinned schema reads: {e}"))
+    let read = if std::path::Path::new(file)
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("json"))
+    {
+        read_schema_json(&src)
+    } else {
+        read_schema(&src)
+    };
+    read.unwrap_or_else(|e| panic!("{file}: the pinned schema reads: {e}"))
 }
 
 /// Every assertion string of `schema`: class invariants plus routine pre- and

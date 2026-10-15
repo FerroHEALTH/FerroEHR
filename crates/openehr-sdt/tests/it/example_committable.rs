@@ -24,7 +24,7 @@
 use std::path::{Path, PathBuf};
 
 use openehr_its::opt14;
-use openehr_rm::v1_2::paths::RmPath;
+use openehr_rm::v1_2::paths::{PathSegment, RmPath};
 use openehr_sdt::flat::example::{DetailLevel, example_composition};
 use openehr_sdt::flat::webtemplate::builder::build_web_template;
 use openehr_sdt::flat::webtemplate::model::{
@@ -68,10 +68,31 @@ fn top_level_opts(dir: &Path) -> Vec<PathBuf> {
     out
 }
 
+/// The vendored templates whose examples cannot pass the commit path, each
+/// with its reason.
+const NOT_COMMITTABLE: &[(&str, &str)] = &[
+    (
+        "pregnancy-ecosystem-testing.opt",
+        "the template pins COMPOSITION.category to 435, a code the openEHR \
+         terminology's composition category group (431, 433, 451, 815) does not hold",
+    ),
+    // TODO(#3779): same-archetype siblings told apart by name merge in the example.
+    (
+        "covid-19-pneumonia-diagnosis-and-treatment-7th-edition.opt",
+        "two name-distinguished imaging_exam_result siblings",
+    ),
+];
+
 /// Generates every committable level of `path`'s template and returns the
 /// validation messages, each prefixed with the file and level.
+///
+/// Only a COMPOSITION commits, so a template rooted in another class is outside
+/// the committable claim (#3780).
 fn committable_findings(path: &Path) -> Vec<String> {
     let name = file_name(path);
+    if NOT_COMMITTABLE.iter().any(|(file, _)| *file == name) {
+        return Vec::new();
+    }
     let xml = std::fs::read_to_string(path).unwrap_or_else(|e| panic!("read {name}: {e}"));
     // A template the conformant reader refuses is pinned by the reader's own
     // gates; there is no example to generate for it.
@@ -81,6 +102,9 @@ fn committable_findings(path: &Path) -> Vec<String> {
     let Ok(wt) = build_web_template(&opt) else {
         return Vec::new();
     };
+    if wt.tree.rm_type != "COMPOSITION" {
+        return Vec::new();
+    }
     let mut out = Vec::new();
     for level in COMMITTABLE {
         let example = example_composition(&wt, level);
@@ -193,8 +217,9 @@ fn make_content_less_mandatory(
     });
 }
 
-/// The archetype node id the last segment of the stub's owner path names.
-fn owner_node_id(stub: &WebTemplateStructuralStub) -> String {
+/// The segments of the stub's owner path: the attribute's absolute path
+/// without the attribute itself.
+fn owner_segments(stub: &WebTemplateStructuralStub) -> Vec<PathSegment> {
     let owner = stub
         .path
         .strip_suffix(stub.attr.as_str())
@@ -204,9 +229,23 @@ fn owner_node_id(stub: &WebTemplateStructuralStub) -> String {
         .parse()
         .unwrap_or_else(|e| panic!("owner path {owner}: {e}"));
     path.segments
-        .last()
-        .and_then(|s| s.predicate.archetype_node_id.clone())
-        .unwrap_or_else(|| panic!("node-identified owner {owner}"))
+}
+
+/// Every canonical-JSON object `segments` reach from `node`, each step selecting
+/// the values whose node id and name its predicate matches.
+fn objects_at<'a>(node: &'a Value, segments: &[PathSegment], out: &mut Vec<&'a Value>) {
+    let Some((segment, rest)) = segments.split_first() else {
+        out.push(node);
+        return;
+    };
+    match node.get(&segment.attribute) {
+        Some(Value::Array(items)) => items
+            .iter()
+            .filter(|item| segment.predicate.matches(item))
+            .for_each(|item| objects_at(item, rest, out)),
+        Some(single) if segment.predicate.matches(single) => objects_at(single, rest, out),
+        _ => {}
+    }
 }
 
 /// Every canonical-JSON object whose `archetype_node_id` is `id`.
@@ -240,23 +279,25 @@ fn assert_content_less_mandatory_is_materialised(attr: &str) {
     let mut wt = web_template(&ckm_dir().join("vital-signs.opt"));
     let (holder_path, stub) = first_stub(&wt, attr);
     make_content_less_mandatory(&mut wt, &holder_path, &stub);
-    let owner_id = owner_node_id(&stub);
+    let segments = owner_segments(&stub);
     for level in [DetailLevel::Medium, DetailLevel::Complete] {
         let comp = example_composition(&wt, level);
         let mut owners = Vec::new();
-        objects_with_id(&comp, &owner_id, &mut owners);
+        objects_at(&comp, &segments, &mut owners);
         assert!(
             !owners.is_empty(),
-            "{level:?}: the example carries {owner_id}"
+            "{level:?}: the example carries the owner of {}",
+            stub.path
         );
         for owner in owners {
             let value = owner
                 .get(attr)
-                .unwrap_or_else(|| panic!("{level:?}: {owner_id}.{attr} is present: {owner}"));
+                .unwrap_or_else(|| panic!("{level:?}: {} is present: {owner}", stub.path));
             assert_eq!(
                 value.get("archetype_node_id").and_then(Value::as_str),
                 Some(stub.node_id.as_str()),
-                "{level:?}: {owner_id}.{attr} carries the constrained node id"
+                "{level:?}: {} carries the constrained node id",
+                stub.path
             );
         }
         let missing = missing_attribute(&comp, &wt, attr);

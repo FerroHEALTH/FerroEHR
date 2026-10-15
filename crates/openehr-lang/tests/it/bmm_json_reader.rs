@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
+// SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
 //! The JSON serialisation of a `P_BMM` schema reads to the same `P_BMM_SCHEMA`
@@ -53,6 +54,26 @@ const JSON_SCHEMAS: &[&str] = &[
     "TERM/json/openehr_term_3.1.0.bmm.json",
 ];
 
+/// The vendored json schemas the strict reader refuses, each with the element
+/// its message names.
+///
+/// AM 2.4.0's json gives the `P_BMM_GENERIC_PROPERTY` `value_sets` a
+/// `cardinality`, which only `P_BMM_CONTAINER_PROPERTY` declares
+/// (`LANG/docs/UML/classes/org.openehr.lang.bmm_persistence.p_bmm_generic_property.adoc`
+/// §Attributes); its ODIN twin carries none.
+const REFUSED_JSON: &[(&str, &str)] = &[(
+    "AM/json/openehr_am_2.4.0.bmm.json",
+    "ARCHETYPE_TERMINOLOGY/properties/value_sets: attribute `cardinality`",
+)];
+
+/// The adjudicated refusal of `file`, when [`REFUSED_JSON`] names it.
+fn refused(file: &str) -> Option<&'static str> {
+    REFUSED_JSON
+        .iter()
+        .find(|(refused, _)| *refused == file)
+        .map(|(_, detail)| *detail)
+}
+
 /// Reads `file` under [`components`] as text.
 fn source(file: &str) -> String {
     let path = components().join(file);
@@ -82,11 +103,11 @@ fn assert_same_reading(label: &str, json: &PBmmSchema, odin: &PBmmSchema) {
             "{label}: the {list} differ in membership or order"
         );
         for (json_class, odin_class) in json_list.iter().zip(odin_list) {
-            assert_eq!(
-                json_class,
-                odin_class,
-                "{label}: {list}/{} reads differently",
-                json_class.name()
+            assert!(
+                json_class == odin_class,
+                "{label}: {list}/{} reads differently: {}",
+                json_class.name(),
+                first_difference(&format!("{json_class:#?}"), &format!("{odin_class:#?}"))
             );
         }
     }
@@ -97,6 +118,31 @@ fn assert_same_reading(label: &str, json: &PBmmSchema, odin: &PBmmSchema) {
     assert_eq!(json, odin, "{label}: the schema headers differ");
 }
 
+/// The first line where two pretty-printed readings part, with the field path
+/// leading to it, so a parity failure names the field that differs.
+fn first_difference(json: &str, odin: &str) -> String {
+    let mut open: Vec<&str> = Vec::new();
+    for (json_line, odin_line) in json.lines().zip(odin.lines()) {
+        if json_line != odin_line {
+            return format!(
+                "under {}:\n  json: {json_line}\n  odin: {odin_line}",
+                open.join(" > ")
+            );
+        }
+        let trimmed = json_line.trim();
+        if trimmed.ends_with('{') || trimmed.ends_with('[') || trimmed.ends_with('(') {
+            open.push(trimmed);
+        } else if trimmed.starts_with('}') || trimmed.starts_with(']') || trimmed.starts_with(')') {
+            open.pop();
+        }
+    }
+    format!(
+        "one reading is a prefix of the other ({} vs {} lines)",
+        json.lines().count(),
+        odin.lines().count()
+    )
+}
+
 #[test]
 fn every_component_schema_published_in_both_serialisations_reads_to_one_value() {
     let mut pairs = 0usize;
@@ -104,7 +150,7 @@ fn every_component_schema_published_in_both_serialisations_reads_to_one_value() 
         let odin_file = file
             .replace("/json/", "/odin/")
             .replace(".bmm.json", ".bmm");
-        if !components().join(&odin_file).exists() {
+        if !components().join(&odin_file).exists() || refused(file).is_some() {
             continue;
         }
         let json = read_schema_json(&source(file)).unwrap_or_else(|e| panic!("{file}: {e}"));
@@ -113,14 +159,24 @@ fn every_component_schema_published_in_both_serialisations_reads_to_one_value() 
         pairs += 1;
     }
     // Eighteen json schemas; the ODIN twins of BASE 1.3.0, RM 1.2.0 and
-    // TERM 3.1.0 are not vendored, since only their json carries the release.
-    assert_eq!(pairs, 15);
+    // TERM 3.1.0 are not vendored, since only their json carries the release,
+    // and AM 2.4.0's json does not read (`REFUSED_JSON`).
+    assert_eq!(pairs, 14);
 }
 
 #[test]
 fn every_component_json_schema_reads() {
     for file in JSON_SCHEMAS {
-        let schema = read_schema_json(&source(file)).unwrap_or_else(|e| panic!("{file}: {e}"));
+        let read = read_schema_json(&source(file));
+        if let Some(detail) = refused(file) {
+            let Err(error @ PBmmReadError::UnknownAttribute { .. }) = read else {
+                panic!("{file}: expected the adjudicated refusal, got {read:?}");
+            };
+            let message = error.to_string();
+            assert!(message.contains(detail), "{file}: {message}");
+            continue;
+        }
+        let schema = read.unwrap_or_else(|e| panic!("{file}: {e}"));
         assert!(
             schema.class_definitions.is_some(),
             "{file}: no class definitions were read"

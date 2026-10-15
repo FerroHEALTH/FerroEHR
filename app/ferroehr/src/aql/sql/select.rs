@@ -294,11 +294,11 @@ impl Builder<'_> {
             }
         }
         for (ehr_status, leaf) in leaves {
-            if leaf.anchor.is_empty() {
-                continue;
-            }
             if ehr_status {
                 self.ensure_ehr_status_root(leaf.source.0)?;
+            }
+            if leaf.anchor.is_empty() {
+                continue;
             }
             let mut parent = self.source_node(leaf.source.0)?;
             let mut prefix: Vec<StructureStep> = Vec::with_capacity(leaf.anchor.len());

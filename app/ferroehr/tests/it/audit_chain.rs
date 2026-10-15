@@ -377,9 +377,12 @@ async fn verify_mode_accepts_a_migrated_database_and_refuses_a_stale_one() {
         ),
         "the refusal must be the typed one: {error}"
     );
+    let divergence = std::error::Error::source(&error)
+        .map(ToString::to_string)
+        .unwrap_or_default();
     assert!(
-        error.to_string().contains("audit"),
-        "the refusal must name the schema: {error}"
+        divergence.contains("audit"),
+        "the refusal's divergence must name the schema: {error}: {divergence}"
     );
 
     // Apply mode is the zero-config path, and it repairs what verify refused.

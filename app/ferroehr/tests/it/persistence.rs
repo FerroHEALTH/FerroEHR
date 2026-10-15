@@ -87,7 +87,7 @@ async fn migrations_apply_cleanly_and_idempotently() {
     // `_sqlx_migrations` reads as the set's table of contents.
     assert_eq!(applied("ext").await, 4);
     assert_eq!(applied("clinical").await, 14);
-    assert_eq!(applied("party").await, 9);
+    assert_eq!(applied("party").await, 10);
     assert_eq!(applied("linkage").await, 5);
     assert_eq!(applied("audit").await, 11);
 

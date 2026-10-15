@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
+// SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
 //! The P_BMM schema reader for the JSON serialisation: `.bmm.json` text → the

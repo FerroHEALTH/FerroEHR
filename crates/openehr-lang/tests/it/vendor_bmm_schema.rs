@@ -61,7 +61,7 @@ use openehr_lang::v1_1::bmm_persistence::validate::validate_schema;
 /// (`master02-overview.adoc` §Conceptual Approach).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Stage {
-    /// `read_schema` — the ODIN → `P_BMM_SCHEMA` walk.
+    /// `read_schema` / `read_schema_json` — the ODIN or json → `P_BMM_SCHEMA` walk.
     Read,
     /// `resolve_includes` — schema inclusion resolution.
     Resolve,
@@ -516,12 +516,12 @@ struct PinnedCase {
 /// two published files cannot both answer one `includes` entry. The
 /// tie-break is exercised from both sides —
 /// [`am_2_4_0_is_refused_against_either_published_lang_1_1_0_schema`] pins that
-/// neither choice materialises AM 2.4.0.
+/// neither choice materialises AM 2.4.0. AM 2.4.0's json is absent too: it does
+/// not read (its [`pinned_cases`] row), and no schema includes an AM schema.
 const INCLUDE_SOURCES: &[&str] = &[
     "AM/json/openehr_am_1.4.0.bmm.json",
     "AM/json/openehr_am_2.2.0.bmm.json",
     "AM/json/openehr_am_2.3.0.bmm.json",
-    "AM/json/openehr_am_2.4.0.bmm.json",
     "BASE/json/openehr_base_1.0.4.bmm.json",
     "BASE/json/openehr_base_1.1.0.bmm.json",
     "BASE/json/openehr_base_1.2.0.bmm.json",
@@ -585,11 +585,11 @@ fn pinned_cases() -> Vec<PinnedCase> {
         PinnedCase {
             file: "AM/json/openehr_am_2.4.0.bmm.json",
             outcome: PinnedOutcome::Refused(
-                Stage::Model,
-                Kind::UnknownType,
-                "class `BMM_ENUMERATION` property `item_values`: type `T`",
+                Stage::Read,
+                Kind::UnknownAttribute,
+                "ARCHETYPE_TERMINOLOGY/properties/value_sets: attribute `cardinality`",
             ),
-            adjudication: "AM 2.4.0 includes openehr_lang_1.1.0 and so inherits that schema's own defect below; against the other published openehr_lang_1.1.0 file it is refused for STATEMENT_SET instead — see am_2_4_0_is_refused_against_either_published_lang_1_1_0_schema",
+            adjudication: "the json serialisation gives the P_BMM_GENERIC_PROPERTY `value_sets` a `cardinality`, which only P_BMM_CONTAINER_PROPERTY declares (LANG org.openehr.lang.bmm_persistence.p_bmm_generic_property.adoc §Attributes); its ODIN twin carries none. Read from ODIN, AM 2.4.0 is still refused at the model stage — see am_2_4_0_is_refused_against_either_published_lang_1_1_0_schema",
         },
         PinnedCase {
             file: "BASE/json/openehr_base_1.0.4.bmm.json",
@@ -818,14 +818,22 @@ fn the_finding_table_names_only_schemas_that_materialise() {
     }
 }
 
-/// Reads one json file under [`CODEGEN_VENDOR`] as a `P_BMM_SCHEMA`.
-fn read_pinned(file: &str) -> PBmmSchema {
+/// The text of one file under [`CODEGEN_VENDOR`].
+fn pinned_source(file: &str) -> String {
     let full = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join(CODEGEN_VENDOR)
         .join(file);
-    let src =
-        std::fs::read_to_string(&full).unwrap_or_else(|e| panic!("read {}: {e}", full.display()));
-    read_schema_json(&src).unwrap_or_else(|e| panic!("{file}: the pinned schema reads: {e}"))
+    std::fs::read_to_string(&full).unwrap_or_else(|e| panic!("read {}: {e}", full.display()))
+}
+
+/// Reads one json file under [`CODEGEN_VENDOR`] as a `P_BMM_SCHEMA`.
+fn read_pinned_json(file: &str) -> Result<PBmmSchema, PBmmReadError> {
+    read_schema_json(&pinned_source(file))
+}
+
+/// Reads one json file under [`CODEGEN_VENDOR`] that must read.
+fn read_pinned(file: &str) -> PBmmSchema {
+    read_pinned_json(file).unwrap_or_else(|e| panic!("{file}: the pinned schema reads: {e}"))
 }
 
 /// [`INCLUDE_SOURCES`] keyed by `schema_id`.
@@ -850,10 +858,12 @@ fn every_pinned_openehr_component_schema_reaches_its_adjudicated_outcome() {
     // class its own inclusion closure does not define.
     let available = pinned_include_map();
     for case in pinned_cases() {
-        let schema = read_pinned(case.file);
-        let id = schema.schema_id();
-        let observed = resolve_includes(schema, &available)
-            .map_err(|error| (Stage::Resolve, error))
+        let id = case.file;
+        let observed = read_pinned_json(case.file)
+            .map_err(|error| (Stage::Read, error))
+            .and_then(|schema| {
+                resolve_includes(schema, &available).map_err(|error| (Stage::Resolve, error))
+            })
             .and_then(|resolved| match create_bmm_model(&resolved) {
                 Ok(model) => {
                     let findings: Vec<String> = validate_schema(&resolved, &model)
@@ -941,9 +951,12 @@ fn am_2_4_0_is_refused_against_either_published_lang_1_1_0_schema() {
             let schema = read_pinned(file);
             available.insert(schema.schema_id(), schema);
         }
-        let resolved =
-            resolve_includes(read_pinned("AM/json/openehr_am_2.4.0.bmm.json"), &available)
-                .unwrap_or_else(|e| panic!("{lang}: inclusion resolution: {e}"));
+        // The json serialisation does not read (its `pinned_cases` row); the
+        // model question is the same over the ODIN twin.
+        let am = read_schema(&pinned_source("AM/odin/openehr_am_2.4.0.bmm"))
+            .unwrap_or_else(|e| panic!("AM 2.4.0 ODIN reads: {e}"));
+        let resolved = resolve_includes(am, &available)
+            .unwrap_or_else(|e| panic!("{lang}: inclusion resolution: {e}"));
         let error = create_bmm_model(&resolved)
             .err()
             .unwrap_or_else(|| panic!("{lang}: AM 2.4.0 unexpectedly materialised"));

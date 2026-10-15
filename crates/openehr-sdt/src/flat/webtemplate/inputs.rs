@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Cada.map(|assumed| assumed.symbol.defining_code.code_string.as_str()),|s| s.value.defining_code.code_string.as_str());to B.V.
+// SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
 //! RM-type → `inputs` mapping.

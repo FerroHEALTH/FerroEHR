@@ -260,8 +260,15 @@ workflow refuses a tag that has no matching section here.
 - **Example compositions pass the server's own validation** (#3739, #3740).
   `GET /definition/template/adl1.4/{template_id}/example` now carries every
   attribute the template makes mandatory, an EVENT `state` or ENTRY
-  `protocol` without data points included, and never sets `value` and
-  `null_flavour` on one ELEMENT (RM `Inv_null_flavour_indicated`).
+  `protocol` without data points included, every SECTION the template
+  requires but names only, and never sets `value` and `null_flavour` on one
+  ELEMENT (RM `Inv_null_flavour_indicated`). The cases it still cannot cover
+  are #3779 and #3780.
+- **The web template keeps an ELEMENT's `value` beside its `null_flavour`.** An
+  ELEMENT constraining a text `value` and a coded `null_flavour` was folded
+  into one coded node with an `other` input, which dropped the `value`. That
+  fold now applies only to two alternatives of one attribute (Simplified
+  Formats master04 §"Open Value-Sets and the `|other` Suffix").
 - **XML without the required `id` of a key/value element is refused** (#3741).
   An OPT 1.4, archetype or RM XML document whose `original_author`,
   `other_details` or other `StringDictionaryItem` element has no `id`

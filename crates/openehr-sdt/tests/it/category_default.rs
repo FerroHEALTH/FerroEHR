@@ -15,7 +15,7 @@
 )]
 
 use openehr_its::opt14;
-use openehr_sdt::flat::convert::composition_from_flat;
+use openehr_sdt::flat::convert::{composition_from_flat, composition_to_flat};
 use openehr_sdt::flat::error::FlatError;
 use openehr_sdt::flat::tdd::from_tdd;
 use openehr_sdt::flat::webtemplate::builder::build_web_template;
@@ -66,16 +66,18 @@ fn web_template(codes: &[&str], assumed: Option<&str>) -> WebTemplate {
     build_web_template(&opt14::from_xml(&xml).expect("parse OPT")).expect("build WebTemplate")
 }
 
-/// The CNF FLAT instance of the template.
-fn flat_document() -> Map<String, Value> {
-    let path = format!("{CORPUS}/compositions/FLAT/persistent_minimal.en.v1__full.json");
+/// The template's FLAT instance under `wt`, flattened from the CNF canonical
+/// composition by this crate's own writer.
+fn flat_document(wt: &WebTemplate) -> Map<String, Value> {
+    let path = format!("{CORPUS}/compositions/CANONICAL_JSON/persistent_minimal.en.v1__full.json");
     let text = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {path}: {e}"));
-    serde_json::from_str(&text).expect("FLAT JSON")
+    let composition: Value = serde_json::from_str(&text).expect("canonical JSON");
+    composition_to_flat(&composition, wt).expect("FLAT from the canonical composition")
 }
 
-/// The CNF FLAT instance of the template, without its category.
-fn flat_without_category() -> Map<String, Value> {
-    let mut doc = flat_document();
+/// The template's FLAT instance under `wt`, without its category.
+fn flat_without_category(wt: &WebTemplate) -> Map<String, Value> {
+    let mut doc = flat_document(wt);
     doc.retain(|key, _| !key.starts_with("persistent_minimal/category"));
     doc
 }
@@ -108,7 +110,7 @@ fn category_code(comp: &Value) -> (&str, &str, &str) {
 #[test]
 fn persistent_only_template_defaults_to_431() {
     let wt = web_template(&["431"], None);
-    let flat = composition_from_flat(&flat_without_category(), &wt, NOW).expect("FLAT build");
+    let flat = composition_from_flat(&flat_without_category(&wt), &wt, NOW).expect("FLAT build");
     assert_eq!(category_code(&flat), ("431", "openehr", "persistent"));
     let tdd = from_tdd(&tdd_without_category(), &wt).expect("TDD build");
     assert_eq!(category_code(&tdd), ("431", "openehr", "persistent"));
@@ -117,7 +119,7 @@ fn persistent_only_template_defaults_to_431() {
 #[test]
 fn unconstrained_category_defaults_to_433() {
     let wt = web_template(&[], None);
-    let flat = composition_from_flat(&flat_without_category(), &wt, NOW).expect("FLAT build");
+    let flat = composition_from_flat(&flat_without_category(&wt), &wt, NOW).expect("FLAT build");
     assert_eq!(category_code(&flat), ("433", "openehr", "event"));
     let tdd = from_tdd(&tdd_without_category(), &wt).expect("TDD build");
     assert_eq!(category_code(&tdd), ("433", "openehr", "event"));
@@ -126,7 +128,7 @@ fn unconstrained_category_defaults_to_433() {
 #[test]
 fn several_admitted_codes_without_default_refuse_naming_the_path() {
     let wt = web_template(&["431", "433"], None);
-    match composition_from_flat(&flat_without_category(), &wt, NOW) {
+    match composition_from_flat(&flat_without_category(&wt), &wt, NOW) {
         Err(FlatError::MissingRequiredSuffix { key }) => {
             assert_eq!(key, "persistent_minimal/category|code");
         }
@@ -144,14 +146,14 @@ fn several_admitted_codes_without_default_refuse_naming_the_path() {
 #[test]
 fn an_explicit_category_is_kept() {
     let wt = web_template(&["431", "433"], None);
-    let flat = composition_from_flat(&flat_document(), &wt, NOW).expect("FLAT build");
+    let flat = composition_from_flat(&flat_document(&wt), &wt, NOW).expect("FLAT build");
     assert_eq!(category_code(&flat).0, "431");
 }
 
 #[test]
 fn several_admitted_codes_take_the_assumed_value() {
     let wt = web_template(&["431", "433"], Some("433"));
-    let flat = composition_from_flat(&flat_without_category(), &wt, NOW).expect("FLAT build");
+    let flat = composition_from_flat(&flat_without_category(&wt), &wt, NOW).expect("FLAT build");
     assert_eq!(category_code(&flat), ("433", "openehr", "event"));
     let tdd = from_tdd(&tdd_without_category(), &wt).expect("TDD build");
     assert_eq!(category_code(&tdd), ("433", "openehr", "event"));

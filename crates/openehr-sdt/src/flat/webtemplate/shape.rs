@@ -100,8 +100,14 @@ pub(super) fn post_process(node: &mut WebTemplateNode) {
     }
 }
 
+/// Merges an ELEMENT's coded-text and text alternatives for ONE attribute into a
+/// coded text with `other` (master04 §"Open Value-Sets and the `|other`
+/// Suffix"); a `value` beside a `null_flavour` constrains two attributes and
+/// stays two children.
 fn post_process_element(node: &mut WebTemplateNode) {
-    if let [first_child, second_child] = node.children.as_slice() {
+    if let [first_child, second_child] = node.children.as_slice()
+        && first_child.aql_path == second_child.aql_path
+    {
         let first = first_child.first_input_type();
         let second = second_child.first_input_type();
         if first == Some(WebTemplateInputType::CodedText)

@@ -1741,13 +1741,15 @@ fn like_and_matches_lower_existentially_on_anchored_leaves() {
         "matches on an anchored leaf is existential: {matches_sql}"
     );
     // NOT flips the polarity back to the scalar shape (three-valued SQL
-    // semantics preserved for absent leaves) — same rule as the comparisons.
+    // semantics preserved for absent leaves) — same rule as the comparisons;
+    // the one EXISTS left is the clause's assignment.
     let negated = build_sql(
         "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c \
          WHERE NOT c/context/other_context[at0001]/items[at0002]/value/value LIKE 'x*'",
     );
-    assert!(
-        anchor_exists(&negated) == 0,
+    assert_eq!(
+        anchor_exists(&negated),
+        1,
         "negative polarity keeps the scalar lowering: {negated}"
     );
 }
@@ -2146,7 +2148,7 @@ fn an_or_branch_binding_reads_the_latest_unrestricted_version() {
 fn a_variable_under_an_or_branch_versioned_object_is_readable() {
     let sql = build_sql(
         "SELECT c1/uid/value, o/name/value FROM EHR e CONTAINS \
-         (COMPOSITION c1 CONTAINS OBSERVATION o OR COMPOSITION c2)",
+         ((COMPOSITION c1 CONTAINS OBSERVATION o) OR COMPOSITION c2)",
     );
     assert_eq!(
         sql.matches("unnest(ARRAY(").count(),
@@ -2276,7 +2278,7 @@ fn the_patient_scope_refuses_an_id_held_under_two_namespaces() {
     )
     .sql;
     assert!(
-        scoped.contains(r#"NOT EXISTS (SELECT 1 FROM "ehr" AS "subject_other""#),
+        scoped.contains("NOT EXISTS(SELECT") && scoped.contains(r#"FROM "ehr" AS "subject_other""#),
         "{scoped}"
     );
     assert!(

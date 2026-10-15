@@ -30,8 +30,10 @@
 //!   (`migrations/clinical/0002_ehr.sql` through `0006_definitions.sql`).
 //! * **Table aliases** — `format!` over an integer source id or the builder's
 //!   own counter, never over query text: `n{sid}`, `v{sid}`, `e{sid}`,
-//!   `x{ctr}`, `xv{ctr}`, `s{ctr}`, `w{ctr}`, `p{ctr}`, `qg{ctr}`, `esv{ctr}`,
-//!   `esn{ctr}`, `a_v{sid}` (`aql::sql::from`, `aql::sql::value`,
+//!   `x{ctr}`, `xv{ctr}`, `s{ctr}`, `w{ctr}`, `b{ctr}`, `p{ctr}`, `qg{ctr}`,
+//!   `esv{ctr}`, `esn{ctr}`, `a_v{sid}`, the row bindings' inner `b{ctr}_n` /
+//!   `w{ctr}_n` and one-row `b{ctr}_one` / `w{ctr}_one`, and the streaming
+//!   source's inner `n{sid}_s` (`aql::sql::from`, `aql::sql::value`,
 //!   `aql::sql::select`), plus the two fixed `ehr` aliases of the patient-scope
 //!   rule, `subject_row` and `subject_other` (`aql::sql::subject`).
 //! * **Output-column aliases** — `col{i}` / `col{i}_{vo,sv,num,cap}` from the
@@ -617,6 +619,9 @@ const ALIAS_PATTERNS: &[&str] = &[
     r"^xv[0-9]+$",
     r"^s[0-9]+$",
     r"^w[0-9]+$",
+    r"^b[0-9]+$",
+    r"^(b|w)[0-9]+_(n|one)$",
+    r"^n[0-9]+_s$",
     r"^p[0-9]+$",
     r"^qg[0-9]+$",
     r"^esv[0-9]+$",

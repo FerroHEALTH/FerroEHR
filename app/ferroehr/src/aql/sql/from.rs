@@ -1786,6 +1786,6 @@ fn binding_rows(table: BoundTable, alias: &str, inner: &str, on: Expr) -> sea_qu
             rows.join_as(JoinType::LeftJoin, VersionRow::Table, Alias::new(inner), on)
         }
     };
-    let array = Expr::cust_with_exprs("ARRAY$1", [Expr::from(rows)]);
+    let array = Expr::cust_with_exprs("ARRAY($1)", [Expr::from(rows)]);
     sea_query::Func::cust(Alias::new("unnest")).arg(array)
 }
