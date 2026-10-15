@@ -319,7 +319,7 @@ jobs:
       - name: Documented keys resolve in their source
         run: bash scripts/checks/docs-claims.sh --all
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-notes
           path: release-notes.md
@@ -355,7 +355,7 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ github.sha }} # == plan's pinned commit: the dispatch-at-tag refusal makes them equal (#2790)
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: release-notes
 
@@ -382,7 +382,7 @@ jobs:
       # supplier, component name, version, other unique identifiers (purl),
       # dependency relationships, SBOM author and timestamp
       # (https://www.cisa.gov/sbom).
-      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+      - uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
         with:
           tool: syft@1.50.0
       - name: Generate the repository SPDX SBOM
@@ -533,7 +533,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         with:
           cache: false
-      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+      - uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
         with:
           tool: cargo-cyclonedx@0.5.9
       - name: The archive the SBOM describes, and the SBOM
@@ -655,7 +655,7 @@ jobs:
           tar -czf "ferroehr-${TAG}-trivy-reports.tar.gz" reports
       # Kept for a refused run too, so the findings to judge are one download
       # away rather than one re-run away.
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: vulnerability-record
@@ -827,7 +827,7 @@ jobs:
       # docker/Dockerfile and release-build.yml; the action fetches the
       # prebuilt binary and installs curl and jq into the slim container itself.
       - name: Install cargo-auditable
-        uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+        uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
         with:
           tool: cargo-auditable@0.7.5
 
@@ -856,7 +856,7 @@ jobs:
       - name: The OS VEX linkage facts hold for this binary
         run: bash scripts/checks/vex-linkage.sh target/release/ferroehr
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ferroehr-${{ matrix.platform }}
           path: target/release/ferroehr
@@ -949,7 +949,7 @@ jobs:
       # The viewer binary carries its dependency list too (#3675): the same
       # pinned `cargo auditable` as the app binary job above.
       - name: Install cargo-auditable
-        uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+        uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
         with:
           tool: cargo-auditable@0.7.5
 
@@ -975,7 +975,7 @@ jobs:
       - name: The OS VEX linkage facts hold for this binary
         run: bash scripts/checks/vex-linkage.sh target/release/ferroehr-viewer
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ferroehr-viewer-${{ matrix.platform }}
           path: target/release/ferroehr-viewer
@@ -993,7 +993,7 @@ jobs:
         if: matrix.platform == 'amd64'
         run: apt-get update && apt-get install -y --no-install-recommends curl ca-certificates
 
-      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+      - uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
         if: matrix.platform == 'amd64'
         with:
           tool: cargo-leptos@0.3.7,wasm-bindgen@0.2.128
@@ -1020,7 +1020,7 @@ jobs:
           # which is where leptos reads it from.
           cp target/release/hash.txt target/site/hash.txt
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: matrix.platform == 'amd64'
         with:
           name: ferroehr-viewer-site
