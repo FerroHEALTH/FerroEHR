@@ -160,10 +160,23 @@ pub enum CohortError {
     /// A demographic or linkage read failed.
     #[error("the cohort store is unavailable")]
     Database(#[source] sqlx::Error),
+    /// No connection to the demographic or linkage store could be obtained,
+    /// so nothing ran.
+    #[error("the cohort store is unavailable")]
+    Acquire(#[from] crate::db::acquire::AcquireError),
     /// The execution ran but its access record could not be taken, and the
     /// deployment fails closed, so the result is withheld.
     #[error("the access record could not be taken and the deployment fails closed")]
     Unrecorded(#[source] SmError),
+}
+
+impl From<super::store::StoreError> for CohortError {
+    fn from(error: super::store::StoreError) -> Self {
+        match error {
+            super::store::StoreError::Acquire(e) => CohortError::Acquire(e),
+            super::store::StoreError::Database(e) => CohortError::Database(e),
+        }
+    }
 }
 
 impl From<CohortError> for SmError {
@@ -183,9 +196,10 @@ impl From<CohortError> for SmError {
                 Self::new(CallStatusType::ContentInvalid, message).with_source(error)
             }
             CohortError::Database(_) => {
-                crate::service::error::internal_fault("execute a cohort query", &error)
+                crate::service::error::internal_fault_caused("execute a cohort query", &error)
                     .with_source(error)
             }
+            CohortError::Acquire(e) => SmError::from(e),
         }
     }
 }
@@ -211,7 +225,8 @@ impl FerroEhrService {
     /// [`CohortError::NoPredicates`] / [`CohortError::ScopeNotAllowed`] /
     /// [`CohortError::UnknownPredicate`] / [`CohortError::InvalidValue`] for a
     /// malformed request, [`CohortError::CohortTooLarge`] above the configured
-    /// ceiling, [`CohortError::Database`] when a domain read fails,
+    /// ceiling, [`CohortError::Acquire`] when no domain connection can be
+    /// obtained, [`CohortError::Database`] when a domain read fails,
     /// [`CohortError::Query`] when the AQL execution fails, and
     /// [`CohortError::Unrecorded`] when the access record could not be taken
     /// under `fail_mode = "closed"`.
@@ -258,7 +273,7 @@ impl FerroEhrService {
         let party_ids: Vec<VoId> = parties.into_iter().collect();
         let ehr_ids = super::store::open_mappings(&self.linkage_pool, &party_ids)
             .await
-            .map_err(CohortError::Database)?;
+            .map_err(CohortError::from)?;
         let cohort_size = u64::try_from(ehr_ids.len()).unwrap_or(u64::MAX);
 
         // Step three. An empty cohort scopes nothing, and an unscoped AQL is a

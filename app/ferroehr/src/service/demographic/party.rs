@@ -17,7 +17,9 @@
 )]
 
 use serde_json::Value;
+use sqlx::Connection as _;
 
+use crate::db::acquire::acquire;
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::service::demographic::support;
@@ -147,11 +149,11 @@ impl FerroEhrService {
     /// The representation is built **from the commit result** (never a
     /// post-commit re-read): the served body is the just-written canonical with
     /// the `uid` injected, byte-identical to a fresh [`Self::read_party`] (the
-    /// node codec round-trips losslessly; pinned by a test). When the
-    /// `DV_MULTIMEDIA` externalization engine is engaged the stored/served form
-    /// is the offloaded body, which the in-memory input does not reflect, so the
-    /// fresh read is kept for byte-fidelity (no openEHR spec governs media
-    /// externalization — our own extension).
+    /// node codec round-trips losslessly; pinned by a test). When the commit
+    /// rewrites the body ([`support::commit_rewrites_body`]: the `DV_MULTIMEDIA`
+    /// offload, or national-identifier protection), the in-memory input is not
+    /// the stored form, so the stored version is read back instead and the
+    /// response never carries a protected value the store does not hold.
     pub(super) async fn commit_new_party(
         &self,
         kind: PartyKind,
@@ -173,17 +175,11 @@ impl FerroEhrService {
             "PARTY creation",
         )?;
         let ctx = CommitEnv::signing_ctx(self);
-        // Keep the served bytes for the in-memory representation, unless media
-        // externalization is on (then the fresh read reflects the offloaded form).
-        #[cfg(feature = "multimedia")]
-        let repr_body = self
-            .multimedia
-            .as_ref()
-            .is_none_or(|e| !e.offload_enabled())
-            .then(|| body.clone());
-        #[cfg(not(feature = "multimedia"))]
-        let repr_body = Some(body.clone());
-        let mut tx = self.demographic_pool.begin().await?;
+        // Keep the served bytes for the in-memory representation, unless the
+        // commit rewrites the body (then the fresh read is the stored form).
+        let repr_body = (!support::commit_rewrites_body(self)).then(|| body.clone());
+        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut tx = conn.begin().await?;
         let committed = create(
             &mut tx,
             None,
@@ -307,15 +303,9 @@ impl FerroEhrService {
             "PARTY update",
         )?;
         let ctx = CommitEnv::signing_ctx(self);
-        #[cfg(feature = "multimedia")]
-        let repr_body = self
-            .multimedia
-            .as_ref()
-            .is_none_or(|e| !e.offload_enabled())
-            .then(|| body.clone());
-        #[cfg(not(feature = "multimedia"))]
-        let repr_body = Some(body.clone());
-        let mut tx = self.demographic_pool.begin().await?;
+        let repr_body = (!support::commit_rewrites_body(self)).then(|| body.clone());
+        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut tx = conn.begin().await?;
         let committed = update(
             &mut tx,
             None,
@@ -402,7 +392,8 @@ impl FerroEhrService {
 
         let audit = self.demographic_audit(update_audit, change_type::DELETED, "PARTY delete")?;
         let ctx = CommitEnv::signing_ctx(self);
-        let mut tx = self.demographic_pool.begin().await?;
+        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut tx = conn.begin().await?;
         let committed = delete(
             &mut tx,
             None,

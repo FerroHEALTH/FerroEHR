@@ -14,7 +14,9 @@
 //! through the `next` query parameter on BOTH paths: the Basic form posts it
 //! as a hidden field, the OIDC link appends it to its href. An arrival
 //! carrying `?expired=1` — the shell's signed-out transition — opens the card
-//! with the notice that the previous session ended.
+//! with the notice that the previous session ended; one carrying `?refused=1`
+//! — where [`crate::auth::login_basic`] sends credentials the CDR refused —
+//! opens it with the refusal.
 
 use leptos::prelude::*;
 
@@ -30,7 +32,9 @@ use crate::components::surface::CARD_PAD;
 /// a `Resource` under `<Suspense>`). The action's error value renders in a
 /// MessageBar; the submit button reflects the action's pending state. A
 /// `?expired=1` arrival — the shell's signed-out transition — additionally
-/// opens the card with the notice that the previous session ended.
+/// opens the card with the notice that the previous session ended, and a
+/// `?refused=1` arrival — a Basic sign-in the CDR refused — with the refusal,
+/// both read from the URL so the server pass and hydration agree.
 #[expect(
     clippy::must_use_candidate,
     reason = "#[component] rewrites the fn; view!/mount always consumes the value"
@@ -59,6 +63,10 @@ pub fn LoginPage() -> impl IntoView {
     // sign in, their session ended under them, and the card says so instead of
     // looking like a plain sign-in they asked for.
     let expired = Signal::derive(move || query.with(|q| q.get("expired").is_some()));
+    // `?refused=1` is where `crate::auth::login_basic` sends credentials the CDR
+    // refused: a URL rather than an action error, so the refusal renders the
+    // same with and without JavaScript and never travels as a `500`.
+    let refused = Signal::derive(move || query.with(|q| q.get("refused").is_some()));
 
     let expiry_notice = view! {
         {move || {
@@ -78,6 +86,25 @@ pub fn LoginPage() -> impl IntoView {
         }}
     }
         .into_any();
+
+    let refusal_notice = view! {
+        {move || {
+            refused
+                .get()
+                .then(|| {
+                    view! {
+                        <div id="login-refused" role="alert">
+                            <thaw::MessageBar intent=thaw::MessageBarIntent::Error>
+                                <thaw::MessageBarBody>
+                                    "Wrong username or password."
+                                </thaw::MessageBarBody>
+                            </thaw::MessageBar>
+                        </div>
+                    }
+                })
+        }}
+    }
+    .into_any();
 
     let error_bar = view! {
         {move || {
@@ -248,6 +275,7 @@ pub fn LoginPage() -> impl IntoView {
                         <Wordmark />
                     </div>
                     {expiry_notice}
+                    {refusal_notice}
                     {error_bar}
                     {forms}
                 </div>

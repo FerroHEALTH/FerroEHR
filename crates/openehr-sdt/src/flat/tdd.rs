@@ -78,6 +78,7 @@ use std::sync::LazyLock;
 use openehr_rm::v1_2::paths::{PathSegment, is_archetype_root_node_id};
 use serde_json::{Map, Value, json};
 
+use crate::flat::build::{code_phrase, dv_coded_text, template_category};
 use crate::flat::error::FlatError;
 use crate::flat::rmpath;
 use crate::flat::webtemplate::model::{WebTemplate, WebTemplateNode};
@@ -144,10 +145,7 @@ fn parse_tree(xml: &str) -> Result<El, FlatError> {
     let mut root: Option<El> = None;
 
     loop {
-        match reader
-            .read_event()
-            .map_err(|e| FlatError::Conversion(format!("TDD is not well-formed XML: {e}")))?
-        {
+        match reader.read_event().map_err(FlatError::TddXml)? {
             Event::Start(e) => stack.push(start_element(&e)?),
             Event::Empty(e) => {
                 stack.push(start_element(&e)?);
@@ -172,12 +170,11 @@ fn parse_tree(xml: &str) -> Result<El, FlatError> {
 /// Reads one start tag into a childless [`El`].
 ///
 /// # Errors
-/// Returns [`FlatError::Conversion`] if an attribute is malformed.
+/// Returns [`FlatError::TddAttribute`] if an attribute is malformed.
 fn start_element(e: &quick_xml::events::BytesStart<'_>) -> Result<El, FlatError> {
     let mut attrs = Vec::new();
     for a in e.attributes() {
-        let a =
-            a.map_err(|err| FlatError::Conversion(format!("malformed TDD attribute: {err}")))?;
+        let a = a.map_err(FlatError::TddAttribute)?;
         let key = a.key.as_ref().to_owned();
         let val = a.value.as_ref().to_owned();
         attrs.push((key, val));
@@ -283,7 +280,6 @@ fn xml_escape(s: &str) -> String {
 /// content, which is what the `400`/`422` body must show the caller.
 fn parse_typed(el: &El, type_name: &str) -> Result<Value, FlatError> {
     use openehr_base::prelude::UidBasedId;
-    use openehr_its::xml::from_canonical_xml as fx;
     use openehr_rm::prelude::{
         CodePhrase, DataValue, DvBoolean, DvCodedText, DvCount, DvDate, DvDateTime, DvDuration,
         DvEhrUri, DvIdentifier, DvMultimedia, DvOrdinal, DvParagraph, DvParsable, DvProportion,
@@ -295,8 +291,12 @@ fn parse_typed(el: &El, type_name: &str) -> Result<Value, FlatError> {
     let xml = to_canonical_xml(el, Some(resolved));
     macro_rules! p {
         ($t:ty) => {{
-            let v: $t = fx(&xml)
-                .map_err(|e| FlatError::Conversion(format!("TDD {}: {e}", stringify!($t))))?;
+            let v: $t = openehr_its::xml::from_canonical_xml(&xml).map_err(|source| {
+                FlatError::TddElement {
+                    rm_type: stringify!($t),
+                    source,
+                }
+            })?;
             openehr_its::json::to_canonical_value(&v)
         }};
     }
@@ -400,12 +400,19 @@ fn is_locatable(rm_type: &str) -> bool {
 
 // ── the `WebTemplate`-driven build ─────────────────────────────────────────────
 
-/// Convert a TDD XML instance to a canonical-JSON `COMPOSITION`, guided by `wt`.
+/// Converts a TDD XML instance to a canonical-JSON `COMPOSITION`, guided by `wt`.
+///
+/// A TDD that carries no `category` takes the template's default for it
+/// (`crate::flat::build::template_category`).
 ///
 /// # Errors
-/// [`FlatError::Conversion`] if the TDD is not well-formed XML, its root does not
-/// match the template, or a leaf/attribute fragment cannot be parsed as its RM
-/// type.
+///
+/// [`FlatError::TddXml`] if the TDD is not well-formed XML,
+/// [`FlatError::TddAttribute`] on a malformed attribute,
+/// [`FlatError::TddElement`] if a leaf fragment cannot be parsed as its RM
+/// type, and [`FlatError::Conversion`] if its root does not match the
+/// template, or if it carries no category while the template admits several
+/// with no default.
 pub fn from_tdd(tdd_xml: &str, wt: &WebTemplate) -> Result<Value, FlatError> {
     let root_el = parse_tree(tdd_xml)?;
     let root_id = &wt.tree.id;
@@ -429,7 +436,7 @@ pub fn from_tdd(tdd_xml: &str, wt: &WebTemplate) -> Result<Value, FlatError> {
     let mut comp = build_node(&root_el, &wt.tree, "COMPOSITION", "", true)?;
     if let Value::Object(m) = &mut comp {
         ensure_template_id(m, &wt.tree, &wt.template_id);
-        ensure_category(m);
+        ensure_category(m, &wt.tree)?;
     }
     complete_tree(&mut comp);
     Ok(comp)
@@ -1128,18 +1135,6 @@ fn fill_structural_mandatory(obj: &mut Map<String, Value>, rm_type: &str) {
 
 // ── small canonical-JSON builders ────────────────────────────────────────────
 
-fn code_phrase(terminology: &str, code: &str) -> Value {
-    json!({
-        "_type": "CODE_PHRASE",
-        "terminology_id": {"_type": "TERMINOLOGY_ID", "value": terminology},
-        "code_string": code,
-    })
-}
-
-fn dv_coded_text(value: &str, terminology: &str, code: &str) -> Value {
-    json!({"_type": "DV_CODED_TEXT", "value": value, "defining_code": code_phrase(terminology, code)})
-}
-
 fn archetyped(archetype_id: &str, template_id: Option<&str>) -> Value {
     let mut a = Map::new();
     a.insert("_type".into(), json!("ARCHETYPED"));
@@ -1173,11 +1168,27 @@ fn ensure_template_id(comp: &mut Map<String, Value>, root: &WebTemplateNode, tem
     }
 }
 
-/// `COMPOSITION.category` is mandatory; default to `event` (openEHR 433) when the
-/// template did not carry it as a tree node.
-fn ensure_category(comp: &mut Map<String, Value>) {
-    comp.entry("category".to_owned())
-        .or_insert_with(|| dv_coded_text("event", "openehr", "433"));
+/// Supplies the mandatory `COMPOSITION.category` when the TDD carried none,
+/// taking the default from the template's constraint on it
+/// (`crate::flat::build::template_category`).
+///
+/// # Errors
+///
+/// [`FlatError::Conversion`] naming `/category` when the template admits
+/// several codes and fixes no default.
+fn ensure_category(comp: &mut Map<String, Value>, root: &WebTemplateNode) -> Result<(), FlatError> {
+    if comp.contains_key("category") {
+        return Ok(());
+    }
+    let category = template_category(root).map_err(|admitted| {
+        FlatError::Conversion(format!(
+            "COMPOSITION.category (/category) is required: the template admits {} and fixes \
+             no default",
+            admitted.join(", ")
+        ))
+    })?;
+    comp.insert("category".to_owned(), category);
+    Ok(())
 }
 
 // ── name matching + path helpers ─────────────────────────────────────────────

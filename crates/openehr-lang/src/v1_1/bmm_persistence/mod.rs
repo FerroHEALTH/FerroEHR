@@ -43,6 +43,7 @@ pub mod create_bmm3_model;
 pub mod create_model;
 pub mod error;
 pub mod include_resolution;
+pub mod json_reader;
 pub mod loader;
 pub mod p_bmm_class_impl;
 pub mod p_bmm_enumeration_impl;

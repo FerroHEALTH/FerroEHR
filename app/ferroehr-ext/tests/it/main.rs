@@ -17,10 +17,6 @@
     clippy::panic,
     reason = "integration-test assertions and fixture plumbing outside #[test] fns, which the clippy.toml allow-*-in-tests scoping does not reach"
 )]
-#![expect(
-    clippy::disallowed_types,
-    reason = "test fixtures and wire assertions are raw JSON by the testing rule (.claude/rules/testing.md §Test-fixture construction): a FHIR response body and a canonical composition are bytes a server or a client sends, and building them through a typed model would test the model instead of the decoder"
-)]
 
 #[cfg(feature = "events")]
 mod events_contract;

@@ -21,6 +21,9 @@ without a golden is a render nothing compares.
 - `audit-categories.yaml` — `ci/audit-categories-values.yaml` (a German SGB V
   § 309 controller: the access-log horizon as `retention_years: 3` and an EHDS
   priority-category map under `[audit.categories]`).
+- `server-tls.yaml` — `ci/server-tls-values.yaml` (`[server.tls]` on, with the
+  viewer, FerroBRIDGE and the ServiceMonitor scrape all calling the CDR over
+  https and trusting the CA from `service.tls.caExistingSecret`).
 - `production.yaml` — `ferroehr/values-production.yaml`, the overlay the chart
   ships to users (`deployment_profile: production`: one Secret per storage
   domain, the migration Job under `migrate: verify`, a TLS Ingress and a

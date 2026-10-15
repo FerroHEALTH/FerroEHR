@@ -8,7 +8,7 @@ the corpus size, with the `EXPLAIN (ANALYZE)` time of both statements beside the
 wall clock.
 
 **A benchmark, not a conformance record.** Conformance is the CNF 2.0 suite
-[Veredictum](https://github.com/rubentalstra/Veredictum) runs, and its artifacts
+[Veredictum](https://github.com/Vernum-Projecten/Veredictum) runs, and its artifacts
 live under `docs/conformance/<sut>/`. Nothing here earns a class. No openEHR
 specification governs the cohort surface: this is our own design.
 

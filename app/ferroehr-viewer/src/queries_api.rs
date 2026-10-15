@@ -260,7 +260,8 @@ pub async fn store_query(
              query; leave the field empty to let the server assign the version."
         )));
     }
-    openehr_query::parser::parse_str(&aql).map_err(|e| ViewerError::Invalid(e.to_string()))?;
+    openehr_query::parser::parse_str(&aql)
+        .map_err(|e| ViewerError::Invalid(crate::error::error_chain(&e)))?;
     let state: crate::state::AppState = leptos::prelude::expect_context();
     let path = match version.as_deref() {
         Some(version) => format!(

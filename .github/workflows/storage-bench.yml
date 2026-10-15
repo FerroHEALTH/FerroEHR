@@ -47,6 +47,13 @@ on:
 
 permissions: {}
 
+env:
+  # A FerroEHR started by any step of this workflow sends no usage report to
+  # FerroPULSE: compose interpolates this into every server it brings up, and
+  # scripts/checks/usage-report-off.sh holds each `docker run` and Helm install
+  # to its own explicit switch.
+  FERROEHR__USAGE_REPORT__ENABLED: "false"
+
 jobs:
   bench:
     name: measure + compare
@@ -64,7 +71,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U openehr"
+          --health-cmd "pg_isready -h 127.0.0.1 -U openehr"
           --health-interval 10s --health-timeout 5s --health-retries 10
     env:
       # The shared test-database harness (tools/testkit) migrates its template

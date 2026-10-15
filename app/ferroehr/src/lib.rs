@@ -35,6 +35,10 @@
 //!   — the redacted deployment report `ferroehr report` writes.
 //! - [`support`] — the support period of this release, which every identity
 //!   surface states.
+//! - [`served_vocabulary`] — the deployment gap codes and OpenAPI family slugs
+//!   the server serves and the viewer names.
+//! - [`oauth2_http`] — the workspace `reqwest` client as the `oauth2` /
+//!   `openidconnect` transport.
 
 // Doctests are copy-paste templates: they must use `?`, never unwrap
 // (C-QUESTION-MARK, https://rust-lang.github.io/api-guidelines/documentation.html#c-question-mark).
@@ -48,8 +52,10 @@ pub mod extensions;
 pub mod ids;
 pub mod licence;
 pub mod manufacturer;
+pub mod oauth2_http;
 pub mod privacy;
 pub mod report;
+pub mod served_vocabulary;
 pub mod service;
 pub mod storage;
 pub mod support;

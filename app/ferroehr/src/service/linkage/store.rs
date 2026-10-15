@@ -32,6 +32,7 @@ use sqlx::postgres::PgRow;
 use sqlx::{PgConnection, PgPool, Row};
 use uuid::Uuid;
 
+use crate::db::acquire::{AcquireError, acquire};
 use crate::ids::{EhrId, VoId};
 use crate::service::ehr_index::types::{LocationDesc, ResourceStatus, SubjectRef};
 
@@ -41,6 +42,17 @@ use crate::service::ehr_index::types::{LocationDesc, ResourceStatus, SubjectRef}
 /// Error Codes", class 23,
 /// <https://www.postgresql.org/docs/18/errcodes-appendix.html>).
 const SQLSTATE_EXCLUSION_VIOLATION: &str = "23P01";
+
+/// A failure of a statement this module runs on the linkage pool.
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum StoreError {
+    /// No connection could be obtained from the pool, so nothing ran.
+    #[error(transparent)]
+    Acquire(#[from] AcquireError),
+    /// The statement failed on the acquired connection.
+    #[error("the linkage statement failed")]
+    Database(#[from] sqlx::Error),
+}
 
 /// The columns every EHR Index read projects, written once so two reads of the
 /// same association cannot drift apart.
@@ -78,13 +90,14 @@ pub(super) struct ClosedMapping {
 /// The EHR `party` is the subject of right now, or `None`.
 ///
 /// # Errors
-/// The driver error, when the read fails.
-pub(super) async fn open_mapping(pool: &PgPool, party: VoId) -> Result<Option<EhrId>, sqlx::Error> {
+/// [`StoreError::Acquire`] when no connection can be obtained, else
+/// [`StoreError::Database`] when the read fails.
+pub(super) async fn open_mapping(pool: &PgPool, party: VoId) -> Result<Option<EhrId>, StoreError> {
     let found: Option<Uuid> = sqlx::query_scalar(
         "SELECT ehr_id FROM subject_ehr WHERE party_id = $1 AND upper_inf(sys_period)",
     )
     .bind(party.0)
-    .fetch_optional(pool)
+    .fetch_optional(&mut *acquire(pool).await?)
     .await?;
     Ok(found.map(EhrId))
 }
@@ -167,11 +180,12 @@ fn closed_mapping(row: &PgRow) -> Result<ClosedMapping, sqlx::Error> {
 /// already known.
 ///
 /// # Errors
-/// The driver error, when the read fails.
+/// [`StoreError::Acquire`] when no connection can be obtained, else
+/// [`StoreError::Database`] when the read fails.
 pub(super) async fn open_mappings(
     pool: &PgPool,
     parties: &[VoId],
-) -> Result<Vec<EhrId>, sqlx::Error> {
+) -> Result<Vec<EhrId>, StoreError> {
     if parties.is_empty() {
         return Ok(Vec::new());
     }
@@ -181,7 +195,7 @@ pub(super) async fn open_mappings(
          WHERE party_id = ANY($1) AND upper_inf(sys_period)",
     )
     .bind(&ids)
-    .fetch_all(pool)
+    .fetch_all(&mut *acquire(pool).await?)
     .await?;
     Ok(found.into_iter().map(EhrId).collect())
 }
@@ -194,14 +208,15 @@ pub(super) async fn open_mappings(
 /// the same pair stays untouched as history.
 ///
 /// # Errors
-/// The driver error, when the write fails.
+/// [`StoreError::Acquire`] when no connection can be obtained, else
+/// [`StoreError::Database`] when the write fails.
 pub(crate) async fn add_association(
     pool: &PgPool,
     ehr: EhrId,
     subject: &SubjectRef,
     status: &ResourceStatus,
     location: Option<&LocationDesc>,
-) -> Result<(), sqlx::Error> {
+) -> Result<(), StoreError> {
     sqlx::query(
         "INSERT INTO subject_ehr \
          (ehr_id, subject_id, subject_namespace, subject_type, status, location) \
@@ -217,7 +232,7 @@ pub(crate) async fn add_association(
     .bind(&subject.r#type)
     .bind(sqlx::types::Json(status))
     .bind(location.map(sqlx::types::Json))
-    .execute(pool)
+    .execute(&mut *acquire(pool).await?)
     .await?;
     Ok(())
 }
@@ -226,13 +241,14 @@ pub(crate) async fn add_association(
 /// many rows matched.
 ///
 /// # Errors
-/// The driver error, when the update fails.
+/// [`StoreError::Acquire`] when no connection can be obtained, else
+/// [`StoreError::Database`] when the update fails.
 pub(crate) async fn set_association_status(
     pool: &PgPool,
     ehr: EhrId,
     subject: &SubjectRef,
     status: &ResourceStatus,
-) -> Result<u64, sqlx::Error> {
+) -> Result<u64, StoreError> {
     let updated = sqlx::query(
         "UPDATE subject_ehr SET status = $4 \
          WHERE ehr_id = $1 AND subject_id = $2 AND subject_namespace = $3 \
@@ -242,7 +258,7 @@ pub(crate) async fn set_association_status(
     .bind(&subject.id)
     .bind(&subject.namespace)
     .bind(sqlx::types::Json(status))
-    .execute(pool)
+    .execute(&mut *acquire(pool).await?)
     .await?;
     Ok(updated.rows_affected())
 }
@@ -251,13 +267,14 @@ pub(crate) async fn set_association_status(
 /// returning how many rows matched.
 ///
 /// # Errors
-/// The driver error, when the update fails.
+/// [`StoreError::Acquire`] when no connection can be obtained, else
+/// [`StoreError::Database`] when the update fails.
 pub(crate) async fn set_association_location(
     pool: &PgPool,
     ehr: EhrId,
     subject: &SubjectRef,
     location: Option<&LocationDesc>,
-) -> Result<u64, sqlx::Error> {
+) -> Result<u64, StoreError> {
     let updated = sqlx::query(
         "UPDATE subject_ehr SET location = $4 \
          WHERE ehr_id = $1 AND subject_id = $2 AND subject_namespace = $3 \
@@ -267,7 +284,7 @@ pub(crate) async fn set_association_location(
     .bind(&subject.id)
     .bind(&subject.namespace)
     .bind(location.map(sqlx::types::Json))
-    .execute(pool)
+    .execute(&mut *acquire(pool).await?)
     .await?;
     Ok(updated.rows_affected())
 }
@@ -307,19 +324,20 @@ fn close_statement(predicate: &str) -> String {
 /// matched.
 ///
 /// # Errors
-/// The driver error, when the statement fails.
+/// [`StoreError::Acquire`] when no connection can be obtained, else
+/// [`StoreError::Database`] when the statement fails.
 pub(crate) async fn close_association(
     pool: &PgPool,
     ehr: EhrId,
     subject: &SubjectRef,
-) -> Result<u64, sqlx::Error> {
+) -> Result<u64, StoreError> {
     let closed: i64 = sqlx::query_scalar(sqlx::AssertSqlSafe(close_statement(
         "ehr_id = $1 AND subject_id = $2 AND subject_namespace = $3",
     )))
     .bind(ehr.0)
     .bind(&subject.id)
     .bind(&subject.namespace)
-    .fetch_one(pool)
+    .fetch_one(&mut *acquire(pool).await?)
     .await?;
     Ok(closed.unsigned_abs())
 }
@@ -328,17 +346,18 @@ pub(crate) async fn close_association(
 /// many rows matched.
 ///
 /// # Errors
-/// The driver error, when the statement fails.
+/// [`StoreError::Acquire`] when no connection can be obtained, else
+/// [`StoreError::Database`] when the statement fails.
 pub(crate) async fn close_subject_associations(
     pool: &PgPool,
     subject: &SubjectRef,
-) -> Result<u64, sqlx::Error> {
+) -> Result<u64, StoreError> {
     let closed: i64 = sqlx::query_scalar(sqlx::AssertSqlSafe(close_statement(
         "subject_id = $1 AND subject_namespace = $2",
     )))
     .bind(&subject.id)
     .bind(&subject.namespace)
-    .fetch_one(pool)
+    .fetch_one(&mut *acquire(pool).await?)
     .await?;
     Ok(closed.unsigned_abs())
 }
@@ -346,26 +365,29 @@ pub(crate) async fn close_subject_associations(
 /// The associations of `ehr` in force, ordered by subject key.
 ///
 /// # Errors
-/// The driver error, when the read fails.
-pub(crate) async fn ehr_associations(pool: &PgPool, ehr: EhrId) -> Result<Vec<PgRow>, sqlx::Error> {
+/// [`StoreError::Acquire`] when no connection can be obtained, else
+/// [`StoreError::Database`] when the read fails.
+pub(crate) async fn ehr_associations(pool: &PgPool, ehr: EhrId) -> Result<Vec<PgRow>, StoreError> {
     sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT {ASSOCIATION_COLUMNS} FROM subject_ehr \
          WHERE ehr_id = $1 AND subject_id IS NOT NULL AND upper_inf(sys_period) \
          ORDER BY subject_id, subject_namespace"
     )))
     .bind(ehr.0)
-    .fetch_all(pool)
+    .fetch_all(&mut *acquire(pool).await?)
     .await
+    .map_err(StoreError::from)
 }
 
 /// The associations of `subject` in force, ordered by EHR id.
 ///
 /// # Errors
-/// The driver error, when the read fails.
+/// [`StoreError::Acquire`] when no connection can be obtained, else
+/// [`StoreError::Database`] when the read fails.
 pub(crate) async fn subject_associations(
     pool: &PgPool,
     subject: &SubjectRef,
-) -> Result<Vec<PgRow>, sqlx::Error> {
+) -> Result<Vec<PgRow>, StoreError> {
     sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT {ASSOCIATION_COLUMNS} FROM subject_ehr \
          WHERE subject_id = $1 AND subject_namespace = $2 AND upper_inf(sys_period) \
@@ -373,36 +395,40 @@ pub(crate) async fn subject_associations(
     )))
     .bind(&subject.id)
     .bind(&subject.namespace)
-    .fetch_all(pool)
+    .fetch_all(&mut *acquire(pool).await?)
     .await
+    .map_err(StoreError::from)
 }
 
 /// The subjects that more than one EHR is associated with, in force.
 ///
 /// # Errors
-/// The driver error, when the read fails.
-pub(crate) async fn subjects_with_multiple_ehrs(pool: &PgPool) -> Result<Vec<PgRow>, sqlx::Error> {
+/// [`StoreError::Acquire`] when no connection can be obtained, else
+/// [`StoreError::Database`] when the read fails.
+pub(crate) async fn subjects_with_multiple_ehrs(pool: &PgPool) -> Result<Vec<PgRow>, StoreError> {
     sqlx::query(
         "SELECT subject_id, subject_namespace FROM subject_ehr \
          WHERE subject_id IS NOT NULL AND upper_inf(sys_period) \
          GROUP BY subject_id, subject_namespace HAVING count(DISTINCT ehr_id) > 1 \
          ORDER BY subject_id, subject_namespace",
     )
-    .fetch_all(pool)
+    .fetch_all(&mut *acquire(pool).await?)
     .await
+    .map_err(StoreError::from)
 }
 
 /// The EHRs that more than one subject is associated with, in force.
 ///
 /// # Errors
-/// The driver error, when the read fails.
-pub(crate) async fn ehrs_with_multiple_subjects(pool: &PgPool) -> Result<Vec<EhrId>, sqlx::Error> {
+/// [`StoreError::Acquire`] when no connection can be obtained, else
+/// [`StoreError::Database`] when the read fails.
+pub(crate) async fn ehrs_with_multiple_subjects(pool: &PgPool) -> Result<Vec<EhrId>, StoreError> {
     let rows: Vec<Uuid> = sqlx::query_scalar(
         "SELECT ehr_id FROM subject_ehr \
          WHERE subject_id IS NOT NULL AND upper_inf(sys_period) \
          GROUP BY ehr_id HAVING count(*) > 1 ORDER BY ehr_id",
     )
-    .fetch_all(pool)
+    .fetch_all(&mut *acquire(pool).await?)
     .await?;
     Ok(rows.into_iter().map(EhrId).collect())
 }
@@ -417,12 +443,13 @@ pub(crate) async fn ehrs_with_multiple_subjects(pool: &PgPool) -> Result<Vec<Ehr
 /// asserting whose record it was.
 ///
 /// # Errors
-/// The driver error, when the call fails — including the privilege refusal
+/// [`StoreError::Acquire`] when no connection can be obtained, else
+/// [`StoreError::Database`] when the call fails — including the privilege refusal
 /// when the deployment has not granted the role `EXECUTE` on the function.
-pub(crate) async fn erase_ehr(pool: &PgPool, ehr: EhrId) -> Result<u64, sqlx::Error> {
+pub(crate) async fn erase_ehr(pool: &PgPool, ehr: EhrId) -> Result<u64, StoreError> {
     let erased: i64 = sqlx::query_scalar("SELECT erase_ehr($1)")
         .bind(ehr.0)
-        .fetch_one(pool)
+        .fetch_one(&mut *acquire(pool).await?)
         .await?;
     Ok(erased.unsigned_abs())
 }

@@ -48,17 +48,76 @@ ORDER BY systolic DESC
   one reference hop, so a chain of references is expressed by chaining
   `CONTAINS`. A pair the RM defines no containment relationship for (say
   `COMPOSITION CONTAINS COMPOSITION`) is refused with a typed error.
+  Containment is strict: a node does not contain itself, so
+  `CLUSTER cl1 CONTAINS CLUSTER cl2` binds only clusters nested inside
+  another cluster. A variable declared inside an `OR` branch can be read in
+  `SELECT`, `WHERE`, and `ORDER BY`: a row where its branch did not match
+  reads `null` for it, and when both branches match, each match of one pairs
+  with each match of the other. This holds for a branch that is a versioned
+  object of its own too: `EHR e CONTAINS (COMPOSITION c1[...] OR COMPOSITION
+  c2[...])` returns the current version of each matching composition, its
+  `c1/uid/value` included, and a `FOLDER` branch reads the compositions the
+  folder references.
 - **`SELECT`** projects values by path. Paths use archetype node ids (`at0004`)
-  and RM attribute names (`value/magnitude`); `AS` names a column.
+  and RM attribute names (`value/magnitude`); `AS` names a column. A path
+  through a repeated node returns one row per node it reaches: selecting the
+  systolic and the diastolic of a blood-pressure `EVENT` returns one row per
+  event, each pairing that event's own two values, with `null` where an
+  event lacks one. Paths that share a prefix share that node in a row, and a
+  path that reaches nothing reads `null` without removing the row. The AQL
+  specification does not define this row shape; it is this engine's
+  documented convention.
 - **`WHERE`** filters on typed leaf values, with comparisons, `EXISTS`, `LIKE`,
-  `MATCHES`, and boolean combinators. Comparisons over multi-valued paths use
-  any-match semantics: when a path matches several nodes or several elements of
-  a list attribute (`links`, `participations`, `identifiers`, ...), the
-  predicate holds if **any** matched value satisfies it (the AQL specification
-  is silent here; any-match is this engine's documented convention,
-  deterministic and index-friendly). Projecting a path that crosses a
-  list-valued attribute returns every match as one JSON array cell, and `null`
-  where nothing matches.
+  `MATCHES`, and boolean combinators. The AQL specification does not say how a
+  test behaves on a path that reaches several nodes; this engine's rule is:
+  - Every repeated step a `WHERE` path descends, and the `SELECT` has not
+    already bound, is bound **once for the whole `WHERE` clause**, the way a
+    `SELECT` path binds it: one node per binding, and one `null` binding when
+    nothing matches. Steps written identically (predicate included) are one
+    binding, so `events[at0006]` and `events` are two.
+  - A row is kept when **some** assignment of those bindings makes the whole
+    clause true, with SQL's three-valued logic: a test of a `null` value is
+    unknown, and an unknown clause does not keep the row.
+  - A path that shares a prefix with a selected path reads the node that row
+    is bound to.
+
+  The boolean laws therefore hold. `<systolic> >= 140 AND <diastolic> >= 90`
+  holds only for an event carrying both values, also under `OR` and `NOT`,
+  whether or not the `SELECT` reads the event; `NOT (<systolic> > 140)` holds
+  when some event's systolic is 140 or lower, and is unknown when the path
+  reaches nothing; `NOT (A OR B)` equals `NOT A AND NOT B`; adding a test with
+  `AND` never adds rows. Paths compared with each other, and paths inside a
+  function call, read through the same bindings. Elements of a list attribute
+  inside one node's data (`links`, `participations`, `identifiers`, ...) are
+  not bindings: a test of such a path against a value holds when **any**
+  element of the bound node satisfies it, and is unknown when the list is
+  empty or absent, so `NOT (c/links/target/value = 'x')` drops a composition
+  without links. Beside another path or inside a function, such a path reads
+  its first element.
+
+  `EXISTS <path>` asks whether the data at that path exists (the AQL
+  specification's own definition). It reads through the `SELECT` bindings,
+  and otherwise looks at the whole path on its own, outside the clause's
+  bindings: `EXISTS` holds when any node on the path carries the data and
+  `NOT EXISTS` when none does, whatever the other tests bind.
+
+  Projecting a path that crosses a list attribute inside a node's data returns
+  every match as one JSON array cell, and `null` where nothing matches. Paths
+  through different repeated steps of one variable are bound independently, so
+  selecting both returns every combination of their nodes.
+- **Aggregates read every data item of their path** in the rows `FROM` and
+  `WHERE` select: `MAX(<systolic>)` over an observation measured twice sees
+  both events, and `COUNT` over a list attribute counts its elements. An item
+  counts when some assignment of the `WHERE` bindings, with the steps the
+  item shares fixed to its own nodes, makes the clause true, so
+  `SELECT COUNT(<systolic>) ... WHERE NOT (<systolic> < 140)` counts exactly
+  the readings that selecting `<systolic>` would return. List elements inside
+  one node are not filtered one by one: `COUNT(<links path>)` under a `WHERE`
+  on that path counts every link of a row the clause keeps. An aggregate adds
+  no rows, so `COUNT(*)` counts the rows the `WHERE` clause keeps whatever
+  other aggregates sit beside it. `COUNT(DISTINCT)` compares numbers by value
+  (`120` and `120.0` are one value), a stored JSON `null` counts as no value,
+  and `AVG` returns a decimal mean.
 - **`ORDER BY`**, **`LIMIT`**, and **`OFFSET`** behave as you expect; quantities
   order by their openEHR magnitude semantics.
 - **Date/time comparisons accept reduced precision** on both sides: openEHR
@@ -501,6 +560,9 @@ silently incorrect answer:
 - **Branch version addressing.** A version predicate may address trunk versions;
   reading branch content is done by scoping `ALL_VERSIONS`, not by naming a
   branch.
+- **Reading a variable declared under `NOT CONTAINS`.** `NOT CONTAINS` states
+  that no such node exists, so a path through its variable has nothing to
+  read.
 - **`SELECT DISTINCT` ordered by an unselected expression.** De-duplication and
   sorting by something the projection dropped have no defined meaning together;
   sort by a selected column.

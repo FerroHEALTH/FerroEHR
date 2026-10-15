@@ -319,46 +319,88 @@ pub async fn probe_management_api() -> Result<ManagementAvailability, ViewerErro
 /// The `GET /management/info` body as rendered rows.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct BuildInfoView {
-    /// Top-level scalar facts (`version`, `git_sha`, `rustc`, …) as
-    /// `(key, value)`, key-sorted.
+    /// Top-level non-object members (`version`, `git_sha`, `rustc`, …) as
+    /// `(key, text)`, key-sorted.
     pub facts: Vec<(String, String)>,
-    /// The `spec` sub-object's pinned specification versions as
-    /// `(key, value)`, key-sorted.
-    pub spec: Vec<(String, String)>,
+    /// One section per top-level object member (`spec`, `manufacturer`,
+    /// `support`, …), key-sorted.
+    pub sections: Vec<InfoSection>,
 }
 
-/// Distil a `/management/info` body into a [`BuildInfoView`].
+/// One nested object of `/management/info`, rendered one level deep.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct InfoSection {
+    /// The member name in the body, unique among the sections.
+    pub key: String,
+    /// The object's members as `(key, text)`, key-sorted; a member that is
+    /// itself an object or an array is shown as its compact JSON.
+    pub rows: Vec<(String, String)>,
+}
+
+impl InfoSection {
+    /// Returns the heading the panel shows for this section.
+    ///
+    /// `spec` reads as the specification pins it holds; any other member name
+    /// is shown with its first letter capitalised and underscores as spaces.
+    #[must_use]
+    pub fn title(&self) -> String {
+        if self.key == "spec" {
+            return "openEHR specification pins".to_owned();
+        }
+        let spaced = self.key.replace('_', " ");
+        let mut chars = spaced.chars();
+        chars.next().map_or_else(String::new, |first| {
+            first.to_uppercase().chain(chars).collect()
+        })
+    }
+}
+
+/// Distils a `/management/info` body into a [`BuildInfoView`].
 ///
 /// Generic over the field set on purpose: the CDR owns that shape and may add
-/// facts, so every scalar leaf is rendered rather than a fixed list, and the
-/// nested `spec` object is lifted into its own section.
+/// members, so every top-level member is rendered rather than a fixed list.
+/// Non-object members become fact rows; each object member (`spec`,
+/// `manufacturer`, `support`, `audit`, …) becomes its own section, one level
+/// deep. Every list is key-sorted, so the render order is deterministic and
+/// hydration-safe.
 #[must_use]
 pub fn build_info_view(body: &serde_json::Value) -> BuildInfoView {
-    BuildInfoView {
-        facts: scalar_rows(body),
-        spec: body.get("spec").map(scalar_rows).unwrap_or_default(),
-    }
-}
-
-/// Every scalar leaf of a JSON object as `(key, text)`, key-sorted for a
-/// deterministic (hydration-safe) render order.
-fn scalar_rows(value: &serde_json::Value) -> Vec<(String, String)> {
-    let mut rows: Vec<(String, String)> = Vec::new();
-    if let Some(object) = value.as_object() {
-        for (key, value) in object {
-            let text = match value {
-                serde_json::Value::String(s) => Some(s.clone()),
-                serde_json::Value::Number(n) => Some(n.to_string()),
-                serde_json::Value::Bool(b) => Some(b.to_string()),
-                _ => None,
-            };
-            if let Some(text) = text {
-                rows.push((key.clone(), text));
-            }
+    let mut view = BuildInfoView::default();
+    let Some(object) = body.as_object() else {
+        return view;
+    };
+    for (key, value) in object {
+        match value {
+            serde_json::Value::Object(members) => view.sections.push(InfoSection {
+                key: key.clone(),
+                rows: leaf_rows(members),
+            }),
+            other => view.facts.push((key.clone(), leaf_text(other))),
         }
     }
+    view.facts.sort();
+    view.sections.sort_by(|a, b| a.key.cmp(&b.key));
+    view
+}
+
+/// Every member of a JSON object as `(key, text)`, key-sorted.
+fn leaf_rows(object: &serde_json::Map<String, serde_json::Value>) -> Vec<(String, String)> {
+    let mut rows: Vec<(String, String)> = object
+        .iter()
+        .map(|(key, value)| (key.clone(), leaf_text(value)))
+        .collect();
     rows.sort();
     rows
+}
+
+/// One JSON value as display text: a string verbatim, a number or boolean as
+/// written, `null` as an em dash, and an array or object as compact JSON.
+fn leaf_text(value: &serde_json::Value) -> String {
+    match value {
+        serde_json::Value::String(s) => s.clone(),
+        serde_json::Value::Null => "—".to_owned(),
+        other => other.to_string(),
+    }
 }
 
 /// Read the CDR's build + spec provenance (`GET /management/info`).
@@ -713,7 +755,7 @@ async fn management_get(path: &str) -> Result<Option<String>, ViewerError> {
 #[cfg(test)]
 mod tests {
     use super::{
-        BuildInfoView, ManagementAvailability, MetricDetailView, MetricSample,
+        BuildInfoView, InfoSection, ManagementAvailability, MetricDetailView, MetricSample,
         availability_of_status, build_info_view, falls_back_to_public_readiness, format_metric,
         logger_view, metric_detail_view, metric_total, readiness_view, renders_management_ops,
     };
@@ -845,7 +887,7 @@ mod tests {
                 "am": "1.4.0 + 2.4.0"
             }
         });
-        let BuildInfoView { facts, spec } = build_info_view(&body);
+        let BuildInfoView { facts, sections } = build_info_view(&body);
         assert_eq!(
             facts,
             vec![
@@ -857,16 +899,93 @@ mod tests {
                 ("version".to_owned(), "3.10.0".to_owned()),
             ]
         );
-        // The nested object is NOT a fact row (only scalars are), and its own
-        // leaves land in `spec`, key-sorted.
+        // The nested object is NOT a fact row, and its own leaves land in the
+        // `spec` section, key-sorted.
         assert_eq!(
-            spec,
+            sections,
+            vec![InfoSection {
+                key: "spec".to_owned(),
+                rows: vec![
+                    ("am".to_owned(), "1.4.0 + 2.4.0".to_owned()),
+                    ("its_rest".to_owned(), "1.1.0".to_owned()),
+                    ("rm".to_owned(), "1.2.0".to_owned()),
+                ],
+            }]
+        );
+        assert_eq!(
+            sections.first().map(InfoSection::title).as_deref(),
+            Some("openEHR specification pins")
+        );
+    }
+
+    /// Every nested object of the body becomes its own key-sorted section,
+    /// one level deep: the manufacturer the CDR serializes (the shared
+    /// `manufacturer.rs` value, so the fixture is the server's shape), the
+    /// support statement with its `null` dates, and a deeper object shown as
+    /// compact JSON rather than dropped.
+    #[test]
+    fn build_info_renders_every_nested_object_one_level_deep() {
+        let body = serde_json::json!({
+            "version": "4.3.6",
+            "features": ["fhir", "events"],
+            "manufacturer": serde_json::to_value(crate::manufacturer::MANUFACTURER)
+                .expect("the manufacturer serializes"),
+            "support": {"release_date": null, "support_ends": null, "status": "unreleased"},
+            "audit": {"enabled": true, "category_map": {"sha256": "ab12"}},
+            "spec": {"rm": "1.2.0"}
+        });
+        let BuildInfoView { facts, sections } = build_info_view(&body);
+        assert_eq!(
+            facts,
             vec![
-                ("am".to_owned(), "1.4.0 + 2.4.0".to_owned()),
-                ("its_rest".to_owned(), "1.1.0".to_owned()),
-                ("rm".to_owned(), "1.2.0".to_owned()),
+                ("features".to_owned(), r#"["fhir","events"]"#.to_owned()),
+                ("version".to_owned(), "4.3.6".to_owned()),
             ]
         );
+        let keys: Vec<&str> = sections.iter().map(|s| s.key.as_str()).collect();
+        assert_eq!(keys, ["audit", "manufacturer", "spec", "support"]);
+        let section = |key: &str| {
+            sections
+                .iter()
+                .find(|s| s.key == key)
+                .expect("the section is present")
+        };
+        assert_eq!(
+            section("manufacturer").rows,
+            vec![
+                ("email".to_owned(), "info@cadasto.com".to_owned()),
+                ("name".to_owned(), "Cadasto B.V.".to_owned()),
+                (
+                    "postal_address".to_owned(),
+                    "Comeniusstraat 2d, 1817 MS Alkmaar, The Netherlands".to_owned()
+                ),
+                (
+                    "website".to_owned(),
+                    "https://www.cadasto.com/contact/".to_owned()
+                ),
+            ]
+        );
+        assert_eq!(section("manufacturer").title(), "Manufacturer");
+        assert_eq!(
+            section("support").rows,
+            vec![
+                ("release_date".to_owned(), "—".to_owned()),
+                ("status".to_owned(), "unreleased".to_owned()),
+                ("support_ends".to_owned(), "—".to_owned()),
+            ]
+        );
+        assert_eq!(
+            section("audit").rows,
+            vec![
+                ("category_map".to_owned(), r#"{"sha256":"ab12"}"#.to_owned()),
+                ("enabled".to_owned(), "true".to_owned()),
+            ]
+        );
+        let spaced = InfoSection {
+            key: "spec_profile".to_owned(),
+            rows: Vec::new(),
+        };
+        assert_eq!(spaced.title(), "Spec profile");
     }
 
     #[test]

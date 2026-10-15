@@ -18,6 +18,7 @@ use serde_json::Value;
 use sqlx::{PgConnection, PgPool, Row};
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::storage::error::StorageError;
 
@@ -142,7 +143,7 @@ pub async fn read_attestations_all(
          ORDER BY time_committed, id",
     )
     .bind(vo_id)
-    .fetch_all(pool)
+    .fetch_all(&mut *acquire(pool).await?)
     .await?;
     rows.iter()
         .map(|row| Ok((row.try_get("sys_version")?, row.try_get("data")?)))

@@ -78,13 +78,21 @@
             "type": "url",
             "title": "FHIR CodeSystem and ValueSet",
             "description": "The openEHR Terminology as FHIR CodeSystem and ValueSet files.",
-            "link": "https://github.com/openEHR/specifications-TERM/tree/master/computable/fhir"
+            "link": "https://github.com/openEHR/specifications-TERM/tree/master/computable/FHIR"
         },
         {
-            "id": "openEHR_UML-TERM.mdzip",
-            "type": "uml",
-            "title": "TERM UML",
-            "description": "UML file for openEHR TERM classes, as MagicDraw 19. Contains UML 2.5 standard XMI file."
+            "id": "ITS-BMM-TERM",
+            "type": "url",
+            "title": "Terminology BMM",
+            "description": "BMM files for openEHR Terminology classes",
+            "link": "https://github.com/openEHR/specifications-ITS-BMM/tree/master/components/TERM"
+        },
+        {
+            "id": "ITS-BMM-BASE",
+            "dependency": {
+                "component": "BASE",
+                "release": "development"
+            }
         }
     ],
     "jira": {

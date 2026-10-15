@@ -45,7 +45,7 @@ support period is five years from the month of their tag all the same.
 
 **The running server states its own support period.** The end month is on the
 boot banner, in `ferroehr --version`, under `support` in
-`GET /management/info` and in `GET {rest root}/status` as `support.status`
+`GET /management/info` and in `GET /management/status` as `support.status`
 (`supported`, `ended` or `unreleased`). Once the period has ended the server
 logs a warning at boot and once a day (Art 13(19)). It does not contact anyone
 to look for a newer release. To hear of new releases and fixes, subscribe to

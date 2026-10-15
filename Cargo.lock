@@ -2716,7 +2716,7 @@ dependencies = [
  "quick-xml 0.42.0",
  "rand 0.8.7",
  "regex",
- "reqwest 0.13.5",
+ "reqwest",
  "rustls",
  "sea-query",
  "sea-query-sqlx",
@@ -2806,7 +2806,7 @@ dependencies = [
  "opentelemetry_sdk",
  "pprof",
  "prometheus",
- "reqwest 0.13.5",
+ "reqwest",
  "rustls",
  "serde",
  "serde_json",
@@ -2843,7 +2843,7 @@ dependencies = [
  "ferroehr-rest",
  "openehr-its",
  "openehr-sdt",
- "reqwest 0.13.5",
+ "reqwest",
  "serde_json",
  "sqlx",
  "tokio",
@@ -2880,7 +2880,7 @@ dependencies = [
  "openehr-query",
  "openehr-sdt",
  "openidconnect",
- "reqwest 0.13.5",
+ "reqwest",
  "serde",
  "serde_json",
  "thaw",
@@ -3787,7 +3787,6 @@ dependencies = [
  "tokio",
  "tokio-rustls",
  "tower-service",
- "webpki-roots",
 ]
 
 [[package]]
@@ -4355,7 +4354,7 @@ dependencies = [
  "percent-encoding",
  "referencing",
  "regex",
- "reqwest 0.13.5",
+ "reqwest",
  "rustls",
  "serde",
  "serde_json",
@@ -5358,7 +5357,6 @@ dependencies = [
  "getrandom 0.2.17",
  "http",
  "rand 0.8.7",
- "reqwest 0.12.28",
  "serde",
  "serde_json",
  "serde_path_to_error",
@@ -5412,7 +5410,7 @@ dependencies = [
  "percent-encoding",
  "quick-xml 0.41.0",
  "rand 0.10.2",
- "reqwest 0.13.5",
+ "reqwest",
  "rustls-pki-types",
  "serde",
  "serde_json",
@@ -5488,7 +5486,7 @@ checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 
 [[package]]
 name = "openehr-adl"
-version = "0.0.86"
+version = "0.0.87"
 dependencies = [
  "indexmap 2.14.2",
  "openehr-am",
@@ -5504,7 +5502,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-am"
-version = "0.0.86"
+version = "0.0.87"
 dependencies = [
  "openehr-base",
  "openehr-lang",
@@ -5514,7 +5512,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-base"
-version = "0.0.86"
+version = "0.0.87"
 dependencies = [
  "serde",
  "serde_json",
@@ -5534,7 +5532,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-its"
-version = "0.0.86"
+version = "0.0.87"
 dependencies = [
  "async-trait",
  "axum",
@@ -5550,7 +5548,7 @@ dependencies = [
  "openehr-rm",
  "openehr-term",
  "quick-xml 0.42.0",
- "reqwest 0.13.5",
+ "reqwest",
  "secrecy",
  "serde",
  "serde_json",
@@ -5568,7 +5566,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-lang"
-version = "0.0.86"
+version = "0.0.87"
 dependencies = [
  "assert_fs",
  "chumsky",
@@ -5582,7 +5580,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-query"
-version = "0.0.86"
+version = "0.0.87"
 dependencies = [
  "chumsky",
  "logos",
@@ -5591,7 +5589,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-rm"
-version = "0.0.86"
+version = "0.0.87"
 dependencies = [
  "insta",
  "jsonschema",
@@ -5609,7 +5607,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-sdt"
-version = "0.0.86"
+version = "0.0.87"
 dependencies = [
  "fancy-regex",
  "indexmap 2.14.2",
@@ -5633,7 +5631,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-term"
-version = "0.0.86"
+version = "0.0.87"
 dependencies = [
  "openehr-base",
  "roxmltree",
@@ -5702,7 +5700,7 @@ dependencies = [
  "bytes",
  "http",
  "opentelemetry",
- "reqwest 0.13.5",
+ "reqwest",
 ]
 
 [[package]]
@@ -5718,7 +5716,7 @@ dependencies = [
  "opentelemetry-proto",
  "opentelemetry_sdk",
  "prost",
- "reqwest 0.13.5",
+ "reqwest",
  "thiserror 2.0.20",
  "tokio",
  "tonic",
@@ -7068,44 +7066,6 @@ checksum = "51743d3e274e2b18df81c4dc6caf8a5b8e15dbe799e0dca05c7617380094e884"
 
 [[package]]
 name = "reqwest"
-version = "0.12.28"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eddd3ca559203180a307f12d114c268abf583f59b03cb906fd0b3ff8646c1147"
-dependencies = [
- "base64 0.22.1",
- "bytes",
- "futures-core",
- "http",
- "http-body",
- "http-body-util",
- "hyper",
- "hyper-rustls",
- "hyper-util",
- "js-sys",
- "log",
- "percent-encoding",
- "pin-project-lite",
- "quinn",
- "rustls",
- "rustls-pki-types",
- "serde",
- "serde_json",
- "serde_urlencoded",
- "sync_wrapper",
- "tokio",
- "tokio-rustls",
- "tower",
- "tower-http 0.6.11",
- "tower-service",
- "url",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
- "webpki-roots",
-]
-
-[[package]]
-name = "reqwest"
 version = "0.13.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "16a1cfa75cc186dd73d5818e510e042e40927bccc9c236b061cea97e1eb08029"
@@ -7331,9 +7291,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.45"
+version = "0.23.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d41d731c7d2f962d1ccc364cec258de3c0e93b38c2fb3ba97ac74513048d634"
+checksum = "48e13bd8c0e9365c43cfa5c9e8f9ad49d3c8444926c9aac819e0e4dc503c8fdf"
 dependencies = [
  "aws-lc-rs",
  "log",
@@ -8774,7 +8734,7 @@ dependencies = [
  "http",
  "indexmap 2.14.2",
  "pastey",
- "reqwest 0.13.5",
+ "reqwest",
  "serde",
  "serde_json",
  "serde_repr",

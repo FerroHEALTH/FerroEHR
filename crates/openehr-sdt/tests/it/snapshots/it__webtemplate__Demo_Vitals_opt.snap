@@ -655,7 +655,8 @@ expression: wt
                               "sl": "Preveč oblečen (zavit)"
                             }
                           }
-                        ]
+                        ],
+                        "defaultValue": "at0033"
                       }
                     ]
                   },

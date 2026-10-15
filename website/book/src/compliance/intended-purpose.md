@@ -184,7 +184,7 @@ Foreseeable misuse, and what FerroEHR does about it:
 | Misuse | What FerroEHR does | What remains |
 |---|---|---|
 | Real patient data in an instance running the shipped `sandbox` profile | states the profile on the banner, in the log, on `GET /rest/status` and in the viewer | nothing refuses it; the Helm chart and the Compose files declare `sandbox` explicitly, and the chart's values say what a deployment holding patient data sets |
-| The quickstart Compose file in production, with its development user and RBAC off | the README and the Compose file call these development defaults | nothing refuses it; the [go-live checklist](../security/go-live-checklist.md) is the control |
+| The quickstart Compose file in production, with its development user and RBAC off | the README and the Compose file call these development defaults; `production` refuses RBAC off unless `rbac_off` is accepted by name | nothing refuses it under `sandbox`; the [go-live checklist](../security/go-live-checklist.md) is the control |
 | `auth.enabled = false` on a reachable network | `production` refuses it at boot unless `auth_off` is accepted by name (#3638) | an accepted gap is stated on every boot; the `sandbox` profile does not refuse it |
 | A plaintext listener on a routable address with no TLS ingress in front | `production` refuses it at boot unless `plaintext_listener` is accepted by name; a loopback bind is exempt (#3638); a separate management listener (`management.port`), which binds every interface in plain HTTP, opens the same gap (#3668) | a deployment behind a TLS-terminating ingress accepts `plaintext_listener`, and nothing checks that the ingress exists or that the management port is unreachable off the host |
 | Several organisations in one instance | no tenant model exists to misconfigure; one instance per organisation is documented | nothing in the software can detect it ([B5](../threat-model.md#b5--instance-separation)) |
@@ -195,7 +195,7 @@ Foreseeable misuse, and what FerroEHR does about it:
 | Reads and writes straight against the database | the domain roles limit what each credential reaches | such access bypasses authorisation and the access log ([B6](../threat-model.md#b6--the-database)) |
 | Structural validation taken for clinical correctness | validation checks structure, invariants and terminology bindings only | clinical governance is the organisation's ([threat model](../threat-model.md#what-is-explicitly-not-defended-against)) |
 | openEHR conformance results, or these pages, taken for regulatory conformity | the [compliance overview](index.md) says FerroEHR holds no certification or declaration | none |
-| A release run after its support period ends | the end date is in every release's notes and in `SECURITY.md`; the running server states it on the boot banner, in `ferroehr --version`, on `GET /management/info` and `GET /rest/status`, and logs a warning at boot and daily once it has passed (#3639) | nothing refuses to run; the server does not look for newer releases |
+| A release run after its support period ends | the end date is in every release's notes and in `SECURITY.md`; the running server states it on the boot banner, in `ferroehr --version`, on `GET /management/info` and `GET /management/status`, and logs a warning at boot and daily once it has passed (#3639) | nothing refuses to run; the server does not look for newer releases |
 
 ## What the intended purpose excludes
 

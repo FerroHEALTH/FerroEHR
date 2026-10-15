@@ -12,8 +12,9 @@ abstract: >-
   (CDR): ITS-REST 1.1.0 REST API, AQL 1.1 query language, and the openEHR
   RM 1.2.0 reference model on PostgreSQL-18-native storage. The openEHR
   specification layer is generated from the official machine-readable
-  specifications, and conformance is machine-verified per release by a
-  built-in CNF conformance runner.
+  specifications. Its openEHR conformance is measured with Veredictum, a
+  separate CNF 2.0 conformance runner, and the run records are committed
+  alongside the source.
 authors:
   - family-names: Talstra
     given-names: Ruben

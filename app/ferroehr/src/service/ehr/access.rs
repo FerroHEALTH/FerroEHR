@@ -26,7 +26,7 @@ use std::sync::Arc;
 
 use crate::ids::EhrId;
 use crate::service::ehr::access_types::{EhrAccessIndex, EhrAccessSettings};
-use crate::service::error::{ServiceError, internal_fault};
+use crate::service::error::{ServiceError, internal_fault_caused};
 use crate::service::status::SmError;
 use moka::future::Cache;
 use openehr_rm::prelude::{DvText, DvTextData, EhrAccess};
@@ -195,7 +195,7 @@ impl FerroEhrService {
         let mut index = Vec::with_capacity(bodies.len());
         for (ehr_id, body) in bodies {
             let value: Value = serde_json::from_str(&body)
-                .map_err(|e| internal_fault("read a stored EHR_ACCESS body", &e))?;
+                .map_err(|e| internal_fault_caused("read a stored EHR_ACCESS body", &e))?;
             if let Some(settings) = EhrAccessSettings::from_ehr_access(&value) {
                 index.push((ehr_id, settings));
             }

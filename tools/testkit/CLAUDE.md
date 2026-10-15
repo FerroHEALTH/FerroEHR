@@ -19,7 +19,10 @@ own container or running its own migrations.
   `docker rm -f ferroehr-testkit-pg18`.
 - **Sweep:** every test process reclaims stale harness databases **once, at
   server acquisition, before it hands out any clone** — clones past a short
-  grace window plus templates of other migration fingerprints. Drops are
+  grace window plus templates of other migration fingerprints stamped
+  complete longer ago than their own grace window (or not stamped with a
+  build time), so concurrent suites from different fingerprints on one server
+  stop rebuilding each other's templates. Drops are
   **force-free on purpose**: a clone another process is still connected to is
   refused with SQLSTATE `55006` and skipped as benign (never
   `WITH (FORCE)` — that would tear a live test's database out from under it;
@@ -28,13 +31,13 @@ own container or running its own migrations.
 - **Template discipline:** the template is migrated by the platform
   library's own `db::run_migrations` and keyed on
   `db::migration_fingerprint()`; completion is stamped as the database
-  comment. Never connect to the template outside the build path — an open
+  comment, with the fingerprint and the build time. Never connect to the template outside the build path — an open
   connection blocks every clone (PostgreSQL docs § CREATE DATABASE).
 - **Isolation is per-database, not per-server.** A test that needs
   server-global state (ALTER SYSTEM, cross-database assertions) does not
   belong on the shared server — flag it instead of hacking around the
   harness. The single exception is testkit's OWN gate
-  (`tools/testkit/tests/harness.rs`), which must assert on cluster-wide state
+  (`tools/testkit/tests/it/harness.rs`), which must assert on cluster-wide state
   (the sweep) — it does so under uniquely named databases in the
   `ferroehr_tk_*` namespace so parallel processes cannot collide.
 - **Dependency shape:** `testkit → ferroehr` (normal dep); the app crates'

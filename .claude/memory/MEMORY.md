@@ -86,5 +86,5 @@
 - [Stacked PRs after a squash merge](stacked-prs-after-squash.md) — rebase --onto the lower PR's last commit; lease-push to the exact remote sha
 - [Greenfield: breaking changes OK](greenfield-breaking-changes-ok.md) — remove superseded routes/keys in 4.3.x, no major bump
 - [FerroHEALTH is the mother name](ferrohealth-umbrella.md) — family-level docs (manufacturer, EHDS system, CRA overview, licensing) go to the FerroHEALTH book, not FerroEHR's
-- [Podman, not Docker](podman-not-docker.md) — owner runs podman; DOCKER_HOST to the podman socket for testkit
+- [Podman, not Docker](podman-not-docker.md) — podman for containers and Kubernetes (kind, podman provider); DOCKER_HOST to the podman socket
 - [Agent pushes release tags](agent-pushes-release-tags.md) — create+push the signed vX.Y.Z tag, watch the run, close the milestone, clean branches; owner only merges

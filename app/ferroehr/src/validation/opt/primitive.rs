@@ -398,9 +398,75 @@ fn in_order_subset(s: &str, order: &[char]) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use openehr_base::prelude::{CodePhrase, TerminologyId};
+    use openehr_its::opt14::types::{CDvQuantity, CQuantityItem, Intervalofinteger};
+
     use super::{
-        valid_date_pattern, valid_date_time_pattern, valid_duration_pattern, valid_time_pattern,
+        check_dv_quantity, valid_date_pattern, valid_date_time_pattern, valid_duration_pattern,
+        valid_time_pattern,
     };
+
+    /// A `C_DV_QUANTITY` constraining the openEHR `property` code `property`
+    /// to the given units.
+    fn quantity(property: &str, units: &[&str]) -> CDvQuantity {
+        CDvQuantity {
+            rm_type_name: "DV_QUANTITY".to_owned(),
+            occurrences: Intervalofinteger {
+                lower_included: Some(true),
+                upper_included: Some(true),
+                lower_unbounded: false,
+                upper_unbounded: false,
+                lower: Some(1),
+                upper: Some(1),
+            },
+            node_id: String::new(),
+            assumed_value: None,
+            property: Some(CodePhrase {
+                terminology_id: TerminologyId {
+                    value: "openehr".to_owned(),
+                },
+                code_string: property.to_owned(),
+                preferred_term: None,
+            }),
+            list: units
+                .iter()
+                .map(|u| CQuantityItem {
+                    magnitude: None,
+                    precision: None,
+                    units: (*u).to_owned(),
+                })
+                .collect(),
+        }
+    }
+
+    /// TERM 3.1.0 amendment 3.1.4 (SPECPR-450) adds concepts 761 to 765 to the
+    /// `property` group (`TERM/docs/SupportTerminology/codesets/
+    /// openehr_terminology-vocabularies.adoc`), so `Property_valid` accepts each
+    /// through the vendored terminology, together with the new units of 764
+    /// (Length per area) and 765 (Concentration per volume).
+    #[test]
+    fn property_valid_accepts_the_specpr_450_properties() {
+        for (property, units) in [
+            ("761", &[][..]),
+            ("762", &[][..]),
+            ("763", &[][..]),
+            ("764", &["mm/m2"][..]),
+            ("765", &["ng/mL/cm3", "ug/L/cm3"][..]),
+        ] {
+            assert!(
+                check_dv_quantity(&quantity(property, units), "at0001").is_ok(),
+                "property {property} must be in the openEHR 'property' group"
+            );
+        }
+    }
+
+    /// A property code outside the `property` group is still refused.
+    #[test]
+    fn property_valid_refuses_an_unknown_property_code() {
+        let err = check_dv_quantity(&quantity("766", &["ng/mL/cm3"]), "at0001")
+            .expect_err("766 is not in the openEHR 'property' group");
+        assert_eq!(err.code, "Property_valid");
+    }
 
     #[test]
     fn duration_pattern_syntax() {

@@ -28,6 +28,7 @@ use serde_json::Value;
 use sqlx::postgres::PgRow;
 use sqlx::{PgPool, Row};
 
+use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::storage::error::StorageError;
 
@@ -121,7 +122,7 @@ pub async fn all_version_meta(
 ) -> Result<Vec<VersionMeta>, StorageError> {
     let rows = sqlx::query(ALL_VERSION_META_SQL)
         .bind(vo_id)
-        .fetch_all(pool)
+        .fetch_all(&mut *acquire(pool).await?)
         .await?;
     rows.iter()
         .map(|row| {
@@ -167,7 +168,7 @@ pub async fn time_created(
          WHERE v.vo_id = $1 ORDER BY v.sys_version LIMIT 1";
     let stamp = sqlx::query_scalar::<_, jiff_sqlx::Timestamp>(SQL)
         .bind(vo_id)
-        .fetch_optional(pool)
+        .fetch_optional(&mut *acquire(pool).await?)
         .await?;
     Ok(stamp.map(jiff_sqlx::Timestamp::to_jiff))
 }
@@ -197,7 +198,10 @@ pub async fn commit_bounds(
                        min(a.time_committed) AS created, \
                        max(a.time_committed) AS modified \
                        FROM version v JOIN commit_audit a ON a.id = v.commit_audit_id WHERE v.vo_id = $1";
-    let row = sqlx::query(SQL).bind(vo_id).fetch_one(pool).await?;
+    let row = sqlx::query(SQL)
+        .bind(vo_id)
+        .fetch_one(&mut *acquire(pool).await?)
+        .await?;
     let owner: Option<EhrId> = row.try_get("ehr_id")?;
     let created: Option<jiff_sqlx::Timestamp> = row.try_get("created")?;
     let modified: Option<jiff_sqlx::Timestamp> = row.try_get("modified")?;
@@ -232,12 +236,12 @@ pub async fn template_id_of(
             .bind(trunk)
             .bind(branch)
             .bind(branch_version)
-            .fetch_optional(pool)
+            .fetch_optional(&mut *acquire(pool).await?)
             .await?);
     }
     Ok(sqlx::query_scalar(CURRENT_SQL)
         .bind(vo_id)
-        .fetch_optional(pool)
+        .fetch_optional(&mut *acquire(pool).await?)
         .await?)
 }
 
@@ -252,7 +256,7 @@ pub async fn ehr_exists(pool: &PgPool, ehr_id: EhrId) -> Result<bool, StorageErr
     Ok(
         sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM ehr WHERE id = $1)")
             .bind(ehr_id)
-            .fetch_one(pool)
+            .fetch_one(&mut *acquire(pool).await?)
             .await?,
     )
 }
@@ -268,7 +272,7 @@ pub async fn object_kind(pool: &PgPool, vo_id: VoId) -> Result<Option<String>, S
                        WHERE version.vo_id = $1";
     Ok(sqlx::query_scalar(SQL)
         .bind(vo_id)
-        .fetch_optional(pool)
+        .fetch_optional(&mut *acquire(pool).await?)
         .await?)
 }
 
@@ -292,7 +296,10 @@ pub async fn object_kinds(
     if vo_ids.is_empty() {
         return Ok(Vec::new());
     }
-    let rows = sqlx::query(SQL).bind(vo_ids).fetch_all(pool).await?;
+    let rows = sqlx::query(SQL)
+        .bind(vo_ids)
+        .fetch_all(&mut *acquire(pool).await?)
+        .await?;
     rows.iter()
         .map(|r| Ok((r.try_get("vo_id")?, r.try_get("kind")?)))
         .collect::<Result<_, StorageError>>()
@@ -307,7 +314,7 @@ pub async fn vo_owner(pool: &PgPool, vo_id: VoId) -> Result<Option<Option<EhrId>
     const SQL: &str = "SELECT ehr_id FROM version WHERE vo_id = $1 LIMIT 1";
     Ok(sqlx::query_scalar(SQL)
         .bind(vo_id)
-        .fetch_optional(pool)
+        .fetch_optional(&mut *acquire(pool).await?)
         .await?)
 }
 
@@ -325,7 +332,10 @@ pub async fn vo_owner_kind(
     vo_id: VoId,
 ) -> Result<Option<(Option<EhrId>, String)>, StorageError> {
     const SQL: &str = "SELECT ehr_id, kind FROM version WHERE vo_id = $1 LIMIT 1";
-    Ok(sqlx::query_as(SQL).bind(vo_id).fetch_optional(pool).await?)
+    Ok(sqlx::query_as(SQL)
+        .bind(vo_id)
+        .fetch_optional(&mut *acquire(pool).await?)
+        .await?)
 }
 
 /// Whether a specific VERSION of a versioned object exists, addressed by its
@@ -345,7 +355,7 @@ pub async fn version_exists(
         .bind(trunk)
         .bind(branch_number)
         .bind(branch_version)
-        .fetch_one(pool)
+        .fetch_one(&mut *acquire(pool).await?)
         .await?)
 }
 
@@ -426,7 +436,7 @@ pub async fn current_vo(
     let found = sqlx::query(SQL)
         .bind(ehr_id)
         .bind(kind)
-        .fetch_optional(pool)
+        .fetch_optional(&mut *acquire(pool).await?)
         .await?;
     let Some(row) = found else {
         return Ok(None);
@@ -455,7 +465,9 @@ pub async fn ehr_access_bodies_with_settings(
                        FROM version \
                        JOIN vo_head h ON h.vo_id = version.vo_id AND h.trunk_head_sys_version = version.sys_version \
                        WHERE version.kind = 'EHR_ACCESS' AND strpos(version.body, '\"settings\"') > 0";
-    let rows = sqlx::query(SQL).fetch_all(pool).await?;
+    let rows = sqlx::query(SQL)
+        .fetch_all(&mut *acquire(pool).await?)
+        .await?;
     rows.iter()
         .map(|row| Ok((row.try_get("ehr_id")?, row.try_get("body")?)))
         .collect()
@@ -522,7 +534,7 @@ pub async fn current_version_meta_by_kind(
     let found = sqlx::query(SQL)
         .bind(ehr_id)
         .bind(kind)
-        .fetch_optional(pool)
+        .fetch_optional(&mut *acquire(pool).await?)
         .await?;
     let Some(row) = found else {
         return Ok(None);
@@ -548,7 +560,7 @@ pub async fn current_version_meta_scoped(
     let found = sqlx::query(CURRENT_VERSION_META_SCOPED_SQL)
         .bind(vo_id)
         .bind(ehr_id)
-        .fetch_optional(pool)
+        .fetch_optional(&mut *acquire(pool).await?)
         .await?;
     let Some(row) = found else {
         return Ok(None);
@@ -601,7 +613,10 @@ pub async fn current_demographic_meta(
                        FROM version v JOIN commit_audit a ON a.id = v.commit_audit_id \
                        JOIN vo_head h ON h.vo_id = v.vo_id AND h.trunk_head_sys_version = v.sys_version \
                        WHERE v.vo_id = $1 AND v.ehr_id IS NULL";
-    let found = sqlx::query(SQL).bind(vo_id).fetch_optional(pool).await?;
+    let found = sqlx::query(SQL)
+        .bind(vo_id)
+        .fetch_optional(&mut *acquire(pool).await?)
+        .await?;
     let Some(row) = found else {
         return Ok(None);
     };
@@ -702,7 +717,10 @@ pub async fn current_composition_meta(
                        ) fv ON true \
                        JOIN vo_head h ON h.vo_id = v.vo_id AND h.trunk_head_sys_version = v.sys_version \
                        WHERE v.vo_id = $1";
-    let found = sqlx::query(SQL).bind(vo_id).fetch_optional(pool).await?;
+    let found = sqlx::query(SQL)
+        .bind(vo_id)
+        .fetch_optional(&mut *acquire(pool).await?)
+        .await?;
     let Some(row) = found else {
         return Ok(None);
     };
@@ -744,7 +762,7 @@ pub async fn composition_count(pool: &PgPool, ehr_id: EhrId) -> Result<i64, Stor
          WHERE ehr_id = $1 AND kind = 'COMPOSITION'",
     )
     .bind(ehr_id)
-    .fetch_one(pool)
+    .fetch_one(&mut *acquire(pool).await?)
     .await?)
 }
 
@@ -771,6 +789,6 @@ pub async fn current_vo_ids(
     .bind(ehr_id)
     .bind(kind)
     .bind(exclude_lifecycle)
-    .fetch_all(pool)
+    .fetch_all(&mut *acquire(pool).await?)
     .await?)
 }

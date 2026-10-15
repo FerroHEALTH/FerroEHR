@@ -30,12 +30,17 @@
 //!   (`migrations/clinical/0002_ehr.sql` through `0006_definitions.sql`).
 //! * **Table aliases** — `format!` over an integer source id or the builder's
 //!   own counter, never over query text: `n{sid}`, `v{sid}`, `e{sid}`,
-//!   `x{ctr}`, `xv{ctr}`, `s{ctr}`, `w{ctr}`, `p{ctr}`, `qg{ctr}`, `esv{ctr}`,
-//!   `esn{ctr}`, `a_v{sid}` (`aql::sql::from`, `aql::sql::value`,
-//!   `aql::sql::select`).
+//!   `x{ctr}`, `xv{ctr}`, `s{ctr}`, `w{ctr}`, `b{ctr}`, `p{ctr}`, `qg{ctr}`,
+//!   `esv{ctr}`, `esn{ctr}`, `a_v{sid}`, the row bindings' inner `b{ctr}_n` /
+//!   `w{ctr}_n` and one-row `b{ctr}_one` / `w{ctr}_one`, and the streaming
+//!   source's inner `n{sid}_s` (`aql::sql::from`, `aql::sql::value`,
+//!   `aql::sql::select`), plus the two fixed `ehr` aliases of the patient-scope
+//!   rule, `subject_row` and `subject_other` (`aql::sql::subject`).
 //! * **Output-column aliases** — `col{i}` / `col{i}_{vo,sv,num,cap}` from the
 //!   SELECT index (`aql::sql::select`), `scope_ehr_{i}` / `scope_template_{i}`
-//!   from the VO-root index (`aql::sql::build_scope`), `access_ehr_{i}` /
+//!   from one index over the EHR sources, the VO roots and the joined
+//!   `EHR_STATUS` roots (`aql::sql::build_scope`), the literal `subject_shared`
+//!   of the subject lookup (`aql::sql::subject::lookup`), `access_ehr_{i}` /
 //!   `access_vo_{i}` / `access_sv_{i}` from the same index
 //!   (`aql::sql::select::build_access_ehr_columns` and
 //!   `build_access_version_columns`, the hidden columns the access log reads
@@ -83,6 +88,7 @@ use ferroehr::aql::error::{AnalysisError, AqlError, AqlFeatureError};
 use ferroehr::aql::ir::{ParamValue, Params, QueryIr};
 use ferroehr::aql::lineage::ArchetypeLineage;
 use ferroehr::aql::plan;
+use ferroehr::aql::sql::subject::SubjectScope;
 use ferroehr::aql::sql::{PreparedQuery, SqlCtx};
 use openehr_query::parser::parse_str;
 
@@ -591,6 +597,7 @@ const IDENTIFIERS: &[&str] = &[
     "system_id",
     "time_created",
     "subject_id",
+    "subject_namespace",
     "is_queryable",
     // audit
     "time_committed",
@@ -612,6 +619,9 @@ const ALIAS_PATTERNS: &[&str] = &[
     r"^xv[0-9]+$",
     r"^s[0-9]+$",
     r"^w[0-9]+$",
+    r"^b[0-9]+$",
+    r"^(b|w)[0-9]+_(n|one)$",
+    r"^n[0-9]+_s$",
     r"^p[0-9]+$",
     r"^qg[0-9]+$",
     r"^esv[0-9]+$",
@@ -628,6 +638,7 @@ const ALIAS_PATTERNS: &[&str] = &[
     r"^scope_(ehr|template)_[0-9]+$",
     r"^access_(ehr|vo|sv)_[0-9]+$",
     r"^hit$",
+    r"^subject_(row|other|shared)$",
 ];
 
 #[test]
@@ -652,7 +663,29 @@ fn every_quoted_identifier_comes_from_the_closed_set() {
         {
             statements.push((format!("{query} [scope]"), scope.sql));
         }
+        // The ABAC patient scope adds the subject-identity conditions to both
+        // statements, so each is scanned under a scoped context too, with and
+        // without a configured patient namespace.
+        for namespace in [None, Some("nl.example.patients".to_owned())] {
+            let scoped = SqlCtx {
+                subject_scope: Some(SubjectScope {
+                    id: "patient-1".to_owned(),
+                    namespace,
+                }),
+                ..ctx()
+            };
+            let prepared = build_with(query, &Params::new(), &scoped);
+            statements.push((format!("{query} [patient scope]"), prepared.sql));
+            if let Some(scope) = ferroehr::aql::sql::build_scope(&ir, &Params::new(), &scoped)
+                .unwrap_or_else(|e| panic!("scope build failed for {query:?}: {e}"))
+            {
+                statements.push((format!("{query} [patient scope, scope]"), scope.sql));
+            }
+        }
     }
+    // The subject lookup the direct-route gate and the post-check read.
+    let (lookup, _) = ferroehr::aql::sql::subject::lookup(&[uuid::Uuid::nil()]);
+    statements.push(("subject lookup".to_owned(), lookup));
     for payload in HOSTILE {
         for (position, query) in PARAM_POSITIONS {
             let prepared = build(query, &one_param("p", payload));
@@ -727,7 +760,10 @@ fn hostile_execution_context_values_bind() {
     for payload in HOSTILE {
         let mut hostile_ctx = ctx();
         hostile_ctx.system_id = (*payload).to_owned();
-        hostile_ctx.subject_scope = Some((*payload).to_owned());
+        hostile_ctx.subject_scope = Some(SubjectScope {
+            id: (*payload).to_owned(),
+            namespace: Some((*payload).to_owned()),
+        });
         let hostile = build_with(query, &Params::new(), &hostile_ctx);
         assert!(
             !hostile.sql.contains(MARKER),
@@ -745,7 +781,10 @@ fn hostile_execution_context_values_bind() {
         // the payload changes nothing structural between two hostile builds.
         let mut second_ctx = ctx();
         second_ctx.system_id = format!("{payload}{payload}");
-        second_ctx.subject_scope = Some(format!("{payload}{payload}"));
+        second_ctx.subject_scope = Some(SubjectScope {
+            id: format!("{payload}{payload}"),
+            namespace: Some(format!("{payload}{payload}")),
+        });
         let second = build_with(query, &Params::new(), &second_ctx);
         assert_eq!(
             hostile.sql, second.sql,

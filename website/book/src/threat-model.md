@@ -378,7 +378,7 @@ of no other, so a privilege cannot arrive through a membership.
 | `ferroehr_clinical` | `clinical`, archival partitions included, with `SELECT`, `INSERT`, `UPDATE` and `DELETE`; the `ext.posture` stamp; `USAGE` on `ext`; in `audit`, record an event, stamp it forwarded, run the retention reaper and verify the chain | `party` and `linkage`, revoked explicitly and in both directions |
 | `ferroehr_clinical_reader` | `SELECT` on `clinical`; `USAGE` on `ext`; read the `audit` repository and verify the chain | the same two schemas |
 | `ferroehr_party` | `party`, archival partitions included, with `SELECT`, `INSERT`, `UPDATE` and `DELETE`, the sealed `national_identifier` rows included; `EXECUTE` on `party.resolve_national_identifier` | `clinical` and `linkage`, revoked explicitly and in both directions |
-| `ferroehr_party_reader` | `SELECT` on `party`. On `national_identifier` the table-level grant is revoked and re-granted column by column, so it reads `id`, `party_id`, `scheme` and `created_at` and never `lookup_digest`, `nonce` or `ciphertext` | `clinical` and `linkage` |
+| `ferroehr_party_reader` | `SELECT` on `party`. On `national_identifier` the table-level grant is revoked and re-granted column by column, so it reads `id`, `party_id`, `scheme`, `created_at` and `retired_at` and never `lookup_digest`, `nonce` or `ciphertext` | `clinical` and `linkage` |
 | `ferroehr_linkage` | `linkage.subject_ehr` with `SELECT`, `INSERT` and `UPDATE`; `EXECUTE` on `linkage.erase_ehr`; `USAGE` on `ext` | `clinical`, `party`, and `party.resolve_national_identifier` by its own revoke. It holds no `DELETE` anywhere, so the only rows it can remove are the ones the definer function deletes for an erased EHR, one EHR id at a time |
 | The schema-preparation credential (`[db] migrate_url`, normally a member of `ferroehr_migrator`) | every schema: it issues the DDL of all five migration sets and reads all five `_sqlx_migrations` tables, and it owns the objects it created | nothing. The server opens it for that one boot step and closes it again, so no pool is held on it and no request is served through it |
 
@@ -526,7 +526,7 @@ the admin delete calls once the clinical delete has committed.
 ### The sealed identifier and its lookup digest
 
 **Control.** A protected national identifier leaves the versioned body and
-lives in `demographic.national_identifier` under AES-256-GCM with a fresh
+lives in `party.national_identifier` under AES-256-GCM with a fresh
 96-bit nonce per record, with the scheme code bound in as
 associated data so a ciphertext moved between either fails to open. Beside it
 is an HMAC-SHA-256 digest under a separate subkey, which is what lets equality
@@ -537,6 +537,23 @@ function is `SECURITY DEFINER`, `PUBLIC` is revoked from it, and only
 event naming the scheme and whether it matched, never the value. The scheme
 registry is a closed set: an identifier whose scheme nobody registered cannot
 be stored as a protected one at all.
+
+Each party version seals rows of its own. When a later version or the logical
+deletion supersedes a version, its rows get a `retired_at` stamp and stay, so
+an older version still expands to the value it committed. Resolution matches
+live rows only, and a value is live for at most one party at a time.
+
+Three paths that move a party version keep the value sealed:
+
+- **EHR-Extract import:** a received version is stored verbatim, so the server
+  cannot seal it on the way in. It refuses with a `422` a version that carries
+  a protected scheme's value in plaintext, and one that references a sealed
+  row this instance does not hold, such as a reference from another instance.
+- **Admin dump and load:** the archive carries the party's sealed rows, live
+  and retired, as base64 ciphertext, nonce and digest, never the value. They
+  open again only under the same root key.
+- **Physical erasure of a party:** every sealed row of the party, live and
+  retired, is deleted in the same transaction as its versions.
 
 **Residual risk.**
 

@@ -71,8 +71,9 @@ pub trait Transport: Send + Sync {
     /// Sends `request` and reads the whole response.
     ///
     /// # Errors
-    /// Returns a [`TransportError`] when the request did not complete: a
-    /// refused connection, a broken stream, or the engine's timeout.
+    /// Returns a [`TransportError`] when the request did not complete (a
+    /// refused connection, a broken stream, or the engine's timeout), or when
+    /// the answer body is longer than the engine's limit.
     async fn send(
         &self,
         request: http::Request<Vec<u8>>,
@@ -96,6 +97,19 @@ pub enum TransportError {
         #[source]
         source: Box<dyn std::error::Error + Send + Sync>,
     },
+    /// The service answered, but the answer body is longer than the engine's
+    /// limit, so it was not read whole.
+    ///
+    /// The request reached the service and was answered with `status`; only the
+    /// body was refused, unread when its declared length is already past
+    /// `limit`, cut off as soon as it passed `limit` otherwise.
+    #[error("the {status} answer is longer than the {limit}-byte limit")]
+    BodyTooLarge {
+        /// The status the service answered with.
+        status: StatusCode,
+        /// The most body bytes the engine reads of one answer.
+        limit: usize,
+    },
 }
 
 /// The `reqwest` engine: a shared connection pool with rustls TLS.
@@ -105,12 +119,18 @@ pub enum TransportError {
 /// received and nothing is re-sent to the host its `Location` names. That is
 /// why the constructors take a `reqwest::ClientBuilder` rather than a built
 /// client, whose redirect policy can be neither read nor changed.
+///
+/// An engine reads every answer body whole unless it carries a limit
+/// ([`ReqwestTransport::with_max_body`]); a caller that cannot trust the size
+/// of what a service sends sets one.
 #[derive(Debug, Clone)]
 pub struct ReqwestTransport {
     client: reqwest::Client,
     // The per-request timeout this engine was built with, kept so a request
     // deadline can shorten it and never lengthen it.
     timeout: Option<Duration>,
+    // The most body bytes read of one answer; `None` reads every body whole.
+    max_body: Option<usize>,
 }
 
 impl ReqwestTransport {
@@ -131,6 +151,7 @@ impl ReqwestTransport {
                 .redirect(reqwest::redirect::Policy::none())
                 .build()?,
             timeout: None,
+            max_body: None,
         })
     }
 
@@ -150,6 +171,7 @@ impl ReqwestTransport {
                 .redirect(reqwest::redirect::Policy::none())
                 .build()?,
             timeout: Some(timeout),
+            max_body: None,
         })
     }
 
@@ -161,6 +183,65 @@ impl ReqwestTransport {
     pub fn with_timeout(timeout: Duration) -> Result<Self, reqwest::Error> {
         Self::with_builder_timeout(reqwest::Client::builder(), timeout)
     }
+
+    /// Returns this engine with a limit of `limit` bytes on the body it reads
+    /// of one answer.
+    ///
+    /// An answer whose body length is known and past `limit` is refused
+    /// without reading it; a body of unknown length (chunked, or decompressed
+    /// on the fly) is read chunk by chunk and refused as soon as it passes
+    /// `limit`. The refusal is [`TransportError::BodyTooLarge`], carrying the
+    /// answer's status, which the client returns as
+    /// [`ClientError::AnswerTooLarge`]. The limit counts the body as handed
+    /// over, after any content decoding, so a compressed body cannot expand
+    /// past it either.
+    #[must_use]
+    pub fn with_max_body(mut self, limit: usize) -> Self {
+        self.max_body = Some(limit);
+        self
+    }
+}
+
+/// The engine error `source` stands for: a timeout, or any other failure.
+fn engine_error(source: reqwest::Error) -> TransportError {
+    if source.is_timeout() {
+        TransportError::Timeout {
+            source: Box::new(source),
+        }
+    } else {
+        TransportError::Send {
+            source: Box::new(source),
+        }
+    }
+}
+
+/// Reads the body of `response` whole, or refuses it once it passes `limit`.
+async fn read_body(
+    mut response: reqwest::Response,
+    limit: Option<usize>,
+) -> Result<Vec<u8>, TransportError> {
+    let Some(limit) = limit else {
+        return Ok(response.bytes().await.map_err(engine_error)?.to_vec());
+    };
+    let too_large = TransportError::BodyTooLarge {
+        status: response.status(),
+        limit,
+    };
+    // `content_length` is the exact length of the body as handed over (`None`
+    // when chunked or decoded), so a `HEAD` or `304` answer counts as empty.
+    let declared = match response.content_length().map(usize::try_from) {
+        None => 0,
+        Some(Ok(declared)) if declared <= limit => declared,
+        Some(_) => return Err(too_large),
+    };
+    let mut body = Vec::with_capacity(declared);
+    while let Some(chunk) = response.chunk().await.map_err(engine_error)? {
+        if chunk.len() > limit.saturating_sub(body.len()) {
+            return Err(too_large);
+        }
+        body.extend_from_slice(&chunk);
+    }
+    Ok(body)
 }
 
 #[async_trait::async_trait]
@@ -178,26 +259,10 @@ impl Transport for ReqwestTransport {
             let timeout = self.timeout.map_or(budget, |own| own.min(budget));
             *request.timeout_mut() = Some(timeout);
         }
-        let response = self.client.execute(request).await.map_err(|source| {
-            if source.is_timeout() {
-                TransportError::Timeout {
-                    source: Box::new(source),
-                }
-            } else {
-                TransportError::Send {
-                    source: Box::new(source),
-                }
-            }
-        })?;
+        let response = self.client.execute(request).await.map_err(engine_error)?;
         let status = response.status();
         let headers = response.headers().clone();
-        let body = response
-            .bytes()
-            .await
-            .map_err(|source| TransportError::Send {
-                source: Box::new(source),
-            })?
-            .to_vec();
+        let body = read_body(response, self.max_body).await?;
         let mut out = http::Response::new(body);
         *out.status_mut() = status;
         *out.headers_mut() = headers;
@@ -760,7 +825,8 @@ impl<T: Transport> Client<T> {
     /// Returns [`ClientError::Unauthorized`], [`ClientError::Forbidden`] and
     /// [`ClientError::ServiceFailure`] for the general statuses the ITS-REST
     /// overview documents for every operation, [`ClientError::Transport`] when
-    /// no attempt completed, [`ClientError::DeadlineElapsed`] when the
+    /// no attempt completed, [`ClientError::AnswerTooLarge`] when an answer
+    /// body passed the engine's limit, [`ClientError::DeadlineElapsed`] when the
     /// deadline passed before an attempt (its `sent` says whether an earlier
     /// attempt or a DPoP nonce re-send's first send went out), and
     /// [`ClientError::Credentials`]
@@ -814,7 +880,8 @@ impl<T: Transport> Client<T> {
     ///
     /// # Errors
     /// Returns [`ClientError::Transport`] when the request did not complete,
-    /// [`ClientError::DeadlineElapsed`] when its deadline has passed — with
+    /// [`ClientError::AnswerTooLarge`] when the answer body passed the engine's
+    /// limit, [`ClientError::DeadlineElapsed`] when its deadline has passed — with
     /// `sent: false` before anything went out, and `sent: true` when it passed
     /// before the re-send that answers a DPoP nonce challenge —,
     /// [`ClientError::Credentials`] when the provider produced no credential,
@@ -901,15 +968,23 @@ impl<T: Transport> Client<T> {
             if let Some(left) = request.remaining(sent)? {
                 built.extensions_mut().insert(RequestTimeout(left));
             }
-            let response =
-                self.transport
-                    .send(built)
-                    .await
-                    .map_err(|source| ClientError::Transport {
+            let response = self
+                .transport
+                .send(built)
+                .await
+                .map_err(|source| match source {
+                    TransportError::BodyTooLarge { status, limit } => ClientError::AnswerTooLarge {
+                        method: request.method.clone(),
+                        path: request.path.clone(),
+                        status,
+                        limit,
+                    },
+                    source => ClientError::Transport {
                         method: request.method.clone(),
                         path: request.path.clone(),
                         source,
-                    })?;
+                    },
+                })?;
             sent = true;
             let (parts, body) = response.into_parts();
             if let Some((prover, _)) = prover
@@ -1457,6 +1532,23 @@ pub enum ClientError {
         /// What the engine reported on the last attempt.
         #[source]
         source: TransportError,
+    },
+    /// The service answered, but the body is longer than the engine's limit
+    /// ([`ReqwestTransport::with_max_body`]); it is never retried.
+    ///
+    /// Unlike [`ClientError::Transport`], the request reached the service and
+    /// was answered with `status`, so a non-idempotent request may have been
+    /// acted on.
+    #[error("the {status} answer to {method} {path} is longer than the {limit}-byte limit")]
+    AnswerTooLarge {
+        /// The HTTP method.
+        method: Method,
+        /// The operation path.
+        path: String,
+        /// The status the service answered with.
+        status: StatusCode,
+        /// The most body bytes the engine reads of one answer.
+        limit: usize,
     },
     /// The `http` request could not be built from its parts.
     #[error("the {method} {path} request could not be built")]

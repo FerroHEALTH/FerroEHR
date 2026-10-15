@@ -140,6 +140,27 @@ pub(super) fn version_response(
     ))
 }
 
+/// Whether a demographic commit stores a different body than the one submitted.
+///
+/// Two collaborators rewrite the body before it is decomposed and signed: the
+/// `DV_MULTIMEDIA` offload replaces inline media with a reference, and
+/// national-identifier protection replaces each protected value with a
+/// reference to its sealed row. A write response built from the submitted
+/// body would then serve bytes the store does not hold — for identifier
+/// protection, the very value the store exists to keep out of the record — so
+/// the write paths re-read the stored form instead. No openEHR spec governs
+/// either rewrite — our own design/extension.
+pub(super) fn commit_rewrites_body(service: &FerroEhrService) -> bool {
+    #[cfg(feature = "multimedia")]
+    let offloads = service
+        .multimedia
+        .as_ref()
+        .is_some_and(|engine| engine.offload_enabled());
+    #[cfg(not(feature = "multimedia"))]
+    let offloads = false;
+    offloads || service.identifiers.is_some()
+}
+
 /// The create/update representation built **from the commit result**, never a
 /// post-commit re-read: the served body is the just-written `canonical` with
 /// the `uid` injected, and the identity + commit instant come straight from
@@ -147,9 +168,8 @@ pub(super) fn version_response(
 /// written version identity). Byte-identical to a fresh read: the served form is
 /// `inject_uid(reassemble(decompose(canonical)))`, and the node codec
 /// round-trips `canonical` losslessly (pinned by a test). The caller passes
-/// the pre-write `canonical`; the multimedia-externalization fallback (where
-/// the stored form is offloaded and the in-memory body would diverge) stays in
-/// the party write paths.
+/// the pre-write `canonical`, and only when [`commit_rewrites_body`] says the
+/// commit stores that body unchanged; otherwise it re-reads the stored form.
 ///
 /// # Errors
 /// [`VersionIdError`] when the committed `creating_system_id` is not a legal

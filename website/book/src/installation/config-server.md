@@ -266,16 +266,18 @@ separate-port management listener always stays plain HTTP, so under
 enabled = false
 client_auth = "off"
 min_version = "1.3"
+reload_interval_secs = 60
 ```
 
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `enabled` | bool | `false` | Terminate TLS natively on the main listener. |
 | `cert_file` | path | unset | Server certificate chain (PEM). Required when enabled; a missing, unreadable or certificate-less file stops startup. |
-| `key_file` | path | unset | Server private key (PEM). Required when enabled. |
+| `key_file` | path | unset | Server private key (PEM): PKCS#8, SEC1 (`EC PRIVATE KEY`) or PKCS#1. Required when enabled; a key that does not belong to the first certificate in `cert_file` stops startup. |
 | `client_auth` | enum{off,optional,required} | `off` | Client-certificate policy. `optional` verifies a certificate when one is presented and still accepts connections without; `required` rejects any client without a verified certificate at the handshake. |
 | `client_ca_file` | path | unset | The explicit CA bundle client certificates must chain to, never the web PKI. Required unless `client_auth = "off"`. |
 | `min_version` | enum{"1.3","1.2"} | `"1.3"` | The lowest TLS version this listener negotiates. |
+| `reload_interval_secs` | integer | `60` | How often `cert_file` and `key_file` are re-read while the server runs. A changed pair is served to every new handshake without a restart; a pair that fails to load is logged with its cause and the previous pair stays in service. `0` reads them once, at startup. |
 
 > [!NOTE]
 > `min_version` defaults to **1.3 only**, following the OWASP Transport Layer
@@ -285,6 +287,14 @@ min_version = "1.3"
 > do 1.3, such as an older integration engine or a pinned Java runtime.
 > TLS 1.1 and 1.0 are not selectable at all: RFC 8996 deprecates them, and
 > neither this key nor the TLS library offers them.
+
+> [!NOTE]
+> An EC certificate must name its curve. RFC 5480 §2.1.1 forbids explicit
+> curve parameters, TLS clients refuse such a certificate, and the server
+> refuses it at startup with a message saying so. LibreSSL (the `openssl`
+> that ships with macOS) writes explicit parameters from `genpkey` and
+> `req -newkey ec` unless you add `-pkeyopt ec_param_enc:named_curve`;
+> `openssl ecparam -name prime256v1 -genkey` writes a named curve.
 
 ### `[server.identity]`
 
@@ -323,7 +333,7 @@ statement_timeout_ms = 60000
 |---|---|---|---|
 | `url` | secret URL | `postgres://ferroehr:ferroehr@localhost:5432/ferroehr` | Connection DSN. The default suits a local from-source run against a localhost PostgreSQL, and the server logs a prominent warning at boot while it is in use; **production MUST set it**. Credentials are redacted from every rendering. `DATABASE_URL` is a recognized lower-priority alias. |
 | `url_file` | path | unset | Read the DSN from a file instead of the key above, for a mounted secret. Preferred over the environment form in Kubernetes: an environment value is readable through `/proc/<pid>/environ` and inherited by every child process. At most one of the pair, where the built-in development default does not count as "set". |
-| `migrate_url` | secret URL | unset | DSN that PREPARES the schema, used for that one boot step and then closed. Preparation spans every schema of a database at once, which no domain-scoped runtime credential can do, so a deployment separating the runtime roles names the credential that can here. It prepares every domain whose DSN reaches the SAME DATABASE — which is the whole of the separated-credential posture, where each domain has a login role of its own on one database; a domain whose DSN reaches a different database is prepared on that DSN. Which it is, is read from the server (`pg_control_system()` plus `current_database()`), never from the DSN text. Unset, it falls back to `url`. See [Operations → Which credential prepares the schema](../operations.md#which-credential-prepares-the-schema). |
+| `migrate_url` | secret URL | unset | DSN that PREPARES the schema, used for that one boot step and then closed. Preparation spans every schema of a database at once, which no domain-scoped runtime credential can do, so a deployment separating the runtime roles names the credential that can here. It prepares every domain whose DSN reaches the SAME DATABASE — which is the whole of the separated-credential posture, where each domain has a login role of its own on one database; a domain whose DSN reaches a different database is prepared on that database's `storage.migrate.<domain>.url` (on the domain's own DSN when that is unset). Which it is, is read from the server (`pg_control_system()` plus `current_database()`), never from the DSN text. Unset, it falls back to `url`. See [Operations → Which credential prepares the schema](../operations.md#which-credential-prepares-the-schema). |
 | `migrate_url_file` | path | unset | Read `migrate_url` from a file instead, for a mounted secret. At most one of the pair. |
 | `migrate` | enum{apply,verify} | `apply` | Whether the server applies its embedded migrations at boot. `apply` is what makes an empty configuration boot against an empty database. `verify` issues **no DDL at all**: it checks that the database already carries exactly this build's migrations and refuses to start otherwise, so the serving DSN can authenticate as a role with no DDL rights. That check still READS every `_sqlx_migrations` table of each database, which no least-privilege role can do, so pair it with `migrate_url` above and with `ferroehr db migrate` run out of band; see [Operations](../operations.md#which-credential-prepares-the-schema). |
 | `max_connections` | int | `20` | Pool ceiling. Write-heavy deployments benefit from raising it. |
@@ -385,9 +395,28 @@ What the server checks at boot:
   refusal under `production`, where there are no grants to separate anything
   with.
 
-One constraint on relocation: the `linkage` migration set revokes a function the
-`party` set creates, so those two domains are prepared in the same database. A
-layout that splits them is refused before anything connects, with the remedy.
+Each database is prepared on its own migration credential. `[db] migrate_url`
+names one database; a domain whose DSN reaches another database is prepared
+there, and verified there under `migrate = "verify"`, on the credential named in
+`[storage.migrate.<domain>]`:
+
+```toml
+[storage.linkage]
+url_file = "/run/secrets/db-linkage-dsn"           # postgres://ferroehr_linkage:…@linkage-db/…
+[storage.migrate.linkage]
+url_file = "/run/secrets/db-linkage-migrate-dsn"   # postgres://ferroehr_migrator:…@linkage-db/…
+```
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `storage.migrate.<domain>.url` | secret URL | unset | DSN that prepares the database the domain lives in, when that is not the database `db.migrate_url` reaches. Used for that one step and closed again. Unset, such a database is prepared on the domain's own `url`, which a DML-only runtime role cannot do: it is refused on the first bookkeeping table it cannot read. |
+| `storage.migrate.<domain>.url_file` | path | unset | Read it from a file instead, for a mounted secret. At most one of the pair. |
+
+The server refuses to start when a domain's `url` and its `storage.migrate`
+URL reach different databases. A database that holds the `linkage` domain
+without the `party` domain also receives the party migration set, its schema
+and grants and never a row, because the linkage set revokes a function the
+party set creates.
 
 ## `[log]`
 

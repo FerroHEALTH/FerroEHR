@@ -16,14 +16,17 @@
 #      amendment record (default branch) but absent from the vendored copy
 #      under docs/specs/openehr/ (paths mirror the upstream repos 1:1; pins
 #      live in scripts/vendor/spec-docs.sh).
-#   C. Commits-ahead cross-check — per MASTER-pinned component repo, the
+#   C. Commits-ahead cross-check — per pinned component repo (every
+#      spec-docs.sh pin, plus ITS-BMM from its codegen provenance record), the
 #      default branch's distance ahead of the vendored pin commit. A and B are
 #      key-granular and blind to raw commits (a key adopted once dedups away
 #      every later commit under it; the amendment diff sees only NEW keys and
 #      never computable/BMM/**) — which is how 24 BASE commits accumulated
-#      silently (issue #341). One rolling issue per component: created when
-#      ahead, body updated in place as the delta grows, auto-closed when a
-#      re-vendor catches the pin up.
+#      silently (issue #341). A master pin reports "ahead of the vendored pin"
+#      (re-vendor triage); a Release-* tag pin reports "unreleased commits past
+#      the vendored release" (look-ahead triage: the pin waits for a release).
+#      One rolling issue per component: created when ahead, body updated in
+#      place as the delta grows, auto-closed when a re-vendor catches the pin up.
 #
 # Dedup / watermark: the issue board itself — a key already present in ANY
 # issue title (open or closed, searched with `--state all`) is never
@@ -41,6 +44,8 @@
 # successful poll that genuinely matches nothing is green-with-zero. A change
 # FOUND is a green run that files work, per the family's run-colour rule.
 #
+# Usage: scripts/watch/spec-update.sh [--self-test]  (--self-test checks the
+#      C helpers offline over fixture records)
 # Env: DRY_RUN=1 (report, create nothing) · WINDOW_DAYS (default 14 — the scheduled cadence; run manually with a wide window, e.g. 365, to catch any backlog: dedup + the vendored baseline make that safe) ·
 #      GH_TOKEN/GITHUB_TOKEN for gh. Requires curl, jq, gh.
 set -euo pipefail
@@ -66,6 +71,164 @@ PROJECTS="SPECRM,SPECBASE,SPECAM,SPECLANG,SPECQUERY,SPECITS,SPECTERM,SPECSM,SPEC
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
+
+# ── C helpers: the pinned rows, the pin kind and the rolling-issue text ─────
+# ITS-BMM feeds codegen only, so its pin lives in the codegen-inputs
+# provenance record rather than in spec-docs.sh.
+BMM_PROVENANCE="tools/openehr-codegen/vendor/bmm/PROVENANCE.md"
+
+# The kind of a human pin ref: `master…` is a branch pin, `Release-…` a
+# release-tag pin; any other ref word fails, so a mislabelled pin cannot land
+# silently in either class.
+pin_kind() {
+  case "$1" in
+    master*) echo "branch" ;;
+    Release-*) echo "release" ;;
+    *) return 1 ;;
+  esac
+}
+
+# One `comp|repo|ref|sha|record` row per spec-docs.sh pin, then the ITS-BMM
+# row from its provenance record line "Pinned commit: `<sha>` (<ref>)".
+rolling_rows() {
+  local spec_docs=$1 bmm_record=$2 line sha ref tick=$'\x60'
+  grep -E '^  "[A-Z-]+\|' "$spec_docs" | sed -e 's/^  "//' -e 's/"$//' |
+    while IFS='|' read -r comp repo ref sha; do
+      printf '%s|%s|%s|%s|%s\n' "$comp" "$repo" "$ref" "$sha" "$spec_docs"
+    done
+  line=$(grep -E "^Pinned commit: ${tick}[0-9a-f]{40}${tick} \\([^)]+\\)" "$bmm_record" | head -1) || return 1
+  [[ -n "$line" ]] || return 1
+  sha=$(sed -E "s/^Pinned commit: ${tick}([0-9a-f]{40})${tick}.*/\\1/" <<<"$line")
+  ref=$(sed -E "s/^Pinned commit: ${tick}[0-9a-f]{40}${tick} \\(([^)]+)\\).*/\\1/" <<<"$line")
+  printf 'ITS-BMM|specifications-ITS-BMM|%s|%s|%s\n' "$ref" "$sha" "$bmm_record"
+}
+
+# The stable title of a component's rolling issue. The branch-pin title is the
+# one this watcher has always used, so existing issues keep deduping.
+rolling_title() {
+  case "$1" in
+    branch) echo "[spec-update] $2 spec repo is ahead of the vendored pin" ;;
+    release) echo "[spec-update] $2 has unreleased commits past the vendored release" ;;
+    *) return 1 ;;
+  esac
+}
+
+# The count line a re-run compares against the open issue's body.
+# Args: kind ahead ref sha default head_sha.
+rolling_count_line() {
+  local kind=$1 ahead=$2 ref=$3 sha=$4 default=$5 head_sha=$6
+  case "$kind" in
+    branch) echo "**Commits ahead of the pin:** $ahead (pin \`${sha:0:9}\`, upstream $default @ \`${head_sha:0:9}\`)" ;;
+    release) echo "**Commits past the release:** $ahead (release \`${ref%% *}\` @ \`${sha:0:9}\`, upstream $default @ \`${head_sha:0:9}\`)" ;;
+    *) return 1 ;;
+  esac
+}
+
+# The rolling issue body. Args: kind comp repo sha default record count_line.
+rolling_body() {
+  local kind=$1 comp=$2 repo=$3 sha=$4 default=$5 record=$6 count_line=$7
+  if [[ "$kind" = "release" ]]; then
+    cat <<BODY
+Upstream \`openEHR/$repo\` ($comp) has commits on $default past the release we vendor. They are unreleased and the pin moves only to a released tag (\`docs/VERSIONS.md\`, spec version policy), so this is look-ahead triage, not a re-vendor.
+
+$count_line
+- **Compare:** https://github.com/openEHR/$repo/compare/${sha}...${default}
+- **Vendored pin:** \`$record\`
+
+### Triage checklist
+
+- [ ] Triage every commit in the delta: wire-visible / prose / machine-readable codegen input
+- [ ] File a tracker issue for each change the implementation will need once a release carries it
+- [ ] Re-vendor when a release tag carries the delta (the spec-release watcher reports new tags)
+
+_Maintained automatically by the spec-update watcher: the count above updates in place as the delta grows, and the issue closes when a re-vendor catches the pin up._
+BODY
+  else
+    cat <<BODY
+Upstream \`openEHR/$repo\` ($comp) has moved past our vendored pin — commit-delta triage needed (the per-commit triage pattern that closed #341).
+
+$count_line
+- **Compare:** https://github.com/openEHR/$repo/compare/${sha}...${default}
+- **Vendored pin:** \`$record\`; where this component feeds codegen, also the machine-readable vendor dirs (\`tools/openehr-codegen/vendor/bmm/\`, \`crates/openehr-its/{vendor,schemas}/\`, re-vendored by \`scripts/vendor/codegen-inputs.sh\`)
+
+### Triage checklist
+
+- [ ] Baseline: full regen + drift check green against the CURRENT pin before changing inputs
+- [ ] Triage every commit in the delta: prose / class-table / machine-readable codegen input
+- [ ] Verify each behaviour-relevant item against the implementation (several may already be satisfied)
+- [ ] Re-vendor + re-pin + regenerate; review the generated diff line by line
+- [ ] CNF zero-drift + changelog + \`docs/VERSIONS.md\` if anything is wire-visible
+
+_Maintained automatically by the spec-update watcher: the count above updates in place as the delta grows, and the issue closes when a re-vendor catches the pin up._
+BODY
+  fi
+}
+
+# Offline checks of the C helpers over fixture records: no network, no gh.
+self_test() {
+  local dir="$tmp/self-test" fail=0 rows
+  mkdir -p "$dir"
+  cat > "$dir/spec-docs.sh" <<'FIXTURE'
+PINS=(
+  "RM|specifications-RM|master (RM 1.2.0)|1111111111111111111111111111111111111111"
+  "ITS-REST|specifications-ITS-REST|Release-1.1.0 (released 19-Jul-2026)|2222222222222222222222222222222222222222"
+)
+FIXTURE
+  printf 'Source: x\nPinned commit: \x60%s\x60 (master)\n' 3333333333333333333333333333333333333333 > "$dir/PROVENANCE.md"
+  printf 'Source: x\nPinned commit: 3333 (master)\n' > "$dir/BROKEN.md"
+  check() { # $1 = what, $2 = actual, $3 = expected
+    if [[ "$2" != "$3" ]]; then
+      echo "self-test: $1: got '$2', want '$3'" >&2
+      fail=1
+    fi
+  }
+  rows=$(rolling_rows "$dir/spec-docs.sh" "$dir/PROVENANCE.md")
+  check "rows" "$rows" "RM|specifications-RM|master (RM 1.2.0)|1111111111111111111111111111111111111111|$dir/spec-docs.sh
+ITS-REST|specifications-ITS-REST|Release-1.1.0 (released 19-Jul-2026)|2222222222222222222222222222222222222222|$dir/spec-docs.sh
+ITS-BMM|specifications-ITS-BMM|master|3333333333333333333333333333333333333333|$dir/PROVENANCE.md"
+  if rolling_rows "$dir/spec-docs.sh" "$dir/BROKEN.md" >/dev/null; then
+    echo "self-test: a provenance record without a pinned commit was accepted" >&2
+    fail=1
+  fi
+  check "branch kind" "$(pin_kind "master (RM 1.2.0)")" "branch"
+  check "release kind" "$(pin_kind "Release-1.1.0 (released)")" "release"
+  if pin_kind "development" >/dev/null; then
+    echo "self-test: an unknown ref word was classified" >&2
+    fail=1
+  fi
+  check "branch title" "$(rolling_title branch ITS-BMM)" "[spec-update] ITS-BMM spec repo is ahead of the vendored pin"
+  check "release title" "$(rolling_title release ITS-REST)" "[spec-update] ITS-REST has unreleased commits past the vendored release"
+  check "release count" \
+    "$(rolling_count_line release 6 "Release-1.1.0 (released 19-Jul-2026)" 2222222222222222222222222222222222222222 master 4444444444444444444444444444444444444444)" \
+    "**Commits past the release:** 6 (release \`Release-1.1.0\` @ \`222222222\`, upstream master @ \`444444444\`)"
+  check "branch count" \
+    "$(rolling_count_line branch 6 master 3333333333333333333333333333333333333333 master 4444444444444444444444444444444444444444)" \
+    "**Commits ahead of the pin:** 6 (pin \`333333333\`, upstream master @ \`444444444\`)"
+  if ! rolling_body release ITS-REST specifications-ITS-REST 2222 master "$dir/spec-docs.sh" "COUNT" | grep -qxF "COUNT"; then
+    echo "self-test: the release body lacks its count line" >&2
+    fail=1
+  fi
+  if ! rolling_body branch ITS-BMM specifications-ITS-BMM 3333 master "$dir/PROVENANCE.md" "COUNT" | grep -qF "\`$dir/PROVENANCE.md\`"; then
+    echo "self-test: the branch body does not name its pin record" >&2
+    fail=1
+  fi
+  if [[ "$fail" -ne 0 ]]; then
+    exit 1
+  fi
+  echo "spec-update-watcher: self-test OK (pin rows incl. ITS-BMM, pin kinds, rolling titles, count lines, bodies)."
+}
+
+case "${1:-}" in
+  "") ;;
+  --self-test)
+    self_test
+    exit 0
+    ;;
+  *)
+    echo "usage: $0 [--self-test]" >&2
+    exit 2
+    ;;
+esac
 
 for bin in curl jq gh; do
   command -v "$bin" >/dev/null 2>&1 || { echo "spec-update-watcher: $bin is required" >&2; exit 1; }
@@ -290,42 +453,29 @@ while IFS= read -r local_path; do
   fi
 done <<< "$amendment_files"
 
-# ── C. Commits-ahead cross-check (master-pinned components) ─────────────────
-# Release-tag pins (e.g. QUERY, ITS-REST) are deliberately excluded: master
-# being ahead of a release tag is the normal state between releases, and new
-# releases are the release watcher's job (spec-release-watcher.yml).
+# ── C. Commits-ahead cross-check (every pinned component repo) ──────────────
+# One rolling issue per component and pin kind (rolling_title): created when
+# the default branch is ahead of the pin, updated in place as the delta grows,
+# auto-closed when a re-vendor catches the pin up.
 echo "spec-update-watcher: commits-ahead cross-check against the vendored pins"
 ahead_created=0 ahead_updated=0 ahead_closed=0
-while IFS='|' read -r comp repo ref sha; do
+rolling_rows scripts/vendor/spec-docs.sh "$BMM_PROVENANCE" > "$tmp/rows" ||
+  { echo "spec-update-watcher: no pinned commit in $BMM_PROVENANCE" >&2; exit 1; }
+while IFS='|' read -r comp repo ref sha record; do
   [[ -n "$comp" ]] || continue
-  case "$ref" in master*) ;; *) continue ;; esac
+  kind=$(pin_kind "$ref") ||
+    { echo "spec-update-watcher: $comp ref '$ref' names neither master nor a Release-* tag ($record)" >&2; exit 1; }
   default=$(gh api "repos/openEHR/$repo" --jq '.default_branch') ||
     { echo "spec-update-watcher: failed to read openEHR/$repo default branch" >&2; exit 1; }
   ahead=$(gh api "repos/openEHR/$repo/compare/${sha}...${default}" --jq '.ahead_by') ||
     { echo "spec-update-watcher: failed to compare ${sha}...${default} for openEHR/$repo" >&2; exit 1; }
   head_sha=$(gh api "repos/openEHR/$repo/branches/$default" --jq '.commit.sha') ||
     { echo "spec-update-watcher: failed to read openEHR/$repo $default head" >&2; exit 1; }
-  title="[spec-update] $comp spec repo is ahead of the vendored pin"
+  title=$(rolling_title "$kind" "$comp")
   num=$("$FILE_ISSUE" find --title "$title")
   if [[ "$ahead" -gt 0 ]]; then
-    count_line="**Commits ahead of the pin:** $ahead (pin \`${sha:0:9}\`, upstream $default @ \`${head_sha:0:9}\`)"
-    cat > "$tmp/ahead-body.md" <<EOF
-Upstream \`openEHR/$repo\` ($comp) has moved past our vendored pin — commit-delta triage needed (the per-commit triage pattern that closed #341).
-
-$count_line
-- **Compare:** https://github.com/openEHR/$repo/compare/${sha}...${default}
-- **Vendored pin:** \`scripts/vendor/spec-docs.sh\` (docs text); where this component feeds codegen, also the machine-readable vendor dirs (\`tools/openehr-codegen/vendor/bmm/\`, \`crates/openehr-its/{vendor,schemas}/\`)
-
-### Triage checklist
-
-- [ ] Baseline: full regen + drift check green against the CURRENT pin before changing inputs
-- [ ] Triage every commit in the delta: prose / class-table / machine-readable codegen input
-- [ ] Verify each behaviour-relevant item against the implementation (several may already be satisfied)
-- [ ] Re-vendor + re-pin + regenerate; review the generated diff line by line
-- [ ] CNF zero-drift + changelog + \`docs/VERSIONS.md\` if anything is wire-visible
-
-_Maintained automatically by the spec-update watcher: the count above updates in place as the delta grows, and the issue closes when a re-vendor catches the pin up._
-EOF
+    count_line=$(rolling_count_line "$kind" "$ahead" "$ref" "$sha" "$default" "$head_sha")
+    rolling_body "$kind" "$comp" "$repo" "$sha" "$default" "$record" "$count_line" > "$tmp/ahead-body.md"
     if [[ -n "$num" ]] && gh issue view "$num" --json body --jq '.body' | grep -qF "$count_line"; then
       continue # unchanged since the last run
     fi
@@ -340,7 +490,7 @@ EOF
     # as the delta grows).
     "$FILE_ISSUE" file --title "$title" --body-file "$tmp/ahead-body.md" \
       --type Task --labels "$labels" --on-existing update "${engine_dry[@]+"${engine_dry[@]}"}"
-    echo "  $comp is $ahead commit(s) ahead"
+    echo "  $comp is $ahead commit(s) ahead ($kind pin)"
     if [[ -n "$num" ]]; then
       ahead_updated=$((ahead_updated + 1))
     else
@@ -356,7 +506,7 @@ EOF
     fi
     ahead_closed=$((ahead_closed + 1))
   fi
-done < <(grep -E '^  "[A-Z-]+\|' scripts/vendor/spec-docs.sh | sed -e 's/^  "//' -e 's/"$//')
+done < "$tmp/rows"
 echo "spec-update-watcher: commits-ahead — $ahead_created created, $ahead_updated updated, $ahead_closed closed"
 
 # ── D. Dedup by key against the issue board (open AND closed), create ───────

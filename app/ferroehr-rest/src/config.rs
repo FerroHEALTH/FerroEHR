@@ -17,7 +17,7 @@ use ferroehr::config::smart::SmartConfig;
 /// Not a serde root — it is built in code, so extension-group toggles are
 /// plain `bool`s lifted from their owning sections
 /// (`[terminology].api_enabled`, `[events].admin_api`).
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct AppConfig {
     /// `[server]` — listener + REST surface + System-Options identity.
     pub server: ServerConfig,
@@ -36,10 +36,30 @@ pub struct AppConfig {
     /// records it whether or not the ABAC gate that shares the setting is
     /// switched on. `None` when the deployment configures no claim.
     pub audit_organization_claim: Option<String>,
+    /// `[authz.rbac] role_claims` — the access-token claim paths Bearer role
+    /// extraction reads, lifted here because the authenticator applies them
+    /// whether or not any authorization gate is switched on.
+    pub role_claims: Vec<String>,
     /// `spec_profile` — the openEHR specification generation set the server
     /// runs; the demographic ingress boundary reads it (the stable
     /// generation's released surface differs from the typed core's).
     pub spec_profile: ferroehr::config::profile::SpecProfile,
+}
+
+impl Default for AppConfig {
+    fn default() -> Self {
+        Self {
+            server: ServerConfig::default(),
+            auth: AuthConfig::default(),
+            admin: AdminConfig::default(),
+            smart: SmartConfig::default(),
+            terminology_api_enabled: false,
+            events_admin_api: false,
+            audit_organization_claim: None,
+            role_claims: ferroehr::config::authz::RbacConfig::default().role_claims,
+            spec_profile: ferroehr::config::profile::SpecProfile::default(),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -77,5 +97,9 @@ mod tests {
         assert!(!c.smart.enabled);
         assert!(!c.terminology_api_enabled);
         assert!(!c.events_admin_api);
+        assert_eq!(
+            c.role_claims,
+            ferroehr::config::authz::RbacConfig::default().role_claims
+        );
     }
 }

@@ -15,24 +15,16 @@
 //! design/extension; the grant is RFC 6749 §4.4 (client credentials),
 //! implemented by the `oauth2` crate.
 //!
-//! That crate is HTTP-client agnostic, building an `http::Request<Vec<u8>>` and
-//! parsing the response through its `AsyncHttpClient` trait, and its own
-//! `reqwest` impl targets a different major version than the workspace pins, so
-//! `Oauth2HttpClient` supplies the pinned one and the token endpoint is reached
-//! with the same TLS stack as the terminology operations.
-//!
-//! NOTE: the transport trait is implemented on a concrete type rather than
-//! through the crate's blanket closure impl, whose higher-ranked `Send`-ness the
-//! compiler cannot discharge through the `#[async_trait]` call chain that
-//! reaches it.
+//! The token request rides [`Oauth2HttpClient`], the workspace `reqwest` client
+//! as the `oauth2` transport, so the token endpoint is reached with the same TLS
+//! stack as the terminology operations.
 
-use std::future::Future;
-use std::pin::Pin;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use oauth2::TokenResponse;
 
+use crate::oauth2_http::Oauth2HttpClient;
 use crate::service::status::SmError;
 
 use super::config::{Oauth2AuthMethod, TerminologyOauth2Config};
@@ -111,7 +103,7 @@ impl TokenSource {
             .set_client_secret(oauth2::ClientSecret::new(secret.expose().to_owned()))
             .set_token_uri(token_url)
             .set_auth_type(auth_type);
-        let http = Oauth2HttpClient(
+        let http = Oauth2HttpClient::new(
             reqwest::Client::builder()
                 .build()
                 .map_err(|e| fail(&format!("building the token-endpoint HTTP client: {e}")))?,
@@ -176,7 +168,7 @@ impl TokenSource {
                 // governs 500 body content — our own design/extension.)
                 tracing::error!(
                     oauth2_client = %self.name,
-                    error = %e,
+                    error = %crate::service::error::ErrorChain::new(&e),
                     "terminology oauth2 client-credentials grant failed → 500"
                 );
                 SmError::exception(crate::service::error::INTERNAL_MESSAGE.to_owned())
@@ -196,47 +188,6 @@ impl TokenSource {
             refresh_after,
         })
     }
-}
-
-/// The workspace-pinned `reqwest` client as an `oauth2` transport
-/// (`oauth2::AsyncHttpClient`): send the request the crate built and reassemble
-/// the reply as the `http::Response<Vec<u8>>` it parses.
-#[derive(Debug)]
-struct Oauth2HttpClient(reqwest::Client);
-
-impl<'c> oauth2::AsyncHttpClient<'c> for Oauth2HttpClient {
-    type Error = TokenTransportError;
-    /// `Send` is *declared* here, not inferred — it is what keeps every
-    /// service future that can reach a token grant `Send` (see the module
-    /// NOTE).
-    type Future =
-        Pin<Box<dyn Future<Output = Result<oauth2::HttpResponse, Self::Error>> + Send + 'c>>;
-
-    fn call(&'c self, request: oauth2::HttpRequest) -> Self::Future {
-        Box::pin(async move {
-            let response = self.0.execute(reqwest::Request::try_from(request)?).await?;
-            let mut builder = http::Response::builder().status(response.status());
-            for (name, value) in response.headers() {
-                builder = builder.header(name, value);
-            }
-            builder
-                .body(response.bytes().await?.to_vec())
-                .map_err(TokenTransportError::Http)
-        })
-    }
-}
-
-/// A transport failure while calling the token endpoint. The `oauth2` crate
-/// requires the HTTP client's error type to be `std::error::Error`, so the two
-/// failure shapes (`reqwest` and `http` response assembly) are one enum.
-#[derive(Debug, thiserror::Error)]
-enum TokenTransportError {
-    /// The request could not be sent or its body could not be read.
-    #[error("token endpoint request failed: {0}")]
-    Reqwest(#[from] reqwest::Error),
-    /// The response could not be reassembled as an `http::Response`.
-    #[error("token endpoint response was malformed: {0}")]
-    Http(#[from] http::Error),
 }
 
 #[cfg(test)]

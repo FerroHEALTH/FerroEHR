@@ -162,7 +162,7 @@ act_reason() {
   market-surveillance-2019-1020) printf '%s' "The market-surveillance regulation whose Article 3 definitions, 'placing on the market', 'manufacturer' and 'economic operator' among them, Article 2(1)(d) of Regulation (EU) 2025/327 takes over, and which Article 43(1) of that Regulation applies to EHR systems (#3607)." ;;
   accreditation-765-2008) printf '%s' "The regulation whose Article 30 sets the general principles of the CE marking, which Article 41(3) of Regulation (EU) 2025/327 applies to the CE marking of an EHR system and Article 29 of Regulation (EU) 2024/2847 to a product with digital elements (#3607)." ;;
   cra-product-categories-2025-2392) printf '%s' "Adopted under Article 7(4) of Regulation (EU) 2024/2847: its Annex I gives the technical description of the important product categories (classes I and II of Annex III to that Regulation) and its Annex II that of the critical product categories (Annex IV), which a manufacturer reads to see whether its product falls into one (#3607)." ;;
-  cra-dissemination-delay-2026-881) printf '%s' "Adopted under Article 14(9) of Regulation (EU) 2024/2847: it sets the conditions under which the CSIRT that first receives a manufacturer's Article 14 notification may delay passing it on under Article 16(2), which SECURITY.md and the post-market procedure cite (#3627)." ;;
+  cra-dissemination-delay-2026-881) printf '%s' "Adopted under Article 14(9) of Regulation (EU) 2024/2847: it sets the conditions under which the CSIRT that first receives a manufacturer's Article 14 notification may delay passing it on under Article 16(2). Its Article 3(a) is cited by the post-market procedure of the FerroHEALTH book, https://ferrohealth.eu/docs/post-market.html (#3627, #3706)." ;;
   cra-exclusion-vehicles-2025-1535) printf '%s' "Adopted under Article 2(5), second subparagraph, of Regulation (EU) 2024/2847: it excludes from that Regulation the products with digital elements within the scope of Regulation (EU) No 168/2013 (two- or three-wheel vehicles and quadricycles), and is vendored so that a reading of the Regulation's scope covers every delegated act limiting it (#3627)." ;;
   *) printf '%s' "" ;;
   esac
@@ -272,8 +272,8 @@ apply.
 
 ## The corrigenda, and which file to cite for what
 
-The Publications Office records seven corrigenda to this Regulation, CELEX
-`32024R2847R(01)` to `32024R2847R(07)` (read 2026-10-06). Three have an
+The Publications Office records eight corrigenda to this Regulation, CELEX
+`32024R2847R(01)` to `32024R2847R(08)` (read 2026-10-14). Three have an
 English version, and all three are vendored beside the OJ text:
 
 - `corrigendum-2024-12-05.html`, CELEX `32024R2847R(01)`, OJ L, 2024/90780:
@@ -286,8 +286,12 @@ English version, and all three are vendored beside the OJ text:
   the point Article 67 adds to Annex I to Directive (EU) 2020/1828 is
   numbered "72." in place of "69.".
 
-The other four correct other language versions only: `R(03)` French and
-Hungarian, `R(05)` Slovak, `R(06)` French, `R(07)` German.
+The other five correct other language versions only: `R(03)` French and
+Hungarian, `R(05)` Slovak, `R(06)` French, `R(07)` German, `R(08)` Slovenian.
+`R(08)` (OJ L, 2026/90847, 9.10.2026) corrects the Slovenian wording of
+Article 3(17), Article 14(7), third subparagraph, point (c), and the titles
+of Articles 21 and 22. The Publications Office records no English version of
+it, so the English text of those provisions is not affected (#3732).
 
 `text.html` is the OJ text of 20 November 2024 and includes none of the three
 English corrigenda: its Article 64(10) still reads "paragraphs 3 to 9".

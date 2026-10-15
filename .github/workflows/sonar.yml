@@ -29,6 +29,11 @@ on:
 permissions: {}
 
 env:
+  # A FerroEHR started by any step of this workflow sends no usage report to
+  # FerroPULSE: compose interpolates this into every server it brings up, and
+  # scripts/checks/usage-report-off.sh holds each `docker run` and Helm install
+  # to its own explicit switch.
+  FERROEHR__USAGE_REPORT__ENABLED: "false"
   # The ONE place this lane's shard count lives. Raising it is this line: the
   # matrix and the `--partition` divisor are both derived from it below, so they
   # cannot drift apart. When it needs raising, the pipeline-budget watcher says
@@ -139,7 +144,7 @@ jobs:
           POSTGRES_DB: openehr_test
         ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U openehr"
+          --health-cmd "pg_isready -h 127.0.0.1 -U openehr"
           --health-interval 10s --health-timeout 5s --health-retries 10
     env:
       DATABASE_URL: postgres://openehr:openehr@localhost:5432/openehr_test

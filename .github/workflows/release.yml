@@ -79,6 +79,13 @@ concurrency:
 
 permissions: {}
 
+env:
+  # A FerroEHR started by any step of this workflow sends no usage report to
+  # FerroPULSE: compose interpolates this into every server it brings up, and
+  # scripts/checks/usage-report-off.sh holds each `docker run` and Helm install
+  # to its own explicit switch.
+  FERROEHR__USAGE_REPORT__ENABLED: "false"
+
 jobs:
   # ── plan: every release fact, verified before anything is built ─────────────
   # Minutes, and it publishes nothing. A red plan costs seconds and leaves the
@@ -839,6 +846,16 @@ jobs:
       - name: Strip
         run: strip target/release/ferroehr
 
+      # The OS VEX statements argue from what this program loads and imports
+      # (security/vex/ferroehr-os.openvex.json, each statement's
+      # ferroehr:linkage block). A binary that contradicts one stops the release
+      # here, before an image carries the false statement. jq arrives with the
+      # install-action step above; readelf with the binutils that `strip` is.
+      - name: The linkage check refuses what it claims to refuse
+        run: bash scripts/checks/vex-linkage.sh --self-test
+      - name: The OS VEX linkage facts hold for this binary
+        run: bash scripts/checks/vex-linkage.sh target/release/ferroehr
+
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ferroehr-${{ matrix.platform }}
@@ -950,6 +967,13 @@ jobs:
 
       - name: Strip
         run: strip target/release/ferroehr-viewer
+
+      # Same OS VEX linkage facts as the app binary job above: the statements
+      # name both images.
+      - name: The linkage check refuses what it claims to refuse
+        run: bash scripts/checks/vex-linkage.sh --self-test
+      - name: The OS VEX linkage facts hold for this binary
+        run: bash scripts/checks/vex-linkage.sh target/release/ferroehr-viewer
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

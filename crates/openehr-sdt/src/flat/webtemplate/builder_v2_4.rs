@@ -55,6 +55,7 @@ use openehr_am::v2_4::beom::core::expression::Expression;
 use openehr_base::prelude::{Cardinality, Interval, MultiplicityInterval, ProperInterval};
 use openehr_lang::v1_1::beom::core::operator_kind::OperatorKind;
 
+use super::inputs::{assumed_code, default_string};
 use super::model::{
     WebTemplate, WebTemplateArchetypeSlot, WebTemplateBindingCodedValue, WebTemplateCardinality,
     WebTemplateClosedAttribute, WebTemplateCodedValue, WebTemplateExistence, WebTemplateInput,
@@ -409,9 +410,7 @@ fn build_children(
     if recurse_attrs {
         node.existence = existence_constraints(co, &node.aql_path);
         node.closed_attributes = closed_attributes(co, &node.aql_path);
-        if shape::is_entry_family(&node.rm_type) {
-            node.structural_stubs = structural_stubs(ctx, term, co);
-        }
+        node.structural_stubs = structural_stubs(ctx, term, co, &node.aql_path);
     }
     node.children = children;
     shape::post_process(node);
@@ -514,8 +513,37 @@ fn text_input(cstring: Option<&CString>, suffix: Option<&str>) -> WebTemplateInp
         // An `/.../ ` regex or an open list leaves the list open; a closed literal
         // list (no regex) constrains it.
         input.list_open = Some(input.list.is_empty());
+        input.default_value = cs
+            .assumed_value
+            .as_deref()
+            .filter(|v| input.list.is_empty() || input.list.iter().any(|cv| cv.value == *v))
+            .map(default_string);
     }
     input
+}
+
+/// Whether an AOM2 interval-list constraint admits `value`: an absent or empty
+/// list is no constraint, else any member interval must `has` it
+/// (AM `UML/classes/org.openehr.am.aom2.c_integer.adoc` §`constraint`).
+fn admits<T: PartialOrd>(constraint: Option<&Vec<Interval<T>>>, value: &T) -> bool {
+    constraint.is_none_or(|intervals| {
+        intervals.is_empty() || intervals.iter().any(|interval| interval.has(value))
+    })
+}
+
+/// The `defaultValue` of a `C_INTEGER`: its assumed value when integral and
+/// admitted (the generated AOM2 model carries `assumed_value` as a Real).
+fn integer_default(ci: &CInteger) -> Option<serde_json::Value> {
+    let rendered = ci.assumed_value?.to_string();
+    let value = rendered.parse::<i32>().ok()?;
+    admits(ci.constraint.as_ref(), &value).then(|| default_string(&value))
+}
+
+/// The `defaultValue` of a `C_REAL`: its assumed value when admitted.
+fn real_default(cr: &CReal) -> Option<serde_json::Value> {
+    cr.assumed_value
+        .filter(|v| admits(cr.constraint.as_ref(), v))
+        .map(|v| default_string(&v))
 }
 
 fn coded_text_inputs(
@@ -552,14 +580,22 @@ fn coded_inputs_from(
     ctc: &CTerminologyCode,
 ) -> Vec<WebTemplateInput> {
     let codes = expand_codes(term, &ctc.constraint);
+    let assumed = ctc.assumed_value.as_ref().map(|tc| tc.code_string.as_str());
     if codes.is_empty() {
-        return external_coded_inputs();
+        let mut inputs = external_coded_inputs();
+        if let Some(code) = inputs.first_mut() {
+            code.default_value = assumed_code(assumed, &codes);
+        }
+        return inputs;
     }
     let mut input = WebTemplateInput::new(WebTemplateInputType::CodedText, Some("code"));
     input.list = codes
         .iter()
         .map(|code| coded_value(ctx, term, code))
         .collect();
+    // An ac-code's assumed value is one at-code of its value set
+    // (AM `UML/classes/org.openehr.am.aom2.c_terminology_code.adoc`).
+    input.default_value = assumed_code(assumed, &codes);
     // Local (archetype-defined) value sets have terminology `local` — left
     // implicit (the reference form omits `terminology: "local"`).
     vec![input]
@@ -702,18 +738,24 @@ fn quantity_inputs(ctx: &Ctx, term: &ArchetypeTerminology, co: &CObject) -> Vec<
     {
         magnitude.validation.clone_from(&only.validation);
     }
+    magnitude.default_value = creal_under(co, "magnitude").and_then(real_default);
+    units.default_value = cstrings_under(co, "units")
+        .find_map(|cs| cs.assumed_value.as_deref())
+        .filter(|unit| units.list.is_empty() || units.list.iter().any(|cv| cv.value == *unit))
+        .map(default_string);
     vec![magnitude, units]
 }
 
 fn count_input(co: &CObject) -> WebTemplateInput {
     let mut input = WebTemplateInput::new(WebTemplateInputType::Integer, None);
-    if let Some(ci) = cinteger_under(co, "magnitude")
-        && let Some(range) = ci.constraint.iter().flatten().next().and_then(int_range)
-    {
-        input.validation = Some(WebTemplateValidation {
-            range: Some(range),
-            ..Default::default()
-        });
+    if let Some(ci) = cinteger_under(co, "magnitude") {
+        if let Some(range) = ci.constraint.iter().flatten().next().and_then(int_range) {
+            input.validation = Some(WebTemplateValidation {
+                range: Some(range),
+                ..Default::default()
+            });
+        }
+        input.default_value = integer_default(ci);
     }
     input
 }
@@ -749,8 +791,28 @@ fn ordinal_input(
             }
             input.list.push(cv);
         }
+        // The symbol member's assumed at-code, when it is one of the rows'.
+        let listed: Vec<String> = input.list.iter().map(|cv| cv.value.clone()).collect();
+        let assumed = tuple.members.iter().flatten().find_map(|member| {
+            (member.rm_attribute_name == "symbol")
+                .then(|| terminology_code_under_attribute(member))
+                .flatten()
+                .and_then(|ctc| ctc.assumed_value.as_ref())
+                .map(|tc| tc.code_string.clone())
+        });
+        if input.default_value.is_none() {
+            input.default_value = assumed_code(assumed.as_deref(), &listed);
+        }
     }
     input
+}
+
+/// The `C_TERMINOLOGY_CODE` a tuple member attribute constrains, if any.
+fn terminology_code_under_attribute(attribute: &CAttribute) -> Option<&CTerminologyCode> {
+    attribute.children.iter().flatten().find_map(|c| match c {
+        CObject::CTerminologyCode(ctc) => Some(ctc),
+        _ => None,
+    })
 }
 
 /// One tuple row read into its symbol code and the two paired numeric readings.
@@ -810,6 +872,14 @@ fn boolean_input(co: &CObject) -> WebTemplateInput {
                 .list
                 .push(WebTemplateCodedValue::new("true", Some("true".to_owned())));
         }
+        input.default_value = cb
+            .assumed_value
+            .filter(|v| {
+                cb.constraint
+                    .as_ref()
+                    .is_none_or(|c| c.is_empty() || c.contains(v))
+            })
+            .map(|v| default_string(&v));
     }
     input
 }
@@ -827,7 +897,36 @@ fn temporal_input(co: &CObject, ty: WebTemplateInputType) -> WebTemplateInput {
             ..Default::default()
         });
     }
+    input.default_value = temporal_default(co);
     input
+}
+
+/// The `defaultValue` of the date, time, date-time or duration constraint on
+/// `value`: its assumed value when its interval constraint admits it.
+fn temporal_default(co: &CObject) -> Option<serde_json::Value> {
+    attr_children(co, "value").find_map(|c| match c {
+        CObject::CDate(cd) => cd
+            .assumed_value
+            .as_ref()
+            .filter(|v| admits(cd.constraint.as_ref(), *v))
+            .map(|v| default_string(&v.value)),
+        CObject::CDateTime(cdt) => cdt
+            .assumed_value
+            .as_ref()
+            .filter(|v| admits(cdt.constraint.as_ref(), *v))
+            .map(|v| default_string(&v.value)),
+        CObject::CTime(ct) => ct
+            .assumed_value
+            .as_ref()
+            .filter(|v| admits(ct.constraint.as_ref(), *v))
+            .map(|v| default_string(&v.value)),
+        CObject::CDuration(cd) => cd
+            .assumed_value
+            .as_ref()
+            .filter(|v| admits(cd.constraint.as_ref(), *v))
+            .map(|v| default_string(&v.value)),
+        _ => None,
+    })
 }
 
 /// The `DV_DURATION` per-field inputs, gated by the `C_DURATION` pattern (a `P…`
@@ -845,6 +944,7 @@ fn duration_input(co: &CObject) -> WebTemplateInput {
             ..Default::default()
         });
     }
+    input.default_value = temporal_default(co);
     input
 }
 
@@ -885,13 +985,14 @@ fn proportion_inputs(co: &CObject, proportion_types: &mut Vec<String>) -> Vec<We
         .into_iter()
         .map(|suffix| {
             let mut input = WebTemplateInput::new(ty, Some(suffix));
-            if let Some(cr) = creal_under(co, suffix)
-                && let Some(range) = cr.constraint.iter().flatten().next().and_then(real_range)
-            {
-                input.validation = Some(WebTemplateValidation {
-                    range: Some(range),
-                    ..Default::default()
-                });
+            if let Some(cr) = creal_under(co, suffix) {
+                if let Some(range) = cr.constraint.iter().flatten().next().and_then(real_range) {
+                    input.validation = Some(WebTemplateValidation {
+                        range: Some(range),
+                        ..Default::default()
+                    });
+                }
+                input.default_value = real_default(cr);
             }
             input
         })
@@ -1163,28 +1264,33 @@ fn delimited_regex_body(entry: &str) -> Option<&str> {
     })
 }
 
-/// The RM-mandatory structural attributes of an ENTRY whose value the FLAT/TDD
-/// composition builder synthesises when the simplified form carries no content
-/// under them (the ENTRY `data`/`state`/`protocol` plus `ACTION.description`;
-/// RM `composition`).
-const ENTRY_STRUCTURAL_ATTRS: [&str; 4] = ["data", "description", "protocol", "state"];
+/// The structural attributes whose value the FLAT/TDD composition builder and the
+/// example generator synthesise when the simplified form carries no content under
+/// them (the ENTRY `data`/`state`/`protocol`, `ACTION.description`, the EVENT
+/// `data`/`state` and `ACTIVITY.description`; RM `composition`, RM
+/// `data_structures`).
+const STRUCTURAL_ATTRS: [&str; 4] = ["data", "description", "protocol", "state"];
 
-/// Capture the structural stubs for an ENTRY node (mirrors the OPT-1.4 front
-/// end): for each RM-mandatory structural attribute the OPT constrains with a
-/// node-identified structural child, record its RM type, archetype node id, and
-/// rubric name. The compactor drops such a wrapper when it carries no leaf
-/// content, so this is the only surviving record of the *constrained* identity —
-/// the composition builder synthesises the empty attribute from it (AOM2
-/// §C_ATTRIBUTE: a constrained attribute must be filled by a conforming value)
-/// rather than a blind `at0001`/`id1` placeholder a closed-archetype walk rejects.
+/// Captures the structural stubs of a structural node (mirrors the OPT-1.4 front
+/// end).
+///
+/// For each structural attribute the archetype constrains with a
+/// node-identified structural child, the stub records its absolute attribute
+/// path (under `node_path`), RM type, archetype node id and rubric name. The
+/// compactor drops such a wrapper when it carries no leaf content, so this is the
+/// only surviving record of the *constrained* identity — the composition builder
+/// synthesises the empty attribute from it (AOM2 §C_ATTRIBUTE: a constrained
+/// attribute must be filled by a conforming value) rather than a blind
+/// `at0001`/`id1` placeholder a closed-archetype walk rejects.
 fn structural_stubs(
     ctx: &Ctx,
     term: &ArchetypeTerminology,
     co: &CObject,
+    node_path: &str,
 ) -> Vec<WebTemplateStructuralStub> {
     let mut out = Vec::new();
     for attr in co_attributes(co) {
-        if !ENTRY_STRUCTURAL_ATTRS.contains(&attr.rm_attribute_name.as_str()) {
+        if !STRUCTURAL_ATTRS.contains(&attr.rm_attribute_name.as_str()) {
             continue;
         }
         for child in attr.children.iter().flatten() {
@@ -1199,6 +1305,7 @@ fn structural_stubs(
             }
             out.push(WebTemplateStructuralStub {
                 attr: attr.rm_attribute_name.clone(),
+                path: format!("{node_path}/{}", attr.rm_attribute_name),
                 rm_type: object_rm_type(child).to_owned(),
                 node_id,
                 name: rubric_text(term, object_node_id(child), &ctx.default_language),
@@ -1582,5 +1689,99 @@ fn interface_id(full: &str) -> String {
         }
     } else {
         bare.to_owned()
+    }
+}
+
+#[cfg(test)]
+mod default_value_tests {
+    use openehr_am::v2_4::aom2::constraint_model::primitive::c_integer::CInteger;
+    use openehr_am::v2_4::aom2::constraint_model::primitive::c_real::CReal;
+    use openehr_base::prelude::{Interval, PointInterval, ProperInterval, ProperIntervalData};
+
+    use super::{integer_default, real_default};
+
+    fn up_to<T>(lower: T, upper: T) -> Interval<T> {
+        Interval::ProperInterval(ProperInterval::ProperInterval(ProperIntervalData {
+            lower: Some(lower),
+            upper: Some(upper),
+            lower_unbounded: false,
+            upper_unbounded: false,
+            lower_included: true,
+            upper_included: true,
+        }))
+    }
+
+    fn integer(assumed: Option<f64>, constraint: Vec<Interval<i32>>) -> CInteger {
+        CInteger {
+            parent: None,
+            soc_parent: None,
+            rm_type_name: "Integer".to_owned(),
+            occurrences: None,
+            node_id: "id9999".to_owned(),
+            alternative_ids: None,
+            is_deprecated: None,
+            sibling_order: None,
+            default_value: None,
+            assumed_value: assumed,
+            is_enumerated_type_constraint: None,
+            constraint: Some(constraint),
+        }
+    }
+
+    fn real(assumed: Option<f64>, constraint: Vec<Interval<f64>>) -> CReal {
+        CReal {
+            parent: None,
+            soc_parent: None,
+            rm_type_name: "Real".to_owned(),
+            occurrences: None,
+            node_id: "id9999".to_owned(),
+            alternative_ids: None,
+            is_deprecated: None,
+            sibling_order: None,
+            default_value: None,
+            assumed_value: assumed,
+            is_enumerated_type_constraint: None,
+            constraint: Some(constraint),
+        }
+    }
+
+    fn text(v: Option<serde_json::Value>) -> Option<String> {
+        v.and_then(|v| v.as_str().map(str::to_owned))
+    }
+
+    /// AOM2 `C_PRIMITIVE_OBJECT.assumed_value` becomes `defaultValue` only when
+    /// the interval constraint admits it (AM `org.openehr.am.aom2.c_integer.adoc`).
+    #[test]
+    fn numeric_assumed_values_are_offered_when_admitted() {
+        assert_eq!(
+            text(integer_default(&integer(Some(3.0), vec![up_to(0, 10)]))),
+            Some("3".to_owned())
+        );
+        assert_eq!(
+            text(integer_default(&integer(Some(30.0), vec![up_to(0, 10)]))),
+            None
+        );
+        let points = vec![Interval::PointInterval(PointInterval {
+            lower: Some(2),
+            upper: Some(2),
+            lower_unbounded: false,
+            upper_unbounded: false,
+            lower_included: true,
+            upper_included: true,
+        })];
+        assert_eq!(
+            text(integer_default(&integer(Some(2.0), points))),
+            Some("2".to_owned())
+        );
+        assert_eq!(text(integer_default(&integer(Some(2.5), Vec::new()))), None);
+        assert_eq!(
+            text(real_default(&real(Some(0.21), vec![up_to(0.0, 1.0)]))),
+            Some("0.21".to_owned())
+        );
+        assert_eq!(
+            text(real_default(&real(Some(21.0), vec![up_to(0.0, 1.0)]))),
+            None
+        );
+        assert_eq!(text(real_default(&real(None, Vec::new()))), None);
     }
 }

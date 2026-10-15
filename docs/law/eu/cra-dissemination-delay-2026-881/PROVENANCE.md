@@ -1,6 +1,6 @@
 # Commission Delegated Regulation (EU) 2026/881 — terms and conditions for applying the cybersecurity-related grounds in relation to delaying the dissemination of notifications
 
-Adopted under Article 14(9) of Regulation (EU) 2024/2847: it sets the conditions under which the CSIRT that first receives a manufacturer's Article 14 notification may delay passing it on under Article 16(2), which SECURITY.md and the post-market procedure cite (#3627).
+Adopted under Article 14(9) of Regulation (EU) 2024/2847: it sets the conditions under which the CSIRT that first receives a manufacturer's Article 14 notification may delay passing it on under Article 16(2). Its Article 3(a) is cited by the post-market procedure of the FerroHEALTH book, https://ferrohealth.eu/docs/post-market.html (#3627, #3706).
 
 | | |
 |---|---|
@@ -10,7 +10,7 @@ Adopted under Article 14(9) of Regulation (EU) 2024/2847: it sets the conditions
 | Fetched from | https://publications.europa.eu/resource/celex/32026R0881 (`Accept: application/xhtml+xml`) |
 | Resolved to | https://publications.europa.eu/resource/cellar/e117d914-3c51-11f1-814f-01aa75ed71a1.0006.03/DOC_1 |
 | Human-readable at | https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32026R0881 |
-| Fetched | 2026-10-06 (UTC) |
+| Fetched | 2026-10-14 (UTC) |
 | Vendored by | `scripts/vendor/law-eu.sh` |
 
 ## Files

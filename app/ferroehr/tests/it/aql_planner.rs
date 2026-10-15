@@ -34,6 +34,7 @@ use ferroehr::aql::ir::{ParamValue, Params};
 use ferroehr::aql::lineage::ArchetypeLineage;
 use ferroehr::aql::plan;
 use ferroehr::aql::sql::SqlCtx;
+use ferroehr::aql::sql::subject::SubjectScope;
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -803,8 +804,8 @@ fn currency_probes(sql: &str) -> usize {
 /// (`LOCATABLE.links` — LINK is no structure root, so the whole list lives in
 /// the root node's fragment) lowers existentially through the set-returning
 /// `jsonb_path_query`, never the first-match scalar: QUERY master03 §WHERE is
-/// silent on multi-valued predicates, and any-match is the adjudicated
-/// semantics recorded on `data_leaf_exists`.
+/// silent on multi-valued predicates, and any element is the semantics the
+/// `condition` module records.
 #[test]
 fn multi_valued_fragment_predicate_lowers_existentially() {
     let sql = build_sql(
@@ -832,8 +833,8 @@ fn anchored_multi_valued_fragment_predicate_is_existential() {
          WHERE c/context/participations/performer/name = 'Dr Second'",
     );
     assert!(
-        sql.contains("jsonb_path_query(") && sql.contains("BETWEEN"),
-        "anchored walk + per-match extraction: {sql}"
+        sql.contains("jsonb_path_query(") && sql.contains(r#""parent_num""#),
+        "anchored attribute-step walk + per-match extraction: {sql}"
     );
     assert!(sql.contains("EXISTS"), "existential shape: {sql}");
 }
@@ -973,7 +974,9 @@ fn or_contains_under_ehr_lowers_to_disjunctive_exists() {
 }
 
 /// OR-containment under a COMPOSITION shares the parent VO and
-/// interval-anchors each branch inside its node subtree (`num BETWEEN`).
+/// anchors each branch on the STRICT interval of its node subtree (QUERY
+/// master03 §Containment: the left operand is the parent of the right, and a
+/// node is not its own parent).
 #[test]
 fn or_contains_under_vo_interval_anchors_each_branch() {
     let sql = build_sql(
@@ -985,8 +988,12 @@ fn or_contains_under_vo_interval_anchors_each_branch() {
     assert_eq!(anchor_exists(&sql), 2, "{sql}");
     assert!(sql.contains(" OR "), "{sql}");
     assert!(
-        sql.contains("BETWEEN"),
-        "each branch is interval-anchored in the parent VO: {sql}"
+        sql.contains(r#""num" > "n1"."num""#) && sql.contains(r#""num" <= "n1"."num_cap""#),
+        "each branch is anchored on the strict interval of the parent VO: {sql}"
+    );
+    assert!(
+        !sql.contains("BETWEEN"),
+        "no inclusive interval lets the anchor contain itself: {sql}"
     );
 }
 
@@ -1734,13 +1741,15 @@ fn like_and_matches_lower_existentially_on_anchored_leaves() {
         "matches on an anchored leaf is existential: {matches_sql}"
     );
     // NOT flips the polarity back to the scalar shape (three-valued SQL
-    // semantics preserved for absent leaves) — same rule as the comparisons.
+    // semantics preserved for absent leaves) — same rule as the comparisons;
+    // the one EXISTS left is the clause's assignment.
     let negated = build_sql(
         "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c \
          WHERE NOT c/context/other_context[at0001]/items[at0002]/value/value LIKE 'x*'",
     );
-    assert!(
-        anchor_exists(&negated) == 0,
+    assert_eq!(
+        anchor_exists(&negated),
+        1,
         "negative polarity keeps the scalar lowering: {negated}"
     );
 }
@@ -1909,4 +1918,666 @@ fn folder_root_never_streams() {
         !sql.contains("JOIN LATERAL"),
         "FOLDER roots take the flat shape: {sql}"
     );
+}
+
+// ── row grain, strict containment, OR-branch reads ───────────────────────────
+
+/// The QUERY master03 §Variables blood-pressure example: the two leaves share
+/// `data[at0001]/events[at0006]/data[at0003]`, so that prefix binds ONCE per
+/// row (three bindings) and each leaf adds its own `items` binding — five in
+/// all, and no leaf is an independent first-match subquery that could pair a
+/// systolic of one event with the diastolic of another.
+#[test]
+fn sibling_leaves_share_their_bound_prefix() {
+    let sql = build_sql(
+        "SELECT obs/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude, \
+                obs/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude \
+         FROM EHR e CONTAINS COMPOSITION CONTAINS OBSERVATION obs[openEHR-EHR-OBSERVATION.blood_pressure.v1]",
+    );
+    assert_eq!(
+        sql.matches("unnest(ARRAY(").count(),
+        5,
+        "three shared step bindings plus one per leaf: {sql}"
+    );
+    assert!(
+        !sql.contains("LIMIT"),
+        "no projected leaf is a first-match subquery: {sql}"
+    );
+    assert!(
+        sql.contains(r#""parent_num""#),
+        "every bound step is an attribute child of its parent: {sql}"
+    );
+}
+
+/// The same binding on the streaming shape is a `LEFT JOIN LATERAL` per
+/// bound step, so a row whose step matches nothing keeps a NULL cell.
+#[test]
+fn streaming_binds_projected_steps_as_left_laterals() {
+    let sql = build_sql_limited(
+        "SELECT o/data[at0001]/events[at0006]/time/value, \
+                o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude \
+         FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o",
+    );
+    assert_eq!(
+        sql.matches("LEFT JOIN LATERAL").count(),
+        4,
+        "data, events (shared), then data and items below the event: {sql}"
+    );
+}
+
+/// A WHERE path that shares the projected prefix reads the bound node of its
+/// row instead of probing every node of the observation.
+#[test]
+fn where_reads_through_the_projected_binding() {
+    let sql = build_sql(
+        "SELECT o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude \
+         FROM EHR e CONTAINS OBSERVATION o \
+         WHERE o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude > 140",
+    );
+    assert_eq!(anchor_exists(&sql), 0, "no existential walk remains: {sql}");
+    assert_eq!(sql.matches("unnest(ARRAY(").count(), 4, "{sql}");
+}
+
+/// QUERY master03 §Containment: the left operand is the PARENT of the right,
+/// and no node is its own parent, so `CLUSTER CONTAINS CLUSTER` joins on the
+/// strict interval.
+#[test]
+fn contains_is_strict() {
+    let sql = build_sql("SELECT cl2 FROM EHR e CONTAINS CLUSTER cl1 CONTAINS CLUSTER cl2");
+    assert!(
+        sql.contains(r#""n2"."num" > "n1"."num""#)
+            && sql.contains(r#""n2"."num" <= "n1"."num_cap""#),
+        "the child lies strictly inside the parent's interval: {sql}"
+    );
+    assert!(!sql.contains("BETWEEN"), "no inclusive interval: {sql}");
+}
+
+/// `NOT CONTAINS` negates the same strict edge, so a CLUSTER without a nested
+/// CLUSTER satisfies `CLUSTER NOT CONTAINS CLUSTER` instead of excluding
+/// itself.
+#[test]
+fn not_contains_is_strict() {
+    let sql = build_sql(
+        "SELECT cl1/archetype_node_id FROM EHR e CONTAINS CLUSTER cl1 NOT CONTAINS CLUSTER cl2",
+    );
+    assert!(sql.contains(r#"> "n1"."num""#), "strict anti-join: {sql}");
+    assert!(!sql.contains("BETWEEN"), "no inclusive interval: {sql}");
+}
+
+/// The streaming shape keeps the flat shape's answer for a logically deleted
+/// version (RM common master06 §Logical Deletion: its data is Void, so the
+/// flat shape finds no root node): with the root lateral elided, the spine
+/// itself excludes lifecycle state `523`.
+#[test]
+fn elided_streaming_root_excludes_deleted_versions() {
+    let sql = build_sql_limited("SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c");
+    assert!(
+        !sql.contains("JOIN LATERAL"),
+        "the root lateral is elided: {sql}"
+    );
+    assert!(
+        sql.contains(r#""lifecycle_state" <> $"#),
+        "the spine drops deleted versions: {sql}"
+    );
+}
+
+/// A variable of an OR containment branch is readable (QUERY master03
+/// §Containment's own `OR` example binds a variable per branch): each read
+/// branch is left-bound under the shared COMPOSITION.
+#[test]
+fn or_branch_variables_are_readable() {
+    let sql = build_sql(
+        "SELECT o/name/value, ev/name/value FROM EHR e CONTAINS COMPOSITION c \
+         CONTAINS (OBSERVATION o OR EVALUATION ev)",
+    );
+    assert_eq!(
+        sql.matches("unnest(ARRAY(").count(),
+        2,
+        "one left binding per read branch: {sql}"
+    );
+    assert_eq!(anchor_exists(&sql), 2, "the OR filter stays: {sql}");
+}
+
+/// An OR branch nobody reads stays a containment filter: no binding.
+#[test]
+fn unread_or_branches_stay_filters() {
+    let sql = build_sql(
+        "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c \
+         CONTAINS (OBSERVATION o OR EVALUATION ev)",
+    );
+    assert!(!sql.contains("unnest("), "no binding: {sql}");
+}
+
+/// A variable declared under NOT CONTAINS names an object no row holds
+/// (QUERY master03 §Containment), so reading it is a typed refusal.
+#[test]
+fn reading_a_not_contains_variable_is_refused() {
+    let err = build_err(
+        "SELECT o/name/value FROM EHR e CONTAINS COMPOSITION c NOT CONTAINS OBSERVATION o",
+    );
+    assert!(
+        matches!(
+            err,
+            AqlError::Feature(AqlFeatureError::NegatedContainmentVariable(ref v)) if v == "o"
+        ),
+        "{err:?}"
+    );
+}
+
+/// Lowers `q` with the given scope and limit, returning the whole prepared
+/// query.
+fn prepare(
+    q: &str,
+    ehr_ids: Vec<ferroehr::ids::EhrId>,
+    subject_scope: Option<&str>,
+    limit: Option<i64>,
+) -> ferroehr::aql::sql::PreparedQuery {
+    let ir = plan_ok(q);
+    let ctx = SqlCtx {
+        system_id: "sys.example.com".to_owned(),
+        ehr_ids,
+        subject_scope: subject_scope.map(|id| SubjectScope {
+            id: id.to_owned(),
+            namespace: None,
+        }),
+        ehr_access: ferroehr::aql::sql::EhrAccessScope::Unrestricted,
+        limit,
+        offset: None,
+        archetype_lineage: Arc::new(ArchetypeLineage::default()),
+    };
+    ferroehr::aql::sql::build(&ir, &Params::new(), &ctx)
+        .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"))
+}
+
+const OR_COMPOSITIONS: &str = "SELECT c1/uid/value, c2/uid/value FROM EHR e CONTAINS \
+     (COMPOSITION c1[openEHR-EHR-COMPOSITION.report.v1] \
+      OR COMPOSITION c2[openEHR-EHR-COMPOSITION.referral.v1])";
+
+/// A composition declared in an OR branch under the EHR is readable (QUERY
+/// master03 §Containment defines OR between containment constraints without
+/// limiting the operand class): each read branch binds its node and, one to
+/// one beside it, its version row, which the `uid` synthesizes from.
+#[test]
+fn or_branch_versioned_objects_are_readable() {
+    let sql = build_sql(OR_COMPOSITIONS);
+    assert_eq!(
+        sql.matches("unnest(ARRAY(").count(),
+        4,
+        "a node and a version binding per read branch: {sql}"
+    );
+    assert_eq!(
+        sql.matches(r#"LEFT JOIN "version" AS"#).count(),
+        2,
+        "one version binding per branch: {sql}"
+    );
+    assert_eq!(
+        sql.matches(r#""creating_system_id""#).count(),
+        2,
+        "each uid synthesizes from its own branch's version row: {sql}"
+    );
+    // Each branch filter links its node and its version to the EHR (4); each
+    // binding links its node directly and again inside its scope test (6).
+    assert_eq!(
+        sql.matches(r#""ehr_id" = "e0"."id""#).count(),
+        10,
+        "the branch nodes belong to the EHR: {sql}"
+    );
+}
+
+/// The branch binding carries the scope the same object has outside the OR:
+/// the trunk head under `LATEST_VERSION`, and no restricted object.
+#[test]
+fn an_or_branch_binding_reads_the_latest_unrestricted_version() {
+    let sql = build_sql(OR_COMPOSITIONS);
+    // Two branch filters plus two bindings, each with its own head join.
+    assert_eq!(
+        sql.matches(r#""trunk_head_sys_version""#).count(),
+        4,
+        "each filter and each binding reads the trunk head: {sql}"
+    );
+    assert_eq!(
+        sql.matches(r#""restricted_at" IS NULL"#).count(),
+        5,
+        "four head gates plus the EHR row's own gate: {sql}"
+    );
+}
+
+/// A variable nested under a branch's versioned object binds under that
+/// object's binding.
+#[test]
+fn a_variable_under_an_or_branch_versioned_object_is_readable() {
+    let sql = build_sql(
+        "SELECT c1/uid/value, o/name/value FROM EHR e CONTAINS \
+         ((COMPOSITION c1 CONTAINS OBSERVATION o) OR COMPOSITION c2)",
+    );
+    assert_eq!(
+        sql.matches("unnest(ARRAY(").count(),
+        3,
+        "c1's node and version, then o under c1: {sql}"
+    );
+}
+
+/// A composition a FOLDER references, declared in an OR branch, is readable;
+/// with no EHR above the folder the binding carries the population gate itself.
+#[test]
+fn a_folder_referenced_or_branch_is_readable() {
+    let sql =
+        build_sql("SELECT c1/uid/value FROM FOLDER f CONTAINS (COMPOSITION c1 OR COMPOSITION c2)");
+    assert_eq!(
+        sql.matches("unnest(ARRAY(").count(),
+        2,
+        "the read branch's node and version: {sql}"
+    );
+    assert_eq!(
+        sql.matches("jsonb_array_elements(").count(),
+        3,
+        "two branch filters and the binding resolve the folder's items: {sql}"
+    );
+    assert_eq!(
+        sql.matches(r#""is_queryable" = $"#).count(),
+        2,
+        "the folder root's gate and the unlinked binding's own: {sql}"
+    );
+}
+
+/// The patient-scope test on the bound `ehr` row `e0`.
+const EHR_SUBJECT: &str = r#""e0"."subject_id" = $"#;
+/// The patient-scope test inside a versioned-object root's subquery.
+const ROOT_SUBJECT: &str = r#""subject_row"."subject_id" = $"#;
+/// The ambiguity guard the patient-scope test on `e0` carries.
+const SUBJECT_GUARD: &str = r#""subject_other"."subject_id" = "e0"."subject_id""#;
+
+/// A branch binding under the EHR is a node of that EHR, so the patient scope
+/// on the EHR row covers it, and a row whose branches all miss stays in scope:
+/// the bindings carry no patient-scope test of their own, which would repeat
+/// the EHR row's.
+#[test]
+fn an_or_branch_under_the_ehr_is_covered_by_the_ehr_patient_scope() {
+    let unscoped = prepare(OR_COMPOSITIONS, Vec::new(), None, None).sql;
+    assert!(!unscoped.contains(r#""subject_id""#), "{unscoped}");
+    let scoped = prepare(OR_COMPOSITIONS, Vec::new(), Some("patient-1"), None).sql;
+    assert_eq!(
+        scoped.matches(EHR_SUBJECT).count(),
+        1,
+        "the EHR row carries the patient scope: {scoped}"
+    );
+    assert_eq!(
+        scoped.matches(ROOT_SUBJECT).count(),
+        0,
+        "no branch binding repeats it: {scoped}"
+    );
+}
+
+/// A branch binding with no EHR above it carries the patient scope itself.
+#[test]
+fn an_or_branch_without_an_ehr_carries_the_patient_scope() {
+    let scoped = prepare(
+        "SELECT c1/uid/value FROM FOLDER f CONTAINS (COMPOSITION c1 OR COMPOSITION c2)",
+        Vec::new(),
+        Some("patient-1"),
+        None,
+    )
+    .sql;
+    assert_eq!(
+        scoped.matches(ROOT_SUBJECT).count(),
+        2,
+        "the folder root and the unlinked binding: {scoped}"
+    );
+}
+
+/// A query with no versioned-object root reads the `ehr` row alone, so the
+/// ABAC patient scope binds that row (our own extension; no openEHR spec
+/// governs it).
+#[test]
+fn an_ehr_only_query_carries_the_patient_scope() {
+    for q in [
+        "SELECT e/ehr_id/value FROM EHR e",
+        "SELECT e/time_created/value FROM EHR e",
+        "SELECT COUNT(*) FROM EHR e",
+        "SELECT e/ehr_status/subject FROM EHR e",
+    ] {
+        let unscoped = prepare(q, Vec::new(), None, None).sql;
+        assert!(!unscoped.contains(r#""subject_id""#), "{q}: {unscoped}");
+        let scoped = prepare(q, Vec::new(), Some("patient-1"), None).sql;
+        assert_eq!(
+            scoped.matches(EHR_SUBJECT).count(),
+            1,
+            "{q}: the EHR row carries the patient scope: {scoped}"
+        );
+        assert_eq!(
+            scoped.matches(SUBJECT_GUARD).count(),
+            1,
+            "{q}: with its ambiguity guard: {scoped}"
+        );
+    }
+}
+
+/// An explicit `ehr_id` scope does not lift the patient scope off the EHR row.
+#[test]
+fn an_ehr_scoped_query_keeps_the_patient_scope() {
+    let scoped = prepare(
+        "SELECT e/ehr_id/value FROM EHR e",
+        vec![ferroehr::ids::EhrId(uuid::Uuid::nil())],
+        Some("patient-1"),
+        None,
+    )
+    .sql;
+    assert!(scoped.contains(EHR_SUBJECT), "{scoped}");
+}
+
+/// The patient claim names a subject id with no namespace, so a match is
+/// refused where another namespace holds the same id: every patient-scope
+/// test carries a `NOT EXISTS` over the other holders of the id.
+#[test]
+fn the_patient_scope_refuses_an_id_held_under_two_namespaces() {
+    let scoped = prepare(
+        "SELECT e/ehr_id/value FROM EHR e",
+        Vec::new(),
+        Some("patient-1"),
+        None,
+    )
+    .sql;
+    assert!(
+        scoped.contains("NOT EXISTS(SELECT") && scoped.contains(r#"FROM "ehr" AS "subject_other""#),
+        "{scoped}"
+    );
+    assert!(
+        scoped.contains(r#""subject_other"."subject_namespace" <> "e0"."subject_namespace""#),
+        "the guard compares the namespaces: {scoped}"
+    );
+}
+
+/// Every versioned-object root and the EHR row carry the patient scope, on the
+/// flat shape and on the LIMIT-streaming shape alike.
+#[test]
+fn rooted_queries_carry_the_patient_scope_on_both_shapes() {
+    const EHR_COMPOSITION: &str = "SELECT c/name/value FROM EHR e CONTAINS COMPOSITION c";
+    for limit in [None, Some(10)] {
+        let scoped = prepare(EHR_COMPOSITION, Vec::new(), Some("patient-1"), limit).sql;
+        assert_eq!(
+            scoped.matches(EHR_SUBJECT).count(),
+            1,
+            "limit {limit:?}: the EHR row carries the patient scope: {scoped}"
+        );
+        assert_eq!(
+            scoped.matches(ROOT_SUBJECT).count(),
+            1,
+            "limit {limit:?}: and the composition root: {scoped}"
+        );
+    }
+    let streaming = prepare(EHR_COMPOSITION, Vec::new(), Some("patient-1"), Some(10)).sql;
+    assert!(
+        streaming.contains("LATERAL"),
+        "the streaming shape: {streaming}"
+    );
+    for q in [
+        "SELECT s/uid/value FROM EHR_STATUS s",
+        "SELECT a/uid/value FROM EHR_ACCESS a",
+        "SELECT f/uid/value FROM FOLDER f",
+        "SELECT c/uid/value FROM COMPOSITION c",
+    ] {
+        for limit in [None, Some(10)] {
+            let scoped = prepare(q, Vec::new(), Some("patient-1"), limit).sql;
+            assert_eq!(
+                scoped.matches(ROOT_SUBJECT).count(),
+                1,
+                "{q} (limit {limit:?}): the root carries the patient scope: {scoped}"
+            );
+        }
+    }
+}
+
+/// An unscoped, unpaged execution context for the scope-collection tests.
+fn scope_ctx() -> SqlCtx {
+    SqlCtx {
+        system_id: "sys.example.com".to_owned(),
+        ehr_ids: Vec::new(),
+        subject_scope: None,
+        ehr_access: ferroehr::aql::sql::EhrAccessScope::Unrestricted,
+        limit: None,
+        offset: None,
+        archetype_lineage: Arc::new(ArchetypeLineage::default()),
+    }
+}
+
+/// The ABAC scope collection reports the EHRs a query touches from its EHR
+/// sources too, so a query reading only the `ehr` row reaches the post-check
+/// PDP (our own extension; no openEHR spec governs ABAC).
+#[test]
+fn the_scope_collection_reports_ehr_sources() {
+    for q in [
+        "SELECT e/ehr_id/value FROM EHR e",
+        "SELECT e/ehr_status/subject FROM EHR e",
+        "SELECT e/ehr_id/value FROM EHR e CONTAINS (COMPOSITION c1 OR COMPOSITION c2)",
+    ] {
+        let ir = plan_ok(q);
+        let scope = ferroehr::aql::sql::build_scope(&ir, &Params::new(), &scope_ctx())
+            .unwrap_or_else(|e| panic!("scope build failed for {q:?}: {e}"))
+            .unwrap_or_else(|| panic!("{q}: an EHR source is something to collect"));
+        assert_eq!(
+            scope.ehr_columns.first().map(String::as_str),
+            Some("scope_ehr_0"),
+            "{q}: the EHR source's id is collected: {:?}",
+            scope.ehr_columns
+        );
+        assert!(
+            scope.sql.contains(r#""e0"."id" AS "scope_ehr_0""#),
+            "{q}: {}",
+            scope.sql
+        );
+    }
+    let ir = plan_ok("SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c");
+    let scope = ferroehr::aql::sql::build_scope(&ir, &Params::new(), &scope_ctx())
+        .unwrap_or_else(|e| panic!("scope build failed: {e}"))
+        .unwrap_or_else(|| panic!("a rooted query collects"));
+    assert_eq!(
+        scope.ehr_columns,
+        vec!["scope_ehr_0".to_owned(), "scope_ehr_1".to_owned()]
+    );
+    assert_eq!(scope.template_columns, vec!["scope_template_1".to_owned()]);
+}
+/// The branch bindings are reported to the access log: one EHR column and one
+/// version locator per bound branch.
+#[test]
+fn or_branch_bindings_are_logged_as_served_roots() {
+    let prepared = prepare(
+        OR_COMPOSITIONS,
+        vec![ferroehr::ids::EhrId(uuid::Uuid::nil())],
+        None,
+        None,
+    );
+    assert_eq!(prepared.access_ehr_cols.len(), 2, "{}", prepared.sql);
+    assert_eq!(prepared.access_version_cols.len(), 2, "{}", prepared.sql);
+}
+
+/// A LIMIT does not move an OR read onto the streaming shape: the bindings
+/// stay implicitly lateral FROM functions of the flat shape.
+#[test]
+fn a_limited_or_branch_read_keeps_the_flat_shape() {
+    let sql = prepare(OR_COMPOSITIONS, Vec::new(), None, Some(10)).sql;
+    assert!(!sql.contains("JOIN LATERAL"), "{sql}");
+    assert_eq!(sql.matches("unnest(ARRAY(").count(), 4, "{sql}");
+}
+
+/// QUERY master03 §Aggregate functions: an aggregate's inputs are the data
+/// items its path selects in the rows FROM and WHERE define. Its argument adds
+/// no row binding (which would change `COUNT(*)` beside it); it aggregates its
+/// own items per row and combines the rows.
+#[test]
+fn aggregate_arguments_add_no_row_binding() {
+    let sql = build_sql(
+        "SELECT COUNT(*), \
+                MAX(o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude) \
+         FROM EHR e CONTAINS OBSERVATION o",
+    );
+    assert!(!sql.contains("unnest("), "no row binding: {sql}");
+    assert_eq!(
+        sql.matches("MAX(").count(),
+        2,
+        "the per-row maximum combined by an outer maximum: {sql}"
+    );
+}
+
+/// Paths through different repeated attributes of one variable bind
+/// independently, so the rows are their cross product.
+#[test]
+fn different_repeated_attributes_bind_independently() {
+    let sql = build_sql(
+        "SELECT o/data/events/time/value, o/protocol/items/name/value \
+         FROM EHR e CONTAINS OBSERVATION o",
+    );
+    assert_eq!(
+        sql.matches("unnest(ARRAY(").count(),
+        4,
+        "data and events, then protocol and items: {sql}"
+    );
+}
+
+/// Two paths compared in WHERE read through the one set of WHERE bindings, so
+/// paths sharing their steps compare values of one node and no pair of values
+/// from two different events passes.
+#[test]
+fn path_to_path_comparison_shares_its_steps() {
+    let sql = build_sql(
+        "SELECT o/name/value FROM EHR e CONTAINS OBSERVATION o \
+         WHERE o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude \
+             > o/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude",
+    );
+    assert_eq!(anchor_exists(&sql), 1, "one walk binds both paths: {sql}");
+    assert!(!sql.contains("LIMIT"), "no first-match read remains: {sql}");
+}
+
+/// The WHERE clause binds each structure step its paths descend ONCE, at its
+/// root, as one `EXISTS` over the assignments of those bindings: a row is kept
+/// when some assignment makes the whole clause true. The two tests share
+/// `data/events/data` (three bindings) and each adds its own `items` step, so
+/// AND, OR and NOT all lower to the one `EXISTS` over five bindings, with the
+/// boolean structure evaluated per assignment.
+#[test]
+fn where_binds_each_step_once_for_the_whole_clause() {
+    let sys = "o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude";
+    let dia = "o/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude";
+    for clause in [
+        format!("{sys} >= 140 AND {dia} >= 90"),
+        format!("{sys} >= 140 OR {dia} >= 90"),
+        format!("{sys} >= 140 AND NOT ({dia} < 90)"),
+    ] {
+        let sql = build_sql(&format!(
+            "SELECT o/name/value FROM EHR e CONTAINS OBSERVATION o WHERE {clause}"
+        ));
+        assert_eq!(anchor_exists(&sql), 1, "one assignment EXISTS: {sql}");
+        assert_eq!(
+            sql.matches("unnest(ARRAY(").count(),
+            5,
+            "three shared step bindings plus one per items step: {sql}"
+        );
+    }
+}
+
+/// `events` and `events[at0006]` are two steps, so two independent bindings
+/// (seven in all: the shared `data[at0001]`, then three per event step).
+#[test]
+fn differently_predicated_steps_are_not_shared() {
+    let sql = build_sql(
+        "SELECT o/name/value FROM EHR e CONTAINS OBSERVATION o \
+         WHERE o/data[at0001]/events/data[at0003]/items[at0004]/value/magnitude >= 140 \
+           AND o/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude >= 90",
+    );
+    assert_eq!(sql.matches("unnest(ARRAY(").count(), 7, "{sql}");
+}
+
+/// An aggregate's items are filtered by the WHERE clause with the steps they
+/// share fixed to the item's own nodes (QUERY master03 §Aggregate functions:
+/// inputs are data items "filtered by FROM and WHERE"). This replaces the
+/// earlier test of the same name, whose row-level WHERE was a per-step
+/// existential: the row-level clause is now the one assignment `EXISTS`, and
+/// the per-item filter needs no binding of its own because every step it
+/// reads is the walk's.
+#[test]
+fn aggregate_items_are_filtered_by_a_shared_where() {
+    let sys = "o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude";
+    let sql = build_sql(&format!(
+        "SELECT COUNT({sys}), AVG({sys}) FROM EHR e CONTAINS OBSERVATION o WHERE NOT ({sys} < 140)"
+    ));
+    assert_eq!(
+        anchor_exists(&sql),
+        1,
+        "the row-level assignment EXISTS only: {sql}"
+    );
+    assert_eq!(
+        sql.matches(" < ").count(),
+        4,
+        "the test applies once per row and once per item walk of each per-row aggregate \
+         (COUNT, and SUM and COUNT inside AVG): {sql}"
+    );
+}
+
+/// QUERY master03 §EXISTS: "true means the data associated with the specified
+/// path exists". An `EXISTS` operand walks its own steps in its own `EXISTS`
+/// and never joins the clause's assignment: only the systolic path's four
+/// steps are WHERE bindings.
+#[test]
+fn exists_is_path_level() {
+    let sql = build_sql(
+        "SELECT o/name/value FROM EHR e CONTAINS OBSERVATION o \
+         WHERE NOT EXISTS o/data[at0001]/events[at0006]/data[at0003]/items[at0005] \
+           AND o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude >= 140",
+    );
+    assert_eq!(
+        sql.matches("unnest(ARRAY(").count(),
+        4,
+        "the EXISTS path binds nothing: {sql}"
+    );
+    assert_eq!(
+        anchor_exists(&sql),
+        2,
+        "the assignment EXISTS plus the operand's own: {sql}"
+    );
+}
+
+/// An `e/ehr_status/...` path joins the EHR's current `EHR_STATUS`, whose
+/// template the scope collection reports beside the EHR's id.
+#[test]
+fn the_scope_collection_reports_the_ehr_status_template() {
+    let ir = plan_ok("SELECT e/ehr_status/subject FROM EHR e");
+    let scope = ferroehr::aql::sql::build_scope(&ir, &Params::new(), &scope_ctx())
+        .unwrap_or_else(|e| panic!("scope build failed: {e}"))
+        .unwrap_or_else(|| panic!("an EHR source is something to collect"));
+    assert_eq!(scope.ehr_columns, vec!["scope_ehr_0".to_owned()]);
+    assert_eq!(scope.template_columns, vec!["scope_template_1".to_owned()]);
+    assert!(
+        scope.sql.contains(r#""template_id" AS "scope_template_1""#),
+        "{}",
+        scope.sql
+    );
+}
+
+/// With a configured patient namespace the claim names the (id, namespace)
+/// pair exactly, so the patient scope compares both columns and carries no
+/// ambiguity guard (our own extension; no openEHR spec governs the claim).
+#[test]
+fn a_configured_patient_namespace_matches_the_pair_exactly() {
+    let ctx = SqlCtx {
+        subject_scope: Some(SubjectScope {
+            id: "patient-1".to_owned(),
+            namespace: Some("nl.example.patients".to_owned()),
+        }),
+        ..scope_ctx()
+    };
+    for q in [
+        "SELECT e/ehr_id/value FROM EHR e",
+        "SELECT c/uid/value FROM COMPOSITION c",
+    ] {
+        let sql = ferroehr::aql::sql::build(&plan_ok(q), &Params::new(), &ctx)
+            .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"))
+            .sql;
+        assert!(
+            sql.contains(r#""subject_namespace" = $"#),
+            "{q}: the namespace is compared: {sql}"
+        );
+        assert!(
+            !sql.contains(r#""subject_other""#),
+            "{q}: no ambiguity guard: {sql}"
+        );
+    }
 }

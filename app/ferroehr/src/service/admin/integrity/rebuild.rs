@@ -39,9 +39,11 @@
 use std::time::Instant;
 
 use serde_json::Value;
+use sqlx::Connection as _;
 use sqlx::PgConnection;
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::admin::integrity::{
@@ -272,7 +274,8 @@ impl FerroEhrService {
             StorageDomain::Clinical => &self.pool,
             StorageDomain::Demographic => &self.demographic_pool,
         };
-        let mut tx = pool.begin().await?;
+        let mut conn = acquire(pool).await?;
+        let mut tx = conn.begin().await?;
 
         // The tier's own rule: a write always thaws first, so a versioned
         // object is never split across tiers. The marker is captured before

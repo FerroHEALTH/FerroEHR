@@ -50,7 +50,7 @@ pub(super) fn set(reload: &LogReload, body: &SetFilter) -> Response {
         Ok(()) => (StatusCode::OK, Json(view(reload))).into_response(),
         Err(e) => (
             refusal_status(&e),
-            Json(serde_json::json!({ "error": format!("invalid filter: {e}") })),
+            Json(serde_json::json!({ "error": refusal_message("invalid filter", &e) })),
         )
             .into_response(),
     }
@@ -62,9 +62,21 @@ pub(super) fn reset(reload: &LogReload) -> Response {
         Ok(()) => (StatusCode::OK, Json(view(reload))).into_response(),
         Err(e) => (
             refusal_status(&e),
-            Json(serde_json::json!({ "error": format!("reset failed: {e}") })),
+            Json(serde_json::json!({ "error": refusal_message("reset failed", &e) })),
         )
             .into_response(),
+    }
+}
+
+/// Renders a refused filter swap for the response body: the refusal and the
+/// failure that caused it.
+///
+/// One hop rather than the whole chain, because `tracing_subscriber`'s
+/// directive `ParseError` already repeats its own source in its `Display`.
+fn refusal_message(prefix: &str, e: &FilterReloadError) -> String {
+    match std::error::Error::source(e) {
+        Some(cause) => format!("{prefix}: {e}: {cause}"),
+        None => format!("{prefix}: {e}"),
     }
 }
 
@@ -74,5 +86,25 @@ fn refusal_status(e: &FilterReloadError) -> StatusCode {
     match e {
         FilterReloadError::Directives(_) => StatusCode::BAD_REQUEST,
         FilterReloadError::Handle(_) => StatusCode::SERVICE_UNAVAILABLE,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The `400` body names the parser's diagnosis, which the refusal carries
+    /// as its source rather than in its own message.
+    #[test]
+    fn a_refused_filter_body_names_the_parse_diagnosis() {
+        let parse = tracing_subscriber::EnvFilter::try_new("ferroehr=!!bad")
+            .expect_err("the directive must not parse");
+        let diagnosis = parse.to_string();
+        let refused = FilterReloadError::from(parse);
+        assert_eq!(
+            refusal_message("invalid filter", &refused),
+            format!("invalid filter: the filter directives are not valid: {diagnosis}")
+        );
+        assert_eq!(refusal_status(&refused), StatusCode::BAD_REQUEST);
     }
 }

@@ -13,6 +13,7 @@
 //! our own design over the greenfield `contribution` / `version` /
 //! `commit_audit` tables (`clinical/0003_change_control.sql`).
 
+use crate::db::acquire::acquire;
 use crate::service::FerroEhrService;
 use crate::service::admin::types::StatTimeRange;
 use crate::service::error::ServiceError;
@@ -78,7 +79,7 @@ impl FerroEhrService {
         let ids: Vec<String> = sqlx::query_scalar(sql)
             .bind(lo)
             .bind(hi)
-            .fetch_all(self.contribution_pool(ehr_scoped))
+            .fetch_all(&mut *acquire(self.contribution_pool(ehr_scoped)).await?)
             .await
             .map_err(ServiceError::from)?;
         Ok(ids)
@@ -180,7 +181,7 @@ impl FerroEhrService {
             sqlx::query_scalar(
                 "SELECT count(DISTINCT vo_id) FROM version WHERE kind = 'COMPOSITION'",
             )
-            .fetch_one(&self.pool)
+            .fetch_one(&mut *acquire(&self.pool).await?)
             .await
             .map_err(ServiceError::from)?
         } else {
@@ -192,7 +193,7 @@ impl FerroEhrService {
             )
             .bind(lo)
             .bind(hi)
-            .fetch_one(&self.pool)
+            .fetch_one(&mut *acquire(&self.pool).await?)
             .await
             .map_err(ServiceError::from)?
         };
@@ -219,7 +220,7 @@ impl FerroEhrService {
         }
         let count: i64 = if lo.is_none() && hi.is_none() {
             sqlx::query_scalar("SELECT count(*) FROM version WHERE kind = 'COMPOSITION'")
-                .fetch_one(&self.pool)
+                .fetch_one(&mut *acquire(&self.pool).await?)
                 .await
                 .map_err(ServiceError::from)?
         } else {
@@ -231,7 +232,7 @@ impl FerroEhrService {
             )
             .bind(lo)
             .bind(hi)
-            .fetch_one(&self.pool)
+            .fetch_one(&mut *acquire(&self.pool).await?)
             .await
             .map_err(ServiceError::from)?
         };

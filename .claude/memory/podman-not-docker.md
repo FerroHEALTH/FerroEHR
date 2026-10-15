@@ -1,6 +1,6 @@
 ---
 name: podman-not-docker
-description: "The owner's machine runs podman, not Docker — how to point testkit and container tooling at it"
+description: "The owner's machine runs podman, not Docker, for containers AND Kubernetes (kind on podman) — how to point tooling at it"
 metadata:
   node_type: memory
   type: user
@@ -13,4 +13,5 @@ The owner uses **podman** locally, never Docker (stated 2026-10-07). There is no
 **How to apply:**
 - Test suites do NOT run locally (see [[tests-run-in-pr-ci]]: the machine lacks the RAM); they run in the PR's CI. Where a podman-backed tool needs a Docker socket (testkit, the deploy probes, docker-compose), point it at podman: `DOCKER_HOST=unix://$(podman machine inspect --format '{{.ConnectionInfo.PodmanSocket.Path}}') TESTCONTAINERS_RYUK_DISABLED=true`. A `docker` shim that maps `docker compose` to docker-compose and everything else to podman lets scripts that call `docker` run.
 - If `podman compose version` says "connection refused" while `podman machine list` shows the VM up, `podman machine stop && podman machine start` fixes it.
+- **Kubernetes runs on podman too** (owner, 2026-10-14): a `kind` cluster with `KIND_EXPERIMENTAL_PROVIDER=podman` (`/opt/homebrew/bin/kind`, `kubectl` at /usr/local/bin), never Docker Desktop's cluster. The k8s-test skill and the deploy-probe-k8s script assume Docker Desktop; run them against the kind context instead. See [[k8s-testing-uses-compose-postgres]].
 - Scripts calling `docker compose` (e.g. `scripts/ui-e2e.sh`, the screenshot refresh) do not run as-is here; ask before shimming them.

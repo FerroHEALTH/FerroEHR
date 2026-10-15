@@ -1261,8 +1261,8 @@ fn single_field_type(
 ///   §Invariants).
 ///
 /// The `1..*` source is the BMM minus
-/// [`crate::plan::overrides::cardinality_contradicted`] (a class whose own
-/// invariants contradict its declared lower bound). The write direction is
+/// [`crate::plan::overrides::cardinality_contradicted`] (an attribute whose
+/// declared lower bound the release's own syntax chapter contradicts). The write direction is
 /// unaffected either way: the canonical-JSON writer omits an empty list
 /// whether it is `None` or `Some(vec![])` (ITS-REST overview `Resources.md`
 /// §JSON Format — "attributes (even required ones) that are `Null` or an

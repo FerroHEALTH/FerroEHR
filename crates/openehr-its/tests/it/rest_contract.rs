@@ -4,7 +4,7 @@
 
 //! Smoke test for the generated ITS-REST contract: the DTOs serde
 //! round-trip, the route table is populated, and the server trait is nameable.
-use openehr_its::rest::generated::{common, query};
+use openehr_its::rest::generated::{common, definition, query};
 
 /// The generated server trait is a real, nameable bound.
 fn _assert_is_trait<T: query::server::QueryApi>() {}
@@ -196,5 +196,43 @@ fn a_closed_schema_refuses_an_undeclared_member() {
     assert!(
         refused.is_err(),
         "UpdateItemTag is additionalProperties: false"
+    );
+}
+
+/// The template-example body (`responses/200_Template_example_retrieved.yaml`,
+/// an inline `oneOf` over eight RM classes with no `discriminator`) decodes
+/// into the member its `_type` names and refuses a `_type` outside the set.
+#[test]
+fn template_example_body_dispatches_on_type() {
+    let wire = serde_json::json!({
+        "_type": "EHR_STATUS",
+        "archetype_node_id": "openEHR-EHR-EHR_STATUS.generic.v1",
+        "name": {"_type": "DV_TEXT", "value": "EHR Status"},
+        "subject": {"_type": "PARTY_SELF"},
+        "is_queryable": true,
+        "is_modifiable": true,
+    });
+    let body: definition::TemplateExampleRetrievedBody =
+        serde_json::from_value(wire.clone()).expect("an EHR_STATUS example decodes");
+    assert!(
+        matches!(body, definition::TemplateExampleRetrievedBody::EhrStatus(_)),
+        "`_type: EHR_STATUS` selects the EhrStatus member: {body:?}"
+    );
+    let back = serde_json::to_value(&body).expect("serialize the example body");
+    assert_eq!(
+        back.get("_type"),
+        wire.get("_type"),
+        "the member writes its own `_type`"
+    );
+
+    let outside = serde_json::json!({"_type": "OBSERVATION"});
+    assert!(
+        serde_json::from_value::<definition::TemplateExampleRetrievedBody>(outside).is_err(),
+        "OBSERVATION is not one of the eight members"
+    );
+    let untagged = serde_json::json!({"is_queryable": true});
+    assert!(
+        serde_json::from_value::<definition::TemplateExampleRetrievedBody>(untagged).is_err(),
+        "a body without `_type` cannot pick a member"
     );
 }

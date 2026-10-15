@@ -47,7 +47,7 @@ Valid values take the form of an xs:NCName value, i.e. cannot contain:
 An NCName cannot begin with a number, dot or minus character although these can appear later in the value.
 
 h|*0..1*
-|*status*: `<<_terminology_status_enumeration,TERMINOLOGY_STATUS>> +
-{default{nbsp}={nbsp}}`
+|*status*: `<<_terminology_status_enumeration,TERMINOLOGY_STATUS>>` +
+`{default{nbsp}={nbsp}active}`
 a|Status of this code set.
 |===

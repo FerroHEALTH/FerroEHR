@@ -27,8 +27,9 @@
 # Figures are copied byte-for-byte — never re-encoded, never optimized.
 #
 # This is REFERENCE DOCUMENTATION for spec-adherence checks. It is NOT a build
-# input: codegen consumes tools/openehr-codegen/vendor/** (BMM/XSD/OAS) and
-# openehr-its/schemas/**; those vendor dirs stay authoritative for generation.
+# input: codegen consumes the BMM under tools/openehr-codegen/vendor/bmm/ and
+# the XSDs, JSON schemas and OAS under crates/openehr-its/{schemas,vendor}/,
+# all fetched by scripts/vendor/codegen-inputs.sh at their own pins.
 #
 # Idempotent: wipes and re-vendors each component dir. Re-run after bumping a
 # ref below (keep docs/VERSIONS.md in sync).
@@ -41,28 +42,39 @@ INCLUDE_EXT=(adoc md txt csv json yaml yml robot xml opt g4)
 # component | upstream repo | human ref | pinned commit
 # Master pins: the latest published spec versions (RM 1.2.0, BASE 1.3.0,
 # TERM 3.1.0, AM 2.4.0, LANG 1.1.0) have no GitHub release tags yet — they
-# live on master. SHAs chosen 2026-07-06 to match the ITS-BMM/ITS-JSON pins
-# already vendored for codegen.
+# live on master. A master pin is the upstream HEAD at its last re-vendor. The
+# ITS-JSON docs pin can run ahead of the schema pin recorded in
+# crates/openehr-its/schemas/json/PROVENANCE.md when the delta leaves the
+# schemas untouched (docs/VERSIONS.md names both).
 COMPONENTS=(
-  "BASE|specifications-BASE|master (BASE 1.3.0)|e48795762a0648cbe5701be58d42ec5df0c701a7"
-  "RM|specifications-RM|master (RM 1.2.0)|66d3ac45587e4532a94d5fd27ca24bcf049f5bf3"
-  "AM|specifications-AM|master (AM 2.4.0 + ADL/AOM/OPT 1.4)|da06d63297e8549a351c854d8b1c45cd9f1d577c"
-  "TERM|specifications-TERM|master (TERM 3.1.0)|78edd7f59600c40da00fa4e8a1282d563b8942cc"
-  "LANG|specifications-LANG|master (LANG 1.1.0)|201b647034f7b1ddfe207e4c3c6f52f6878869b8"
+  "BASE|specifications-BASE|master (BASE 1.3.0)|45caad1bf3874b26a5ce275e27e28eff15150b4a"
+  "RM|specifications-RM|master (RM 1.2.0)|e0f7c9a24fe9b9cd568adb48c6dd53ac66e43647"
+  "AM|specifications-AM|master (AM 2.4.0 + ADL/AOM/OPT 1.4)|82284df6c0f68aef48eb9bb48344972b9d385a42"
+  "TERM|specifications-TERM|master (TERM 3.1.0)|1232e59bb679928b921b305b6eca4d0b5e1e03f0"
+  "LANG|specifications-LANG|master (LANG 1.1.0)|84cd268326f724c354292b11cb75a8f6b59b1ca2"
   "QUERY|specifications-QUERY|Release-1.1.0|a87bb51fa1c515b863c9610a9444a2d5570dc05a"
   "SM|specifications-SM|master|23ffc4711c10bae2ae43724b1948fe3b24a0964e"
-  "CNF|specifications-CNF|master|33251d2abe5a75c042e11c9385d2e9a79aa15904"
+  "CNF|specifications-CNF|master|239dfb4ed2c634ca713aee95df074604a6f5ab56"
   "ITS-REST|specifications-ITS-REST|Release-1.1.0 (released 19-Jul-2026; matches the vendored OAS identity)|24058992d5fa96e8dfbd855d9c133f328387fc09"
-  "ITS-XML|specifications-ITS-XML|master (1.0.2 target, 2.0.0 TRIAL)|de8b37ba6c9a5e126623a063cafba3b58ebf1107"
-  "ITS-JSON|specifications-ITS-JSON|master (development pin)|5acae056248e917a4b4c56f7e712f4fcfeb616a6"
+  "ITS-XML|specifications-ITS-XML|Release-2.0.0v2 (tag; the XSD bundles are tags Release-1.0.2v2 + Release-2.0.0v2)|de8b37ba6c9a5e126623a063cafba3b58ebf1107"
+  "ITS-JSON|specifications-ITS-JSON|master (development pin)|14387ce9191f228d768b6bade3308b79aaf87471"
 )
-# ITS-BMM is deliberately absent: it is already vendored verbatim (all
-# serializations) at tools/openehr-codegen/vendor/bmm/.
+# ITS-BMM is deliberately absent: scripts/vendor/codegen-inputs.sh vendors its
+# json and odin serializations (not yaml) at tools/openehr-codegen/vendor/bmm/.
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-# Upstream repo tooling is not spec text: exclude agent configs and CI.
+# Upstream repo tooling is not spec text: exclude agent configs (AGENTS.md,
+# CLAUDE.md, .claude/, .junie/) and CI. A vendored CLAUDE.md is worse than
+# noise: agent harnesses load nested CLAUDE.md files as instructions.
+#
+# A spec repo's top-level `development/` directory is upstream's build tooling
+# by the repos' own layout (TERM: the PHP terminology generator; ITS-REST: "All
+# build tooling and scripts live here", its development/README.md), so it is
+# excluded whole rather than file by file. Every PROVENANCE.md names the
+# exclusions (TOOLING_NOTE below).
+#
 # `tmp-*` is upstream's own scratch-note prefix (e.g. the CNF repo's
 # tmp-docs-how-to-get-code-coverage-from-all-tests.md, a JaCoCo/Java how-to
 # with no conformance content) — noise in a tree we treat as an oracle.
@@ -82,7 +94,10 @@ MANIFESTS=(
   'Gemfile*' '*.gemspec'
   'pom.xml' 'build.gradle*' 'go.mod' 'go.sum'
 )
-rsync_args=(--exclude='.git' --exclude='.claude' --exclude='.junie' --exclude='.github' --exclude='AGENTS.md' --exclude='tmp-*')
+rsync_args=(--exclude='.git' --exclude='.claude' --exclude='.junie' --exclude='.github' --exclude='AGENTS.md' --exclude='CLAUDE.md' --exclude='tmp-*' --exclude='/development/')
+TOOLING_NOTE="- Upstream repo tooling excluded: \`.git\`, \`.github\`, \`.claude\`, \`.junie\`,
+  \`AGENTS.md\`, \`CLAUDE.md\`, \`tmp-*\` scratch notes, the top-level
+  \`development/\` build-tooling directory and dependency manifests."
 # CNF's abstract pseudo-code scripts are not vendored. Nothing in this
 # repository reads them — the CNF material we use is the test schedule
 # (docs/) and the Robot suites (tests/) — and every one of the 34 files
@@ -222,6 +237,7 @@ for entry in "${COMPONENTS[@]}"; do
 - Vendored by: \`scripts/vendor/spec-docs.sh\` (text formats only: ${INCLUDE_EXT[*]})
 $diagram_note
 $figure_note
+$TOOLING_NOTE
 - Unreferenced figures, UML \`.xmi\`/\`.mdzip\`, XSDs and other binaries
   excluded — fetch from the repo at the pinned commit.
 

@@ -25,7 +25,10 @@
 #                                four DSNs must reach four different PostgreSQL
 #                                clusters. Pointing them at one cluster is refused;
 #                                accept `shared_cluster` by name only as a
-#                                recorded decision.
+#                                recorded decision. Each cluster is prepared on
+#                                its own migrator: the Job applies the schema
+#                                and the server verifies it on
+#                                database.<domain>.migrateExistingSecret below.
 #   open_subject_namespace       made: privacy.subject_namespaces is declared.
 #   audit_off                    made: the audit trail is on with its local store.
 #   audit_fails_open             made: audit.fail_mode is `closed`.
@@ -35,6 +38,9 @@
 #   migrate_on_runtime_credential made: db.migrate is `verify`; the migration Job
 #                                prepares the schema on its own credential.
 #   auth_off                     made: authentication on, through OIDC.
+#   rbac_off                     made: authorization stays on through the chart
+#                                default config.authz.rbac.enabled: true, which
+#                                this overlay leaves as it is.
 #   plaintext_listener           ACCEPTED by name: TLS terminates at the Ingress,
 #                                and the pod listener speaks plain HTTP on the pod
 #                                network. The NetworkPolicy admits only the
@@ -60,16 +66,28 @@ database:
     # Role ferroehr_party: every identity the instance holds.
     existingSecret: ferroehr-db-party
     existingSecretKey: FERROEHR__STORAGE__PARTY__URL
+    # The migrator of the party cluster: the Job prepares it, the server
+    # verifies it. Drop it only when party shares the clinical cluster.
+    migrateExistingSecret: ferroehr-db-party-migrate
+    migrateExistingSecretKey: FERROEHR__STORAGE__MIGRATE__PARTY__URL
   linkage:
     # Role ferroehr_linkage: the map from a party to its EHR.
     existingSecret: ferroehr-db-linkage
     existingSecretKey: FERROEHR__STORAGE__LINKAGE__URL
+    # The migrator of the linkage cluster. That cluster also receives the
+    # party migration set (schema only, no rows), which the linkage set needs.
+    migrateExistingSecret: ferroehr-db-linkage-migrate
+    migrateExistingSecretKey: FERROEHR__STORAGE__MIGRATE__LINKAGE__URL
   audit:
     # The audit repository, kept apart from the system that processes the data.
     existingSecret: ferroehr-db-audit
     existingSecretKey: FERROEHR__STORAGE__AUDIT__URL
-  # The migrator DSN (role ferroehr_migrator). The server opens it for the
-  # verify step at boot and holds no pool on it.
+    # The migrator of the audit cluster.
+    migrateExistingSecret: ferroehr-db-audit-migrate
+    migrateExistingSecretKey: FERROEHR__STORAGE__MIGRATE__AUDIT__URL
+  # The migrator DSN of the clinical cluster (role ferroehr_migrator). The
+  # server opens it, and each domain's migrateExistingSecret above, for the
+  # verify step at boot and holds no pool on any of them.
   migrateExistingSecret: ferroehr-db-migrate
   migrateExistingSecretKey: FERROEHR__DB__MIGRATE_URL
 

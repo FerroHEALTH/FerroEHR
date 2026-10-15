@@ -32,7 +32,7 @@ use indexmap::IndexMap;
 
 use super::model::{
     WebTemplateCardinality, WebTemplateClosedAttribute, WebTemplateExistence, WebTemplateInput,
-    WebTemplateInputType, WebTemplateNode, WebTemplateSlot,
+    WebTemplateInputType, WebTemplateNode, WebTemplateSlot, WebTemplateStructuralStub,
 };
 
 /// The Web-Template metadata **format** version string emitted by both front
@@ -77,7 +77,7 @@ pub(super) fn tree_placeholder() -> WebTemplateNode {
     WebTemplateNode::new("COMPOSITION".to_owned(), String::new())
 }
 
-pub(super) fn is_entry_family(rm_type: &str) -> bool {
+fn is_entry_family(rm_type: &str) -> bool {
     matches!(
         rm_type,
         "OBSERVATION" | "EVALUATION" | "INSTRUCTION" | "ACTION" | "ADMIN_ENTRY" | "GENERIC_ENTRY"
@@ -100,8 +100,14 @@ pub(super) fn post_process(node: &mut WebTemplateNode) {
     }
 }
 
+/// Merges an ELEMENT's coded-text and text alternatives for ONE attribute into a
+/// coded text with `other` (master04 §"Open Value-Sets and the `|other`
+/// Suffix"); a `value` beside a `null_flavour` constrains two attributes and
+/// stays two children.
 fn post_process_element(node: &mut WebTemplateNode) {
-    if let [first_child, second_child] = node.children.as_slice() {
+    if let [first_child, second_child] = node.children.as_slice()
+        && first_child.aql_path == second_child.aql_path
+    {
         let first = first_child.first_input_type();
         let second = second_child.first_input_type();
         if first == Some(WebTemplateInputType::CodedText)
@@ -563,6 +569,7 @@ pub(super) fn compact(mut node: WebTemplateNode, depth: usize) -> Option<WebTemp
         card_all: std::mem::take(&mut node.card_all),
         slots: std::mem::take(&mut node.slots),
         closed_attributes: std::mem::take(&mut node.closed_attributes),
+        structural_stubs: std::mem::take(&mut node.structural_stubs),
     };
     node.children = get_compacted(children, &mut hoisted);
     node.cardinalities = hoisted.cardinalities;
@@ -570,6 +577,7 @@ pub(super) fn compact(mut node: WebTemplateNode, depth: usize) -> Option<WebTemp
     node.card_all = hoisted.card_all;
     node.slots = hoisted.slots;
     node.closed_attributes = hoisted.closed_attributes;
+    node.structural_stubs = hoisted.structural_stubs;
     // Recurse into the (post-hoist) children.
     let children = std::mem::take(&mut node.children);
     node.children = children
@@ -587,6 +595,7 @@ struct Hoisted {
     card_all: Vec<WebTemplateCardinality>,
     slots: Vec<WebTemplateSlot>,
     closed_attributes: Vec<WebTemplateClosedAttribute>,
+    structural_stubs: Vec<WebTemplateStructuralStub>,
 }
 
 fn get_compacted(children: Vec<WebTemplateNode>, parent: &mut Hoisted) -> Vec<WebTemplateNode> {
@@ -614,6 +623,9 @@ fn get_compacted(children: Vec<WebTemplateNode>, parent: &mut Hoisted) -> Vec<We
             parent
                 .closed_attributes
                 .append(&mut std::mem::take(&mut child.closed_attributes));
+            parent
+                .structural_stubs
+                .append(&mut std::mem::take(&mut child.structural_stubs));
             // The hoisted wrapper's own RM type is an archetype constraint the
             // compacted tree would otherwise lose: record it as a slot so the
             // walk still rejects a sibling subtype in a narrowed

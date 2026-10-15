@@ -17,11 +17,11 @@ pub enum FlatError {
     InvalidTemplate(String),
 
     /// An OPT 1.4 XML document failed to parse.
-    #[error("failed to parse OPT 1.4 XML: {0}")]
+    #[error("failed to parse OPT 1.4 XML")]
     OptParse(#[from] openehr_its::xml::runtime::XmlError),
 
     /// A value could not be serialized to JSON.
-    #[error("failed to serialize to JSON: {0}")]
+    #[error("failed to serialize to JSON")]
     Serialize(#[from] serde_json::Error),
 
     /// A FLAT key is not syntactically valid (ITS-REST simplified_formats
@@ -126,4 +126,24 @@ pub enum FlatError {
     /// type, or a STRUCTURED document is not a JSON object).
     #[error("simplified-format conversion error: {0}")]
     Conversion(String),
+
+    /// A TDD is not well-formed XML; the reader's error is the source.
+    #[error("simplified-format conversion error: TDD is not well-formed XML")]
+    TddXml(#[source] quick_xml::Error),
+
+    /// A TDD element carries a malformed attribute; the reader's error is the
+    /// source.
+    #[error("simplified-format conversion error: malformed TDD attribute")]
+    TddAttribute(#[source] quick_xml::events::attributes::AttrError),
+
+    /// A TDD element did not decode as the RM type it declares; the
+    /// canonical-XML reader's error is the source.
+    #[error("simplified-format conversion error: TDD {rm_type}")]
+    TddElement {
+        /// The RM type the element was read as.
+        rm_type: &'static str,
+        /// The canonical-XML reader's refusal.
+        #[source]
+        source: openehr_its::xml::runtime::XmlError,
+    },
 }

@@ -245,18 +245,12 @@ pub(crate) async fn enforce(
     let settings = (*settings).as_ref();
 
     // 1. The per-EHR gate (every EHR-scoped route). A setting-less EHR falls
-    // back to the server-wide disposition; with authz absent entirely there is
-    // no configured default to consult, so the historical permit stands.
+    // back to the configured server-wide disposition, whether or not the RBAC
+    // gate is on; no handle means that disposition is `open`.
     let authz = state.authz();
-    let rbac = authz.as_deref().and_then(AuthzHandle::rbac_rules);
-    EhrAccessGate::ehr_gate(
-        settings,
-        subject,
-        roles,
-        rbac.map_or(EhrAccessDefault::Open, |r| r.ehr_access_default),
-        rbac.map_or("ADMIN", |r| r.admin_role.as_str()),
-    )
-    .map_err(|reason| Box::new(forbidden(principal.as_ref(), &reason)))?;
+    let (server_default, admin_role) = server_disposition(authz.as_deref());
+    EhrAccessGate::ehr_gate(settings, subject, roles, server_default, admin_role)
+        .map_err(|reason| Box::new(forbidden(principal.as_ref(), &reason)))?;
 
     // 2. The Composition privacy ceiling (Composition read routes).
     if is_composition_read(op)
@@ -297,9 +291,7 @@ pub(crate) async fn query_scope(state: &AppState) -> Result<EhrAccessScope, Box<
             ))
         })?;
     let authz = state.authz();
-    let rbac = authz.as_deref().and_then(AuthzHandle::rbac_rules);
-    let server_default = rbac.map_or(EhrAccessDefault::Open, |r| r.ehr_access_default);
-    let admin_role = rbac.map_or("ADMIN", |r| r.admin_role.as_str());
+    let (server_default, admin_role) = server_disposition(authz.as_deref());
     let readable = |settings: Option<&EhrAccessSettings>| {
         EhrAccessGate::ehr_gate(settings, subject, roles, server_default, admin_role).is_ok()
     };
@@ -324,6 +316,20 @@ pub(crate) async fn query_scope(state: &AppState) -> Result<EhrAccessScope, Box<
         )
     };
     Ok(scope)
+}
+
+/// The server-wide disposition for a setting-less EHR and the role a
+/// `restricted` one admits, read from the authorization handle whether or not
+/// its RBAC gate is on.
+///
+/// [`AuthzHandle::build`] returns no handle only when the configured default is
+/// `open`, and the binary wires none with authentication off, which the
+/// configuration refuses beside a `restricted` default; so `None` reads as
+/// `open`, and the admin role is then never consulted.
+fn server_disposition(authz: Option<&AuthzHandle>) -> (EhrAccessDefault, &str) {
+    authz.map_or((EhrAccessDefault::Open, "ADMIN"), |handle| {
+        (handle.ehr_access_default(), handle.admin_role())
+    })
 }
 
 /// A `403` carrying the principal (so the ATNA audit layer records the deny —

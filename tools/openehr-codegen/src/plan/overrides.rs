@@ -16,7 +16,7 @@
 use std::collections::BTreeMap;
 
 use crate::analyze::invariants::{Bucket, classify};
-use crate::load::bmm::{BmmPropKind, BmmProperty, BmmType};
+use crate::load::bmm::{BmmClass, BmmPropKind, BmmProperty, BmmType};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Primitive type map (spec foundation type → Rust type)
@@ -801,28 +801,38 @@ pub(crate) const FIELD_DEFAULTS: &[FieldDefault] = &[
     },
 ];
 
-/// Render a property's vendored `default` facet as a literal Rust expression of
-/// the field's own type, or `None` when the facet cannot be one.
+/// Render a property's vendored `default` facet as a Rust expression of the
+/// field's own type, or `None` when the facet cannot be one.
 ///
 /// The facet is an **undeclared extension**: LANG
 /// `docs/UML/classes/org.openehr.lang.bmm_persistence.p_bmm_property.adoc`
 /// §Attributes declares `name`, `is_mandatory`, `is_computed`,
 /// `is_im_infrastructure`, `is_im_runtime`, `type_def` and `bmm_property` — no
-/// `default` — so the vendored schemas' 44 occurrences carry no normative
-/// reading and the emitter derives from them only where the facet is
-/// unambiguous in the property's own declared type:
+/// `default` — so the vendored schemas' occurrences carry no normative reading
+/// and the emitter derives from them only where the facet is unambiguous in
+/// the property's own declared type:
 ///
 /// * `Boolean` ← the ODIN literals `False`/`True` (the JSON export stringifies
 ///   them) or a real JSON boolean.
 /// * `String` ← an ODIN-QUOTED literal (`<"Boolean">` arrives as `"\"Boolean\""`).
 ///   The quoting is what distinguishes a string value from a stray annotation:
-///   the one bare non-empty facet in the vendored set is RM
-///   `RESOURCE_DESCRIPTION.parent_resource = "0..1"`, a cardinality that leaked
-///   into the default slot of an `AUTHORED_RESOURCE`-typed property.
+///   the one bare non-empty facet on a non-enumeration type in the vendored set
+///   is RM `RESOURCE_DESCRIPTION.parent_resource = "0..1"`, a cardinality that
+///   leaked into the default slot of an `AUTHORED_RESOURCE`-typed property.
+/// * an enumeration class (`class_of` resolves the declared type to a class
+///   carrying `BMM_ENUMERATION` constants) ← the bare name of one of its
+///   `item_names` (TERM 3.1.0 `CODE.status = active`). The result is the
+///   marker `@SPEC::Variant`, which each emitter resolves to the variant's
+///   generation-correct full path exactly as it resolves a `@SPEC`
+///   construction-door parameter (the plan stage does not know the crate a
+///   default is emitted into).
 ///
 /// Everything else is un-renderable and is listed in [`UNRENDERABLE_DEFAULTS`],
 /// so the vendored set is partitioned totally: derived, or named with a reason.
-pub(crate) fn vendored_default(prop: &BmmProperty) -> Option<String> {
+pub(crate) fn vendored_default<'c>(
+    prop: &BmmProperty,
+    class_of: impl Fn(&str) -> Option<&'c BmmClass>,
+) -> Option<String> {
     let facet = prop.default.as_deref()?;
     let BmmPropKind::Single(BmmType::Simple(ty)) = &prop.kind else {
         return None;
@@ -837,7 +847,28 @@ pub(crate) fn vendored_default(prop: &BmmProperty) -> Option<String> {
             let inner = facet.strip_prefix('"')?.strip_suffix('"')?;
             (!inner.is_empty()).then(|| format!("::std::string::String::from({inner:?})"))
         }
-        _ => None,
+        _ => {
+            let enumeration = class_of(ty)?.enumeration.as_ref()?;
+            enumeration
+                .item_names
+                .iter()
+                .find(|name| name.as_str() == facet)
+                .map(|name| format!("@{ty}::{}", crate::render::naming::type_name(name)))
+        }
+    }
+}
+
+/// Resolve a rendered default expression for the crate it is emitted into: an
+/// enumeration-constant marker `@SPEC::Variant` (see [`vendored_default`])
+/// becomes `{path}::Variant`, where `path` is `resolve("@SPEC")`, the emitter's
+/// own `@SPEC` type resolution; any other expression passes through.
+pub(crate) fn resolve_default(default: &str, resolve: impl Fn(&str) -> String) -> String {
+    match default
+        .strip_prefix('@')
+        .and_then(|marker| marker.rsplit_once("::"))
+    {
+        Some((spec, variant)) => format!("{}::{variant}", resolve(&format!("@{spec}"))),
+        None => default.to_owned(),
     }
 }
 
@@ -847,6 +878,11 @@ pub(crate) struct UnrenderableDefault {
     pub owner: &'static str,
     /// The property carrying the facet.
     pub field: &'static str,
+    /// Every distinct vendored facet value this entry adjudicates, across all
+    /// composed generations; the emitter's test suite fails when the vendored
+    /// set differs, so a re-vendor cannot leave the citation describing a
+    /// facet that is no longer there.
+    pub facets: &'static [&'static str],
     /// The spec/schema evidence for leaving it unrealized.
     pub citation: &'static str,
     /// One-line reason.
@@ -858,46 +894,18 @@ pub(crate) struct UnrenderableDefault {
 /// dropped.
 ///
 /// A new un-renderable facet (a re-vendored schema, a pin bump) fails the
-/// emitter's own test suite until it is adjudicated here.
-pub(crate) const UNRENDERABLE_DEFAULTS: &[UnrenderableDefault] = &[
-    UnrenderableDefault {
-        owner: "RESOURCE_DESCRIPTION",
-        field: "parent_resource",
-        citation: "The property is typed AUTHORED_RESOURCE, not a primitive: the BASE 1.3.0 \
-                   schema gives it the facet `\"\"` and the RM 1.2.0 schema `\"0..1\"` (a \
-                   cardinality string in the default slot). It is also a designated owner/parent \
-                   back-reference (see BACK_REFERENCES), so no struct field exists to default.",
-        reason: "Class-typed back-reference; both vendored facet values are authoring slips.",
-    },
-    UnrenderableDefault {
-        owner: "CODE_SET",
-        field: "status",
-        citation: "TERM 3.1.0 types the property TERMINOLOGY_STATUS and gives it the facet \
-                   `\"\"`; an empty string is not a value of that type.",
-        reason: "Empty facet on a non-primitive type.",
-    },
-    UnrenderableDefault {
-        owner: "TERMINOLOGY_GROUP",
-        field: "status",
-        citation: "TERM 3.1.0 types the property TERMINOLOGY_STATUS and gives it the facet \
-                   `\"\"`; an empty string is not a value of that type.",
-        reason: "Empty facet on a non-primitive type.",
-    },
-    UnrenderableDefault {
-        owner: "CODE",
-        field: "status",
-        citation: "TERM 3.1.0 types the property TERMINOLOGY_STATUS and gives it the facet \
-                   `\"\"`; an empty string is not a value of that type.",
-        reason: "Empty facet on a non-primitive type.",
-    },
-    UnrenderableDefault {
-        owner: "TERMINOLOGY_CONCEPT",
-        field: "status",
-        citation: "TERM 3.1.0 types the property TERMINOLOGY_STATUS and gives it the facet \
-                   `\"\"`; an empty string is not a value of that type.",
-        reason: "Empty facet on a non-primitive type.",
-    },
-];
+/// emitter's own test suite until it is adjudicated here, and so does a changed
+/// facet value under an existing entry.
+pub(crate) const UNRENDERABLE_DEFAULTS: &[UnrenderableDefault] = &[UnrenderableDefault {
+    owner: "RESOURCE_DESCRIPTION",
+    field: "parent_resource",
+    facets: &["", "0..1"],
+    citation: "The property is typed AUTHORED_RESOURCE, not a primitive: the BASE 1.3.0 \
+               schema gives it the facet `\"\"` and the RM 1.2.0 schema `\"0..1\"` (a \
+               cardinality string in the default slot). It is also a designated owner/parent \
+               back-reference (see BACK_REFERENCES), so no struct field exists to default.",
+    reason: "Class-typed back-reference; both vendored facet values are authoring slips.",
+}];
 
 /// Whether `(owner, field)`'s vendored `default` facet is an adjudicated
 /// un-renderable one.
@@ -908,58 +916,118 @@ pub(crate) fn default_unrenderable(owner: &str, field: &str) -> bool {
         .any(|u| u.owner == owner && u.field == field)
 }
 
-/// A container attribute whose vendored cardinality lower bound is CONTRADICTED
-/// by the same release's normative syntax, with the citation that resolves it.
-///
-/// The emitter never softens a bound on its own — a `1..*` is emitted as
-/// `NonEmptyVec<T>` precisely so the model carries it. An entry here exists
-/// only where the vendored release states the bound BOTH ways and the syntax
-/// chapter (which defines the persistence form and shows conformant instances)
-/// governs over the UML class table.
-struct CardinalityContradiction {
-    /// The declaring BMM class.
-    owner: &'static str,
-    /// The container attribute.
-    field: &'static str,
-    /// The spec text that resolves the contradiction.
-    #[expect(
-        dead_code,
-        reason = "the citation is this decision map's spec record — it exists to be read at review, exactly like every other override map's citation field, and is deliberately not consumed by emitted text"
-    )]
-    citation: &'static str,
-    /// One-line reason.
-    #[expect(
-        dead_code,
-        reason = "the reason is this decision map's spec record — read at review, not consumed by emitted text"
-    )]
-    reason: &'static str,
+/// Which vendored statement a [`SpecContradiction`] entry declines to realize.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ContradictionKind {
+    /// A container's `1..*` lower bound: the field is emitted as a plain
+    /// (possibly empty) container instead of `NonEmptyVec<T>`.
+    LowerBound,
+    /// A mandatory `Hash<K, V>` attribute's `1..1` existence: the field stays
+    /// a `BTreeMap`, an absent key reads as the empty map, and the empty map is
+    /// omitted on write.
+    Existence,
 }
 
-/// Every adjudicated cardinality contradiction in the vendored inputs.
-static CARDINALITY_CONTRADICTIONS: &[CardinalityContradiction] = &[CardinalityContradiction {
-    owner: "P_BMM_GENERIC_TYPE",
-    field: "generic_parameter_defs",
-    citation: "docs/specs/openehr/LANG/docs/bmm_persistence/master04-syntax.adoc \u{a7}Generic                Classes: \"within `P_BMM_GENERIC_TYPE`, use `_generic_parameters_` for a list of                string types; use `_generic_parameter_defs_` for a list of complex type                references\" \u{2014} the two are ALTERNATIVES, and the chapter\u{2019}s own                example writes `root_type = <\"DV_INTERVAL\"> generic_parameters =                <\"DV_QUANTITY\">` with no `generic_parameter_defs` at all. The UML class table                (docs/specs/openehr/LANG/docs/UML/classes/org.openehr.lang.bmm_persistence.p_bmm_generic_type.adoc)                states 1..1 for the same attribute, which would make that example \u{2014} and                every string-parameterised generic type in a real .bmm schema \u{2014} invalid,                and would leave the 0..1 `generic_parameters` attribute dead. The syntax                chapter governs.",
-    reason: "Reported upstream as a spec defect (tracker issue #1717); the syntax chapter's reading is emitted.",
-}];
+/// An attribute whose vendored cardinality or existence is CONTRADICTED by the
+/// same release's normative syntax, with the citation that resolves it.
+///
+/// The emitter never softens a bound on its own — a `1..*` is emitted as
+/// `NonEmptyVec<T>` and a `1..1` as a required field precisely so the model
+/// carries them. An entry here exists only where the vendored release states
+/// the constraint BOTH ways and the syntax chapter (which defines the
+/// persistence form and shows conformant instances) governs over the UML class
+/// table. An entry is declared on the attribute's declaring class, so it
+/// reaches every descendant that inherits the attribute.
+pub(crate) struct SpecContradiction {
+    /// The declaring BMM class.
+    pub owner: &'static str,
+    /// The attribute.
+    pub field: &'static str,
+    /// What the entry declines to realize.
+    pub kind: ContradictionKind,
+    /// The spec text that resolves the contradiction.
+    pub citation: &'static str,
+    /// One-line reason.
+    pub reason: &'static str,
+}
+
+/// Every adjudicated cardinality or existence contradiction in the vendored
+/// inputs.
+pub(crate) const SPEC_CONTRADICTIONS: &[SpecContradiction] = &[
+    SpecContradiction {
+        owner: "P_BMM_GENERIC_TYPE",
+        field: "generic_parameter_defs",
+        kind: ContradictionKind::LowerBound,
+        citation: "docs/specs/openehr/LANG/docs/bmm_persistence/master04-syntax.adoc \u{a7}Generic \
+                   Classes: \"within `P_BMM_GENERIC_TYPE`, use `_generic_parameters_` for a list of \
+                   string types; use `_generic_parameter_defs_` for a list of complex type \
+                   references\" \u{2014} the two are ALTERNATIVES, and the chapter\u{2019}s own \
+                   example writes `root_type = <\"DV_INTERVAL\"> generic_parameters = \
+                   <\"DV_QUANTITY\">` with no `generic_parameter_defs` at all. The UML class table \
+                   (docs/specs/openehr/LANG/docs/UML/classes/org.openehr.lang.bmm_persistence.p_bmm_generic_type.adoc) \
+                   states 1..1 for the same attribute, which would make that example \u{2014} and \
+                   every string-parameterised generic type in a real .bmm schema \u{2014} invalid, \
+                   and would leave the 0..1 `generic_parameters` attribute dead. The syntax \
+                   chapter governs.",
+        reason: "Reported upstream as a spec defect (tracker issue #1717); the syntax chapter's reading is emitted.",
+    },
+    SpecContradiction {
+        owner: "P_BMM_PACKAGE_CONTAINER",
+        field: "packages",
+        kind: ContradictionKind::Existence,
+        citation: "docs/specs/openehr/LANG/docs/bmm_persistence/master04-syntax.adoc \u{a7}Package \
+                   Definition: \"just name the classes and packages in a recursive fashion\", and \
+                   the chapter\u{2019}s only package example (`org.openehr.test_pkg`, carrying \
+                   `name` and `classes`) has no `packages` attribute; \u{a7}Serialisation Formats \
+                   applies the same rules to the JSON form. The UML class table \
+                   (docs/specs/openehr/LANG/docs/UML/classes/org.openehr.lang.bmm_persistence.p_bmm_package_container.adoc \
+                   \u{a7}Attributes) and the LANG BMM state 1..1, which would make that example \
+                   and every leaf package of every published BMM schema invalid, while the \
+                   in-memory twin (org.openehr.lang.bmm.bmm_package_container.adoc \
+                   \u{a7}Attributes) states 0..1. The syntax chapter governs; no text defines \
+                   absent as empty, so reading absence as the empty package map is our own \
+                   design, matching the ODIN reader.",
+        reason: "Reported upstream as a spec defect (tracker issue #3770); a leaf package or schema without `packages` reads as the empty map, which is omitted on write.",
+    },
+];
+
+/// Whether `(owner, field)` carries an adjudicated contradiction of `kind`.
+fn contradicted(owner: &str, field: &str, kind: ContradictionKind) -> bool {
+    SPEC_CONTRADICTIONS
+        .iter()
+        .any(|c| c.owner == owner && c.field == field && c.kind == kind)
+}
 
 /// Whether `(owner, field)`'s vendored cardinality lower bound is an adjudicated
 /// contradiction that the emitter must NOT realize as a non-empty container.
 #[must_use]
 pub(crate) fn cardinality_contradicted(owner: &str, field: &str) -> bool {
-    CARDINALITY_CONTRADICTIONS
-        .iter()
-        .any(|c| c.owner == owner && c.field == field)
+    contradicted(owner, field, ContradictionKind::LowerBound)
 }
 
-/// The serde default expression for a resolved property, or `None`.
+/// Whether `(owner, field)`'s vendored `1..1` existence is an adjudicated
+/// contradiction: the mandatory `Hash` field reads an absent key as the empty
+/// map and omits the empty map on write.
+#[must_use]
+pub(crate) fn existence_contradicted(owner: &str, field: &str) -> bool {
+    contradicted(owner, field, ContradictionKind::Existence)
+}
+
+/// The default expression for a resolved property, or `None`.
 ///
-/// The vendored `default` facet on the DECLARING class wins; [`FIELD_DEFAULTS`]
-/// supplies only what the schemas leave unstated. The two can never disagree —
-/// an entry in the hand table for a property that carries a renderable facet
-/// fails the emitter's own test suite.
-pub(crate) fn field_default(owner: &str, prop: &BmmProperty) -> Option<String> {
-    vendored_default(prop).or_else(|| {
+/// The vendored `default` facet on the DECLARING class wins (rendered by
+/// [`vendored_default`], with `class_of` resolving an enumeration-typed
+/// property's class); [`FIELD_DEFAULTS`] supplies only what the schemas leave
+/// unstated. The two can never disagree: an entry in the hand table for a
+/// property that carries a renderable facet fails the emitter's own test suite.
+/// An enumeration default is a `@SPEC::Variant` marker the emitter resolves
+/// with [`resolve_default`].
+pub(crate) fn field_default<'c>(
+    owner: &str,
+    prop: &BmmProperty,
+    class_of: impl Fn(&str) -> Option<&'c BmmClass>,
+) -> Option<String> {
+    vendored_default(prop, class_of).or_else(|| {
         FIELD_DEFAULTS
             .iter()
             .find(|d| d.owner == owner && d.field == prop.name)

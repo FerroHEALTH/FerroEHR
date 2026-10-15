@@ -21,6 +21,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use crate::aql::lineage::ArchetypeLineage;
+use crate::db::acquire::acquire;
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
 
@@ -75,7 +76,7 @@ impl FerroEhrService {
         let edges: Vec<(String, String)> = sqlx::query_as(
             "SELECT hrid, parent_hrid FROM adl2_artefact WHERE parent_hrid IS NOT NULL",
         )
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *acquire(&self.pool).await?)
         .await?;
         Ok(Arc::new(ArchetypeLineage::from_parent_edges(edges)))
     }

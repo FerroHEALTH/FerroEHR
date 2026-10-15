@@ -30,7 +30,7 @@ use openehr_its::rest::runtime::ApiError;
 use uuid::Uuid;
 
 use crate::ids::VoId;
-use crate::service::error::ServiceError;
+use crate::service::error::{ErrorChain, ServiceError};
 
 /// A decoded `VERSION_TREE_ID`.
 ///
@@ -196,7 +196,7 @@ pub(crate) fn version_id(
 pub enum VersionIdError {
     /// Not a well-formed BASE `OBJECT_VERSION_ID` (wrong part count, empty
     /// component, malformed `version_tree_id`).
-    #[error("malformed OBJECT_VERSION_ID {raw:?}: {source}")]
+    #[error("malformed OBJECT_VERSION_ID {raw:?}")]
     Malformed {
         /// The rejected wire value, echoed so the client can see what was read.
         raw: String,
@@ -212,15 +212,27 @@ pub enum VersionIdError {
     OutOfRange(String),
 }
 
+impl VersionIdError {
+    /// Renders the client-visible refusal: the variant's message followed by
+    /// the lexical rule that rejected the value.
+    ///
+    /// The BASE lexical error is the fact a client acts on, so the wire text
+    /// walks the cause chain rather than stopping at the variant's own
+    /// `Display`.
+    fn wire_message(&self) -> String {
+        ErrorChain::new(self).to_string()
+    }
+}
+
 impl From<VersionIdError> for ApiError {
     fn from(e: VersionIdError) -> Self {
-        ApiError::BadRequest(e.to_string())
+        ApiError::BadRequest(e.wire_message())
     }
 }
 
 impl From<VersionIdError> for ServiceError {
     fn from(e: VersionIdError) -> Self {
-        ServiceError::content_invalid(crate::service::error::Violation::new(e.to_string()))
+        ServiceError::content_invalid(crate::service::error::Violation::new(e.wire_message()))
     }
 }
 
@@ -229,7 +241,7 @@ impl From<VersionIdError> for crate::service::status::SmError {
     /// precondition failure (→ `400` at the wire, matching the
     /// [`From<VersionIdError> for ApiError`] `BadRequest` row).
     fn from(e: VersionIdError) -> Self {
-        crate::service::status::SmError::precondition(e.to_string())
+        crate::service::status::SmError::precondition(e.wire_message())
     }
 }
 
@@ -586,5 +598,28 @@ mod tests {
         assert_eq!(if_match_token("  \"abc::sys::3\"  "), "abc::sys::3");
         assert_eq!(if_match_token("abc::sys::3"), "abc::sys::3");
         assert_eq!(if_match_token("\"\""), "");
+    }
+
+    /// A malformed id prints the lexical rule once on a chain walk, and the
+    /// `400` body still names it (RFC 0201: the cause is the source hop).
+    #[test]
+    fn a_malformed_id_names_its_lexical_rule_once() {
+        use std::error::Error;
+
+        let err = parse_version_uid(&format!("{VO}::2")).unwrap_err();
+        let lexical = err
+            .source()
+            .expect("the lexical error is the source")
+            .to_string();
+        assert!(!err.to_string().contains(&lexical), "{err}");
+        let chain = ErrorChain::new(&err).to_string();
+        assert_eq!(chain.matches(&lexical).count(), 1, "{chain}");
+
+        let body = ApiError::from(err).to_string();
+        assert!(body.contains("malformed OBJECT_VERSION_ID"), "{body}");
+        assert!(
+            body.contains(&lexical),
+            "the 400 body names the rule: {body}"
+        );
     }
 }

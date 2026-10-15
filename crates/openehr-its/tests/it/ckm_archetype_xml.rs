@@ -15,7 +15,8 @@
 //! the other.
 //!
 //! The root element is `<archetype>` in `http://schemas.openehr.org/v1`, the
-//! AM 1.4 ARCHETYPE serialization (`crates/openehr-its/schemas/xml/components/AM/Release-1.4`,
+//! AM 1.4 ARCHETYPE serialization
+//! (`crates/openehr-its/schemas/xml/its-xml-1.0.2-nsv1/ALL/Archetype.xsd`,
 //! merged into the OPT emission closure alongside `Template.xsd`).
 //!
 //! Corpus discipline: 100% exercised, adjudicated failures only
@@ -35,8 +36,8 @@ use openehr_its::opt14::types::Archetype;
 /// `C_OBJECT`, but
 ///
 /// * no vendored openEHR schema declares that type — it is absent from every
-///   `OpenehrProfile.xsd` we vendor (ITS-XML 1.0.2 `ALL/`, ITS-XML 2.0.0
-///   `AM/Release-1.4/`, and `components/AM/Release-1.4/`), all of which DO
+///   `OpenehrProfile.xsd` we vendor (ITS-XML 1.0.2 `ALL/` and ITS-XML 2.0.0
+///   `AM/Release-1.4/`), both of which DO
 ///   declare the sibling constrainers `C_DV_ORDINAL`/`C_DV_QUANTITY`; and
 /// * CKM's own ADL 1.4 export of the same archetype contains no `DV_SCALE` or
 ///   `C_DV_SCALE` anywhere, so the constraint is expressed differently in the

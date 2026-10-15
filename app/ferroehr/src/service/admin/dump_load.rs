@@ -64,6 +64,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use sqlx::Connection as _;
 use sqlx::{PgConnection, Row};
 use uuid::Uuid;
 
@@ -75,11 +76,13 @@ use openehr_rm::prelude::{
 use openehr_rm::v1_2::demographic::party_relationship::PartyRelationship;
 use serde::de::DeserializeOwned;
 
+use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::admin::types::{
     CompressionFormat, DumpLoadFailReport, ExportFormat, ExportSpec,
 };
+use crate::service::demographic::identifier::store::{IdentifierStore, SealedRow, StoreError};
 use crate::service::error::ServiceError;
 use crate::service::status::{CallStatusType, SmError};
 use crate::storage::codec::decompose;
@@ -170,6 +173,13 @@ struct DemographicRecord {
     item_tags: Vec<ItemTagRow>,
     #[serde(default)]
     archives: Vec<ArchiveRow>,
+    /// The container's sealed national-identifier rows, live and retired, as
+    /// ciphertext: the versions reference them, so a restored version expands
+    /// to the value it committed under the same deployment key, and the archive
+    /// never carries a protected value in plaintext. `#[serde(default)]` so
+    /// archives dumped before this member existed load with none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    identifiers: Vec<SealedRow>,
 }
 
 /// Insert a record's commit-audit rows in ONE `unnest` statement.
@@ -1006,7 +1016,7 @@ fn version_document(kind: &str, envelope: &Value) -> Result<String, ServiceError
 #[derive(Debug, thiserror::Error)]
 enum VersionPayloadError {
     /// The entry is not a readable canonical-XML `ORIGINAL_VERSION`.
-    #[error("{0}")]
+    #[error(transparent)]
     Xml(#[from] openehr_its::xml::runtime::XmlError),
     /// The document parsed, but carries no `data` to restore.
     #[error("the ORIGINAL_VERSION document carries no `data`")]
@@ -1539,8 +1549,16 @@ impl FerroEhrService {
                 )),
             }));
         }
-        self.load_one_demographic(record).await?;
-        Ok(None)
+        let (entity_type, entity_id) = (record.kind.clone(), record.vo_id.to_string());
+        Ok(self
+            .load_one_demographic(record)
+            .await?
+            .map(|refusal| DumpLoadFailReport {
+                entity_type,
+                entity_id,
+                dump_status: false,
+                error: Some(refusal),
+            }))
     }
 
     /// Fetch every externalized `DV_MULTIMEDIA` blob referenced by the exported
@@ -1589,7 +1607,7 @@ impl FerroEhrService {
         keys.dedup();
         for hex in &keys {
             let bytes = engine.store().get(hex).await.map_err(|e| {
-                crate::service::error::internal_fault("export a multimedia blob", &e)
+                crate::service::error::internal_fault_caused("export a multimedia blob", &e)
             })?;
             archive.write(&format!("{BLOB_PREFIX}{hex}"), &bytes)?;
         }
@@ -1622,7 +1640,7 @@ impl FerroEhrService {
         )
         .bind(&vo_ids)
         .bind(&sys_versions)
-        .fetch_all(pool)
+        .fetch_all(&mut *acquire(pool).await?)
         .await?)
     }
 
@@ -1652,7 +1670,7 @@ impl FerroEhrService {
                 .put_if_absent(hex, bytes)
                 .await
                 .map_err(|e| {
-                    crate::service::error::internal_fault("import a multimedia blob", &e)
+                    crate::service::error::internal_fault_caused("import a multimedia blob", &e)
                 })?;
         }
         Ok(())
@@ -1663,7 +1681,7 @@ impl FerroEhrService {
         Ok(
             sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM ehr WHERE id = $1)")
                 .bind(ehr_id)
-                .fetch_one(&self.pool)
+                .fetch_one(&mut *acquire(&self.pool).await?)
                 .await?,
         )
     }
@@ -1674,7 +1692,7 @@ impl FerroEhrService {
             "SELECT EXISTS(SELECT 1 FROM version WHERE vo_id = $1 AND ehr_id IS NULL)",
         )
         .bind(vo_id)
-        .fetch_one(&self.demographic_pool)
+        .fetch_one(&mut *acquire(&self.demographic_pool).await?)
         .await?)
     }
 
@@ -1686,7 +1704,8 @@ impl FerroEhrService {
         &self,
         commons: &DemographicCommons,
     ) -> Result<(), ServiceError> {
-        let mut tx = self.demographic_pool.begin().await?;
+        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut tx = conn.begin().await?;
         insert_audit_rows(&mut tx, &commons.audits, true).await?;
         if !commons.contributions.is_empty() {
             let ids: Vec<Uuid> = commons.contributions.iter().map(|c| c.id).collect();
@@ -1709,26 +1728,54 @@ impl FerroEhrService {
         Ok(())
     }
 
-    /// Load one ehr-less demographic container: its per-version audits, every
-    /// version (`version` + re-decomposed `node` rows, `ehr_id` NULL),
-    /// attestations, demographic tags and archive rows — one transaction, so
-    /// a failed container commits nothing.
-    async fn load_one_demographic(&self, record: DemographicRecord) -> Result<(), ServiceError> {
-        let mut tx = self.demographic_pool.begin().await?;
+    /// Load one ehr-less demographic container: its per-version audits, its
+    /// sealed national-identifier rows, every version (`version` +
+    /// re-decomposed `node` rows, `ehr_id` NULL), attestations, demographic
+    /// tags and archive rows — one transaction, so a failed container commits
+    /// nothing.
+    ///
+    /// Returns the refusal text when the container cannot be restored under
+    /// this deployment's identifier protection: a sealed row that collides with
+    /// a live value here, or a version carrying a protected value in plaintext
+    /// or a reference this container does not hold. A restored version is
+    /// stored verbatim, so it cannot be sealed on the way in (no openEHR spec
+    /// governs identifier protection — our own design/extension).
+    ///
+    /// # Errors
+    /// The storage errors of the load itself.
+    async fn load_one_demographic(
+        &self,
+        record: DemographicRecord,
+    ) -> Result<Option<String>, ServiceError> {
+        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut tx = conn.begin().await?;
         insert_audit_rows(&mut tx, &record.audits, true).await?;
+        if let Err(refusal) = IdentifierStore::restore_sealed(&mut tx, &record.identifiers).await {
+            return restore_refusal(refusal);
+        }
+        if let Some(engine) = self.identifiers.as_deref() {
+            for version in record.versions.iter().filter(|v| !v.body.is_null()) {
+                if let Err(refusal) = engine
+                    .refuse_unsealed(&mut tx, record.vo_id.0, &version.body)
+                    .await
+                {
+                    return restore_refusal(refusal);
+                }
+            }
+        }
         load_versions(&mut tx, &self.privacy, None, record.versions).await?;
         load_attestations(&mut tx, &record.attestations).await?;
         insert_item_tag_rows(&mut tx, None, &record.item_tags).await?;
         restore_archive_placement(&mut tx, &record.archives).await?;
         tx.commit().await?;
-        Ok(())
+        Ok(None)
     }
 
     /// Read every EHR's content into export records (ordered by EHR id for a
     /// deterministic archive).
     async fn collect_ehr_records(&self) -> Result<Vec<EhrRecord>, ServiceError> {
         let ehr_ids: Vec<EhrId> = sqlx::query_scalar("SELECT id FROM ehr ORDER BY id")
-            .fetch_all(&self.pool)
+            .fetch_all(&mut *acquire(&self.pool).await?)
             .await?;
         let mut records = Vec::with_capacity(ehr_ids.len());
         for ehr_id in ehr_ids {
@@ -1752,7 +1799,7 @@ impl FerroEhrService {
              WHERE id IN (SELECT commit_audit_id FROM contribution WHERE ehr_id IS NULL) \
              ORDER BY id",
         )
-        .fetch_all(&self.demographic_pool)
+        .fetch_all(&mut *acquire(&self.demographic_pool).await?)
         .await?;
         let mut commons_audits = Vec::with_capacity(audit_rows.len());
         for r in audit_rows {
@@ -1761,7 +1808,7 @@ impl FerroEhrService {
         let contribution_rows = sqlx::query(
             "SELECT id, commit_audit_id FROM contribution WHERE ehr_id IS NULL ORDER BY id",
         )
-        .fetch_all(&self.demographic_pool)
+        .fetch_all(&mut *acquire(&self.demographic_pool).await?)
         .await?;
         let mut contributions = Vec::with_capacity(contribution_rows.len());
         for r in contribution_rows {
@@ -1779,7 +1826,7 @@ impl FerroEhrService {
             "SELECT DISTINCT vo_id, kind FROM version WHERE ehr_id IS NULL \
              ORDER BY vo_id",
         )
-        .fetch_all(&self.demographic_pool)
+        .fetch_all(&mut *acquire(&self.demographic_pool).await?)
         .await?;
         let mut records = Vec::with_capacity(container_rows.len());
         for c in container_rows {
@@ -1805,7 +1852,7 @@ impl FerroEhrService {
              ORDER BY id",
         )
         .bind(vo_id)
-        .fetch_all(&self.demographic_pool)
+        .fetch_all(&mut *acquire(&self.demographic_pool).await?)
         .await?;
         let mut audits = Vec::with_capacity(audit_rows.len());
         for r in audit_rows {
@@ -1822,7 +1869,7 @@ impl FerroEhrService {
              ORDER BY sys_version",
         )
         .bind(vo_id)
-        .fetch_all(&self.demographic_pool)
+        .fetch_all(&mut *acquire(&self.demographic_pool).await?)
         .await?;
         let mut versions = Vec::with_capacity(version_rows.len());
         for r in version_rows {
@@ -1835,7 +1882,7 @@ impl FerroEhrService {
              ORDER BY sys_version, time_committed, id",
         )
         .bind(vo_id)
-        .fetch_all(&self.demographic_pool)
+        .fetch_all(&mut *acquire(&self.demographic_pool).await?)
         .await?;
         let mut attestations = Vec::with_capacity(attestation_rows.len());
         for r in attestation_rows {
@@ -1848,7 +1895,7 @@ impl FerroEhrService {
              WHERE ehr_id IS NULL AND target_vo_id = $1 ORDER BY id",
         )
         .bind(vo_id)
-        .fetch_all(&self.demographic_pool)
+        .fetch_all(&mut *acquire(&self.demographic_pool).await?)
         .await?;
         let mut item_tags = Vec::with_capacity(tag_rows.len());
         for r in tag_rows {
@@ -1860,7 +1907,7 @@ impl FerroEhrService {
              FROM vo_head WHERE vo_id = $1 AND archived_at IS NOT NULL ORDER BY vo_id",
         )
         .bind(vo_id)
-        .fetch_all(&self.demographic_pool)
+        .fetch_all(&mut *acquire(&self.demographic_pool).await?)
         .await?;
         let mut archives = Vec::with_capacity(archive_rows.len());
         for r in archive_rows {
@@ -1871,6 +1918,11 @@ impl FerroEhrService {
             });
         }
 
+        let identifiers = IdentifierStore::new(self.demographic_pool.clone())
+            .sealed_rows(vo_id.0)
+            .await
+            .map_err(|e| ServiceError::internal("read the sealed national identifiers", e))?;
+
         Ok(DemographicRecord {
             vo_id,
             kind,
@@ -1879,6 +1931,7 @@ impl FerroEhrService {
             attestations,
             item_tags,
             archives,
+            identifiers,
         })
     }
 
@@ -1934,7 +1987,7 @@ impl FerroEhrService {
              FROM ehr WHERE id = $1",
         )
         .bind(ehr_id)
-        .fetch_one(&self.pool)
+        .fetch_one(&mut *acquire(&self.pool).await?)
         .await?;
         let ehr = EhrRow {
             id: ehr_id,
@@ -1953,7 +2006,7 @@ impl FerroEhrService {
              ORDER BY id",
         )
         .bind(ehr_id)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *acquire(&self.pool).await?)
         .await?;
         let mut audits = Vec::with_capacity(audit_rows.len());
         for r in audit_rows {
@@ -1975,7 +2028,7 @@ impl FerroEhrService {
             "SELECT id, commit_audit_id FROM contribution WHERE ehr_id = $1 ORDER BY id",
         )
         .bind(ehr_id)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *acquire(&self.pool).await?)
         .await?;
         let mut contributions = Vec::with_capacity(contribution_rows.len());
         for r in contribution_rows {
@@ -1994,7 +2047,7 @@ impl FerroEhrService {
              FROM version WHERE ehr_id = $1 ORDER BY vo_id, sys_version",
         )
         .bind(ehr_id)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *acquire(&self.pool).await?)
         .await?;
         let mut versions = Vec::with_capacity(version_rows.len());
         for r in version_rows {
@@ -2004,7 +2057,7 @@ impl FerroEhrService {
         let folder_rank_rows =
             sqlx::query("SELECT rank, vo_id FROM ehr_folder WHERE ehr_id = $1 ORDER BY rank")
                 .bind(ehr_id)
-                .fetch_all(&self.pool)
+                .fetch_all(&mut *acquire(&self.pool).await?)
                 .await?;
         let mut folder_ranks = Vec::with_capacity(folder_rank_rows.len());
         for r in folder_rank_rows {
@@ -2019,7 +2072,7 @@ impl FerroEhrService {
              created_at::text AS created_at FROM item_tag WHERE ehr_id = $1 ORDER BY id",
         )
         .bind(ehr_id)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *acquire(&self.pool).await?)
         .await?;
         let mut item_tags = Vec::with_capacity(tag_rows.len());
         for r in tag_rows {
@@ -2031,7 +2084,7 @@ impl FerroEhrService {
              FROM vo_head WHERE ehr_id = $1 AND archived_at IS NOT NULL ORDER BY vo_id",
         )
         .bind(ehr_id)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *acquire(&self.pool).await?)
         .await?;
         let mut archives = Vec::with_capacity(archive_rows.len());
         for r in archive_rows {
@@ -2049,7 +2102,7 @@ impl FerroEhrService {
              ORDER BY vo_id, sys_version, time_committed, id",
         )
         .bind(ehr_id)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *acquire(&self.pool).await?)
         .await?;
         let mut attestations = Vec::with_capacity(attestation_rows.len());
         for r in attestation_rows {
@@ -2074,7 +2127,8 @@ impl FerroEhrService {
     /// preserved ids, provenance and commit times (a lossless migration; RM
     /// common master06 §Copying "the `ORIGINAL_VERSION` is never modified").
     async fn load_one_ehr(&self, record: EhrRecord) -> Result<(), ServiceError> {
-        let mut tx = self.pool.begin().await?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
         let ehr_id = record.ehr.id;
 
         insert_ehr_row(&mut tx, &record.ehr).await?;
@@ -2262,6 +2316,28 @@ async fn load_attestations(
     .execute(&mut *tx)
     .await?;
     Ok(())
+}
+
+/// The per-container answer to a protected-identifier refusal during a
+/// demographic restore: a failure report for what the archive itself
+/// carries, an error for a storage fault.
+///
+/// # Errors
+/// [`ServiceError`] for a store fault that says nothing about the archive.
+fn restore_refusal(refusal: StoreError) -> Result<Option<String>, ServiceError> {
+    match refusal {
+        StoreError::ValueTaken { .. }
+        | StoreError::SchemeRepeated { .. }
+        | StoreError::ForeignReference
+        | StoreError::Unsealed { .. }
+        | StoreError::UnknownScheme { .. }
+        | StoreError::MalformedRow(_)
+        | StoreError::Crypto(_) => Ok(Some(refusal.to_string())),
+        other => Err(ServiceError::internal(
+            "restore the sealed national identifiers",
+            other,
+        )),
+    }
 }
 
 /// Load a record's version rows and their re-decomposed node rows (through

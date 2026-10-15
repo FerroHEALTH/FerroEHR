@@ -46,11 +46,15 @@ pub(crate) struct Operation<'a> {
     pub responses: Vec<Response>,
 }
 
-/// One documented response of an operation: a status, the media types its
-/// content declares with their schemas (verbatim — a `$ref` keeps its name),
-/// and the response headers it declares, in document order.
+/// One documented response of an operation: a status, the
+/// `#/components/responses` entry it references, the media types its content
+/// declares with their schemas (verbatim — a `$ref` keeps its name), and the
+/// response headers it declares, in document order.
 pub(crate) struct Response {
     pub status: http::StatusCode,
+    /// The `#/components/responses/<name>` component the operation references,
+    /// when it references one rather than declaring the response inline.
+    pub component: Option<String>,
     pub media: Vec<(String, Value)>,
     pub headers: Vec<String>,
 }
@@ -321,6 +325,11 @@ impl Oas {
                 // code or `default`; a non-numeric key is legitimately not a
                 // status, not a defect.
                 let status = http::StatusCode::from_u16(code.parse::<u16>().ok()?).ok()?;
+                let component = resp
+                    .get("$ref")
+                    .and_then(Value::as_str)
+                    .and_then(|r| r.strip_prefix("#/components/responses/"))
+                    .map(str::to_string);
                 let resp = self.resolve(resp);
                 let media = resp
                     .get("content")
@@ -339,6 +348,7 @@ impl Oas {
                     .unwrap_or_default();
                 Some(Response {
                     status,
+                    component,
                     media,
                     headers,
                 })

@@ -86,8 +86,9 @@ on the documentation site.
 
 ## What makes it different
 
-- **Conformance you can verify.** An independent CNF 2.0
-  conformance instrument executes the complete machine-readable catalogue across
+- **Conformance you can verify.** A separate CNF 2.0 conformance instrument
+  ([Veredictum](https://github.com/Vernum-Projecten/Veredictum), its own project
+  with the same maintainer) executes the complete machine-readable catalogue across
   the claimed wire formats and computes the openEHR profile verdicts as pure
   functions of the run records. The conformance badges above render straight
   from the committed run artifacts of real runs; none are hand-edited.
@@ -422,7 +423,7 @@ flowchart TB
         testkit["testkit<br/>(shared PG18 harness)"]
     end
 
-    conf["Veredictum<br/>(the independent CNF 2.0 conformance instrument,<br/>pinned in scripts/lib/veredictum.sh)"]
+    conf["Veredictum<br/>(the separate CNF 2.0 conformance instrument,<br/>pinned in scripts/lib/veredictum.sh)"]
 
     specs -- "openehr-codegen (deterministic, drift-checked in CI)" --> crates
     bin -- "wires" --> rest
@@ -551,7 +552,7 @@ in the repo, with each system's committed measurement records under
 [`docs/conformance/`](docs/conformance/). Reproduce either side with the
 pinned instrument: `bash scripts/conformance.sh` (`CONF_SUT=ehrbase`
 for EHRbase) and `veredictum stress` / `veredictum aql-probe`
-([Veredictum](https://github.com/rubentalstra/Veredictum), pinned in
+([Veredictum](https://github.com/Vernum-Projecten/Veredictum), pinned in
 `scripts/lib/veredictum.sh`).
 
 ## Deployment
@@ -562,7 +563,7 @@ deploys, and listed on
 
 ```shell
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 11.1.0 --set database.existingSecret=my-db-secret
+  --version 11.1.1 --set database.existingSecret=my-db-secret
 ```
 
 There is no HTTP chart repository, so `helm repo add` does not apply — OCI is the

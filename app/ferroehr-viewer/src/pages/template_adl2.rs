@@ -136,7 +136,12 @@ pub fn adl2_catalog_from_json(json: &str) -> Result<CatalogNode, ViewerError> {
     >(json)
     .map_err(|e| ViewerError::Internal(format!("OperationalTemplateV2 parse: {e}")))?;
     let web_template = openehr_sdt::flat::webtemplate::builder_v2_4::build_web_template_v2_4(&opt)
-        .map_err(|e| ViewerError::Internal(format!("WebTemplate build: {e}")))?;
+        .map_err(|e| {
+            ViewerError::Internal(format!(
+                "WebTemplate build: {}",
+                crate::error::error_chain(&e)
+            ))
+        })?;
     Ok(crate::builder::catalog::from_web_template(&web_template))
 }
 

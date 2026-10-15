@@ -21,6 +21,7 @@ use serde_json::Value;
 use sqlx::{PgConnection, PgPool, Row};
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::storage::codec::reassemble;
 use crate::storage::error::StorageError;
@@ -351,7 +352,7 @@ pub async fn read_version_canonical(
     vo_id: VoId,
     sys_version: i32,
 ) -> Result<Value, StorageError> {
-    let rows = read_rows(pool, vo_id, sys_version).await?;
+    let rows = read_rows(&mut *acquire(pool).await?, vo_id, sys_version).await?;
     if rows.is_empty() {
         return Ok(Value::Null);
     }
@@ -441,7 +442,7 @@ pub async fn read_version_rows_all(
     )
     .bind(&vo_ids)
     .bind(&sys_versions)
-    .fetch_all(pool)
+    .fetch_all(&mut *acquire(pool).await?)
     .await?;
 
     let mut grouped: BTreeMap<(VoId, i32), Vec<ReadRow>> = BTreeMap::new();
@@ -560,7 +561,7 @@ pub async fn read_subtrees_canonical(
     .bind(&sys_versions)
     .bind(&anums)
     .bind(&acaps)
-    .fetch_all(pool)
+    .fetch_all(&mut *acquire(pool).await?)
     .await?;
 
     // Bucket the returned node rows by anchor index.
@@ -639,7 +640,7 @@ async fn read_root_bodies(
     )
     .bind(&vo_ids)
     .bind(&sys_versions)
-    .fetch_all(pool)
+    .fetch_all(&mut *acquire(pool).await?)
     .await?;
     let mut by_key: HashMap<(Uuid, i32), Value> = rows
         .into_iter()

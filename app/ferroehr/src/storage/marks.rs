@@ -29,9 +29,11 @@
 //!   the periods, their citations, and what has fallen due — a list, never a
 //!   disposal.
 
+use sqlx::Connection as _;
 use sqlx::{PgConnection, PgPool, Row as _};
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::storage::error::StorageError;
 
@@ -212,7 +214,7 @@ pub async fn restrictions(
          FROM restriction WHERE ehr_id = $1 ORDER BY requested_at DESC, id DESC",
     )
     .bind(ehr_id)
-    .fetch_all(pool)
+    .fetch_all(&mut *acquire(pool).await?)
     .await?;
     rows.iter()
         .map(|row| {
@@ -310,7 +312,7 @@ pub async fn ehr_marks(pool: &PgPool, ehr_id: EhrId) -> Result<Option<EhrMarks>,
          FROM ehr WHERE id = $1",
     )
     .bind(ehr_id)
-    .fetch_optional(pool)
+    .fetch_optional(&mut *acquire(pool).await?)
     .await?;
     row.as_ref()
         .map(|row| {
@@ -366,7 +368,7 @@ pub async fn retention_policies(pool: &PgPool) -> Result<Vec<RetentionPolicyRow>
         "SELECT kind, jurisdiction, category, period::text AS period, anchor, source \
          FROM retention_policy ORDER BY jurisdiction, kind, category NULLS FIRST",
     )
-    .fetch_all(pool)
+    .fetch_all(&mut *acquire(pool).await?)
     .await?;
     rows.iter()
         .map(|row| {
@@ -396,7 +398,8 @@ pub async fn replace_category_map(
     pool: &PgPool,
     rows: &[(&str, String, String)],
 ) -> Result<(), StorageError> {
-    let mut tx = pool.begin().await?;
+    let mut conn = acquire(pool).await?;
+    let mut tx = conn.begin().await?;
     sqlx::query("LOCK TABLE category_map IN SHARE ROW EXCLUSIVE MODE")
         .execute(&mut *tx)
         .await?;
@@ -492,7 +495,7 @@ pub async fn retention_due(
          FROM retention_due ORDER BY due_at, ehr_id, kind, category NULLS FIRST LIMIT $1",
     )
     .bind(limit)
-    .fetch_all(pool)
+    .fetch_all(&mut *acquire(pool).await?)
     .await?;
     rows.iter()
         .map(|row| {

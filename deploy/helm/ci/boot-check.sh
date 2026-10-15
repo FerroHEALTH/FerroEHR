@@ -253,6 +253,11 @@ boot_one() {
       # runtime credentials unexercised.
       db.migrate_url)
         printf 'postgres://ferroehr_migrator:pw@postgres:5432/ferroehr' > "${secdir}/${base}" ;;
+      # The migrator of a domain on a cluster of its own (#3762), which
+      # database.<domain>.migrateExistingSecret supplies.
+      storage.migrate.clinical.url|storage.migrate.party.url|storage.migrate.linkage.url|storage.migrate.audit.url)
+        printf 'postgres://ferroehr_migrator:pw@postgres-%s:5432/ferroehr' \
+          "$(printf '%s' "$base" | cut -d. -f3)" > "${secdir}/${base}" ;;
       *)
         red "  ${p} is referenced but no rendered Secret key supplies it"
         return 1

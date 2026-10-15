@@ -57,6 +57,7 @@ erasure requests and test-data cleanup.
 |---|---|---|
 | `DELETE {base}/admin/ehr/{ehr_id}` | **204**: the EHR and every resource it owns (compositions, `EHR_STATUS`, item tags, contributions, and all their historical versions) are physically gone | **400** malformed id (rejected before any deletion), **404** no EHR with that id |
 | `DELETE {base}/admin/ehr/all` | **204**: bulk delete | **400** any id in the list is not a well-formed UUID; the whole request is refused before anything is deleted |
+| `DELETE {base}/admin/party/{party_id}` | **204**: the demographic party, every `PARTY_RELATIONSHIP` naming it as source or target, and all their versions, contributions and commit audits are physically gone | **400** malformed id, **404** no party with that id (a relationship id is refused the same way) |
 | `DELETE {base}/admin/template/{template_id}` | **204** | **404** unknown template, **409** a committed version still references it |
 | `DELETE {base}/admin/query/{qualified_query_name}/{version}` | **204** | **404** unknown name, or a known name with no such version |
 | `GET {base}/admin/config` | **200**: the effective configuration as a redacted JSON tree | — |
@@ -76,14 +77,18 @@ delete it (GDPR Art. 19). The cross-reference row that names the EHR's subject
 is then erased in the linkage domain, and the externalized multimedia blobs no
 surviving version still references are removed from the object store.
 
-**A party delete announces itself the same way.** The SM
-`physical_party_delete` operation, which this release exposes on the service
-layer and on no REST route, writes one erasure tombstone on the party domain's
-own outbox before its transaction commits, naming the party and every
-`PARTY_RELATIONSHIP` erased with it. A consumer of the party stream has no
-other way to learn the identity is gone.
+**A party delete announces itself the same way.** `DELETE
+{base}/admin/party/{party_id}` is the SM `physical_party_delete` operation on
+the wire. The released Admin API defines deletion for EHRs only, so the route
+is our own extension, and the served OpenAPI document says so. It writes one
+erasure tombstone on the party domain's own outbox before its transaction
+commits, naming the party and every `PARTY_RELATIONSHIP` erased with it. A
+consumer of the party stream has no other way to learn the identity is gone.
+The access log records it the way it records an EHR delete: action `D` under
+the operation `admin_party_delete`, on the demographic resource, with the
+party id as the resource.
 
-**What it keeps:** the audit records naming the `ehr_id`. Art. 17(3)(b)
+**What it keeps:** the audit records naming the `ehr_id` or the party. Art. 17(3)(b)
 withholds erasure where processing is necessary for compliance with a legal
 obligation, and the national access-logging periods are that obligation. Data
 outside the running database (backups, replicas, exports) is reached by your
@@ -533,6 +538,20 @@ already exists is reported the same way, under its own kind (`PERSON`,
 
 Both directions are lossless: a dump and a load reproduce every record,
 whichever format and container you choose.
+
+With [national-identifier protection](installation/config-privacy.md) on, a
+party's demographic record also carries its sealed identifier rows, live and
+retired, as base64 ciphertext, nonce and lookup digest. The archive never holds
+a protected value in plaintext. The rows open again only under the same
+`[demographic.identifier_protection]` root key, so restore a dump into a
+deployment configured with the key it was taken under. A load reports a
+demographic container in the response array and restores none of it when:
+
+- one of its sealed rows holds a value that is already live for another party
+  in this repository, or names a scheme this repository has not registered;
+- with protection on here, one of its versions carries a protected scheme's
+  value in plaintext, or references a sealed row the container does not
+  carry.
 
 ### Refusals
 

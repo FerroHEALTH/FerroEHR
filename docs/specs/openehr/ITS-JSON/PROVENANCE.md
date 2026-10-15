@@ -2,7 +2,7 @@
 
 - Source: https://github.com/openEHR/specifications-ITS-JSON
 - Ref: master (development pin)
-- Commit: `5acae056248e917a4b4c56f7e712f4fcfeb616a6`
+- Commit: `14387ce9191f228d768b6bade3308b79aaf87471`
 - License: Apache-2.0 — the upstream `LICENSE` is vendored verbatim alongside
   this file, from the same pinned commit. Root reference copies:
   `LICENSE-CC-BY-SA-3.0` / `LICENSE-APACHE-2.0`.
@@ -11,6 +11,9 @@
   reference none.
 - No per-document figures: the vendored chapters of this component
   reference no `{diagrams_uri}`/`{images_uri}` file.
+- Upstream repo tooling excluded: `.git`, `.github`, `.claude`, `.junie`,
+  `AGENTS.md`, `CLAUDE.md`, `tmp-*` scratch notes, the top-level
+  `development/` build-tooling directory and dependency manifests.
 - Unreferenced figures, UML `.xmi`/`.mdzip`, XSDs and other binaries
   excluded — fetch from the repo at the pinned commit.
 

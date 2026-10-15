@@ -310,11 +310,15 @@ async fn capture_stored_query_screens(h: &Harness, dir: &Path, cdr: &str, user: 
     for (name, aql) in [
         (
             "org.example::recent-compositions",
-            "SELECT c/uid/value AS uid, c/context/start_time/value AS time                  FROM EHR e CONTAINS COMPOSITION c                  ORDER BY c/context/start_time/value DESC LIMIT 20",
+            "SELECT c/uid/value AS uid, c/context/start_time/value AS time \
+                 FROM EHR e CONTAINS COMPOSITION c \
+                 ORDER BY c/context/start_time/value DESC LIMIT 20",
         ),
         (
             "org.example::quantity-series",
-            "SELECT c/context/start_time/value AS time,                  c/content[openEHR-EHR-EVALUATION.minimal.v1]/data[at0001]/items[at0002]/value/magnitude AS magnitude                  FROM EHR e CONTAINS COMPOSITION c",
+            "SELECT c/context/start_time/value AS time, \
+                 c/content[openEHR-EHR-EVALUATION.minimal.v1]/data[at0001]/items[at0002]/value/magnitude AS magnitude \
+                 FROM EHR e CONTAINS COMPOSITION c",
         ),
         // A SECOND namespace, so the grouping renders more than one card
         // (`ehr::…` is one of the spec's own qualified-name examples).
@@ -688,7 +692,10 @@ async fn capture_documentation_screenshots() {
     h.wait_css("#aql-editor")
         .await
         .send_keys(
-            "SELECT c/context/start_time/value AS time,              c/content[openEHR-EHR-EVALUATION.minimal.v1]/data[at0001]/items[at0002]/value/magnitude AS magnitude              FROM EHR e CONTAINS COMPOSITION c              WHERE c/archetype_details/template_id/value = 'minimal_evaluation.en.v1'",
+            "SELECT c/context/start_time/value AS time, \
+             c/content[openEHR-EHR-EVALUATION.minimal.v1]/data[at0001]/items[at0002]/value/magnitude AS magnitude \
+             FROM EHR e CONTAINS COMPOSITION c \
+             WHERE c/archetype_details/template_id/value = 'minimal_evaluation.en.v1'",
         )
         .await;
     // Run is disabled until the typed AQL reaches the signal; a click before

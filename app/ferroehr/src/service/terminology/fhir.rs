@@ -209,7 +209,7 @@ impl FhirTerminologyProvider {
             .map_err(|e| self.transport_error(op_path, &e))?;
         let fetched = if status.is_success() {
             Fetched::Found(decode(kind, &body).map_err(|e| {
-                self.provider_fault(op_path, &format_args!("malformed FHIR response: {e}"))
+                self.provider_fault(op_path, &crate::service::error::ErrorChain::new(&e))
             })?)
         } else {
             let issues = outcome_issue_types(&body);
@@ -815,7 +815,7 @@ impl Expansion {
 enum DecodeError {
     /// The body is not the FHIR resource the operation returns.
     #[cfg(feature = "fhir")]
-    #[error("{0}")]
+    #[error(transparent)]
     Fhir(#[from] ferroehr_ext::fhir::terminology::TerminologyDecodeError),
     /// A slim build has no FHIR model to decode with. Unreachable:
     /// [`FhirTerminologyProvider::new`] refuses a configured provider at boot.

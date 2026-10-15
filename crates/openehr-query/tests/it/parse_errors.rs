@@ -38,9 +38,10 @@ fn a_lex_failure_carries_the_lexer_error_as_its_source() {
         .expect("and that cause is the lexer's own error type");
     assert_eq!(lex.slice, "#", "the offending slice survives the hop");
 
-    // Display is unchanged by the wrapping: the message a client sees is still
-    // the lexer's located diagnostic verbatim.
-    assert_eq!(err.to_string(), lex.to_string());
+    // The message names the pass and leaves the located diagnostic to the
+    // source, so a chain printer reads it once.
+    assert_eq!(err.to_string(), "the query could not be tokenised");
+    assert!(!err.to_string().contains(&lex.to_string()));
 }
 
 /// A syntax failure carries the position and the token found, so a caller can

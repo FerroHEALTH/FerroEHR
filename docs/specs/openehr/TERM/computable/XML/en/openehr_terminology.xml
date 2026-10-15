@@ -1,4 +1,4 @@
-<terminology name="openehr" language="en" version="3.1.0" date="2024-04-11">
+<terminology name="openehr" language="en" version="3.1.0" date="2026-10-09">
 	<codeset issuer="openehr" openehr_id="compression_algorithms" name="compression algorithms" external_id="openehr_compression_algorithms">
 		<code value="compress"/>
 		<code value="deflate"/>
@@ -54,6 +54,7 @@
 		<concept id="500" rubric="Angle, solid"/>
 		<concept id="335" rubric="Area"/>
 		<concept id="119" rubric="Concentration"/>
+		<concept id="765" rubric="Concentration per volume"/>
 		<concept id="350" rubric="Density"/>
 		<concept id="362" rubric="Diffusion coefficient"/>
 		<concept id="501" rubric="Electric capacitance"/>
@@ -67,6 +68,7 @@
 		<concept id="508" rubric="Energy dose"/>
 		<concept id="365" rubric="Energy per area"/>
 		<concept id="364" rubric="Energy, linear"/>
+		<concept id="761" rubric="Flow rate (volume) per area"/>
 		<concept id="347" rubric="Flow rate, mass"/>
 		<concept id="352" rubric="Flow rate, mass/force"/>
 		<concept id="351" rubric="Flow rate, mass/volume"/>
@@ -81,6 +83,7 @@
 		<concept id="505" rubric="Illuminance"/>
 		<concept id="379" rubric="Inductance"/>
 		<concept id="122" rubric="Length"/>
+		<concept id="764" rubric="Length per area"/>
 		<concept id="499" rubric="Light intensity"/>
 		<concept id="123" rubric="Loudness"/>
 		<concept id="504" rubric="Luminous flux"/>
@@ -90,6 +93,7 @@
 		<concept id="385" rubric="Mass (IU)"/>
 		<concept id="445" rubric="Mass (Units)"/>
 		<concept id="349" rubric="Mass per area"/>
+		<concept id="763" rubric="Mitotic count"/>
 		<concept id="344" rubric="Moment inertia, area"/>
 		<concept id="345" rubric="Moment inertia, mass"/>
 		<concept id="340" rubric="Momentum"/>
@@ -120,6 +124,7 @@
 		<concept id="361" rubric="Viscosity, kinematic"/>
 		<concept id="374" rubric="Electric potential"/>
 		<concept id="129" rubric="Volume"/>
+		<concept id="762" rubric="Volume per area"/>
 		<concept id="130" rubric="Work"/>
 		<concept id="685" rubric="Refractive power"/>
 		<concept id="118" rubric="&lt;not set&gt;"/>

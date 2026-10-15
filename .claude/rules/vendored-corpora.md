@@ -16,6 +16,7 @@ commit the result.
 | corpus | script | destination |
 |---|---|---|
 | openEHR spec text + CNF schedule | `scripts/vendor/spec-docs.sh` | `docs/specs/openehr/` |
+| openEHR codegen inputs (BMM + component overlays, ITS-JSON schemas, ITS-XML XSDs, ITS-REST OAS) | `scripts/vendor/codegen-inputs.sh` | `tools/openehr-codegen/vendor/bmm/`, `crates/openehr-its/{schemas,vendor/rest-oas}/` |
 | CKM templates (OPT 1.4) — curated journey pack + full library | `scripts/vendor/ckm-templates.sh` | `corpus/templates/ckm/{,full/}` |
 | CKM archetypes (**ADL 1.4**) | `scripts/vendor/ckm-archetypes.sh` | `corpus/archetypes/ckm/adl14/` |
 | ADL **2** archetypes + their 1.4 twins | `scripts/vendor/adl2-archetypes.sh` | `crates/openehr-adl/tests/corpus/adl2-reference/`, `corpus/archetypes/adl2/` |

@@ -370,6 +370,19 @@ fn decision_map_integrity_entries_are_cited_and_reference_real_classes() {
     }
 }
 
+/// Every existence-contradiction entry still names a mandatory `Hash` its owner
+/// declares, so an upstream fix to the class table (`0..1`) fails here instead
+/// of leaving a citation that describes a contradiction no longer there.
+#[test]
+fn existence_contradictions_name_a_still_mandatory_hash() {
+    let stale = testsupport::stale_existence_contradictions().unwrap();
+    assert!(
+        stale.is_empty(),
+        "stale existence-contradiction entries:\n{}",
+        stale.join("\n")
+    );
+}
+
 /// Every adjudicated free-form field is a REAL degrade whose adjudication is
 /// written at the site: some generated file renders the field as
 /// `serde_json::Value` and carries the `// NOTE:` with the entry's citation.
@@ -510,6 +523,50 @@ fn composition_table_integrity() {
             "composition {:?} failed to resolve one row per specification unit",
             info.key,
         );
+    }
+}
+
+/// Every `includes` a vendored unit declares is honoured by its generation's
+/// `model_deps` (the paired dependency generation with that spec version) and
+/// named by the composition's citation, so a re-vendor that adds, drops or
+/// re-pins an include cannot leave the table or its citation describing a
+/// different file.
+#[test]
+fn composition_follows_the_bmm_includes() {
+    let infos = testsupport::composition_infos();
+    for unit in testsupport::unit_includes().unwrap() {
+        let info = infos.iter().find(|c| c.key == unit.key).unwrap();
+        let generation = info
+            .generations
+            .iter()
+            .find(|g| g.module == unit.module)
+            .unwrap();
+        for include in &unit.includes {
+            let (component, version) = include
+                .strip_prefix("openehr_")
+                .and_then(|rest| rest.split_once('_'))
+                .unwrap_or_else(|| panic!("{}: unrecognised include id {include:?}", unit.file));
+            let honoured = generation.model_deps.iter().any(|(dep_key, dep_gen)| {
+                dep_key == component
+                    && infos
+                        .iter()
+                        .find(|c| &c.key == dep_key)
+                        .and_then(|c| c.generations.iter().find(|g| &g.module == dep_gen))
+                        .is_some_and(|g| g.spec_version == version)
+            });
+            assert!(
+                honoured,
+                "{} ({}::{}) includes {include}, but the generation's model_deps pair no \
+                 {component} generation of spec version {version}",
+                unit.file, unit.key, unit.module,
+            );
+            assert!(
+                info.citation.contains(include.as_str()),
+                "{} includes {include}, which the {:?} composition citation does not name",
+                unit.file,
+                unit.key,
+            );
+        }
     }
 }
 
@@ -1111,23 +1168,72 @@ fn vendored_default_facets_are_totally_partitioned() {
             f.facet,
         );
     }
-    // and the reverse: no adjudicated exclusion is stale (it must still be an
-    // un-rendered vendored facet).
-    for (owner, field) in [
-        ("RESOURCE_DESCRIPTION", "parent_resource"),
-        ("CODE_SET", "status"),
-        ("TERMINOLOGY_GROUP", "status"),
-        ("CODE", "status"),
-        ("TERMINOLOGY_CONCEPT", "status"),
-    ] {
-        assert!(
-            facets
-                .iter()
-                .any(|f| f.owner == owner && f.field == field && f.rendered.is_none()),
-            "{owner}.{field} is adjudicated un-renderable but carries no un-rendered vendored \
-             facet — the entry is stale",
+    // and the reverse: no adjudicated exclusion is stale. Each entry must still
+    // name un-rendered vendored facets, and exactly the facet values its
+    // citation describes, so a re-vendor that changes a value fails here.
+    for (owner, field, recorded) in testsupport::unrenderable_defaults() {
+        let mut vendored: Vec<&str> = facets
+            .iter()
+            .filter(|f| f.owner == owner && f.field == field && f.rendered.is_none())
+            .map(|f| f.facet.as_str())
+            .collect();
+        vendored.sort_unstable();
+        vendored.dedup();
+        let mut recorded: Vec<&str> = recorded.iter().map(String::as_str).collect();
+        recorded.sort_unstable();
+        recorded.dedup();
+        assert_eq!(
+            vendored, recorded,
+            "{owner}.{field}: the UNRENDERABLE_DEFAULTS entry adjudicates the facet(s) \
+             {recorded:?}, but the vendored schemas carry un-rendered {vendored:?} — the entry \
+             (and its citation) is stale",
         );
     }
+}
+
+/// TERM 3.1.0 gives the four `status` properties the enumeration-constant
+/// default `active` (`docs/specs/openehr/TERM/docs/UML/classes/
+/// org.openehr.term.terminology.code.adoc` and its three siblings show
+/// `{default = active}`): the emitter renders each as the
+/// `TERMINOLOGY_STATUS` constant, never as an adjudicated exclusion.
+#[test]
+fn term_status_defaults_render_as_the_enumeration_constant() {
+    let facets = testsupport::vendored_defaults().unwrap();
+    for owner in [
+        "CODE_SET",
+        "TERMINOLOGY_GROUP",
+        "CODE",
+        "TERMINOLOGY_CONCEPT",
+    ] {
+        let f = facets
+            .iter()
+            .find(|f| f.owner == owner && f.field == "status")
+            .unwrap_or_else(|| panic!("{owner}.status carries no vendored default"));
+        assert_eq!(f.facet, "active", "{owner}.status facet");
+        assert_eq!(
+            f.rendered.as_deref(),
+            Some("@TERMINOLOGY_STATUS::Active"),
+            "{owner}.status",
+        );
+        assert!(
+            !testsupport::default_unrenderable(owner, "status"),
+            "{owner}.status renders, so it must not stay adjudicated un-renderable",
+        );
+    }
+    let resolved = testsupport::resolve_default("@TERMINOLOGY_STATUS::Active", |marker| {
+        assert_eq!(marker, "@TERMINOLOGY_STATUS");
+        "crate::v3_1::terminology::terminology_status::TerminologyStatus".to_owned()
+    });
+    assert_eq!(
+        resolved,
+        "crate::v3_1::terminology::terminology_status::TerminologyStatus::Active"
+    );
+    assert_eq!(
+        testsupport::resolve_default("false", |marker| format!(
+            "unexpected resolution of {marker}"
+        )),
+        "false"
+    );
 }
 
 /// The hand-written `field_default` table is the RESIDUE of the vendored facet,
@@ -1743,17 +1849,13 @@ fn every_request_body_has_its_media_types() {
 
 /// Every generated response body that is still an untyped
 /// `serde_json::Value`, with the reason it is not typed. A `oneOf` of a
-/// resource and `Identifier` is typed as `Representation`; a new untyped body
-/// fails here until it is typed or pinned with its reason.
+/// resource and `Identifier` is typed as `Representation`, and a `oneOf` of
+/// `_type`-tagged RM classes as a `_type`-dispatched enum (the template-example
+/// body); a new untyped body fails here until it is typed or pinned with its
+/// reason.
 #[test]
 fn untyped_response_bodies_are_pinned_with_their_reason() {
-    // `oneOf` eight RM classes with no discriminator (#3549).
-    const PINNED: &[&str] = &[
-        "DefinitionTemplateAdl14ExampleGetOutcome",
-        "DefinitionTemplateAdl14ExampleGetResponse",
-        "DefinitionTemplateAdl2ExampleGetOutcome",
-        "DefinitionTemplateAdl2ExampleGetResponse",
-    ];
+    const PINNED: &[&str] = &[];
     let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../crates/openehr-its/src/rest/generated");
     let mut untyped = std::collections::BTreeSet::new();

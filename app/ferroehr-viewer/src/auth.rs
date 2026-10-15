@@ -57,12 +57,66 @@ pub struct SessionInfo {
     pub expires_in_secs: u32,
 }
 
-/// Basic login: validate the credentials against the CDR (an authenticated
-/// ITS-REST call), then store them in the server-side session.
+/// The shell root, and the destination every refused `next` falls back to.
+const DEFAULT_NEXT: &str = "/";
+
+/// Returns the post-login destination a `next` value is allowed to name.
+///
+/// Only a same-origin relative path is honoured. The value must begin with a
+/// single `/` — never `//` or `/\`, which a browser reads as protocol-relative
+/// and would follow to another site — and carry only visible ASCII, so nothing
+/// can smuggle a control character into the `Location` header this ends up in.
+/// Everything else (an absolute URL, a `javascript:` payload, an empty value)
+/// falls back to the shell root, because an open redirect on a sign-in route
+/// is a phishing primitive: it lends this deployment's origin to someone
+/// else's page at the exact moment the user has just proved who they are.
+/// Both sign-in paths (Basic and OIDC) filter through here.
+#[must_use]
+pub(crate) fn same_origin_next(raw: Option<&str>) -> String {
+    let candidate = raw.unwrap_or_default();
+    let mut bytes = candidate.bytes();
+    if bytes.next() != Some(b'/') || matches!(bytes.next(), Some(b'/' | b'\\')) {
+        return DEFAULT_NEXT.to_owned();
+    }
+    if candidate.bytes().all(|byte| byte.is_ascii_graphic()) {
+        candidate.to_owned()
+    } else {
+        DEFAULT_NEXT.to_owned()
+    }
+}
+
+/// Returns the `/login` URL a refused Basic sign-in lands on.
+///
+/// `refused=1` is what makes the login screen say the credentials were
+/// refused, and `next` keeps the destination the user was signing in for,
+/// filtered through `same_origin_next` and left off when it is the shell
+/// root (the screen's own default). The destination is percent-encoded with
+/// the `urlencoding` crate.
+#[must_use]
+pub fn refused_login_url(next: Option<&str>) -> String {
+    let next = same_origin_next(next);
+    if next == DEFAULT_NEXT {
+        "/login?refused=1".to_owned()
+    } else {
+        format!("/login?refused=1&next={}", urlencoding::encode(&next))
+    }
+}
+
+/// Basic login: validates the credentials against the CDR (an authenticated
+/// ITS-REST call), then stores them in the server-side session.
+///
+/// Accepted credentials land on `next`, filtered through
+/// `same_origin_next` so a crafted link cannot send a freshly signed-in user
+/// to another site. Credentials the CDR refuses are not an error: the call succeeds and
+/// redirects to [`refused_login_url`], so the login screen renders the
+/// refusal from its URL — a document `302` for a form posted without
+/// JavaScript, the server-function redirect for a hydrated one — and never a
+/// `500`, which is how a server function transports an error value.
 ///
 /// # Errors
-/// [`ViewerError::Invalid`] on wrong credentials, [`ViewerError::Cdr`] /
-/// [`ViewerError::CdrUnreachable`] when the CDR misbehaves.
+/// [`ViewerError::Invalid`] when Basic login is disabled,
+/// [`ViewerError::Cdr`] / [`ViewerError::CdrUnreachable`] when the CDR
+/// misbehaves.
 #[server(client = crate::session_client::SessionAwareClient)]
 pub async fn login_basic(
     /// The CDR username the viewer authenticates as.
@@ -86,9 +140,8 @@ pub async fn login_basic(
     let url = state.cdr.rest_v1("definition/template/adl1.4");
     let probe = state.cdr.get(&credential, &url, "application/json").await?;
     if probe.is(http::StatusCode::UNAUTHORIZED) {
-        return Err(ViewerError::Invalid(
-            "wrong username or password".to_owned(),
-        ));
+        leptos_axum::redirect(&refused_login_url(next.as_deref()));
+        return Ok(());
     }
     if probe.status.is_server_error() {
         return Err(ViewerError::Cdr {
@@ -108,7 +161,7 @@ pub async fn login_basic(
     )?;
     crate::session::commit(&session)?;
 
-    leptos_axum::redirect(next.as_deref().unwrap_or("/"));
+    leptos_axum::redirect(&same_origin_next(next.as_deref()));
     Ok(())
 }
 
@@ -189,4 +242,54 @@ pub async fn fetch_status() -> Result<String, ViewerError> {
     let url = state.cdr.rest_root_url("status");
     let response = state.cdr.get_public(&url, "application/json").await?;
     Ok(crate::cdr::CdrClient::expect_success(response)?.body)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{refused_login_url, same_origin_next};
+
+    /// The sign-in routes' `next` is attacker-supplied by construction — it
+    /// arrives in a link anyone can craft — so what it accepts is the whole
+    /// security property, and it is pinned from both sides.
+    #[test]
+    fn only_a_same_origin_relative_path_survives_as_the_post_login_destination() {
+        assert_eq!(same_origin_next(Some("/ehrs?x=1")), "/ehrs?x=1");
+        assert_eq!(same_origin_next(Some("/")), "/");
+        assert_eq!(
+            same_origin_next(Some("/ehrs/01a06375?tab=status#top")),
+            "/ehrs/01a06375?tab=status#top"
+        );
+
+        // Protocol-relative: a browser reads both as "another origin".
+        assert_eq!(same_origin_next(Some("//evil.example")), "/");
+        assert_eq!(same_origin_next(Some("/\\evil.example")), "/");
+        // Absolute and scheme-bearing values never begin with `/` at all.
+        assert_eq!(same_origin_next(Some("https://evil.example")), "/");
+        assert_eq!(same_origin_next(Some("javascript:alert(1)")), "/");
+        assert_eq!(same_origin_next(Some("ehrs")), "/");
+        // Nothing that no `Location` header could carry.
+        assert_eq!(same_origin_next(Some("/ehrs\r\nSet-Cookie: x=1")), "/");
+        assert_eq!(same_origin_next(Some("/ehrs with space")), "/");
+        // Absent or empty.
+        assert_eq!(same_origin_next(None), "/");
+        assert_eq!(same_origin_next(Some("")), "/");
+    }
+
+    #[test]
+    fn a_refused_sign_in_keeps_an_encoded_same_origin_destination_only() {
+        assert_eq!(refused_login_url(None), "/login?refused=1");
+        assert_eq!(refused_login_url(Some("/")), "/login?refused=1");
+        assert_eq!(refused_login_url(Some("")), "/login?refused=1");
+        assert_eq!(
+            refused_login_url(Some("/ehrs/01a06375?tab=status")),
+            "/login?refused=1&next=%2Fehrs%2F01a06375%3Ftab%3Dstatus"
+        );
+        for foreign in ["https://evil.example", "//evil.example", "/\\evil.example"] {
+            assert_eq!(
+                refused_login_url(Some(foreign)),
+                "/login?refused=1",
+                "{foreign}"
+            );
+        }
+    }
 }

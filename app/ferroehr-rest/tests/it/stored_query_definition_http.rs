@@ -248,3 +248,58 @@ async fn stores_accept_an_absent_content_type() {
     let (status, _h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::OK, "{body}");
 }
+
+// ── a store runs the analysis an execution runs ─────────────────────────────
+
+fn put_text(uri: String, aql: &str) -> Request<Body> {
+    Request::builder()
+        .method("PUT")
+        .uri(uri)
+        .header(header::CONTENT_TYPE, "text/plain")
+        .body(Body::from(aql.to_owned()))
+        .unwrap()
+}
+
+#[tokio::test]
+async fn store_accepts_a_query_the_engine_plans() {
+    let (_pg, app) = app().await;
+    // Parameters (a temporal bound among them) are bound at execution; the
+    // store analyses the text without them.
+    let aql = "SELECT c/name/value FROM EHR e CONTAINS COMPOSITION c \
+               WHERE c/context/start_time/value > $since AND e/ehr_id/value = $ehr_id \
+               LIMIT 10";
+    for uri in [
+        format!("{BASE}/definition/query/org.test::plans"),
+        format!("{BASE}/definition/query/org.test::plans_v/1.0.0"),
+    ] {
+        let (status, _h, body) = send(&app, put_text(uri.clone(), aql)).await;
+        assert_eq!(status, StatusCode::OK, "{uri}: {body}");
+    }
+}
+
+#[tokio::test]
+async fn store_refuses_a_query_the_engine_refuses_and_stores_nothing() {
+    let (_pg, app) = app().await;
+    // Reading a variable declared under NOT CONTAINS is refused at SQL
+    // generation (QUERY master03 §Containment); the store refuses it with the
+    // operation's only error status (definition_query_store.yaml: `400`).
+    let aql = "SELECT o/name/value FROM EHR e CONTAINS COMPOSITION c \
+               NOT CONTAINS OBSERVATION o";
+    for name in ["org.test::refused", "org.test::refused_v/1.0.0"] {
+        let uri = format!("{BASE}/definition/query/{name}");
+        let (status, _h, body) = send(&app, put_text(uri.clone(), aql)).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{uri}: {body}");
+    }
+    for name in ["org.test::refused", "org.test::refused_v"] {
+        let get = Request::builder()
+            .method("GET")
+            .uri(format!("{BASE}/definition/query/{name}"))
+            .header(header::ACCEPT, "application/json")
+            .body(Body::empty())
+            .unwrap();
+        // definition_query_list declares `200` only: nothing stored is `[]`.
+        let (status, _h, body) = send(&app, get).await;
+        assert_eq!(status, StatusCode::OK, "{name}: {body}");
+        assert_eq!(body.trim(), "[]", "{name} was stored: {body}");
+    }
+}

@@ -863,3 +863,141 @@ async fn a_bearer_credential_never_asks_the_prover() -> TestResult {
     assert_eq!(prover.proofs.load(Ordering::SeqCst), 0);
     Ok(())
 }
+
+// ── answer body limit ───────────────────────────────────────────────────────
+
+/// A client whose engine reads at most `limit` body bytes of one answer.
+fn limited_client(base: &str, limit: usize) -> Result<Client<ReqwestTransport>, Box<dyn Error>> {
+    let transport = ReqwestTransport::with_timeout(Duration::from_secs(10))?.with_max_body(limit);
+    Ok(Client::new(transport, base.parse()?)?)
+}
+
+/// An answer whose declared length is past the limit fails with its status
+/// and the limit, is not retried, and a body exactly at the limit is read whole.
+#[tokio::test]
+async fn a_declared_body_past_the_limit_is_refused_with_its_status() -> TestResult {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path(format!("/ehr/{EHR_ID}")))
+        .respond_with(ResponseTemplate::new(400).set_body_raw(vec![b'x'; 17], "text/plain"))
+        .expect(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path("/ehr"))
+        .respond_with(ResponseTemplate::new(200).set_body_raw(vec![b'y'; 16], "text/plain"))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let client = limited_client(&server.uri(), 16)?.with_retry(RetryPolicy {
+        max_attempts: 5,
+        initial_backoff: Duration::from_millis(1),
+        max_backoff: Duration::from_millis(1),
+    });
+    let result = client
+        .execute(Request::new(Method::GET, format!("/ehr/{EHR_ID}")))
+        .await;
+    match result {
+        Err(ref refused @ ClientError::AnswerTooLarge { status, limit, .. }) => {
+            assert_eq!(status, StatusCode::BAD_REQUEST);
+            assert_eq!(limit, 16);
+            assert!(!refused.is_retryable());
+        }
+        other => panic!("expected AnswerTooLarge, got {other:?}"),
+    }
+    let whole = client
+        .execute(Request::new(Method::GET, "/ehr".to_owned()))
+        .await?;
+    assert_eq!(whole.body(), [b'y'; 16].as_slice());
+    Ok(())
+}
+
+/// A `HEAD` answer declares the length of the representation but carries no
+/// body (RFC 9110 §9.3.2), so a declared length past the limit is no refusal.
+#[tokio::test]
+async fn a_head_answer_is_not_measured_by_its_declared_length() -> TestResult {
+    let server = MockServer::start().await;
+    Mock::given(method("HEAD"))
+        .and(path(format!("/ehr/{EHR_ID}")))
+        .respond_with(ResponseTemplate::new(200).set_body_raw(vec![b'x'; 64], "text/plain"))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let client = limited_client(&server.uri(), 16)?;
+    let answer = client
+        .forward(Request::new(Method::HEAD, format!("/ehr/{EHR_ID}")))
+        .await?;
+    assert_eq!(answer.status(), StatusCode::OK);
+    assert!(answer.body().is_empty());
+    Ok(())
+}
+
+/// Starts a server that answers every request `200` with a chunked body of
+/// `chunks` 1 KiB chunks, or an endless one under `None`, and returns its base
+/// URL.
+///
+/// A chunked body declares no length, which `wiremock` cannot answer.
+async fn chunked_server(chunks: Option<usize>) -> Result<String, Box<dyn Error>> {
+    use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await?;
+    let base = format!("http://{}", listener.local_addr()?);
+    tokio::spawn(async move {
+        while let Ok((mut socket, _)) = listener.accept().await {
+            tokio::spawn(async move {
+                let mut head = Vec::new();
+                let mut buf = [0_u8; 1024];
+                while !head.windows(4).any(|w| w == b"\r\n\r\n") {
+                    match socket.read(&mut buf).await {
+                        Ok(0) | Err(_) => return,
+                        Ok(n) => head.extend_from_slice(buf.get(..n).unwrap_or_default()),
+                    }
+                }
+                let start = b"HTTP/1.1 200 OK\r\ncontent-type: text/plain\r\n\
+                              transfer-encoding: chunked\r\n\r\n";
+                if socket.write_all(start).await.is_err() {
+                    return;
+                }
+                let chunk = format!("400\r\n{}\r\n", "z".repeat(1024));
+                let mut sent = 0;
+                while chunks.is_none_or(|chunks| sent < chunks) {
+                    if socket.write_all(chunk.as_bytes()).await.is_err() {
+                        return;
+                    }
+                    sent += 1;
+                }
+                let _end = socket.write_all(b"0\r\n\r\n").await;
+            });
+        }
+    });
+    Ok(base)
+}
+
+/// An endless chunked body is cut off once it passes the limit and fails
+/// with its status; a chunked body inside the limit is read whole.
+#[tokio::test]
+async fn a_chunked_body_is_cut_off_at_the_limit() -> TestResult {
+    let endless = chunked_server(None).await?;
+    let started = Instant::now();
+    let result = limited_client(&endless, 4096)?
+        .forward(Request::new(Method::GET, format!("/ehr/{EHR_ID}")))
+        .await;
+    assert!(
+        matches!(
+            result,
+            Err(ClientError::AnswerTooLarge {
+                status: StatusCode::OK,
+                limit: 4096,
+                ..
+            })
+        ),
+        "{result:?}"
+    );
+    assert!(started.elapsed() < Duration::from_secs(5));
+    let bounded = chunked_server(Some(4)).await?;
+    let answer = limited_client(&bounded, 4096)?
+        .forward(Request::new(Method::GET, format!("/ehr/{EHR_ID}")))
+        .await?;
+    assert_eq!(answer.status(), StatusCode::OK);
+    assert_eq!(answer.body(), "z".repeat(4096).as_bytes());
+    Ok(())
+}

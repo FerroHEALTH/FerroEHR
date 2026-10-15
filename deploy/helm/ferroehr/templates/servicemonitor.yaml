@@ -1,4 +1,9 @@
 {{- if .Values.metrics.serviceMonitor.enabled }}
+{{- $scrapesApi := not (and .Values.config.management.enabled .Values.config.management.port) }}
+{{- $tls := and $scrapesApi (eq (include "ferroehr.serverTls" .) "true") }}
+{{- if $scrapesApi }}
+{{- include "ferroehr.cdrTrustRequired" (dict "root" . "client" "the ServiceMonitor scrape (metrics.serviceMonitor.enabled, no config.management.port)") }}
+{{- end }}
 # A Prometheus Operator ServiceMonitor. The prometheus.io/* pod annotations that
 # `metrics.enabled` adds are honoured only by a Prometheus whose scrape config
 # does kubernetes_sd discovery; an operator-managed Prometheus selects its
@@ -28,9 +33,23 @@ spec:
   endpoints:
     # The Service port the ops-introspection surface answers on: its own
     # `management` port when config.management.port is set, else the API port.
-    - port: {{ if and .Values.config.management.enabled .Values.config.management.port }}management{{ else }}http{{ end }}
+    - port: {{ if $scrapesApi }}http{{ else }}management{{ end }}
       path: {{ printf "%s/prometheus" (.Values.config.management.base_path | trimSuffix "/") | quote }}
       interval: {{ .Values.metrics.serviceMonitor.interval }}
       scrapeTimeout: {{ .Values.metrics.serviceMonitor.scrapeTimeout }}
+      {{- if $tls }}
+      # The API port speaks the server's own TLS, so the scrape checks its
+      # certificate against the CA from service.tls.caExistingSecret, which
+      # Prometheus reads from the ServiceMonitor's namespace
+      # (https://prometheus-operator.dev/docs/api-reference/api/#monitoring.coreos.com/v1.SafeTLSConfig).
+      scheme: https
+      tlsConfig:
+        serverName: {{ include "ferroehr.fullname" . }}
+        ca:
+          secret:
+            name: {{ .Values.service.tls.caExistingSecret }}
+            key: {{ .Values.service.tls.caExistingSecretKey }}
+      {{- else }}
       scheme: http
+      {{- end }}
 {{- end }}

@@ -1,4 +1,0 @@
-= specifications-BASE - openEHR Base Specifications
-
-This repository contains the document and model sources (Asciidoctor and MagicDraw) for the openEHR Base Model (BASE) specifications. The published form may be accessed from the openEHR website https://specifications.openehr.org/releases/BASE/development/[BASE component index page].
-

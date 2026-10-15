@@ -19918,7 +19918,10 @@ impl ::serde::Serialize for crate::v1_0::bmm_persistence::p_bmm_package::PBmmPac
         &self,
         __serializer: __S,
     ) -> ::core::result::Result<__S::Ok, __S::Error> {
-        let mut __n = 3usize;
+        let mut __n = 2usize;
+        if !self.packages.is_empty() {
+            __n += 1;
+        }
         if self.documentation.is_some() {
             __n += 1;
         }
@@ -19930,7 +19933,9 @@ impl ::serde::Serialize for crate::v1_0::bmm_persistence::p_bmm_package::PBmmPac
         }
         let mut __st = ::serde::Serializer::serialize_struct(__serializer, "P_BMM_PACKAGE", __n)?;
         ::serde::ser::SerializeStruct::serialize_field(&mut __st, "_type", "P_BMM_PACKAGE")?;
-        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "packages", &self.packages)?;
+        if !self.packages.is_empty() {
+            ::serde::ser::SerializeStruct::serialize_field(&mut __st, "packages", &self.packages)?;
+        }
         if let Some(__v) = &self.documentation {
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "documentation", __v)?;
         }
@@ -20018,7 +20023,7 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_0::bmm_persistence::p_bmm_pack
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
                 let mut __seen_type = false;
-                let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s0: ::core::option::Option<_> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s2: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s3: ::core::option::Option<_> = None;
@@ -20081,9 +20086,7 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_0::bmm_persistence::p_bmm_pack
                 }
                 ::core::result::Result::Ok(
                     crate::v1_0::bmm_persistence::p_bmm_package::PBmmPackage {
-                        packages: __s0
-                            .flatten()
-                            .ok_or_else(|| ::serde::de::Error::missing_field("packages"))?,
+                        packages: __s0.unwrap_or_default(),
                         documentation: __s1.flatten(),
                         name: __s2
                             .flatten()
@@ -20110,7 +20113,10 @@ impl ::serde::Serialize
         &self,
         __serializer: __S,
     ) -> ::core::result::Result<__S::Ok, __S::Error> {
-        let mut __n = 2usize;
+        let mut __n = 1usize;
+        if !self.packages.is_empty() {
+            __n += 1;
+        }
         let mut __st =
             ::serde::Serializer::serialize_struct(__serializer, "P_BMM_PACKAGE_CONTAINER", __n)?;
         ::serde::ser::SerializeStruct::serialize_field(
@@ -20118,7 +20124,9 @@ impl ::serde::Serialize
             "_type",
             "P_BMM_PACKAGE_CONTAINER",
         )?;
-        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "packages", &self.packages)?;
+        if !self.packages.is_empty() {
+            ::serde::ser::SerializeStruct::serialize_field(&mut __st, "packages", &self.packages)?;
+        }
         ::serde::ser::SerializeStruct::end(__st)
     }
 }
@@ -20179,7 +20187,7 @@ impl<'de> ::serde::Deserialize<'de>
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
                 let mut __seen_type = false;
-                let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s0: ::core::option::Option<_> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
                     match __key {
                         __Field::__Type => {
@@ -20207,7 +20215,7 @@ impl<'de> ::serde::Deserialize<'de>
                     }
                 }
                 ::core::result::Result::Ok(crate::v1_0::bmm_persistence::p_bmm_package_container::PBmmPackageContainerData {
-packages: __s0.flatten().ok_or_else(|| ::serde::de::Error::missing_field("packages"))?,
+packages: __s0.unwrap_or_default(),
 })
             }
         }
@@ -20374,7 +20382,10 @@ impl ::serde::Serialize for crate::v1_0::bmm_persistence::p_bmm_schema::PBmmSche
         &self,
         __serializer: __S,
     ) -> ::core::result::Result<__S::Ok, __S::Error> {
-        let mut __n = 11usize;
+        let mut __n = 10usize;
+        if !self.packages.is_empty() {
+            __n += 1;
+        }
         if self.includes.is_some() {
             __n += 1;
         }
@@ -20407,7 +20418,9 @@ impl ::serde::Serialize for crate::v1_0::bmm_persistence::p_bmm_schema::PBmmSche
         }
         let mut __st = ::serde::Serializer::serialize_struct(__serializer, "P_BMM_SCHEMA", __n)?;
         ::serde::ser::SerializeStruct::serialize_field(&mut __st, "_type", "P_BMM_SCHEMA")?;
-        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "packages", &self.packages)?;
+        if !self.packages.is_empty() {
+            ::serde::ser::SerializeStruct::serialize_field(&mut __st, "packages", &self.packages)?;
+        }
         ::serde::ser::SerializeStruct::serialize_field(
             &mut __st,
             "rm_publisher",
@@ -20573,7 +20586,7 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_0::bmm_persistence::p_bmm_sche
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
                 let mut __seen_type = false;
-                let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s0: ::core::option::Option<_> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s2: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s3: ::core::option::Option<::core::option::Option<_>> = None;
@@ -20734,9 +20747,7 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_0::bmm_persistence::p_bmm_sche
                     }
                 }
                 ::core::result::Result::Ok(crate::v1_0::bmm_persistence::p_bmm_schema::PBmmSchema {
-                    packages: __s0
-                        .flatten()
-                        .ok_or_else(|| ::serde::de::Error::missing_field("packages"))?,
+                    packages: __s0.unwrap_or_default(),
                     rm_publisher: __s1
                         .flatten()
                         .ok_or_else(|| ::serde::de::Error::missing_field("rm_publisher"))?,
@@ -35353,7 +35364,10 @@ impl ::serde::Serialize for crate::v1_1::bmm_persistence::p_bmm_package::PBmmPac
         &self,
         __serializer: __S,
     ) -> ::core::result::Result<__S::Ok, __S::Error> {
-        let mut __n = 3usize;
+        let mut __n = 2usize;
+        if !self.packages.is_empty() {
+            __n += 1;
+        }
         if self.documentation.is_some() {
             __n += 1;
         }
@@ -35365,7 +35379,9 @@ impl ::serde::Serialize for crate::v1_1::bmm_persistence::p_bmm_package::PBmmPac
         }
         let mut __st = ::serde::Serializer::serialize_struct(__serializer, "P_BMM_PACKAGE", __n)?;
         ::serde::ser::SerializeStruct::serialize_field(&mut __st, "_type", "P_BMM_PACKAGE")?;
-        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "packages", &self.packages)?;
+        if !self.packages.is_empty() {
+            ::serde::ser::SerializeStruct::serialize_field(&mut __st, "packages", &self.packages)?;
+        }
         if let Some(__v) = &self.documentation {
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "documentation", __v)?;
         }
@@ -35453,7 +35469,7 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::bmm_persistence::p_bmm_pack
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
                 let mut __seen_type = false;
-                let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s0: ::core::option::Option<_> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s2: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s3: ::core::option::Option<_> = None;
@@ -35516,9 +35532,7 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::bmm_persistence::p_bmm_pack
                 }
                 ::core::result::Result::Ok(
                     crate::v1_1::bmm_persistence::p_bmm_package::PBmmPackage {
-                        packages: __s0
-                            .flatten()
-                            .ok_or_else(|| ::serde::de::Error::missing_field("packages"))?,
+                        packages: __s0.unwrap_or_default(),
                         documentation: __s1.flatten(),
                         name: __s2
                             .flatten()
@@ -35545,7 +35559,10 @@ impl ::serde::Serialize
         &self,
         __serializer: __S,
     ) -> ::core::result::Result<__S::Ok, __S::Error> {
-        let mut __n = 2usize;
+        let mut __n = 1usize;
+        if !self.packages.is_empty() {
+            __n += 1;
+        }
         let mut __st =
             ::serde::Serializer::serialize_struct(__serializer, "P_BMM_PACKAGE_CONTAINER", __n)?;
         ::serde::ser::SerializeStruct::serialize_field(
@@ -35553,7 +35570,9 @@ impl ::serde::Serialize
             "_type",
             "P_BMM_PACKAGE_CONTAINER",
         )?;
-        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "packages", &self.packages)?;
+        if !self.packages.is_empty() {
+            ::serde::ser::SerializeStruct::serialize_field(&mut __st, "packages", &self.packages)?;
+        }
         ::serde::ser::SerializeStruct::end(__st)
     }
 }
@@ -35614,7 +35633,7 @@ impl<'de> ::serde::Deserialize<'de>
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
                 let mut __seen_type = false;
-                let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s0: ::core::option::Option<_> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
                     match __key {
                         __Field::__Type => {
@@ -35642,7 +35661,7 @@ impl<'de> ::serde::Deserialize<'de>
                     }
                 }
                 ::core::result::Result::Ok(crate::v1_1::bmm_persistence::p_bmm_package_container::PBmmPackageContainerData {
-packages: __s0.flatten().ok_or_else(|| ::serde::de::Error::missing_field("packages"))?,
+packages: __s0.unwrap_or_default(),
 })
             }
         }
@@ -35809,7 +35828,10 @@ impl ::serde::Serialize for crate::v1_1::bmm_persistence::p_bmm_schema::PBmmSche
         &self,
         __serializer: __S,
     ) -> ::core::result::Result<__S::Ok, __S::Error> {
-        let mut __n = 10usize;
+        let mut __n = 9usize;
+        if !self.packages.is_empty() {
+            __n += 1;
+        }
         if self
             .schema_contributors
             .as_ref()
@@ -35852,7 +35874,9 @@ impl ::serde::Serialize for crate::v1_1::bmm_persistence::p_bmm_schema::PBmmSche
         }
         let mut __st = ::serde::Serializer::serialize_struct(__serializer, "P_BMM_SCHEMA", __n)?;
         ::serde::ser::SerializeStruct::serialize_field(&mut __st, "_type", "P_BMM_SCHEMA")?;
-        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "packages", &self.packages)?;
+        if !self.packages.is_empty() {
+            ::serde::ser::SerializeStruct::serialize_field(&mut __st, "packages", &self.packages)?;
+        }
         ::serde::ser::SerializeStruct::serialize_field(
             &mut __st,
             "rm_publisher",
@@ -36050,7 +36074,7 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::bmm_persistence::p_bmm_sche
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
                 let mut __seen_type = false;
-                let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s0: ::core::option::Option<_> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s2: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s3: ::core::option::Option<::core::option::Option<_>> = None;
@@ -36226,9 +36250,7 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::bmm_persistence::p_bmm_sche
                     }
                 }
                 ::core::result::Result::Ok(crate::v1_1::bmm_persistence::p_bmm_schema::PBmmSchema {
-                    packages: __s0
-                        .flatten()
-                        .ok_or_else(|| ::serde::de::Error::missing_field("packages"))?,
+                    packages: __s0.unwrap_or_default(),
                     rm_publisher: __s1
                         .flatten()
                         .ok_or_else(|| ::serde::de::Error::missing_field("rm_publisher"))?,

@@ -1,5 +1,7 @@
 # Vendored openEHR ITS-REST OpenAPI (OAS)
 
+Reproduced by: `scripts/vendor/codegen-inputs.sh` (`--check` verifies the committed files against the pin).
+
 Source repo: https://github.com/openEHR/specifications-ITS-REST
 Pinned commit: `24058992d5fa96e8dfbd855d9c133f328387fc09` (tag Release-1.1.0, released 19-Jul-2026)
 Upstream path: `computable/OAS/` · Fetched: 2026-07-20.

@@ -153,9 +153,12 @@ database:
   # then happens in the application, over two connections, and every resolution
   # is recorded as a linkage-domain access event.
   #
-  # NOTE: the linkage domain's migration set names a function the party set
-  # creates, so the two are prepared in the same database; the server refuses a
-  # layout that splits them rather than failing partway through a migration.
+  # A domain may live in a database or cluster of its own. Such a database is
+  # prepared, and verified, on ITS migration credential: give the domain a
+  # `migrateExistingSecret` below, and the migration Job and the server both
+  # mount it. A database holding linkage without party also receives the
+  # party migration set (its schema only, never a pool or a row), because the
+  # linkage set names a function the party set creates.
 
   clinical:
     # -- Reference an existing Secret holding the CLINICAL-role DSN
@@ -168,6 +171,16 @@ database:
     # -- Inline clinical DSN (DEV/TEST ONLY — lands in a chart-managed Secret).
     # Ignored when `clinical.existingSecret` is set.
     url: ""
+    # -- Reference an existing Secret holding the DSN that PREPARES the database
+    # this domain lives in, when it is not the database
+    # `database.migrateExistingSecret` reaches (a migrator of THAT database).
+    # Mounted into the migration Job, which applies the schema there, and into
+    # the server, which verifies it there under `config.db.migrate=verify`.
+    # Empty: such a database is prepared on this domain's own DSN, which a
+    # DML-only role cannot do.
+    migrateExistingSecret: ""
+    # -- Key WITHIN migrateExistingSecret holding that DSN. Mounted as a file.
+    migrateExistingSecretKey: FERROEHR__STORAGE__MIGRATE__CLINICAL__URL
 
   party:
     # -- Reference an existing Secret holding the PARTY-role DSN
@@ -179,6 +192,16 @@ database:
     # -- Inline party DSN (DEV/TEST ONLY). Ignored when
     # `party.existingSecret` is set.
     url: ""
+    # -- Reference an existing Secret holding the DSN that PREPARES the database
+    # this domain lives in, when it is not the database
+    # `database.migrateExistingSecret` reaches (a migrator of THAT database).
+    # Mounted into the migration Job, which applies the schema there, and into
+    # the server, which verifies it there under `config.db.migrate=verify`.
+    # Empty: such a database is prepared on this domain's own DSN, which a
+    # DML-only role cannot do.
+    migrateExistingSecret: ""
+    # -- Key WITHIN migrateExistingSecret holding that DSN. Mounted as a file.
+    migrateExistingSecretKey: FERROEHR__STORAGE__MIGRATE__PARTY__URL
 
   linkage:
     # -- Reference an existing Secret holding the LINKAGE-role DSN
@@ -190,6 +213,16 @@ database:
     # -- Inline linkage DSN (DEV/TEST ONLY). Ignored when
     # `linkage.existingSecret` is set.
     url: ""
+    # -- Reference an existing Secret holding the DSN that PREPARES the database
+    # this domain lives in, when it is not the database
+    # `database.migrateExistingSecret` reaches (a migrator of THAT database).
+    # Mounted into the migration Job, which applies the schema there, and into
+    # the server, which verifies it there under `config.db.migrate=verify`.
+    # Empty: such a database is prepared on this domain's own DSN, which a
+    # DML-only role cannot do.
+    migrateExistingSecret: ""
+    # -- Key WITHIN migrateExistingSecret holding that DSN. Mounted as a file.
+    migrateExistingSecretKey: FERROEHR__STORAGE__MIGRATE__LINKAGE__URL
 
   audit:
     # -- Reference an existing Secret holding the DSN the audit repository is
@@ -203,6 +236,16 @@ database:
     # -- Inline audit DSN (DEV/TEST ONLY). Ignored when
     # `audit.existingSecret` is set.
     url: ""
+    # -- Reference an existing Secret holding the DSN that PREPARES the database
+    # this domain lives in, when it is not the database
+    # `database.migrateExistingSecret` reaches (a migrator of THAT database).
+    # Mounted into the migration Job, which applies the schema there, and into
+    # the server, which verifies it there under `config.db.migrate=verify`.
+    # Empty: such a database is prepared on this domain's own DSN, which a
+    # DML-only role cannot do.
+    migrateExistingSecret: ""
+    # -- Key WITHIN migrateExistingSecret holding that DSN. Mounted as a file.
+    migrateExistingSecretKey: FERROEHR__STORAGE__MIGRATE__AUDIT__URL
 
   # ── the credential that prepares the schema ────────────────────────────────
   # No domain DSN above can do it. Preparing spans every schema of a database —
@@ -212,7 +255,7 @@ database:
   # refused on the first set. It prepares every domain whose DSN reaches the
   # same DATABASE it does — all of them in the ordinary posture, where the
   # per-domain credentials sit on one database; a domain relocated to another
-  # database is prepared on its own DSN.
+  # database is prepared on that domain's `migrateExistingSecret`.
   #
   # Set this whenever the pod's DSN is a domain-scoped role. The server opens
   # it for that one boot step and closes it again: no pool is held on it and no
@@ -826,6 +869,25 @@ service:
   # so it is off unless you have measured that you want it
   # (https://kubernetes.io/docs/reference/networking/virtual-ips/#traffic-distribution).
   trafficDistribution: ""
+  # The trust the chart's own clients of this Service place in the server's own
+  # TLS listener. Read only while `config.server.tls.enabled` is true: the
+  # viewer, FerroBRIDGE and the ServiceMonitor scrape then call
+  # `https://<release fullname>:<service.port>`, so the server's certificate
+  # (config.server.tls.cert_file) carries that Service name as a DNS SAN and is
+  # checked against the CA named here. The render is refused when one of those
+  # clients is enabled and the Secret is not named. The ServiceMonitor reads
+  # the Secret from its own namespace (metrics.serviceMonitor.namespace).
+  tls:
+    # -- Name of an EXISTING Secret holding the CA that signed the server's
+    # certificate, in PEM. Give it a Secret that holds the CA certificate ALONE:
+    # every pod and the ServiceMonitor that reads it then reads no private key,
+    # and a ServiceMonitor in another namespace needs its own copy there. A
+    # cert-manager Certificate's Secret also carries `ca.crt`, but beside the
+    # server's private key; copy the CA out of it (trust-manager's Bundle, or
+    # by hand) rather than naming it here.
+    caExistingSecret: ""
+    # -- The key in `caExistingSecret` holding the CA.
+    caExistingSecretKey: ca.crt
 
 ingress:
   # -- Create an Ingress. TLS termination belongs here (or at a gateway).
@@ -834,6 +896,13 @@ ingress:
   className: ""
   # -- Ingress annotations (TLS issuer, body size, timeouts — controller-specific).
   annotations: {}
+  # -- Annotations added to the Ingress only while config.server.tls.enabled is
+  # true: how your controller is told the backend speaks HTTPS, which is
+  # controller-specific (ingress-nginx:
+  # `nginx.ingress.kubernetes.io/backend-protocol: HTTPS`). The render is
+  # refused while server TLS and the Ingress are both on and this is empty,
+  # because the controller would otherwise send plain HTTP to a TLS listener.
+  backendTlsAnnotations: {}
   hosts:
     - host: ferroehr.example.com
       paths:

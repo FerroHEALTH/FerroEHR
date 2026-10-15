@@ -135,6 +135,12 @@ per incoming request, so callers get fast `401`s instead of slow ones. Keep the
 negative TTL short: it is also how long recovery takes to be noticed after the
 provider comes back.
 
+The discovery and JWKS fetches verify the identity provider's certificate
+against the platform trust store and follow no redirects. An identity provider
+whose certificate comes from a private CA is trusted once that CA is in the
+image's system store or in a directory or file named by `SSL_CERT_DIR` or
+`SSL_CERT_FILE`.
+
 ### `[auth.oidc.assurance]`: the assurance level patient data requires
 
 Off by default. What it refuses and the `401` challenge it sends are described
@@ -188,13 +194,13 @@ order and design rationale are in [Security](../security.md).
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `enabled` | bool | `true` | The coarse role gate (active when authentication is enabled). |
+| `enabled` | bool | `true` | The coarse role gate (active when authentication is enabled). Off, every authenticated caller may use every enabled surface, reported as the `rbac_off` deployment gap. `ehr_access_default` and `admin_role` apply either way. |
 | `admin_role` | string | `ADMIN` | Role required for admin-class operations. A blank value is a boot error. |
 | `user_role` | string | `USER` | Baseline clinical role. |
 | `readonly_role` | string | `READONLY` | Role marking a principal read-only: refused on every write operation (create/update/delete/upload), even alongside granting roles. Reads and AQL queries are still allowed. |
 | `subject_audit_role` | string | unset | Role that may read the access log for one subject at a time: `GET /fhir/r4/AuditEvent` with the `patient` parameter required, refused without it. The grant a patient portal holds to serve a person's right to know who accessed their record (GDPR Art. 15, EHDS Art. 9), instead of an admin credential over every patient's log. Unset, the log stays admin-only. See [Audit trail](../audit.md#retrieving-audit-records-iti-81). |
 | `role_claims` | list of string | `["roles","groups","entitlements","realm_access.roles"]` | JWT claim paths mined for roles, in order. Dotted paths walk nested claims. Must be non-empty and contain no blank path. **`scope` is not a role source**; see [Security](../security.md#rbac-role-based-coarse). |
-| `ehr_access_default` | enum{open,restricted} | `open` | What an EHR carrying no `ACCESS_CONTROL_SETTINGS` admits. `restricted` is object-level default-deny: only `admin_role` reaches a setting-less EHR, so an operator can still author the settings that open it. See [Security](../security.md#per-ehr-access-control-ehr_access). |
+| `ehr_access_default` | enum{open,restricted} | `open` | What an EHR carrying no `ACCESS_CONTROL_SETTINGS` admits. `restricted` is object-level default-deny: only `admin_role` reaches a setting-less EHR, so an operator can still author the settings that open it. It is enforced whether `enabled` is on or off. With `[auth] enabled = false` nothing could enforce `restricted`, so that combination is a boot error. See [Security](../security.md#per-ehr-access-control-ehr_access). |
 
 > [!NOTE]
 > The management surface is **not** configured under `[authz.rbac]`.
@@ -209,8 +215,27 @@ order and design rationale are in [Security](../security.md).
 | `enabled` | bool | `false` | Master ABAC switch. |
 | `engine` | enum{cedar,remote} | `cedar` | Embedded Cedar, or a remote decision point. |
 | `organization_claim` | string | `organization_id` | JWT claim carrying the caller's organization. |
-| `patient_claim` | string | `patient_id` | JWT claim carrying the patient id. |
+| `patient_claim` | string | `patient_id` | JWT claim carrying the patient id. Set, it scopes every request to the patient it names (see below). Empty turns the patient scope off. |
+| `patient_namespace` | string | unset | The subject namespace (`EHR_STATUS.subject.external_ref.namespace`) the patient ids in `patient_claim` are issued in. Set, a claim names the EHR whose subject is that id under this namespace. Unset, a claim names the EHR holding that id only when no other namespace holds the same id. |
 | `check_directory` | bool | `false` | Submit DIRECTORY (`FOLDER`) operations to the decision point. Engine-independent, so it works under Cedar as well as a remote PDP. |
+
+**The patient scope.** With ABAC on and `patient_claim` set, a token
+without that claim is refused with `403`. With the claim:
+
+- A route that names an EHR (`/ehr/{ehr_id}/…`) answers `403` unless the
+  claim names that EHR's subject. An EHR that records no subject is in no
+  patient's scope and is refused.
+- Without `patient_namespace`, an id held under two or more namespaces names
+  none of those subjects, so it reaches none of their EHRs. Set
+  `patient_namespace` to read the claim in one namespace.
+- An AQL query returns rows only from EHRs the claim names, whatever the query
+  selects, including `SELECT e/ehr_id/value FROM EHR e`.
+
+After a query runs, the decision point receives the subject ids of every EHR
+the query touched as its `patient` attribute, so a patient-keyed policy
+applies to queries whether or not `patient_claim` is set. Without
+`patient_namespace`, a query that touches a subject id held under several
+namespaces is refused with `403`, because a bare id would name both subjects.
 
 - **`[authz.abac.cedar]`:** `policy_dir` (path, required when
   `engine = "cedar"` and ABAC is on) and `reload_secs` (int, unset, an

@@ -23,10 +23,13 @@
     )
 )]
 
+use sqlx::Connection as _;
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
+use crate::service::demographic::identifier::store::IdentifierStore;
 use crate::service::error::ServiceError;
 use crate::service::status::{CallStatusType, SmError};
 
@@ -112,7 +115,8 @@ impl FerroEhrService {
     /// (`clinical/0006_definitions.sql`, NO ACTION) is the underlying guard that
     /// makes orphaning impossible even under a concurrent commit.
     async fn delete_template_by_id(&self, template_id: &str) -> Result<(), ServiceError> {
-        let mut tx = self.pool.begin().await?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
         // Resolve the stored (case-preserved) id; absent → 404 (§Composite
         // Identifiers and Case: compare case-insensitively).
         let stored: Option<String> = sqlx::query_scalar(
@@ -224,7 +228,8 @@ impl FerroEhrService {
         #[cfg(not(feature = "multimedia"))]
         let candidate_blobs: Vec<String> = Vec::new();
 
-        let mut tx = self.pool.begin().await?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
 
         // Capture the audit ids the EHR's versions and contributions reference,
         // before the cascade deletes those referencing rows. Read over BOTH
@@ -302,7 +307,7 @@ impl FerroEhrService {
         // non-empty selector deletes exactly the named EHRs.
         let targets: Vec<EhrId> = if ehr_ids.is_empty() {
             sqlx::query_scalar("SELECT id FROM ehr")
-                .fetch_all(&self.pool)
+                .fetch_all(&mut *acquire(&self.pool).await?)
                 .await?
         } else {
             ehr_ids.to_vec()
@@ -318,7 +323,8 @@ impl FerroEhrService {
             // version references a blob and there is nothing to collect.
             #[cfg(not(feature = "multimedia"))]
             let candidate_blobs: Vec<String> = Vec::new();
-            let mut tx = self.pool.begin().await?;
+            let mut conn = acquire(&self.pool).await?;
+            let mut tx = conn.begin().await?;
             let commit_audit_ids: Vec<Uuid> = sqlx::query_scalar(
                 "SELECT commit_audit_id FROM version WHERE ehr_id = ANY($1) \
                  UNION \
@@ -386,7 +392,7 @@ impl FerroEhrService {
              WHERE v.ehr_id = ANY($1)",
         )
         .bind(ehr_ids)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *acquire(&self.pool).await?)
         .await?)
     }
 
@@ -444,11 +450,16 @@ impl FerroEhrService {
         }
         let mut still_referenced: Vec<String> = Vec::new();
         for domain in [&self.pool, &self.demographic_pool] {
-            match sqlx::query_scalar("SELECT DISTINCT uri FROM blob_ref WHERE uri = ANY($1)")
-                .bind(&candidates)
-                .fetch_all(domain)
-                .await
-            {
+            let read: Result<Vec<String>, ServiceError> = async {
+                Ok(
+                    sqlx::query_scalar("SELECT DISTINCT uri FROM blob_ref WHERE uri = ANY($1)")
+                        .bind(&candidates)
+                        .fetch_all(&mut *acquire(domain).await?)
+                        .await?,
+                )
+            }
+            .await;
+            match read {
                 Ok(rows) => still_referenced.extend(rows),
                 Err(e) => {
                     tracing::warn!(error = %e, "multimedia blob GC reference read failed; keeping all candidates");
@@ -494,9 +505,13 @@ impl FerroEhrService {
     /// `(vo_id, sys_version)` FKs), the CONTRIBUTIONs/audit rows they orphan
     /// (guarded — a row shared with a survivor is kept), the head rows
     /// markers. `audit` has no FK from `version` (NO ACTION), so those rows
-    /// are swept explicitly, as in the EHR delete.
+    /// are swept explicitly, as in the EHR delete. Every sealed national
+    /// identifier row of the deleted objects, live and retired, goes in the
+    /// same transaction: `national_identifier` carries no foreign key to the
+    /// versions that reference it.
     async fn physical_delete_party(&self, party_id: VoId) -> Result<(), ServiceError> {
-        let mut tx = self.demographic_pool.begin().await?;
+        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut tx = conn.begin().await?;
 
         // The target must be a demographic PARTY (ehr-less; any version exists),
         // in either storage tier — an archived party is still deletable.
@@ -571,6 +586,14 @@ impl FerroEhrService {
             .bind(&vo_ids)
             .execute(&mut *tx)
             .await?;
+
+        // The sealed national identifiers those versions referenced, live and
+        // retired: the erasure removes the values with the record that held
+        // them. No openEHR spec governs identifier protection — our own design.
+        let sealed_owners: Vec<Uuid> = vo_ids.iter().map(|vo| vo.0).collect();
+        IdentifierStore::erase(&mut tx, &sealed_owners)
+            .await
+            .map_err(|e| ServiceError::internal("erase the sealed national identifiers", e))?;
 
         // Orphaned CONTRIBUTIONs (guarded: keep any still referenced by a
         // surviving version/attestation).

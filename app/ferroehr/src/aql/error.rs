@@ -1,11 +1,14 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! AQL planner errors.
+//! AQL planner, SQL-build and execution errors.
 //!
-//! Two families, both surfaced before any SQL is built:
+//! Four families; all but [`ExecError`] surface before the query runs:
 //!
-//! * [`AqlFeatureError`] — the feature-envelope rejections. Every variant names
+//! * [`AqlFeatureError`] — the feature-envelope rejections, raised by planning
+//!   and, for the ones that depend on the FROM tree's shape (a containment
+//!   edge, a read of a `NOT CONTAINS` or `OR`-branch variable), by
+//!   [`crate::aql::sql::build`]. Every variant names
 //!   the rejected construct and cites the governing QUERY 1.1 spec section, so a
 //!   rejection is always explainable against the vendored spec
 //!   (`docs/specs/openehr/QUERY/docs/AQL/`), which is the ONLY authority for the
@@ -198,6 +201,15 @@ pub enum AqlFeatureError {
          (AQL 1.1 defines no grouping; QUERY master03 §Aggregate functions)"
     )]
     MixedAggregateProjection,
+
+    /// A path reading a variable declared under `NOT CONTAINS`. QUERY master03
+    /// §Containment: `NOT CONTAINS` expresses "the absence of any containment
+    /// relationship", so the variable names an object no matching row holds.
+    #[error(
+        "variable `{0}` is declared under NOT CONTAINS and names no object a row \
+         holds, so no path can read it (QUERY §FROM/Containment)"
+    )]
+    NegatedContainmentVariable(String),
 }
 
 /// A path-analysis / typing failure against the generated RM model
@@ -361,13 +373,18 @@ pub enum SqlError {
 /// An execution / `RESULT_SET` assembly failure.
 #[derive(Debug, Error)]
 pub enum ExecError {
+    /// No connection could be obtained from the pool, so no statement reached
+    /// the database.
+    #[error("query execution could not obtain a database connection")]
+    Acquire(#[from] crate::db::acquire::AcquireError),
+
     /// The database rejected or failed the generated query.
-    #[error("query execution failed: {0}")]
+    #[error("query execution failed")]
     Database(#[from] sqlx::Error),
 
     /// A whole-object `RESULT_SET` cell could not be reassembled from its node
     /// subtree (a storage/codec failure).
-    #[error("result assembly failed: {0}")]
+    #[error("result assembly failed")]
     Assembly(#[from] crate::storage::error::StorageError),
 
     /// A terminology-server call failed while resolving a

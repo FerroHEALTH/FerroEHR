@@ -11,7 +11,11 @@ period, embedded from the changelog by `build.rs`), `privacy`,
 erase` operation: blobs first, then `db::erase_schema` drops every schema,
 behind a confirmation naming the instance), `manufacturer` (the one source of
 the manufacturer every surface names; the viewer compiles this file through
-`#[path]`, so it stays dependency-free but for `serde`), `report` (the
+`#[path]`, so it stays dependency-free but for `serde`), `served_vocabulary`
+(the deployment gap codes and OpenAPI family slugs the viewer names; also
+compiled by the viewer through `#[path]`, so it depends on nothing), `oauth2_http` (the workspace `reqwest`
+client as the `oauth2`/`openidconnect` transport, shared by the terminology
+token source and OIDC discovery), `report` (the
 redacted deployment report `ferroehr report` writes), `usage_report` (the outbound
 installation report to FerroPULSE: typed payload, cross-replica claims on the
 clinical pool, the in-process latency window fed by `ferroehr-rest`'s HTTP
@@ -61,8 +65,11 @@ module.**
 - **One pool and one DSN per domain** (`db/domain.rs`): `[storage.<domain>]`
   carries `url`/`url_file` for `clinical`, `party`, `linkage` and `audit`, each
   defaulting to `[db].url`, and `db::connect_domains` opens the four
-  (`db::DomainPools`). Preparation is per DATABASE — the `ext` set by whichever
-  domain reaches it first, then each resident domain's own set. No statement
+  (`db::DomainPools`). Preparation is per DATABASE, on that database's migration
+  credential (`[db].migrate_url`, or `[storage.migrate.<domain>]` for a database
+  of its own): the `ext` set, then each resident domain's set, plus the party
+  set as a companion where linkage lives without party (the shipped linkage
+  grant file revokes a party function). No statement
   ever names two domains' relations; `tests/it/one_schema_per_statement.rs`
   refuses one that does.
 - **AQL engine** (`src/aql/`): typed IR over the BMM-generated RM model, lowered

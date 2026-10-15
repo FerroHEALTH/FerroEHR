@@ -28,7 +28,7 @@ pub enum RmAccessError {
     /// where all the schemas loaded here are found"
     /// (`org.openehr.lang.bmm.reference_model_access.adoc` §Attributes) — so the
     /// I/O failure set is our own design.
-    #[error("schema directory `{directory}` could not be read: {source}")]
+    #[error("schema directory `{directory}` could not be read")]
     Directory {
         /// The directory as listed in `schema_directories`.
         directory: String,
@@ -38,7 +38,7 @@ pub enum RmAccessError {
     },
 
     /// A `.bmm` schema file could not be read.
-    #[error("schema file `{path}` could not be read: {source}")]
+    #[error("schema file `{path}` could not be read")]
     File {
         /// The file's path.
         path: String,
@@ -48,7 +48,7 @@ pub enum RmAccessError {
     },
 
     /// The P_BMM pipeline refused a schema file's content.
-    #[error("schema file `{path}`: {source}")]
+    #[error("schema file `{path}` was refused")]
     Schema {
         /// The file's path.
         path: String,

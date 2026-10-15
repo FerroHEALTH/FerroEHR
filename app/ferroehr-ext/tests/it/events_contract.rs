@@ -119,7 +119,13 @@ async fn an_unreachable_broker_is_a_typed_transport_error_on_first_use() {
     .expect("a refused connection fails within the retry budget");
     let err = outcome.expect_err("no broker answers on port 1");
     assert!(matches!(err, EventError::Amqp(_)), "got {err:?}");
-    assert!(err.to_string().starts_with("amqp transport: "), "{err}");
+    // The transport's own error is the source, kept out of the message.
+    assert_eq!(err.to_string(), "amqp transport failed");
+    assert!(
+        std::error::Error::source(&err)
+            .is_some_and(|cause| cause.downcast_ref::<lapin::Error>().is_some()),
+        "{err:?}"
+    );
     assert_eq!(
         publisher.topology_epoch(),
         0,

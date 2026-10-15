@@ -35,7 +35,9 @@ use crate::flat::error::FlatError;
 use crate::flat::map;
 use crate::flat::rmpath;
 use crate::flat::sim::{SimDocument, SimNode};
-use crate::flat::webtemplate::model::{CodedName, WebTemplate, WebTemplateNode};
+use crate::flat::webtemplate::model::{
+    CodedName, WebTemplate, WebTemplateNode, WebTemplateStructuralStub,
+};
 
 /// openEHR reference-model release stamped into a rebuilt
 /// `ARCHETYPED.rm_version` (RM common `archetyped.adoc`: the "version of
@@ -52,15 +54,21 @@ pub(crate) const RM_VERSION: &str = "1.2.0";
 /// [`crate::flat::ctx`], not to these structural fills.)
 pub(crate) const DEFAULT_TIME: &str = "1970-01-01T00:00:00Z";
 
-/// Convert a parsed simplified document to a canonical-JSON composition,
-/// driven by `wt`. `now` is the caller's current timestamp, used only for
-/// the `ctx/time` default (`master04 §Context`).
+/// Converts a parsed simplified document to a canonical-JSON composition,
+/// driven by `wt`.
+///
+/// `now` is the caller's current timestamp, used only for the `ctx/time`
+/// default (`master04 §Context`). A document that names no `category` takes
+/// the template's default for it (`template_category`).
 ///
 /// # Errors
+///
 /// [`FlatError::UnknownPath`] for a field identifier matching no
 /// web-template node; the `crate::flat::map`/`crate::flat::ctx` errors for datum
-/// and context violations; [`FlatError::Conversion`] when the document
-/// carries nothing buildable.
+/// and context violations; [`FlatError::MissingRequiredSuffix`] naming
+/// `<root>/category|code` when the document names no category and the
+/// template admits several with no default; [`FlatError::Conversion`] when the
+/// document carries nothing buildable.
 pub fn build_composition(
     doc: &SimDocument,
     wt: &WebTemplate,
@@ -111,7 +119,7 @@ pub fn build_composition(
     // Resolve `category` BEFORE the context is applied: persistent
     // compositions may optionally omit the Event context (RM ehr master05
     // §"Persistent Compositions may optionally have an Event context").
-    ensure_category(&mut comp);
+    ensure_category(&mut comp, &wt.tree)?;
     apply_composition_ctx(&mut comp, &defaults, explicit_event_context);
     let mut value = Value::Object(comp);
     apply_entry_defaults(&mut value, &defaults);
@@ -1381,7 +1389,7 @@ fn fill_time_anchor(obj: &mut Map<String, Value>, rm_type: &str) {
 }
 
 /// Stamps `archetype_details` on an archetype-root node.
-fn stamp_archetype_details(
+pub(crate) fn stamp_archetype_details(
     obj: &mut Map<String, Value>,
     node: &WebTemplateNode,
     is_root: bool,
@@ -1463,19 +1471,27 @@ fn fill_mandatory_entry_attributes(
 
 /// Synthesize an empty structural node for a missing mandatory ENTRY
 /// attribute (see [`finish_identity`]).
+///
+/// The stub is looked up by the attribute's absolute path, since the compactor
+/// re-homes a hoisted wrapper's stubs (an EVENT's `data`/`state`) onto `node`.
 fn structural_from_stub(
     node: &WebTemplateNode,
     attr: &str,
     default_rm_type: &str,
     default_name: &str,
 ) -> Value {
-    match node.structural_stubs.iter().find(|s| s.attr == attr) {
-        Some(stub) => {
-            let name = stub.name.as_deref().unwrap_or(default_name);
-            structural_container(concrete_structural(&stub.rm_type), &stub.node_id, name)
-        }
+    let path = format!("{}/{attr}", node.aql_path);
+    match node.structural_stubs.iter().find(|s| s.path == path) {
+        Some(stub) => structural_from(stub, default_name),
         None => structural_container(default_rm_type, "at0001", default_name),
     }
+}
+
+/// Synthesizes the empty structural node a [`WebTemplateStructuralStub`]
+/// constrains, named by its rubric or else `default_name`.
+pub(crate) fn structural_from(stub: &WebTemplateStructuralStub, default_name: &str) -> Value {
+    let name = stub.name.as_deref().unwrap_or(default_name);
+    structural_container(concrete_structural(&stub.rm_type), &stub.node_id, name)
 }
 
 /// An abstract `ITEM_STRUCTURE` constraint materialises as `ITEM_TREE`; a
@@ -1504,11 +1520,68 @@ fn structural_container(rm_type: &str, node_id: &str, name: &str) -> Value {
     Value::Object(o)
 }
 
-/// COMPOSITION.category is mandatory; default `event` (openEHR 433) when
-/// the tree carried none.
-fn ensure_category(comp: &mut Map<String, Value>) {
-    comp.entry("category".to_owned())
-        .or_insert_with(|| dv_coded_text("event", "openehr", "433"));
+/// Supplies the mandatory `COMPOSITION.category` when the input named none,
+/// taking the default from the template's constraint on it.
+///
+/// # Errors
+///
+/// [`FlatError::MissingRequiredSuffix`] naming `<root>/category|code` when the
+/// template admits several codes and fixes no default.
+fn ensure_category(comp: &mut Map<String, Value>, root: &WebTemplateNode) -> Result<(), FlatError> {
+    if comp.contains_key("category") {
+        return Ok(());
+    }
+    let category =
+        template_category(root).map_err(|_admitted| FlatError::MissingRequiredSuffix {
+            key: format!("{}/category|code", root.id),
+        })?;
+    comp.insert("category".to_owned(), category);
+    Ok(())
+}
+
+/// Returns the `COMPOSITION.category` a build supplies for an input that names
+/// none, from the template's constraint on `/category`.
+///
+/// `COMPOSITION.category` is mandatory (RM
+/// `UML/classes/org.openehr.rm.composition.composition.adoc` §Attributes, `1..1`), so a default must satisfy
+/// the template: its default value (the archetype's assumed value) when it
+/// fixes one, else its single admitted code, else `433` (event) when the
+/// template leaves the category unconstrained.
+///
+/// NOTE: no openEHR spec governs the default for an omitted category — our own design/extension.
+///
+/// # Errors
+///
+/// The admitted codes when the template admits several and fixes no default:
+/// no one of them is the input's.
+pub(crate) fn template_category(root: &WebTemplateNode) -> Result<Value, Vec<String>> {
+    let input = root
+        .children
+        .iter()
+        .find(|child| child.aql_path == "/category")
+        .and_then(|node| {
+            node.inputs
+                .iter()
+                .find(|input| input.suffix.as_deref() == Some("code"))
+        });
+    let Some(input) = input.filter(|input| !input.list.is_empty()) else {
+        return Ok(dv_coded_text("event", "openehr", "433"));
+    };
+    let terminology = input.terminology.as_deref().unwrap_or("openehr");
+    let assumed = input.default_value.as_ref().and_then(Value::as_str);
+    let chosen = match (assumed, input.list.as_slice()) {
+        (Some(code), list) => list.iter().find(|entry| entry.value == code),
+        (None, [only]) => Some(only),
+        (None, _) => None,
+    };
+    match chosen {
+        Some(entry) => Ok(dv_coded_text(
+            entry.label.as_deref().unwrap_or(&entry.value),
+            terminology,
+            &entry.value,
+        )),
+        None => Err(input.list.iter().map(|entry| entry.value.clone()).collect()),
+    }
 }
 
 /// Ensure the composition's `archetype_details` carries `archetype_id` +

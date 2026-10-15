@@ -2,7 +2,7 @@
 
 - Source: https://github.com/openEHR/specifications-TERM
 - Ref: master (TERM 3.1.0)
-- Commit: `78edd7f59600c40da00fa4e8a1282d563b8942cc`
+- Commit: `1232e59bb679928b921b305b6eca4d0b5e1e03f0`
 - License: CC-BY-SA 3.0 Unported (the upstream repo's `LICENSE`; root
   reference copy `LICENSE-CC-BY-SA-3.0`) — redistributed verbatim with
   attribution.

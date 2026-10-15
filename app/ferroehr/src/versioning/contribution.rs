@@ -22,8 +22,10 @@
 
 use openehr_base::prelude::{HierObjectId, ObjectId, ObjectRef, ObjectRefData};
 use serde_json::{Value, json};
+use sqlx::Connection as _;
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::error::{ServiceError, Violation};
 use crate::service::list::Page;
@@ -587,7 +589,8 @@ async fn write_contribution(
     party_only: bool,
     write: ContributionWrite<'_>,
 ) -> Result<CommittedContribution, ServiceError> {
-    let mut tx = domain_pool(cx, party_only).begin().await?;
+    let mut conn = acquire(domain_pool(cx, party_only)).await?;
+    let mut tx = conn.begin().await?;
     // The content-write gate, under a row lock (RM ehr master04 §EHR Active
     // Status; the in-transaction evaluation is our own recorded semantics —
     // see `change::ensure_content_writable_tx`). A set that itself writes an
@@ -1115,7 +1118,7 @@ async fn refuse_content_into_inactive_ehr(
         return Ok(());
     }
     let (exists, modifiable, _) =
-        crate::storage::ehr_repo::ehr_writability(cx.pool(), ehr_id).await?;
+        crate::storage::ehr_repo::ehr_writability(&mut *acquire(cx.pool()).await?, ehr_id).await?;
     if exists && modifiable == Some(false) {
         return Err(change::not_modifiable_error(ehr_id));
     }

@@ -141,9 +141,19 @@ requirements:
           accepts `plaintext_listener` by name behind a TLS ingress. The
           chart's validation renders it and asserts each separation, and its
           boot check has the server evaluate the posture from the rendered
-          configuration. Separate database clusters, which the server measures
-          over live connections, are judged by no check before the first boot
-          against the operator's databases. The chart and the Compose files
+          configuration. The Kubernetes deployment probe
+          (`scripts/deploy-probe-k8s.sh`, probes P-K8S-PROD-BOOT and
+          P-K8S-PROD-SHARED) installs the overlay against four PostgreSQL
+          clusters, one per storage domain. Its first run, on 2026-10-14
+          against the 4.3.6 image, observed the four-cluster layout refuse to
+          start. A second run the same day, against an image built from the
+          fix, observed the chart's migration Job prepare all four clusters
+          on their own migration credentials, the server boot under
+          `production` with `plaintext_listener` its only gap, and the boot
+          refuse all four domains on one cluster by naming `shared_cluster`.
+          That run used a kind cluster on podman with `hostUsers: true` and
+          plain TCP to the databases, so the overlay's `hostUsers: false` and
+          `sslmode=verify-full` were not exercised. The chart and the Compose files
           still declare `sandbox` by default, so an installation that follows
           the quickstart instead of the instructions runs the sandbox posture,
           which must not hold real personal data; the server says so on every

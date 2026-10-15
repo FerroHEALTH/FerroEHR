@@ -460,24 +460,17 @@ mod tests {
 
     /// The emitter names every column through this catalog: no `col(alias,
     /// "literal")`, no `Expr::col(Alias::new("literal"))`, and no
-    /// `.column(Alias::new("literal"))` anywhere under `aql/sql/`.
+    /// `.column(Alias::new("literal"))` in any `.rs` file under `aql/sql/`.
     ///
     /// The catalog exists for the typo protection a string cannot give, and a
     /// column that drops out of the schema has to be a failing test rather
     /// than a runtime SQL error. `derived_col` is the sanctioned exception and
     /// is why the scan is spelled on the `col(` token: a subquery's or a
     /// set-returning function's output column is declared by no relation, so
-    /// the catalog cannot name it.
+    /// the catalog cannot name it. The directory is walked, so a module added
+    /// to the emitter is scanned without being registered here.
     #[test]
     fn the_emitter_names_no_column_as_a_string() {
-        const SOURCES: &[(&str, &str)] = &[
-            ("mod.rs", include_str!("../aql/sql/mod.rs")),
-            ("expr.rs", include_str!("../aql/sql/expr.rs")),
-            ("from.rs", include_str!("../aql/sql/from.rs")),
-            ("predicate.rs", include_str!("../aql/sql/predicate.rs")),
-            ("select.rs", include_str!("../aql/sql/select.rs")),
-            ("value.rs", include_str!("../aql/sql/value.rs")),
-        ];
         // `expr.rs` defines `col` and `derived_col` themselves, so its two
         // definition lines are the one place the tokens appear without naming
         // a column.
@@ -485,8 +478,23 @@ mod tests {
             "pub(super) fn col(alias: &str, column: impl IntoIden) -> Expr {",
             "pub(super) fn derived_col(alias: &str, name: &str) -> Expr {",
         ];
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/aql/sql");
+        let mut files: Vec<std::path::PathBuf> = std::fs::read_dir(&dir)
+            .expect("the AQL emitter directory is readable")
+            .map(|entry| entry.expect("a readable directory entry").path())
+            .filter(|path| path.extension().is_some_and(|ext| ext == "rs"))
+            .collect();
+        files.sort();
+        assert!(
+            files.len() >= 6,
+            "the scan found only {} emitter files under {}",
+            files.len(),
+            dir.display()
+        );
         let mut offenders = Vec::new();
-        for (name, source) in SOURCES {
+        for path in &files {
+            let source = std::fs::read_to_string(path).expect("an emitter file is readable");
+            let name = path.file_name().map(|n| n.to_string_lossy().into_owned());
             for (number, line) in source.lines().enumerate() {
                 if DEFINITIONS.contains(&line.trim()) {
                     continue;
@@ -495,7 +503,12 @@ mod tests {
                     || line.contains("Expr::col(Alias::new(\"")
                     || line.contains(".column(Alias::new(\"");
                 if raw_column {
-                    offenders.push(format!("{name}:{}: {}", number + 1, line.trim()));
+                    offenders.push(format!(
+                        "{}:{}: {}",
+                        name.as_deref().unwrap_or("?"),
+                        number + 1,
+                        line.trim()
+                    ));
                 }
             }
         }

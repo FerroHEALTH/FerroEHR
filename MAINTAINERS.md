@@ -67,9 +67,10 @@ There is no succession plan that a document can create. What exists instead:
   overwritten by policy and the lane refuses to; the Zenodo DOI is permanent.
   A deployment already running is not affected by maintainer availability.
 - **Nothing new ships.** No release, no security fix, no chart version, no
-  crate publish. The support window in [SECURITY.md](SECURITY.md) (only the
-  newest release is supported) becomes, in that situation, no supported
-  release at all.
+  crate publish. [SECURITY.md](SECURITY.md) supports each release for five
+  years from the month it is published and ships every security update in
+  the newest release. With no new release, a vulnerability in a release still
+  inside its support period has nowhere to ship.
 - **The work is not lost.** The source is available under the Business Source
   License 1.1 and every version becomes Apache 2.0 four years after its
   release, the history is public, every gate is a committed script and every

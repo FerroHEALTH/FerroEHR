@@ -7,15 +7,17 @@
 //!
 //! Two kinds of module live here. The `e2e_*` journeys drive a real browser
 //! against a composed stack and skip-with-reason when it is absent;
-//! `ssr_components` (the shared kit), `ssr_pages` (whole routed screens) and
+//! `ssr_components` (the shared kit), `ssr_pages` (whole routed screens),
 //! `ssr_shell` (the persistent chrome, rendered through the whole route tree)
-//! render in-process with no external process at all, so the component/page
+//! and `ssr_login` (the Basic sign-in server function through the real
+//! service) render in-process with no external process at all, so the component/page
 //! code is exercised by the ordinary `--features ssr` test lane (and by the
 //! coverage lane over it).
 
 mod common;
 
 mod ssr_components;
+mod ssr_login;
 mod ssr_pages;
 mod ssr_shell;
 

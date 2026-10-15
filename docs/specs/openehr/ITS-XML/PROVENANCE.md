@@ -1,7 +1,7 @@
 # Vendored openEHR spec docs: ITS-XML
 
 - Source: https://github.com/openEHR/specifications-ITS-XML
-- Ref: master (1.0.2 target, 2.0.0 TRIAL)
+- Ref: Release-2.0.0v2 (tag; the XSD bundles are tags Release-1.0.2v2 + Release-2.0.0v2)
 - Commit: `de8b37ba6c9a5e126623a063cafba3b58ebf1107`
 - License: Apache-2.0 — the upstream `LICENSE` is vendored verbatim alongside
   this file, from the same pinned commit. Root reference copies:
@@ -11,6 +11,9 @@
   reference none.
 - No per-document figures: the vendored chapters of this component
   reference no `{diagrams_uri}`/`{images_uri}` file.
+- Upstream repo tooling excluded: `.git`, `.github`, `.claude`, `.junie`,
+  `AGENTS.md`, `CLAUDE.md`, `tmp-*` scratch notes, the top-level
+  `development/` build-tooling directory and dependency manifests.
 - Unreferenced figures, UML `.xmi`/`.mdzip`, XSDs and other binaries
   excluded — fetch from the repo at the pinned commit.
 

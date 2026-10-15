@@ -55,4 +55,5 @@ mod xml_locatable_attr;
 mod xml_namespace;
 mod xml_roundtrip;
 mod xml_smoke;
+mod xml_string_dictionary_id;
 mod xml_xsd_validity;

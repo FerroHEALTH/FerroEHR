@@ -86,10 +86,10 @@ A DSN that names another host moves the domain to a **database or cluster of its
 own**, which is the separation a schema cannot make: a base backup, WAL
 archiving and physical replication carry every schema of a database together
 ([PostgreSQL 18, Backup and
-Restore](https://www.postgresql.org/docs/18/backup-dump.html)). One constraint:
-the `linkage` migration set revokes a function the `party` set creates, so those
-two are prepared in the same database, and a layout that splits them is refused
-at boot with the remedy rather than failing partway through a migration.
+Restore](https://www.postgresql.org/docs/18/backup-dump.html)). A database that
+holds the `linkage` domain without the `party` domain also receives the party
+migration set, its schema and grants and never a row, because the linkage set
+revokes a function the party set creates.
 
 Two boot checks make the posture honest. Two domains configured on **different**
 DSNs that authenticate as the **same** database role are refused — a separation
@@ -126,9 +126,10 @@ url = "postgres://ferroehr_linkage:***@pg:5432/ferroehr"
 
 `migrate_url` prepares every domain that reaches the same DATABASE it does,
 which is all of them in the posture above: three credentials, one database. A
-domain whose DSN reaches a DIFFERENT database is prepared on its own DSN
-instead, because `migrate_url` names one database and a relocated domain is not
-in it. Which case a domain is in is read from the server itself
+domain whose DSN reaches a DIFFERENT database is prepared there on that
+database's own migrator, `[storage.migrate.<domain>] url`, because
+`migrate_url` names one database and a relocated domain is not in it; unset, it
+falls back to the domain's own DSN, which a DML-only role cannot use. Which case a domain is in is read from the server itself
 (`pg_control_system()` and `current_database()`), never from the DSN text — two
 DSNs that differ only in their credential reach the same database.
 
@@ -144,7 +145,9 @@ the fix is visible from the message:
 ```text
 database role `app_ehr` cannot read the migration state of schema
 `ext`: … point `[db] migrate_url` (or `migrate_url_file`) at the credential
-that prepares the schema — unset, it falls back to `[db] url`
+that prepares the schema — unset, it falls back to `[db] url` — and, for a
+domain in a database of its own, `[storage.migrate.<domain>] url` at that
+database's migration credential
 ```
 
 Either way the server **refuses to boot** when the grants themselves are wrong:
@@ -223,6 +226,14 @@ Exercised against a real PostgreSQL 18:
 - The boot sequence on separated credentials with `[db] migrate_url`, under
   both `verify` and `apply`, and the single-DSN fallback under both
   (`app/ferroehr/tests/it/schema_preparation_credential.rs`).
+- The linkage domain relocated to a second database, prepared and verified
+  there on `[storage.migrate.linkage]`, with the companion party set, and the
+  refusal when the domain's two DSNs reach different databases
+  (`app/ferroehr/tests/it/relocated_domain_preparation.rs`).
+- The chart's production overlay on four PostgreSQL clusters, one per domain,
+  prepared by the migration Job and booting under `production`
+  (`scripts/deploy-probe-k8s.sh --production-only`, probes P-K8S-PROD-BOOT and
+  P-K8S-PROD-SHARED).
 - The compose stack's grant boundary read back from the running database by
   `scripts/deploy-probe.sh`, which also records that the stack is
   single-credential by design.
@@ -231,9 +242,6 @@ Not exercised by anything, and stated rather than left to inference:
 
 - **A separated `migrate_url` alongside the linkage credential in one boot.**
   The preparation tests configure the clinical and party DSNs.
-- **A domain actually relocated to another database**, as opposed to a second
-  credential on the same one. The layout, the per-database preparation and the
-  refusals are covered in process; no suite runs two PostgreSQL databases.
 - **A real deployment on separated DSNs**: a container booting with the DSN
   files mounted, and the chart wiring them through
   `database.party.existingSecret`, `database.linkage.existingSecret` and
@@ -331,7 +339,7 @@ below.
 ### Recovering a partially wiped database
 
 A wipe that removes *some* of the server's schemas is not a fresh start, and the
-server refuses to migrate over one rather than doing something plausible with it.
+server cannot tell it from one.
 
 The server owns five schemas: `ext`, `clinical`, `party`, `linkage` and `audit`.
 A fresh start drops all five. Each domain's cold archival tier is a **partition**
@@ -339,9 +347,14 @@ of the relation it archives, inside that domain's own schema, so a
 `DROP SCHEMA clinical CASCADE` takes the archived rows with the live ones. There
 is no separate mirror schema left to survive a wipe of the tier it mirrors.
 
-Dropping the clinical schemas (`clinical`, `ext`, `audit`) while `party` and
-`linkage` survive is a supported reset: the clinical migration set rebuilds its
-schema on the next boot.
+Dropping some of the schemas is not a supported reset, because they are not
+independent. `btree_gist` is installed in `ext`, so `DROP SCHEMA ext CASCADE`
+also drops the temporal uniqueness constraint on `linkage.subject_ehr` that the
+extension's operator classes back, and the `linkage` set, still recorded as
+applied, never recreates it. `linkage` also maps parties to EHRs that a dropped
+`clinical` no longer holds. The next boot rebuilds the dropped schemas, and its
+migration check reads each set's bookkeeping only, so it passes over a database
+that has lost those guarantees.
 
 A database written by a release before the storage rewrite is refused outright:
 
@@ -550,6 +563,9 @@ Rotation re-encrypts; it is not an edit. Both keys have to be present while it
 runs, because every row is opened under the old key and sealed under the new
 one, and the lookup digest changes with the key too — so the rotation rewrites
 the digest column and every stored reference keeps pointing at the same row.
+The rotation has to cover retired rows as well as live ones: every party version
+keeps rows of its own, and an older version opens its value from a retired
+row.
 
 The procedure:
 
@@ -565,6 +581,13 @@ The procedure:
 5. Swap `key_file` to the new key and restart. Verify by resolving one known
    identifier and reading one party back.
 6. Destroy the old key once step 5 is verified, not before.
+
+The same key binds the
+[admin dump archives](operations-admin-apis.md#dump-and-load). A dump carries the sealed rows as
+ciphertext, so restoring it needs the root key the rows were sealed under.
+An archive dumped before a rotation holds rows sealed under the old key, so
+step 6 also leaves the identifiers in those archives unreadable. Keep the old
+key for as long as you may restore one of them.
 
 > [!WARNING]
 > There is no automated rotation command yet. Until there is, the rotation is a
@@ -729,7 +752,7 @@ supported for five years from the month of its release date (CRA Art 13(8)),
 and the server reads that date from its changelog heading at build time. The
 end month is on the boot banner (`Support` line), in the boot log, in
 `ferroehr --version`, under `support` in `GET /management/info`, and under
-`support` in `GET /ferroehr/rest/status` as
+`support` in `GET /management/status` as
 `{release_date, support_ends, status}`, where `support_ends` is `YYYY-MM` and
 `status` is `supported`, `ended` or `unreleased`. Once the end month has passed,
 `status` reads `ended` and the server logs a `warn` line at boot and once a day
@@ -905,7 +928,7 @@ its own probes.
 | `GET /health` | constant `200 OK` (plain text `OK`), touches nothing | load balancers, `docker` `HEALTHCHECK`, anything that must never be auth-gated |
 | `GET /health/liveness` | identical to `/health`, the same constant answer under the orchestrator-conventional path | Kubernetes `livenessProbe` and `startupProbe` |
 | `GET /health/readiness` | `200` when the aggregate is up or degraded, `503` when a **required** component is down; JSON body with every indicator, each bounded to one second | Kubernetes `readinessProbe`, ops dashboards |
-| `GET /ferroehr/rest/status` | product status document: `status`, `server_version`, `openehr_rest_api_version`, `timestamp`, `licence` (the grant in force: `state`, `use`, `licensee`, `not_after`, `configured_token`) `deployment` (the declared profile, the separations still open and the ones accepted by name) and `support` (`release_date`, `support_ends`, `status`) | version/identity checks; the URL the container's `ferroehr healthcheck` subcommand probes |
+| `GET /ferroehr/rest/status` | public status document: `status`, `server_version`, `openehr_rest_api_version`, `timestamp` and `deployment.profile`. The full document, which adds `licence` (the grant in force: `state`, `use`, `licensee`, `not_after`, `configured_token`), the whole `deployment` posture (the declared profile, the separations still open and the ones accepted by name) and `support` (`release_date`, `support_ends`, `status`), is `GET /management/status` | version/identity checks; the URL the container's `ferroehr healthcheck` subcommand probes |
 | `GET /management/*` | ops introspection; see below | operators, off by default, enable deliberately |
 
 Every management request is itself recorded in the audit trail as a

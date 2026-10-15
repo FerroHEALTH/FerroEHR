@@ -168,7 +168,8 @@ impl FerroEhrService {
             .await
             .map_err(|e| {
                 ServiceError::content_invalid(Violation::new(format!(
-                    "operational template {template_id} could not be built into a WebTemplate: {e}"
+                    "operational template {template_id} could not be built into a WebTemplate: {}",
+                    crate::service::error::ErrorChain::new(&*e)
                 )))
             })
     }

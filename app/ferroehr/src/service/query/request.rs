@@ -18,6 +18,8 @@ use std::collections::BTreeMap;
 
 use serde_json::Value;
 
+use crate::aql::subject::EhrSubject;
+
 /// A normalized AQL query request: the paging window, the EHR scope, and the
 /// `$parameter` bindings.
 ///
@@ -50,8 +52,12 @@ pub struct AqlQueryRequest {
     pub parameters: BTreeMap<String, Value>,
     /// The ABAC patient-scope subject id (no openEHR spec governs this — our
     /// own access-control extension): when set, the engine pre-filters every
-    /// VO root to EHRs whose subject equals it.
+    /// VO root and EHR source to EHRs whose subject it names.
     pub subject_scope: Option<String>,
+    /// The configured patient namespace (`[authz.abac] patient_namespace`) the
+    /// [`Self::subject_scope`] id is read in; `None` reads the id alone and
+    /// refuses one held under several namespaces.
+    pub subject_namespace: Option<String>,
     /// The caller's per-EHR access decision (`EHR_ACCESS`): the EHRs the query
     /// may read rows from, applied to every EHR-anchored source whatever the
     /// query scopes or projects.
@@ -77,8 +83,8 @@ impl AqlQueryRequest {
 ///
 /// Carries the assembled `RESULT_SET` (`result_set.adoc`; rendered as ITS-REST
 /// canonical JSON) plus — when the caller asked for them
-/// ([`AqlQueryRequest::collect_attributes`]) — the distinct EHR ids and
-/// template ids the query touched, for the ABAC post-check.
+/// ([`AqlQueryRequest::collect_attributes`]) — the distinct EHR ids, template
+/// ids and EHR subjects the query touched, for the ABAC post-check.
 #[derive(Debug, Clone, Default)]
 pub struct QueryOutcome {
     /// The `RESULT_SET` (canonical JSON) the adapter renders.
@@ -87,6 +93,9 @@ pub struct QueryOutcome {
     pub ehr_ids: Vec<String>,
     /// The distinct template ids the query touched (empty unless collected).
     pub template_ids: Vec<String>,
+    /// The distinct subjects of the EHRs the query touched (empty unless
+    /// collected), from which the ABAC post-check folds its patient attribute.
+    pub subjects: Vec<EhrSubject>,
     /// The EHRs this execution actually SERVED, each with its served-row count.
     ///
     /// Distinct from [`Self::ehr_ids`], and the difference is the point.
@@ -128,6 +137,7 @@ impl QueryOutcome {
             result_set,
             ehr_ids: Vec::new(),
             template_ids: Vec::new(),
+            subjects: Vec::new(),
             served_ehrs: Vec::new(),
             served_rows: 0,
             served_origins: Vec::new(),

@@ -51,6 +51,7 @@ pub mod router;
 pub mod smart;
 pub mod state;
 pub mod system_log;
+pub mod tls;
 
 // `access` and `management` are part of the crate's public surface, reached at
 // their defining modules because the crate has no re-exports. The two shared
@@ -75,8 +76,11 @@ pub enum ServeError {
     #[error("authentication configuration error: {0}")]
     Auth(String),
     /// Binding the listener or serving failed.
-    #[error("server I/O error: {0}")]
+    #[error("binding or serving the listener failed")]
     Io(#[from] std::io::Error),
+    /// The `[server.tls]` material could not be turned into a TLS listener.
+    #[error("the TLS listener could not be configured")]
+    Tls(#[from] tls::TlsError),
 }
 
 /// Build the application router backed by a concrete service (the `ferroehr`
@@ -88,7 +92,7 @@ pub fn build_with(
     config: AppConfig,
     backend: Arc<FerroEhrService>,
 ) -> Result<axum::Router, ServeError> {
-    let authenticator = Authenticator::new(config.auth.clone()).map_err(ServeError::Auth)?;
+    let authenticator = build_authenticator(&config)?;
     let state = AppState::with_backend(config, backend);
     Ok(router(state, authenticator))
 }
@@ -100,7 +104,8 @@ pub fn build_with(
 /// component, whose sender the binary boots, injects and drains on shutdown.
 ///
 /// # Errors
-/// [`ServeError::Auth`] on bad auth config; [`ServeError::Io`] on bind/serve failure.
+/// [`ServeError::Auth`] on bad auth config; [`ServeError::Tls`] on unusable
+/// `[server.tls]` material; [`ServeError::Io`] on bind/serve failure.
 pub async fn serve_with(
     config: AppConfig,
     backend: Arc<FerroEhrService>,
@@ -126,23 +131,23 @@ pub fn build_full(
     authz: Option<Arc<AuthzHandle>>,
     observability: Observability,
 ) -> Result<axum::Router, ServeError> {
-    let authenticator = build_authenticator(&config, authz.as_deref())?;
+    let authenticator = build_authenticator(&config)?;
     let state = AppState::with_parts(config, backend, authz, observability);
     Ok(router(state, authenticator))
 }
 
-/// Build the [`Authenticator`], threading the RBAC role-claim paths from the
-/// authorization handle (default paths when none is wired) so Bearer role
-/// extraction matches the gate's configuration.
-fn build_authenticator(
-    config: &AppConfig,
-    authz: Option<&AuthzHandle>,
-) -> Result<Arc<Authenticator>, ServeError> {
-    let role_claims = authz.map_or_else(
-        || ferroehr::config::authz::RbacConfig::default().role_claims,
-        AuthzHandle::role_claims,
-    );
-    Authenticator::with_role_claims(config.auth.clone(), role_claims).map_err(ServeError::Auth)
+/// Builds the [`Authenticator`] with the configured role-claim paths.
+///
+/// The paths are `[authz.rbac] role_claims` as lifted into
+/// [`AppConfig::role_claims`], whether or not an authorization gate is wired,
+/// so Bearer role extraction never falls back to the defaults behind the
+/// operator's back.
+///
+/// # Errors
+/// [`ServeError::Auth`] if the OIDC key material/algorithms are invalid.
+fn build_authenticator(config: &AppConfig) -> Result<Arc<Authenticator>, ServeError> {
+    Authenticator::with_role_claims(config.auth.clone(), config.role_claims.clone())
+        .map_err(ServeError::Auth)
 }
 
 /// Builds and serves the application with full observability.
@@ -153,14 +158,15 @@ fn build_authenticator(
 /// listeners. ATNA auditing lives in the backend's SM `SystemLog` component.
 ///
 /// # Errors
-/// [`ServeError::Auth`] on bad auth config; [`ServeError::Io`] on bind/serve failure.
+/// [`ServeError::Auth`] on bad auth config; [`ServeError::Tls`] on unusable
+/// `[server.tls]` material; [`ServeError::Io`] on bind/serve failure.
 pub async fn serve_full(
     config: AppConfig,
     backend: Arc<FerroEhrService>,
     authz: Option<Arc<AuthzHandle>>,
     observability: Observability,
 ) -> Result<(), ServeError> {
-    let authenticator = build_authenticator(&config, authz.as_deref())?;
+    let authenticator = build_authenticator(&config)?;
     let bind = config.server.bind.clone();
     let tls = config.server.tls.clone();
     let connection = config.server.connection;
@@ -200,6 +206,8 @@ pub async fn serve_full(
 /// Plain HTTP, or native TLS with optional client-certificate verification when
 /// `[server.tls]` is enabled — the IHE ATNA ITI-19 node-authentication posture,
 /// with a TLS 1.3 floor unless `min_version = "1.2"` admits 1.2 alongside.
+/// Under TLS, the certificate and key are re-read every
+/// `reload_interval_secs` while the listener runs ([`tls::CertificateReloader`]).
 async fn run_server(
     app: axum::Router,
     bind: &str,
@@ -217,7 +225,7 @@ async fn run_server(
     >(app);
 
     if tls.enabled {
-        let rustls_config = tls_server_config(tls).map_err(ServeError::Io)?;
+        let server_tls = tls::server_tls(tls)?;
         let addr: SocketAddr = bind.parse().map_err(|e| {
             ServeError::Io(std::io::Error::new(std::io::ErrorKind::InvalidInput, e))
         })?;
@@ -229,9 +237,12 @@ async fn run_server(
             signal_handle.graceful_shutdown(Some(std::time::Duration::from_secs(10)));
         });
         tracing::info!(%bind, client_auth = ?tls.client_auth, "ferroehr-rest listening (TLS)");
+        let watcher = tls
+            .reload_interval()
+            .map(|interval| tokio::spawn(Arc::clone(&server_tls.certificate).watch(interval)));
         let mut server = axum_server::bind_rustls(
             addr,
-            axum_server::tls_rustls::RustlsConfig::from_config(rustls_config),
+            axum_server::tls_rustls::RustlsConfig::from_config(server_tls.config),
         )
         .handle(handle);
         // The connection-level bound, applied where hyper actually enforces it.
@@ -239,7 +250,11 @@ async fn run_server(
         // so this is the only place a connection that never finishes writing one
         // can be reclaimed.
         bound_connections(server.http_builder(), connection);
-        server.serve(make).await?;
+        let outcome = server.serve(make).await;
+        if let Some(watcher) = watcher {
+            watcher.abort();
+        }
+        outcome?;
         return Ok(());
     }
 
@@ -322,84 +337,6 @@ impl<S> axum_server::accept::Accept<tokio::net::TcpStream, S> for NoDelayAccepto
     }
 }
 
-/// Builds the rustls server config for `[server.tls]`.
-///
-/// Assembles the certificate chain and key, and — when `client_auth` is not
-/// `off` — a client-certificate verifier against the explicit `client_ca_file`
-/// trust anchor, never the web PKI.
-///
-/// # Errors
-/// [`std::io::Error`] when required key material is missing/unreadable or a
-/// PEM/verifier component is invalid.
-pub fn tls_server_config(
-    tls: &ferroehr::config::server::TlsConfig,
-) -> Result<Arc<rustls::ServerConfig>, std::io::Error> {
-    use rustls::pki_types::pem::PemObject;
-
-    use ferroehr::config::server::ClientAuth;
-    use ferroehr::config::server::TlsVersion;
-
-    fn required<'a>(value: Option<&'a String>, key: &str) -> Result<&'a str, std::io::Error> {
-        value.map(String::as_str).ok_or_else(|| {
-            std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                format!("server.tls.{key} is required when TLS is enabled"),
-            )
-        })
-    }
-    fn invalid(e: impl std::fmt::Display) -> std::io::Error {
-        std::io::Error::new(std::io::ErrorKind::InvalidInput, e.to_string())
-    }
-
-    let cert_pem = std::fs::read(required(tls.cert_file.as_ref(), "cert_file")?)?;
-    let key_pem = std::fs::read(required(tls.key_file.as_ref(), "key_file")?)?;
-    let certs = rustls::pki_types::CertificateDer::pem_slice_iter(&cert_pem)
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(invalid)?;
-    if certs.is_empty() {
-        return Err(invalid("server.tls.cert_file contains no certificate"));
-    }
-    let key = rustls::pki_types::PrivateKeyDer::from_pem_slice(&key_pem).map_err(invalid)?;
-
-    let provider = Arc::new(rustls::crypto::aws_lc_rs::default_provider());
-    // NOTE: 1.3-only by default — OWASP Transport Layer Security §Only Support
-    // Strong Protocols; 1.1/1.0 are unreachable by construction (RFC 8996).
-    let versions: &[&rustls::SupportedProtocolVersion] = match tls.min_version {
-        TlsVersion::V1_3 => &[&rustls::version::TLS13],
-        TlsVersion::V1_2 => &[&rustls::version::TLS13, &rustls::version::TLS12],
-    };
-    let builder = rustls::ServerConfig::builder_with_provider(Arc::clone(&provider))
-        .with_protocol_versions(versions)
-        .map_err(invalid)?;
-
-    let builder = match tls.client_auth {
-        ClientAuth::Off => builder.with_no_client_auth(),
-        ClientAuth::Optional | ClientAuth::Required => {
-            let ca_pem = std::fs::read(required(tls.client_ca_file.as_ref(), "client_ca_file")?)?;
-            let mut roots = rustls::RootCertStore::empty();
-            for cert in rustls::pki_types::CertificateDer::pem_slice_iter(&ca_pem) {
-                roots.add(cert.map_err(invalid)?).map_err(invalid)?;
-            }
-            if roots.is_empty() {
-                return Err(invalid("server.tls.client_ca_file contains no certificate"));
-            }
-            let verifier = rustls::server::WebPkiClientVerifier::builder_with_provider(
-                roots.into(),
-                Arc::clone(&provider),
-            );
-            let verifier = if tls.client_auth == ClientAuth::Optional {
-                verifier.allow_unauthenticated()
-            } else {
-                verifier
-            };
-            builder.with_client_cert_verifier(verifier.build().map_err(invalid)?)
-        }
-    };
-
-    let config = builder.with_single_cert(certs, key).map_err(invalid)?;
-    Ok(Arc::new(config))
-}
-
 /// Resolve when the process receives `SIGINT` (Ctrl-C) or, on Unix, `SIGTERM`.
 async fn shutdown_signal() {
     let ctrl_c = async {
@@ -424,4 +361,68 @@ async fn shutdown_signal() {
         () = terminate => {},
     }
     tracing::info!("shutdown signal received");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ferroehr::config::auth::{AuthConfig, OidcConfig};
+    use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
+
+    const SECRET: &str = "role-claims-secret";
+
+    /// The claim set the test token carries, roles under a custom path.
+    #[derive(serde::Serialize)]
+    struct Claims {
+        sub: &'static str,
+        iss: &'static str,
+        aud: &'static str,
+        exp: i64,
+        app_roles: [&'static str; 1],
+    }
+
+    /// The configured `[authz.rbac] role_claims` reach the authenticator with
+    /// no authorization handle wired (RBAC, ABAC and the per-EHR default all
+    /// off), so a role under a custom claim path is extracted.
+    #[tokio::test]
+    async fn configured_role_claims_apply_without_an_authz_handle() {
+        let config = AppConfig {
+            auth: AuthConfig {
+                enabled: true,
+                basic: None,
+                oidc: Some(OidcConfig {
+                    issuer: "https://issuer.example".to_owned(),
+                    audiences: vec!["ferroehr".to_owned()],
+                    algorithms: vec!["HS256".to_owned()],
+                    hmac_secret: Some(ferroehr::config::secret::Secret::new(SECRET.to_owned())),
+                    jwks_json: None,
+                    ..OidcConfig::default()
+                }),
+                ..AuthConfig::default()
+            },
+            role_claims: vec!["app_roles".to_owned()],
+            ..AppConfig::default()
+        };
+        let authenticator = build_authenticator(&config).expect("authenticator");
+        let exp = jiff::Timestamp::now().as_second() + 3600;
+        let token = encode(
+            &Header::new(Algorithm::HS256),
+            &Claims {
+                sub: "alice",
+                iss: "https://issuer.example",
+                aud: "ferroehr",
+                exp,
+                app_roles: ["CLINICIAN"],
+            },
+            &EncodingKey::from_secret(SECRET.as_bytes()),
+        )
+        .expect("encode");
+        let mut headers = http::HeaderMap::new();
+        headers.insert(
+            http::header::AUTHORIZATION,
+            http::HeaderValue::from_str(&format!("Bearer {token}")).expect("header"),
+        );
+        let authenticated = authenticator.authenticate(&headers).await.expect("valid");
+        assert_eq!(authenticated.principal.roles, vec!["CLINICIAN".to_owned()]);
+    }
 }

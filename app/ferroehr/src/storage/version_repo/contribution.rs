@@ -17,6 +17,7 @@ use serde_json::Value;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::storage::error::StorageError;
 
@@ -58,7 +59,7 @@ pub async fn contribution_audit(
     )
     .bind(contribution_id)
     .bind(ehr_id)
-    .fetch_optional(pool)
+    .fetch_optional(&mut *acquire(pool).await?)
     .await?
     else {
         return Ok(None);
@@ -100,7 +101,7 @@ pub async fn contribution_version_refs(
          ORDER BY vo_id",
     )
     .bind(contribution_id)
-    .fetch_all(pool)
+    .fetch_all(&mut *acquire(pool).await?)
     .await?;
     rows.iter()
         .map(|row| {
@@ -162,7 +163,7 @@ pub async fn list_contribution_summaries(
     .bind(ehr_id)
     .bind(offset)
     .bind(limit)
-    .fetch_all(pool)
+    .fetch_all(&mut *acquire(pool).await?)
     .await?;
     rows.iter()
         .map(|row| {
@@ -206,7 +207,7 @@ pub async fn list_contributions(
     .bind(upper.map(|t| t.to_string()))
     .bind(offset)
     .bind(limit)
-    .fetch_all(pool)
+    .fetch_all(&mut *acquire(pool).await?)
     .await?;
     rows.iter().map(|row| Ok(row.try_get("id")?)).collect()
 }
@@ -231,7 +232,7 @@ pub async fn count_contributions(
     .bind(ehr_id)
     .bind(lower.map(|t| t.to_string()))
     .bind(upper.map(|t| t.to_string()))
-    .fetch_one(pool)
+    .fetch_one(&mut *acquire(pool).await?)
     .await?)
 }
 
@@ -244,7 +245,7 @@ pub async fn ehr_contribution_count(pool: &PgPool, ehr_id: EhrId) -> Result<i64,
     Ok(
         sqlx::query_scalar("SELECT count(*) FROM contribution WHERE ehr_id = $1")
             .bind(ehr_id)
-            .fetch_one(pool)
+            .fetch_one(&mut *acquire(pool).await?)
             .await?,
     )
 }

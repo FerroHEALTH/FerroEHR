@@ -49,9 +49,9 @@ use crate::components::surface::titled_card;
 use crate::components::toast::toast_success;
 use crate::error::ViewerError;
 use crate::management::{
-    BuildInfoView, LoggerView, MetricDetailView, MetricTile, ReadinessView, fetch_build_info,
-    fetch_headline_metrics, fetch_loggers, fetch_metric_detail, fetch_metric_names,
-    fetch_readiness, reset_log_filter, set_log_filter,
+    BuildInfoView, InfoSection, LoggerView, MetricDetailView, MetricTile, ReadinessView,
+    fetch_build_info, fetch_headline_metrics, fetch_loggers, fetch_metric_detail,
+    fetch_metric_names, fetch_readiness, reset_log_filter, set_log_filter,
 };
 
 /// The log-filter apply action: the filter it was dispatched with, paired with
@@ -258,8 +258,9 @@ fn readiness_body(view: ReadinessView) -> AnyView {
 
 // ── Build + spec provenance ─────────────────────────────────────────────────
 
-/// The build-info card: `GET /management/info` (version, git commit, `rustc`,
-/// and the pinned openEHR specification versions).
+/// Renders the build-info card: `GET /management/info` (version, git commit,
+/// `rustc`, and each nested object such as the specification pins and the
+/// manufacturer).
 fn build_info_card() -> AnyView {
     let resource = Resource::new(|| (), |()| async move { fetch_build_info().await });
     let body = view! {
@@ -279,34 +280,54 @@ fn build_info_card() -> AnyView {
     titled_card("Build & spec provenance", false, body)
 }
 
-/// Render the build facts and, under their own heading, the pinned
-/// specification versions.
-fn build_info_body(view: BuildInfoView) -> AnyView {
-    let definition_list = |rows: Vec<(String, String)>| {
-        rows.into_iter()
-            .map(|(key, value)| {
+/// Renders a `(key, text)` list as the rows of a definition list, keyed by
+/// the member name (unique within one JSON object).
+fn definition_rows(rows: Vec<(String, String)>) -> AnyView {
+    view! {
+        <For
+            each=move || rows.clone()
+            key=|(key, _)| key.clone()
+            children=|(key, value)| {
                 view! {
                     <dt class="font-medium text-ink-muted">{key}</dt>
                     <dd class="font-mono break-all text-ink">{value}</dd>
                 }
-            })
-            .collect_view()
-            .into_any()
-    };
-    let facts = definition_list(view.facts);
-    let spec = (!view.spec.is_empty()).then(|| {
-        let rows = definition_list(view.spec);
-        view! {
+            }
+        />
+    }
+    .into_any()
+}
+
+/// Renders one nested object of `/management/info` under its own heading,
+/// marked `data-info-section` with its member name.
+fn info_section(section: InfoSection) -> AnyView {
+    let title = section.title();
+    let rows = definition_rows(section.rows);
+    view! {
+        <section data-info-section=section.key>
             <h3 class="mt-4 mb-1 text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                "openEHR specification pins"
+                {title}
             </h3>
             <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">{rows}</dl>
-        }
-    });
+        </section>
+    }
+    .into_any()
+}
+
+/// Renders the build facts and, each under its own heading, every nested
+/// object of the body (the specification pins, the manufacturer, the support
+/// statement, …), keyed by member name.
+fn build_info_body(view: BuildInfoView) -> AnyView {
+    let facts = definition_rows(view.facts);
+    let sections = view.sections;
     view! {
         <div id="ops-build-info">
             <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">{facts}</dl>
-            {spec}
+            <For
+                each=move || sections.clone()
+                key=|section| section.key.clone()
+                children=info_section
+            />
         </div>
     }
     .into_any()
@@ -709,5 +730,47 @@ mod tests {
             metric_subtitle("gauge", "requests in flight"),
             "gauge · requests in flight"
         );
+    }
+}
+
+#[cfg(all(test, feature = "ssr"))]
+mod ssr_tests {
+    use super::build_info_body;
+    use crate::management::build_info_view;
+    use crate::manufacturer::MANUFACTURER;
+    use leptos::prelude::*;
+
+    /// The server pass of the build-info card names the manufacturer the CDR
+    /// reports under its own heading, as one `name` row beside the facts and
+    /// the specification pins.
+    #[test]
+    #[expect(
+        clippy::disallowed_types,
+        reason = "the fixture is the CDR's `/management/info` JSON wire, read over ITS-REST \
+                  (#1694)"
+    )]
+    fn the_build_info_card_renders_the_manufacturer_row() {
+        let body = serde_json::json!({
+            "version": "4.3.6",
+            "manufacturer": serde_json::to_value(MANUFACTURER)
+                .expect("the manufacturer serializes"),
+            "spec": {"rm": "1.2.0"}
+        });
+        let owner = Owner::new();
+        let html = owner.with(|| build_info_body(build_info_view(&body)).to_html());
+        let (_, section) = html
+            .split_once("data-info-section=\"manufacturer\"")
+            .expect("the manufacturer section is rendered");
+        let section = section.split("</section>").next().unwrap_or_default();
+        assert!(section.contains(">Manufacturer</h3>"), "{section}");
+        // The `name` term's own description is the manufacturer's name.
+        let (_, after_name) = section
+            .split_once(">name</dt>")
+            .expect("the manufacturer section has a name row");
+        let name_value = after_name.split("</dd>").next().unwrap_or_default();
+        assert!(name_value.contains(">Cadasto B.V."), "{name_value}");
+        assert!(section.contains(MANUFACTURER.email), "{section}");
+        assert!(html.contains("data-info-section=\"spec\""), "{html}");
+        assert!(html.contains(">openEHR specification pins</h3>"), "{html}");
     }
 }

@@ -122,8 +122,12 @@ fn clearing_the_stub_reintroduces_the_rejected_placeholder() {
     let mut wt = web_template("../../../openehr-its/tests/fixtures/sdk/ips.v0.opt");
     // Simulate the pre-fix builder: drop the structural stubs (the constrained
     // identity is lost) but keep the closed-archetype constraint that admits only
-    // at0017.
-    edit_tree(&mut wt.tree, &|n| n.structural_stubs.clear());
+    // at0017. The existence constraints go too, so the example walk does not
+    // reach `description` through its optional item and the build's fallback runs.
+    edit_tree(&mut wt.tree, &|n| {
+        n.structural_stubs.clear();
+        n.existence.clear();
+    });
 
     let comp = example_composition(&wt, DetailLevel::Required);
     let mut found = Vec::new();
@@ -153,6 +157,7 @@ fn unconstrained_structural_attribute_keeps_the_any_placeholder() {
     edit_tree(&mut wt.tree, &|n| {
         n.structural_stubs.clear();
         n.closed_attributes.clear();
+        n.existence.clear();
     });
 
     let comp = example_composition(&wt, DetailLevel::Required);

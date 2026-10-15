@@ -60,14 +60,17 @@ impl Namespace {
 /// Errors from canonical-XML (de)serialization.
 #[derive(Debug, thiserror::Error)]
 pub enum XmlError {
-    /// The `quick-xml` writer rejected an event.
-    #[error("xml write error: {0}")]
+    /// The `quick-xml` writer rejected an event; its error is the whole
+    /// message.
+    #[error(transparent)]
     Write(#[from] quick_xml::Error),
-    /// The underlying byte sink or source failed.
-    #[error("xml io error: {0}")]
+    /// The underlying byte sink or source failed; its error is the whole
+    /// message.
+    #[error(transparent)]
     Io(#[from] std::io::Error),
-    /// The written bytes were not valid UTF-8.
-    #[error("xml output was not valid utf-8: {0}")]
+    /// The written bytes were not valid UTF-8; the decoder's error is the
+    /// whole message.
+    #[error(transparent)]
     Utf8(#[from] std::string::FromUtf8Error),
     /// The input was not well-formed, or did not match the expected canonical
     /// shape. Carries the diagnosis and nothing beneath it: a shape violation
@@ -679,7 +682,7 @@ impl std::fmt::Display for Location {
 ///
 /// One absent element has such a fix: the `<value>` of a `DV_CODED_TEXT` under
 /// a `<symbol>`. The ITS-XML profile schema types `C_DV_ORDINAL.list` as the RM
-/// `DV_ORDINAL` (`components/AM/Release-1.4/OpenehrProfile.xsd`), whose `symbol`
+/// `DV_ORDINAL` (`its-xml-2.0.0-nsv2/AM/Release-1.4/OpenehrProfile.xsd`), whose `symbol`
 /// is a `DV_CODED_TEXT` with a mandatory `value`, so a symbol without the
 /// element is not a document the format admits. The value itself carries
 /// nothing: AOM 1.4 models the symbol as a `CODE_PHRASE` and the rubric is

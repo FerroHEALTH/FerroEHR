@@ -30,8 +30,9 @@ use crate::aql;
 use crate::aql::error::{AqlError, ExecError};
 use crate::aql::ir::{Params, QueryIr};
 use crate::aql::sql::SqlCtx;
+use crate::db::acquire::acquire;
 use crate::service::FerroEhrService;
-use crate::service::error::internal_fault;
+use crate::service::error::{ErrorChain, internal_fault_caused};
 use crate::service::query::request::{AqlQueryRequest, QueryOutcome};
 use crate::service::status::{QUERY_TIMEOUT_TAG, SmError};
 use crate::system_log::categories::{AccessedContent, ContentIds};
@@ -156,7 +157,12 @@ impl FerroEhrService {
         let ctx = SqlCtx {
             system_id: self.effective_system_id(),
             ehr_ids,
-            subject_scope: request.subject_scope.clone(),
+            subject_scope: request.subject_scope.clone().map(|id| {
+                aql::sql::subject::SubjectScope {
+                    id,
+                    namespace: request.subject_namespace.clone(),
+                }
+            }),
             ehr_access: request.ehr_access.clone(),
             limit,
             offset,
@@ -216,6 +222,7 @@ impl FerroEhrService {
         if let Some(scope) = scope {
             outcome.ehr_ids = scope.ehr_ids;
             outcome.template_ids = scope.template_ids;
+            outcome.subjects = scope.subjects;
         }
         Ok(outcome)
     }
@@ -245,7 +252,7 @@ impl FerroEhrService {
         }
         // Miss: full parse → terminology expansion → lowering.
         let mut ast = parse_str(aql).map_err(|e| {
-            let message = format!("invalid AQL: {e}");
+            let message = format!("invalid AQL: {}", ErrorChain::new(&e));
             Failure::analysis(SmError::precondition(message).with_source(e))
         })?;
         // Semantic-analysis pre-pass: resolve every `TERMINOLOGY('expand', …)`
@@ -301,10 +308,14 @@ impl FerroEhrService {
         let present: std::collections::HashSet<Uuid> =
             sqlx::query_scalar::<_, EhrId>("SELECT id FROM ehr WHERE id = ANY($1)")
                 .bind(&ids)
-                .fetch_all(&self.pool)
+                .fetch_all(
+                    &mut *acquire(&self.pool)
+                        .await
+                        .map_err(|e| Failure::analysis(SmError::from(e)))?,
+                )
                 .await
                 .map_err(|e| {
-                    Failure::analysis(internal_fault("resolve the requested ehr_ids", &e))
+                    Failure::analysis(internal_fault_caused("resolve the requested ehr_ids", &e))
                 })?
                 .into_iter()
                 .map(|id| id.0)
@@ -543,7 +554,7 @@ fn map_plan_error(e: AqlError) -> SmError {
 /// schema objects the generated SQL touched, an assembly failure names the
 /// internal node-row shape, and a missing column alias names a generated SQL
 /// alias — server-internal detail that goes to `tracing` instead
-/// ([`internal_fault`]).
+/// ([`internal_fault_caused`]).
 fn map_exec_error(e: AqlError) -> SmError {
     match e {
         // A data-exception the DRIVER raises here is the caller's own binding
@@ -560,23 +571,42 @@ fn map_exec_error(e: AqlError) -> SmError {
             ) =>
         {
             SmError::precondition(
-                "a query parameter value cannot be coerced to the type its                  predicate compares against (an invalid date/time or text                  representation); correct the parameter value",
+                "a query parameter value cannot be coerced to the type its \
+                 predicate compares against (an invalid date/time or text \
+                 representation); correct the parameter value",
             )
             .with_source(db)
         }
+        // No connection could be obtained: no statement ran, so the request can
+        // be repeated (`503` plus `Retry-After`).
+        AqlError::Exec(
+            ExecError::Acquire(e)
+            | ExecError::Assembly(crate::storage::error::StorageError::Acquire(e)),
+        ) => SmError::from(e),
         AqlError::Exec(ExecError::Database(db)) => crate::storage::error::classify_sqlx(&db),
-        AqlError::Exec(ExecError::Assembly(a)) => internal_fault("assemble the RESULT_SET", &a),
+        AqlError::Exec(ExecError::Assembly(a)) => {
+            internal_fault_caused("assemble the RESULT_SET", &a)
+        }
         AqlError::Exec(ExecError::Terminology(msg)) => SmError::exception(msg),
         // The `spec_profile` refusal is already the SM `conflict` the resource
         // reads carry (→ `409`), so it crosses unchanged: same cause, same
         // status, same remedy, whichever route reached the stored body.
         AqlError::Exec(ExecError::Profile(e)) => SmError::from(e),
         AqlError::Exec(e @ ExecError::MissingColumnAlias { .. }) => {
-            internal_fault("bind a RESULT_SET column to its generated SQL alias", &e)
+            internal_fault_caused("bind a RESULT_SET column to its generated SQL alias", &e)
         }
         AqlError::Feature(_) | AqlError::Analysis(_) | AqlError::Sql(_) => {
             SmError::precondition(e.to_string()).with_source(e)
         }
+    }
+}
+
+impl From<AqlError> for SmError {
+    /// Bridges an AQL-engine failure to the SM call-status model as a query
+    /// execution reports it (`map_exec_error`): a connection that cannot be
+    /// obtained is `service_overloaded` (`503` plus `Retry-After`).
+    fn from(e: AqlError) -> Self {
+        map_exec_error(e)
     }
 }
 
@@ -613,5 +643,67 @@ mod tests {
             !fault.message.contains("RowNotFound"),
             "the driver diagnostic never reaches the wire body, got {fault:?}"
         );
+    }
+
+    /// A closed pool: every acquire on it fails before any statement runs.
+    async fn closed_pool() -> sqlx::PgPool {
+        let options = sqlx::postgres::PgConnectOptions::new()
+            .host("ferroehr-acquire-test.invalid")
+            .username("nobody")
+            .database("nothing");
+        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy_with(options);
+        pool.close().await;
+        pool
+    }
+
+    /// An AQL execution that cannot obtain a connection fails in the acquire
+    /// phase and answers `service_overloaded` (→ `503` plus `Retry-After`): no
+    /// statement ran, so the request can be repeated.
+    #[tokio::test]
+    async fn an_acquire_failure_on_execution_answers_503() {
+        let ast = super::parse_str("SELECT e/ehr_id/value FROM EHR e").expect("the query parses");
+        let params = crate::aql::ir::Params::new();
+        let profile = crate::config::profile::SpecProfile::default();
+        let ir = crate::aql::plan(&ast, &params, profile).expect("the query plans");
+        let ctx = crate::aql::sql::SqlCtx {
+            system_id: "sys.example.com".to_owned(),
+            ehr_ids: Vec::new(),
+            subject_scope: None,
+            ehr_access: crate::aql::sql::EhrAccessScope::Unrestricted,
+            limit: None,
+            offset: None,
+            archetype_lineage: std::sync::Arc::new(crate::aql::lineage::ArchetypeLineage::default()),
+        };
+        let pool = closed_pool().await;
+        let failure = crate::aql::exec::execute(&pool, &ir, &params, &ctx, profile)
+            .await
+            .expect_err("a closed pool yields no connection");
+        assert!(
+            matches!(failure, AqlError::Exec(ExecError::Acquire(_))),
+            "the failure carries the acquire phase, got {failure:?}"
+        );
+        assert_eq!(
+            map_exec_error(failure).status,
+            CallStatusType::ServiceOverloaded
+        );
+        let collected = crate::aql::exec::collect_scope(&pool, &ir, &params, &ctx)
+            .await
+            .expect_err("the scope collection acquires too");
+        assert!(
+            matches!(collected, AqlError::Exec(ExecError::Acquire(_))),
+            "got {collected:?}"
+        );
+    }
+
+    /// A node-codec read that cannot obtain a connection answers `503` too.
+    #[tokio::test]
+    async fn an_acquire_failure_while_assembling_answers_503() {
+        let failure = crate::db::acquire::acquire(&closed_pool().await)
+            .await
+            .expect_err("a closed pool yields no connection");
+        let sm = map_exec_error(AqlError::Exec(ExecError::Assembly(
+            crate::storage::error::StorageError::Acquire(failure),
+        )));
+        assert_eq!(sm.status, CallStatusType::ServiceOverloaded);
     }
 }

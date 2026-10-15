@@ -146,6 +146,14 @@
             "url": {
               "description": "Inline DSN (dev/test only). Ignored when existingSecret is set.",
               "type": "string"
+            },
+            "migrateExistingSecret": {
+              "description": "A Secret holding the DSN of the credential that PREPARES the database the clinical domain lives in, when that is not the database database.migrateExistingSecret reaches. Mounted into the migration Job and the server as storage.migrate.clinical.url; the Job applies the schema there and the server verifies it there.",
+              "type": "string"
+            },
+            "migrateExistingSecretKey": {
+              "description": "A key name INSIDE migrateExistingSecret; the chart mounts that key as a file and passes only its path.",
+              "type": "string"
             }
           }
         },
@@ -163,6 +171,14 @@
             },
             "url": {
               "description": "Inline DSN (dev/test only). Ignored when existingSecret is set.",
+              "type": "string"
+            },
+            "migrateExistingSecret": {
+              "description": "A Secret holding the DSN of the credential that PREPARES the database the party domain lives in, when that is not the database database.migrateExistingSecret reaches. Mounted into the migration Job and the server as storage.migrate.party.url; the Job applies the schema there and the server verifies it there.",
+              "type": "string"
+            },
+            "migrateExistingSecretKey": {
+              "description": "A key name INSIDE migrateExistingSecret; the chart mounts that key as a file and passes only its path.",
               "type": "string"
             }
           }
@@ -182,6 +198,14 @@
             "url": {
               "description": "Inline DSN (dev/test only). Ignored when existingSecret is set.",
               "type": "string"
+            },
+            "migrateExistingSecret": {
+              "description": "A Secret holding the DSN of the credential that PREPARES the database the linkage domain lives in, when that is not the database database.migrateExistingSecret reaches. Mounted into the migration Job and the server as storage.migrate.linkage.url; the Job applies the schema there and the server verifies it there.",
+              "type": "string"
+            },
+            "migrateExistingSecretKey": {
+              "description": "A key name INSIDE migrateExistingSecret; the chart mounts that key as a file and passes only its path.",
+              "type": "string"
             }
           }
         },
@@ -199,6 +223,14 @@
             },
             "url": {
               "description": "Inline DSN (dev/test only). Ignored when existingSecret is set.",
+              "type": "string"
+            },
+            "migrateExistingSecret": {
+              "description": "A Secret holding the DSN of the credential that PREPARES the database the audit domain lives in, when that is not the database database.migrateExistingSecret reaches. Mounted into the migration Job and the server as storage.migrate.audit.url; the Job applies the schema there and the server verifies it there.",
+              "type": "string"
+            },
+            "migrateExistingSecretKey": {
+              "description": "A key name INSIDE migrateExistingSecret; the chart mounts that key as a file and passes only its path.",
               "type": "string"
             }
           }
@@ -740,6 +772,22 @@
             "PreferSameNode"
           ],
           "description": "Service topology preference (KEP-4444, stable v1.33). Empty omits the field, leaving cluster-wide spreading."
+        },
+        "tls": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "The trust the in-chart clients (viewer, FerroBRIDGE, the ServiceMonitor scrape) place in the server's own TLS listener; read only while config.server.tls.enabled is true.",
+          "properties": {
+            "caExistingSecret": {
+              "type": "string",
+              "description": "An existing Secret holding the PEM CA that signed the server's certificate."
+            },
+            "caExistingSecretKey": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The key in caExistingSecret holding the CA."
+            }
+          }
         }
       }
     },
@@ -809,6 +857,13 @@
                 }
               }
             }
+          }
+        },
+        "backendTlsAnnotations": {
+          "description": "Annotations added to the Ingress only while config.server.tls.enabled is true, naming how the controller reaches an HTTPS backend (controller-specific). Required when both are on.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
           }
         }
       }

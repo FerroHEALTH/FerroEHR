@@ -17,6 +17,7 @@
               fragment the seam produced once; stored-content serving"
 )]
 
+use crate::db::acquire::acquire;
 use crate::ids::EhrId;
 use crate::service::ehr::handle::EhrSummary;
 use crate::service::ehr_index::types::SubjectRef;
@@ -28,6 +29,7 @@ use crate::system_log::event::{
 use openehr_base::prelude::{ArchetypeId, HierObjectId, ObjectId, ObjectRef, ObjectRefData};
 use openehr_rm::prelude::{Archetyped, DvText, DvTextData, Ehr, EhrStatus, PartySelf};
 use serde_json::Value;
+use sqlx::Connection as _;
 use uuid::Uuid;
 
 use crate::service::FerroEhrService;
@@ -91,7 +93,8 @@ impl FerroEhrService {
             None => self.audit(change_type::CREATION, "EHR creation"),
         };
 
-        let mut tx = self.pool.begin().await?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
 
         // EHR.system_id is recorded at creation and immutable thereafter (arch
         // master06 §System Identity — a stored value, not the live config); the
@@ -249,8 +252,12 @@ impl FerroEhrService {
         subject_id: &str,
         namespace: &str,
     ) -> Result<ServiceResponse, ServiceError> {
-        let found =
-            crate::storage::ehr_repo::ehr_id_by_subject(&self.pool, subject_id, namespace).await?;
+        let found = crate::storage::ehr_repo::ehr_id_by_subject(
+            &mut *acquire(&self.pool).await?,
+            subject_id,
+            namespace,
+        )
+        .await?;
         self.emit_subject_resolution(namespace, found)?;
         let ehr_id = found.ok_or_else(|| {
             ServiceError::sm(

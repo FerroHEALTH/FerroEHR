@@ -19,7 +19,9 @@ pub(crate) mod overrides;
 
 use crate::analyze::Model;
 use crate::load::bmm::{BmmClass, BmmEnumeration, BmmPropKind, BmmSchema, BmmType};
-use crate::plan::overrides::{back_reference, cardinality_contradicted, field_default, primitive};
+use crate::plan::overrides::{
+    back_reference, cardinality_contradicted, existence_contradicted, field_default, primitive,
+};
 use crate::render::naming;
 use std::collections::BTreeSet;
 
@@ -136,9 +138,10 @@ pub(crate) struct XmlField {
     /// name (`V`); `None` otherwise. `Some("String")` is serialized inline as the
     /// openEHR `StringDictionaryItem` shape.
     pub map_value: Option<String>,
-    /// A mandatory field archie omits at its default (the `Interval` inclusivity/
-    /// boundedness flags): the Rust default expression (`true`/`false`) to use on
-    /// deserialization when the element is absent. `None` = genuinely required.
+    /// The field's default expression ([`field_default`]); the reader uses it
+    /// for a mandatory field whose element is absent (the `Interval`
+    /// inclusivity/boundedness flags archie omits). An enumeration constant is
+    /// a `@SPEC::Variant` marker resolved by the emitter. `None` = no default.
     pub default: Option<String>,
 }
 
@@ -203,10 +206,11 @@ pub(crate) struct JsonField {
     pub wire_name: String,
     pub rust_name: String,
     pub kind: JsonFieldKind,
-    /// A literal default (`"true"`/`"false"`) for a mandatory (`Plain`) field the
-    /// wire may omit — the `Interval` `*_included`/`*_unbounded` flags. When set,
-    /// a missing field deserializes to this default instead of erroring, matching
-    /// the retired derive's `#[openehr(default = "…")]`.
+    /// The field's default expression ([`field_default`]); for a mandatory
+    /// (`Plain`) field the wire may omit (the `Interval` `*_included`/
+    /// `*_unbounded` flags) a missing key deserializes to it instead of
+    /// erroring. An enumeration constant is a `@SPEC::Variant` marker resolved
+    /// by the emitter. `None` = no default.
     pub default: Option<String>,
 }
 
@@ -216,7 +220,10 @@ pub(crate) struct JsonField {
 pub(crate) enum JsonFieldKind {
     /// `Option<T>` — omitted when `None`.
     Optional,
-    /// `Vec<T>` (a mandatory container) — omitted when empty.
+    /// `Vec<T>` (a mandatory container), or the `BTreeMap` of a mandatory
+    /// `Hash` under an adjudicated existence contradiction
+    /// ([`crate::plan::overrides::existence_contradicted`]) — read as empty when
+    /// absent, omitted when empty.
     Container,
     /// `NonEmptyVec<T>` (a mandatory `1..*` container) — always present, and
     /// read through the type's own fallible constructor, so an absent or empty
@@ -321,6 +328,11 @@ impl Model {
                         (true, false) => JsonFieldKind::Container,
                         (false, _) => JsonFieldKind::OptionalContainer,
                     }
+                } else if p.is_mandatory && existence_contradicted(&rp.owner, &p.name) {
+                    // A `1..1` `Hash` whose existence the syntax chapter
+                    // contradicts takes the mandatory-container door: absent
+                    // reads as empty, empty is omitted on write.
+                    JsonFieldKind::Container
                 } else if p.is_mandatory {
                     JsonFieldKind::Plain
                 } else {
@@ -330,7 +342,7 @@ impl Model {
                     wire_name: p.name.clone(),
                     rust_name: naming::field_ident(&p.name),
                     kind,
-                    default: field_default(&rp.owner, p),
+                    default: field_default(&rp.owner, p, |name| self.get(name)),
                 }
             })
             .collect()
@@ -506,7 +518,7 @@ impl Model {
                                     }))),
                     target,
                     map_value,
-                    default: field_default(&rp.owner, p),
+                    default: field_default(&rp.owner, p, |name| self.get(name)),
                 }
             })
             .collect()

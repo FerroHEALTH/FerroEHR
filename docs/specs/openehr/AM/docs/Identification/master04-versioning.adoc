@@ -92,7 +92,7 @@ Consider first the paths. An archetype path is a formal path through a hierarchi
 * the order and naming of nodes down the hierarchy is determined by the RM;
 * the type of every object is determined by the RM;
 
-Further, each node is made unique by the use of archetype at-codes (id-codes) (in ADL 1.4 at-codes) which distinguish sibling child objects under any attribute node. Where there are siblings (there need not always be), these codes must be defined in the archetype terminology by domain semantic definitions (e.g. 'serum sodium', 'O2 saturation level').
+Further, each node is made unique by the use of archetype at-codes (id-codes) which distinguish sibling child objects under any attribute node. Where there are siblings (there need not always be), these codes must be defined in the archetype terminology by domain semantic definitions (e.g. 'serum sodium', 'O2 saturation level').
 
 Typical archetype paths look as follows:
 

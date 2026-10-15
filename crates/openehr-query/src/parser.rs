@@ -67,10 +67,12 @@ impl std::fmt::Display for SyntaxFault {
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
 pub enum ParseError {
     /// The source did not tokenize.
-    // NOTE: `#[error("{0}")]` and not `transparent`, which forwards `source()`
-    // to the inner error and so erases the lex error from the cause chain
-    // (<https://docs.rs/thiserror/latest/thiserror/derive.Error.html>).
-    #[error("{0}")]
+    ///
+    /// The message names the pass; the lexer's located diagnostic is the
+    /// [`std::error::Error::source`], so a caller that shows the failure to a
+    /// person renders the cause chain, and a chain printer reads the
+    /// diagnostic once.
+    #[error("the query could not be tokenised")]
     Lex(#[from] crate::lexer::LexError),
     /// The tokens did not match the grammar.
     #[error("{}", faults.iter().map(ToString::to_string).collect::<Vec<_>>().join("; "))]

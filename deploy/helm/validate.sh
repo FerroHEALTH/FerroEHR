@@ -97,6 +97,7 @@ declare -a CASES=(
   "terminology:${CI_DIR}/terminology-values.yaml"
   "bridge:${CI_DIR}/bridge-values.yaml"
   "audit-categories:${CI_DIR}/audit-categories-values.yaml"
+  "server-tls:${CI_DIR}/server-tls-values.yaml"
   # The user-facing production overlay ships INSIDE the chart (#3678), so it is
   # rendered from there rather than from a ci/ copy that could drift from it.
   "production:${CHART_DIR}/values-production.yaml"
@@ -567,9 +568,12 @@ refusal_registry_gate() {
   local basic="${CI_DIR}/basic-auth-values.yaml"
   local viewer="${CI_DIR}/viewer-values.yaml"
   local bridge="${CI_DIR}/bridge-values.yaml"
+  local tls="${CI_DIR}/server-tls-values.yaml"
   local -a registry=(
     "deployment.yaml|no authentication mechanism is configured|${base}|--set config.auth.oidc.issuer=null|config.auth.basic.users;config.auth.oidc.issuer"
     "migration-job.yaml|requires migrations.job.existingSecret|${base}|--set migrations.job.enabled=true|migrations.job.existingSecret"
+    "deployment.yaml|server.tls.client_auth is|${tls}|--set config.server.tls.client_auth=required|config.server.tls.client_auth;optional"
+    "ingress.yaml|ingress.backendTlsAnnotations is empty|${tls}|--set ingress.backendTlsAnnotations=null|ingress.backendTlsAnnotations;nginx.ingress.kubernetes.io/backend-protocol"
     "hpa.yaml|with every target utilisation at 0|${base}|--set autoscaling.enabled=true --set autoscaling.targetCPUUtilizationPercentage=0 --set autoscaling.targetMemoryUtilizationPercentage=0|autoscaling.targetCPUUtilizationPercentage;autoscaling.targetMemoryUtilizationPercentage"
     "_helpers.tpl|multi-tenancy no longer exists|${base}|--set-string config.tenancy.enabled=true|config.tenancy;separate instances"
     "_helpers.tpl|refusing to render a secret into the ConfigMap|${base}|--set-string config.db.url=SENTINEL_PROBE|config.db.url;database.existingSecret"
@@ -593,6 +597,9 @@ refusal_registry_gate() {
     "bridge.yaml|with an empty bridge.cdr.existingSecret|${bridge}|--set bridge.cdr.existingSecret=|bridge.cdr.existingSecret;bearer_token"
     "bridge.yaml|with an empty bridge.mappings.files|${bridge}|--set bridge.mappings.files=null|bridge.mappings.files;..data"
     "bridge.yaml|with an empty bridge.mappings.existingConfigMap|${bridge}|--set bridge.mappings.existingConfigMap=|bridge.mappings.existingConfigMap"
+    "_helpers.tpl|service.tls.caExistingSecret is empty|${bridge}|--set config.server.tls.enabled=true|FerroBRIDGE (bridge.enabled);service.tls.caExistingSecret;DNS SAN"
+    "_helpers.tpl|service.tls.caExistingSecret is empty|${viewer}|--set config.server.tls.enabled=true|the viewer (viewer.enabled);service.tls.caExistingSecret"
+    "_helpers.tpl|service.tls.caExistingSecret is empty|${base}|--set config.server.tls.enabled=true --set metrics.serviceMonitor.enabled=true|the ServiceMonitor scrape;service.tls.caExistingSecret"
     "_helpers.tpl|the chart injects both|${base}|--set-string config.usage_report.deployment=compose|config.usage_report.deployment;usageReport.enabled"
     "networkpolicy.yaml|networkPolicy.ingressAllowAll=false with an empty|${base}|--set networkPolicy.ingressAllowAll=false|networkPolicy.ingressFrom;hardening-network-policy.md"
     "networkpolicy.yaml|with no destination for the database|${base}|--set networkPolicy.egress.enabled=true|networkPolicy.egress.database.to;hardening-network-policy.md"
@@ -996,6 +1003,7 @@ audit|enabled|true
 audit|fail_mode|"closed"
 audit.store|enabled|true
 authz.rbac|ehr_access_default|"restricted"
+authz.rbac|enabled|true
 auth|enabled|true
 server.tls|enabled|
 management|port|
@@ -1006,7 +1014,8 @@ CLAIMS
   ! grep -qE '^ *transport = "udp"' <<<"$toml" \
     || { red "  an audit syslog sink renders transport = \"udp\": audit_syslog_udp would refuse the boot"; missing=1; }
   local file
-  for file in DB__URL_FILE STORAGE__PARTY__URL_FILE STORAGE__LINKAGE__URL_FILE STORAGE__AUDIT__URL_FILE DB__MIGRATE_URL_FILE; do
+  for file in DB__URL_FILE STORAGE__PARTY__URL_FILE STORAGE__LINKAGE__URL_FILE STORAGE__AUDIT__URL_FILE DB__MIGRATE_URL_FILE \
+    STORAGE__MIGRATE__PARTY__URL_FILE STORAGE__MIGRATE__LINKAGE__URL_FILE STORAGE__MIGRATE__AUDIT__URL_FILE; do
     [[ "$(yq -r "select(.kind == \"Deployment\" and .metadata.name == \"${RELEASE_NAME}\") | .spec.template.spec.containers[0].env[] | select(.name == \"FERROEHR__${file}\") | .name" <<<"$rendered")" == "FERROEHR__${file}" ]] \
       || { red "  the Deployment does not carry FERROEHR__${file}: a domain or the migrator shares a credential"; missing=1; }
   done
@@ -1023,6 +1032,153 @@ CLAIMS
   fi
 }
 production_overlay_gate
+
+# ── The migration Job: its account, and every database it must prepare ───────
+# Two claims a golden cannot state. (1) The hook ServiceAccount survives a
+# failed or slow hook: Helm deletes the `hook-succeeded` hooks that ran before a
+# hook that fails (https://helm.sh/docs/topics/charts_hooks/), so the account
+# carries `before-hook-creation` alone, and with serviceAccount.create=false the
+# Job runs under the operator's named account and no hook account renders.
+# (2) Under the production overlay every relocated domain's migrator reaches the
+# Job, which is what prepares that cluster.
+migration_job_gate() {
+  bold "── migration Job: its account and the databases it prepares ─"
+  local values="${CHART_DIR}/values-production.yaml" rendered missing=0 domain
+  rendered="$(helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "$values")"
+  [[ "$(yq -r "select(.kind == \"ServiceAccount\" and .metadata.name == \"${RELEASE_NAME}-migrate\") | .metadata.annotations[\"helm.sh/hook-delete-policy\"]" <<<"$rendered")" == "before-hook-creation" ]] \
+    || { red "  the hook ServiceAccount's delete policy is not before-hook-creation alone: a failed hook would delete it under a running Job"; missing=1; }
+  [[ "$(yq -r 'select(.kind == "Job") | .spec.template.spec.serviceAccountName' <<<"$rendered")" == "${RELEASE_NAME}-migrate" ]] \
+    || { red "  with serviceAccount.create the Job does not run under the hook account"; missing=1; }
+  for domain in PARTY LINKAGE AUDIT; do
+    [[ "$(yq -r "select(.kind == \"Job\") | .spec.template.spec.containers[0].env[] | select(.name == \"FERROEHR__STORAGE__MIGRATE__${domain}__URL_FILE\") | .name" <<<"$rendered")" == "FERROEHR__STORAGE__MIGRATE__${domain}__URL_FILE" ]] \
+      || { red "  the Job lacks FERROEHR__STORAGE__MIGRATE__${domain}__URL_FILE: it cannot prepare that domain's cluster"; missing=1; }
+  done
+  [[ "$(yq -r 'select(.kind == "Job") | .spec.template.spec.volumes[] | select(.name == "migrator-secret") | .projected.sources | length' <<<"$rendered")" -eq 4 ]] \
+    || { red "  the Job's migrator volume does not project four Secrets (the shared migrator and three domain migrators)"; missing=1; }
+  rendered="$(helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "$values" \
+    --set serviceAccount.create=false --set serviceAccount.name=operator-account)"
+  [[ -z "$(yq -r "select(.kind == \"ServiceAccount\") | .metadata.name" <<<"$rendered")" ]] \
+    || { red "  serviceAccount.create=false still renders a ServiceAccount"; missing=1; }
+  [[ "$(yq -r 'select(.kind == "Job") | .spec.template.spec.serviceAccountName' <<<"$rendered")" == "operator-account" ]] \
+    || { red "  with serviceAccount.create=false the Job does not run under serviceAccount.name"; missing=1; }
+  if [[ "$missing" -eq 0 ]]; then
+    echo "  the hook account survives a failed hook, an operator account is used when named, and the Job holds all four migrators"
+  else
+    FAIL=1
+  fi
+}
+migration_job_gate
+
+# ── The server's own TLS: every in-chart client follows the listener ─────────
+# With config.server.tls.enabled the CDR listener speaks TLS, so each client the
+# chart wires to it (the viewer, FerroBRIDGE, the ServiceMonitor scrape, the
+# kubelet's probes) must speak it too, and the first three must trust the CA
+# named by service.tls.caExistingSecret. Judged on the TLS overlay AND on the
+# same clients with TLS off, so a scheme hard-wired to either value fails one
+# half. Each fact is read from the parsed object (gates/tls-clients.jq).
+tls_client_facts() { # <rendered>: one "<fact> <value>" line per client fact
+  yq -o=json -I0 '.' "$1" | jq -s -r --arg release "$RELEASE_NAME" -f "$(dirname "$0")/gates/tls-clients.jq"
+}
+server_tls_gate() {
+  bold "── server TLS: the in-chart clients follow the listener ─"
+  local on off facts missing=0 want got
+  on="$(mktemp)"; off="$(mktemp)"
+  helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "${CI_DIR}/server-tls-values.yaml" > "$on"
+  helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "${CI_DIR}/server-tls-values.yaml" \
+    --set config.server.tls.enabled=false > "$off"
+  facts="$(tls_client_facts "$on")"
+  # <fact>|<expected value>, one line per object the fact is read from.
+  while IFS='|' read -r want got; do
+    [[ -n "$want" ]] || continue
+    grep -qxF "${want} ${got}" <<<"$facts" \
+      || { red "  TLS on: ${want} is not '${got}'"; missing=1; }
+  done <<CLAIMS
+viewer-url|https://${RELEASE_NAME}:8080
+viewer-management-url|https://${RELEASE_NAME}:8080/management
+bridge-url|https://${RELEASE_NAME}:8080/ferroehr/rest/openehr/v1
+viewer-certdir|/etc/ssl/certs:/etc/ferroehr-cdr-ca
+bridge-certdir|/etc/ssl/certs:/etc/ferroehr-cdr-ca
+viewer-ca-secret|ferroehr-server-ca
+bridge-ca-secret|ferroehr-server-ca
+viewer-ca-mount|/etc/ferroehr-cdr-ca
+bridge-ca-mount|/etc/ferroehr-cdr-ca
+service-appprotocol|https
+scrape-scheme|https
+scrape-ca-secret|ferroehr-server-ca
+annotation-scheme|https
+ingress-backend-protocol|HTTPS
+CLAIMS
+  [[ "$(grep -c -xF "probe-scheme HTTPS" <<<"$facts")" -eq 3 ]] \
+    || { red "  TLS on: the server's three probes do not all use scheme HTTPS"; missing=1; }
+  ! grep -qE '^(viewer|viewer-management|bridge)-url http://' <<<"$facts" \
+    || { red "  TLS on: a client still calls the CDR over http://"; missing=1; }
+  facts="$(tls_client_facts "$off")"
+  while IFS='|' read -r want got; do
+    [[ -n "$want" ]] || continue
+    grep -qxF "${want} ${got}" <<<"$facts" \
+      || { red "  TLS off: ${want} is not '${got}'"; missing=1; }
+  done <<CLAIMS
+viewer-url|http://${RELEASE_NAME}:8080
+viewer-management-url|http://${RELEASE_NAME}:8080/management
+bridge-url|http://${RELEASE_NAME}:8080/ferroehr/rest/openehr/v1
+service-appprotocol|http
+scrape-scheme|http
+annotation-scheme|http
+ingress-backend-protocol|absent
+CLAIMS
+  [[ "$(grep -c -xF "probe-scheme HTTP" <<<"$facts")" -eq 3 ]] \
+    || { red "  TLS off: the server's three probes do not all use scheme HTTP"; missing=1; }
+  ! grep -qE '^(viewer|bridge)-(certdir|ca-secret|ca-mount) ' <<<"$facts" \
+    || { red "  TLS off: a client still mounts or names the CDR CA"; missing=1; }
+  rm -f "$on" "$off"
+  if [[ "$missing" -eq 0 ]]; then
+    echo "  TLS on: viewer, FerroBRIDGE and the scrape call https and trust the named CA; the probes use HTTPS. TLS off: all http, no CA"
+  else
+    FAIL=1
+  fi
+}
+server_tls_gate
+
+# ── The viewer reaches the management surface where the CDR serves it ────────
+# The viewer derives `{base_url}/management` when it is told nothing, which is
+# wrong twice over once config.management.port moves the surface to its own
+# listener: another port, and an egress policy admitting only the API port.
+# Both halves are read from the render, with and without the separate port.
+viewer_management_gate() {
+  bold "── viewer: the management surface's URL and egress ─────"
+  local viewer="${CI_DIR}/viewer-values.yaml" render wrong=0 url ports port
+  local -a extra
+  for port in "" 9464; do
+    extra=()
+    [[ -z "$port" ]] || extra=(--set "config.management.port=${port}")
+    if ! render="$(helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "$viewer" \
+                   ${extra[@]+"${extra[@]}"} -s templates/viewer.yaml 2>&1)"; then
+      red "  viewer: the viewer overlay no longer renders${port:+ with config.management.port=$port}:"
+      printf '%s\n' "$render" | head -4
+      FAIL=1
+      return
+    fi
+    url="$(printf '%s' "$render" | yq -r 'select(.kind == "Deployment") | .spec.template.spec.containers[0].env[] | select(.name == "FERROEHR_VIEWER__CDR__MANAGEMENT_BASE_URL") | .value')"
+    ports="$(printf '%s' "$render" | yq -r 'select(.kind == "NetworkPolicy") | [.spec.egress[] | select(.to[0].podSelector.matchLabels["app.kubernetes.io/name"] == "ferroehr") | .ports[].port] | join(",")')"
+    if [[ -z "$port" ]]; then
+      [[ "$url" == "http://${RELEASE_NAME}:8080/management" ]] \
+        || { red "  viewer, shared port: the management URL is '${url}', not http://${RELEASE_NAME}:8080/management"; wrong=1; }
+      [[ "$ports" == "8080" ]] \
+        || { red "  viewer, shared port: egress to the CDR is '${ports}', not the API port alone"; wrong=1; }
+    else
+      [[ "$url" == "http://${RELEASE_NAME}:${port}/management" ]] \
+        || { red "  viewer, own port: the management URL is '${url}', not http://${RELEASE_NAME}:${port}/management"; wrong=1; }
+      [[ "$ports" == "8080,${port}" ]] \
+        || { red "  viewer, own port: egress to the CDR is '${ports}', not the API port and ${port}"; wrong=1; }
+    fi
+  done
+  if [[ "$wrong" -eq 0 ]]; then
+    echo "  viewer: the management URL names the listener that serves it, and egress admits its port when it has its own"
+  else
+    FAIL=1
+  fi
+}
+viewer_management_gate
 
 for case in "${CASES[@]}"; do
   label="${case%%:*}"

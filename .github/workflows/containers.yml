@@ -42,6 +42,11 @@ concurrency:
 # was declared here too until the tagging steps that read it moved into the
 # reusable lane (#2776) — a constant nothing reads is drift waiting to happen.
 env:
+  # A FerroEHR started by any step of this workflow sends no usage report to
+  # FerroPULSE: compose interpolates this into every server it brings up, and
+  # scripts/checks/usage-report-off.sh holds each `docker run` and Helm install
+  # to its own explicit switch.
+  FERROEHR__USAGE_REPORT__ENABLED: "false"
   REGISTRY: ghcr.io
   APP_IMAGE: ghcr.io/ferrohealth/ferroehr
   VIEWER_IMAGE: ghcr.io/ferrohealth/ferroehr-viewer

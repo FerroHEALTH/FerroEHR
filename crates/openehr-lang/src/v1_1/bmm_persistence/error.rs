@@ -27,8 +27,20 @@
 #[non_exhaustive]
 pub enum PBmmReadError {
     /// The schema text is not well-formed ODIN.
-    #[error("the schema text is not valid ODIN: {0}")]
+    #[error("the schema text is not valid ODIN")]
     Odin(#[from] crate::v1_1::odin::OdinError),
+
+    /// The schema text is not well-formed JSON (the `.bmm.json` serialisation,
+    /// `master04-syntax.adoc` §Serialisation Formats).
+    #[error("the schema text is not valid JSON at line {line}, column {column}: {message}")]
+    Json {
+        /// 1-based line of the syntax error.
+        line: usize,
+        /// 1-based column of the syntax error.
+        column: usize,
+        /// The JSON parser's description of the error.
+        message: String,
+    },
 
     /// The ODIN document root is not the attribute object a schema file is:
     /// "A schema file begins with the header (meta) items corresponding to the

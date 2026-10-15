@@ -91,6 +91,7 @@ h| *Code*      h| *Description*       h| *Status*
 | *500*      a| Angle, solid       | active
 | *335*      a| Area       | active
 | *119*      a| Concentration       | active
+| *765*      a| Concentration per volume       | active
 | *350*      a| Density       | active
 | *362*      a| Diffusion coefficient       | active
 | *501*      a| Electric capacitance       | active
@@ -104,6 +105,7 @@ h| *Code*      h| *Description*       h| *Status*
 | *508*      a| Energy dose       | active
 | *365*      a| Energy per area       | active
 | *364*      a| Energy, linear       | active
+| *761*      a| Flow rate (volume) per area       | active
 | *347*      a| Flow rate, mass       | active
 | *352*      a| Flow rate, mass/force       | active
 | *351*      a| Flow rate, mass/volume       | active
@@ -118,6 +120,7 @@ h| *Code*      h| *Description*       h| *Status*
 | *505*      a| Illuminance       | active
 | *379*      a| Inductance       | active
 | *122*      a| Length       | active
+| *764*      a| Length per area       | active
 | *499*      a| Light intensity       | active
 | *123*      a| Loudness       | active
 | *504*      a| Luminous flux       | active
@@ -127,6 +130,7 @@ h| *Code*      h| *Description*       h| *Status*
 | *385*      a| Mass (IU)       | active
 | *445*      a| Mass (Units)       | active
 | *349*      a| Mass per area       | active
+| *763*      a| Mitotic count       | active
 | *344*      a| Moment inertia, area       | active
 | *345*      a| Moment inertia, mass       | active
 | *340*      a| Momentum       | active
@@ -157,6 +161,7 @@ h| *Code*      h| *Description*       h| *Status*
 | *361*      a| Viscosity, kinematic       | active
 | *374*      a| Electric potential       | active
 | *129*      a| Volume       | active
+| *762*      a| Volume per area       | active
 | *130*      a| Work       | active
 | *685*      a| Refractive power       | active
 | *118*      a| <not set>       | active

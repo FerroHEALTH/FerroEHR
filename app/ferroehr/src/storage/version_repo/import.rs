@@ -527,7 +527,33 @@ pub struct ContainerStateRow {
     pub max_ordinal: i32,
 }
 
+/// Takes the per-object advisory lock of every named container, in ascending
+/// `vo_id` order.
+///
+/// The lock is the one the commit path takes
+/// ([`crate::storage::version_repo::commit::advisory_lock`]), so an import
+/// holding it is serialised against concurrent imports and commits of the same
+/// containers until its transaction ends. The fixed order means two imports
+/// sharing several containers wait on each other instead of deadlocking.
+///
+/// # Errors
+/// Returns [`StorageError::Database`] on a driver failure.
+pub async fn lock_containers(
+    tx: &mut PgConnection,
+    vo_ids: impl IntoIterator<Item = VoId>,
+) -> Result<(), StorageError> {
+    let ordered: std::collections::BTreeSet<VoId> = vo_ids.into_iter().collect();
+    for vo_id in ordered {
+        crate::storage::version_repo::commit::advisory_lock(&mut *tx, vo_id).await?;
+    }
+    Ok(())
+}
+
 /// Read the [`ContainerStateRow`] of a to-be-imported container.
+///
+/// The aggregates are only stable while the caller holds the container's lock
+/// ([`lock_containers`]); without it a concurrent import can land versions
+/// between this read and the inserts numbered from it.
 ///
 /// # Errors
 /// Returns [`StorageError::Database`] on a driver failure.

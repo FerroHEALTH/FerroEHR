@@ -38,7 +38,7 @@ kubectl -n ferroehr create secret generic ferroehr-db \
   --from-literal=FERROEHR__DB__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 11.1.0 -n ferroehr \
+  --version 11.1.1 -n ferroehr \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=4.3.6
 ```
@@ -55,7 +55,7 @@ helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
 reference. To read the chart's metadata without installing it:
 
 ```shell
-helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 11.1.0
+helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 11.1.1
 ```
 
 ### Pin two versions, not one
@@ -68,7 +68,7 @@ against.
 
 | | Selects | Pin with | Line |
 |---|---|---|---|
-| Chart version | templates, values schema, defaults | `--version 11.1.0` | SemVer over the chart's own contract |
+| Chart version | templates, values schema, defaults | `--version 11.1.1` | SemVer over the chart's own contract |
 | Image tag | the server binary | `--set image.tag=4.3.6` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
@@ -168,7 +168,7 @@ image, and FerroTERM.
 > the image itself as the authority:
 >
 > ```shell
-> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 11.1.0 \
+> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 11.1.1 \
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
@@ -288,12 +288,13 @@ separation that profile checks made, except one it accepts by name:
 | Gap | In the overlay |
 |---|---|
 | `shared_credential` | the clinical, party and linkage domains each read their own Secret (`database.existingSecret`, `database.party.existingSecret`, `database.linkage.existingSecret`), and the audit domain reads `database.audit.existingSecret` |
-| `shared_cluster` | yours to make: the server compares the cluster each domain pool reaches, so point the four DSNs at four PostgreSQL clusters, or add `shared_cluster` to `config.deployment_accepts` as a recorded decision |
+| `shared_cluster` | yours to make: the server compares the cluster each domain pool reaches, so the separation is four DSNs on four PostgreSQL clusters. Each cluster is prepared on its own migrator: the migration Job applies the schema in every cluster, and the server verifies it there, on `database.<domain>.migrateExistingSecret` (`database.migrateExistingSecret` for the clinical cluster). The linkage cluster also receives the party migration set, schema only, because the linkage set names a function the party set creates |
 | `migrate_on_runtime_credential` | `config.db.migrate: verify`, with `migrations.job.enabled` preparing the schema on `database.migrateExistingSecret` |
 | `open_subject_namespace` | `config.privacy.subject_namespaces` declared |
 | `audit_off`, `audit_fails_open`, `audit_syslog_udp` | the audit trail on with its local store, `config.audit.fail_mode: closed`, no UDP syslog sink |
 | `open_ehr_access_default` | `config.authz.rbac.ehr_access_default: restricted` |
 | `auth_off` | OIDC authentication on |
+| `rbac_off` | the role gate on (`config.authz.rbac.enabled: true`, the chart's default) |
 | `plaintext_broker` | no AMQP integration on |
 | `plaintext_audit_feed`, `plaintext_object_store` | the audit FHIR feed and the multimedia store off; an `https://` URL for either when you turn it on |
 | `plaintext_listener` | accepted by name: TLS ends at the Ingress (`ingress.tls`), the pod listens in plain HTTP, and the NetworkPolicy admits only the ingress controller's namespace (`networkPolicy.ingressFrom`, with `networkPolicy.ingressAllowAll: false`) |
@@ -303,7 +304,7 @@ the TLS Secret and the ingress controller's namespace in it are examples.
 Replace them in a values file of your own and pass both:
 
 ```shell
-helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 11.1.0 --untar
+helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 11.1.1 --untar
 helm install ferroehr ./ferroehr -n ferroehr \
   -f ./ferroehr/values-production.yaml -f my-site-values.yaml
 ```
@@ -313,8 +314,13 @@ the pod from starting, and the server refuses to start under `production`
 while a separation is open, naming each gap and its remedy. The chart's
 validation renders the overlay and asserts each separation above, and its
 boot check has the server evaluate the posture from the rendered
-configuration. Neither reaches a database, so `shared_cluster` is first judged
-when the pod starts against yours.
+configuration. Neither reaches a database. The deployment probe
+(`scripts/deploy-probe-k8s.sh --production-only`) installs the overlay on a
+real cluster against four PostgreSQL clusters: it observes the migration Job
+prepare all four, the server start under `production` with `plaintext_listener`
+as its only gap, and the server refuse all four domains on one cluster by
+naming `shared_cluster`. Against your own databases, `shared_cluster` is first
+judged when the pod starts.
 
 ## Database roles — who runs migrations
 
@@ -399,6 +405,26 @@ start. It is normally the same credential
 runs before the Deployment exists. Unset, preparation falls back to
 `database.existingSecret`, which is what a single-credential install has
 always done.
+
+`database.migrateExistingSecret` reaches one database. A domain whose DSN
+reaches another database or cluster is prepared there, on that database's own
+migrator, which `database.<domain>.migrateExistingSecret` names:
+
+```yaml
+database:
+  linkage:
+    existingSecret: ferroehr-db-linkage            # postgres://ferroehr_linkage:…@linkage-db/…
+    migrateExistingSecret: ferroehr-db-linkage-migrate   # postgres://ferroehr_migrator:…@linkage-db/…
+```
+
+The migration Job mounts it and applies the schema in that database; the server
+mounts it and verifies the schema there under `config.db.migrate: verify`. The
+domain's own role cannot do either, because it holds one domain and cannot read
+the `ext` set's bookkeeping. The server refuses to start when the two DSNs of
+one domain reach different databases. A database that holds the linkage domain
+without the party domain also receives the party migration set, its schema and
+grants and never a row, because the linkage set names a function the party set
+creates.
 
 Give the migrator DSN a short `lock_timeout`
 (`?options=-c%20lock_timeout%3D5s`) so DDL blocked behind live traffic fails
@@ -543,6 +569,74 @@ encryption, WAL archiving / PITR) belong to whoever provisions PostgreSQL; the
 chart references them but cannot enforce them. See
 [Operations](../operations.md).
 
+### TLS at the pod
+
+The production overlay ends TLS at the Ingress and accepts `plaintext_listener`
+by name. To close that gap instead, the server terminates TLS itself
+(`config.server.tls`), and every client the chart wires to it follows: the
+viewer and FerroBRIDGE call `https://<release>:<service.port>`, the kubelet
+probes over HTTPS, the Service declares `appProtocol: https`, and a
+ServiceMonitor that scrapes the API port uses `https` too.
+
+The clients check the server's certificate against a CA you name in
+`service.tls.caExistingSecret`. The certificate must carry the Service name
+(the release's full name, `ferroehr` for a release called `ferroehr`) as a DNS
+SAN, which no public CA issues, so the chart refuses to render a TLS listener
+beside an enabled viewer, FerroBRIDGE or API-port scrape while that value is
+empty. Name a Secret that holds the CA certificate alone: every pod and the
+ServiceMonitor that read it then read no private key, and a ServiceMonitor in
+another namespace reads its own copy there. A cert-manager `Certificate`
+writes the key pair and the CA into one Secret (`tls.crt`, `tls.key`,
+`ca.crt`); copy `ca.crt` out of it (trust-manager's `Bundle` does this) rather
+than naming that Secret. The Ingress in front of the TLS listener must reach
+it over HTTPS too, and how a controller is told so is controller-specific, so
+the chart refuses to render the Ingress with server TLS on until
+`ingress.backendTlsAnnotations` names it:
+
+```yaml
+config:
+  deployment_accepts: []          # nothing left to accept for the listener
+  server:
+    tls:
+      enabled: true
+      cert_file: /etc/ferroehr-tls/tls.crt
+      key_file: /etc/ferroehr-tls/tls.key
+extraVolumes:
+  - name: server-tls
+    secret:
+      secretName: ferroehr-server-tls
+      defaultMode: 0440
+      items:
+        - { key: tls.crt, path: tls.crt }
+        - { key: tls.key, path: tls.key }
+extraVolumeMounts:
+  - { name: server-tls, mountPath: /etc/ferroehr-tls, readOnly: true }
+service:
+  tls:
+    caExistingSecret: ferroehr-server-ca    # ca.crt alone
+ingress:
+  backendTlsAnnotations:                    # ingress-nginx
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+```
+
+When cert-manager renews the certificate, the kubelet updates the mounted
+files and the server serves the new pair within
+`config.server.tls.reload_interval_secs` (60 seconds by default), with no
+restart; a renewed pair that fails to load is logged and the old one stays in
+service.
+
+The viewer and FerroBRIDGE read the CA through `SSL_CERT_DIR`, which the chart
+sets to the image's system roots plus the mounted CA, so their other peers
+that verify through the platform verifier stay trusted. The viewer's OIDC
+client does not read `SSL_CERT_DIR`: it trusts the public roots it is built
+with, so an OIDC issuer with a certificate from a private CA is not trusted by
+the viewer. The ServiceMonitor reads the Secret from its own namespace, and
+the `prometheus.io/scheme: https` pod annotation follows the listener when
+`metrics.enabled` is set. With `config.server.tls.client_auth: required` the
+kubelet probes cannot present a client certificate, so the chart refuses to
+render it; keep it at `off` or `optional`.
+`config.management.port` stays plain HTTP on its own listener.
+
 ## Health probes
 
 All three probes use the always-on, unauthenticated, PHI-free health routes on the
@@ -678,7 +772,7 @@ config:
 
 ```shell
 helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 11.1.0 -n ferroehr --reuse-values \
+  --version 11.1.1 -n ferroehr --reuse-values \
   --set config.query.plan_cache_capacity=512
 ```
 
@@ -777,7 +871,7 @@ running. It is the Helm equivalent of the
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 11.1.0 -n ferroehr --reuse-values \
+  --version 11.1.1 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
@@ -1123,7 +1217,7 @@ Preview an upgrade against what you have installed with
 `helm diff`, or render the new chart version and read it:
 
 ```shell
-helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 11.1.0 \
+helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 11.1.1 \
   -n ferroehr -f my-values.yaml | less
 ```
 

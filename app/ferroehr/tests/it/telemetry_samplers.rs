@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The background metric samplers (`ferroehr::telemetry::samplers`): the
-//! instrumented pool acquisition and the periodic pool/runtime gauge task.
+//! The instrumented pool acquisition (`ferroehr::db::acquire`) and the
+//! background metric samplers (`ferroehr::telemetry::samplers`): the periodic
+//! pool/runtime gauge task.
 //!
 //! Both are exercised against real objects — a migrated `PostgreSQL` 18 from the
 //! shared testkit harness and an in-memory `OTel` metric exporter — so no OTLP
@@ -23,6 +24,7 @@ use opentelemetry::metrics::MeterProvider;
 use opentelemetry_sdk::Resource;
 use opentelemetry_sdk::metrics::{InMemoryMetricExporter, PeriodicReader, SdkMeterProvider};
 
+use ferroehr::db::acquire::acquire;
 use ferroehr::telemetry::metrics::{
     DB_POOL_CONNECTIONS, TOKIO_ALIVE_TASKS, TOKIO_GLOBAL_QUEUE_DEPTH, TOKIO_WORKERS,
 };
@@ -45,7 +47,7 @@ fn exported_names(exporter: &InMemoryMetricExporter) -> Vec<String> {
     names
 }
 
-/// `samplers::acquire` hands back a genuine pooled connection — the recording
+/// `acquire` hands back a genuine pooled connection — the recording
 /// wrapper must not swap in anything the caller cannot query on, and it must
 /// leave the pool usable for the next acquisition.
 #[tokio::test]
@@ -54,7 +56,7 @@ async fn acquire_returns_a_usable_pooled_connection() {
     let pool = db.pool();
 
     {
-        let mut conn = samplers::acquire(&pool).await.expect("acquire");
+        let mut conn = acquire(&pool).await.expect("acquire");
         let one: i32 = sqlx::query_scalar("SELECT 1")
             .fetch_one(&mut *conn)
             .await
@@ -65,7 +67,7 @@ async fn acquire_returns_a_usable_pooled_connection() {
 
     // The guard was a real pool checkout, so the pool keeps serving after it is
     // dropped rather than leaking the connection.
-    let mut again = samplers::acquire(&pool).await.expect("second acquire");
+    let mut again = acquire(&pool).await.expect("second acquire");
     let two: i32 = sqlx::query_scalar("SELECT 2")
         .fetch_one(&mut *again)
         .await
@@ -75,7 +77,7 @@ async fn acquire_returns_a_usable_pooled_connection() {
 
 /// The wrapper PROPAGATES the pool's failure instead of masking it as a
 /// telemetry concern: a pool that cannot connect times out, and the caller sees
-/// that `sqlx` error.
+/// that `sqlx` error as the acquire failure's driver error.
 #[tokio::test]
 async fn acquire_propagates_the_pool_error() {
     let pool = sqlx::postgres::PgPoolOptions::new()
@@ -83,11 +85,11 @@ async fn acquire_propagates_the_pool_error() {
         .connect_lazy("postgres://nobody:nobody@127.0.0.1:1/nonexistent")
         .expect("lazy pool");
 
-    let error = samplers::acquire(&pool)
+    let error = acquire(&pool)
         .await
         .expect_err("an unreachable database cannot be acquired");
     assert!(
-        matches!(error, sqlx::Error::PoolTimedOut),
+        matches!(error.driver(), sqlx::Error::PoolTimedOut),
         "the pool's own error must reach the caller, got {error:?}"
     );
 }

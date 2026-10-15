@@ -34,14 +34,14 @@ spec_profile = "development"
 # missing and not named in deployment_accepts (shared_credential,
 # shared_cluster, open_subject_namespace, audit_off, audit_fails_open,
 # audit_syslog_udp, open_ehr_access_default, migrate_on_runtime_credential,
-# auth_off, plaintext_listener, plaintext_broker, plaintext_audit_feed,
+# auth_off, rbac_off, plaintext_listener, plaintext_broker, plaintext_audit_feed,
 # plaintext_object_store; accept plaintext_listener
 # behind a TLS-terminating ingress; a [management] port opens it too, since that
 # listener is plain HTTP on every interface; plaintext_broker opens on an
 # enabled [events] amqp:// URL without tls,
 # plaintext_audit_feed on an enabled [audit.fhir_feed] http:// url,
 # plaintext_object_store on an enabled [multimedia] with allow_http). Our own
-# posture; auth_off follows CRA Annex I Part I(2)(d), the plaintext_* gaps (e),
+# posture; auth_off and rbac_off follow CRA Annex I Part I(2)(d), the plaintext_* gaps (e),
 # audit_syslog_udp EHDS Annex II 1.4.
 deployment_profile = "sandbox"   # sandbox | production
 #? deployment_accepts = ["shared_cluster"]
@@ -85,6 +85,10 @@ client_auth = "off"          # off | optional | required (required = IHE mTLS)
 # rustls offers them.
 min_version = "1.3"          # 1.3 | 1.2
 #? client_ca_file = "/etc/ferroehr/client-ca.pem"
+# How often cert_file and key_file are re-read, so a renewed pair (cert-manager,
+# a mounted Secret) is served without a restart. A pair that fails to load is
+# logged and the previous one stays in service. 0 reads them once, at boot.
+reload_interval_secs = 60
 
 # [server.limits] — the largest request body each route family accepts. Two
 # tiers: the clinical surface, and the routes that accept bulk by design
@@ -181,8 +185,13 @@ statement_timeout_ms = 60000
 # two separately-configured domains turn out to authenticate as one role, and —
 # under deployment_profile = "production" — when a domain role is missing.
 #
-# The linkage set names a function the party set creates, so those two are
-# prepared in the same database; the server refuses a layout that splits them.
+# Schema preparation runs per DATABASE: [db] migrate_url prepares the one it
+# reaches, and a domain in a database of its own is prepared on that database's
+# migration credential, [storage.migrate.<domain>] url, for both migrate =
+# "apply" and "verify". Unset, it falls back to the domain's own url, which a
+# DML-only runtime role cannot use. A database holding linkage without party
+# also receives the party migration set (empty, no pool), because the linkage
+# set names a function the party set creates.
 #? [storage.clinical]
 #? url = "postgres://ferroehr_clinical:...@localhost:5432/ferroehr"
 #? url_file = "/run/secrets/db-clinical-dsn"
@@ -195,6 +204,18 @@ statement_timeout_ms = 60000
 #? [storage.audit]
 #? url = "postgres://ferroehr_audit:...@localhost:5432/ferroehr_audit"
 #? url_file = "/run/secrets/db-audit-dsn"
+#? [storage.migrate.clinical]
+#? url = "postgres://ferroehr_migrator:...@clinical-db:5432/ferroehr"
+#? url_file = "/run/secrets/db-clinical-migrate-dsn"
+#? [storage.migrate.party]
+#? url = "postgres://ferroehr_migrator:...@party-db:5432/ferroehr"
+#? url_file = "/run/secrets/db-party-migrate-dsn"
+#? [storage.migrate.linkage]
+#? url = "postgres://ferroehr_migrator:...@linkage-db:5432/ferroehr"
+#? url_file = "/run/secrets/db-linkage-migrate-dsn"
+#? [storage.migrate.audit]
+#? url = "postgres://ferroehr_migrator:...@audit-db:5432/ferroehr_audit"
+#? url_file = "/run/secrets/db-audit-migrate-dsn"
 
 # ── [log] — logging ──────────────────────────────────────────────────────────
 [log]
@@ -302,6 +323,9 @@ verified_cache_ttl_seconds = 60
 
 # ── [authz] — RBAC + ABAC ─────────────────────────────────────────────────────
 [authz.rbac]
+# The coarse role gate. Off, every authenticated caller may use every enabled
+# surface (the rbac_off deployment gap); ehr_access_default and admin_role
+# still apply to the per-EHR gate.
 enabled = true
 admin_role = "ADMIN"
 user_role = "USER"
@@ -315,7 +339,8 @@ role_claims = ["roles", "groups", "entitlements", "realm_access.roles"]
 # What an EHR carrying no ACCESS_CONTROL_SETTINGS admits. A new EHR carries
 # none, so this governs most records. "restricted" is object-level default-deny:
 # only admin_role reaches a setting-less EHR, so an operator can still author
-# the settings that open it.
+# the settings that open it. It applies with enabled = false too, and is refused
+# at boot with [auth] enabled = false, where nothing could enforce it.
 ehr_access_default = "open"   # open | restricted
 # The management surface is NOT configured here — see [management.endpoints],
 # which owns it, one level per endpoint.
@@ -325,6 +350,9 @@ enabled = false
 engine = "cedar"             # cedar | remote
 organization_claim = "organization_id"
 patient_claim = "patient_id"
+#? patient_namespace = "nl.example.patients"  # the subject namespace patient-claim ids
+                             # are issued in; unset, an id held under two
+                             # namespaces matches no EHR
 check_directory = false      # submit DIRECTORY (FOLDER) operations to the PDP;
                              # engine-independent, so it works under cedar too
 

@@ -25,7 +25,7 @@ use fhir_model::r4b::resources::{
 #[derive(Debug, thiserror::Error)]
 pub enum TerminologyDecodeError {
     /// The body is not a valid R4B resource of the expected type.
-    #[error("malformed FHIR response: {0}")]
+    #[error("malformed FHIR response")]
     Malformed(#[from] serde_json::Error),
     /// The body is a well-formed resource of another type. The concrete R4B
     /// structs carry no `resourceType` discriminator of their own (only the

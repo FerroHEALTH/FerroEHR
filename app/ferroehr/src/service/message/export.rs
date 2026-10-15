@@ -38,6 +38,7 @@ use serde_json::{Value, json};
 use sqlx::Row;
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
@@ -270,7 +271,7 @@ impl FerroEhrService {
         Ok(
             sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM ehr WHERE id = $1)")
                 .bind(ehr_id)
-                .fetch_one(&self.pool)
+                .fetch_one(&mut *acquire(&self.pool).await?)
                 .await?,
         )
     }
@@ -467,7 +468,7 @@ impl FerroEhrService {
              ORDER BY version.vo_id",
         )
         .bind(ehr_id)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *acquire(&self.pool).await?)
         .await?;
         let mut out = Vec::with_capacity(rows.len());
         for r in rows {
@@ -490,7 +491,7 @@ impl FerroEhrService {
         )
         .bind(vo_id)
         .bind(ehr_id)
-        .fetch_optional(&self.pool)
+        .fetch_optional(&mut *acquire(&self.pool).await?)
         .await?)
     }
 
@@ -504,7 +505,7 @@ impl FerroEhrService {
              FROM version WHERE vo_id = $1 ORDER BY sys_version",
         )
         .bind(vo_id)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *acquire(&self.pool).await?)
         .await?;
         let mut out = Vec::with_capacity(rows.len());
         for r in rows {
@@ -528,7 +529,7 @@ impl FerroEhrService {
             "SELECT vo_id, count(*) AS n FROM version WHERE vo_id = ANY($1) GROUP BY vo_id",
         )
         .bind(&ids)
-        .fetch_all(&self.demographic_pool)
+        .fetch_all(&mut *acquire(&self.demographic_pool).await?)
         .await?;
         let mut out = std::collections::HashMap::with_capacity(rows.len());
         for r in rows {
@@ -1107,7 +1108,7 @@ async fn resolve_entity_ehr(
     if let Some(subject) = subject_id {
         let id: Option<EhrId> = sqlx::query_scalar("SELECT id FROM ehr WHERE subject_id = $1")
             .bind(subject)
-            .fetch_optional(&svc.pool)
+            .fetch_optional(&mut *acquire(&svc.pool).await?)
             .await
             .map_err(ServiceError::from)?;
         return id

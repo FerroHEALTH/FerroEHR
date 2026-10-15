@@ -312,7 +312,8 @@ pub(crate) async fn message_import_ehr_extract(
 
 pub(crate) fn dispatch(state: AppState, op: &'static str, parts: RequestParts) -> BoxResponse {
     Box::pin(async move {
-        run(state, op, parts)
+        // Boxed like the sibling dispatchers: the import arms' futures are large.
+        Box::pin(run(state, op, parts))
             .await
             .unwrap_or_else(IntoResponse::into_response)
     })

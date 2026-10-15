@@ -27,8 +27,9 @@ use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::ids::{EhrId, VoId};
-use crate::service::error::ServiceError;
-use crate::service::status::CallStatusType;
+use crate::service::demographic::identifier::store::{IdentifierStore, StoreError};
+use crate::service::error::{ServiceError, Violation};
+use crate::service::status::{CallStatusType, SmError};
 use crate::storage::codec::{decompose, reassemble};
 use crate::storage::row::NodeRow;
 use crate::versioning::attestation::{self, PendingAttest};
@@ -326,7 +327,9 @@ async fn next_version(
     let placement = if let Some(placement) = preplaced {
         placement
     } else {
-        // Serialize concurrent writers of the same object.
+        // Serialize concurrent writers of the same object. A multi-object
+        // CONTRIBUTION already holds it, and a repeated request by the holding
+        // session succeeds (PostgreSQL docs §13.3.5 Advisory Locks).
         crate::storage::version_repo::commit::advisory_lock(tx, vo_id).await?;
 
         // ONE statement: preceding tip + next ordinal + the transaction
@@ -585,12 +588,17 @@ struct CommitScope<'a> {
     preplaced: Option<crate::storage::version_repo::placement::Placement>,
 }
 
-/// Seal every configured-scheme national identifier out of a demographic body
-/// before it is decomposed and signed.
+/// Seal every protected national identifier of a demographic body into rows
+/// of this version, on the commit transaction `tx`, before the body is
+/// decomposed and signed.
 ///
 /// Runs on the demographic kinds only: a party's identifiers are the point of
 /// that domain, and clinical content carrying one is a different rule
 /// altogether ([`crate::privacy`] refuses it outright rather than sealing it).
+/// A demographic kind's commit transaction is always on the party domain's
+/// pool, the one database that holds `national_identifier` in every layout,
+/// so the sealed rows commit or roll back with the version that references
+/// them and no compensating cleanup is needed.
 ///
 /// Placed before `decompose` and the signature for the same reason the
 /// multimedia offload is: the stored, signed and served body must be one form,
@@ -599,10 +607,13 @@ struct CommitScope<'a> {
 /// design/extension.
 ///
 /// # Errors
-/// [`ServiceError`] when a value cannot be sealed or stored. The commit fails
-/// rather than proceeding, because proceeding would store the body with the
-/// identifier still in it.
+/// The [`protection_refusal`] mapping of the store's refusals: `409` for a
+/// value another party holds, `422` for a body the store cannot hold, `500`
+/// for a configuration or storage fault. The commit fails rather than
+/// proceeding, because proceeding would store the body with the identifier
+/// still in it.
 async fn seal_protected_identifiers(
+    tx: &mut PgConnection,
     ctx: &SigningCtx<'_>,
     kind: Kind,
     vo_id: VoId,
@@ -615,10 +626,72 @@ async fn seal_protected_identifiers(
         return Ok(());
     }
     engine
-        .externalize(vo_id.0, canonical)
+        .externalize(tx, vo_id.0, canonical)
         .await
-        .map_err(|e| ServiceError::internal("seal a protected national identifier", e))?;
+        .map_err(protection_refusal)?;
     Ok(())
+}
+
+/// Take a logically deleted party's identifiers out of resolution, on the
+/// commit transaction `tx`.
+///
+/// A deleted version carries no data (RM common
+/// `master06-change_control_package.adoc` §Logical Deletion), so the party
+/// holds no identifier from it on; the earlier versions keep their rows. No
+/// openEHR spec governs identifier protection — our own design/extension.
+///
+/// # Errors
+/// The [`protection_refusal`] mapping of a failed update.
+async fn retire_protected_identifiers(
+    tx: &mut PgConnection,
+    ctx: &SigningCtx<'_>,
+    kind: Kind,
+    vo_id: VoId,
+) -> Result<(), ServiceError> {
+    if ctx.identifiers.is_none() || !kind.is_demographic() {
+        return Ok(());
+    }
+    IdentifierStore::retire_live(tx, vo_id.0)
+        .await
+        .map_err(protection_refusal)?;
+    Ok(())
+}
+
+/// Map a protected-identifier store refusal onto the commit's answer.
+///
+/// A value another party holds is ITS-REST `409 Conflict` ("the request could
+/// not be processed because it might generate a duplicate or a conflict",
+/// `ITS-REST/specifications/docs/overview/Requests_and_responses.md` §HTTP
+/// status codes). A body that repeats a scheme, carries a reference the party
+/// does not hold, or must be stored verbatim with a protected value in
+/// plaintext is `422` (`responses/422.yaml`: semantic errors in a resource
+/// that parsed). An unregistered scheme is the deployment's own
+/// configuration disagreeing with its registry, which the client cannot act
+/// on, so it stays a `500` whose logged context names the scheme. No message
+/// carries an identifier value.
+pub(crate) fn protection_refusal(error: StoreError) -> ServiceError {
+    match error {
+        StoreError::ValueTaken { ref scheme } => ServiceError::Conflict(
+            SmError::new(
+                CallStatusType::Conflict,
+                format!("a `{scheme}` identifier of this party is already held by another party"),
+            )
+            .with_source(error),
+        ),
+        StoreError::SchemeRepeated { .. }
+        | StoreError::ForeignReference
+        | StoreError::Unsealed { .. } => {
+            ServiceError::content_invalid(Violation::new(error.to_string()))
+        }
+        StoreError::UnknownScheme { ref scheme } => ServiceError::internal(
+            format!(
+                "identifier scheme `{scheme}` is configured for protection but absent from \
+                 the identifier_scheme registry"
+            ),
+            error,
+        ),
+        other => ServiceError::internal("seal a protected national identifier", other),
+    }
 }
 
 /// Refuse a write that would process an object whose processing is restricted.
@@ -660,6 +733,31 @@ pub(crate) async fn ensure_not_restricted_tx(
         )));
     }
     Ok(())
+}
+
+/// Refuses a logical deletion whose preceding version is already deleted.
+///
+/// The master06 §Version Lifecycle state machine draws a `delete` edge out of
+/// every live state and none out of `deleted` (only `revert`), and ITS-REST
+/// answers the repeat as `400` (`responses/400_already_deleted.yaml`: "the
+/// resource identified by the request parameters is already deleted"). The
+/// check runs on the locked placement read, so the `DELETE` routes and a
+/// CONTRIBUTION deletion member reach the same refusal.
+///
+/// # Errors
+/// [`ServiceError::BadRequest`] when `preceding_lifecycle` is `523|deleted|`.
+fn refuse_already_deleted(
+    kind: Kind,
+    vo_id: VoId,
+    preceding_lifecycle: &str,
+) -> Result<(), ServiceError> {
+    if preceding_lifecycle != lifecycle::state::DELETED {
+        return Ok(());
+    }
+    Err(ServiceError::precondition(format!(
+        "{} {vo_id} is already deleted",
+        kind.as_str()
+    )))
 }
 
 #[expect(
@@ -707,7 +805,7 @@ async fn apply_change(
             // a first version can only be `complete`/`incomplete`.
             validate_transition(None, &lifecycle)?;
             let vo_id = VoId::minted(ctx.stamp);
-            seal_protected_identifiers(ctx, kind, vo_id, &mut canonical).await?;
+            seal_protected_identifiers(tx, ctx, kind, vo_id, &mut canonical).await?;
             stamp_version_uid(
                 &mut canonical,
                 &object_version_id(vo_id, &ctx.system_id, TreeId::trunk(1)),
@@ -769,7 +867,7 @@ async fn apply_change(
             // the transition from the preceding version's state must be
             // legal (master06 §Version Lifecycle state machine).
             validate_transition(Some(&next.preceding_lifecycle), &lifecycle)?;
-            seal_protected_identifiers(ctx, kind, vo_id, &mut canonical).await?;
+            seal_protected_identifiers(tx, ctx, kind, vo_id, &mut canonical).await?;
             stamp_version_uid(
                 &mut canonical,
                 &object_version_id(vo_id, &ctx.system_id, next.tree),
@@ -805,10 +903,11 @@ async fn apply_change(
         } => {
             let next =
                 next_version(tx, ehr_id, vo_id, kind, expected, &ctx.system_id, preplaced).await?;
+            refuse_already_deleted(kind, vo_id, &next.preceding_lifecycle)?;
+            retire_protected_identifiers(tx, ctx, kind, vo_id).await?;
             // A deleted version carries no data — its `ORIGINAL_VERSION.data` is
             // Void (master06 §Logical Deletion); the signature is over the
-            // data-less version wrapper. Logical deletion is permitted from any
-            // live state, so no transition check runs here.
+            // data-less version wrapper.
             ResolvedWrite {
                 kind,
                 vo_id,
@@ -1293,7 +1392,8 @@ pub(crate) async fn update_with_placement(
 /// # Errors
 /// [`ServiceError::NotFound`] when `(ehr_id, kind, vo_id)` does not address a
 /// stored object; [`ServiceError::VersionConflict`] when `expected` is not the
-/// open lineage tip; plus the [`commit_resolved`] storage/signing errors.
+/// open lineage tip; [`ServiceError::BadRequest`] when the preceding version is
+/// already deleted; plus the [`commit_resolved`] storage/signing errors.
 #[expect(
     clippy::too_many_arguments,
     reason = "the write parameters, named individually; a parameter struct \
@@ -1331,17 +1431,24 @@ pub(crate) async fn delete(
     Ok(committed)
 }
 
-/// Commit a set of changes atomically under one CONTRIBUTION (RM common
+/// Commits a set of changes atomically under one CONTRIBUTION (RM common
 /// master06 §Committal and Audits — "similar to nested transactions").
-/// `contribution_audit` is the CONTRIBUTION's own audit; each change carries its
-/// VERSION `commit_audit`. `attests` are `666|attestation|` items — new
-/// `ATTESTATION`s attached to **existing** versions, committed in the
-/// same transaction but adding no new version.
+///
+/// `contribution_audit` is the CONTRIBUTION's own audit; each change carries
+/// its VERSION `commit_audit`. `attests` are `666|attestation|` items — new
+/// `ATTESTATION`s attached to **existing** versions, committed in the same
+/// transaction but adding no new version.
 ///
 /// Every audit of the set is stamped with the one commit instant this
 /// function reads (RM common master06 §Committal and Audits: `time_committed`
 /// "computed on the server"); each version and attestation keeps the
 /// committer its own audit states.
+///
+/// The per-object lock of every existing object the set modifies or deletes
+/// is taken up front, in ascending `vo_id` order — the order an import takes
+/// the same locks in
+/// ([`crate::storage::version_repo::import::lock_containers`]) — so two
+/// writers sharing several objects queue instead of deadlocking.
 ///
 /// # Errors
 /// The per-change [`apply_change`] errors; the attestation-completion
@@ -1356,6 +1463,13 @@ pub(crate) async fn commit_contribution(
     attests: Vec<PendingAttest>,
     ctx: &SigningCtx<'_>,
 ) -> Result<CommittedContribution, ServiceError> {
+    crate::storage::version_repo::import::lock_containers(
+        tx,
+        changes
+            .iter()
+            .filter_map(|(_, change)| change.target_vo_id()),
+    )
+    .await?;
     // The CONTRIBUTION's own audit + contribution rows in one round trip (the
     // per-version `commit_audit`s are inserted per change below). A uid the
     // client did not supply is minted here, stamped, never by the database.

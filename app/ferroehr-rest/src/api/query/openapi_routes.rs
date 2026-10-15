@@ -28,10 +28,16 @@
 //!   query string as well as from the body. Precedence between the two carriers
 //!   is unassigned, so the same rule applies: equal values are accepted,
 //!   conflicting values are a `400`.
-//! - **JSON-only response** (`200_Query.yaml` declares `application/json`; the
-//!   `RESULT_SET` has no canonical-XML shape): an exclusively-XML `Accept`
-//!   negotiates to `406` on every operation — documented below as our real wire
-//!   though the OAS does not enumerate `406`. The `POST`s answer a non-JSON
+//! - **JSON-only response**: a service "MUST support at least one of the
+//!   openEHR XML or JSON canonical formats" and answers an `Accept:
+//!   application/xml` it cannot fulfil with `406` (`docs/overview/Resources.md`
+//!   §Data representation, §XML Format), and the released `200_Query.yaml`
+//!   declares `application/json` only. The vendored
+//!   `its-xml-2.0.0-nsv2/QUERY/latest/Query.xsd` does declare a `result_set`
+//!   element (status Draft), so the refusal rests on that optionality, not on a
+//!   missing XML shape: an exclusively-XML `Accept` negotiates to `406` on every
+//!   operation, documented below as our real wire though the OAS does not
+//!   enumerate `406`. The `POST`s answer a non-JSON
 //!   request `Content-Type` with `415`, likewise OAS-undeclared and likewise a
 //!   cross-cutting MUST (`Resources.md` §"JSON Format").
 //! - **`ETag`** (`200_Query.yaml` + `headers/ETag_RESULT_SET.yaml`): the `200`
@@ -485,7 +491,7 @@ pub(crate) async fn query_execute_adhoc_query(
     ),
     request_body(
         content((serde_json::Value = "application/json", example = json!({
-            "q": "SELECT e/ehr_id/value, o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude AS temperature, o/name FROM EHR e CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.body_temperature.v2] WHERE o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude > $temperature ORDER BY temperature DESC",
+            "q": "SELECT e/ehr_id/value, o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude AS temperature, o/name FROM EHR e CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.body_temperature.v2] WHERE o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude > $temperature ORDER BY o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude DESC",
             "offset": 0,
             "fetch": 10,
             "query_parameters": { "temperature": 38.5 }
@@ -579,9 +585,9 @@ pub(crate) async fn query_execute_adhoc_query(
                     "_type": "RESULTSET",
                     "_schema_version": "1.1.0",
                     "_created": "2026-07-26T09:12:44.512331Z",
-                    "_executed_aql": "SELECT e/ehr_id/value, o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude AS temperature, o/name FROM EHR e CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.body_temperature.v2] WHERE o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude > 38.5 ORDER BY temperature DESC"
+                    "_executed_aql": "SELECT e/ehr_id/value, o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude AS temperature, o/name FROM EHR e CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.body_temperature.v2] WHERE o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude > 38.5 ORDER BY o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude DESC"
                 },
-                "q": "SELECT e/ehr_id/value, o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude AS temperature, o/name FROM EHR e CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.body_temperature.v2] WHERE o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude > $temperature ORDER BY temperature DESC",
+                "q": "SELECT e/ehr_id/value, o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude AS temperature, o/name FROM EHR e CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.body_temperature.v2] WHERE o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude > $temperature ORDER BY o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude DESC",
                 "columns": [
                     { "name": "#0", "path": "/ehr_id/value" },
                     { "name": "temperature", "path": "/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude" },

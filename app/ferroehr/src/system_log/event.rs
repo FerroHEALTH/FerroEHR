@@ -301,6 +301,20 @@ impl AccessDomain {
 }
 
 impl AuditEvent {
+    /// Whether the audited data moves from this server to the client, which
+    /// makes the server the Source and the client the Destination participant.
+    ///
+    /// DICOM PS3.15 §A.5.2.7 gives Source Role ID to the entity the information
+    /// originates from and Destination Role ID to the one it is directed to, so
+    /// a read (and its Data Export, §A.5.3.4) has the server as Source. A
+    /// query is the exception: §A.5.3.10 makes the process issuing it the
+    /// Source, as the IHE BALP `Query` profile fixes for the client agent.
+    /// Every other action moves data, or a request, from the client in.
+    #[must_use]
+    pub fn server_is_data_source(&self) -> bool {
+        self.action == EventActionCode::Read && self.object != ObjectClass::Query
+    }
+
     /// Record the origins of the served data, capped for the record with the
     /// true distinct count beside the set (`total` when the caller already
     /// aggregated a wider set, else the set's own distinct size).

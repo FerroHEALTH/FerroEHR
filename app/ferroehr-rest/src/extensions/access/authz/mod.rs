@@ -47,7 +47,10 @@ pub mod roles;
 use crate::extensions::access::authz::classify::{OperationClass, class_of, is_write};
 use crate::extensions::access::authz::engine::{AuthzError, PolicyEngine};
 use crate::extensions::access::authz::roles::{RbacDecision, authorize, authorize_readonly};
-use ferroehr::config::authz::{AbacConfig, AbacEngineKind, AuthzConfig, RbacConfig};
+use ferroehr::aql::subject::EhrSubject;
+use ferroehr::config::authz::{
+    AbacConfig, AbacEngineKind, AuthzConfig, EhrAccessDefault, RbacConfig,
+};
 
 use std::collections::HashMap;
 use std::future::Future;
@@ -95,10 +98,12 @@ impl ResolveError {
 /// The future a resolver closure returns.
 pub type ResolverFuture<T> = Pin<Box<dyn Future<Output = Result<T, ResolveError>> + Send>>;
 
-/// `ehr_id → EHR subject external-ref id` (the promoted `ehr.subject_id`
-/// column; the audit `SubjectResolver` query). Ids are passed as strings so the
+/// `ehr_id → EHR subject`, or `None` when no EHR has the id.
+///
+/// The subject is read as the patient scope addresses it
+/// ([`ferroehr::aql::subject::ehr_subject`]). Ids are passed as strings so the
 /// REST layer stays `uuid`-free (the binary parses).
-pub type SubjectFn = Arc<dyn Fn(String) -> ResolverFuture<Option<String>> + Send + Sync>;
+pub type SubjectFn = Arc<dyn Fn(String) -> ResolverFuture<Option<EhrSubject>> + Send + Sync>;
 
 /// `(vo_id, version) → template_id` (`version.template_id`, read back via
 /// `ferroehr::service` in the binary).
@@ -116,7 +121,7 @@ pub type TemplateOfVersionFn =
 /// precedent.
 #[derive(Clone)]
 pub struct AuthzResolvers {
-    /// EHR subject external-ref id lookup.
+    /// EHR subject lookup.
     pub subject: SubjectFn,
     /// COMPOSITION version → template id lookup.
     pub template_of_version: TemplateOfVersionFn,
@@ -154,17 +159,27 @@ pub fn build_engine(config: &AbacConfig) -> Result<Option<Arc<dyn PolicyEngine>>
 ///
 /// `None` on [`AppState`](crate::state::AppState) means authorization is off
 /// (authentication-only behaviour). Carries the coarse RBAC gate and/or the
-/// fine-grained ABAC gate.
+/// fine-grained ABAC gate, plus the `[authz.rbac]` keys the per-EHR
+/// `EHR_ACCESS` gate reads whether or not the RBAC gate is on.
 #[derive(Debug)]
 pub struct AuthzHandle {
     rbac: Option<RbacGate>,
     abac: Option<AbacGate>,
+    /// The configured `[authz.rbac]` keys, kept whatever `rbac.enabled` says:
+    /// `ehr_access_default`, `admin_role` and `role_claims` are read by the
+    /// per-EHR gate and by role extraction, which run without the coarse gate.
+    rules: RbacConfig,
 }
 
 impl AuthzHandle {
-    /// Build the full handle (the binary): the RBAC gate (when enabled) plus the
-    /// ABAC gate (when `engine` is `Some`, i.e. `abac.enabled`). `None` when
-    /// neither layer is active, so `AppState` stays empty (auth-only).
+    /// Builds the full handle the binary serves with.
+    ///
+    /// The handle carries the RBAC gate when `rbac.enabled`, the ABAC gate when
+    /// `engine` is `Some` (`abac.enabled`), and the configured `[authz.rbac]`
+    /// keys in every case. It is `None` only when there is nothing to enforce:
+    /// both gates off and `rbac.ehr_access_default` open, so `AppState` stays
+    /// empty (auth-only). A `restricted` default alone yields a handle: the
+    /// per-EHR default applies with the coarse gate off.
     #[must_use]
     pub fn build(
         config: &AuthzConfig,
@@ -177,10 +192,17 @@ impl AuthzHandle {
             .enabled
             .then(|| RbacGate::new(config.rbac.clone(), base_path));
         let abac = engine.map(|engine| AbacGate::new(&config.abac, engine, resolvers));
-        if rbac.is_none() && abac.is_none() {
+        if rbac.is_none()
+            && abac.is_none()
+            && config.rbac.ehr_access_default == EhrAccessDefault::Open
+        {
             return None;
         }
-        Some(Self { rbac, abac })
+        Some(Self {
+            rbac,
+            abac,
+            rules: config.rbac.clone(),
+        })
     }
 
     /// The coarse RBAC gate, if enabled.
@@ -192,6 +214,19 @@ impl AuthzHandle {
     /// surface's `AdminOnly` level gates on the same rules (issue #1879).
     pub(crate) fn rbac_rules(&self) -> Option<&RbacConfig> {
         self.rbac.as_ref().map(RbacGate::rules)
+    }
+
+    /// What an EHR carrying no `ACCESS_CONTROL_SETTINGS` admits, as configured
+    /// in `[authz.rbac] ehr_access_default`, whether or not the RBAC gate is on.
+    #[must_use]
+    pub fn ehr_access_default(&self) -> EhrAccessDefault {
+        self.rules.ehr_access_default
+    }
+
+    /// The role a `restricted` per-EHR default admits (`[authz.rbac]
+    /// admin_role`), whether or not the RBAC gate is on.
+    pub(crate) fn admin_role(&self) -> &str {
+        &self.rules.admin_role
     }
 
     /// The fine-grained ABAC gate, if enabled.
@@ -214,16 +249,17 @@ impl AuthzHandle {
         self.abac.is_some()
     }
 
-    /// The configured JWT role-claim paths (fed into the [`Authenticator`] so
-    /// Bearer role extraction uses them); defaults when RBAC is off.
+    /// Returns the configured `[authz.rbac] role_claims`, whether or not the
+    /// RBAC gate is on.
+    ///
+    /// The [`Authenticator`] takes the same paths from
+    /// [`AppConfig::role_claims`](crate::config::AppConfig::role_claims), so
+    /// role extraction applies them with or without a handle.
     ///
     /// [`Authenticator`]: crate::extensions::access::authn::Authenticator
     #[must_use]
     pub fn role_claims(&self) -> Vec<String> {
-        self.rbac.as_ref().map_or_else(
-            || RbacConfig::default().role_claims,
-            |r| r.rules.role_claims.clone(),
-        )
+        self.rules.role_claims.clone()
     }
 }
 
@@ -238,6 +274,9 @@ pub(crate) struct AbacGate {
     /// The JWT claim carrying the patient id; its presence enables the subject
     /// gate.
     pub(crate) patient_claim: Option<String>,
+    /// The subject namespace patient-claim ids are read in
+    /// (`abac.patient_namespace`); `None` reads the id alone.
+    pub(crate) patient_namespace: Option<String>,
     /// Whether DIRECTORY (FOLDER) operations reach the PDP — the
     /// `abac.check_directory` switch, so the opt-in is engine-independent
     /// rather than inferred from a remote-PDP-shaped policy map.
@@ -249,6 +288,7 @@ impl std::fmt::Debug for AbacGate {
         f.debug_struct("AbacGate")
             .field("organization_claim", &self.organization_claim)
             .field("patient_claim", &self.patient_claim)
+            .field("patient_namespace", &self.patient_namespace)
             .field("directory_checked", &self.directory_checked)
             .finish_non_exhaustive()
     }
@@ -261,6 +301,7 @@ impl AbacGate {
             resolvers,
             organization_claim: config.organization_claim().map(str::to_owned),
             patient_claim: config.patient_claim().map(str::to_owned),
+            patient_namespace: config.patient_namespace().map(str::to_owned),
             directory_checked: config.check_directory,
         }
     }
@@ -610,6 +651,25 @@ mod tests {
         );
     }
 
+    /// A `restricted` per-EHR default is carried with the RBAC gate off, with
+    /// the configured admin role and role claims, so the per-EHR gate applies
+    /// it instead of falling back to open.
+    #[test]
+    fn restricted_default_survives_rbac_disabled() {
+        let mut cfg = AuthzConfig::default();
+        cfg.rbac.enabled = false;
+        cfg.rbac.ehr_access_default = EhrAccessDefault::Restricted;
+        cfg.rbac.admin_role = "SUPERADMIN".to_owned();
+        cfg.rbac.role_claims = vec!["app_roles".to_owned()];
+        let handle = AuthzHandle::build(&cfg, BASE, None, inert_resolvers())
+            .expect("a restricted default needs a handle");
+        assert!(!handle.rbac_active(), "the coarse gate stays off");
+        assert!(!handle.abac_active());
+        assert_eq!(handle.ehr_access_default(), EhrAccessDefault::Restricted);
+        assert_eq!(handle.admin_role(), "SUPERADMIN");
+        assert_eq!(handle.role_claims(), vec!["app_roles".to_owned()]);
+    }
+
     /// DIRECTORY gating reads `abac.check_directory`, so it works identically
     /// under both engines and is not inferred from the remote-PDP policy map (a
     /// Cedar deployment would otherwise need a policy name its engine never
@@ -689,7 +749,12 @@ mod tests {
         // with in-memory stand-ins (the binary supplies pool-backed ones).
         let resolvers = AuthzResolvers {
             subject: Arc::new(|ehr_id: String| {
-                Box::pin(async move { Ok((ehr_id == "known").then(|| "subject-1".to_owned())) })
+                Box::pin(async move {
+                    Ok((ehr_id == "known").then(|| EhrSubject::Unique {
+                        id: "subject-1".to_owned(),
+                        namespace: None,
+                    }))
+                })
             }),
             template_of_version: Arc::new(|_vo: String, version: Option<String>| {
                 Box::pin(async move { Ok(version.map(|v| format!("t.v{v}"))) })
@@ -697,7 +762,10 @@ mod tests {
         };
         assert_eq!(
             (resolvers.subject)("known".to_owned()).await.unwrap(),
-            Some("subject-1".to_owned())
+            Some(EhrSubject::Unique {
+                id: "subject-1".to_owned(),
+                namespace: None,
+            })
         );
         assert_eq!((resolvers.subject)("other".to_owned()).await.unwrap(), None);
         assert_eq!(

@@ -36,7 +36,7 @@ Both requirements can be achieved for archetypes and templates with a canonical 
 * concept code;
 * definition section (comments stripped).
 
-These objects would be represented in the same form as defined by the AOM. A suitable serialisation is the dADL syntax form. XML forms could be used, but they depend on which schema variant is in use, and there is no single normative openEHR XML-schema for the AOM.
+These objects would be represented in the same form as defined by the AOM. A suitable serialisation is the ODIN syntax form. XML forms could be used, but they depend on which schema variant is in use, and there is no single normative openEHR XML-schema for the AOM.
 
 [.tbd]
 _TBD_: canonical forms of other artefact types. Since all forms of archetypes and templates are now AOM-based (as of 1.5), a single canonical algorithm based on the AOM (with TOM extensions) can be described.

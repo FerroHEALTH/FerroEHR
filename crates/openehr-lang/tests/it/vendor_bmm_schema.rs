@@ -25,8 +25,9 @@
 //! must validate clean.
 //!
 //! A third table ([`pinned_cases`]) covers the openEHR component schemas
-//! `openehr-codegen` vendors — all 18 released generations, each with its class
-//! count + findings or its adjudicated refusal.
+//! `openehr-codegen` vendors — all 18 released generations, read from the json
+//! serialisation codegen reads, each with its class count + findings or its
+//! adjudicated refusal.
 //!
 //! Spec oracle: `docs/specs/openehr/LANG/docs/bmm_persistence/`
 //! (`master02-overview.adoc` §Conceptual Approach for the three stages,
@@ -50,6 +51,7 @@ use std::path::{Path, PathBuf};
 use openehr_lang::v1_1::bmm_persistence::create_model::create_bmm_model;
 use openehr_lang::v1_1::bmm_persistence::error::PBmmReadError;
 use openehr_lang::v1_1::bmm_persistence::include_resolution::resolve_includes;
+use openehr_lang::v1_1::bmm_persistence::json_reader::read_schema_json;
 use openehr_lang::v1_1::bmm_persistence::p_bmm_class::PBmmClass;
 use openehr_lang::v1_1::bmm_persistence::p_bmm_schema::PBmmSchema;
 use openehr_lang::v1_1::bmm_persistence::reader::read_schema;
@@ -59,7 +61,7 @@ use openehr_lang::v1_1::bmm_persistence::validate::validate_schema;
 /// (`master02-overview.adoc` §Conceptual Approach).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Stage {
-    /// `read_schema` — the ODIN → `P_BMM_SCHEMA` walk.
+    /// `read_schema` / `read_schema_json` — the ODIN or json → `P_BMM_SCHEMA` walk.
     Read,
     /// `resolve_includes` — schema inclusion resolution.
     Resolve,
@@ -382,14 +384,13 @@ fn vendor_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/vendor")
 }
 
-/// The ODIN serialisations of the openEHR component schemas that
-/// `openehr-codegen` vendors.
+/// The openEHR component schemas `openehr-codegen` vendors, read in their json
+/// serialisation — the files codegen itself reads.
 ///
 /// Referenced by path (never copied) so the boundary test below pins the reader
-/// against the schemas the project actually pins (`docs/VERSIONS.md`). Codegen
-/// itself consumes the `.bmm.json` serialisation of these same models, so these
-/// ODIN files are not part of this crate's committed corpus.
-const CODEGEN_VENDOR_ODIN: &str = "../../tools/openehr-codegen/vendor/bmm/components";
+/// against the schemas the project actually pins (`docs/VERSIONS.md`); they are
+/// not part of this crate's committed corpus.
+const CODEGEN_VENDOR: &str = "../../tools/openehr-codegen/vendor/bmm/components";
 
 /// Reads `path` relative to `tests/vendor`.
 fn source(path: &str) -> String {
@@ -498,7 +499,7 @@ enum PinnedOutcome {
 
 /// One row of the pinned-generation outcome table.
 struct PinnedCase {
-    /// Path relative to [`CODEGEN_VENDOR_ODIN`].
+    /// Path relative to [`CODEGEN_VENDOR`].
     file: &'static str,
     /// The adjudicated outcome.
     outcome: PinnedOutcome,
@@ -510,36 +511,36 @@ struct PinnedCase {
 
 /// The schemas offered for inclusion resolution, one file per `schema_id`.
 ///
-/// `LANG/odin/openehr_lang_1.1.0-bmm3.bmm` is deliberately absent: it renders
+/// `LANG/json/openehr_lang_1.1.0-bmm3.bmm.json` is deliberately absent: it renders
 /// the same `schema_id` (`openehr_lang_1.1.0`) as the v2.x LANG file, so the
 /// two published files cannot both answer one `includes` entry. The
 /// tie-break is exercised from both sides —
 /// [`am_2_4_0_is_refused_against_either_published_lang_1_1_0_schema`] pins that
-/// neither choice materialises AM 2.4.0.
+/// neither choice materialises AM 2.4.0. AM 2.4.0's json is absent too: it does
+/// not read (its [`pinned_cases`] row), and no schema includes an AM schema.
 const INCLUDE_SOURCES: &[&str] = &[
-    "AM/odin/openehr_am_1.4.0.bmm",
-    "AM/odin/openehr_am_2.2.0.bmm",
-    "AM/odin/openehr_am_2.3.0.bmm",
-    "AM/odin/openehr_am_2.4.0.bmm",
-    "BASE/odin/openehr_base_1.0.4.bmm",
-    "BASE/odin/openehr_base_1.1.0.bmm",
-    "BASE/odin/openehr_base_1.2.0.bmm",
-    "BASE/odin/openehr_base_1.3.0.bmm",
-    "LANG/odin/openehr_lang_1.0.0.bmm",
-    "LANG/odin/openehr_lang_1.1.0.bmm",
-    "RM/odin/openehr_rm_1.0.2.bmm",
-    "RM/odin/openehr_rm_1.0.3.bmm",
-    "RM/odin/openehr_rm_1.0.4.bmm",
-    "RM/odin/openehr_rm_1.1.0.bmm",
-    "RM/odin/openehr_rm_1.2.0.bmm",
-    "TERM/odin/openehr_term_3.0.0.bmm",
-    "TERM/odin/openehr_term_3.1.0.bmm",
+    "AM/json/openehr_am_1.4.0.bmm.json",
+    "AM/json/openehr_am_2.2.0.bmm.json",
+    "AM/json/openehr_am_2.3.0.bmm.json",
+    "BASE/json/openehr_base_1.0.4.bmm.json",
+    "BASE/json/openehr_base_1.1.0.bmm.json",
+    "BASE/json/openehr_base_1.2.0.bmm.json",
+    "BASE/json/openehr_base_1.3.0.bmm.json",
+    "LANG/json/openehr_lang_1.0.0.bmm.json",
+    "LANG/json/openehr_lang_1.1.0.bmm.json",
+    "RM/json/openehr_rm_1.0.2.bmm.json",
+    "RM/json/openehr_rm_1.0.3.bmm.json",
+    "RM/json/openehr_rm_1.0.4.bmm.json",
+    "RM/json/openehr_rm_1.1.0.bmm.json",
+    "RM/json/openehr_rm_1.2.0.bmm.json",
+    "TERM/json/openehr_term_3.0.0.bmm.json",
+    "TERM/json/openehr_term_3.1.0.bmm.json",
 ];
 
 /// The adjudicated outcome of EVERY openEHR component schema `openehr-codegen`
-/// vendors, as ODIN — 18 files, the complete pinned matrix.
+/// vendors, read from json — 18 files, the complete pinned matrix.
 ///
-/// Seven materialise; eleven are refused, and each refusal is a first-hand
+/// Eight materialise; ten are refused, and each refusal is a first-hand
 /// adjudication that the RELEASED schema references something its own
 /// inclusion closure does not define. The pipeline is fail-fast
 /// (`master02-overview.adoc` §Conceptual Approach), so a refusal row names the
@@ -551,7 +552,7 @@ const INCLUDE_SOURCES: &[&str] = &[
 fn pinned_cases() -> Vec<PinnedCase> {
     vec![
         PinnedCase {
-            file: "AM/odin/openehr_am_1.4.0.bmm",
+            file: "AM/json/openehr_am_1.4.0.bmm.json",
             outcome: PinnedOutcome::Model(
                 110,
                 &[
@@ -564,7 +565,7 @@ fn pinned_cases() -> Vec<PinnedCase> {
             adjudication: "AM 1.4.0's own CARDINALITY and the included BASE 1.3.0's Cardinality are DIFFERENT classes whose names are equal under master05-core-model.adoc §Naming Convention ('the class name \"Hashable\" refers to the same class as \"HASHABLE\"'), so §Packages' uniqueness rule is violated and the two containment rows are that collision seen through the same case-insensitive fold; separately ARCHETYPE redefines the inherited `uid: UUID` as HIER_OBJECT_ID, which is not a UUID descendant",
         },
         PinnedCase {
-            file: "AM/odin/openehr_am_2.2.0.bmm",
+            file: "AM/json/openehr_am_2.2.0.bmm.json",
             outcome: PinnedOutcome::Refused(
                 Stage::Model,
                 Kind::UnknownType,
@@ -573,7 +574,7 @@ fn pinned_cases() -> Vec<PinnedCase> {
             adjudication: "AM 2.2.0 includes openehr_base_1.1.0 and nothing else, yet types ARCHETYPE.rules as List<STATEMENT> — a class published only in the LANG schema. master04-syntax.adoc §Package Definition, second NOTE ('only classes defined in the same schema can be referenced') and §Inclusions make the inclusion list the only way to widen the class pool, and BMM_CONTAINER_TYPE's target roots in a BMM_CLASS, so the reference is unresolvable",
         },
         PinnedCase {
-            file: "AM/odin/openehr_am_2.3.0.bmm",
+            file: "AM/json/openehr_am_2.3.0.bmm.json",
             outcome: PinnedOutcome::Refused(
                 Stage::Model,
                 Kind::UnknownType,
@@ -582,16 +583,16 @@ fn pinned_cases() -> Vec<PinnedCase> {
             adjudication: "AM 2.3.0 includes openehr_lang_1.0.0, which defines no STATEMENT_SET (that class is published in LANG 1.1.0's beom package); the include therefore names the wrong LANG generation and the reference stays unresolvable",
         },
         PinnedCase {
-            file: "AM/odin/openehr_am_2.4.0.bmm",
+            file: "AM/json/openehr_am_2.4.0.bmm.json",
             outcome: PinnedOutcome::Refused(
-                Stage::Model,
-                Kind::UnknownType,
-                "class `BMM_ENUMERATION` property `item_values`: type `T`",
+                Stage::Read,
+                Kind::UnknownAttribute,
+                "ARCHETYPE_TERMINOLOGY/properties/value_sets: attribute `cardinality`",
             ),
-            adjudication: "AM 2.4.0 includes openehr_lang_1.1.0 and so inherits that schema's own defect below; against the other published openehr_lang_1.1.0 file it is refused for STATEMENT_SET instead — see am_2_4_0_is_refused_against_either_published_lang_1_1_0_schema",
+            adjudication: "the json serialisation gives the P_BMM_GENERIC_PROPERTY `value_sets` a `cardinality`, which only P_BMM_CONTAINER_PROPERTY declares (LANG org.openehr.lang.bmm_persistence.p_bmm_generic_property.adoc §Attributes); its ODIN twin carries none. Read from ODIN, AM 2.4.0 is still refused at the model stage — see am_2_4_0_is_refused_against_either_published_lang_1_1_0_schema",
         },
         PinnedCase {
-            file: "BASE/odin/openehr_base_1.0.4.bmm",
+            file: "BASE/json/openehr_base_1.0.4.bmm.json",
             outcome: PinnedOutcome::Refused(
                 Stage::Model,
                 Kind::UnknownType,
@@ -600,22 +601,22 @@ fn pinned_cases() -> Vec<PinnedCase> {
             adjudication: "the schema declares no includes and defines no BMM_OPEN_TYPE, yet types P_BMM_SINGLE_PROPERTY_OPEN.bmm_property as BMM_PROPERTY<BMM_OPEN_TYPE>; BMM_GENERIC_TYPE's actual parameters root in BMM_CLASS, so the generic parameter cannot be materialised",
         },
         PinnedCase {
-            file: "BASE/odin/openehr_base_1.1.0.bmm",
+            file: "BASE/json/openehr_base_1.1.0.bmm.json",
             outcome: PinnedOutcome::Model(66, &[]),
             adjudication: "self-contained (its own primitive_types block) and model-valid",
         },
         PinnedCase {
-            file: "BASE/odin/openehr_base_1.2.0.bmm",
+            file: "BASE/json/openehr_base_1.2.0.bmm.json",
             outcome: PinnedOutcome::Model(71, &[]),
             adjudication: "self-contained and model-valid",
         },
         PinnedCase {
-            file: "BASE/odin/openehr_base_1.3.0.bmm",
+            file: "BASE/json/openehr_base_1.3.0.bmm.json",
             outcome: PinnedOutcome::Model(72, &[]),
             adjudication: "the pinned BASE generation is self-contained and model-valid",
         },
         PinnedCase {
-            file: "LANG/odin/openehr_lang_1.0.0.bmm",
+            file: "LANG/json/openehr_lang_1.0.0.bmm.json",
             outcome: PinnedOutcome::Refused(
                 Stage::Model,
                 Kind::UnknownType,
@@ -624,7 +625,7 @@ fn pinned_cases() -> Vec<PinnedCase> {
             adjudication: "LANG 1.0.0 declares no includes and no primitive_types block, so none of the container and primitive classes it references exists: master04-syntax.adoc §Classes for Primitive Types is explicit that 'all container types such as List<T>, Hash<V,K> etc are exlicit in a BMM schema, and consequently, such types are normally defined ... in a BMM schema'. Every property of the schema is affected; List on BMM_ACTION_TABLE.items is simply the first",
         },
         PinnedCase {
-            file: "LANG/odin/openehr_lang_1.1.0.bmm",
+            file: "LANG/json/openehr_lang_1.1.0.bmm.json",
             outcome: PinnedOutcome::Refused(
                 Stage::Model,
                 Kind::UnknownType,
@@ -633,7 +634,7 @@ fn pinned_cases() -> Vec<PinnedCase> {
             adjudication: "BMM_ENUMERATION types item_values as List<T> while declaring no generic_parameter_defs, and its only ancestor BMM_CLASS declares none either — the released class doc (org.openehr.lang.bmm.bmm_enumeration.adoc, Inherit: BMM_CLASS, no generic parameter) says the same. bmm_open_type.adoc §Description requires 'The parameter must be in the type declaration of the owning BMM_CLASS', so T is neither an open type nor a class here. This is the schema's ONLY defect: with item_values removed the schema materialises 158 classes",
         },
         PinnedCase {
-            file: "LANG/odin/openehr_lang_1.1.0-bmm3.bmm",
+            file: "LANG/json/openehr_lang_1.1.0-bmm3.bmm.json",
             outcome: PinnedOutcome::Refused(
                 Stage::Model,
                 Kind::UnknownType,
@@ -642,7 +643,7 @@ fn pinned_cases() -> Vec<PinnedCase> {
             adjudication: "the v3 LANG schema types EL_CASE.value_constraint as C_OBJECT, an AM AOM2 class, while including only openehr_base_1.3.0; AM includes LANG, so the missing include would also be circular. This is the schema's ONLY defect: with value_constraint removed it materialises 191 classes",
         },
         PinnedCase {
-            file: "RM/odin/openehr_rm_1.0.2.bmm",
+            file: "RM/json/openehr_rm_1.0.2.bmm.json",
             outcome: PinnedOutcome::Refused(
                 Stage::Model,
                 Kind::UnknownType,
@@ -651,7 +652,7 @@ fn pinned_cases() -> Vec<PinnedCase> {
             adjudication: "RM 1.0.2 declares no includes and no primitive_types block, so String, List, Integer and every other foundation class it references is undefined; the RM line first declares an include at 1.0.4",
         },
         PinnedCase {
-            file: "RM/odin/openehr_rm_1.0.3.bmm",
+            file: "RM/json/openehr_rm_1.0.3.bmm.json",
             outcome: PinnedOutcome::Refused(
                 Stage::Model,
                 Kind::UnknownType,
@@ -660,7 +661,7 @@ fn pinned_cases() -> Vec<PinnedCase> {
             adjudication: "the 1.0.3 generation of the same defect",
         },
         PinnedCase {
-            file: "RM/odin/openehr_rm_1.0.4.bmm",
+            file: "RM/json/openehr_rm_1.0.4.bmm.json",
             outcome: PinnedOutcome::Model(
                 206,
                 &[
@@ -675,7 +676,7 @@ fn pinned_cases() -> Vec<PinnedCase> {
             adjudication: "the first RM generation to declare an include (openehr_base_1.1.0); the six classes it lists in its own packages are listed again by BASE, against master05-core-model.adoc §Packages",
         },
         PinnedCase {
-            file: "RM/odin/openehr_rm_1.1.0.bmm",
+            file: "RM/json/openehr_rm_1.1.0.bmm.json",
             outcome: PinnedOutcome::Model(
                 222,
                 &[
@@ -688,7 +689,7 @@ fn pinned_cases() -> Vec<PinnedCase> {
             adjudication: "the same double containment against BASE 1.2.0, less the two definitions classes BASE 1.2.0 no longer duplicates",
         },
         PinnedCase {
-            file: "RM/odin/openehr_rm_1.2.0.bmm",
+            file: "RM/json/openehr_rm_1.2.0.bmm.json",
             outcome: PinnedOutcome::Model(
                 213,
                 &[
@@ -696,13 +697,13 @@ fn pinned_cases() -> Vec<PinnedCase> {
                     "class `RESOURCE_DESCRIPTION` is contained within 2 package listing(s) (org.openehr.base.resource, org.openehr.rm.common.resource); a class must be contained within exactly one package",
                     "class `TRANSLATION_DETAILS` is contained within 2 package listing(s) (org.openehr.base.resource, org.openehr.rm.common.resource); a class must be contained within exactly one package",
                     "class `RESOURCE_DESCRIPTION_ITEM` is contained within 2 package listing(s) (org.openehr.base.resource, org.openehr.rm.common.resource); a class must be contained within exactly one package",
-                    "class `CODE_PHRASE` is contained within 2 package listing(s) (org.openehr.base.foundation_types.terminology, org.openehr.rm.data_types.text); a class must be contained within exactly one package",
+                    "class `CODE_PHRASE` is contained within 2 package listing(s) (org.openehr.base.base_types.terminology, org.openehr.rm.data_types.text); a class must be contained within exactly one package",
                 ],
             ),
-            adjudication: "RM 1.2.0 includes openehr_base_1.3.0 and both schemas list these five classes in a package of their own, so each is contained twice after the merge — master05-core-model.adoc §Packages",
+            adjudication: "RM 1.2.0 includes openehr_base_1.3.0 and both schemas list these five classes in a package of their own, so each is contained twice after the merge — master05-core-model.adoc §Packages; the BASE 1.3.0 component-repo file lists CODE_PHRASE under base_types.terminology (SPECAM-82)",
         },
         PinnedCase {
-            file: "TERM/odin/openehr_term_3.0.0.bmm",
+            file: "TERM/json/openehr_term_3.0.0.bmm.json",
             outcome: PinnedOutcome::Refused(
                 Stage::Model,
                 Kind::UnknownType,
@@ -711,13 +712,9 @@ fn pinned_cases() -> Vec<PinnedCase> {
             adjudication: "TERM 3.0.0 declares no includes and no primitive_types block, so String, List and Iso8601_date are all undefined; primitives are ordinary class definitions a schema must carry or include (master04-syntax.adoc §Classes for Primitive Types), never implicit",
         },
         PinnedCase {
-            file: "TERM/odin/openehr_term_3.1.0.bmm",
-            outcome: PinnedOutcome::Refused(
-                Stage::Model,
-                Kind::UnknownType,
-                "class `CODE` property `description`: type `String`",
-            ),
-            adjudication: "the pinned TERM generation carries the same defect as 3.0.0",
+            file: "TERM/json/openehr_term_3.1.0.bmm.json",
+            outcome: PinnedOutcome::Model(78, &[]),
+            adjudication: "the component-repo TERM 3.1.0 file includes openehr_base_1.3.0, which defines String, List and Iso8601_date, so its six classes materialise beside the 72 BASE classes and are each listed in exactly one package",
         },
     ]
 }
@@ -821,14 +818,22 @@ fn the_finding_table_names_only_schemas_that_materialise() {
     }
 }
 
-/// Reads one file under [`CODEGEN_VENDOR_ODIN`] as a `P_BMM_SCHEMA`.
-fn read_pinned(file: &str) -> PBmmSchema {
+/// The text of one file under [`CODEGEN_VENDOR`].
+fn pinned_source(file: &str) -> String {
     let full = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join(CODEGEN_VENDOR_ODIN)
+        .join(CODEGEN_VENDOR)
         .join(file);
-    let src =
-        std::fs::read_to_string(&full).unwrap_or_else(|e| panic!("read {}: {e}", full.display()));
-    read_schema(&src).unwrap_or_else(|e| panic!("{file}: the pinned schema reads: {e}"))
+    std::fs::read_to_string(&full).unwrap_or_else(|e| panic!("read {}: {e}", full.display()))
+}
+
+/// Reads one json file under [`CODEGEN_VENDOR`] as a `P_BMM_SCHEMA`.
+fn read_pinned_json(file: &str) -> Result<PBmmSchema, PBmmReadError> {
+    read_schema_json(&pinned_source(file))
+}
+
+/// Reads one json file under [`CODEGEN_VENDOR`] that must read.
+fn read_pinned(file: &str) -> PBmmSchema {
+    read_pinned_json(file).unwrap_or_else(|e| panic!("{file}: the pinned schema reads: {e}"))
 }
 
 /// [`INCLUDE_SOURCES`] keyed by `schema_id`.
@@ -846,17 +851,19 @@ fn pinned_include_map() -> BTreeMap<String, PBmmSchema> {
 }
 
 #[test]
-fn every_pinned_openehr_odin_schema_reaches_its_adjudicated_outcome() {
+fn every_pinned_openehr_component_schema_reaches_its_adjudicated_outcome() {
     // The complete matrix openehr-codegen vendors, run as models rather than
-    // just read: seven materialise (their class count + §Packages findings
-    // pinned) and eleven are refused where the RELEASED schema references a
+    // just read: eight materialise (their class count + §Packages findings
+    // pinned) and ten are refused where the RELEASED schema references a
     // class its own inclusion closure does not define.
     let available = pinned_include_map();
     for case in pinned_cases() {
-        let schema = read_pinned(case.file);
-        let id = schema.schema_id();
-        let observed = resolve_includes(schema, &available)
-            .map_err(|error| (Stage::Resolve, error))
+        let id = case.file;
+        let observed = read_pinned_json(case.file)
+            .map_err(|error| (Stage::Read, error))
+            .and_then(|schema| {
+                resolve_includes(schema, &available).map_err(|error| (Stage::Resolve, error))
+            })
             .and_then(|resolved| match create_bmm_model(&resolved) {
                 Ok(model) => {
                     let findings: Vec<String> = validate_schema(&resolved, &model)
@@ -905,9 +912,9 @@ fn every_pinned_openehr_odin_schema_reaches_its_adjudicated_outcome() {
 
 #[test]
 fn the_pinned_table_covers_every_vendored_component_schema() {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(CODEGEN_VENDOR_ODIN);
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(CODEGEN_VENDOR);
     let mut on_disk: Vec<String> = Vec::new();
-    collect_bmm(&root, &root, &mut on_disk);
+    collect_files(&root, &root, ".bmm.json", &mut on_disk);
     on_disk.sort();
     let mut claimed: Vec<String> = pinned_cases()
         .iter()
@@ -916,7 +923,7 @@ fn the_pinned_table_covers_every_vendored_component_schema() {
     claimed.sort();
     assert_eq!(
         claimed, on_disk,
-        "the pinned-generation table and the vendored component ODIN schemas disagree"
+        "the pinned-generation table and the vendored component json schemas disagree"
     );
     // Five components × their released generations.
     assert_eq!(on_disk.len(), 18);
@@ -931,20 +938,24 @@ fn am_2_4_0_is_refused_against_either_published_lang_1_1_0_schema() {
     // include by schema id alone, so no third reading exists.
     for (lang, detail) in [
         (
-            "LANG/odin/openehr_lang_1.1.0.bmm",
+            "LANG/json/openehr_lang_1.1.0.bmm.json",
             "class `BMM_ENUMERATION` property `item_values`: type `T`",
         ),
         (
-            "LANG/odin/openehr_lang_1.1.0-bmm3.bmm",
+            "LANG/json/openehr_lang_1.1.0-bmm3.bmm.json",
             "class `ARCHETYPE` property `rules`: type `STATEMENT_SET`",
         ),
     ] {
         let mut available: BTreeMap<String, PBmmSchema> = BTreeMap::new();
-        for file in ["BASE/odin/openehr_base_1.3.0.bmm", lang] {
+        for file in ["BASE/json/openehr_base_1.3.0.bmm.json", lang] {
             let schema = read_pinned(file);
             available.insert(schema.schema_id(), schema);
         }
-        let resolved = resolve_includes(read_pinned("AM/odin/openehr_am_2.4.0.bmm"), &available)
+        // The json serialisation does not read (its `pinned_cases` row); the
+        // model question is the same over the ODIN twin.
+        let am = read_schema(&pinned_source("AM/odin/openehr_am_2.4.0.bmm"))
+            .unwrap_or_else(|e| panic!("AM 2.4.0 ODIN reads: {e}"));
+        let resolved = resolve_includes(am, &available)
             .unwrap_or_else(|e| panic!("{lang}: inclusion resolution: {e}"));
         let error = create_bmm_model(&resolved)
             .err()
@@ -980,11 +991,21 @@ fn the_table_covers_every_vendored_bmm_file() {
 
 /// Collects every `.bmm` path under `dir`, relative to `root`.
 fn collect_bmm(dir: &Path, root: &Path, out: &mut Vec<String>) {
+    collect_files(dir, root, ".bmm", out);
+}
+
+/// Collects every path under `dir` whose file name ends with `suffix`,
+/// relative to `root`.
+fn collect_files(dir: &Path, root: &Path, suffix: &str, out: &mut Vec<String>) {
     for entry in std::fs::read_dir(dir).unwrap_or_else(|e| panic!("read_dir: {e}")) {
         let path = entry.unwrap_or_else(|e| panic!("dir entry: {e}")).path();
         if path.is_dir() {
-            collect_bmm(&path, root, out);
-        } else if path.extension().and_then(std::ffi::OsStr::to_str) == Some("bmm") {
+            collect_files(&path, root, suffix, out);
+        } else if path
+            .file_name()
+            .and_then(std::ffi::OsStr::to_str)
+            .is_some_and(|name| name.ends_with(suffix))
+        {
             let rel = path
                 .strip_prefix(root)
                 .unwrap_or_else(|e| panic!("strip_prefix: {e}"));
@@ -994,22 +1015,22 @@ fn collect_bmm(dir: &Path, root: &Path, out: &mut Vec<String>) {
 }
 
 #[test]
-fn the_pinned_openehr_odin_schemas_read_their_persisted_interfaces() {
+fn the_pinned_openehr_component_schemas_read_their_persisted_interfaces() {
     // master02-overview.adoc §Conceptual Approach: "In addition to ordinary
     // classes, the model can also represent pure interfaces via
     // P_BMM_INTERFACE, i.e. class-like definitions that declare only functions
-    // and carry no state" — and the RM and BASE ODIN schemas this project pins
+    // and carry no state" — and the RM and BASE schemas this project pins
     // (docs/VERSIONS.md: RM 1.2.0, BASE 1.3.0) serialise them as
-    // `(P_BMM_INTERFACE)`-marked members of `class_definitions`. Those real
+    // `P_BMM_INTERFACE`-typed members of `class_definitions`. Those real
     // artefacts (not a fixture) pin that the reader materialises each one with
     // its declared functions, and that the whole schema still reads.
     for (file, interfaces) in [
         (
-            "RM/odin/openehr_rm_1.2.0.bmm",
+            "RM/json/openehr_rm_1.2.0.bmm.json",
             ["CODE_SET_ACCESS", "TERMINOLOGY_ACCESS"].as_slice(),
         ),
         (
-            "BASE/odin/openehr_base_1.3.0.bmm",
+            "BASE/json/openehr_base_1.3.0.bmm.json",
             ["Env", "Locale", "Math", "Quantity_converter"].as_slice(),
         ),
     ] {
@@ -1038,15 +1059,15 @@ fn the_pinned_openehr_odin_schemas_read_their_persisted_interfaces() {
 }
 
 #[test]
-fn the_pinned_openehr_odin_schemas_materialise_their_interfaces_as_abstract_classes() {
+fn the_pinned_openehr_component_schemas_materialise_their_interfaces_as_abstract_classes() {
     // The whole pinned RM 1.2.0 + BASE 1.3.0 pair runs the three stages: the
     // interfaces are listed in packages and referenced as property types
     // (`TERMINOLOGY_SERVICE.terminology: TERMINOLOGY_ACCESS`), so the transform
     // has to resolve those references — which it does by materialising each
     // interface as an abstract `BMM_CLASS` with no properties (see
     // `create_model::Builder::build_class`).
-    let base = read_pinned("BASE/odin/openehr_base_1.3.0.bmm");
-    let rm = read_pinned("RM/odin/openehr_rm_1.2.0.bmm");
+    let base = read_pinned("BASE/json/openehr_base_1.3.0.bmm.json");
+    let rm = read_pinned("RM/json/openehr_rm_1.2.0.bmm.json");
     let mut available: BTreeMap<String, PBmmSchema> = BTreeMap::new();
     available.insert(base.schema_id(), base.clone());
 

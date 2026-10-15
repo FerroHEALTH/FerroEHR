@@ -47,10 +47,12 @@ optional:
   `statement-version.sh` step of `citation-guard` enforces the match) — it is GENERATED, never hand-edited, because Zenodo ignores
   `CITATION.cff` completely whenever a `.zenodo.json` exists
   (<https://help.zenodo.org/docs/github/describe-software/zenodo-json/>),
-  + the default image tags in `docker-compose.yml` — the `ghcr.io/…:X.Y.Z`
-  fallbacks the standalone quickstart pulls — guarded by
-  `scripts/checks/compose-image-tags.sh` / the `compose-version-guard` CI
-  job (the hosted sandbox carries NO release-cut step: its compose defaults
+  + the default image tags in `docker-compose.yml` (the `ghcr.io/…:X.Y.Z`
+  fallbacks the standalone quickstart pulls) AND in the
+  `docker-compose.terminology.yml` overlay (its `FERROEHR_IMAGE` default, the
+  image volume the FerroTERM services mount; #3605), guarded by
+  `scripts/checks/compose-image-tags.sh`, which reads every root and
+  `docker/` compose file / the `compose-version-guard` CI job (the hosted sandbox carries NO release-cut step: its compose defaults
   track the `:latest` release pointer and the release pipeline's `sandbox` +
   `sandbox-reseed` legs redeploy + reseed the Hetzner box automatically after
   the tag's images apply — `deploy/hosted/README.md`, #2974), + the chart's `appVersion` and

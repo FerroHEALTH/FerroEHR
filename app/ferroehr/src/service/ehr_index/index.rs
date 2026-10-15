@@ -17,6 +17,7 @@
 
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
 use crate::service::ehr_index::types::{EhrIndexEntry, LocationDesc, ResourceStatus, SubjectRef};
@@ -235,7 +236,7 @@ impl FerroEhrService {
     async fn index_ehr_exists(&self, ehr_id: EhrId) -> Result<(), IndexError> {
         let found: Option<Uuid> = sqlx::query_scalar("SELECT id FROM ehr WHERE id = $1")
             .bind(ehr_id)
-            .fetch_optional(&self.pool)
+            .fetch_optional(&mut *acquire(&self.pool).await?)
             .await?;
         found.map(|_| ()).ok_or(IndexError::EhrDoesNotExist(ehr_id))
     }

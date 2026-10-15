@@ -34,8 +34,10 @@ use openehr_adl::validate::rm::ProductionRmModel;
 use openehr_adl::validate::{ValidationIssue, validate_adl14_source};
 use openehr_base::prelude::ArchetypeId;
 use openehr_base::validate::InvariantViolation;
+use sqlx::Connection as _;
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::service::FerroEhrService;
 use crate::service::error::{ServiceError, Violation};
 use crate::service::list::Page;
@@ -387,7 +389,7 @@ impl FerroEhrService {
             "SELECT EXISTS(SELECT 1 FROM archetype_store WHERE lower(archetype_id) = lower($1))",
         )
         .bind(an_id)
-        .fetch_one(&self.pool)
+        .fetch_one(&mut *acquire(&self.pool).await?)
         .await?)
     }
 
@@ -402,7 +404,8 @@ impl FerroEhrService {
                  header or a well-formed ARCHETYPE_ID)",
             )
         })?;
-        let mut tx = self.pool.begin().await?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
         sqlx::query("DELETE FROM archetype_store WHERE lower(archetype_id) = lower($1)")
             .bind(&id.value)
             .execute(&mut *tx)
@@ -423,7 +426,7 @@ impl FerroEhrService {
             "SELECT adl FROM archetype_store WHERE lower(archetype_id) = lower($1)",
         )
         .bind(an_id)
-        .fetch_optional(&self.pool)
+        .fetch_optional(&mut *acquire(&self.pool).await?)
         .await?
         .ok_or_else(|| {
             ServiceError::sm(
@@ -441,7 +444,7 @@ impl FerroEhrService {
         )
         .bind(offset)
         .bind(limit)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *acquire(&self.pool).await?)
         .await?)
     }
 
@@ -455,7 +458,7 @@ impl FerroEhrService {
         let re = compile_pattern(id_pattern)?;
         let all: Vec<String> =
             sqlx::query_scalar("SELECT archetype_id FROM archetype_store ORDER BY archetype_id")
-                .fetch_all(&self.pool)
+                .fetch_all(&mut *acquire(&self.pool).await?)
                 .await?;
         Ok(paginate(all.into_iter().filter(|id| re.is_match(id)), page))
     }
@@ -466,7 +469,7 @@ impl FerroEhrService {
         let deleted =
             sqlx::query("DELETE FROM archetype_store WHERE lower(archetype_id) = lower($1)")
                 .bind(an_id)
-                .execute(&self.pool)
+                .execute(&mut *acquire(&self.pool).await?)
                 .await?
                 .rows_affected();
         if deleted == 0 {
@@ -482,7 +485,7 @@ impl FerroEhrService {
     async fn archetype_count(&self) -> Result<i64, ServiceError> {
         Ok(
             sqlx::query_scalar::<_, i64>("SELECT count(*) FROM archetype_store")
-                .fetch_one(&self.pool)
+                .fetch_one(&mut *acquire(&self.pool).await?)
                 .await?,
         )
     }
@@ -495,7 +498,7 @@ impl FerroEhrService {
             "SELECT EXISTS(SELECT 1 FROM template_store WHERE id = $1)",
         )
         .bind(id)
-        .fetch_one(&self.pool)
+        .fetch_one(&mut *acquire(&self.pool).await?)
         .await?)
     }
 
@@ -506,7 +509,7 @@ impl FerroEhrService {
         let id = parse_opt_uuid(an_opt_id)?;
         sqlx::query_scalar::<_, String>("SELECT content FROM template_store WHERE id = $1")
             .bind(id)
-            .fetch_optional(&self.pool)
+            .fetch_optional(&mut *acquire(&self.pool).await?)
             .await?
             .ok_or_else(|| {
                 ServiceError::sm(
@@ -530,7 +533,7 @@ impl FerroEhrService {
             "SELECT content FROM template_store WHERE lower(template_id) = lower($1)",
         )
         .bind(template_id)
-        .fetch_optional(&self.pool)
+        .fetch_optional(&mut *acquire(&self.pool).await?)
         .await?
         .ok_or_else(|| {
             ServiceError::sm(
@@ -548,7 +551,7 @@ impl FerroEhrService {
         )
         .bind(offset)
         .bind(limit)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *acquire(&self.pool).await?)
         .await?;
         Ok(ids.into_iter().map(|u| u.to_string()).collect())
     }
@@ -564,7 +567,7 @@ impl FerroEhrService {
         let re = compile_pattern(id_pattern)?;
         let all: Vec<String> =
             sqlx::query_scalar("SELECT template_id FROM template_store ORDER BY template_id")
-                .fetch_all(&self.pool)
+                .fetch_all(&mut *acquire(&self.pool).await?)
                 .await?;
         Ok(paginate(
             all.into_iter().filter(|tid| re.is_match(tid)),
@@ -583,7 +586,8 @@ impl FerroEhrService {
         // consistent with the delete; the `version.template_id` →
         // `template_ref` foreign key stays the integrity guard under a
         // concurrent commit.
-        let mut tx = self.pool.begin().await?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
         let template_id: Option<String> =
             sqlx::query_scalar("SELECT template_id FROM template_store WHERE id = $1")
                 .bind(id)
@@ -639,7 +643,7 @@ impl FerroEhrService {
     async fn opt_count(&self) -> Result<i64, ServiceError> {
         Ok(
             sqlx::query_scalar::<_, i64>("SELECT count(*) FROM template_store")
-                .fetch_one(&self.pool)
+                .fetch_one(&mut *acquire(&self.pool).await?)
                 .await?,
         )
     }

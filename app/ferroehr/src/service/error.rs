@@ -183,6 +183,14 @@ impl std::fmt::Display for Violation {
 /// restores both verbatim. The one deliberate exception is the `500`-class
 /// [`ServiceError::Internal`] row, whose body and reported status are curated
 /// (see its docs).
+///
+/// A variant that wraps one error is `#[error(transparent)]`: its `Display` is
+/// the wrapped error's and its [`std::error::Error::source`] is that error's
+/// cause, so a chain printer such as [`ErrorChain`] reads every fact once
+/// ([RFC 0201](https://rust-lang.github.io/rfcs/0201-error-chaining.html)).
+/// [`ServiceError::Unprocessable`] names its status and leaves the violation to
+/// its source hop. No `Display` here is a wire body: both bridges below render
+/// the carried message or violation themselves.
 #[derive(Debug, thiserror::Error)]
 pub enum ServiceError {
     /// The requested resource does not exist. Carries the granular SM
@@ -191,8 +199,8 @@ pub enum ServiceError {
     /// via [`ServiceError::sm`] naming the precise status; extension resources
     /// the SM has no status for (event subscriptions, item
     /// tags) use the generic `versioned_object_does_not_exist`.
-    #[error("{0} not found")]
-    NotFound(#[source] SmError),
+    #[error(transparent)]
+    NotFound(SmError),
     /// The request is malformed at the semantic level (e.g. a stale/invalid
     /// `preceding_version_uid`, or an operation on an already-deleted object) —
     /// ITS-REST `400 Bad Request` (`400_already_deleted.yaml`).
@@ -201,8 +209,8 @@ pub enum ServiceError {
     /// `precondition_violation` ([`ServiceError::precondition`]) or the
     /// definition service's `invalid_id_pattern`
     /// (`definition_call_status_type.adoc`).
-    #[error("bad request: {0}")]
-    BadRequest(#[source] SmError),
+    #[error(transparent)]
+    BadRequest(SmError),
     /// The request conflicts with current state (e.g. EHR already exists) —
     /// ITS-REST `409 Conflict`.
     ///
@@ -210,16 +218,16 @@ pub enum ServiceError {
     /// `ehr_create_fail_duplicate_id` or `ehr_for_subject_already_exists`
     /// (`ehr_call_status_type.adoc`), or the generic `conflict` the storage
     /// bridge classifies.
-    #[error("conflict: {0}")]
-    Conflict(#[source] SmError),
+    #[error(transparent)]
+    Conflict(SmError),
     /// Optimistic-concurrency precondition (`If-Match`) failed — the SM
     /// `version_mismatch` status (`call_status_type.adoc`), ITS-REST `412`.
-    #[error("version conflict: {0}")]
-    VersionConflict(#[source] SmError),
+    #[error(transparent)]
+    VersionConflict(SmError),
     /// The submitted payload is malformed or fails a structural rule —
     /// carrying the violated rule as DATA ([`Violation`]: path, invariant,
     /// causes), rendered into prose only at the protocol edge.
-    #[error("unprocessable: {violation}")]
+    #[error("unprocessable content ({})", .status.sm_name())]
     Unprocessable {
         /// The `422`-class SM status the refusal reports: the generic
         /// `content_invalid` ([`ServiceError::content_invalid`]), an
@@ -240,17 +248,20 @@ pub enum ServiceError {
     #[error("{} validation error(s)", .0.len())]
     ValidationFailed(Vec<InvariantViolation>),
     /// A storage/codec failure.
-    #[error("storage: {0}")]
+    #[error(transparent)]
     Storage(#[from] crate::storage::error::StorageError),
     /// A database failure.
-    #[error("database: {0}")]
+    #[error(transparent)]
     Database(#[from] sqlx::Error),
+    /// No database connection could be obtained, so nothing ran.
+    #[error(transparent)]
+    Acquire(#[from] crate::db::acquire::AcquireError),
     /// A JSON payload the server was asked to READ is malformed — a
     /// client-caused refusal (`400`) whose wire message NAMES the defect
     /// (offset, expected token), because that is the only thing the caller can
     /// act on. Constructed explicitly at a read site; never by `?`.
-    #[error("malformed json: {0}")]
-    JsonRead(#[source] serde_json::Error),
+    #[error(transparent)]
+    JsonRead(serde_json::Error),
     /// The server failed to serialize its OWN data — a server-side fault
     /// (`500`). This is the `From<serde_json::Error>` default (a bare `?` on a
     /// `serde_json` failure lands here), because the safe classification of an
@@ -258,7 +269,7 @@ pub enum ServiceError {
     /// diagnostic names Rust type and field names, which is server-internal
     /// detail no client can act on. The full diagnostic goes to `tracing`
     /// instead, and the wire body carries `INTERNAL_MESSAGE`.
-    #[error("json serialization failed: {0}")]
+    #[error(transparent)]
     JsonWrite(#[from] serde_json::Error),
     /// A version-signing or read-time integrity failure (RM common master06
     /// §Digital Signature) — either signing at commit failed, or
@@ -269,18 +280,22 @@ pub enum ServiceError {
     /// below trace it and answer with `INTERNAL_MESSAGE`.
     #[error("signing: {0}")]
     Signing(String),
-    /// The same failure, with its cause intact (RFC 0201: `Error::source` is
-    /// part of the contract). A signing failure is a config problem or a key
-    /// problem, and a caller that cannot tell them apart has to substring-match
-    /// prose — which `reliability.md` bans outright.
-    #[error("signing: {0}")]
-    SigningFailed(String, #[source] SignError),
-    /// Canonicalisation failed on the signing path — a different cause from a
-    /// signer failure, and the distinction is the point: one is a malformed
-    /// document, the other a key or configuration problem.
-    #[error("signing: {0}")]
+    /// The signer failed, with its cause intact as the source (RFC 0201:
+    /// `Error::source` is part of the contract).
+    ///
+    /// A signing failure is a key or configuration problem, and the cause is
+    /// what tells them apart. Both bridges below trace the chain and answer
+    /// with `INTERNAL_MESSAGE`.
+    #[error("signing a version failed")]
+    SigningFailed(#[source] SignError),
+    /// Canonicalisation failed on the signing or verification path, with the
+    /// canonicaliser's error as the source.
+    ///
+    /// A different cause from a signer failure, and the distinction is the
+    /// point: one is a malformed document, the other a key or configuration
+    /// problem.
+    #[error("canonicalising a version for its signature failed")]
     SigningCanonical(
-        String,
         #[source] openehr_rm::v1_2::common::change_control::version_impl::CanonicalFormError,
     ),
     /// A server-side fault with no more specific variant (the `500`-class SM
@@ -294,8 +309,8 @@ pub enum ServiceError {
     /// definition something the client cannot act on and must disclose no
     /// internal error value. Construct with [`ServiceError::exception`], or
     /// with [`ServiceError::internal`] to carry the failure that caused it.
-    #[error("internal: {0}")]
-    Internal(#[source] SmError),
+    #[error(transparent)]
+    Internal(SmError),
     /// The access record for a completed read or write could not be taken
     /// and the deployment fails closed (`[audit] fail_mode = "closed"`), so
     /// the result is withheld — the wire's `503`, `Retry-After` set, the same
@@ -304,8 +319,8 @@ pub enum ServiceError {
     /// Carries the `service_overloaded` [`SmError`] that
     /// [`FerroEhrService::record_access`](crate::service::FerroEhrService::record_access)
     /// produced, so the SM route reports the same status.
-    #[error("access unrecorded: {0}")]
-    Unrecorded(#[source] SmError),
+    #[error(transparent)]
+    Unrecorded(SmError),
     /// Processing of the addressed object is restricted: the server holds it
     /// in storage and refuses everything else — the wire's `403`.
     ///
@@ -318,8 +333,8 @@ pub enum ServiceError {
     /// a caller can tell it from an authorization refusal.
     ///
     /// Construct with [`ServiceError::restricted`].
-    #[error("restricted: {0}")]
-    Restricted(#[source] SmError),
+    #[error(transparent)]
+    Restricted(SmError),
 }
 
 /// The client-visible message of a server-side fault (`500`). Deliberately
@@ -353,7 +368,7 @@ pub(crate) fn internal_fault(context: &'static str, detail: &dyn std::fmt::Displ
 /// [`std::error::Error`] source: the `cause` field is the walked
 /// [`std::error::Error::source`] chain, which is the only place the underlying
 /// `sqlx`/codec/transport diagnosis is readable — it never reaches the wire.
-fn internal_fault_caused(
+pub(crate) fn internal_fault_caused(
     context: &'static str,
     error: &(dyn std::error::Error + 'static),
 ) -> SmError {
@@ -733,14 +748,15 @@ impl From<ServiceError> for SmError {
             // (integrity/serialization conflict → 409, pool exhaustion → 503)
             // instead of collapsing every database error to a blanket 500.
             ServiceError::Database(e) => crate::storage::error::classify_sqlx(&e),
+            ServiceError::Acquire(e) => crate::storage::error::classify_acquire(&e).with_source(e),
             // A malformed payload the server was asked to read names its own
             // defect (`400`); a failure to serialize the server's own data is
             // a server fault whose diagnostic stays in the log (`500`).
             ServiceError::JsonRead(e) => SmError::new(S::PreconditionViolation, e.to_string()),
-            ServiceError::JsonWrite(e) => internal_fault("serialize a JSON payload", &e),
+            ServiceError::JsonWrite(e) => internal_fault_caused("serialize a JSON payload", &e),
             ServiceError::Signing(m) => internal_fault("sign or verify a version", &m),
-            ServiceError::SigningFailed(m, _) | ServiceError::SigningCanonical(m, _) => {
-                internal_fault("sign or verify a version", &m)
+            e @ (ServiceError::SigningFailed(_) | ServiceError::SigningCanonical(_)) => {
+                internal_fault_caused("sign or verify a version", &e)
             }
             // The curated row: the detail and the whole cause chain go to the
             // trace record, the client gets `exception` + `INTERNAL_MESSAGE`.
@@ -784,6 +800,9 @@ impl From<ServiceError> for ApiError {
             ServiceError::Database(e) => {
                 sqlx_conflict_api_error(crate::storage::error::classify_sqlx(&e))
             }
+            ServiceError::Acquire(e) => {
+                sqlx_conflict_api_error(crate::storage::error::classify_acquire(&e))
+            }
             // A malformed payload the server was asked to read is a client
             // defect → `400`, and the body names it (that IS the strict
             // reader's contract). A failure to serialize the server's own data
@@ -791,15 +810,16 @@ impl From<ServiceError> for ApiError {
             // serde diagnostic rides the trace record only.
             ServiceError::JsonRead(e) => ApiError::BadRequest(e.to_string()),
             ServiceError::JsonWrite(e) => {
-                ApiError::Internal(internal_fault("serialize a JSON payload", &e).message)
+                ApiError::Internal(internal_fault_caused("serialize a JSON payload", &e).message)
             }
             // Signing/integrity failures and generic faults are server-side
             // (`500`): the carried text is the log detail, the body is the
             // curated message.
-            ServiceError::SigningFailed(m, _)
-            | ServiceError::SigningCanonical(m, _)
-            | ServiceError::Signing(m) => {
+            ServiceError::Signing(m) => {
                 ApiError::Internal(internal_fault("sign or verify a version", &m).message)
+            }
+            e @ (ServiceError::SigningFailed(_) | ServiceError::SigningCanonical(_)) => {
+                ApiError::Internal(internal_fault_caused("sign or verify a version", &e).message)
             }
             ServiceError::Internal(sm) => {
                 ApiError::Internal(internal_fault_caused("complete the request", &sm).message)
@@ -972,6 +992,31 @@ mod tests {
             let got = ApiError::from(ServiceError::sm(status, "m")).status();
             assert_eq!(got, expected, "row {} diverged", status.sm_name());
         }
+    }
+
+    /// A resolver failure while acquiring answers `503` on the wire, while the
+    /// same driver identity on an acquired session stays `500` (#3749).
+    #[tokio::test]
+    async fn the_acquire_phase_decides_503_versus_500() {
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(5))
+            .connect_lazy_with(
+                sqlx::postgres::PgConnectOptions::new()
+                    .host("ferroehr-acquire-test.invalid")
+                    .username("nobody")
+                    .database("nothing"),
+            );
+        let failure = crate::db::acquire::acquire(&pool)
+            .await
+            .expect_err("the `.invalid` top-level domain never resolves");
+        let api = ApiError::from(ServiceError::from(failure));
+        assert_eq!(api.status(), http::StatusCode::SERVICE_UNAVAILABLE);
+
+        let in_session = ServiceError::Database(sqlx::Error::Protocol("unexpected".to_owned()));
+        assert_eq!(
+            ApiError::from(in_session).status(),
+            http::StatusCode::INTERNAL_SERVER_ERROR
+        );
     }
 
     /// The JSON twins: a payload the server was asked to READ names its own
@@ -1425,9 +1470,11 @@ mod tests {
                 message: "no secret key".to_owned(),
                 backtrace: None,
             });
-        let signing = ServiceError::SigningFailed(
-            pgp.to_string(),
-            crate::versioning::signature::signer::SignError::Pgp(pgp),
+        let signing =
+            ServiceError::SigningFailed(crate::versioning::signature::signer::SignError::Pgp(pgp));
+        assert!(
+            !signing.to_string().contains("no secret key"),
+            "the cause is the source, not part of the message: {signing}"
         );
 
         // Walked to the ROOT cause, not to a wrapper. `SignError::Pgp` is
@@ -1448,5 +1495,8 @@ mod tests {
              caller cannot tell a key problem from a configuration problem without \
              parsing prose"
         );
+        let api = ApiError::from(signing);
+        assert_eq!(api.status(), http::StatusCode::INTERNAL_SERVER_ERROR);
+        assert!(!api.to_string().contains("no secret key"), "{api}");
     }
 }

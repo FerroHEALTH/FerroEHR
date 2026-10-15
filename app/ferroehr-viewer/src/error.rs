@@ -50,6 +50,24 @@ pub enum ViewerError {
     Internal(String),
 }
 
+/// Renders an error and every cause under it on one line, `: `-separated.
+///
+/// The text a [`ViewerError`] carries is a rendered cause, so it is rendered
+/// from the whole chain: an error whose message names only its own step keeps
+/// the diagnostic in its [`std::error::Error::source`]
+/// ([RFC 0201](https://rust-lang.github.io/rfcs/0201-error-chaining.html)).
+#[must_use]
+pub fn error_chain(error: &(dyn std::error::Error + 'static)) -> String {
+    let mut text = error.to_string();
+    let mut next = error.source();
+    while let Some(cause) = next {
+        text.push_str(": ");
+        text.push_str(&cause.to_string());
+        next = cause.source();
+    }
+    text
+}
+
 impl ViewerError {
     /// The CDR's HTTP status, typed, when this error carries one.
     ///
@@ -79,5 +97,24 @@ impl leptos::server_fn::error::FromServerFnError for ViewerError {
 
     fn from_server_fn_error(value: leptos::server_fn::error::ServerFnErrorErr) -> Self {
         Self::Internal(value.to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::error_chain;
+
+    /// A parse error names its pass and keeps the lexer diagnostic as its
+    /// source; the rendered text carries both, once each.
+    #[test]
+    fn a_lex_failure_renders_with_its_diagnostic() {
+        let err = openehr_query::parser::parse_str("SELECT # FROM EHR e")
+            .expect_err("`#` lexes as nothing");
+        let rendered = error_chain(&err);
+        assert!(
+            rendered.starts_with("the query could not be tokenised: "),
+            "{rendered}"
+        );
+        assert_eq!(rendered.matches("\"#\"").count(), 1, "{rendered}");
     }
 }

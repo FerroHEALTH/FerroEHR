@@ -31,6 +31,12 @@
 # run; an empty tag list on a never-tagged repo is a logged skip. A release
 # FOUND is a green run that files work, per the family's run-colour rule.
 #
+# Pins: every scripts/vendor/spec-docs.sh pin plus each codegen-only repo of
+# scripts/vendor/codegen-inputs.sh (ITS-BMM), so a codegen input's release is
+# watched too.
+#
+# Usage: scripts/watch/spec-release.sh [--self-test]  (--self-test checks the
+#      pin rows offline over fixture vendor scripts)
 # Env: DRY_RUN=1 (report, create nothing) · GH_TOKEN/GITHUB_TOKEN for gh.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
@@ -41,11 +47,70 @@ engine_dry=()
 if [[ "$DRY_RUN" = "1" ]]; then
   engine_dry=(--dry-run)
 fi
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+
+# component|repo|ref|sha rows: every spec-docs.sh pin, then each codegen-only
+# repo pinned by codegen-inputs.sh (one row per repo not already listed; ITS-BMM
+# today), its ref naming the codegen pin since that script records no version.
+pin_rows() {
+  local spec_docs=$1 codegen_inputs=$2 seen=" " comp repo ref sha
+  while IFS='|' read -r comp repo ref sha; do
+    [[ -n "$comp" ]] || continue
+    seen="$seen$repo "
+    printf '%s|%s|%s|%s\n' "$comp" "$repo" "$ref" "$sha"
+  done < <(grep -E '^  "[A-Z-]+\|' "$spec_docs" | tr -d '"' | sed 's/^  //')
+  while IFS='|' read -r _name repo sha _rest; do
+    [[ "$seen" == *" $repo "* ]] && continue
+    seen="$seen$repo "
+    printf '%s|%s|%s|%s\n' "${repo#specifications-}" "$repo" "codegen pin (scripts/vendor/codegen-inputs.sh)" "$sha"
+  done < <(grep -E '^  "[a-z0-9-]+\|specifications-' "$codegen_inputs" | tr -d '"' | sed 's/^  //')
+}
+
+# Offline check of pin_rows over fixture vendor scripts: no network, no gh.
+self_test() {
+  local dir="$tmp/self-test" got want
+  mkdir -p "$dir"
+  cat > "$dir/spec-docs.sh" <<'FIXTURE'
+PINS=(
+  "ITS-REST|specifications-ITS-REST|Release-1.1.0 (released)|2222222222222222222222222222222222222222"
+)
+FIXTURE
+  cat > "$dir/codegen-inputs.sh" <<'FIXTURE'
+SETS=(
+  "bmm|specifications-ITS-BMM|3333333333333333333333333333333333333333|components|no-yaml|dest|record"
+  "rest-oas|specifications-ITS-REST|2222222222222222222222222222222222222222|computable/OAS|all|dest|record"
+  "bmm-again|specifications-ITS-BMM|4444444444444444444444444444444444444444|components|all|dest|record"
+)
+OVERLAYS=(
+  "dest/x.bmm.json|specifications-BASE|5555555555555555555555555555555555555555|computable/BMM/x.bmm.json|record"
+)
+FIXTURE
+  got=$(pin_rows "$dir/spec-docs.sh" "$dir/codegen-inputs.sh")
+  want="ITS-REST|specifications-ITS-REST|Release-1.1.0 (released)|2222222222222222222222222222222222222222
+ITS-BMM|specifications-ITS-BMM|codegen pin (scripts/vendor/codegen-inputs.sh)|3333333333333333333333333333333333333333"
+  if [[ "$got" != "$want" ]]; then
+    printf 'spec-release-watcher: self-test FAILED\ngot:\n%s\nwant:\n%s\n' "$got" "$want" >&2
+    exit 1
+  fi
+  echo "spec-release-watcher: self-test OK (spec-docs pins, then each codegen-only repo once)."
+}
+
+case "${1:-}" in
+  "") ;;
+  --self-test)
+    self_test
+    exit 0
+    ;;
+  *)
+    echo "usage: $0 [--self-test]" >&2
+    exit 2
+    ;;
+esac
+
 for bin in jq gh; do
   command -v "$bin" >/dev/null 2>&1 || { echo "spec-release-watcher: $bin is required" >&2; exit 1; }
 done
-tmp="$(mktemp -d)"
-trap 'rm -rf "$tmp"' EXIT
 
 label_for_component() {
   case "$1" in
@@ -57,7 +122,6 @@ label_for_component() {
 }
 
 filed=0 skipped=0
-# component|repo|ref|sha rows from the vendor script (the single pin source).
 while IFS='|' read -r comp repo ref sha; do
   [[ -n "$comp" ]] || continue
   # Highest Release-X.Y.Z tag (vN re-cut suffixes collapse to their base).
@@ -145,6 +209,6 @@ EOF
     *"file-issue: skipped"*) skipped=$((skipped + 1)) ;;
     *) filed=$((filed + 1)) ;;
   esac
-done < <(grep -E '^  "[A-Z-]+\|' scripts/vendor/spec-docs.sh | tr -d '"' | sed 's/^  //')
+done < <(pin_rows scripts/vendor/spec-docs.sh scripts/vendor/codegen-inputs.sh)
 
 echo "spec-release-watcher: done — $filed new release(s) filed, $skipped already covered/current."

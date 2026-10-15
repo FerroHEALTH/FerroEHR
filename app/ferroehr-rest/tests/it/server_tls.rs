@@ -19,7 +19,10 @@
 //! a client identity here.
 //!
 //! Uses the same offline-generated, 100-year test CA/leaf as the ATNA syslog
-//! TLS round-trip test (CN=localhost, SAN localhost/127.0.0.1).
+//! TLS round-trip test (CN=localhost, SAN localhost/127.0.0.1), plus an EC
+//! P-256 CA/leaf pair for the key-format cases and the certificate reload: a
+//! pair replaced on disk is presented by the next handshake, and a broken
+//! replacement leaves the pair in service untouched.
 
 use std::io::Write;
 use std::time::Duration;
@@ -127,18 +130,44 @@ fn tls_files_at(
             _ => Some(write("client-ca.pem", TEST_CA_PEM)),
         },
         min_version,
+        reload_interval_secs: 0,
+    }
+}
+
+/// Write `cert` and `key` as the server pair under `dir` (replacing any pair
+/// already there) and build the `[server.tls]` section naming them.
+fn pair_files(dir: &assert_fs::TempDir, cert: &[u8], key: &[u8]) -> TlsConfig {
+    let write = |name: &str, bytes: &[u8]| {
+        let path = dir.path().join(name);
+        std::fs::write(&path, bytes).expect("write pem");
+        path.to_string_lossy().into_owned()
+    };
+    TlsConfig {
+        enabled: true,
+        cert_file: Some(write("server.pem", cert)),
+        key_file: Some(write("server.key", key)),
+        ..TlsConfig::default()
     }
 }
 
 /// Serve a minimal router over `[server.tls]` on an ephemeral port via the
 /// crate's real TLS path; return the bound port.
 async fn serve_tls(tls: TlsConfig) -> u16 {
+    serve_tls_reloadable(tls).await.0
+}
+
+/// [`serve_tls`], also returning the reloader the listener resolves its
+/// certificate through.
+async fn serve_tls_reloadable(
+    tls: TlsConfig,
+) -> (u16, std::sync::Arc<ferroehr_rest::tls::CertificateReloader>) {
     let app = axum::Router::new().route("/rest/status", axum::routing::get(|| async { "OK" }));
     // Bind an ephemeral port first so the test knows where to connect.
     let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind");
     let port = listener.local_addr().expect("addr").port();
     drop(listener);
-    let config = ferroehr_rest::tls_server_config(&tls).expect("tls config");
+    let server_tls = ferroehr_rest::tls::server_tls(&tls).expect("tls config");
+    let config = server_tls.config;
     tokio::spawn(async move {
         let addr = std::net::SocketAddr::from(([127, 0, 0, 1], port));
         axum_server::bind_rustls(
@@ -155,7 +184,7 @@ async fn serve_tls(tls: TlsConfig) -> u16 {
             .await
             .is_ok()
         {
-            return port;
+            return (port, server_tls.certificate);
         }
         tokio::time::sleep(Duration::from_millis(50)).await;
     }
@@ -412,8 +441,9 @@ fn the_configured_suites_are_aead_only_over_ephemeral_key_agreement() {
     use rustls::CipherSuite;
 
     let dir = assert_fs::TempDir::new().expect("tempdir");
-    let config =
-        ferroehr_rest::tls_server_config(&tls_files(&dir, ClientAuth::Off)).expect("tls config");
+    let config = ferroehr_rest::tls::server_tls(&tls_files(&dir, ClientAuth::Off))
+        .expect("tls config")
+        .config;
     let suites = &config.crypto_provider().cipher_suites;
     assert!(!suites.is_empty(), "the provider must offer suites");
 
@@ -452,6 +482,245 @@ async fn missing_key_material_is_a_typed_boot_error() {
         enabled: true,
         ..TlsConfig::default()
     };
-    let err = ferroehr_rest::tls_server_config(&tls).expect_err("must fail");
+    let err = ferroehr_rest::tls::server_tls(&tls).expect_err("must fail");
     assert!(err.to_string().contains("server.tls.cert_file"));
+}
+
+// ------------------------------------------------------- EC keys and reload
+
+/// A 100-year EC P-256 test CA (named curve), generated offline with `LibreSSL`.
+const TEST_EC_CA_PEM: &[u8] = b"-----BEGIN CERTIFICATE-----
+MIIBdjCCAR2gAwIBAgIJAKiOVbI12tnRMAoGCCqGSM49BAMCMB4xHDAaBgNVBAMM
+E2ZlcnJvZWhyLXRlc3QtZWMtY2EwIBcNMjYxMDE0MTg1MTI0WhgPMjEyNjA5MjAx
+ODUxMjRaMB4xHDAaBgNVBAMME2ZlcnJvZWhyLXRlc3QtZWMtY2EwWTATBgcqhkjO
+PQIBBggqhkjOPQMBBwNCAAR1u4YnEx2336QpA9RY3M4LQycXaKmy8be+FHUFBMDT
+jb6wntl8W9Hgr1knaD7EzIwx0aOCs8iacfkauvJeETA5o0IwQDAPBgNVHRMBAf8E
+BTADAQH/MA4GA1UdDwEB/wQEAwIBBjAdBgNVHQ4EFgQUkOGQfgIVWOU2fdzgM1lP
+etzG67QwCgYIKoZIzj0EAwIDRwAwRAIgZESns1qCI5+B+YQwKS0eySlDeV4Fjz4p
+Ksg4rl6hOYcCIHJ+sAl4j7GrhcdvjuRQxz4kgQYgu0dpunux+jocrSOL
+-----END CERTIFICATE-----
+";
+
+/// The EC P-256 server leaf `TEST_EC_CA_PEM` issued (CN=localhost, SAN
+/// localhost/127.0.0.1, serverAuth).
+const TEST_EC_LEAF_PEM: &[u8] = b"-----BEGIN CERTIFICATE-----
+MIIBlzCCAT2gAwIBAgIJAI3GSCLsJSmPMAoGCCqGSM49BAMCMB4xHDAaBgNVBAMM
+E2ZlcnJvZWhyLXRlc3QtZWMtY2EwIBcNMjYxMDE0MTg1MTI0WhgPMjEyNjA5MjAx
+ODUxMjRaMBQxEjAQBgNVBAMMCWxvY2FsaG9zdDBZMBMGByqGSM49AgEGCCqGSM49
+AwEHA0IABLhm2z3NfMAnLc/E1LSOKIvP8C3o1iV28QPwUENJXbPHc9SBpg1blvvx
+iAj++6eSjVAHBx2Kl3jC5PgoqAp20gGjbDBqMAkGA1UdEwQCMAAwCwYDVR0PBAQD
+AgeAMBMGA1UdJQQMMAoGCCsGAQUFBwMBMBoGA1UdEQQTMBGCCWxvY2FsaG9zdIcE
+fwAAATAfBgNVHSMEGDAWgBSQ4ZB+AhVY5TZ93OAzWU963MbrtDAKBggqhkjOPQQD
+AgNIADBFAiEAgaReGjmbq/SK8UmAHOIC9/HtUr+3Z1m+rcItIvurMJYCIEJIdwbJ
+QC+qbr9pvcJ2n9QQDN1kQe8UJ1phtndF5vKu
+-----END CERTIFICATE-----
+";
+
+/// The EC leaf's key as SEC1 (`openssl ecparam -genkey -noout`).
+const TEST_EC_LEAF_SEC1_KEY_PEM: &[u8] = b"-----BEGIN EC PRIVATE KEY-----
+MHcCAQEEIBfCoizCOqY1traVDSnFNHdf+UBJnbQORp5Pf40umVwPoAoGCCqGSM49
+AwEHoUQDQgAEuGbbPc18wCctz8TUtI4oi8/wLejWJXbxA/BQQ0lds8dz1IGmDVuW
++/GICP77p5KNUAcHHYqXeMLk+CioCnbSAQ==
+-----END EC PRIVATE KEY-----
+";
+
+/// The same EC leaf key as PKCS#8 (`openssl pkcs8 -topk8 -nocrypt`).
+const TEST_EC_LEAF_PKCS8_KEY_PEM: &[u8] = b"-----BEGIN PRIVATE KEY-----
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgF8KiLMI6pjW2tpUN
+KcU0d1/5QEmdtA5Gnk9/jS6ZXA+hRANCAAS4Zts9zXzAJy3PxNS0jiiLz/At6NYl
+dvED8FBDSV2zx3PUgaYNW5b78YgI/vunko1QBwcdipd4wuT4KKgKdtIB
+-----END PRIVATE KEY-----
+";
+
+/// A self-signed X.509 v3 EC P-256 certificate whose public key carries
+/// EXPLICIT curve parameters: what `LibreSSL` 3.3 `req -x509 -newkey ec -pkeyopt
+/// ec_paramgen_curve:prime256v1` writes without `ec_param_enc:named_curve`.
+const TEST_EXPLICIT_CURVE_PEM: &[u8] = b"-----BEGIN CERTIFICATE-----
+MIICZjCCAgygAwIBAgIJAPSoLDAHYVTDMAoGCCqGSM49BAMCMBQxEjAQBgNVBAMM
+CWxvY2FsaG9zdDAgFw0yNjEwMTUwNTQ1MjRaGA8yMTI2MDkyMTA1NDUyNFowFDES
+MBAGA1UEAwwJbG9jYWxob3N0MIIBSzCCAQMGByqGSM49AgEwgfcCAQEwLAYHKoZI
+zj0BAQIhAP////8AAAABAAAAAAAAAAAAAAAA////////////////MFsEIP////8A
+AAABAAAAAAAAAAAAAAAA///////////////8BCBaxjXYqjqT57PrvVV2mIa8ZR0G
+sMxTsPY7zjw+J9JgSwMVAMSdNgiG5wSTamZ44ROdJreBn36QBEEEaxfR8uEsQkf4
+vOblY6RA8ncDfYEt6zOg9KE5RdiYwpZP40Li/hp/m47n60p8D54WK84zV2sxXs7L
+tkBoN79R9QIhAP////8AAAAA//////////+85vqtpxeehPO5ysL8YyVRAgEBA0IA
+BDa8lmLQSjc1D7ZQwWBdLY/tyYQnD3JJKDg2b5bccjzCZ/lakygnkm+QlADpnRHJ
+gNDv9sdp9uGHShYNSwaNE96jUTBPMAwGA1UdEwEB/wQCMAAwDgYDVR0PAQH/BAQD
+AgeAMBMGA1UdJQQMMAoGCCsGAQUFBwMBMBoGA1UdEQQTMBGCCWxvY2FsaG9zdIcE
+fwAAATAKBggqhkjOPQQDAgNIADBFAiBR1BKUFwecKm7wzIVKOjxroT78yV//p90K
+rzh4GSxbBwIhAKuuohK92TuOYnuv5gJK3H+XJQlQHSi83tx4TqnEl6fy
+-----END CERTIFICATE-----
+";
+
+/// The key of `TEST_EXPLICIT_CURVE_PEM`, PKCS#8 with the same explicit
+/// parameters.
+const TEST_EXPLICIT_CURVE_KEY_PEM: &[u8] = b"-----BEGIN PRIVATE KEY-----
+MIIBeQIBADCCAQMGByqGSM49AgEwgfcCAQEwLAYHKoZIzj0BAQIhAP////8AAAAB
+AAAAAAAAAAAAAAAA////////////////MFsEIP////8AAAABAAAAAAAAAAAAAAAA
+///////////////8BCBaxjXYqjqT57PrvVV2mIa8ZR0GsMxTsPY7zjw+J9JgSwMV
+AMSdNgiG5wSTamZ44ROdJreBn36QBEEEaxfR8uEsQkf4vOblY6RA8ncDfYEt6zOg
+9KE5RdiYwpZP40Li/hp/m47n60p8D54WK84zV2sxXs7LtkBoN79R9QIhAP////8A
+AAAA//////////+85vqtpxeehPO5ysL8YyVRAgEBBG0wawIBAQQgNwnAi5rRiOkF
+UN2H95F4PHYaAt7Sz4m/7hzR332QYWehRANCAAQ2vJZi0Eo3NQ+2UMFgXS2P7cmE
+Jw9ySSg4Nm+W3HI8wmf5WpMoJ5JvkJQA6Z0RyYDQ7/bHafbhh0oWDUsGjRPe
+-----END PRIVATE KEY-----
+";
+
+/// The DER of the first certificate in `pem`.
+fn der_of(pem: &[u8]) -> rustls::pki_types::CertificateDer<'static> {
+    use rustls::pki_types::pem::PemObject;
+    rustls::pki_types::CertificateDer::from_pem_slice(pem).expect("certificate pem")
+}
+
+/// A client config trusting both test CAs, so either server pair verifies.
+fn client_config_trusting_both_cas() -> std::sync::Arc<rustls::ClientConfig> {
+    let mut roots = test_roots();
+    roots.add(der_of(TEST_EC_CA_PEM)).expect("add EC root");
+    let provider = std::sync::Arc::new(rustls::crypto::aws_lc_rs::default_provider());
+    std::sync::Arc::new(
+        rustls::ClientConfig::builder_with_provider(provider)
+            .with_safe_default_protocol_versions()
+            .expect("versions")
+            .with_root_certificates(roots)
+            .with_no_client_auth(),
+    )
+}
+
+/// Completes ONE fresh, verified handshake against the listener and returns
+/// the end-entity certificate the server presented in it.
+async fn presented_certificate(port: u16) -> rustls::pki_types::CertificateDer<'static> {
+    tokio::task::spawn_blocking(move || {
+        let name = rustls::pki_types::ServerName::try_from("localhost").expect("server name");
+        let mut connection = rustls::ClientConnection::new(client_config_trusting_both_cas(), name)
+            .expect("client connection");
+        let mut socket = std::net::TcpStream::connect(("127.0.0.1", port)).expect("connect");
+        socket
+            .set_read_timeout(Some(Duration::from_secs(5)))
+            .expect("read timeout");
+        while connection.is_handshaking() {
+            connection
+                .complete_io(&mut socket)
+                .expect("the handshake must verify against the test CAs");
+        }
+        connection
+            .peer_certificates()
+            .and_then(|chain| chain.first())
+            .expect("the server must present a certificate")
+            .clone()
+            .into_owned()
+    })
+    .await
+    .expect("handshake task")
+}
+
+/// An EC P-256 key loads in PKCS#8 and in SEC1 alike, and the listener serves
+/// a verified handshake with it.
+#[tokio::test]
+async fn an_ec_p256_key_loads_as_pkcs8_and_as_sec1() {
+    for key in [TEST_EC_LEAF_PKCS8_KEY_PEM, TEST_EC_LEAF_SEC1_KEY_PEM] {
+        let dir = assert_fs::TempDir::new().expect("tempdir");
+        let port = serve_tls(pair_files(&dir, TEST_EC_LEAF_PEM, key)).await;
+        assert_eq!(
+            presented_certificate(port).await,
+            der_of(TEST_EC_LEAF_PEM),
+            "{}",
+            String::from_utf8_lossy(key)
+        );
+    }
+}
+
+/// An EC certificate whose public key carries explicit curve parameters never
+/// matches its key byte for byte, and the refusal says so and names the fix,
+/// rather than a bare mismatch (RFC 5480 §2.1.1: `namedCurve` only).
+#[test]
+fn an_explicit_curve_certificate_is_refused_with_the_named_curve_remedy() {
+    let dir = assert_fs::TempDir::new().expect("tempdir");
+    let tls = pair_files(&dir, TEST_EXPLICIT_CURVE_PEM, TEST_EXPLICIT_CURVE_KEY_PEM);
+    let err = ferroehr_rest::tls::server_tls(&tls).expect_err("must refuse");
+    assert!(
+        matches!(err, ferroehr_rest::tls::TlsError::EcKeyMismatch { .. }),
+        "{err:?}"
+    );
+    let text = err.to_string();
+    assert!(text.contains("RFC 5480"), "{text}");
+    assert!(text.contains("ec_param_enc:named_curve"), "{text}");
+}
+
+/// A key that belongs to a different certificate is a typed mismatch.
+#[test]
+fn a_key_of_another_certificate_is_a_key_mismatch() {
+    let dir = assert_fs::TempDir::new().expect("tempdir");
+    let tls = pair_files(&dir, TEST_EC_LEAF_PEM, TEST_LEAF_KEY_PEM);
+    let err = ferroehr_rest::tls::server_tls(&tls).expect_err("must refuse");
+    assert!(
+        matches!(err, ferroehr_rest::tls::TlsError::KeyMismatch { .. }),
+        "{err:?}"
+    );
+}
+
+/// A renewed pair on disk is presented by the next handshake without a
+/// restart; a broken replacement is refused, reported once, and the pair in
+/// service stays in service.
+#[tokio::test]
+async fn a_renewed_certificate_is_served_without_a_restart_and_a_broken_one_is_not() {
+    use ferroehr_rest::tls::Reloaded;
+
+    let dir = assert_fs::TempDir::new().expect("tempdir");
+    let (port, reloader) =
+        serve_tls_reloadable(pair_files(&dir, TEST_LEAF_PEM, TEST_LEAF_KEY_PEM)).await;
+    assert_eq!(presented_certificate(port).await, der_of(TEST_LEAF_PEM));
+    assert_eq!(
+        reloader.reload().await.expect("unchanged files"),
+        Reloaded::Unchanged
+    );
+
+    pair_files(&dir, TEST_EC_LEAF_PEM, TEST_EC_LEAF_PKCS8_KEY_PEM);
+    assert_eq!(
+        reloader.reload().await.expect("the renewed pair loads"),
+        Reloaded::Replaced
+    );
+    assert_eq!(presented_certificate(port).await, der_of(TEST_EC_LEAF_PEM));
+
+    // A replacement certificate without its matching key.
+    pair_files(&dir, TEST_LEAF_PEM, TEST_EC_LEAF_PKCS8_KEY_PEM);
+    let refused = reloader.reload().await.expect_err("a mismatched pair");
+    assert!(
+        matches!(refused, ferroehr_rest::tls::TlsError::EcKeyMismatch { .. }),
+        "{refused:?}"
+    );
+    assert_eq!(presented_certificate(port).await, der_of(TEST_EC_LEAF_PEM));
+    assert_eq!(
+        reloader
+            .reload()
+            .await
+            .expect("the refused pair is not re-reported"),
+        Reloaded::Unchanged
+    );
+
+    // A key file that is not PEM at all.
+    pair_files(&dir, TEST_LEAF_PEM, b"not a key");
+    reloader.reload().await.expect_err("an unreadable key");
+    assert_eq!(presented_certificate(port).await, der_of(TEST_EC_LEAF_PEM));
+}
+
+/// The watcher the listener runs picks a renewal up on its own interval.
+#[tokio::test]
+async fn the_watcher_serves_a_renewal_on_its_interval() {
+    let dir = assert_fs::TempDir::new().expect("tempdir");
+    let (port, reloader) =
+        serve_tls_reloadable(pair_files(&dir, TEST_LEAF_PEM, TEST_LEAF_KEY_PEM)).await;
+    let watcher = tokio::spawn(reloader.watch(Duration::from_millis(50)));
+
+    pair_files(&dir, TEST_EC_LEAF_PEM, TEST_EC_LEAF_SEC1_KEY_PEM);
+    let renewed = der_of(TEST_EC_LEAF_PEM);
+    let mut presented = presented_certificate(port).await;
+    for _ in 0..100 {
+        if presented == renewed {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        presented = presented_certificate(port).await;
+    }
+    watcher.abort();
+    assert_eq!(presented, renewed, "the watcher never served the renewal");
 }

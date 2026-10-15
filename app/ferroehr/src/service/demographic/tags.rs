@@ -20,7 +20,9 @@ use openehr_base::prelude::{
 };
 use openehr_its::rest::generated::common::UpdateItemTag;
 use openehr_rm::prelude::ItemTag;
+use sqlx::Connection as _;
 
+use crate::db::acquire::acquire;
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::service::demographic::types::PartyKind;
@@ -172,7 +174,8 @@ impl FerroEhrService {
                 target_path: target_path.as_deref(),
             })
             .collect();
-        let mut tx = self.demographic_pool.begin().await?;
+        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut tx = conn.begin().await?;
         // The replace RETURNS the stored collection (list order), so the
         // response never re-reads the rows the transaction just wrote.
         let stored = tag_repo::replace_tags(

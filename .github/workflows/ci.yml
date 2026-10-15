@@ -66,6 +66,11 @@ concurrency:
 permissions: {}
 
 env:
+  # A FerroEHR started by any step of this workflow sends no usage report to
+  # FerroPULSE: compose interpolates this into every server it brings up, and
+  # scripts/checks/usage-report-off.sh holds each `docker run` and Helm install
+  # to its own explicit switch.
+  FERROEHR__USAGE_REPORT__ENABLED: "false"
   # The ONE place each sharded lane's count lives. Raising one is that line: the
   # matrix, the job name and the `--partition` divisor are all derived from it,
   # so they cannot drift apart. When one needs raising, the pipeline-budget
@@ -352,7 +357,7 @@ jobs:
           # `deny.toml` is in the code allowlist, so without this a PR editing
           # a VEX justification or its check script skipped the job that would
           # have refused it.
-          if echo "$changed" | grep -qE '^(security/vex/|scripts/checks/(vex-reachability|advisory-exceptions)\.sh$)' ; then
+          if echo "$changed" | grep -qE '^(security/vex/|scripts/checks/(vex-reachability|advisory-exceptions|vex-linkage)\.sh$)' ; then
             echo "vex=true" >> "$GITHUB_OUTPUT"
           else
             echo "vex=false" >> "$GITHUB_OUTPUT"
@@ -564,6 +569,8 @@ jobs:
         run: bash .claude/hooks/crate_version_bump_guard_test.sh
       - name: The GHCR prune deletes nothing on a dry run and keeps young and retagged manifests
         run: bash scripts/watch/ghcr-prune-orphans.sh --self-test
+      - run: bash scripts/watch/spec-update.sh --self-test
+      - run: bash scripts/watch/spec-release.sh --self-test
       - name: The release withdrawal refuses unregistered versions and moves only the floating tags
         run: bash scripts/release/withdraw.sh --self-test
       - name: The release-notes check refuses notes without the CRA user information or the support period
@@ -883,9 +890,10 @@ jobs:
       - name: The chart's terminology seed matches the canonical one
         run: bash scripts/checks/terminology-seed-drift.sh
 
-  # RFC 0201: an error carries its cause. No clippy lint covers this, so the
-  # gate is a per-tree ratchet — the flattened-site counts may only fall while
-  # the #2034 sweep runs.
+  # RFC 0201: an error carries its cause, and prints it once. No clippy lint
+  # covers either, so the gate is a per-tree ratchet on flattened causes (the
+  # counts may only fall) and a hard zero on variants that print their source
+  # in their own message (that detector proves itself with a self-test first).
   error-source-chain:
     name: error-source-chain
     if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
@@ -1195,6 +1203,8 @@ jobs:
       # input here so a broken detector is caught before a release depends on it.
       - name: The exploitability-record detector refuses what it claims to
         run: bash scripts/checks/vex-coverage.sh --self-test
+      - name: OS VEX linkage detector self-test
+        run: bash scripts/checks/vex-linkage.sh --self-test
 
   clippy:
     name: clippy
@@ -1237,16 +1247,16 @@ jobs:
   # is how a wrong feature gate stayed latent until #2358, where
   # `--features events` without `fhir` did not compile.
   #
-  # Three feature sets, each a real deployment shape: the slim CDR, and the
-  # `events` and the `fhir` integration each enabled on top of it. Neither
-  # implies the other, so each lane proves the gates are not silently coupled.
+  # Four feature sets, each a real deployment shape: the slim CDR, and the
+  # `events`, `fhir` and `multimedia` integrations each enabled on top of it.
+  # None implies another, so each lane proves the gates are not silently coupled.
   # clippy, not check: the deny-tier lints must cover the gated code too. No
   # tests — the feature graphs are compile properties, and the test job owns
   # behaviour.
   feature-combos:
     name: clippy (slim server feature combos)
     needs: changes
-    # The three feature sets ARE the test, and they are declared here (#2373).
+    # The feature sets ARE the test, and they are declared here (#2373).
     if: needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -1267,6 +1277,13 @@ jobs:
       - run: cargo clippy --locked -p ferroehr-server --no-default-features --all-targets -- -D warnings
       - run: cargo clippy --locked -p ferroehr-server --no-default-features --features events --all-targets -- -D warnings
       - run: cargo clippy --locked -p ferroehr-server --no-default-features --features fhir --all-targets -- -D warnings
+      - run: cargo clippy --locked -p ferroehr-server --no-default-features --features multimedia --all-targets -- -D warnings
+      # ferroehr-ext alone, per integration: its tests carry feature-scoped
+      # expectations the server lanes never compile (#3703).
+      - run: cargo clippy --locked -p ferroehr-ext --no-default-features --all-targets -- -D warnings
+      - run: cargo clippy --locked -p ferroehr-ext --no-default-features --features events --all-targets -- -D warnings
+      - run: cargo clippy --locked -p ferroehr-ext --no-default-features --features fhir --all-targets -- -D warnings
+      - run: cargo clippy --locked -p ferroehr-ext --no-default-features --features multimedia --all-targets -- -D warnings
 
   # ── openehr-its + openehr-sdt on wasm32: the browser-consumer selection ────
   # `openehr-its` publishes a feature graph whose openEHR content layers
@@ -1454,6 +1471,10 @@ jobs:
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Regenerate and diff
         run: bash scripts/checks/codegen-drift.sh
+      # The committed codegen inputs reproduce byte-identically from their
+      # pinned upstream commits (vendored-corpora.md; fetched over https).
+      - name: Codegen inputs match their pins
+        run: bash scripts/vendor/codegen-inputs.sh --check
 
   # ── Build + tests against PostgreSQL 18.6 ──────────────────────────────────
   # The catalogue's own artifact validation is no longer here: the instrument is
@@ -1496,7 +1517,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U openehr"
+          --health-cmd "pg_isready -h 127.0.0.1 -U openehr"
           --health-interval 10s --health-timeout 5s --health-retries 10
     env:
       DATABASE_URL: postgres://openehr:openehr@localhost:5432/openehr_test
@@ -2487,7 +2508,7 @@ jobs:
           set -euo pipefail
           version=$(grep -m1 '^VEREDICTUM_VERSION=' scripts/lib/veredictum.sh | cut -d'"' -f2)
           curl -fsSL --retry 3 \
-            "https://raw.githubusercontent.com/rubentalstra/Veredictum/v${version}/schemas/ixit.schema.json" \
+            "https://raw.githubusercontent.com/Vernum-Projecten/Veredictum/v${version}/schemas/ixit.schema.json" \
             -o /tmp/ixit.schema.json
           bash scripts/checks/ixit-declarations.sh --schema /tmp/ixit.schema.json docs/conformance/party/ferroehr
 
@@ -2708,7 +2729,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: docker-compose.yml image tags match the workspace version
+      - name: compose image-tag guard self-test
+        run: bash scripts/checks/compose-image-tags.sh --self-test
+      - name: compose image tags match the workspace version
         run: bash scripts/checks/compose-image-tags.sh
 
   # ── The one-check aggregate gate (the rust-analyzer/ruff pattern) ───────────

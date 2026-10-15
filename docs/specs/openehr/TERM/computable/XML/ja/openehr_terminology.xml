@@ -54,6 +54,7 @@
 		<concept id="500" rubric="立体角"/>
 		<concept id="335" rubric="面積"/>
 		<concept id="119" rubric="濃度"/>
+		<concept id="765" rubric="Concentration per volume (en)"/>
 		<concept id="350" rubric="密度"/>
 		<concept id="362" rubric="拡散係数"/>
 		<concept id="501" rubric="電気容量"/>
@@ -67,6 +68,7 @@
 		<concept id="508" rubric="エネルギー量"/>
 		<concept id="365" rubric="面積あたりエネルギー"/>
 		<concept id="364" rubric="線エネルギー"/>
+		<concept id="761" rubric="Flow rate (volume) per area (en)"/>
 		<concept id="347" rubric="質量流量"/>
 		<concept id="352" rubric="質量/力流量"/>
 		<concept id="351" rubric="質量/体積流量"/>
@@ -81,6 +83,7 @@
 		<concept id="505" rubric="照度"/>
 		<concept id="379" rubric="インダクタンス"/>
 		<concept id="122" rubric="長さ"/>
+		<concept id="764" rubric="Length per area (en)"/>
 		<concept id="499" rubric="光強度"/>
 		<concept id="123" rubric="音圧"/>
 		<concept id="504" rubric="光束"/>
@@ -90,6 +93,7 @@
 		<concept id="385" rubric="質量 (IU)"/>
 		<concept id="445" rubric="質量 (Units)"/>
 		<concept id="349" rubric="面積あたり質量"/>
+		<concept id="763" rubric="Mitotic count (en)"/>
 		<concept id="344" rubric="断面二次モーメント"/>
 		<concept id="345" rubric="質量慣性モーメント"/>
 		<concept id="340" rubric="モーメント"/>
@@ -120,6 +124,7 @@
 		<concept id="361" rubric="Viscosity, kinematic (en)"/>
 		<concept id="374" rubric="電圧"/>
 		<concept id="129" rubric="容積"/>
+		<concept id="762" rubric="Volume per area (en)"/>
 		<concept id="130" rubric="仕事量"/>
 		<concept id="685" rubric="屈折力"/>
 		<concept id="118" rubric="&lt;not set&gt; (en)"/>

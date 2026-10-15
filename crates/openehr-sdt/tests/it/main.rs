@@ -16,12 +16,14 @@
 mod common;
 
 mod canonical_json_literals;
+mod category_default;
 mod ckm_full_pack;
 mod cnf_vitals_template;
 mod coded_names;
 mod constraint_binding_capture;
 mod content_constraint_capture;
 mod content_existence_capture;
+mod example_committable;
 mod example_rm_validity;
 mod example_stub;
 mod flat;

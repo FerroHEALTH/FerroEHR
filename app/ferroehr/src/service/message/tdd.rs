@@ -53,6 +53,7 @@ use quick_xml::Reader;
 use quick_xml::events::Event;
 use serde_json::Value;
 
+use crate::db::acquire::acquire;
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
@@ -269,8 +270,9 @@ impl FerroEhrService {
         // partial COMPOSITION).
         openehr_sdt::flat::tdd::from_tdd(tdd, &web_template).map_err(|e| {
             SmError::precondition(format!(
-                "TDD body does not conform to operational template {:?}: {e}",
-                envelope.template_id
+                "TDD body does not conform to operational template {:?}: {}",
+                envelope.template_id,
+                crate::service::error::ErrorChain::new(&e)
             ))
             .with_source(e)
         })
@@ -282,7 +284,7 @@ impl FerroEhrService {
     async fn require_tdd_target_ehr(&self, ehr_id: EhrId) -> Result<(), SmError> {
         let ehr_exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM ehr WHERE id = $1)")
             .bind(ehr_id)
-            .fetch_one(&self.pool)
+            .fetch_one(&mut *acquire(&self.pool).await?)
             .await
             .map_err(ServiceError::from)?;
         if ehr_exists {

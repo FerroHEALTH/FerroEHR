@@ -23,7 +23,9 @@ use uuid::Uuid;
 use super::error::{AqlError, ExecError};
 use super::ir::{Params, QueryIr};
 use super::sql::{CellKind, ColumnSpec, SqlCtx};
-use crate::ids::VoId;
+use super::subject::EhrSubject;
+use crate::db::acquire::acquire;
+use crate::ids::{EhrId, VoId};
 use crate::storage::node_repo::SubtreeAnchor;
 
 /// One `RESULT_SET` column's metadata (`schemas/query/ResultSetColumn`).
@@ -107,7 +109,7 @@ pub async fn execute(
     // PREPARE / plan caching).
     let rows = sqlx::query_with(sqlx::AssertSqlSafe(prepared.sql), prepared.values)
         .persistent(false)
-        .fetch_all(pool)
+        .fetch_all(&mut *acquire(pool).await.map_err(ExecError::from)?)
         .await
         .map_err(ExecError::from)?;
 
@@ -303,7 +305,7 @@ fn fill_whole_object_cells(
     }
 }
 
-/// The distinct EHR ids and template ids an AQL query touches.
+/// The distinct EHR ids, template ids and EHR subjects an AQL query touches.
 ///
 /// Collected for the ABAC query post-check (no openEHR spec governs ABAC — our
 /// own access-control extension), independent of the query's projection.
@@ -313,10 +315,15 @@ pub struct QueryScope {
     pub ehr_ids: Vec<String>,
     /// Distinct touched template ids.
     pub template_ids: Vec<String>,
+    /// The distinct subjects of the touched EHRs, from which the query
+    /// post-check folds its patient attribute
+    /// ([`super::subject::TouchedSubjects::fold`]).
+    pub subjects: Vec<EhrSubject>,
 }
 
-/// Run the scope-collection query for `ir` and return the distinct EHR-id and
-/// template-id sets it touches. Empty when the query has no VO root.
+/// Run the scope-collection query for `ir` and return the distinct EHR ids,
+/// template ids and EHR subjects it touches. Empty when the query binds no EHR
+/// source and no VO root.
 ///
 /// # Errors
 /// [`AqlError::Sql`] if the scope query cannot be lowered; [`AqlError::Exec`] if
@@ -334,25 +341,40 @@ pub async fn collect_scope(
     // SQL, unnamed statement, custom plan per execution.
     let rows = sqlx::query_with(sqlx::AssertSqlSafe(scope.sql), scope.values)
         .persistent(false)
-        .fetch_all(pool)
+        .fetch_all(&mut *acquire(pool).await.map_err(ExecError::from)?)
         .await
         .map_err(ExecError::from)?;
     let mut ehr_ids = std::collections::BTreeSet::new();
     let mut template_ids = std::collections::BTreeSet::new();
+    // A NULL cell is a left binding whose branch did not match; a cell that
+    // fails to decode is a defect and fails the collection, never a silently
+    // narrower scope.
     for row in &rows {
-        // Every bound VO root contributes an (ehr_id, template_id) column pair.
-        for (ehr_col, template_col) in &scope.columns {
-            if let Ok(Some(e)) = row.try_get::<Option<Uuid>, _>(ehr_col.as_str()) {
-                ehr_ids.insert(e.to_string());
+        for ehr_col in &scope.ehr_columns {
+            let ehr: Option<Uuid> = row.try_get(ehr_col.as_str()).map_err(ExecError::from)?;
+            if let Some(e) = ehr {
+                ehr_ids.insert(EhrId(e));
             }
-            if let Ok(Some(t)) = row.try_get::<Option<String>, _>(template_col.as_str()) {
+        }
+        for template_col in &scope.template_columns {
+            let template: Option<String> = row
+                .try_get(template_col.as_str())
+                .map_err(ExecError::from)?;
+            if let Some(t) = template {
                 template_ids.insert(t);
             }
         }
     }
+    let ehr_ids: Vec<EhrId> = ehr_ids.into_iter().collect();
+    let subjects = super::subject::ehr_subjects(pool, &ehr_ids).await?;
     Ok(QueryScope {
-        ehr_ids: ehr_ids.into_iter().collect(),
+        ehr_ids: ehr_ids.iter().map(ToString::to_string).collect(),
         template_ids: template_ids.into_iter().collect(),
+        subjects: subjects
+            .into_values()
+            .collect::<std::collections::BTreeSet<_>>()
+            .into_iter()
+            .collect(),
     })
 }
 

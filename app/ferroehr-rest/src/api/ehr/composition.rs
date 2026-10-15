@@ -420,7 +420,7 @@ async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestEr
                 Ok(deleted) => deleted,
                 Err(e) => {
                     tracing::warn!(
-                        error = %e,
+                        error = %ferroehr::service::error::ErrorChain::new(&e),
                         "reading the categories of a deleted COMPOSITION failed; the access \
                          record is written unclassified"
                     );

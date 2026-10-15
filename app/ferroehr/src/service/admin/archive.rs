@@ -25,8 +25,10 @@
 //! alone, so archived content leaves the queryable store until it is
 //! restored.
 
+use sqlx::Connection as _;
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
@@ -113,7 +115,8 @@ impl FerroEhrService {
     /// Mark and move every versioned object of each EHR, all-or-nothing: every
     /// EHR is existence-checked before anything is written.
     async fn archive_ehr_vos(&self, ehr_ids: &[EhrId]) -> Result<(), ServiceError> {
-        let mut tx = self.pool.begin().await?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
         require_ehrs_exist(&mut tx, ehr_ids).await?;
         for &ehr_id in ehr_ids {
             // The still-hot objects of this EHR: what the move addresses.
@@ -135,7 +138,8 @@ impl FerroEhrService {
     /// unknown or non-party id (e.g. a `PARTY_RELATIONSHIP`) is
     /// `party_id_does_not_exist`.
     async fn archive_party_vos(&self, party_ids: &[Uuid]) -> Result<(), ServiceError> {
-        let mut tx = self.demographic_pool.begin().await?;
+        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut tx = conn.begin().await?;
         let mut live: Vec<VoId> = Vec::new();
         for &party_id in party_ids {
             let kind = party_kind_any_tier(&mut tx, party_id).await?;
@@ -154,7 +158,8 @@ impl FerroEhrService {
 
     /// Restore every archived versioned object of each EHR, all-or-nothing.
     async fn restore_ehr_vos(&self, ehr_ids: &[EhrId]) -> Result<(), ServiceError> {
-        let mut tx = self.pool.begin().await?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
         require_ehrs_exist(&mut tx, ehr_ids).await?;
         for &ehr_id in ehr_ids {
             let vo_ids: Vec<VoId> =
@@ -170,7 +175,8 @@ impl FerroEhrService {
 
     /// Restore each archived party's versioned object, all-or-nothing.
     async fn restore_party_vos(&self, party_ids: &[Uuid]) -> Result<(), ServiceError> {
-        let mut tx = self.demographic_pool.begin().await?;
+        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut tx = conn.begin().await?;
         let mut ids: Vec<VoId> = Vec::new();
         for &party_id in party_ids {
             let kind = party_kind_any_tier(&mut tx, party_id).await?;

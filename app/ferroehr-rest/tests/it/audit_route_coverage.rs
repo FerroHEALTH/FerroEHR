@@ -7,7 +7,8 @@
 //! (`extensions_document`, built from the same `utoipa-axum` composition that
 //! mounts the routes), each route is driven once by an admin principal of its
 //! own, and the local Audit Record Repository must then hold exactly one record
-//! of the route's operation id naming that principal. A route added without
+//! of the route's operation id naming that principal (for the two `DIVERGENT`
+//! routes, of the released id the record keeps). A route added without
 //! the audit layer fails here, which is the hazard the logging
 //! component's hazard log lists first: an access that is not recorded.
 //! Regulation (EU) 2025/327 Annex II 3.2 asks the logging component to record
@@ -161,6 +162,31 @@ const EXEMPT: &[(&str, &str, &str)] = &[
         "GET",
         "/management/status",
         "management surface: node state under management_* operation ids, no patient data",
+    ),
+];
+
+/// The routes whose access record carries another operation id than the served
+/// document declares, each with the record's id and the reason.
+///
+/// The released ITS-REST OAS gives the EHR and the demographic CONTRIBUTION
+/// operations the same ids in two separate documents
+/// (`specifications/operations/demographic_contribution_create.yaml` and
+/// `contribution_create.yaml` both declare `contribution_create`). One served
+/// document needs unique ids (OpenAPI 3.1.0 §4.8.10.1), so the demographic pair
+/// is served under its released file name while the record keeps the released
+/// id.
+const DIVERGENT: &[(&str, &str, &str, &str)] = &[
+    (
+        "POST",
+        "/ferroehr/rest/openehr/v1/demographic/contribution",
+        "contribution_create",
+        "served as demographic_contribution_create: the released id is shared with the EHR API",
+    ),
+    (
+        "GET",
+        "/ferroehr/rest/openehr/v1/demographic/contribution/{contribution_uid}",
+        "contribution_get",
+        "served as demographic_contribution_get: the released id is shared with the EHR API",
     ),
 ];
 
@@ -326,8 +352,9 @@ async fn settled(pool: &PgPool, subjects: &[String]) -> BTreeMap<String, Vec<Opt
     }
 }
 
-/// The exempt table names only mounted routes, and every other mounted route
-/// writes exactly one access record carrying its operation id.
+/// The exempt and divergent tables name only mounted routes, and every other
+/// mounted route writes exactly one access record carrying its operation id,
+/// or the released id a divergent route's record keeps.
 ///
 /// Each route is driven by its own principal, which the record carries, so a
 /// record is attributed to the probe that caused it.
@@ -344,6 +371,15 @@ async fn every_route_writes_exactly_one_access_record() {
         stale.is_empty(),
         "exempt routes the router no longer mounts: {stale:#?}"
     );
+    let stale_divergent: Vec<String> = DIVERGENT
+        .iter()
+        .filter(|(m, p, _, _)| !mounted.contains_key(&((*m).to_owned(), (*p).to_owned())))
+        .map(|(m, p, _, _)| format!("{m} {p}"))
+        .collect();
+    assert!(
+        stale_divergent.is_empty(),
+        "divergent routes the router no longer mounts: {stale_divergent:#?}"
+    );
 
     let (_db, pool, app) = app().await;
     let mut probes = Vec::new();
@@ -351,9 +387,13 @@ async fn every_route_writes_exactly_one_access_record() {
         if EXEMPT.iter().any(|(m, p, _)| m == method && p == path) {
             continue;
         }
-        let expected = operation_id
+        let served = operation_id
             .clone()
             .unwrap_or_else(|| panic!("{method} {path} declares no operation id"));
+        let expected = DIVERGENT
+            .iter()
+            .find(|(m, p, _, _)| m == method && p == path)
+            .map_or(served, |(_, _, recorded, _)| (*recorded).to_owned());
         let subject = format!("route-probe-{}", probes.len());
         drive(&app, &subject, method, path).await;
         probes.push((format!("{method} {path}"), expected, subject));

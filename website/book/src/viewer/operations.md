@@ -82,7 +82,9 @@ target, the audit posture the deployment runs (whether auditing is on, its
 `fail_mode`, the local store and the effective retention), and under their own
 heading the deployment's active
 [`spec_profile`](../installation/configuration.md#spec_profile) with the openEHR
-specification versions it selects. This is the card to screenshot into
+specification versions it selects. Each other object the endpoint reports
+appears under its own heading, among them the manufacturer (name, postal
+address, email, website) and the release's support period. This is the card to screenshot into
 an incident report: it says exactly what is running.
 
 ## Metrics

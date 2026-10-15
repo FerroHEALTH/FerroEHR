@@ -14,11 +14,14 @@
 //!
 //! - `RESTful` operations: `type` = `rest`, `subtype` = the FHIR
 //!   restful-interaction class + the concrete ITS-REST operation id.
-//! - Role direction per BALP: on a **Read** the server is the *source* of
-//!   the data (DCM 110153) and the client the *destination* (DCM 110152);
-//!   on every other action the client initiates as source
-//!   (`IHE.BasicAudit.PatientRead` vs `IHE.BasicAudit.PatientQuery`
-//!   agent:client/agent:server fixed codings).
+//! - Role direction per BALP, shared with the DICOM message: on a **Read**
+//!   the server is the *source* of the data (DCM 110153) and the client the
+//!   *destination* (DCM 110152); on a query, a create and an update the
+//!   client is the source (`IHE.BasicAudit.PatientRead` vs
+//!   `IHE.BasicAudit.PatientQuery` agent:client/agent:server fixed codings).
+//!   On a **Delete** `IHE.BasicAudit.Delete` types the client DCM 110150
+//!   (Application) and the server `custodian` (provenance-participant-type)
+//!   instead; the DICOM message keeps its PS3.15 source/destination roles.
 //! - Patient entity: `audit-entity-type` code `1` (Person) +
 //!   `object-role` code `1` (Patient), the resolved EHR subject as an
 //!   identifier-only reference.
@@ -68,6 +71,9 @@ pub const SYS_AUDIT_EVENT_TYPE: &str = "http://terminology.hl7.org/CodeSystem/au
 pub const SYS_RESTFUL_INTERACTION: &str = "http://hl7.org/fhir/restful-interaction";
 /// DICOM controlled terminology (DCM) system URI.
 pub const SYS_DCM: &str = "http://dicom.nema.org/resources/ontology/DCM";
+/// FHIR `provenance-participant-type` code system (`custodian`).
+pub const SYS_PROVENANCE_PARTICIPANT_TYPE: &str =
+    "http://terminology.hl7.org/CodeSystem/provenance-participant-type";
 /// FHIR `audit-entity-type` code system (`1` person / `2` system object).
 pub const SYS_AUDIT_ENTITY_TYPE: &str = "http://terminology.hl7.org/CodeSystem/audit-entity-type";
 /// FHIR `object-role` code system (`1` patient / `24` query).
@@ -192,15 +198,27 @@ fn type_and_interaction(event: &AuditEvent) -> (AuditCoding, Option<AuditCoding>
     }
 }
 
-/// The client/server agents (+ the OAuth token agent when a `jti` is known).
+/// Returns the client/server agents, plus the OAuth token agent when a `jti`
+/// is known.
 ///
-/// Role direction per the BALP fixed codings: on a **Read** the server is the
-/// source of the data (DCM 110153 "Source Role ID") and the client the
-/// destination (110152); on every other action the initiating client is the
-/// source (`IHE.BasicAudit.PatientRead` vs `PatientQuery` agent slices).
+/// A delete of the BALP `RESTful` family types the client DCM 110150
+/// "Application" and the server `custodian`, the `agent:client.type` and
+/// `agent:server.type` patterns `IHE.BasicAudit.Delete` fixes and
+/// `IHE.BasicAudit.PatientDelete` inherits
+/// (<https://profiles.ihe.net/ITI/BALP/1.1.4/StructureDefinition-IHE.BasicAudit.Delete.html>).
+/// Every other record follows [`AuditEvent::server_is_data_source`], the rule
+/// the DICOM message applies too: on a read the server is the source of the
+/// data (DCM 110153 "Source Role ID") and the client the destination
+/// (110152), as the BALP `Read`/`PatientRead` agent slices fix; on a query, a
+/// create and an update the client is the source, as the `Query`, `Create`
+/// and `Update` slices fix.
 fn build_agents(event: &AuditEvent, ctx: &AuditContext, missing: &str) -> Vec<AuditAgent> {
-    let read = matches!(event.action, EventActionCode::Read);
-    let (client_role, server_role) = if read {
+    let (client_role, server_role) = if is_balp_delete(event) {
+        (
+            coding(SYS_DCM, "110150", "Application"),
+            coding(SYS_PROVENANCE_PARTICIPANT_TYPE, "custodian", "Custodian"),
+        )
+    } else if event.server_is_data_source() {
         (
             coding(SYS_DCM, "110152", "Destination Role ID"),
             coding(SYS_DCM, "110153", "Source Role ID"),
@@ -264,6 +282,13 @@ fn build_agents(event: &AuditEvent, ctx: &AuditContext, missing: &str) -> Vec<Au
     }
 
     agents
+}
+
+/// Whether `event` is a delete of the BALP `RESTful` family, whose agent types
+/// `IHE.BasicAudit.Delete` fixes.
+fn is_balp_delete(event: &AuditEvent) -> bool {
+    event.action == EventActionCode::Delete
+        && balp_profile_name(event.object, event.action, false).is_some()
 }
 
 /// The requesting side's agents.
@@ -657,6 +682,81 @@ mod tests {
         );
     }
 
+    /// The DICOM message and the FHIR document give the client and the server
+    /// the same data-flow role for one record: on a read (and an export) the
+    /// server is Source (110153) and the client Destination (110152), per
+    /// DICOM PS3.15 §A.5.2.7 and the BALP `Read` agent slices; on a write and
+    /// on a query (§A.5.3.10, BALP `Query`) the client is Source.
+    #[test]
+    fn dicom_and_fhir_agree_on_the_data_flow_direction() {
+        let cases = [
+            (
+                EventActionCode::Read,
+                ObjectClass::Composition,
+                "110152",
+                "110153",
+            ),
+            (
+                EventActionCode::Read,
+                ObjectClass::Extract,
+                "110152",
+                "110153",
+            ),
+            (
+                EventActionCode::Create,
+                ObjectClass::Composition,
+                "110153",
+                "110152",
+            ),
+            (
+                EventActionCode::Update,
+                ObjectClass::Ehr,
+                "110153",
+                "110152",
+            ),
+            (
+                EventActionCode::Execute,
+                ObjectClass::Query,
+                "110153",
+                "110152",
+            ),
+            (
+                EventActionCode::Read,
+                ObjectClass::Query,
+                "110153",
+                "110152",
+            ),
+        ];
+        for (action, object, client, server) in cases {
+            let e = event(action, object, EventOutcome::Success);
+            let v = json(&e, Some("patient-42"));
+            let agents = v["agent"].as_array().expect("agents");
+            assert_eq!(
+                agents[0]["type"]["coding"][0]["code"], client,
+                "FHIR client {action:?} {object:?}"
+            );
+            assert_eq!(
+                agents[1]["type"]["coding"][0]["code"], server,
+                "FHIR server {action:?} {object:?}"
+            );
+
+            let xml =
+                crate::system_log::message::AuditMessage::build(&e, &ctx(), Some("patient-42"))
+                    .to_xml()
+                    .expect("xml");
+            let roles: Vec<&str> = xml
+                .split("<RoleIDCode csd-code=\"")
+                .skip(1)
+                .filter_map(|rest| rest.split('"').next())
+                .collect();
+            assert_eq!(
+                roles,
+                vec![client, server],
+                "DICOM participants {action:?} {object:?}"
+            );
+        }
+    }
+
     #[test]
     fn create_uses_source_role_for_client() {
         let e = event(
@@ -673,6 +773,45 @@ mod tests {
             v["meta"]["profile"][0],
             "https://profiles.ihe.net/ITI/BALP/StructureDefinition/IHE.BasicAudit.PatientCreate"
         );
+    }
+
+    /// `IHE.BasicAudit.Delete` (and `PatientDelete`, derived from it) fixes
+    /// `agent:client.type` to DCM 110150 and `agent:server.type` to
+    /// provenance-participant-type `custodian`
+    /// (<https://profiles.ihe.net/ITI/BALP/1.1.4/StructureDefinition-IHE.BasicAudit.Delete.html>).
+    #[test]
+    fn delete_carries_the_agent_types_balp_delete_fixes() {
+        for (subject, profile) in [
+            (Some("patient-42"), "IHE.BasicAudit.PatientDelete"),
+            (None, "IHE.BasicAudit.Delete"),
+        ] {
+            let mut e = event(
+                EventActionCode::Delete,
+                ObjectClass::Composition,
+                EventOutcome::Success,
+            );
+            e.object_id = Some("8fa1::ferroehr::2".to_owned());
+            let v = json(&e, subject);
+            assert_eq!(
+                v["meta"]["profile"][0],
+                format!("https://profiles.ihe.net/ITI/BALP/StructureDefinition/{profile}")
+            );
+            assert_eq!(v["subtype"][0]["code"], "delete");
+            let client = &v["agent"][0]["type"]["coding"][0];
+            assert_eq!(
+                client["system"],
+                "http://dicom.nema.org/resources/ontology/DCM"
+            );
+            assert_eq!(client["code"], "110150");
+            assert_eq!(v["agent"][0]["requestor"], true);
+            let server = &v["agent"][1]["type"]["coding"][0];
+            assert_eq!(
+                server["system"],
+                "http://terminology.hl7.org/CodeSystem/provenance-participant-type"
+            );
+            assert_eq!(server["code"], "custodian");
+            assert_eq!(v["agent"][1]["requestor"], false);
+        }
     }
 
     #[test]

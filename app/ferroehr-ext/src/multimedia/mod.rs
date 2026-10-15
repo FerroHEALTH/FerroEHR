@@ -43,8 +43,9 @@ use crate::multimedia::store::{BlobStore, BlobStoreParams};
 /// A failure in the multimedia externalization path.
 #[derive(Debug, thiserror::Error)]
 pub enum MultimediaError {
-    /// The object store rejected an operation.
-    #[error("blob store: {0}")]
+    /// The object store rejected an operation; its own error names the
+    /// operation and the key.
+    #[error(transparent)]
     Store(#[from] object_store::Error),
     /// A stored blob's bytes do not hash to their content-addressed key — the
     /// integrity check failed.
@@ -62,14 +63,17 @@ pub enum MultimediaError {
     /// The object-store client could not be constructed from configuration.
     #[error("multimedia store configuration: {0}")]
     Config(String),
-    /// The same failure with its cause intact (RFC 0201). A store that will not
-    /// build is a credential problem, an endpoint problem or a TLS problem, and
-    /// a caller that cannot tell them apart has to read prose.
-    #[error("multimedia store configuration: {0}")]
-    ConfigFailed(String, #[source] object_store::Error),
+    /// The object-store client would not build, with the store's error as the
+    /// source (RFC 0201).
+    ///
+    /// A store that will not build is a credential problem, an endpoint problem
+    /// or a TLS problem, and a caller that cannot tell them apart has to read
+    /// prose.
+    #[error("the multimedia store client could not be built from its configuration")]
+    ConfigFailed(#[source] object_store::Error),
     /// The platform's validation refused the configured endpoint; the cause is
     /// the platform's own error type, and its message masks any `userinfo`.
-    #[error("multimedia store configuration: {0}")]
+    #[error("the multimedia store endpoint is not valid")]
     Endpoint(#[source] Box<dyn std::error::Error + Send + Sync>),
 }
 

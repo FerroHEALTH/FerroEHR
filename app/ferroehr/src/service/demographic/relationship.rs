@@ -35,7 +35,9 @@
 )]
 
 use serde_json::Value;
+use sqlx::Connection as _;
 
+use crate::db::acquire::acquire;
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::service::demographic::support;
@@ -177,8 +179,9 @@ impl FerroEhrService {
     /// `VERSIONED_OBJECT` + `ORIGINAL_VERSION` + `CONTRIBUTION`). Returns it with
     /// its `uid` set and the create-response `ETag`/`Location` metadata. The
     /// write response is built from the committed identity + the body already
-    /// in hand — no post-write reassembly read-back (the same metadata
-    /// discipline as every other write path).
+    /// in hand, unless the commit rewrites the body
+    /// ([`support::commit_rewrites_body`]); then the stored version is read back,
+    /// so the response is always the stored form.
     pub(super) async fn create_relationship(
         &self,
         body: Value,
@@ -198,8 +201,9 @@ impl FerroEhrService {
             "PARTY_RELATIONSHIP creation",
         )?;
         let ctx = CommitEnv::signing_ctx(self);
-        let canonical = body.clone();
-        let mut tx = self.demographic_pool.begin().await?;
+        let canonical = (!support::commit_rewrites_body(self)).then(|| body.clone());
+        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut tx = conn.begin().await?;
         let committed = create(
             &mut tx,
             None,
@@ -218,7 +222,13 @@ impl FerroEhrService {
         tx.commit().await?;
         support::record_commit();
 
-        Ok(support::committed_response(canonical, &committed)?)
+        match canonical {
+            Some(canonical) => Ok(support::committed_response(canonical, &committed)?),
+            None => {
+                self.read_relationship(committed.vo_id, Some(committed.tree), None)
+                    .await
+            }
+        }
     }
 
     /// `get_party_relationship` / `get_party_relationship_at_time`
@@ -262,9 +272,12 @@ impl FerroEhrService {
             .await
     }
 
-    /// Commit a new version of an already-resolved relationship. A deleted
-    /// current is `404` (pre `has_party_relationship`); a stale `expected` →
-    /// the engine's version conflict.
+    /// Commit a new version of an already-resolved relationship.
+    ///
+    /// A deleted current is `404` (pre `has_party_relationship`); a stale
+    /// `expected` → the engine's version conflict. The response is the stored
+    /// form: the body in hand, or a read-back when the commit rewrites it
+    /// ([`support::commit_rewrites_body`]).
     pub(super) async fn commit_relationship_update(
         &self,
         current: CurrentRelationship,
@@ -286,8 +299,9 @@ impl FerroEhrService {
             "PARTY_RELATIONSHIP update",
         )?;
         let ctx = CommitEnv::signing_ctx(self);
-        let canonical = body.clone();
-        let mut tx = self.demographic_pool.begin().await?;
+        let canonical = (!support::commit_rewrites_body(self)).then(|| body.clone());
+        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut tx = conn.begin().await?;
         let committed = update(
             &mut tx,
             None,
@@ -307,8 +321,15 @@ impl FerroEhrService {
         tx.commit().await?;
         support::record_commit();
 
-        // Metadata + in-hand body — no post-write reassembly read-back.
-        Ok(support::committed_response(canonical, &committed)?)
+        // Metadata + in-hand body, unless the commit rewrote it: then the
+        // stored form is read back.
+        match canonical {
+            Some(canonical) => Ok(support::committed_response(canonical, &committed)?),
+            None => {
+                self.read_relationship(committed.vo_id, Some(committed.tree), None)
+                    .await
+            }
+        }
     }
 
     /// Commit the logical delete of an already-resolved relationship
@@ -350,7 +371,8 @@ impl FerroEhrService {
             "PARTY_RELATIONSHIP delete",
         )?;
         let ctx = CommitEnv::signing_ctx(self);
-        let mut tx = self.demographic_pool.begin().await?;
+        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut tx = conn.begin().await?;
         let committed = delete(
             &mut tx,
             None,

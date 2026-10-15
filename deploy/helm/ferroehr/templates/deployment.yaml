@@ -21,6 +21,13 @@ available as an explicit, visible choice.
 {{- fail "config.auth.enabled is true but no authentication mechanism is configured, so the server would refuse to start (RFC 9110 §11.6.1: a 401 challenge must name a scheme the server implements).\n\nConfigure one:\n  config.auth.basic.users  — see deploy/helm/ci/basic-auth-values.yaml\n  config.auth.oidc.issuer  — with config.auth.oidc.audiences\n\nOr, for a development install only, set config.auth.enabled=false to serve every request unauthenticated." }}
 {{- end }}
 {{- end }}
+{{- /* The kubelet's HTTPS probes present no client certificate
+       (https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#http-probes),
+       so a listener that requires one fails every probe and no pod ever
+       becomes Ready while the install itself reports success. */}}
+{{- if and (eq (include "ferroehr.serverTls" .) "true") (eq (toString ((.Values.config.server).tls).client_auth) "required") }}
+{{- fail "config.server.tls.client_auth is \"required\", but the kubelet's probes present no client certificate, so every pod would stay unready while the install reports success.\n\nUse config.server.tls.client_auth: optional (a presented certificate is still verified), and enforce mutual TLS for the nodes that must present one at the network layer (NetworkPolicy, a service mesh)." }}
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -57,6 +64,13 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: {{ include "ferroehr.managementPort" . | quote }}
         prometheus.io/path: {{ printf "%s/prometheus" (.Values.config.management.base_path | trimSuffix "/") | quote }}
+        {{- /* The scrape lands on the API listener when no management.port is
+               set, and that listener speaks the server's own TLS when it is on;
+               kubernetes_sd scrape configs read the scheme from this annotation
+               by convention, and default to http without it. */}}
+        {{- if and (not (and .Values.config.management.enabled .Values.config.management.port)) (eq (include "ferroehr.serverTls" .) "true") }}
+        prometheus.io/scheme: "https"
+        {{- end }}
         {{- end }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
@@ -107,7 +121,7 @@ spec:
           # A secret VALUE appears below only where the config key has no
           # `*_file` sibling to point at the mounted volume instead; the rest are
           # `*_FILE` paths, which are not themselves sensitive.
-          {{- if or (eq (include "ferroehr.hasChartSecret" .) "true") .Values.database.existingSecret .Values.extraEnv }}
+          {{- if or (eq (include "ferroehr.hasChartSecret" .) "true") .Values.database.existingSecret (eq (include "ferroehr.hasDomainSecret" .) "true") .Values.database.migrateExistingSecret .Values.extraEnv }}
           env:
             {{- if or .Values.database.existingSecret .Values.database.url }}
             {{- /* The DSN is the credential that reaches patient data, so it is a
@@ -131,6 +145,15 @@ spec:
                    the boot self-check still enforces. */}}
             - name: FERROEHR__STORAGE__{{ upper $domain }}__URL_FILE
               value: {{ printf "%s/storage.%s.url" (include "ferroehr.secretMountPath" $) $domain | quote }}
+            {{- end }}
+            {{- if $dsn.migrateExistingSecret }}
+            {{- /* The migration credential of the database this domain lives in,
+                   when that is not the database the shared migration DSN
+                   reaches: preparation runs per database, and under
+                   migrate=verify it reads that database's ext and domain
+                   bookkeeping, which the domain's DML-only role cannot. */}}
+            - name: FERROEHR__STORAGE__MIGRATE__{{ upper $domain }}__URL_FILE
+              value: {{ printf "%s/storage.migrate.%s.url" (include "ferroehr.secretMountPath" $) $domain | quote }}
             {{- end }}
             {{- end }}
             {{- if or .Values.database.migrateExistingSecret .Values.database.migrateUrl }}
@@ -182,11 +205,17 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           {{- /* The health family is always mounted on the main HTTP port and
-                 never gated by config, so httpGet probes need no prerequisite. */}}
+                 never gated by config, so httpGet probes need no prerequisite.
+                 With the server's own TLS on, the kubelet probes over HTTPS
+                 and skips certificate verification
+                 (https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#http-probes). */}}
           livenessProbe:
             httpGet:
               path: /health/liveness
               port: http
+              {{- if eq (include "ferroehr.serverTls" .) "true" }}
+              scheme: HTTPS
+              {{- end }}
             {{- with .Values.probes.liveness }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -194,6 +223,9 @@ spec:
             httpGet:
               path: /health/readiness
               port: http
+              {{- if eq (include "ferroehr.serverTls" .) "true" }}
+              scheme: HTTPS
+              {{- end }}
             {{- with .Values.probes.readiness }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -202,6 +234,9 @@ spec:
             httpGet:
               path: /health/liveness
               port: http
+              {{- if eq (include "ferroehr.serverTls" .) "true" }}
+              scheme: HTTPS
+              {{- end }}
             initialDelaySeconds: {{ .Values.probes.startup.initialDelaySeconds }}
             periodSeconds: {{ .Values.probes.startup.periodSeconds }}
             timeoutSeconds: {{ .Values.probes.startup.timeoutSeconds }}
@@ -315,6 +350,14 @@ spec:
                   items:
                     - key: {{ $dsn.existingSecretKey }}
                       path: storage.{{ $domain }}.url
+              {{- end }}
+              {{- if $dsn.migrateExistingSecret }}
+              # The migration credential of the database this domain lives in.
+              - secret:
+                  name: {{ $dsn.migrateExistingSecret }}
+                  items:
+                    - key: {{ $dsn.migrateExistingSecretKey }}
+                      path: storage.migrate.{{ $domain }}.url
               {{- end }}
               {{- end }}
               {{- if .Values.database.migrateExistingSecret }}

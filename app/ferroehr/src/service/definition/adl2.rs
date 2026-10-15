@@ -39,14 +39,16 @@ use openehr_base::validate::InvariantViolation;
 use openehr_sdt::flat::example::{DetailLevel, ExampleType, apply_output_uid, example_composition};
 use openehr_sdt::flat::webtemplate::builder_v2_4::build_web_template_v2_4;
 
+use crate::db::acquire::acquire;
 use crate::service::definition::binding_uri::code_system_and_code;
 use crate::service::terminology::fhir::TermExistence;
 use openehr_sdt::flat::webtemplate::model::WebTemplate;
 use serde_json::Value;
+use sqlx::Connection as _;
 use sqlx::Row;
 
 use crate::service::FerroEhrService;
-use crate::service::error::{ServiceError, Violation};
+use crate::service::error::{ErrorChain, ServiceError, Violation};
 use crate::service::list::Page;
 use crate::service::status::{CallStatusType, SmError};
 
@@ -275,7 +277,7 @@ impl FerroEhrService {
             "SELECT EXISTS(SELECT 1 FROM adl2_artefact WHERE lower(hrid) = lower($1))",
         )
         .bind(an_id)
-        .fetch_one(&self.pool)
+        .fetch_one(&mut *acquire(&self.pool).await?)
         .await?)
     }
 
@@ -292,7 +294,7 @@ impl FerroEhrService {
     /// openEHR spec governs this — our own design/extension.
     async fn adl2_repository(&self) -> Result<ArchetypeRepository, ServiceError> {
         let sources: Vec<String> = sqlx::query_scalar("SELECT adl FROM adl2_artefact")
-            .fetch_all(&self.pool)
+            .fetch_all(&mut *acquire(&self.pool).await?)
             .await?;
         on_engine_stack(move || {
             let mut repo = ArchetypeRepository::new();
@@ -432,7 +434,8 @@ impl FerroEhrService {
         replace: bool,
     ) -> Result<(), ServiceError> {
         let kind = store_kind(summary.kind);
-        let mut tx = self.pool.begin().await?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
         if replace {
             sqlx::query("DELETE FROM adl2_artefact WHERE lower(hrid) = lower($1)")
                 .bind(&summary.archetype_id)
@@ -522,7 +525,7 @@ impl FerroEhrService {
                 "SELECT hrid FROM adl2_artefact WHERE lower(hrid) = lower($1)",
             )
             .bind(template_id)
-            .fetch_optional(&self.pool)
+            .fetch_optional(&mut *acquire(&self.pool).await?)
             .await?
         {
             return Ok(hrid);
@@ -535,7 +538,7 @@ impl FerroEhrService {
             (!v.is_empty()).then(|| v.to_owned())
         });
         let hrids: Vec<String> = sqlx::query_scalar("SELECT hrid FROM adl2_artefact")
-            .fetch_all(&self.pool)
+            .fetch_all(&mut *acquire(&self.pool).await?)
             .await?;
         hrids
             .into_iter()
@@ -695,7 +698,8 @@ impl FerroEhrService {
             .map_err(|e| {
                 ServiceError::content_invalid(
                     Violation::new(format!(
-                        "ADL2 template {template_id} could not be built into a WebTemplate: {e}"
+                        "ADL2 template {template_id} could not be built into a WebTemplate: {}",
+                        ErrorChain::new(&*e)
                     ))
                     .with_source(e),
                 )
@@ -756,8 +760,11 @@ impl FerroEhrService {
             .await?
             .map_err(|e| {
                 ServiceError::content_invalid(
-                    Violation::new(format!("cannot compile operational template: {e}"))
-                        .with_source(e),
+                    Violation::new(format!(
+                        "cannot compile operational template: {}",
+                        ErrorChain::new(&e)
+                    ))
+                    .with_source(e),
                 )
             })
     }
@@ -769,7 +776,7 @@ impl FerroEhrService {
             "SELECT adl FROM adl2_artefact WHERE lower(hrid) = lower($1)",
         )
         .bind(an_id)
-        .fetch_optional(&self.pool)
+        .fetch_optional(&mut *acquire(&self.pool).await?)
         .await?
         .ok_or_else(|| {
             ServiceError::sm(
@@ -787,7 +794,7 @@ impl FerroEhrService {
         )
         .bind(offset)
         .bind(limit)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *acquire(&self.pool).await?)
         .await?)
     }
 
@@ -801,7 +808,7 @@ impl FerroEhrService {
         .bind(kind)
         .bind(offset)
         .bind(limit)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *acquire(&self.pool).await?)
         .await?)
     }
 
@@ -814,7 +821,7 @@ impl FerroEhrService {
     ) -> Result<Vec<String>, ServiceError> {
         let re = compile_pattern(id_pattern)?;
         let all: Vec<String> = sqlx::query_scalar("SELECT hrid FROM adl2_artefact ORDER BY hrid")
-            .fetch_all(&self.pool)
+            .fetch_all(&mut *acquire(&self.pool).await?)
             .await?;
         Ok(paginate(all.into_iter().filter(|id| re.is_match(id)), page))
     }
@@ -830,7 +837,8 @@ impl FerroEhrService {
         // and delete in ONE transaction, mirroring `opt_delete`; the
         // `version.template_id` → `template_ref` foreign key (NO ACTION)
         // remains the race-free backstop under a concurrent commit.
-        let mut tx = self.pool.begin().await?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
         let stored: Option<(String, String)> =
             sqlx::query_as("SELECT hrid, kind FROM adl2_artefact WHERE lower(hrid) = lower($1)")
                 .bind(an_id)
@@ -896,7 +904,7 @@ impl FerroEhrService {
     async fn adl2_count(&self) -> Result<i64, ServiceError> {
         Ok(
             sqlx::query_scalar::<_, i64>("SELECT count(*) FROM adl2_artefact")
-                .fetch_one(&self.pool)
+                .fetch_one(&mut *acquire(&self.pool).await?)
                 .await?,
         )
     }
@@ -906,7 +914,7 @@ impl FerroEhrService {
         Ok(
             sqlx::query_scalar::<_, i64>("SELECT count(*) FROM adl2_artefact WHERE kind = $1")
                 .bind(kind)
-                .fetch_one(&self.pool)
+                .fetch_one(&mut *acquire(&self.pool).await?)
                 .await?,
         )
     }
@@ -929,7 +937,7 @@ impl FerroEhrService {
         )
         .bind(offset)
         .bind(limit)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *acquire(&self.pool).await?)
         .await?;
         // NOT NULL columns decode infallibly on a healthy row; a decode fault
         // is a real storage error and surfaces instead of blanking the field.

@@ -73,7 +73,9 @@ a parameter. The shapes it emits are where the
   interval per RM node: "B inside A" is
   `A.num < B.num AND B.num <= A.num_cap`. A CONTAINS chain becomes a chain
   of integer range joins over one table. No JSON is opened to answer
-  containment.
+  containment. The interval is strict: a node is never its own parent, so
+  `CLUSTER CONTAINS CLUSTER` reaches nested clusters only, and
+  `NOT CONTAINS` holds for a node with no such descendant.
 
 ```mermaid
 flowchart LR
@@ -86,6 +88,47 @@ flowchart LR
     contains --> join
 ```
 
+- **A path step is one attribute.** `o/data/events` reaches the `EVENT`
+  nodes that are the `events` of the `HISTORY` that is the `data` of `o`: a
+  direct child, through that attribute, never the node itself, a deeper
+  descendant, or a sibling attribute of the same type.
+- **A projected path binds its nodes once per row.** Every structure step a
+  `SELECT` path descends through is bound as if it were a `FROM` variable:
+  one row per matching node, one row with `null` cells where nothing
+  matches. Paths that share a prefix share its binding, so two values read
+  below one `EVENT` always come from the same event, and paths through
+  different repeated steps give every combination of their nodes. `WHERE`
+  and `ORDER BY` read through those bindings.
+- **The `WHERE` clause binds its own steps once.** Every repeated step a
+  `WHERE` path descends below the projected bindings is bound once for the
+  whole clause, as a `SELECT` step is (one node per binding, one `null`
+  binding when nothing matches), and the clause becomes one `EXISTS` over the
+  assignments of those bindings: a row is kept when some assignment makes the
+  clause true under three-valued logic, so `AND`, `OR` and `NOT` keep their
+  boolean laws per assignment. Elements of a list attribute inside one node's
+  data are not bindings; a test of one holds when any element satisfies it
+  and is unknown over an empty list. `EXISTS <path>` is path-level: it reads
+  through the projected bindings and checks the rest of the path in its own
+  `EXISTS`, outside the clause's assignment.
+  An `ORDER BY` key below the bindings takes the first match in document
+  order.
+- **A variable of an `OR` branch binds like a projected step.** A branch
+  operand a path reads is bound under the object the branches share: one row
+  per node that matches the branch, one row with `null` cells where it does
+  not, and two branches that both match pair up as two independent steps do.
+  A branch that is its own versioned object (a `COMPOSITION` directly under
+  the `EHR`, or one a `FOLDER` references) binds its node together with its
+  version row, in the scope the same object has outside the `OR`: the latest
+  version under `LATEST_VERSION`, never a deleted or restricted one, with its
+  `uid` read from that version.
+- **An aggregate binds nothing.** It reads every item of its path per row in
+  a correlated subquery and combines the rows, so `COUNT(*)` beside it is
+  unaffected; inside that subquery the `WHERE` clause is evaluated again
+  with the steps the item shares fixed to its own nodes, so an item counts
+  when some assignment of the remaining bindings makes the clause true, the
+  items a plain projection of the path would keep. Elements of a list
+  attribute inside one node are not filtered one by one: a row the clause
+  keeps contributes every element.
 - **Class and archetype predicates hit promoted columns.** `rm_type`, the
   parsed archetype identifier columns and names are plain indexed columns;
   a predicate naming a parent archetype matches specialised children through

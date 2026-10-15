@@ -108,6 +108,9 @@ pub enum AuditError {
     /// The local Audit Record Repository write/reap failed.
     #[error("audit store error")]
     Store(#[from] sqlx::Error),
+    /// No connection to the local Audit Record Repository could be obtained.
+    #[error("audit store unavailable")]
+    Acquire(#[from] crate::db::acquire::AcquireError),
     /// Rendering the FHIR `AuditEvent` document failed.
     #[error("audit rendering failed")]
     Render(#[source] Box<dyn std::error::Error + Send + Sync>),
@@ -328,7 +331,7 @@ impl FerroEhrService {
             ));
         };
         audit_store.search(filter).await.map_err(|e| {
-            crate::service::error::internal_fault("search the audit record repository", &e)
+            crate::service::error::internal_fault_caused("search the audit record repository", &e)
         })
     }
 }

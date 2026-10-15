@@ -166,7 +166,12 @@ line, the prelude) and `v1_0` (the released LANG 1.0.0).
   hand-written pipeline `master02-overview.adoc` §Conceptual Approach
   prescribes — `reader.rs` (ODIN text → `P_BMM_SCHEMA`, a STRICT read: an
   attribute the class docs do not declare is a typed error, with two
-  spec-cited tolerance lists), `include_resolution.rs` (transitive inclusion
+  spec-cited tolerance lists; it stamps `P_BMM_CLASS.uid`/`source_schema_id`,
+  which no persisted file carries), `json_reader.rs` (`.bmm.json` text mapped
+  onto the same ODIN value tree per `master04-syntax.adoc` §Serialisation
+  Formats and read by the same walk, so both serialisations give one
+  `P_BMM_SCHEMA`; the generated canonical-JSON codec is NOT a schema-file
+  reader), `include_resolution.rs` (transitive inclusion
   merge, includer wins, collisions marked `is_override`), `create_model.rs`
   (`P_BMM` → **v2.x** `BMM_MODEL`, all name references resolved to object
   references), `create_bmm3_model.rs` (`P_BMM` → **v3** `BMM_MODEL` — its own
@@ -193,9 +198,9 @@ line, the prelude) and `v1_0` (the released LANG 1.0.0).
   pinned finding-for-finding in `tests/it/vendor_bmm_schema.rs`: the released
   RM 1.2.0 and AM 1.4.0 schemas genuinely violate §Packages, so those rows are
   adjudicated, not clean. That module's third table covers ALL 18 vendored
-  component ODIN generations — seven materialise, and **eleven are adjudicated
+  component json generations — eight materialise, and **ten are adjudicated
   refusals of released schemas that reference a class their own inclusion
-  closure does not define** (TERM/RM-1.0.x/LANG-1.0.0 declare no `includes` at
+  closure does not define** (TERM 3.0.0/RM-1.0.x/LANG-1.0.0 declare no `includes` at
   all against `master04-syntax.adoc` §Classes for Primitive Types;
   `BMM_ENUMERATION.item_values: List<T>` names a formal parameter its owner
   never declares; LANG v3's `EL_CASE.value_constraint: C_OBJECT` reaches into

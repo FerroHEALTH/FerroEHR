@@ -12,9 +12,11 @@
 //! replica's claim commits and every concurrent one re-evaluates the `WHERE`
 //! against it and matches nothing. No replica keeps a cache of these decisions.
 
+use sqlx::Connection as _;
 use sqlx::{PgConnection, PgPool};
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::usage_report::payload::BUCKETS;
 use crate::usage_report::window::{Series, SeriesCounts, WindowCounts};
 
@@ -42,6 +44,9 @@ pub enum StoreError {
     /// The database refused or did not answer.
     #[error("usage report store")]
     Sqlx(#[from] sqlx::Error),
+    /// No connection could be obtained from the pool.
+    #[error("usage report store unavailable")]
+    Acquire(#[from] crate::db::acquire::AcquireError),
     /// A window row names a series this build does not know, or carries a
     /// malformed histogram.
     #[error("usage report window row `{0}` is malformed")]
@@ -56,7 +61,7 @@ pub enum StoreError {
 /// # Errors
 /// [`StoreError::Sqlx`] when a statement fails.
 pub async fn ensure_instance(pool: &PgPool) -> Result<Instance, StoreError> {
-    let mut conn = pool.acquire().await?;
+    let mut conn = acquire(pool).await?;
     ensure_instance_on(&mut conn).await
 }
 
@@ -89,7 +94,7 @@ pub async fn ensure_instance_on(conn: &mut PgConnection) -> Result<Instance, Sto
 /// [`StoreError::Sqlx`] when the read fails.
 pub async fn read_instance(pool: &PgPool) -> Result<Option<Uuid>, StoreError> {
     let id = sqlx::query_scalar("SELECT instance_id FROM usage_report_instance")
-        .fetch_optional(pool)
+        .fetch_optional(&mut *acquire(pool).await?)
         .await?;
     Ok(id)
 }
@@ -106,7 +111,7 @@ pub async fn claim_start(pool: &PgPool) -> Result<bool, StoreError> {
             OR last_start_sent_at <= now() - interval '10 minutes' \
          RETURNING instance_id",
     )
-    .fetch_optional(pool)
+    .fetch_optional(&mut *acquire(pool).await?)
     .await?;
     Ok(claimed.is_some())
 }
@@ -123,7 +128,8 @@ pub async fn claim_start(pool: &PgPool) -> Result<bool, StoreError> {
 /// [`StoreError::Sqlx`] when a statement fails, and
 /// [`StoreError::MalformedRow`] when a window row cannot be read back.
 pub async fn claim_daily(pool: &PgPool) -> Result<DailyClaim, StoreError> {
-    let mut tx = pool.begin().await?;
+    let mut conn = acquire(pool).await?;
+    let mut tx = conn.begin().await?;
     // 23 hours: below a day by the scheduling jitter, so a replica that wakes
     // a little early still claims.
     let claimed: Option<Uuid> = sqlx::query_scalar(
@@ -163,7 +169,7 @@ pub async fn claim_daily(pool: &PgPool) -> Result<DailyClaim, StoreError> {
 pub async fn peek_window(pool: &PgPool) -> Result<WindowCounts, StoreError> {
     let rows: Vec<WindowRow> =
         sqlx::query_as("SELECT series, counts, errors_5xx, slow, max_ms FROM usage_report_window")
-            .fetch_all(pool)
+            .fetch_all(&mut *acquire(pool).await?)
             .await?;
     window_counts(rows)
 }
@@ -177,7 +183,8 @@ pub async fn add_to_window(pool: &PgPool, counts: &WindowCounts) -> Result<(), S
     if counts.is_empty() {
         return Ok(());
     }
-    let mut tx = pool.begin().await?;
+    let mut conn = acquire(pool).await?;
+    let mut tx = conn.begin().await?;
     for (series, add) in &counts.series {
         let buckets: Vec<i64> = add.buckets.iter().map(|count| to_i64(*count)).collect();
         sqlx::query(
@@ -213,7 +220,7 @@ pub async fn add_to_window(pool: &PgPool, counts: &WindowCounts) -> Result<(), S
 /// with no major in range.
 pub async fn postgres_major(pool: &PgPool) -> Result<u16, StoreError> {
     let version_num: i32 = sqlx::query_scalar("SELECT current_setting('server_version_num')::int")
-        .fetch_one(pool)
+        .fetch_one(&mut *acquire(pool).await?)
         .await?;
     version_num
         .checked_div(10_000)

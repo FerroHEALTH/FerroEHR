@@ -756,10 +756,14 @@ fn terminology_code(
     })
 }
 
-/// Map a `C_PRIMITIVE_OBJECT` (its wrapped `C_PRIMITIVE`) to the matching `v2_4`
-/// primitive constraint node. The converter passes primitive nodes through
-/// untouched; phase-1 (no RM repo) does not validate primitive-constraint
-/// internals, so a faithful-but-minimal mapping is sufficient and safe.
+/// Maps a `C_PRIMITIVE_OBJECT` (its wrapped `C_PRIMITIVE`) to the matching
+/// `v2_4` primitive constraint node.
+///
+/// The converter passes primitive nodes through untouched. A node without
+/// `item` maps as the unconstrained constraint of the primitive type its
+/// `rm_type_name` names (`unconstrained_primitive`); a name that is no AOM 1.4
+/// primitive type maps to an unconstrained object of that type, reported in
+/// `conversion_details`.
 #[expect(
     clippy::too_many_lines,
     reason = "one arm per primitive C_* struct literal — a flat mapping table"
@@ -769,8 +773,22 @@ fn map_primitive_object(c: &opt14::types::CPrimitiveObject, cx: &mut RootCx) -> 
     let node_id = c.node_id.as_str();
     let occ = &c.occurrences;
     let Some(item) = c.item.as_deref() else {
-        // A primitive object with no inner constraint → an unconstrained string.
-        return c_string(rm, node_id, occ, Vec::new(), None);
+        if let Some(item) = unconstrained_primitive(rm) {
+            let with_item = opt14::types::CPrimitiveObject {
+                item: Some(Box::new(item)),
+                ..c.clone()
+            };
+            return map_primitive_object(&with_item, cx);
+        }
+        cx.note(
+            format!("primitive_without_item.{rm}.{node_id}"),
+            format!(
+                "C_PRIMITIVE_OBJECT node {node_id:?} carries no item and its rm_type_name \
+                 {rm:?} names no AOM 1.4 primitive type; it converts to an unconstrained \
+                 {rm} object"
+            ),
+        );
+        return complex(rm, node_id, occ, Vec::new());
     };
     match item {
         opt14::types::CPrimitive::CBoolean(p) => {
@@ -807,9 +825,10 @@ fn map_primitive_object(c: &opt14::types::CPrimitiveObject, cx: &mut RootCx) -> 
             c_string(rm, node_id, occ, constraint, p.assumed_value.clone())
         }
         opt14::types::CPrimitive::CInteger(p) => {
-            let constraint = openehr_base::containers::present(
-                p.range.as_ref().map(int_interval).into_iter().collect(),
-            );
+            let constraint = openehr_base::containers::present(enumerated_and_range(
+                &p.list,
+                p.range.as_ref().map(int_interval),
+            ));
             CObject::CInteger(CInteger {
                 parent: None,
                 soc_parent: None,
@@ -826,9 +845,10 @@ fn map_primitive_object(c: &opt14::types::CPrimitiveObject, cx: &mut RootCx) -> 
             })
         }
         opt14::types::CPrimitive::CReal(p) => {
-            let constraint = openehr_base::containers::present(
-                p.range.as_ref().map(real_interval).into_iter().collect(),
-            );
+            let constraint = openehr_base::containers::present(enumerated_and_range(
+                &p.list,
+                p.range.as_ref().map(real_interval),
+            ));
             CObject::CReal(CReal {
                 parent: None,
                 soc_parent: None,
@@ -977,6 +997,67 @@ fn map_primitive_object(c: &opt14::types::CPrimitiveObject, cx: &mut RootCx) -> 
             ),
         }),
     }
+}
+
+/// Returns the constraint that admits every value of the AOM 1.4 primitive
+/// type `rm_type_name` names, or `None` when it names none.
+///
+/// A `C_PRIMITIVE_OBJECT` without `item` constrains nothing beyond its type
+/// (`item` is `minOccurs="0"` in `its-xml-1.0.2-nsv1/ALL/Archetype.xsd`
+/// `C_PRIMITIVE_OBJECT`), so it converts to the
+/// unconstrained form of the `C_PRIMITIVE` subtype for that type
+/// (AM `AOM1.4/master06-primitive_package.adoc` §Class Descriptions). The
+/// type names are matched case-insensitively.
+fn unconstrained_primitive(rm_type_name: &str) -> Option<opt14::types::CPrimitive> {
+    use opt14::types::CPrimitive;
+    let name = rm_type_name.to_ascii_uppercase();
+    Some(match name.as_str() {
+        "BOOLEAN" => CPrimitive::CBoolean(opt14::types::CBoolean {
+            true_valid: true,
+            false_valid: true,
+            assumed_value: None,
+        }),
+        "STRING" => CPrimitive::CString(opt14::types::CString {
+            pattern: None,
+            list: Vec::new(),
+            list_open: None,
+            assumed_value: None,
+        }),
+        "INTEGER" => CPrimitive::CInteger(opt14::types::CInteger {
+            list: Vec::new(),
+            range: None,
+            assumed_value: None,
+        }),
+        "REAL" => CPrimitive::CReal(opt14::types::CReal {
+            list: Vec::new(),
+            range: None,
+            assumed_value: None,
+        }),
+        "DATE" => CPrimitive::CDate(opt14::types::CDate {
+            pattern: None,
+            timezone_validity: None,
+            range: None,
+            assumed_value: None,
+        }),
+        "DATE_TIME" => CPrimitive::CDateTime(opt14::types::CDateTime {
+            pattern: None,
+            timezone_validity: None,
+            range: None,
+            assumed_value: None,
+        }),
+        "TIME" => CPrimitive::CTime(opt14::types::CTime {
+            pattern: None,
+            timezone_validity: None,
+            range: None,
+            assumed_value: None,
+        }),
+        "DURATION" => CPrimitive::CDuration(opt14::types::CDuration {
+            pattern: None,
+            range: None,
+            assumed_value: None,
+        }),
+        _ => return None,
+    })
 }
 
 /// Date/time/date-time constraints carry a pattern XOR a range on the ADL2
@@ -1755,6 +1836,29 @@ fn map_cardinality(c: &opt14::types::Cardinality) -> Cardinality {
     }
 }
 
+/// Returns the AOM2 interval list for an AOM 1.4 numeric constraint: each
+/// enumerated `list` value as a point interval, then the `range`.
+///
+/// AOM 1.4 `C_INTEGER`/`C_REAL` carry a `list` and a `range`
+/// (AM `UML/classes/org.openehr.am.aom14.c_integer.adoc`); AOM2 has one
+/// `constraint: List<Interval<T>>`, any member of which admits a value
+/// (`org.openehr.am.aom2.c_integer.adoc`).
+fn enumerated_and_range<T: Copy>(list: &[T], range: Option<Interval<T>>) -> Vec<Interval<T>> {
+    list.iter()
+        .map(|&v| {
+            Interval::PointInterval(PointInterval {
+                lower: Some(v),
+                upper: Some(v),
+                lower_unbounded: false,
+                upper_unbounded: false,
+                lower_included: true,
+                upper_included: true,
+            })
+        })
+        .chain(range)
+        .collect()
+}
+
 fn int_interval(iv: &opt14::types::Intervalofinteger) -> Interval<i32> {
     if iv.lower == iv.upper && iv.lower.is_some() {
         let v = iv.lower.unwrap_or_default();
@@ -2185,7 +2289,7 @@ mod tests {
     #[test]
     fn temporal_range_and_pattern_both_carried() {
         let node = opt14::types::CPrimitiveObject {
-            rm_type_name: "DV_DURATION".to_owned(),
+            rm_type_name: "DURATION".to_owned(),
             occurrences: unbounded_occurrences(),
             node_id: String::new(),
             item: Some(Box::new(opt14::types::CPrimitive::CDuration(
@@ -2224,7 +2328,7 @@ mod tests {
     #[test]
     fn date_pattern_plus_range_keeps_range_and_reports() {
         let node = opt14::types::CPrimitiveObject {
-            rm_type_name: "DV_DATE".to_owned(),
+            rm_type_name: "DATE".to_owned(),
             occurrences: unbounded_occurrences(),
             node_id: String::new(),
             item: Some(Box::new(opt14::types::CPrimitive::CDate(
@@ -2276,6 +2380,114 @@ mod tests {
         };
         assert_eq!(d.pattern_constraint.as_deref(), Some("yyyy-??-??"));
         assert!(cx.notes.is_empty());
+    }
+
+    /// An enumerated AOM 1.4 integer/real `list` survives as AOM2 point
+    /// intervals beside the `range` (AM `org.openehr.am.aom2.c_integer.adoc`
+    /// `constraint: List<Interval<Integer>>`).
+    #[test]
+    fn integer_and_real_lists_become_point_intervals() {
+        let point = |iv: &Interval<i32>| match iv {
+            Interval::PointInterval(p) => p.lower,
+            Interval::ProperInterval(_) => None,
+        };
+        let node = opt14::types::CPrimitiveObject {
+            rm_type_name: "INTEGER".to_owned(),
+            occurrences: unbounded_occurrences(),
+            node_id: String::new(),
+            item: Some(Box::new(opt14::types::CPrimitive::CInteger(
+                opt14::types::CInteger {
+                    list: vec![1, 2, 3],
+                    range: None,
+                    assumed_value: None,
+                },
+            ))),
+        };
+        let mut cx = test_cx();
+        let CObject::CInteger(i) = map_primitive_object(&node, &mut cx) else {
+            panic!("expected a C_INTEGER");
+        };
+        let points: Vec<Option<i32>> = i.constraint.iter().flatten().map(point).collect();
+        assert_eq!(points, vec![Some(1), Some(2), Some(3)]);
+
+        let real = opt14::types::CPrimitiveObject {
+            rm_type_name: "REAL".to_owned(),
+            item: Some(Box::new(opt14::types::CPrimitive::CReal(
+                opt14::types::CReal {
+                    list: vec![0.5, 1.5],
+                    range: None,
+                    assumed_value: None,
+                },
+            ))),
+            ..node
+        };
+        let CObject::CReal(r) = map_primitive_object(&real, &mut cx) else {
+            panic!("expected a C_REAL");
+        };
+        let points: Vec<Option<f64>> = r
+            .constraint
+            .iter()
+            .flatten()
+            .map(|iv| match iv {
+                Interval::PointInterval(p) => p.lower,
+                Interval::ProperInterval(_) => None,
+            })
+            .collect();
+        assert_eq!(points, vec![Some(0.5), Some(1.5)]);
+    }
+
+    /// An item-less `C_PRIMITIVE_OBJECT` converts to the unconstrained
+    /// constraint of the primitive type its `rm_type_name` names, never to a
+    /// `C_STRING` for a non-string type.
+    #[test]
+    fn itemless_primitive_keeps_its_type() {
+        let node = |rm: &str| opt14::types::CPrimitiveObject {
+            rm_type_name: rm.to_owned(),
+            occurrences: unbounded_occurrences(),
+            node_id: String::new(),
+            item: None,
+        };
+        let mut cx = test_cx();
+        let CObject::CInteger(i) = map_primitive_object(&node("INTEGER"), &mut cx) else {
+            panic!("an item-less INTEGER must convert to a C_INTEGER");
+        };
+        assert_eq!(i.rm_type_name, "INTEGER");
+        assert!(i.constraint.as_ref().is_none_or(Vec::is_empty));
+        assert!(i.assumed_value.is_none());
+
+        let CObject::CDate(d) = map_primitive_object(&node("DATE"), &mut cx) else {
+            panic!("an item-less DATE must convert to a C_DATE");
+        };
+        assert_eq!(d.rm_type_name, "DATE");
+        assert!(d.constraint.as_ref().is_none_or(Vec::is_empty));
+        assert!(d.pattern_constraint.is_none());
+
+        let CObject::CBoolean(b) = map_primitive_object(&node("BOOLEAN"), &mut cx) else {
+            panic!("an item-less BOOLEAN must convert to a C_BOOLEAN");
+        };
+        assert_eq!(b.constraint.as_deref(), Some([true, false].as_slice()));
+
+        assert!(matches!(
+            map_primitive_object(&node("STRING"), &mut cx),
+            CObject::CString(_)
+        ));
+        assert!(
+            cx.notes.is_empty(),
+            "a known primitive type is not reported"
+        );
+
+        // A name that is no AOM 1.4 primitive type: an unconstrained object of
+        // that type, reported in conversion_details.
+        let CObject::CComplexObject(_) = map_primitive_object(&node("DV_TEXT"), &mut cx) else {
+            panic!("an unknown primitive type must convert to an unconstrained object");
+        };
+        assert!(
+            cx.notes
+                .keys()
+                .any(|k| k.starts_with("primitive_without_item.DV_TEXT")),
+            "{:?}",
+            cx.notes
+        );
     }
 
     /// Notes recorded during a walk land in the converted archetype's

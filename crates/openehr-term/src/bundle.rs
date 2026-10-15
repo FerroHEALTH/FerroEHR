@@ -60,7 +60,7 @@ const LANGUAGE_ASSETS: &[(&str, &str)] = &[
 #[derive(Debug, thiserror::Error)]
 pub enum TerminologyError {
     /// The XML was not well-formed.
-    #[error("terminology XML is not well-formed: {0}")]
+    #[error("terminology XML is not well-formed")]
     Xml(#[from] roxmltree::Error),
     /// The XML was well-formed but not the expected terminology shape.
     #[error("malformed terminology asset: {0}")]

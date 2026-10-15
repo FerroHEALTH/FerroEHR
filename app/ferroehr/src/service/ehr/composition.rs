@@ -21,13 +21,15 @@
 use openehr_base::prelude::ObjectVersionId;
 use openehr_base::v1_3::base_types::identification::lexical::composite_ids_equal;
 use serde_json::Value;
+use sqlx::Connection as _;
 
+use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::datetime::parse_at_time;
-#[cfg(feature = "multimedia")]
-use crate::service::error::internal_fault;
 use crate::service::error::{ServiceError, Violation};
+#[cfg(feature = "multimedia")]
+use crate::service::error::{internal_fault, internal_fault_caused};
 use crate::service::response::{RawServiceResponse, ReadBody, ResourceMeta, ServiceResponse};
 use crate::service::status::{CallStatusType, SmError};
 use crate::versioning::Kind;
@@ -81,7 +83,7 @@ impl FerroEhrService {
         // ONE pooled connection carries both gates AND the commit, rather
         // than the three or four checkouts this path used to take: measured at
         // +0.4 ms per commit on #3097.
-        let mut conn = self.pool.acquire().await?;
+        let mut conn = acquire(&self.pool).await?;
         // The EHR-existence (404) and content-writability (409) gates in one
         // round trip: a COMPOSITION is EHR content (RM ehr master04 §EHR
         // Creation / §EHR Active Status).
@@ -451,7 +453,8 @@ impl FerroEhrService {
             ),
             Err(_) => None,
         };
-        let mut tx = self.pool.begin().await?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
         // Serialize concurrent writers of the same object, then read the
         // placement + every pre-check column in ONE statement (thaw riding).
         crate::storage::version_repo::commit::advisory_lock(&mut tx, vo_id).await?;
@@ -724,7 +727,8 @@ impl FerroEhrService {
         }
         let _ = expected;
 
-        let mut tx = self.pool.begin().await?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
         // A DELETE is a commit on a change-controlled resource, so the
         // committal request headers merge here too (ITS-REST overview
         // §"openehr-version and openehr-audit-details": the headers MUST be
@@ -1147,7 +1151,7 @@ impl FerroEhrService {
         engine
             .expand(&mut body)
             .await
-            .map_err(|e| internal_fault("expand a multimedia reference", &e))?;
+            .map_err(|e| internal_fault_caused("expand a multimedia reference", &e))?;
         Ok(body)
     }
 

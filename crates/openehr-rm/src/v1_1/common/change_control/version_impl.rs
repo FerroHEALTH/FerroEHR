@@ -143,7 +143,7 @@ impl<T> Version<T> {
 #[derive(Debug, thiserror::Error)]
 pub enum CanonicalFormError {
     /// RFC 8785 (JCS) canonicalisation failed.
-    #[error("RFC 8785 (JCS) canonicalisation: {0}")]
+    #[error("RFC 8785 (JCS) canonicalisation failed")]
     Canonicalize(#[source] serde_json::Error),
 }
 

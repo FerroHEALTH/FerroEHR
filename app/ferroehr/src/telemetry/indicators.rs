@@ -14,6 +14,7 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use crate::db::acquire::acquire;
 use crate::system_log::chain_check::{ChainCheck, ChainCheckState};
 use crate::system_log::config::AuditPosture;
 use crate::system_log::sender::AuditSender;
@@ -42,7 +43,14 @@ impl HealthIndicator for DbHealth {
     }
 
     async fn check(&self) -> Health {
-        match sqlx::query("SELECT 1").execute(&self.pool).await {
+        let mut conn = match acquire(&self.pool).await {
+            Ok(conn) => conn,
+            Err(e) => {
+                tracing::error!(error = %e.driver(), "health: no database connection");
+                return Health::down("database ping failed");
+            }
+        };
+        match sqlx::query("SELECT 1").execute(&mut *conn).await {
             Ok(_) => Health::up(),
             Err(e) => {
                 // The health family is UNAUTHENTICATED by design (orchestrator
@@ -82,8 +90,15 @@ impl HealthIndicator for MigrationsHealth {
         let query = "SELECT (to_regclass('clinical.node') IS NOT NULL \
              AND to_regclass('clinical.version') IS NOT NULL \
              AND to_regclass('clinical.vo_head') IS NOT NULL) AS applied";
+        let mut conn = match acquire(&self.pool).await {
+            Ok(conn) => conn,
+            Err(e) => {
+                tracing::error!(error = %e.driver(), "health: no database connection");
+                return Health::down("migration check failed");
+            }
+        };
         match sqlx::query_scalar::<_, bool>(query)
-            .fetch_one(&self.pool)
+            .fetch_one(&mut *conn)
             .await
         {
             Ok(true) => Health::up(),

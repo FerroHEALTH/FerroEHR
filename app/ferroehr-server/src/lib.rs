@@ -23,13 +23,16 @@ use std::time::Duration;
 
 use anyhow::Context as _;
 use clap::{Parser, Subcommand};
+use ferroehr::aql::subject::ehr_subject;
 use ferroehr::config::deployment::{DatabaseFacts, DeploymentPosture, DeploymentProfile};
 use ferroehr::config::management::EndpointLevels;
 use ferroehr::config::management::ManagementConfig;
 use ferroehr::db::domain::{Domain, DomainPools};
 use ferroehr::decommission::{Decommission, Erasure};
+use ferroehr::ids::EhrId;
 use ferroehr::manufacturer::MANUFACTURER;
 use ferroehr::report::Report;
+use ferroehr::service::status::SmError;
 use ferroehr::support::{SupportPeriod, today_utc};
 use ferroehr::system_log::config::AuditConfig;
 use ferroehr::system_log::config::AuditPosture;
@@ -693,9 +696,12 @@ fn assemble_service(
 }
 
 /// Wires authorization, active only when authentication is enabled: the RBAC
-/// gate plus the ABAC engine over the DB-backed attribute resolvers.
+/// gate, the ABAC engine over the DB-backed attribute resolvers, and the
+/// per-EHR access default.
 ///
-/// `None` when authentication is off, or when neither layer is configured.
+/// `None` when authentication is off, or when both gates are off and the
+/// per-EHR default is `open`. The boot line names which of the three caused
+/// the handle, so a `restricted` default alone reads as the reason.
 ///
 /// # Errors
 /// An ABAC block that is enabled but unbuildable aborts boot: configuration
@@ -714,11 +720,22 @@ fn wire_authz(
         authz_resolvers(pool.clone(), Arc::clone(service)),
     )?;
     if let Some(handle) = &authz {
-        tracing::info!(
-            rbac = handle.rbac_active(),
-            abac = handle.abac_active(),
-            "authorization enabled"
-        );
+        let ehr_access_default = handle.ehr_access_default();
+        if handle.rbac_active() || handle.abac_active() {
+            tracing::info!(
+                rbac = handle.rbac_active(),
+                abac = handle.abac_active(),
+                ?ehr_access_default,
+                "authorization enabled"
+            );
+        } else {
+            tracing::info!(
+                rbac = false,
+                abac = false,
+                ?ehr_access_default,
+                "authorization enabled for the restricted per-EHR access default only"
+            );
+        }
     }
     Ok(authz)
 }
@@ -946,8 +963,8 @@ fn warn_boot_postures(config: &ferroehr::config::FerroEhrConfig) {
 ///
 /// Schema preparation is [`ferroehr::db::prepare`], which spans every schema of
 /// each database on that database's migration DSN (`[db].migrate_url` for every
-/// domain reaching the database it reaches, the domain's own DSN otherwise) and
-/// then
+/// domain reaching the database it reaches, `[storage.migrate.<domain>].url`
+/// for a database of its own, the domain's own DSN when that is unset) and then
 /// measures the runtime pools' own reach with
 /// [`ferroehr::db::verify_domain_isolation`], refusing to boot a database whose
 /// grants let one runtime role read another domain.
@@ -1191,6 +1208,15 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         deployment,
     )?);
 
+    // The schemas are prepared by now, so a configured identifier scheme the
+    // registry does not hold is refused here, not at its first party commit.
+    if let Some(engine) = service.identifier_protection() {
+        engine.verify_registered().await.context(
+            "[demographic.identifier_protection].schemes names a scheme the identifier_scheme \
+             registry does not hold",
+        )?;
+    }
+
     // The retention register keys category periods on the map in force, so it
     // is mirrored before the listener takes traffic. `validate` has already
     // refused a map that does not compile.
@@ -1241,6 +1267,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         terminology_api_enabled: config.terminology.api_enabled,
         events_admin_api: config.events.admin_api,
         audit_organization_claim: config.authz.abac.organization_claim().map(str::to_owned),
+        role_claims: config.authz.rbac.role_claims.clone(),
         spec_profile: config.spec_profile,
     };
 
@@ -1323,11 +1350,12 @@ pub fn build_authz(
 /// The DB-backed ABAC attribute resolvers.
 ///
 /// Builds `ferroehr_rest::extensions::access::authz::AuthzResolvers`: the EHR
-/// subject external-ref id (the promoted `ehr.subject_id` column — the same
-/// query the audit [`SubjectResolver`] runs) and the committed template of a
+/// subject as the patient scope addresses it (`ferroehr::aql::subject::ehr_subject`,
+/// the rule the AQL patient scope applies) and the committed template of a
 /// COMPOSITION version (`version.template_id` via the service read-back).
 /// Failures are typed [`ResolveError`]s — the PEP fails closed on them, never
-/// silently permits.
+/// silently permits; a subject lookup that cannot obtain a connection carries
+/// the `service_overloaded` call status, which the PEP answers with `503`.
 #[must_use]
 pub fn authz_resolvers(pool: PgPool, service: Arc<FerroEhrService>) -> AuthzResolvers {
     AuthzResolvers {
@@ -1336,12 +1364,9 @@ pub fn authz_resolvers(pool: PgPool, service: Arc<FerroEhrService>) -> AuthzReso
             Box::pin(async move {
                 let id = Uuid::parse_str(&ehr_id)
                     .map_err(|e| ResolveError::new(format!("ehr id {ehr_id}"), e))?;
-                sqlx::query_scalar::<_, Option<String>>("SELECT subject_id FROM ehr WHERE id = $1")
-                    .bind(id)
-                    .fetch_optional(&pool)
+                ehr_subject(&pool, EhrId(id))
                     .await
-                    .map(Option::flatten)
-                    .map_err(|e| ResolveError::new("ehr subject lookup", e))
+                    .map_err(|e| ResolveError::new("ehr subject lookup", SmError::from(e)))
             })
         }),
         template_of_version: Arc::new(move |vo: String, version: Option<String>| {
