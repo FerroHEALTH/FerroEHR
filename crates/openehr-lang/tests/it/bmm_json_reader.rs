@@ -92,6 +92,37 @@ fn without_leaders(debug: &str) -> String {
     out
 }
 
+/// `debug` with every empty `documentation` read as absent.
+///
+/// The published json writes a model element without documentation as
+/// `"documentation": ""` where its ODIN twin leaves the attribute out
+/// (`LANG/docs/UML/classes/org.openehr.lang.bmm_persistence.p_bmm_model_element.adoc`
+/// §Attributes types it `0..1`), so `Some("")` and `None` are one fact here.
+fn empty_documentation_as_absent(debug: &str) -> String {
+    let lines: Vec<&str> = debug.lines().collect();
+    let mut out: Vec<String> = Vec::with_capacity(lines.len());
+    let mut i = 0;
+    while let Some(line) = lines.get(i) {
+        let empty = line.trim() == "documentation: Some("
+            && lines.get(i + 1).map(|l| l.trim()) == Some("\"\",")
+            && lines.get(i + 2).map(|l| l.trim()) == Some("),");
+        if empty {
+            let indent = line.len() - line.trim_start().len();
+            out.push(format!("{}documentation: None,", " ".repeat(indent)));
+            i += 3;
+        } else {
+            out.push((*line).to_owned());
+            i += 1;
+        }
+    }
+    out.join("\n")
+}
+
+/// The pretty-printed reading of `class`, in the form both serialisations share.
+fn shared_form(class: &PBmmClass) -> String {
+    empty_documentation_as_absent(&without_leaders(&format!("{class:#?}")))
+}
+
 /// Reads `file` under [`components`] as text.
 fn source(file: &str) -> String {
     let path = components().join(file);
@@ -121,8 +152,8 @@ fn assert_same_reading(label: &str, json: &PBmmSchema, odin: &PBmmSchema) {
             "{label}: the {list} differ in membership or order"
         );
         for (json_class, odin_class) in json_list.iter().zip(odin_list) {
-            let json_text = without_leaders(&format!("{json_class:#?}"));
-            let odin_text = without_leaders(&format!("{odin_class:#?}"));
+            let json_text = shared_form(json_class);
+            let odin_text = shared_form(odin_class);
             assert!(
                 json_text == odin_text,
                 "{label}: {list}/{} reads differently: {}",
