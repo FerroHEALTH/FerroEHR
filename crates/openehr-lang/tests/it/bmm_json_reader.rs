@@ -74,19 +74,12 @@ fn refused(file: &str) -> Option<&'static str> {
         .map(|(_, detail)| *detail)
 }
 
-/// The classes whose json documentation keeps the leading white space of a
-/// multi-line string's continuation lines, which the ODIN reading removes.
-///
-/// LANG `odin/master07-leaf_data.adoc` §Strings: the contents of a multi-line
-/// ODIN string are computed "with the removal of white space leaders up to the
-/// left-most character of the first line of the string". JSON has no such rule,
-/// so the published json carries the leaders the ODIN text drops.
-const DEDENTED_IN_ODIN: &[(&str, &str)] = &[(
-    "AM/json/openehr_am_2.3.0.bmm.json",
-    "C_TEMPORAL_DEFINITIONS",
-)];
-
 /// `debug` with the white space after every escaped newline removed.
+///
+/// LANG `odin/master07-leaf_data.adoc` §Strings computes a multi-line ODIN
+/// string "with the removal of white space leaders up to the left-most character
+/// of the first line"; json has no such rule, so the published json keeps the
+/// leaders and the two readings are compared without them.
 fn without_leaders(debug: &str) -> String {
     let mut out = String::with_capacity(debug.len());
     let mut rest = debug;
@@ -128,12 +121,8 @@ fn assert_same_reading(label: &str, json: &PBmmSchema, odin: &PBmmSchema) {
             "{label}: the {list} differ in membership or order"
         );
         for (json_class, odin_class) in json_list.iter().zip(odin_list) {
-            let mut json_text = format!("{json_class:#?}");
-            let mut odin_text = format!("{odin_class:#?}");
-            if DEDENTED_IN_ODIN.contains(&(label, json_class.name())) {
-                json_text = without_leaders(&json_text);
-                odin_text = without_leaders(&odin_text);
-            }
+            let json_text = without_leaders(&format!("{json_class:#?}"));
+            let odin_text = without_leaders(&format!("{odin_class:#?}"));
             assert!(
                 json_text == odin_text,
                 "{label}: {list}/{} reads differently: {}",

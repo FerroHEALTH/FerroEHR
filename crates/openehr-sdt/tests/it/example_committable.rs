@@ -82,6 +82,11 @@ const NOT_COMMITTABLE: &[(&str, &str)] = &[
          an example cannot invent a slot filler",
     ),
     (
+        "UK AoMRC Outpatient Letter.opt",
+        "ten mandatory protocol and state trees make items mandatory but admit only \
+         archetype slots, and an example cannot invent a slot filler",
+    ),
+    (
         "pregnancy-ecosystem-testing.opt",
         "the template pins COMPOSITION.category to 435, a code the openEHR \
          terminology's composition category group (431, 433, 451, 815) does not hold",
