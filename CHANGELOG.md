@@ -15,7 +15,7 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
-## [4.3.7] - 2026-10-15
+## [4.3.8] - 2026-10-15
 
 ### Added
 
@@ -206,6 +206,14 @@ migrations, so a security-only patch from the v4.3.6 tag cannot carry them.
 
 ### Fixed
 
+- **The release pipeline accepts an arm64 program as built.** The VEX linkage
+  check required the dynamic loader in `DT_NEEDED`, where glibc lists it on
+  amd64 and not on arm64, so it refused both arm64 binaries. It now matches the
+  declared loader against the program interpreter (`PT_INTERP`) and accepts it
+  in `DT_NEEDED` without requiring it. The `v4.3.7` tag carries this content
+  without the fix; its release was never published, and a tag cannot move, so
+  the release ships as 4.3.8.
+
 - **The chart's SBOM is attested** (#3710). The CycloneDX SBOM the chart lane
   writes carried no `serialNumber`, which `actions/attest` requires of a
   CycloneDX document, so chart 11.0.1 was published without its SBOM
@@ -359,7 +367,7 @@ migrations, so a security-only patch from the v4.3.6 tag cannot carry them.
   per-EHR default were all off; the boot log now also says when only a
   restricted per-EHR default switches authorization on.
 - **The Helm chart's in-chart clients follow the server's own TLS** (#3714,
-  chart 11.1.2). With `config.server.tls.enabled`, the viewer, FerroBRIDGE,
+  chart 11.1.3). With `config.server.tls.enabled`, the viewer, FerroBRIDGE,
   the ServiceMonitor scrape and the kubelet probes use https, and the viewer
   and FerroBRIDGE trust the CA named by the new `service.tls.caExistingSecret`;
   the chart refuses to render a TLS listener beside an in-chart client without
@@ -11194,8 +11202,8 @@ but has not yet run in production.
   seccomp, default-deny NetworkPolicy) and golden-render validation.
 
 
-[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.7...HEAD
-[4.3.7]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.6...v4.3.7
+[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.8...HEAD
+[4.3.8]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.6...v4.3.8
 [4.3.6]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.5...v4.3.6
 [4.3.5]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.4...v4.3.5
 [4.3.4]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.3...v4.3.4

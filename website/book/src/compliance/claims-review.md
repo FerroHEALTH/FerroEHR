@@ -149,7 +149,7 @@ Nothing.
 
 ## The review of 2026-10-15
 
-Read on the tree after commit `606a29cce`, for FerroEHR 4.3.7. The facts of
+Read on the tree after commit `606a29cce`, for FerroEHR 4.3.8. The facts of
 this release checked in every text in scope: the ABAC patient scope over
 EHR-only queries and `[authz.abac] patient_namespace` (#3771); a restricted
 `EHR_ACCESS` default with the role gate off, and the `rbac_off` gap (#3742);
@@ -277,4 +277,4 @@ cut, after the texts in scope have been read.
 |---|---|---|---|
 | 2026-10-06 | before 4.3.5, after `d6539d470` | 15 claims, in the README, the landing page and three book pages | the chart description (#3637) |
 | 2026-10-08 | 4.3.6, after `de648fcc3` | 5 claims, in the landing page and five book pages; the chart description item closed | nothing |
-| 2026-10-15 | 4.3.7, after `606a29cce` | 14 claims, in 17 book pages, the README and the readiness row | nothing |
+| 2026-10-15 | 4.3.8, after `606a29cce` | 14 claims, in 17 book pages, the README and the readiness row | nothing |

@@ -15,17 +15,21 @@
 # `ferroehr:linkage` block (our own extension; OpenVEX defines none):
 #
 #   binaries                     the program basenames the facts are about
-#   needed + loader.<arch>       the EXACT DT_NEEDED set: a library added or
+#   needed                       the EXACT DT_NEEDED set: a library added or
 #                                dropped both fail, as the prose names the set
+#   loader.<arch>                the program interpreter (PT_INTERP); glibc
+#                                also lists it in DT_NEEDED on amd64 and not on
+#                                arm64, so there it is accepted, not required
 #   rpath: false                 no DT_RPATH and no DT_RUNPATH
 #   forbidden_imports            undefined dynamic symbols that must not exist
 #   forbidden_import_prefixes    the same, by name prefix (`_Z`: any C++ name)
 #   forbidden_version_prefixes   symbol versions no import may carry
 #   forbidden_strings            byte strings the file must not contain
 #
-# This reads the facts with `readelf -h -d --dyn-syms -W` (GNU binutils, the
+# This reads the facts with `readelf -h -l -d --dyn-syms -W` (GNU binutils, the
 # release lane's job container ships it with the `strip` it already runs):
-# the ELF header for the machine, the dynamic section for NEEDED, RPATH and
+# the ELF header for the machine, the program headers for the interpreter,
+# the dynamic section for NEEDED, RPATH and
 # RUNPATH, and the dynamic symbol table, where an import is an entry whose
 # section index is UND (https://sourceware.org/binutils/docs/binutils/readelf.html).
 # A listing with no NEEDED entry or no import is refused as unreadable rather
@@ -50,11 +54,11 @@ die() {
 }
 
 # facts <binary> <out>: one "<kind> <value...>" line per fact readelf reports.
-# kinds: machine <amd64|arm64|other:...>, needed <lib>, rpath <path>,
-# import <name> <version or ->.
+# kinds: machine <amd64|arm64|other:...>, interp <basename>, needed <lib>,
+# rpath <path>, import <name> <version or ->.
 facts() {
   local binary="$1" out="$2" listing
-  listing="$(LC_ALL=C readelf -h -d --dyn-syms -W "$binary")" \
+  listing="$(LC_ALL=C readelf -h -l -d --dyn-syms -W "$binary")" \
     || die "readelf could not read ${binary}"
   awk '
     function bracketed(line,    s, e) {
@@ -67,6 +71,10 @@ facts() {
       else if (m ~ /AArch64/) print "machine arm64"
       else { gsub(/ /, "_", m); print "machine other:" m }
       next
+    }
+    /Requesting program interpreter:/ {
+      v = $0; sub(/.*interpreter: */, "", v); sub(/\].*/, "", v)
+      n = split(v, part, "/"); print "interp " part[n]; next
     }
     /\(NEEDED\)/ { v = bracketed($0); if (v != "") print "needed " v; next }
     /\((RPATH|RUNPATH)\)/ { v = bracketed($0); if (v != "") print "rpath " v; next }
@@ -102,19 +110,28 @@ judge() {
     | {id: .vulnerability.name} + .["ferroehr:linkage"]' "$doc")"
   [[ -n "$blocks" ]] || die "${binary}: no statement in ${doc} declares linkage facts for a program named ${name}"
 
-  local violated=0 block id want extra missing line
+  local violated=0 block id want extra missing line loader have interp
   local needed_have imports versions
   needed_have="$(awk '$1 == "needed" { print $2 }' "$facts_file" | LC_ALL=C sort -u)"
+  interp="$(awk '$1 == "interp" { print $2; exit }' "$facts_file")"
   imports="$(awk '$1 == "import" { print $2 }' "$facts_file" | LC_ALL=C sort -u)"
   versions="$(awk '$1 == "import" && $3 != "-" { print $3 }' "$facts_file" | LC_ALL=C sort -u)"
   while IFS= read -r block; do
     [[ -n "$block" ]] || continue
     id="$(jq -r '.id' <<<"$block")"
-    want="$(jq -r --arg arch "$arch" '(.needed + [.loader[$arch] // empty])[]' <<<"$block" | LC_ALL=C sort -u)"
-    jq -e --arg arch "$arch" '.loader[$arch] != null' <<<"$block" >/dev/null \
-      || { echo "VIOLATED ${id} ${name} (${arch}): the statement declares no loader for ${arch}"; violated=1; }
-    extra="$(LC_ALL=C comm -13 <(printf '%s\n' "$want") <(printf '%s\n' "$needed_have"))"
-    missing="$(LC_ALL=C comm -23 <(printf '%s\n' "$want") <(printf '%s\n' "$needed_have"))"
+    want="$(jq -r '.needed[]' <<<"$block" | LC_ALL=C sort -u)"
+    loader="$(jq -r --arg arch "$arch" '.loader[$arch] // empty' <<<"$block")"
+    if [[ -z "$loader" ]]; then
+      echo "VIOLATED ${id} ${name} (${arch}): the statement declares no loader for ${arch}"
+      violated=1
+    elif [[ "$interp" != "$loader" ]]; then
+      echo "VIOLATED ${id} ${name} (${arch}): the program interpreter is ${interp:-absent}, the statement declares ${loader}"
+      violated=1
+    fi
+    # The declared loader may also sit in DT_NEEDED; every other library is judged.
+    have="$(grep -vxF -- "${loader:-}" <<<"$needed_have" || true)"
+    extra="$(LC_ALL=C comm -13 <(printf '%s\n' "$want") <(printf '%s\n' "$have"))"
+    missing="$(LC_ALL=C comm -23 <(printf '%s\n' "$want") <(printf '%s\n' "$have"))"
     for line in $extra; do
       echo "VIOLATED ${id} ${name} (${arch}): DT_NEEDED carries ${line}, which the statement does not declare"
       violated=1
@@ -234,6 +251,16 @@ STUB
     shift 2
     {
       printf 'ELF Header:\n  Class:                             ELF64\n  Machine:                           %s\n\n' "$machine"
+      local interp="${LISTING_INTERP-}"
+      if [[ -z "${LISTING_INTERP+set}" ]]; then
+        case "$machine" in
+        AArch64) interp=/lib/ld-linux-aarch64.so.1 ;;
+        *) interp=/lib64/ld-linux-x86-64.so.2 ;;
+        esac
+      fi
+      printf 'Program Headers:\n  Type           Offset   VirtAddr\n'
+      [[ -z "$interp" ]] || printf '  INTERP         0x000318 0x0000000000000318\n      [Requesting program interpreter: %s]\n' "$interp"
+      printf '\n'
       printf 'Dynamic section at offset 0x1 contains 30 entries:\n  Tag        Type                         Name/Value\n'
       while [[ "$#" -gt 0 && "$1" != "--" ]]; do
         printf ' 0x0000000000000001 (NEEDED)             Shared library: [%s]\n' "$1"
@@ -292,6 +319,12 @@ STUB
   run "the viewer is judged by the same statements" 0 "statement(s) hold" ferroehr-viewer "$f"
   listing "$f" "AArch64" libgcc_s.so.1 libm.so.6 libc.so.6 ld-linux-aarch64.so.1 -- -- "${base_imports[@]}"
   run "the declared arm64 linkage holds" 0 "statement(s) hold" ferroehr "$f"
+  listing "$f" "AArch64" libgcc_s.so.1 libm.so.6 libc.so.6 -- -- "${base_imports[@]}"
+  run "the arm64 loader as the interpreter alone holds" 0 "statement(s) hold" ferroehr "$f"
+  LISTING_INTERP=/lib/ld-musl-aarch64.so.1 listing "$f" "AArch64" libgcc_s.so.1 libm.so.6 libc.so.6 -- -- "${base_imports[@]}"
+  run "another interpreter is refused" 1 "the program interpreter is ld-musl-aarch64.so.1, the statement declares ld-linux-aarch64.so.1" ferroehr "$f"
+  LISTING_INTERP='' listing "$f" "Advanced Micro Devices X86-64" "${amd64_ok[@]}" -- -- "${base_imports[@]}"
+  run "a missing interpreter is refused" 1 "the program interpreter is absent" ferroehr "$f"
   listing "$f" "AArch64" "${amd64_ok[@]}" -- -- "${base_imports[@]}"
   run "the amd64 loader on arm64 is refused" 1 "DT_NEEDED carries ld-linux-x86-64.so.2" ferroehr "$f"
   listing "$f" "Advanced Micro Devices X86-64" "${amd64_ok[@]}" libz.so.1 -- -- "${base_imports[@]}"
