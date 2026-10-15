@@ -3,8 +3,8 @@
   "@id": "https://ferroehr.eu/vex/postgres-os-packages",
   "author": "Cadasto B.V.",
   "role": "vendor",
-  "timestamp": "2026-10-08T00:00:00Z",
-  "version": 1,
+  "timestamp": "2026-10-15T00:00:00Z",
+  "version": 2,
   "tooling": "hand-authored; see security/vex/README.md",
   "statements": [
     {
@@ -2304,6 +2304,81 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
       "impact_statement": "Debian's note concerns the no-root option of the Debian expert installer. No installer code is in this image; sysvinit-utils provides only utilities the entrypoint does not use."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-107161"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libsasl2-2"
+            },
+            {
+              "@id": "pkg:deb/debian/libsasl2-modules-db"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The heap overflow is in the client side of Cyrus SASL's DIGEST-MD5 mechanism, reached when a SASL client authenticates to a hostile server. The image carries libsasl2 only as a dependency of libldap. PostgreSQL's LDAP authentication binds with ldap_simple_bind_s (src/backend/libpq/auth.c) and never starts a SASL bind, and libpq's SCRAM is its own implementation, so no process in the image runs the DIGEST-MD5 client."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-107708"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The NULL dereference is in the Kerberos KDC (get_pac_princ_with_realm, krb5kdc's S4U2Proxy handling). The image carries the krb5 client libraries PostgreSQL links (libkrb5-3, libgssapi-krb5-2, libk5crypto3, libkrb5support0) and no KDC: the krb5-kdc package is not installed, so the vulnerable code is not in the image."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-107778"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The NULL dereference is in libkrb5's make_cred_list (rd_cred.c), reached through gss_accept_sec_context when an authenticated Kerberos client forwards mismatched credentials. PostgreSQL accepts a GSSAPI context only for gss or hostgssenc entries in pg_hba.conf with a server keytab (krb_server_keyfile). The configuration FerroEHR ships has neither, but an operator's configuration can, so the image is affected. The crash ends the one backend that accepted the context.",
+      "action_statement": "Do not configure GSSAPI authentication or GSS encryption (gss or hostgssenc in pg_hba.conf with krb_server_keyfile) on the database until Debian ships the fix; FerroEHR connects with password (SCRAM) authentication and needs neither. Debian marks the fix no-dsa for trixie; the image's security-upgrade layer installs it on the first release build after Debian publishes it."
     }
   ]
 }

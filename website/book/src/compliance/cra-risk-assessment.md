@@ -157,15 +157,17 @@ evidence only) and the open work.
 - **Status:** partial. Every finding of the full scan carries a judgement or the
   release does not ship, and the scan reads the Rust dependencies of the
   server and viewer binaries from the binaries themselves (#3674, #3675). The
-  CRA does not define "known". Seven OS findings are judged `affected` and
+  CRA does not define "known". Eight OS findings are judged `affected` and
   have no upstream fix: CVE-2026-8674 (a long resolver search domain) in all
-  three images, and three libxml2 and two glibc JISX0213 findings in the
+  three images; three libxml2 and two glibc JISX0213 findings in the
   `ferroehr-postgres` image that a database login reaches through
-  PostgreSQL's XML functions, which FerroEHR itself never calls (#3673).
-  Each carries an action statement in `security/vex/`. Re-checked for 4.3.8
-  on 2026-10-15: the same seven statements are `affected` in `security/vex/`
-  and #3708 is open, so the status stays partial.
-- **Open:** the seven `affected` findings (#3708), until Debian ships fixes that a
+  PostgreSQL's XML functions, which FerroEHR itself never calls (#3673); and
+  the krb5 CVE-2026-107778 in `ferroehr-postgres`, reached only through a
+  GSSAPI configuration FerroEHR does not ship. Each carries an action
+  statement in `security/vex/`. Re-checked for 4.3.9 on 2026-10-15: the seven
+  earlier statements are still `affected`, CVE-2026-107778 joined them, and
+  #3708 is open, so the status stays partial.
+- **Open:** the eight `affected` findings (#3708), until Debian ships fixes that a
   rebuild picks up; each such rebuild is a security-only patch with its
   advisory.
 
@@ -379,7 +381,7 @@ corruptions"
 - **How:** data: immutable versions, each signed (digest or OpenPGP) and
   verified on read in `strict` mode by default; the access log is
   hash-chained in the database over every column of a record (digest version
-  2; records written before 4.3.8 keep version 1, which covers the original
+  2; records written before 4.3.9 keep version 1, which covers the original
   columns), and `UPDATE`, `DELETE` and `TRUNCATE` on it are refused. The
   runtime roles read the migration bookkeeping of their schema and cannot
   write it, and the server refuses to start while one can. Programs: SLSA Build L3 provenance and SBOM attestations, cosign on
@@ -699,4 +701,4 @@ vulnerabilities and third-party information arrive. It is revised:
 | 2 | 2026-10-07 | (a): the per-release exploitability record (#3636), the viewer image scanned before it is tagged (#3674) and every release binary and image binary built with `cargo auditable` (#3675); (b): the declared profile in the chart and the Compose files, the reasons for `sandbox` and the shipped defaults a production holder keeps, and the reset procedure (#3637); Part II(1): SBOMs for the crates and the chart (#3643); the declared security-relevant paths and their release gate (#3649); (m): the erase command and the decommissioning page (#3642); (e): a plaintext `amqp://` broker refused under `production` (#3676); (e): a plain `http://` audit FHIR feed and a multimedia store with `allow_http` refused under `production` (#3689); (b): the Helm reset run by the Kubernetes probe harness (#3677) |
 | 3 | 2026-10-08 | Part II: the manufacturer's vulnerability-handling and post-market policy is cited from the FerroHEALTH book, where it moved for every FerroHEALTH product; the measures are unchanged (#3701) |
 | 4 | 2026-10-08 | Reviewed for release 4.3.6 against the security-relevant paths changed since 4.3.5: the outbound FHIR emitter and its AMQP flow are gone with the in-tree connector (#3080), so the outbound-flow table names change events alone on AMQP; (a): the `ferroehr-postgres` image drops GnuPG and `gosu`, and every operating-system finding of the three images carries an OpenVEX judgement in `security/vex/` (#3673) |
-| 5 | 2026-10-15 | Reviewed for release 4.3.8 against the security-relevant paths changed since 4.3.6. (d): the ABAC patient scope covers queries that read only the EHR row and every query plan, the direct routes refuse a subject-less or ambiguous EHR to a patient caller, and `[authz.abac] patient_namespace` names the claim's namespace (#3771); `ehr_access_default = "restricted"` holds with the role gate off, is refused at boot with authentication off, and the role gate off is the `rbac_off` gap `production` refuses (#3742); the viewer's Basic sign-in follows only a same-origin `next`. (e): protected national identifiers sealed per party version inside the commit, write responses serving the sealed form, plaintext protected values refused on import and admin load (#3772); the server certificate re-read every `reload_interval_secs` and EC keys in SEC1 or PKCS#8 (#3765, #3761); the OIDC `503` and a JWK Set parse error no longer quote the provider's URLs or key material (#3666); the CDR and the viewer verify an identity provider against the platform trust store (#3767). (f): digest version 2 of the audit chain over every column (#3686); the runtime roles read-only on the migration bookkeeping, checked at boot in every database a pool reaches; version-signing errors carry their cause once (#3684). (a): rustls 0.23.46 for RUSTSEC-2026-0346 to -0349, and the release lane checks the linkage the OS VEX statements rest on (#3694); the seven `affected` findings of #3708 are unchanged. The chart: in-chart clients follow the server's TLS (#3714), FerroBRIDGE as an opt-in, cluster-internal workload (#3713), `client_auth: required` refused at render (#3760), an Ingress in front of a TLS listener sending TLS to it (#3766), and the migration Job under its own hook ServiceAccount. No risk added to the register |
+| 5 | 2026-10-15 | Reviewed for release 4.3.9 against the security-relevant paths changed since 4.3.6. (d): the ABAC patient scope covers queries that read only the EHR row and every query plan, the direct routes refuse a subject-less or ambiguous EHR to a patient caller, and `[authz.abac] patient_namespace` names the claim's namespace (#3771); `ehr_access_default = "restricted"` holds with the role gate off, is refused at boot with authentication off, and the role gate off is the `rbac_off` gap `production` refuses (#3742); the viewer's Basic sign-in follows only a same-origin `next`. (e): protected national identifiers sealed per party version inside the commit, write responses serving the sealed form, plaintext protected values refused on import and admin load (#3772); the server certificate re-read every `reload_interval_secs` and EC keys in SEC1 or PKCS#8 (#3765, #3761); the OIDC `503` and a JWK Set parse error no longer quote the provider's URLs or key material (#3666); the CDR and the viewer verify an identity provider against the platform trust store (#3767). (f): digest version 2 of the audit chain over every column (#3686); the runtime roles read-only on the migration bookkeeping, checked at boot in every database a pool reaches; version-signing errors carry their cause once (#3684). (a): rustls 0.23.46 for RUSTSEC-2026-0346 to -0349, and the release lane checks the linkage the OS VEX statements rest on (#3694); the seven `affected` findings of #3708 are unchanged. The chart: in-chart clients follow the server's TLS (#3714), FerroBRIDGE as an opt-in, cluster-internal workload (#3713), `client_auth: required` refused at render (#3760), an Ingress in front of a TLS listener sending TLS to it (#3766), and the migration Job under its own hook ServiceAccount. No risk added to the register |
