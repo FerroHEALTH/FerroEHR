@@ -358,8 +358,8 @@ fn walk_child(
 }
 
 /// Cardinality satisfaction: for every container attribute constrained to
-/// `min >= 1`, ensures at least one child under it is materialised (a
-/// committable skeleton), even where the level would otherwise skip it.
+/// `min >= 1`, ensures that many distinct children under it are materialised (a
+/// committable skeleton), even where the level would otherwise skip them.
 ///
 /// A child walked here joins `included`.
 fn satisfy_cardinalities<'a>(
@@ -371,16 +371,22 @@ fn satisfy_cardinalities<'a>(
 ) -> bool {
     let mut emitted = false;
     for card in &node.cardinalities {
-        if card.min.unwrap_or(0) < 1 {
-            continue;
-        }
-        let satisfied = included.iter().any(|p| p.starts_with(card.path.as_str()));
-        if !satisfied
-            && let Some(child) = groups.iter().find(|c| c.aql_path.starts_with(&card.path))
-        {
+        let min = card.min.and_then(|m| usize::try_from(m).ok()).unwrap_or(0);
+        let mut count = included
+            .iter()
+            .filter(|p| p.starts_with(card.path.as_str()))
+            .count();
+        for child in groups.iter().filter(|c| c.aql_path.starts_with(&card.path)) {
+            if count >= min {
+                break;
+            }
+            if included.contains(&child.aql_path.as_str()) {
+                continue;
+            }
             let child_prefix = format!("{}/{}", cx.prefix, seg_for(child));
             included.push(child.aql_path.as_str());
             emitted |= walk(child, &child_prefix, cx.opt_depth, cx.level, true, out);
+            count += 1;
         }
     }
     emitted
@@ -645,13 +651,16 @@ fn for_each_at_mut(node: &mut Value, segments: &[PathSegment], f: &mut dyn FnMut
 }
 
 /// The children to consider under a container: one per distinct `aql_path` (the
-/// first alternative of any polymorphic choice), excluding the `EVENT_CONTEXT`
-/// subtree (rebuilt wholesale from the `ctx/…` context keys by `from_flat`).
+/// first alternative of any polymorphic choice). Under an `EVENT_CONTEXT` only
+/// the archetyped `other_context` content is walked; its standard fields are
+/// rebuilt from the `ctx/…` context keys by `from_flat` (Simplified Formats
+/// master06).
 fn child_groups(node: &WebTemplateNode) -> Vec<&WebTemplateNode> {
     let mut seen: HashSet<&str> = HashSet::new();
+    let context = node.rm_type == "EVENT_CONTEXT";
     node.children
         .iter()
-        .filter(|c| c.rm_type != "EVENT_CONTEXT")
+        .filter(|c| !context || c.aql_path.contains("/other_context"))
         .filter(|c| seen.insert(c.aql_path.as_str()))
         .collect()
 }

@@ -74,6 +74,31 @@ fn refused(file: &str) -> Option<&'static str> {
         .map(|(_, detail)| *detail)
 }
 
+/// The classes whose json documentation keeps the leading white space of a
+/// multi-line string's continuation lines, which the ODIN reading removes.
+///
+/// LANG `odin/master07-leaf_data.adoc` §Strings: the contents of a multi-line
+/// ODIN string are computed "with the removal of white space leaders up to the
+/// left-most character of the first line of the string". JSON has no such rule,
+/// so the published json carries the leaders the ODIN text drops.
+const DEDENTED_IN_ODIN: &[(&str, &str)] = &[(
+    "AM/json/openehr_am_2.3.0.bmm.json",
+    "C_TEMPORAL_DEFINITIONS",
+)];
+
+/// `debug` with the white space after every escaped newline removed.
+fn without_leaders(debug: &str) -> String {
+    let mut out = String::with_capacity(debug.len());
+    let mut rest = debug;
+    while let Some(at) = rest.find("\\n") {
+        let (head, tail) = rest.split_at(at + 2);
+        out.push_str(head);
+        rest = tail.trim_start_matches(' ');
+    }
+    out.push_str(rest);
+    out
+}
+
 /// Reads `file` under [`components`] as text.
 fn source(file: &str) -> String {
     let path = components().join(file);
@@ -103,11 +128,17 @@ fn assert_same_reading(label: &str, json: &PBmmSchema, odin: &PBmmSchema) {
             "{label}: the {list} differ in membership or order"
         );
         for (json_class, odin_class) in json_list.iter().zip(odin_list) {
+            let mut json_text = format!("{json_class:#?}");
+            let mut odin_text = format!("{odin_class:#?}");
+            if DEDENTED_IN_ODIN.contains(&(label, json_class.name())) {
+                json_text = without_leaders(&json_text);
+                odin_text = without_leaders(&odin_text);
+            }
             assert!(
-                json_class == odin_class,
+                json_text == odin_text,
                 "{label}: {list}/{} reads differently: {}",
                 json_class.name(),
-                first_difference(&format!("{json_class:#?}"), &format!("{odin_class:#?}"))
+                first_difference(&json_text, &odin_text)
             );
         }
     }
@@ -115,7 +146,16 @@ fn assert_same_reading(label: &str, json: &PBmmSchema, odin: &PBmmSchema) {
         json.packages, odin.packages,
         "{label}: the package trees differ"
     );
-    assert_eq!(json, odin, "{label}: the schema headers differ");
+    let headers = |schema: &PBmmSchema| PBmmSchema {
+        primitive_types: None,
+        class_definitions: None,
+        ..schema.clone()
+    };
+    assert_eq!(
+        headers(json),
+        headers(odin),
+        "{label}: the schema headers differ"
+    );
 }
 
 /// The first line where two pretty-printed readings part, with the field path

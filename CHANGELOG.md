@@ -261,7 +261,8 @@ workflow refuses a tag that has no matching section here.
   `GET /definition/template/adl1.4/{template_id}/example` now carries every
   attribute the template makes mandatory, an EVENT `state` or ENTRY
   `protocol` without data points included, every SECTION the template
-  requires but names only, and never sets `value` and `null_flavour` on one
+  requires but names only, a container's minimum number of children, and the
+  archetyped `other_context` content a template makes mandatory, and never sets `value` and `null_flavour` on one
   ELEMENT (RM `Inv_null_flavour_indicated`). The cases it still cannot cover
   are #3779 and #3780.
 - **The web template keeps an ELEMENT's `value` beside its `null_flavour`.** An

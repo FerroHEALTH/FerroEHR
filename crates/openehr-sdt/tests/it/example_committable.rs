@@ -72,6 +72,16 @@ fn top_level_opts(dir: &Path) -> Vec<PathBuf> {
 /// with its reason.
 const NOT_COMMITTABLE: &[(&str, &str)] = &[
     (
+        "section_cardinality.opt",
+        "COMPOSITION.content is cardinality 1..1 while its mandatory sections need \
+         eight occurrences (example_stub.rs CONTRADICTORY_FIXTURES)",
+    ),
+    (
+        "Generic Laboratory Test Report.v0.opt",
+        "its mandatory other_context items admit only a CLUSTER archetype slot, and \
+         an example cannot invent a slot filler",
+    ),
+    (
         "pregnancy-ecosystem-testing.opt",
         "the template pins COMPOSITION.category to 435, a code the openEHR \
          terminology's composition category group (431, 433, 451, 815) does not hold",
