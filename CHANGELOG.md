@@ -359,7 +359,7 @@ migrations, so a security-only patch from the v4.3.6 tag cannot carry them.
   per-EHR default were all off; the boot log now also says when only a
   restricted per-EHR default switches authorization on.
 - **The Helm chart's in-chart clients follow the server's own TLS** (#3714,
-  chart 11.1.1). With `config.server.tls.enabled`, the viewer, FerroBRIDGE,
+  chart 11.1.2). With `config.server.tls.enabled`, the viewer, FerroBRIDGE,
   the ServiceMonitor scrape and the kubelet probes use https, and the viewer
   and FerroBRIDGE trust the CA named by the new `service.tls.caExistingSecret`;
   the chart refuses to render a TLS listener beside an in-chart client without

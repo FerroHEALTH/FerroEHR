@@ -113,17 +113,14 @@
     {
       "ferroehr:reachability": {
         "direct_dependents": [
-          "leptos_macro",
-          "leptos_router_macro",
-          "reactive_stores_macro",
-          "syn_derive"
+          "reactive_stores_macro"
         ],
         "package": "proc-macro-error2",
         "workspace_roots": [
           "ferroehr-viewer"
         ]
       },
-      "impact_statement": "An UNMAINTAINED-crate advisory, not a vulnerability: RustSec records no flaw and no patched version, only that the author has stated the crate is no longer maintained. `proc-macro-error2` is a procedural-macro dependency of the Leptos 0.8 macro crates — `leptos_macro`, `leptos_router_macro`, `reactive_stores_macro`, and `syn_derive` beneath `rstml` — and the viewer is the only workspace member any of them is reachable from. A proc-macro executes in the COMPILER during the build and its code is not linked into any shipped artifact, so it is absent from both the server binary and the container image this document describes. It goes away when Leptos drops it upstream; re-evaluate at the next Leptos bump.",
+      "impact_statement": "An UNMAINTAINED-crate advisory, not a vulnerability: RustSec records no flaw and no patched version, only that the author has stated the crate is no longer maintained. `proc-macro-error2` is a procedural-macro dependency of `reactive_stores_macro` 0.2, which the viewer's `thaw` UI crates pull in (the Leptos 0.8.22 macro crates no longer depend on it), and the viewer is the only workspace member it is reachable from. A proc-macro executes in the COMPILER during the build and its code is not linked into any shipped artifact, so it is absent from both the server binary and the container image this document describes. It goes away when `thaw` moves to a `reactive_stores` release without it; re-evaluate at the next `thaw` bump.",
       "justification": "vulnerable_code_not_present",
       "products": [
         {
@@ -157,7 +154,7 @@
       }
     }
   ],
-  "timestamp": "2026-10-07T00:00:00Z",
+  "timestamp": "2026-10-15T00:00:00Z",
   "tooling": "scripts/security/vex-generate.sh from security/vex/rust-advisories.toml + deny.toml",
-  "version": 6
+  "version": 7
 }

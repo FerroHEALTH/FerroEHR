@@ -180,7 +180,7 @@ re-checked on every page, and eleven pages still named the public document.
 
 The technical documentation's Annex III 2 named the public status document for
 the deployment posture too; it names `GET /management/status` now.
-| 12 | Repository README, the template-model and example bullets (two places) | every template "generates spec-valid example compositions that pass the server's own validation" | (a) | #3779 and #3780 are open, and a template whose mandatory content only an archetype slot admits has no committable example | "a template [...] generates" them, "except for the cases the book's example page lists" |
+| 12 | Repository README, the template-model and example bullets (two places) | every template "generates spec-valid example compositions that pass the server's own validation" | (a) | #3779 and #3780 are open, and a template whose mandatory content only an archetype slot admits has no committable example | "a template \[…\] generates" them, "except for the cases the book's example page lists" |
 | 13 | Repository README, the deployment posture and licence bullets | `sandbox` names every open gap "on `GET /rest/status`"; "`GET /ferroehr/rest/status` reports the grant in force" | (a) | both are on `GET /management/status` (#3671) | "on `GET /management/status`" |
 | 14 | Book, [EHDS readiness](ehds-readiness.md) row 1.2 | its issue reference | (a) | the probe that issue asked for ran (#3692), without `hostUsers: false` or `sslmode=verify-full` | names #3788 for those two |
 
