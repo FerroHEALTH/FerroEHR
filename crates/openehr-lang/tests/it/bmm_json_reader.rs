@@ -92,23 +92,31 @@ fn without_leaders(debug: &str) -> String {
     out
 }
 
-/// `debug` with every empty `documentation` read as absent.
+/// The attributes the published json writes at their default where its ODIN
+/// twin leaves them out, each with the value that means "absent".
 ///
-/// The published json writes a model element without documentation as
-/// `"documentation": ""` where its ODIN twin leaves the attribute out
+/// `documentation` is written `""` for an element with none
 /// (`LANG/docs/UML/classes/org.openehr.lang.bmm_persistence.p_bmm_model_element.adoc`
-/// §Attributes types it `0..1`), so `Some("")` and `None` are one fact here.
-fn empty_documentation_as_absent(debug: &str) -> String {
+/// §Attributes types it `0..1`), and a function parameter's `is_nullable` is
+/// written `false`, its declared `{default = false}`
+/// (`…org.openehr.lang.bmm3.bmm_formal_element.adoc` §Attributes).
+const DEFAULT_AS_ABSENT: &[(&str, &str)] = &[("documentation", "\"\","), ("is_nullable", "false,")];
+
+/// `debug` with every attribute of [`DEFAULT_AS_ABSENT`] read as absent where
+/// it holds its default.
+fn defaults_as_absent(debug: &str) -> String {
     let lines: Vec<&str> = debug.lines().collect();
     let mut out: Vec<String> = Vec::with_capacity(lines.len());
     let mut i = 0;
     while let Some(line) = lines.get(i) {
-        let empty = line.trim() == "documentation: Some("
-            && lines.get(i + 1).map(|l| l.trim()) == Some("\"\",")
-            && lines.get(i + 2).map(|l| l.trim()) == Some("),");
-        if empty {
+        let absent = DEFAULT_AS_ABSENT.iter().find(|(name, value)| {
+            line.trim() == format!("{name}: Some(")
+                && lines.get(i + 1).map(|l| l.trim()) == Some(*value)
+                && lines.get(i + 2).map(|l| l.trim()) == Some("),")
+        });
+        if let Some((name, _)) = absent {
             let indent = line.len() - line.trim_start().len();
-            out.push(format!("{}documentation: None,", " ".repeat(indent)));
+            out.push(format!("{}{name}: None,", " ".repeat(indent)));
             i += 3;
         } else {
             out.push((*line).to_owned());
@@ -120,7 +128,7 @@ fn empty_documentation_as_absent(debug: &str) -> String {
 
 /// The pretty-printed reading of `class`, in the form both serialisations share.
 fn shared_form(class: &PBmmClass) -> String {
-    empty_documentation_as_absent(&without_leaders(&format!("{class:#?}")))
+    defaults_as_absent(&without_leaders(&format!("{class:#?}")))
 }
 
 /// Reads `file` under [`components`] as text.
