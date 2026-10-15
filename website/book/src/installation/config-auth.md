@@ -394,13 +394,13 @@ on and at which level.
 The commercial licence token. Every build embeds the licensor's
 `non-commercial` grant; a deployment that holds a `commercial` licence installs
 its token here. The server behaves identically under either grant and reports
-the one in force on `GET /rest/status` (`licence.use`, `licence.licensee`,
+the one in force on `GET /management/status` (`licence.use`, `licence.licensee`,
 `licence.not_after`, `licence.configured_token`). See
 [Licensing & legal](../licensing.md).
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `file` | path | unset | The licence token the licensor issued. A token that cannot be read or does not verify is reported as `refused` on `/rest/status`; the embedded grant stays in force. |
+| `file` | path | unset | The licence token the licensor issued. A token that cannot be read or does not verify is reported as `refused` on `/management/status`; the embedded grant stays in force. |
 
 ## `[signing]`
 

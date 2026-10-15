@@ -40,7 +40,7 @@ kubectl -n ferroehr create secret generic ferroehr-db \
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
   --version 11.1.1 -n ferroehr \
   --set database.existingSecret=ferroehr-db \
-  --set image.tag=4.3.6
+  --set image.tag=4.3.7
 ```
 
 > [!IMPORTANT]
@@ -69,7 +69,7 @@ against.
 | | Selects | Pin with | Line |
 |---|---|---|---|
 | Chart version | templates, values schema, defaults | `--version 11.1.1` | SemVer over the chart's own contract |
-| Image tag | the server binary | `--set image.tag=4.3.6` (or `image.digest`) | the application's SemVer line |
+| Image tag | the server binary | `--set image.tag=4.3.7` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
 never `latest`. Pin the two deliberately: the `config` tree is passed through to
@@ -448,7 +448,7 @@ whose entries the chart mounts read-only from a Secret at `/etc/ferroehr/<key>`
 in-TOML `*_file` / `*_path` key at the mounted path. A commercial licence goes
 the same way: put the token the licensor issued under `config.files` as
 `licence.asc` and set `config.licence.file` to `/etc/ferroehr/licence.asc`;
-`GET /ferroehr/rest/status` then reports `licence.use = "commercial"`. Without
+`GET /management/status` then reports `licence.use = "commercial"`. Without
 it the pod runs under the `non-commercial` grant every build embeds (see
 [Licensing & legal](../licensing.md#installing-a-commercial-licence)). Secret-bearing scalar values go under
 `secrets:`: `authOidcHmacSecret`, `signingKeyPassphrase`, `eventsUrl`,
@@ -628,9 +628,9 @@ service.
 The viewer and FerroBRIDGE read the CA through `SSL_CERT_DIR`, which the chart
 sets to the image's system roots plus the mounted CA, so their other peers
 that verify through the platform verifier stay trusted. The viewer's OIDC
-client does not read `SSL_CERT_DIR`: it trusts the public roots it is built
-with, so an OIDC issuer with a certificate from a private CA is not trusted by
-the viewer. The ServiceMonitor reads the Secret from its own namespace, and
+client verifies through the same platform trust store, so an OIDC issuer whose
+certificate comes from a private CA is trusted once that CA is in the store or
+under `SSL_CERT_DIR`. The ServiceMonitor reads the Secret from its own namespace, and
 the `prometheus.io/scheme: https` pod annotation follows the listener when
 `metrics.enabled` is set. With `config.server.tls.client_auth: required` the
 kubelet probes cannot present a client certificate, so the chart refuses to
@@ -1242,7 +1242,7 @@ The check that closes that gap runs the image against your rendered
 configuration:
 
 ```shell
-FERROEHR_IMAGE=ghcr.io/ferrohealth/ferroehr:4.3.6 \
+FERROEHR_IMAGE=ghcr.io/ferrohealth/ferroehr:4.3.7 \
   deploy/helm/ci/boot-check.sh my-values.yaml
 ```
 

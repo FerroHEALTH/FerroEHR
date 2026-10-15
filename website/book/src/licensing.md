@@ -22,8 +22,8 @@ evaluators and deployers, not legal advice.
 
 A commercial licence is a signed token file the licensor issues to you. Place
 it where the server can read it and point `[licence] file` (or
-`FERROEHR__LICENCE__FILE`) at it; `GET /ferroehr/rest/status` then reports
-`licence.use = "commercial"` with your organisation as `licensee`. Without a
+`FERROEHR__LICENCE__FILE`) at it; `GET /management/status` then
+reports `licence.use = "commercial"` with your organisation as `licensee`. Without a
 token the same field reports the `non-commercial` grant every build embeds.
 The server behaves identically under either; identifiers it mints carry a
 few bits derived from the licence id in place of random bits, so a record

@@ -50,7 +50,7 @@ out in [Operations → Applying migrations](../operations.md#applying-migrations
 **A deployment declares what it may hold.** The top-level
 `deployment_profile` key is `sandbox` by default: the server starts whatever
 separations are missing and names every one of them on the banner, in the log
-and on `GET /ferroehr/rest/status`. Set it to `production` and the server
+and on `GET /management/status`. Set it to `production` and the server
 refuses to start while a separation is open and not accepted by name in
 `deployment_accepts`. Read
 [`deployment_profile`](configuration.md#deployment_profile) before you point a

@@ -125,7 +125,7 @@ requirements:
           manufacturer's instructions without adversely affecting their
           characteristics and performance.
         status: partial
-        issues: [3692]
+        issues: [3788]
         evidence:
           - text: The instructions for use
             href: instructions-for-use.md

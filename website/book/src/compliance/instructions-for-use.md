@@ -96,7 +96,8 @@ The shipped default is `sandbox`, which must not hold real personal data.
 name in `deployment_accepts`: shared database credentials or clusters, an
 undeclared pseudonym namespace, the access log off, failing open or shipped
 over UDP syslog, the open per-EHR access default, migrations on a runtime
-credential, authentication off, a plaintext listener on a routable address
+credential, authentication off, the role gate off while authentication is
+on, a plaintext listener on a routable address
 (the separate management port included), change events published to a plain
 `amqp://` broker, an audit FHIR feed on an `http://` URL, a multimedia store
 with `allow_http = true`. Each refusal names the gap
@@ -237,6 +238,12 @@ knows of for this release.
   priority category lives there
   ([audit trail](../audit.md#the-ehds-logging-elements-mapped)). Every other
   access record carries one, `none` or `unclassified` included.
+- AQL 1.1.0 does not define how many rows a path through a repeated node
+  returns, or how a `WHERE` test reads several nodes. FerroEHR returns one row
+  per node and evaluates `WHERE` as one assignment of those nodes
+  ([querying with AQL](../querying-aql.md)); another openEHR server may return
+  other rows for the same query. A client written against a release before
+  4.3.7 that expects one row per composition has to group the rows.
 
 **Security**
 
@@ -252,6 +259,11 @@ knows of for this release.
   ([the emergency mark](../audit.md#emergency-access-ehds-art-115)). The
   mark lifts no restriction, and FerroEHR holds no EHDS Art. 8 restriction
   today (planned, [#3682](https://github.com/FerroHEALTH/FerroEHR/issues/3682)).
+- An access record written before the upgrade to 4.3.7 keeps the original
+  digest of the tamper chain, which leaves out the purpose, legal basis,
+  categories, authentication fields and the emergency mark; for those records
+  only the append-only trigger, which the table owner can disable, protects
+  those columns ([tamper evidence](../audit.md#tamper-evidence)).
 - Clinical content is not encrypted by the application at rest; encryption at
   rest is the database's and the disk's
   ([the justification](cra-risk-assessment.md#application-level-encryption-at-rest-annex-i-part-i2e)).

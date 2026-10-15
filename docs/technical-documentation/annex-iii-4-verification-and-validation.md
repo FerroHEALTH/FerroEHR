@@ -17,9 +17,16 @@ requirements as set out in Parts I and II of Annex I".
   [hazard log](../../website/book/src/compliance/hazard-log.md) names, for each
   hazard, the tests that show its control holds, by file and test name; the
   Annex II 3.2 elements are asserted field by field in
-  `app/ferroehr/tests/it/audit_ehds_mapping.rs`, including the gaps. The tests
-  run on every pull request and their results are the CI runs of the release
-  commit.
+  `app/ferroehr/tests/it/audit_ehds_mapping.rs`, including the gaps. That the
+  tamper chain covers every column of a record is asserted in
+  `app/ferroehr/tests/it/audit_chain.rs`
+  (`the_current_digest_covers_every_column`,
+  `every_hashed_column_is_tamper_evident`), which fails when a migration adds
+  a column the current digest version does not cover; that the DICOM and FHIR
+  renderings give the client and the server one data-flow role is asserted in
+  `app/ferroehr/src/system_log/fhir.rs`
+  (`dicom_and_fhir_agree_on_the_data_flow_direction`). The tests run on every
+  pull request and their results are the CI runs of the release commit.
 - **Annex II, row by row.** The
   [readiness page](../../website/book/src/compliance/ehds-readiness.md) gives
   the status and the evidence for each requirement, read against the text on

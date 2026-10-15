@@ -56,7 +56,9 @@ that information.
 
 **Control:** every generated ITS-REST operation has an explicit audit
 classification, and an unknown operation falls back to the audited default.
-A rejected access (`401`, `403`) is always recorded. Under
+The extension routes that change a record carry one too: the physical delete
+of a demographic party is recorded as a delete of that party, as the physical
+EHR delete is of the EHR. A rejected access (`401`, `403`) is always recorded. Under
 `[audit] fail_mode = "closed"` a request whose record cannot be taken is
 answered `503` and the domain-level operations withhold their result. An AQL
 execution emits one record per EHR it served. `deployment_profile =
@@ -68,7 +70,10 @@ audit failing open, unless each is accepted by name.
 - `app/ferroehr-rest/src/system_log/classify.rs`:
   `every_generated_operation_is_explicit`,
   `every_read_operation_produces_an_access_record`,
-  `unrecognised_operation_fails_closed_to_default`;
+  `unrecognised_operation_fails_closed_to_default`,
+  `representative_mappings`;
+- `app/ferroehr-rest/tests/it/admin_party_delete_http.rs`:
+  `an_admin_deletes_the_party_and_the_access_record_names_it`;
 - `app/ferroehr-rest/tests/it/audit_e2e.rs`: one test per resource family
   (for example `composition_get_emits_read_record`,
   `aql_execute_emits_execute_record`), `unauthenticated_request_emits_401_record`,
@@ -120,7 +125,12 @@ refused on patient data unless it is a client token acting for a named
 professional, and the record carries the acting mode (`person` or `client`)
 and that professional; with `[auth.oidc.assurance]` configured, it carries the
 assurance level the token maps to, and a token below the configured minimum is
-refused with a step-up challenge.
+refused with a step-up challenge. The DICOM message and the FHIR
+`AuditEvent` give the client and this server the same data-flow role (DICOM
+PS3.15 §A.5.2.7, IHE BALP): on a read the server is the source and the client
+the destination, on a write or a query the client is the source. A FHIR
+record of a delete carries the agent types the BALP `Delete` profile fixes
+(the client as DCM `110150` Application, the server as `custodian`).
 
 **Shown by:**
 
@@ -144,7 +154,10 @@ refused with a step-up challenge.
   `object_id_from_query_paths`, `object_id_from_demographic_paths`;
 - `app/ferroehr-rest/tests/it/audit_e2e.rs`:
   `unauthenticated_request_emits_401_record`,
-  `aql_execute_emits_one_access_record_per_served_ehr`.
+  `aql_execute_emits_one_access_record_per_served_ehr`;
+- `app/ferroehr/src/system_log/fhir.rs`:
+  `dicom_and_fhir_agree_on_the_data_flow_direction`,
+  `delete_carries_the_agent_types_balp_delete_fixes`.
 
 **Remains:** both blocks are off by default, and until the deployment
 configures `[auth.oidc.professional]` a client application's credential is
@@ -292,7 +305,9 @@ application role or by someone with direct access.
 **Effect:** an access disappears, or appears to have been made by someone
 else, and the record a patient or a court relies on is false.
 
-**Control:** records are hash-chained in the database; `UPDATE`, `DELETE`
+**Control:** records are hash-chained in the database, and a record's digest
+covers every column but the digest and the two forwarding stamps (digest
+version 2, audit migration 0011); `UPDATE`, `DELETE`
 and `TRUNCATE` on the log are refused; the application role cannot run DDL
 or rewrite the log; `audit.verify_audit_chain()` names any record that
 changed or went missing; the server runs that verification one minute after
@@ -310,11 +325,19 @@ box.
   `the_application_role_cannot_run_ddl_or_rewrite_the_audit_trail`,
   `the_batched_write_path_is_chained_too`,
   `the_chain_check_reports_a_tampered_record_on_the_health_surface`,
-  `the_audit_subsystem_schedules_the_chain_check`;
+  `the_audit_subsystem_schedules_the_chain_check`,
+  `the_current_digest_covers_every_column`,
+  `every_hashed_column_is_tamper_evident`,
+  `records_under_the_original_digest_still_verify`;
 - `app/ferroehr/tests/it/audit_store.rs`:
   `the_access_trail_refuses_rewriting_deletion_and_truncation`.
 
 **Remains:** the chain gives evidence of tampering and does not prevent it.
+A record written before the upgrade to 4.3.7 keeps its version 1 digest,
+which leaves out the columns added after the chain was introduced (the
+purpose, legal basis, categories, authentication fields and the emergency
+mark among them); on those records the append-only trigger alone protects
+those columns, and the table owner can disable it.
 A deployment that sets `verify_interval_seconds = 0` finds a broken chain only
 when an operator runs the check. The indicator never flips readiness, so a
 finding reaches someone only through an alert on the counter or the
@@ -394,3 +417,4 @@ EHDS-side risk assessment of the component.
 | 1 | 2026-10-06 | First log, nine hazards |
 | 2 | 2026-10-07 | H9 names the EHDS Art. 8 restriction; the emergency mark and the subject-scoped retrieval are its control |
 | 3 | 2026-10-08 | Reviewed for release 4.3.6 (changes since 4.3.5: the assurance level and the natural person, the emergency mark, the FHIR connector removed beside the ITI-81 route); every named test exists and asserts its control; no hazard added |
+| 4 | 2026-10-15 | Reviewed for release 4.3.7 (changes since 4.3.6: digest version 2 of the audit chain over every column, audit migration 0011 (#3686); one data-flow direction for the DICOM and FHIR renderings (#3687) and the BALP `Delete` agent types (#3750); the physical party delete classified and its party named (#3683); every audit-store and retention-register checkout through the typed database acquire (#3749)); every named test exists and asserts its control; H1, H2 and H7 name the new tests, H7 the version 1 records; no hazard added |

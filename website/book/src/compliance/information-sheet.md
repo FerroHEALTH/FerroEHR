@@ -115,7 +115,7 @@ the EHR system and versions of those standards, formats and specifications".
 | openEHR BASE | 1.3.0, and 1.2.0 | foundation and base types |
 | openEHR Archetype Model (AM), ADL | 1.4 and 2.4.0 | archetypes and templates |
 | openEHR operational templates (OPT) | 1.4 | template upload and validation |
-| openEHR Terminology (TERM) | 3.1.0 | the openEHR terminology |
+| openEHR Terminology (TERM) | 3.1.0, with amendment 3.1.4 (SPECPR-450) | the openEHR terminology |
 | openEHR ITS-REST | Release-1.1.0 | the REST API |
 | openEHR Archetype Query Language (AQL) | 1.1.0 | queries |
 | openEHR canonical JSON and XML (ITS-JSON, ITS-XML) | ITS-XML Release-1.0.2 and Release-2.0.0 schemas | serialisation |

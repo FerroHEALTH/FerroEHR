@@ -47,7 +47,7 @@ The identity fields Art. 30(1)(a) asks for are yours in every case:
 |---|---|
 | Purpose | *yours*: the care or research purpose the repository serves |
 | Categories of data subject | Patients and other record subjects; the health professionals recorded as composers, performers and participants |
-| Categories of personal data | Clinical content as the operational templates define it, in the `ehr` schema and its `cold` archival tier. Special-category health data under Art. 9. The subject appears as an opaque pseudonym once `[privacy] subject_namespaces` is declared |
+| Categories of personal data | Clinical content as the operational templates define it, in the `clinical` schema, its `cold` archival partitions included. Special-category health data under Art. 9. The subject appears as an opaque pseudonym once `[privacy] subject_namespaces` is declared |
 | Recipients | *yours*: whoever the API is exposed to. The software discloses nothing on its own |
 | Third-country transfers | *yours*: wherever the deployment and its backups run |
 | Retention | No automatic expiry. Content leaves only by an administrator's deletion; archiving moves it to the cold tier without expiring it |
@@ -90,7 +90,7 @@ The identity fields Art. 30(1)(a) asks for are yours in every case:
 |---|---|
 | Purpose | Holding who the record subjects are, and resolving a person to their record where a caller is entitled to |
 | Categories of data subject | Patients, and the parties a record refers to |
-| Categories of personal data | Parties in the `demographic` schema with names, addresses and contacts as the template defines them; protected national identifiers sealed in `national_identifier`; the party-to-EHR map in `linkage`, which holds identifiers and a validity period and nothing else |
+| Categories of personal data | Parties in the `party` schema with names, addresses and contacts as the template defines them; protected national identifiers sealed in `national_identifier`; the party-to-EHR map in `linkage`, which holds identifiers and a validity period and nothing else |
 | Recipients | *yours* |
 | Third-country transfers | *yours* |
 | Retention | Parties leave only by an administrator's deletion. A linkage mapping leaves only with the EHR it names: a merge or a split closes its period and opens a successor, and erasing the EHR erases the rows naming it |

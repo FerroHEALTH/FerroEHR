@@ -206,7 +206,7 @@ evaluation, not for production:
 - **The `sandbox` deployment profile, declared in the inline configuration:**
   the binary's default, stated so the file says what it runs. The server names every
   separation it has not made on the boot banner, in the log and on
-  `GET /ferroehr/rest/status`, and the viewer raises a notice saying the
+  `GET /management/status`, and the viewer raises a notice saying the
   deployment must not hold real patient data. That is the quickstart telling
   the truth about itself, not a fault. See
   [`deployment_profile`](configuration.md#deployment_profile).
@@ -510,7 +510,7 @@ A commercial licence token is not a passthrough variable: mount the signed
 token file into the server container read-only and name its path with
 `FERROEHR__LICENCE__FILE` (the compose file carries a commented example beside
 `FERROEHR__SIGNING__ENABLED`). Unset, the server runs under the embedded
-non-commercial grant and reports which on `GET /ferroehr/rest/status`.
+non-commercial grant and reports which on `GET /management/status`.
 
 The Keycloak overlay adds `KEYCLOAK_PORT` (default `8081`),
 `KEYCLOAK_HOSTNAME`, `KEYCLOAK_ADMIN_USER` and `KEYCLOAK_ADMIN_PASSWORD` (both
