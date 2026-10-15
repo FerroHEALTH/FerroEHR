@@ -124,9 +124,9 @@ on the documentation site.
   source templates are parsed, validated against the full AOM2 validity
   catalogue, specialisation-flattened, and compiled to operational
   templates. ADL 1.4 OPTs and source archetypes are validated against
-  their own 1.4 rules and can be migrated to ADL 2 in-CDR. Every
-  template, either dialect, generates spec-valid example compositions
-  that pass the server's own validation.
+  their own 1.4 rules and can be migrated to ADL 2 in-CDR. A template, in
+  either dialect, generates spec-valid example compositions that pass the
+  server's own validation, except for the cases the book's example page lists.
 - **One self-contained Rust binary.** Predictable memory, fast cold starts, a
   minimal distroless container image, no garbage-collection pauses in the
   write path.
@@ -158,9 +158,10 @@ on the documentation site.
   WebTemplate, FLAT and STRUCTURED formats from either dialect; deep
   archetype-constraint validation plus the RM invariant catalogue
   (including the terminology-backed invariants) on every write
-- **Example generation:** every stored template, ADL 1.4 or 2.4, serves
+- **Example generation:** a stored template, ADL 1.4 or 2.4, serves
   deterministic example compositions that pass the server's own full
-  validation, in canonical JSON/XML and the simplified formats
+  validation, in canonical JSON/XML and the simplified formats (the
+  exceptions are listed on the book's example page)
 - **ADL 1.4 → ADL 2 migration:** stored 1.4 archetypes convert to ADL 2
   source in-CDR, with a reproducible conversion log
 - **EHR Extract & messaging:** whole-EHR export/import with preserved
@@ -197,7 +198,7 @@ on the documentation site.
 - **A declared deployment posture:** `deployment_profile = "production"`
   refuses to start while a separation is open and not accepted by name;
   `sandbox`, the default, names every open one on the banner, in the log and on
-  `GET /rest/status`
+  `GET /management/status`
 - **Authentication:** Basic and OAuth2/OIDC (Keycloak, Active Directory,
   any standards-compliant identity provider)
 - **Authorization:** role-based access control plus attribute-based
@@ -561,7 +562,7 @@ deploys, and listed on
 
 ```shell
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 11.1.1 --set database.existingSecret=my-db-secret
+  --version 11.1.2 --set database.existingSecret=my-db-secret
 ```
 
 There is no HTTP chart repository, so `helm repo add` does not apply — OCI is the
@@ -663,7 +664,7 @@ write to [info@cadasto.com](mailto:info@cadasto.com) or use
 <https://www.cadasto.com/contact/>. Technical questions go to the maintainer
 named in [MAINTAINERS.md](MAINTAINERS.md). The licence you receive is a signed
 token file: point `[licence] file` (or `FERROEHR__LICENCE__FILE`) at it and
-`GET /ferroehr/rest/status` reports the grant in force. Without one the server
+`GET /management/status` reports the grant in force. Without one the server
 runs identically under the embedded non-commercial grant, and says so there.
 The licence policy shared by the FerroHEALTH products, with the trademarks, is
 on the FerroHEALTH book's

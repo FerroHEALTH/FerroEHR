@@ -247,7 +247,7 @@ declared posture and makes the two impossible to confuse.
 
 | Value | Asserts | On boot |
 |---|---|---|
-| `sandbox` *(default)* | Nothing; the deployment must not hold real personal data | Says which separations are missing: a red notice on the banner, one `warn` line per gap with the structured field `posture = "deployment"`, and the same list on `GET /ferroehr/rest/status` under `deployment` |
+| `sandbox` *(default)* | Nothing; the deployment must not hold real personal data | Says which separations are missing: a red notice on the banner, one `warn` line per gap with the structured field `posture = "deployment"`, and the same list on `GET /management/status` under `deployment`; the public `GET /ferroehr/rest/status` carries the profile only |
 | `production` | Every separation below holds, or is accepted by name in `deployment_accepts` | Refuses to start otherwise, naming each open gap, what it found and what to change |
 
 The separations, each a real property the server checks rather than a box
@@ -262,7 +262,7 @@ ticked by being present:
 | `audit_fails_open` | `[audit] fail_mode = "closed"`, so an operation whose access record cannot be taken is refused instead of succeeding unlogged |
 | `audit_syslog_udp` | `[audit.syslog] transport = "tls"` (RFC 5425) whenever the syslog feed is on, so the access log reaches the repository encrypted and with delivery confirmation (EHDS Annex II 1.4). A deployment whose UDP path stays on a trusted segment, with the local store or the FHIR feed holding the durable copy, accepts `audit_syslog_udp` by name |
 | `open_ehr_access_default` | `[authz.rbac] ehr_access_default = "restricted"`, so an EHR carrying no `ACCESS_CONTROL_SETTINGS` is reachable only by an admin. The shipped default is `open`. The setting is enforced with `[authz.rbac] enabled` on or off |
-| `migrate_on_runtime_credential` | `[db] migrate_url` set, or `migrate = "verify"`, so no credential that serves requests can alter the schema. Evaluated per domain database: a domain relocated to a database of its own is prepared on that domain's runtime DSN |
+| `migrate_on_runtime_credential` | `[db] migrate_url` set, or `migrate = "verify"`, so no credential that serves requests can alter the schema. Evaluated per domain database: a domain relocated to a database of its own is prepared on `[storage.migrate.<domain>] url` when that is set, and on that domain's runtime DSN, which opens the gap, when it is not |
 | `auth_off` | `[auth] enabled = true`, so no request is served unauthenticated (CRA Annex I Part I(2)(d)) |
 | `rbac_off` | `[authz.rbac] enabled = true` whenever authentication is on, so a caller reaches only the operations its roles allow (CRA Annex I Part I(2)(d)). Not reported while `auth_off` is |
 | `plaintext_listener` | `[server.tls]` enabled, or `[server] bind` on a loopback address, so data does not cross the network in clear (CRA Annex I Part I(2)(e)). A deployment behind a TLS-terminating ingress accepts `plaintext_listener` by name, which records that the ingress carries the encryption. A bind whose host is a DNS name or empty counts as routable. The gap also opens when `[management] port` is set on an enabled management surface: that listener binds every interface and never speaks TLS, so unset the port (the surface then shares the main listener) or accept the gap by name where the port is unreachable off the host |

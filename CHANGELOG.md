@@ -15,6 +15,8 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+## [4.3.7] - 2026-10-15
+
 ### Added
 
 - **`openehr-query` renders a column path with its variable** (#3782).
@@ -73,6 +75,13 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **The release pipeline checks the linkage the OS VEX statements rest on**
+  (#3694). Each statement that argues from what the binary loads now carries
+  that linkage as data (the needed libraries, the loader, the imports it
+  rules out), and the release lane refuses a `ferroehr` or `ferroehr-viewer`
+  binary, on either architecture, that needs another library or imports a
+  function a statement rules out.
+
 - **`openehr-its`: the template-example response body is typed** (#3549).
   `definition_template_adl1.4_example_get` and
   `definition_template_adl2_example_get` answer a `_type`-dispatched
@@ -114,7 +123,13 @@ workflow refuses a tag that has no matching section here.
 
 ### Security
 
-- **Protected national identifiers stay protected on every path** (#3772).
+Shipped with functional changes because: the patient-scope fix (#3771) is built
+on this release's rewritten AQL row bindings, the per-version identifier rows
+(#3772) and the audit digest version 2 (#3686) need this release's party and
+audit migrations, and the runtime-role grants need its new bookkeeping
+migrations, so a security-only patch from the v4.3.6 tag cannot carry them.
+
+- **Protected national identifiers stay protected on every path** (#3772, GHSA-4w9c-h7v6-xmh2).
   A party create or update response no longer echoes the plaintext
   identifier: with protection on it is the stored version, carrying the
   reference a later read serves (relationship write responses also serve the
@@ -129,7 +144,8 @@ workflow refuses a tag that has no matching section here.
   does not hold is refused at boot. The served OpenAPI declares the `409` and
   the identifier `422` cases on the party create and update operations.
 
-- **The runtime roles can no longer write their migration bookkeeping.** The
+- **The runtime roles can no longer write their migration bookkeeping**
+  (GHSA-jf68-mmp7-grjf). The
   shipped grants on every table of a domain schema covered its
   `_sqlx_migrations`; new migrations (clinical 0014, party 0009, linkage 0005)
   leave the runtime roles SELECT only, and the server refuses to start while a
@@ -137,7 +153,8 @@ workflow refuses a tag that has no matching section here.
   grants now runs in every database a domain pool reaches, so a domain in its
   own database is no longer left unchecked.
 
-- **ABAC patient scoping covers queries that read only the EHR row** (#3771).
+- **ABAC patient scoping covers queries that read only the EHR row** (#3771,
+  GHSA-xqc2-gwmg-jhmg).
   With `[authz.abac]` on, `SELECT e/ehr_id/value FROM EHR e`,
   `COUNT(*) FROM EHR e`, `e/ehr_status/...` paths, `EHR e CONTAINS (A OR B)`
   and an `ehr_id`-scoped query naming another patient's EHR returned EHRs of
@@ -153,25 +170,22 @@ workflow refuses a tag that has no matching section here.
   patient-keyed rule applies even without a configured claim, and it sees the
   EHR_STATUS template on `e/ehr_status/...` paths.
 
-- **The viewer's Basic sign-in follows only a same-origin `next`.** After a
+- **The viewer's Basic sign-in follows only a same-origin `next`**
+  (GHSA-23g2-35q8-43rq). After a
   successful or refused sign-in, an absolute, scheme-relative or backslash
   destination lands on the dashboard instead (an open redirect).
-- **rustls 0.23.46** closes RUSTSEC-2026-0346, -0347, -0348 and -0349 in the
-  lockfile.
-
-- **The release pipeline checks the linkage the OS VEX statements rest on**
-  (#3694). Each statement that argues from what the binary loads now carries
-  that linkage as data (the needed libraries, the loader, the imports it
-  rules out), and the release lane refuses a `ferroehr` or `ferroehr-viewer`
-  binary, on either architecture, that needs another library or imports a
-  function a statement rules out.
+- **rustls 0.23.46** (GHSA-wjr5-jv48-6hf2) closes RUSTSEC-2026-0346, -0347,
+  -0348 and -0349. Of the four, RUSTSEC-2026-0349 reached FerroEHR's TLS
+  clients; the other three need a custom session store, Encrypted Client
+  Hello or the `brotli` feature, none of which FerroEHR uses.
 
 - **An unresolvable signing key set no longer discloses the identity
-  provider's URLs** (#3666). The `503` names only the failed step (issuer URL,
+  provider's URLs** (#3666, GHSA-rch2-2r9h-cjwv). The `503` names only the failed step (issuer URL,
   OIDC discovery, key-set fetch or read); it quoted the transport error, which
   named the provider's discovery and JWKS URLs. The cause is still logged.
 
-- **`ehr_access_default = "restricted"` holds with RBAC off** (#3742).
+- **`ehr_access_default = "restricted"` holds with RBAC off** (#3742,
+  GHSA-rhf2-6x3j-6qrh).
   `[authz.rbac] ehr_access_default = "restricted"` was ignored when
   `[authz.rbac] enabled = false`, leaving every EHR without
   `ACCESS_CONTROL_SETTINGS` open on its path and in AQL, while the deployment
@@ -181,7 +195,8 @@ workflow refuses a tag that has no matching section here.
   `rbac_off`, is reported when authentication is on and the RBAC gate is off;
   `production` refuses it unless it is accepted by name. `[authz.rbac]
   role_claims` now applies to role extraction with RBAC off as well.
-- **The audit hash chain covers every column of an access record** (#3686).
+- **The audit hash chain covers every column of an access record** (#3686,
+  GHSA-29xh-548g-g2mq).
   Digest version 2 hashes every column (purpose, legal basis, categories,
   assurance level and value, professional, the emergency mark and the rest),
   so a change to any of them shows in `audit.verify_audit_chain()`. Records
@@ -344,7 +359,7 @@ workflow refuses a tag that has no matching section here.
   per-EHR default were all off; the boot log now also says when only a
   restricted per-EHR default switches authorization on.
 - **The Helm chart's in-chart clients follow the server's own TLS** (#3714,
-  chart 11.1.1). With `config.server.tls.enabled`, the viewer, FerroBRIDGE,
+  chart 11.1.2). With `config.server.tls.enabled`, the viewer, FerroBRIDGE,
   the ServiceMonitor scrape and the kubelet probes use https, and the viewer
   and FerroBRIDGE trust the CA named by the new `service.tls.caExistingSecret`;
   the chart refuses to render a TLS listener beside an in-chart client without
@@ -11179,7 +11194,8 @@ but has not yet run in production.
   seccomp, default-deny NetworkPolicy) and golden-render validation.
 
 
-[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.6...HEAD
+[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.7...HEAD
+[4.3.7]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.6...v4.3.7
 [4.3.6]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.5...v4.3.6
 [4.3.5]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.4...v4.3.5
 [4.3.4]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.3...v4.3.4

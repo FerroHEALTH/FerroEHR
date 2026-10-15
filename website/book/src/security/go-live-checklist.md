@@ -118,8 +118,8 @@ rather than hidden.
       this deployment intends, not the ones it inherited.
 - [ ] Every entry in `deployment_accepts` is a decision someone recorded, not a
       leftover.
-- [ ] `GET /ferroehr/rest/status` shows the profile and an accepted-gap list
-      you recognise.
+- [ ] `GET /management/status` shows the profile and an accepted-gap list you
+      recognise.
 
 ## 3. Identifier scanning is on and strict
 
@@ -167,7 +167,7 @@ itself, `link_as_subject` uses the first declared namespace.
 
 - [ ] `subject_namespaces` names at least one namespace.
 - [ ] The `open_subject_namespace` gap no longer appears on
-      `GET /ferroehr/rest/status`.
+      `GET /management/status`.
 
 ## 5. Backups, one per domain
 

@@ -144,10 +144,14 @@ evidence only) and the open work.
   unfixed findings included, joins every finding with its OpenVEX statement,
   and is refused, before any image is tagged, while a finding has none; the
   joined record and the raw reports are release assets. The Rust advisory
-  statements are checked against the resolved dependency graph.
+  statements are checked against the resolved dependency graph, and an
+  operating-system statement that argues from what a binary loads carries
+  that linkage as data, which the release lane reads off both Rust binaries
+  on both architectures and refuses a contradiction of (#3694).
 - **Evidence:** `deny.toml`; `trivy.yaml`; `.github/workflows/scan-and-tag.yml`;
   `.github/workflows/image-scan.yml`; `security/vex/`;
   `scripts/checks/vex-reachability.sh`; `scripts/checks/vex-coverage.sh`;
+  `scripts/checks/vex-linkage.sh`;
   `.github/workflows/release.yml` (`vulnerability-record`);
   [the exploitability record](../verifying-releases.md#the-exploitability-record).
 - **Status:** partial. Every finding of the full scan carries a judgement or the
@@ -158,7 +162,9 @@ evidence only) and the open work.
   three images, and three libxml2 and two glibc JISX0213 findings in the
   `ferroehr-postgres` image that a database login reaches through
   PostgreSQL's XML functions, which FerroEHR itself never calls (#3673).
-  Each carries an action statement in `security/vex/`.
+  Each carries an action statement in `security/vex/`. Re-checked for 4.3.7
+  on 2026-10-15: the same seven statements are `affected` in `security/vex/`
+  and #3708 is open, so the status stays partial.
 - **Open:** the seven `affected` findings (#3708), until Debian ships fixes that a
   rebuild picks up; each such rebuild is a security-only patch with its
   advisory.
@@ -288,7 +294,14 @@ systems, and report on possible unauthorised access"
   is appropriate mechanisms.
 - **How:** Basic (Argon2id) and OIDC bearer authentication; RBAC, Cedar or
   remote ABAC, and per-EHR `EHR_ACCESS`; an ABAC block that is enabled but
-  cannot be built aborts boot. Every refused access (`401`, `403`) is recorded
+  cannot be built aborts boot. A restricted `EHR_ACCESS` default holds with
+  the role gate off, and is refused at boot with authentication off. With a
+  patient claim configured, the ABAC patient scope applies to the EHR row and
+  to every versioned object on every query plan and on the direct EHR,
+  composition and status routes. An EHR that records no subject is refused
+  to a patient caller, and so is one whose subject id another namespace also
+  holds, unless `[authz.abac] patient_namespace` names the namespace the
+  claim is issued in. Every refused access (`401`, `403`) is recorded
   in the access log and counted in the `auth_failures` metric.
 - **Evidence:** `app/ferroehr-rest/src/extensions/access/`;
   `app/ferroehr-rest/src/system_log/middleware.rs`;
@@ -317,8 +330,13 @@ transit by state of the art mechanisms, and by using other technical means"
   [the justification](#application-level-encryption-at-rest-annex-i-part-i2e).
 - **How:** in transit, rustls with TLS 1.3 by default and mutual TLS, or a
   TLS-terminating ingress; integrations offer TLS (`amqps`, syslog over TLS,
-  HTTPS-only S3 by default). At rest, protected national identifiers sealed
-  under AES-256-GCM with a keyed lookup digest. Other technical means: three
+  HTTPS-only S3 by default); a renewed server certificate is served without a
+  restart, every `[server.tls] reload_interval_secs`. At rest, protected
+  national identifiers sealed under AES-256-GCM with a keyed lookup digest,
+  per party version, inside the party commit; a write response serves the
+  sealed form, an import or admin load carrying a protected value in plaintext
+  is refused, and a dump carries the sealed rows as ciphertext. Other
+  technical means: three
   pseudonymisation domains on separate credentials, checked by `production`;
   secrets that never render; log sanitising.
 - **Evidence:** `[server.tls]` in `ferroehr.default.toml`;
@@ -360,16 +378,24 @@ corruptions"
   [the justification](#configuration-integrity-annex-i-part-i2f).
 - **How:** data: immutable versions, each signed (digest or OpenPGP) and
   verified on read in `strict` mode by default; the access log is
-  hash-chained in the database, and `UPDATE`, `DELETE` and `TRUNCATE` on it are
-  refused. Programs: SLSA Build L3 provenance and SBOM attestations, cosign on
+  hash-chained in the database over every column of a record (digest version
+  2; records written before 4.3.7 keep version 1, which covers the original
+  columns), and `UPDATE`, `DELETE` and `TRUNCATE` on it are refused. The
+  runtime roles read the migration bookkeeping of their schema and cannot
+  write it, and the server refuses to start while one can. Programs: SLSA Build L3 provenance and SBOM attestations, cosign on
   the chart, signed tags, immutable releases, a read-only root filesystem.
   Configuration: unknown keys and unknown `FERROEHR__` variables are refused
   at boot.
 - **Evidence:** `app/ferroehr/src/versioning/integrity.rs`;
   `app/ferroehr/migrations/audit/0003_tamper_chain.sql`;
+  `app/ferroehr/migrations/audit/0011_chain_digest_v2.sql`;
   `app/ferroehr/src/system_log/chain_check.rs`;
   `app/ferroehr/tests/it/audit_chain.rs`
-  (`the_chain_check_reports_a_tampered_record_on_the_health_surface`);
+  (`the_chain_check_reports_a_tampered_record_on_the_health_surface`,
+  `the_current_digest_covers_every_column`,
+  `every_hashed_column_is_tamper_evident`);
+  `app/ferroehr/migrations/clinical/0014_bookkeeping_read_only.sql` and its
+  party and linkage twins;
   `app/ferroehr/src/config/strict.rs`;
   [tamper evidence](../audit.md#tamper-evidence);
   [verifying releases](../verifying-releases.md).
@@ -673,3 +699,4 @@ vulnerabilities and third-party information arrive. It is revised:
 | 2 | 2026-10-07 | (a): the per-release exploitability record (#3636), the viewer image scanned before it is tagged (#3674) and every release binary and image binary built with `cargo auditable` (#3675); (b): the declared profile in the chart and the Compose files, the reasons for `sandbox` and the shipped defaults a production holder keeps, and the reset procedure (#3637); Part II(1): SBOMs for the crates and the chart (#3643); the declared security-relevant paths and their release gate (#3649); (m): the erase command and the decommissioning page (#3642); (e): a plaintext `amqp://` broker refused under `production` (#3676); (e): a plain `http://` audit FHIR feed and a multimedia store with `allow_http` refused under `production` (#3689); (b): the Helm reset run by the Kubernetes probe harness (#3677) |
 | 3 | 2026-10-08 | Part II: the manufacturer's vulnerability-handling and post-market policy is cited from the FerroHEALTH book, where it moved for every FerroHEALTH product; the measures are unchanged (#3701) |
 | 4 | 2026-10-08 | Reviewed for release 4.3.6 against the security-relevant paths changed since 4.3.5: the outbound FHIR emitter and its AMQP flow are gone with the in-tree connector (#3080), so the outbound-flow table names change events alone on AMQP; (a): the `ferroehr-postgres` image drops GnuPG and `gosu`, and every operating-system finding of the three images carries an OpenVEX judgement in `security/vex/` (#3673) |
+| 5 | 2026-10-15 | Reviewed for release 4.3.7 against the security-relevant paths changed since 4.3.6. (d): the ABAC patient scope covers queries that read only the EHR row and every query plan, the direct routes refuse a subject-less or ambiguous EHR to a patient caller, and `[authz.abac] patient_namespace` names the claim's namespace (#3771); `ehr_access_default = "restricted"` holds with the role gate off, is refused at boot with authentication off, and the role gate off is the `rbac_off` gap `production` refuses (#3742); the viewer's Basic sign-in follows only a same-origin `next`. (e): protected national identifiers sealed per party version inside the commit, write responses serving the sealed form, plaintext protected values refused on import and admin load (#3772); the server certificate re-read every `reload_interval_secs` and EC keys in SEC1 or PKCS#8 (#3765, #3761); the OIDC `503` and a JWK Set parse error no longer quote the provider's URLs or key material (#3666); the CDR and the viewer verify an identity provider against the platform trust store (#3767). (f): digest version 2 of the audit chain over every column (#3686); the runtime roles read-only on the migration bookkeeping, checked at boot in every database a pool reaches; version-signing errors carry their cause once (#3684). (a): rustls 0.23.46 for RUSTSEC-2026-0346 to -0349, and the release lane checks the linkage the OS VEX statements rest on (#3694); the seven `affected` findings of #3708 are unchanged. The chart: in-chart clients follow the server's TLS (#3714), FerroBRIDGE as an opt-in, cluster-internal workload (#3713), `client_auth: required` refused at render (#3760), an Ingress in front of a TLS listener sending TLS to it (#3766), and the migration Job under its own hook ServiceAccount. No risk added to the register |

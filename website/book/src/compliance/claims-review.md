@@ -147,6 +147,77 @@ text in scope.
 
 Nothing.
 
+## The review of 2026-10-15
+
+Read on the tree after commit `606a29cce`, for FerroEHR 4.3.7. The facts of
+this release checked in every text in scope: the ABAC patient scope over
+EHR-only queries and `[authz.abac] patient_namespace` (#3771); a restricted
+`EHR_ACCESS` default with the role gate off, and the `rbac_off` gap (#3742);
+national identifiers sealed per party version, the sealed form in write
+responses and the refusal of plaintext protected values on import (#3772);
+digest version 2 of the audit chain (#3686); the AQL row rules (#3733,
+#3734); the removal of FOSSA; the TLS certificate reload and EC keys (#3765,
+#3761); the four-cluster production layout (#3755 to #3757, #3762); the
+example generator (#3739, #3740); quoted GET query parameters (#3781). The
+2026-10-08 move of the deployment gaps to `GET /management/status` (#3671) was
+re-checked on every page, and eleven pages still named the public document.
+
+### Changed on 2026-10-15
+
+| # | Text | Claim | Art. 28 | Finding | Now reads |
+|---|---|---|---|---|---|
+| 1 | Book, [licensing](../licensing.md), [security](../security.md), [go-live checklist](../security/go-live-checklist.md) (two items), [Kubernetes](../installation/kubernetes.md), [authentication configuration](../installation/config-auth.md) (two places), [Compose](../installation/compose.md) (two places), [installation](../installation/index.md), [configuration](../installation/configuration.md#deployment_profile), [command line](../installation/config-cli.md), [DPIA](../security/dpia.md) R9, [compliance overview](index.md) (GDPR Art. 25, DSV Art. 4) | an open or accepted deployment gap, or the licence in force, is reported on `GET /ferroehr/rest/status` (or `/rest/status`) | (a) | the public document carries `status`, the versions, the timestamp and the profile only; the gaps, the licence and the support period are on `GET /management/status` (#3671) | "on `GET /management/status`"; the configuration page adds that the public document carries the profile only |
+| 2 | Book, [instructions for use](instructions-for-use.md), the deployment profile | the list of what `production` refuses | (b) | omitted the role gate off while authentication is on, the `rbac_off` gap this release adds (#3742) | named |
+| 3 | Book, [instructions for use](instructions-for-use.md), limitations | none on how AQL reads repeated nodes | (b) | AQL 1.1.0 does not define the rows of a path through a repeated node; this release changed them (#3733), so another server, or a client written for an earlier release, may count differently | the limitation is stated, with the regrouping a client needs |
+| 4 | Book, [instructions for use](instructions-for-use.md), limitations | none on the audit chain's coverage | (b) | records written before the upgrade keep digest version 1, which leaves out the columns added after the chain was introduced (#3686) | stated, with the columns and the trigger that alone protects them |
+| 5 | Book, [configuration](../installation/configuration.md#deployment_profile), `migrate_on_runtime_credential` | a domain relocated to its own database "is prepared on that domain's runtime DSN" | (a) | `[storage.migrate.<domain>] url` now prepares it on its own migration credential (#3756); only without it does the runtime DSN prepare it and open the gap | both cases stated |
+| 6 | Book, [records of processing](../security/records-of-processing.md), categories of personal data | clinical content "in the `ehr` schema"; parties "in the `demographic` schema" | (a) | the schemas are `clinical` and `party` since the storage rewrite | `clinical` and `party` |
+| 7 | Book, [Kubernetes](../installation/kubernetes.md), server TLS | the viewer's OIDC client "trusts the public roots it is built with", so a private-CA issuer is not trusted | (a) | the viewer's OIDC client verifies against the platform trust store (#3767) | a private-CA issuer is trusted once its CA is in the store or under `SSL_CERT_DIR` |
+| 8 | Book, [querying with AQL](../querying-aql.md), the URL form | how a parameter value binds | (b) | silent on a quoted value, which now binds the JSON string it denotes (#3781) | the quoted form and the malformed case stated |
+| 9 | Book, [templates and validation](../templates-validation.md), the example composition | "a skeleton instance you can fill in", with no limitation | (b) | the example passes the server's own validation except for two open defects (#3779, #3780) and templates whose mandatory content only a slot admits | the exceptions named |
+| 10 | Book, [threat model](../threat-model.md), what each database credential can reach | the writer roles hold `SELECT`, `INSERT`, `UPDATE` and `DELETE` on their schema | (b) | the migration bookkeeping is now read-only to every runtime role, and the boot refuses a writable one | stated below the table |
+| 11 | Book, [information sheet](information-sheet.md), (e) | TERM "3.1.0" | (b) | the server applies amendment 3.1.4 (SPECPR-450), which adds properties and units the template upload and the quantity validation accept (#3717, #3727) | "3.1.0, with amendment 3.1.4 (SPECPR-450)" |
+
+The technical documentation's Annex III 2 named the public status document for
+the deployment posture too; it names `GET /management/status` now.
+| 12 | Repository README, the template-model and example bullets (two places) | every template "generates spec-valid example compositions that pass the server's own validation" | (a) | #3779 and #3780 are open, and a template whose mandatory content only an archetype slot admits has no committable example | "a template \[…\] generates" them, "except for the cases the book's example page lists" |
+| 13 | Repository README, the deployment posture and licence bullets | `sandbox` names every open gap "on `GET /rest/status`"; "`GET /ferroehr/rest/status` reports the grant in force" | (a) | both are on `GET /management/status` (#3671) | "on `GET /management/status`" |
+| 14 | Book, [EHDS readiness](ehds-readiness.md) row 1.2 | its issue reference | (a) | the probe that issue asked for ran (#3692), without `hostUsers: false` or `sslmode=verify-full` | names #3788 for those two |
+
+### Read and kept on 2026-10-15
+
+- **FOSSA**: no text in scope names FOSSA, a FOSSA badge or a FOSSA lane after
+  its removal in this release.
+- **The patient scope and `patient_namespace`**: the
+  [`[authz.abac]`](../installation/config-auth.md#authzabac) table and its
+  patient-scope list state the EHR-only queries, the direct-route refusals and
+  the namespace rule as they ship; the [security](../security.md) page's
+  fail-closed box is unchanged by them.
+- **The restricted `EHR_ACCESS` default and `rbac_off`**: the authentication
+  configuration, the configuration page, the go-live checklist, the Kubernetes
+  values table and the [CRA risk assessment](cra-risk-assessment.md) (d) state
+  both.
+- **Identifier protection**: the privacy configuration, the threat model's
+  sealed-identifier section, the operations guide and the admin API page state
+  the per-version rows, the sealed write response, the plaintext refusal on
+  import and load, and the erasure of sealed rows.
+- **The audit chain**: the [audit trail](../audit.md#tamper-evidence) page
+  states both digest versions and the downgrade finding.
+- **AQL**: [querying with AQL](../querying-aql.md) and the AQL engine concept
+  page state the row rules and say AQL 1.1.0 does not define them.
+- **TLS**: the server configuration and the Kubernetes page state the reload
+  interval, the EC key formats and the explicit-curve refusal.
+- **The information sheet's BALP row** ("the profile revision is not pinned"):
+  kept. The delete agent types follow BALP 1.1.4, and the profile URLs the
+  records carry are unversioned.
+- **The image labels and the Helm chart's description**: unchanged by this
+  release but for the chart description's NetworkPolicy defaults (#3743),
+  which match `values.yaml`.
+
+### Left open on 2026-10-15
+
+Nothing.
+
 ## Annex II 2.5, re-assessed
 
 EHDS Annex II 2.5: "The harmonised software components of an EHR system shall
@@ -206,3 +277,4 @@ cut, after the texts in scope have been read.
 |---|---|---|---|
 | 2026-10-06 | before 4.3.5, after `d6539d470` | 15 claims, in the README, the landing page and three book pages | the chart description (#3637) |
 | 2026-10-08 | 4.3.6, after `de648fcc3` | 5 claims, in the landing page and five book pages; the chart description item closed | nothing |
+| 2026-10-15 | 4.3.7, after `606a29cce` | 14 claims, in 17 book pages, the README and the readiness row | nothing |

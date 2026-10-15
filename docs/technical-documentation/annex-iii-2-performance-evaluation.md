@@ -32,7 +32,7 @@ re-read against the tree in every release that changes the component
 The server reports its own state: the readiness indicators on
 `GET /health/readiness` (the audit chain verification among them), the
 `atna_audit_*` metrics for every loss path of the access log, and the
-deployment posture on `GET /ferroehr/rest/status`
+deployment posture on the authenticated `GET /management/status`
 ([`operations.md`](../../website/book/src/operations.md#observability)).
 
 State: available. The performance a deployment reaches depends on the hardware

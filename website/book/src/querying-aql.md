@@ -243,10 +243,12 @@ curl -u ferroehr:ferroehr --get \
   http://localhost:8080/ferroehr/rest/openehr/v1/query/aql
 ```
 
-Three details about the URL form: the leading `$` is optional (`$name` and `name`
-bind the same parameter); a value that parses as a JSON scalar binds as that type
-(`36` as a number, `true` as a boolean) while everything else binds as text; and
-the reserved keys `q`, `offset`, `fetch`, `ehr_id` and `query_parameters` are
+Four details about the URL form: the leading `$` is optional (`$name` and `name`
+bind the same parameter); a value in double quotes binds the JSON string it
+denotes, so `uid="123"` binds the text `123`, as `{"uid": "123"}` does in a
+`POST` body (a value that only starts with a quote keeps its text); any other
+value that parses as a JSON scalar binds as that type (`36` as a number, `true`
+as a boolean) while everything else binds as text; and the reserved keys `q`, `offset`, `fetch`, `ehr_id` and `query_parameters` are
 request controls, never parameters. Where the same name appears both as its own
 key and inside `query_parameters`, the named key wins.
 

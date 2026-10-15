@@ -261,6 +261,15 @@ example composition. Both serve any of canonical JSON/XML, FLAT, or STRUCTURED
 (via `Accept`) and take the same two query parameters: `type`
 (`input`/`output`) and `detail_level` (`required`/`medium`/`complete`).
 
+The example carries every attribute and node the template makes mandatory, so
+it passes the server's own validation, with two known exceptions: a template
+whose sibling nodes of one archetype differ only by name, which the example
+merges ([#3779](https://github.com/FerroHEALTH/FerroEHR/issues/3779)), and a
+template whose root is not a `COMPOSITION`
+([#3780](https://github.com/FerroHEALTH/FerroEHR/issues/3780)). A template whose
+mandatory content only an archetype slot admits cannot be filled by any
+example.
+
 ## Composition formats
 
 When committing or retrieving a composition, the canonical openEHR JSON (or XML)

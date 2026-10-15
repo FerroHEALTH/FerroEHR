@@ -382,6 +382,11 @@ of no other, so a privilege cannot arrive through a membership.
 | `ferroehr_linkage` | `linkage.subject_ehr` with `SELECT`, `INSERT` and `UPDATE`; `EXECUTE` on `linkage.erase_ehr`; `USAGE` on `ext` | `clinical`, `party`, and `party.resolve_national_identifier` by its own revoke. It holds no `DELETE` anywhere, so the only rows it can remove are the ones the definer function deletes for an erased EHR, one EHR id at a time |
 | The schema-preparation credential (`[db] migrate_url`, normally a member of `ferroehr_migrator`) | every schema: it issues the DDL of all five migration sets and reads all five `_sqlx_migrations` tables, and it owns the objects it created | nothing. The server opens it for that one boot step and closes it again, so no pool is held on it and no request is served through it |
 
+A schema's `_sqlx_migrations` bookkeeping, the record of which migrations ran
+that the boot check compares, is read-only to every runtime role, the writer
+roles included; the server refuses to start while a runtime role can write any
+bookkeeping table, in every database a domain pool reaches.
+
 The `audit` schema is granted to the clinical pair (`ferroehr_clinical` records an
 event, stamps it forwarded, runs the retention reaper and verifies the chain;
 `ferroehr_clinical_reader` reads it).

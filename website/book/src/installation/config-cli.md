@@ -105,7 +105,7 @@ the databases and writes nothing to them.
 | `target` | the CPU architecture and operating system the binary was built for, and whether it is a debug build |
 | `features` | the optional integrations compiled in (`events`, `fhir`, `multimedia`) |
 | `openehr_crates` | each `openehr-*` crate the binary links, with its version |
-| `licence` | the licence summary `GET /ferroehr/rest/status` serves (state, use, licensee, last valid day, what the configured token contributed); never the token |
+| `licence` | the licence summary `GET /management/status` serves (state, use, licensee, last valid day, what the configured token contributed); never the token |
 | `deployment` | the deployment profile, the open gaps and the accepted ones, measured over the databases, or from the configuration alone when they do not answer |
 | `schema` | for each database, the highest migration version applied and the highest this build embeds, per schema |
 | `configuration` | the effective configuration as `config check` prints it |
