@@ -70,6 +70,7 @@
 - [Update-branch is unsigned](update-branch-is-unsigned.md) — never `gh pr update-branch`; rebase locally, force-with-lease
 - [History rewrite 2026-09-16](history-rewrite-2026-09-16.md) — never resolve "latest release" by ancestry
 - [Release cut 2026-09-16 lessons](release-cut-2026-09-16-lessons.md) — signed tag, crates-io approval, sandbox leg across storage generations
+- [Release cut 2026-10-15 lessons](release-cut-2026-10-15-lessons.md) — the release reads the TAG tree; run vex-linkage and vex-coverage before tagging or the version burns
 - [New crate first publish is standalone](new-crate-first-publish-standalone.md) — first publish alone from a local dirty manifest
 - [Repo moved to FerroHEALTH](repo-moved-to-ferrohealth.md) — ghcr.io/ferrohealth, board orgs/FerroHEALTH/projects/2
 - [Native issue types and fields](native-issue-types-and-priority.md) — type/priority/effort via scripts/gh/fields.sh; read issues with `--json`
