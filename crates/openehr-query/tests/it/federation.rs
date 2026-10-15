@@ -122,3 +122,38 @@ fn a_malformed_directive_is_a_located_syntax_error() {
 fn the_strict_parser_still_refuses_the_directive() {
     assert!(parse_str(r#"SELECT c FROM ENDPOINT p ["n1", "n2"] CONTAINS EHR e"#).is_err());
 }
+
+/// A column path renders with its variable kept for a federated result set,
+/// so two variables of one class stay apart, while the stripped form FerroEHR's
+/// own result set uses is unchanged (#3782).
+#[test]
+fn a_column_path_keeps_its_variable_beside_the_stripped_form() -> TestResult {
+    use openehr_query::ast::ColumnExpr;
+    let query = parse_str(
+        "SELECT c1/uid/value, c2/uid/value, \
+         c1/content[openEHR-EHR-OBSERVATION.minimal.v1]/name/value, e \
+         FROM EHR e CONTAINS (COMPOSITION c1 AND COMPOSITION c2)",
+    )?;
+    let paths: Vec<(String, String)> = query
+        .select
+        .columns
+        .iter()
+        .filter_map(|column| match &column.column {
+            ColumnExpr::Path(p) => Some((p.column_path_with_variable(), p.column_path_text())),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        paths,
+        [
+            ("c1/uid/value".to_owned(), "/uid/value".to_owned()),
+            ("c2/uid/value".to_owned(), "/uid/value".to_owned()),
+            (
+                "c1/content[openEHR-EHR-OBSERVATION.minimal.v1]/name/value".to_owned(),
+                "/content[openEHR-EHR-OBSERVATION.minimal.v1]/name/value".to_owned()
+            ),
+            ("e".to_owned(), "/".to_owned()),
+        ]
+    );
+    Ok(())
+}

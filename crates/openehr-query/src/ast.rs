@@ -708,6 +708,20 @@ impl IdentifiedPath {
             Some(p) => format!("/{p}"),
         }
     }
+
+    /// The column-path text of this select expression with its root variable
+    /// kept, as the query wrote it: `c/uid/value`, or `c` for a bare variable.
+    ///
+    /// ITS-REST 1.1.0 `ResultSetColumn.path` is the "Path from the given AQL of
+    /// the specified column"; with the variable kept, two variables of one class
+    /// (`c1/uid/value`, `c2/uid/value`) render apart.
+    #[must_use]
+    pub fn column_path_with_variable(&self) -> String {
+        match &self.path {
+            None => self.root.clone(),
+            Some(p) => format!("{}/{p}", self.root),
+        }
+    }
 }
 
 impl fmt::Display for ObjectPath {

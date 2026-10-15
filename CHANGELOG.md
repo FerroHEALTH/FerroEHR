@@ -17,6 +17,12 @@ workflow refuses a tag that has no matching section here.
 
 ### Added
 
+- **`openehr-query` renders a column path with its variable** (#3782).
+  `IdentifiedPath::column_path_with_variable` gives `c1/uid/value` where
+  `column_path_text` gives `/uid/value`, so a federation gateway can keep two
+  variables of one class apart in `RESULT_SET.columns[].path`. FerroEHR's own
+  result sets are unchanged.
+
 - **The Helm chart deploys FerroBRIDGE beside the CDR** (#3713, chart 11.1.0).
   `bridge.enabled=true` installs FerroBRIDGE 0.0.5 (pinned by digest) as its
   own workload under the same Restricted security context, with its
