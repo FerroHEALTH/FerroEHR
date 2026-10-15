@@ -28,9 +28,13 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Queued, never cancelled: a run pushes its images by digest before
+# scan-and-tag applies their tags, so a run cancelled in between leaves
+# manifests nothing reaches (the GHCR orphans of #3731). A newer push waits for
+# the running build; GitHub keeps only the newest pending run.
 concurrency:
   group: containers-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 # The image names the STEPS in this file read, derived from the repository owner
 # — the same derivation build-chart.yml and image-scan.yml use. The `uses:` lanes
