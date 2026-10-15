@@ -1,6 +1,6 @@
 # Conformance Statement (SDoC)
 
-Product: FerroEHR 4.3.7 — Cadasto B.V. (urn:rubentalstra:ferroehr)
+Product: FerroEHR 4.3.8 — Cadasto B.V. (urn:rubentalstra:ferroehr)
 Schedule release: cnf-2.0-w2
 
 ## Declared spec versions

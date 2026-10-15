@@ -243,7 +243,7 @@ knows of for this release.
   per node and evaluates `WHERE` as one assignment of those nodes
   ([querying with AQL](../querying-aql.md)); another openEHR server may return
   other rows for the same query. A client written against a release before
-  4.3.7 that expects one row per composition has to group the rows.
+  4.3.8 that expects one row per composition has to group the rows.
 
 **Security**
 
@@ -259,7 +259,7 @@ knows of for this release.
   ([the emergency mark](../audit.md#emergency-access-ehds-art-115)). The
   mark lifts no restriction, and FerroEHR holds no EHDS Art. 8 restriction
   today (planned, [#3682](https://github.com/FerroHEALTH/FerroEHR/issues/3682)).
-- An access record written before the upgrade to 4.3.7 keeps the original
+- An access record written before the upgrade to 4.3.8 keeps the original
   digest of the tamper chain, which leaves out the purpose, legal basis,
   categories, authentication fields and the emergency mark; for those records
   only the append-only trigger, which the table owner can disable, protects

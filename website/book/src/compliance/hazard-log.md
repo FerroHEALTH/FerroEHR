@@ -333,7 +333,7 @@ box.
   `the_access_trail_refuses_rewriting_deletion_and_truncation`.
 
 **Remains:** the chain gives evidence of tampering and does not prevent it.
-A record written before the upgrade to 4.3.7 keeps its version 1 digest,
+A record written before the upgrade to 4.3.8 keeps its version 1 digest,
 which leaves out the columns added after the chain was introduced (the
 purpose, legal basis, categories, authentication fields and the emergency
 mark among them); on those records the append-only trigger alone protects
@@ -417,4 +417,4 @@ EHDS-side risk assessment of the component.
 | 1 | 2026-10-06 | First log, nine hazards |
 | 2 | 2026-10-07 | H9 names the EHDS Art. 8 restriction; the emergency mark and the subject-scoped retrieval are its control |
 | 3 | 2026-10-08 | Reviewed for release 4.3.6 (changes since 4.3.5: the assurance level and the natural person, the emergency mark, the FHIR connector removed beside the ITI-81 route); every named test exists and asserts its control; no hazard added |
-| 4 | 2026-10-15 | Reviewed for release 4.3.7 (changes since 4.3.6: digest version 2 of the audit chain over every column, audit migration 0011 (#3686); one data-flow direction for the DICOM and FHIR renderings (#3687) and the BALP `Delete` agent types (#3750); the physical party delete classified and its party named (#3683); every audit-store and retention-register checkout through the typed database acquire (#3749)); every named test exists and asserts its control; H1, H2 and H7 name the new tests, H7 the version 1 records; no hazard added |
+| 4 | 2026-10-15 | Reviewed for release 4.3.8 (changes since 4.3.6: digest version 2 of the audit chain over every column, audit migration 0011 (#3686); one data-flow direction for the DICOM and FHIR renderings (#3687) and the BALP `Delete` agent types (#3750); the physical party delete classified and its party named (#3683); every audit-store and retention-register checkout through the typed database acquire (#3749)); every named test exists and asserts its control; H1, H2 and H7 name the new tests, H7 the version 1 records; no hazard added |
