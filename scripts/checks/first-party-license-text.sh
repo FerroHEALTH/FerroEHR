@@ -8,14 +8,6 @@
 # A GPL-family or SSPL grant appearing in a file WE wrote is a licence conflict
 # that no reviewer reliably catches by eye, so it is checked here.
 #
-# WHY THIS IS LOCAL AND NOT `customLicenseSearch` IN .fossa.yml: that feature was
-# tried and removed on 2026-08-12 (CLI 3.17.16). It could not upload at all
-# (`archiveAndLicenseUpload is not enabled in this organization`, failing the
-# lane after a clean analysis), and it did not honour the `paths.exclude` list —
-# all seven of its hits were inside vendored third-party trees that list already
-# excludes. A gate that reads the wrong files and cannot report is worse than no
-# gate; this one shares that exclusion list and fails the build.
-#
 # Third-party material is EXCLUDED, not exempted: it is redistributed verbatim
 # under terms recorded in each tree's PROVENANCE.md. Its licences are facts
 # about somebody else's work, and flagging them here would say this project
@@ -33,8 +25,7 @@ cd "$(dirname "$0")/../.."
 # The forbidden grants. Copyleft families incompatible with shipping BUSL-1.1 source.
 readonly PATTERN='GNU (Affero |Lesser )?General Public License|Server Side Public License'
 
-# Mirrors .fossa.yml `paths.exclude`, plus build/VCS output. Keep the two in
-# step: a tree vendored into one and not the other is a silent coverage hole.
+# The vendored third-party trees, plus the files that name these licences as data.
 readonly -a EXCLUDED=(
   ':(exclude)docs/specs/openehr/**'
   ':(exclude)crates/openehr-term/assets/**'
@@ -77,7 +68,6 @@ readonly -a PROSE=(
   ':(exclude).claude/**'
   ':(exclude)scripts/checks/first-party-license-text.sh'
   ':(exclude)deny.toml'
-  ':(exclude).fossa.yml'
   ':(exclude)CHANGELOG.md'
 )
 
@@ -90,8 +80,8 @@ if matches=$(git grep -InE "$PATTERN" -- . "${EXCLUDED[@]}" "${PROSE[@]}"); then
   echo >&2
   echo "This project's own code is BUSL-1.1. A GPL-family or SSPL grant here is a" >&2
   echo "licence conflict. If the file is vendored third-party material, add its" >&2
-  echo "tree to BOTH the exclusion list in this script and paths.exclude in" >&2
-  echo ".fossa.yml, and record its terms in that tree's PROVENANCE.md." >&2
+  echo "tree to the exclusion list in this script and record its terms in that" >&2
+  echo "tree's PROVENANCE.md." >&2
   exit 1
 fi
 
