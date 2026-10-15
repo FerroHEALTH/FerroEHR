@@ -29,6 +29,11 @@ on:
 permissions: {}
 
 env:
+  # A FerroEHR started by any step of this workflow sends no usage report to
+  # FerroPULSE: compose interpolates this into every server it brings up, and
+  # scripts/checks/usage-report-off.sh holds each `docker run` and Helm install
+  # to its own explicit switch.
+  FERROEHR__USAGE_REPORT__ENABLED: "false"
   # The ONE place this lane's shard count lives. Raising it is this line: the
   # matrix and the `--partition` divisor are both derived from it below, so they
   # cannot drift apart. When it needs raising, the pipeline-budget watcher says

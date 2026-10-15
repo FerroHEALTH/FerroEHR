@@ -58,6 +58,11 @@ on:
 permissions: {}
 
 env:
+  # A FerroEHR started by any step of this workflow sends no usage report to
+  # FerroPULSE: compose interpolates this into every server it brings up, and
+  # scripts/checks/usage-report-off.sh holds each `docker run` and Helm install
+  # to its own explicit switch.
+  FERROEHR__USAGE_REPORT__ENABLED: "false"
   CHART_DIR: deploy/helm/ferroehr
   # `helm push` appends the chart name, so the chart lands at
   # ghcr.io/<owner>/charts/ferroehr.

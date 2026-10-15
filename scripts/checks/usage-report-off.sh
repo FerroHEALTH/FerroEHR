@@ -10,7 +10,10 @@
 # `helm upgrade`, or `docker run` of the server image. Each one carries the
 # switch itself (`FERROEHR__USAGE_REPORT__ENABLED=false`, the same key in a
 # workflow `env:` map, or `usageReport.enabled=false`), or is only ever sourced
-# by scripts that carry it. No openEHR spec governs this — our own design.
+# by scripts that carry it. A `docker run` of the server image carries it on
+# the command itself (`-e FERROEHR__USAGE_REPORT__ENABLED…`): a container
+# inherits nothing from the shell or the job environment. No openEHR spec
+# governs this — our own design.
 #
 # Exempt: deploy/hosted/ (the hosted sandbox is a real deployment and reports
 # like one) and scripts/checks/ (guards read these commands as data).
@@ -26,6 +29,8 @@ readonly SWITCH='FERROEHR__USAGE_REPORT__ENABLED(=|:[[:space:]]*["'\'']?)false|u
 readonly COMPOSE_UP='(docker[ -]compose|(^|[;&|(`[:space:]])dc)([[:space:]].*)?[[:space:]]up([[:space:]]|$)|\[@\]\}"?[[:space:]]+up([[:space:]]|$)'
 readonly HELM_INSTALL='(^|[;&|(`[:space:]])helm[[:space:]]+(upgrade|install)[[:space:]]'
 readonly DOCKER_RUN='docker[[:space:]]+run[[:space:]].*(ghcr\.io/ferrohealth/ferroehr[:@]|[[:space:]"'\'']ferroehr[:@]|FERROEHR_IMAGE|APP_IMAGE)'
+# The switch handed to a container on its own `docker run` command line.
+readonly RUN_SWITCH='(-e|--env)[[:space:]=]+["'\'']?FERROEHR__USAGE_REPORT__ENABLED'
 # A one-shot CLI subcommand reads its configuration and exits without serving.
 readonly ONE_SHOT='[[:space:]](config[[:space:]]+check|db[[:space:]]+(migrate|verify)|healthcheck|usage-report)([[:space:]]|$)'
 
@@ -45,6 +50,14 @@ is_launcher() {
   grep -qE "$COMPOSE_UP|$HELM_INSTALL" <<<"$lines" && return 0
   runs="$(grep -E "$DOCKER_RUN" <<<"$lines" || true)"
   [[ -n "$runs" ]] && grep -qvE "$ONE_SHOT" <<<"$runs"
+}
+
+# Whether $1 starts the server with a `docker run` that does not hand the
+# container the switch itself.
+bare_docker_run() {
+  local runs
+  runs="$(logical_lines "$1" | grep -E "$DOCKER_RUN" | grep -vE "$ONE_SHOT" || true)"
+  [[ -n "$runs" ]] && grep -qvE "$RUN_SWITCH" <<<"$runs"
 }
 
 carries_switch() {
@@ -87,6 +100,10 @@ findings() {
   while IFS= read -r f; do
     [[ -n "$f" ]] || continue
     is_launcher "$f" || continue
+    if bare_docker_run "$f"; then
+      printf '%s\n' "$f"
+      continue
+    fi
     carries_switch "$f" && continue
     carriers="$(sourcers "$f" "$list")"
     covered=0
@@ -122,7 +139,9 @@ self_test() {
   printf '#!/usr/bin/env bash\n. scripts/fam/orphan.sh\n' >"$tmp/scripts/bare-carrier.sh"
   printf 'jobs:\n  a:\n    steps:\n      - run: |\n          docker run -d ghcr.io/ferrohealth/ferroehr:main\n' >"$tmp/.github/workflows/run-on.yml"
   # shellcheck disable=SC2016 # the fixture is literal shell text, never expanded here
-  printf 'jobs:\n  a:\n    env:\n      FERROEHR__USAGE_REPORT__ENABLED: "false"\n    steps:\n      - run: docker run -d "$FERROEHR_IMAGE"\n' >"$tmp/.github/workflows/run-off.yml"
+  printf 'jobs:\n  a:\n    env:\n      FERROEHR__USAGE_REPORT__ENABLED: "false"\n    steps:\n      - run: docker run -d "$FERROEHR_IMAGE"\n' >"$tmp/.github/workflows/run-job-env.yml"
+  # shellcheck disable=SC2016 # the fixture is literal shell text, never expanded here
+  printf 'jobs:\n  a:\n    env:\n      FERROEHR__USAGE_REPORT__ENABLED: "false"\n    steps:\n      - run: docker run -d -e FERROEHR__USAGE_REPORT__ENABLED "$FERROEHR_IMAGE"\n' >"$tmp/.github/workflows/run-off.yml"
   printf '#!/usr/bin/env bash\ndocker compose up -d\n' >"$tmp/deploy/hosted/box.sh"
   printf '#!/usr/bin/env bash\ngrep "docker compose up" x\n' >"$tmp/scripts/checks/guard.sh"
   printf '#!/usr/bin/env bash\ndocker run --rm ferroehr-viewer:smoke\n' >"$tmp/docker/viewer.sh"
@@ -131,7 +150,8 @@ self_test() {
   printf '#!/usr/bin/env bash\ndocker run --rm -v "$d:/etc/ferroehr:ro" "$IMAGE" x\n' >"$tmp/docker/mount.sh"
 
   found="$(cd "$tmp" && findings find scripts docker deploy .github -type f)"
-  for name in scripts/on.sh scripts/array-on.sh scripts/long-on.sh scripts/helm-on.sh scripts/fam/orphan.sh .github/workflows/run-on.yml; do
+  for name in scripts/on.sh scripts/array-on.sh scripts/long-on.sh scripts/helm-on.sh scripts/fam/orphan.sh \
+    .github/workflows/run-on.yml .github/workflows/run-job-env.yml; do
     grep -qxF "$name" <<<"$found" || {
       echo "self-test: $name was not caught" >&2
       failures=1
@@ -146,7 +166,7 @@ self_test() {
     fi
   done
   [[ "$failures" -eq 0 ]] || return 1
-  echo "usage-report-off: self-test OK (six unswitched launchers caught, twelve clean or exempt files allowed)."
+  echo "usage-report-off: self-test OK (seven unswitched launchers caught, twelve clean or exempt files allowed)."
 }
 
 report() {
@@ -159,7 +179,8 @@ report() {
   local f
   while IFS= read -r f; do printf '  %s\n' "$f" >&2; done <<<"$found"
   echo "Export FERROEHR__USAGE_REPORT__ENABLED=false (or pass --set usageReport.enabled=false" >&2
-  echo "to helm) in the launcher, or in every script that sources it." >&2
+  echo "to helm) in the launcher, or in every script that sources it; a docker run of the" >&2
+  echo "server passes -e FERROEHR__USAGE_REPORT__ENABLED=false on its own command line." >&2
   return 1
 }
 

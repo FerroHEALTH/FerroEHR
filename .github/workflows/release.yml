@@ -79,6 +79,13 @@ concurrency:
 
 permissions: {}
 
+env:
+  # A FerroEHR started by any step of this workflow sends no usage report to
+  # FerroPULSE: compose interpolates this into every server it brings up, and
+  # scripts/checks/usage-report-off.sh holds each `docker run` and Helm install
+  # to its own explicit switch.
+  FERROEHR__USAGE_REPORT__ENABLED: "false"
+
 jobs:
   # ── plan: every release fact, verified before anything is built ─────────────
   # Minutes, and it publishes nothing. A red plan costs seconds and leaves the
