@@ -15,7 +15,7 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
-## [4.3.8] - 2026-10-15
+## [4.3.9] - 2026-10-15
 
 ### Added
 
@@ -211,8 +211,16 @@ migrations, so a security-only patch from the v4.3.6 tag cannot carry them.
   amd64 and not on arm64, so it refused both arm64 binaries. It now matches the
   declared loader against the program interpreter (`PT_INTERP`) and accepts it
   in `DT_NEEDED` without requiring it. The `v4.3.7` tag carries this content
-  without the fix; its release was never published, and a tag cannot move, so
-  the release ships as 4.3.8.
+  without the fix, and the `v4.3.8` tag without the OS VEX statements below;
+  neither release was published, and a tag cannot move, so the release ships
+  as 4.3.9.
+- **Three OS findings in the database image carry a VEX judgement.** Debian has
+  no fix yet for CVE-2026-107161 (Cyrus SASL DIGEST-MD5 client),
+  CVE-2026-107708 (the krb5 KDC) or CVE-2026-107778 (libkrb5 `rd_cred.c`) in
+  `ferroehr-postgres`. The first two are not reached: PostgreSQL never starts a
+  SASL bind and the image ships no KDC. CVE-2026-107778 is reached only through
+  a GSSAPI configuration FerroEHR does not ship; it is `affected` with an
+  action statement in `security/vex/postgres-os.openvex.json` and joins #3708.
 
 - **The chart's SBOM is attested** (#3710). The CycloneDX SBOM the chart lane
   writes carried no `serialNumber`, which `actions/attest` requires of a
@@ -367,7 +375,7 @@ migrations, so a security-only patch from the v4.3.6 tag cannot carry them.
   per-EHR default were all off; the boot log now also says when only a
   restricted per-EHR default switches authorization on.
 - **The Helm chart's in-chart clients follow the server's own TLS** (#3714,
-  chart 11.1.3). With `config.server.tls.enabled`, the viewer, FerroBRIDGE,
+  chart 11.1.4). With `config.server.tls.enabled`, the viewer, FerroBRIDGE,
   the ServiceMonitor scrape and the kubelet probes use https, and the viewer
   and FerroBRIDGE trust the CA named by the new `service.tls.caExistingSecret`;
   the chart refuses to render a TLS listener beside an in-chart client without
@@ -11202,8 +11210,8 @@ but has not yet run in production.
   seccomp, default-deny NetworkPolicy) and golden-render validation.
 
 
-[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.8...HEAD
-[4.3.8]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.6...v4.3.8
+[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.9...HEAD
+[4.3.9]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.6...v4.3.9
 [4.3.6]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.5...v4.3.6
 [4.3.5]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.4...v4.3.5
 [4.3.4]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.3...v4.3.4
