@@ -234,3 +234,46 @@ async fn mixed_aggregate_projection_is_a_typed_400() {
         "the refusal names the rule, not a database error: {body}"
     );
 }
+
+/// A query-string parameter wrapped in double quotes binds the JSON string it
+/// denotes on both GET forms of query execution, the value its unquoted
+/// spelling binds (ITS-REST `docs/query/Request.md` §Query parameters; #3781).
+#[tokio::test]
+async fn a_quoted_get_parameter_binds_the_string_it_denotes() {
+    const BY_UID: &str = "SELECT e/ehr_id/value FROM EHR e WHERE e/ehr_id/value = $uid";
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let (status, _headers, body) = put(
+        app(&pool),
+        &format!("{BASE}/definition/query/org.test::by_uid"),
+        BY_UID,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "store: {body}");
+
+    let q = urlencoding::encode(BY_UID);
+    let mut executed: Vec<String> = Vec::new();
+    for uid in ["%22abc%3A%3Ax%3A%3A1%22", "abc%3A%3Ax%3A%3A1"] {
+        for uri in [
+            format!("{BASE}/query/aql?q={q}&uid={uid}"),
+            format!("{BASE}/query/org.test::by_uid?uid={uid}"),
+        ] {
+            let (status, body) = get(app(&pool), &uri).await;
+            assert_eq!(status, StatusCode::OK, "{uri}: {body}");
+            let json: serde_json::Value = serde_json::from_str(&body).expect("result set json");
+            let text = json["meta"]["_executed_aql"]
+                .as_str()
+                .unwrap_or_else(|| panic!("{uri}: no _executed_aql in {body}"));
+            executed.push(text.to_owned());
+        }
+    }
+    assert!(
+        executed.iter().all(|text| text == &executed[0]),
+        "every form and spelling binds one value: {executed:#?}"
+    );
+    assert!(
+        executed[0].contains("abc::x::1") && !executed[0].contains("\"abc"),
+        "the bound value is the unquoted string: {}",
+        executed[0]
+    );
+}

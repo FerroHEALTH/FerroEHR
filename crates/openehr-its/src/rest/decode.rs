@@ -179,9 +179,10 @@ impl QueryPairs {
     /// whose name is not one of the operation's `declared` query parameters,
     /// or `None` when there is none.
     ///
-    /// A value is read the way the generated client writes it: a value that is
-    /// JSON text other than a JSON string (a number, a boolean, an object, an
-    /// array) is that value, and anything else is the text itself.
+    /// A value is read as JSON text where it is JSON: a number, a boolean, an
+    /// object or an array is that value, and a JSON string (a value wrapped in
+    /// double quotes) is the string it denotes, its quotes removed and its
+    /// escapes decoded. Anything else is the text itself.
     ///
     /// # Errors
     /// Returns [`ApiError::BadRequest`] naming the parameter when a member is
@@ -209,13 +210,21 @@ impl QueryPairs {
     }
 }
 
-/// One form-exploded object member's value, read as the client writes it.
+/// One form-exploded object member's value.
+///
+/// ITS-REST types `query_parameters` as a JSON object on the POST form
+/// (`docs/query/Request.md`), so `uid="123"` on a GET form names the string
+/// `123`, exactly as `{"uid": "123"}` does in the body.
 fn member_value<V>(raw: &str) -> V
 where
     V: serde::de::DeserializeOwned + From<String>,
 {
     if raw.starts_with('"') {
-        return V::from(raw.to_owned());
+        // NOTE: a quoted value that is not a well-formed JSON string keeps its
+        // text, quotes included, as it did before this reading existed.
+        return V::from(
+            serde_json::from_str::<String>(raw).unwrap_or_else(|_not_json| raw.to_owned()),
+        );
     }
     // NOTE: no openEHR spec governs a form-exploded member's text, our own design;
     // text that is not JSON is legitimately the member's plain string value.
@@ -451,4 +460,32 @@ pub(crate) fn text_body(body: &[u8]) -> Result<String, ApiError> {
         ));
     }
     utf8(body).map(str::to_owned)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::member_value;
+
+    /// A quoted value is the JSON string it denotes, so `uid="123"` and the
+    /// POST body's `{"uid": "123"}` bind one value.
+    #[test]
+    fn a_quoted_member_is_the_json_string_it_denotes() {
+        assert_eq!(member_value::<String>(r#""123""#), "123");
+        assert_eq!(member_value::<String>(r#""a\"b""#), "a\"b");
+        assert_eq!(member_value::<String>(r#""""#), "");
+    }
+
+    /// An unquoted string value is the text itself, as before.
+    #[test]
+    fn an_unquoted_member_is_its_text() {
+        assert_eq!(member_value::<String>("abc::x::1"), "abc::x::1");
+        assert_eq!(member_value::<String>("123"), "123");
+    }
+
+    /// A value that only starts with a quote keeps its text.
+    #[test]
+    fn a_malformed_quoted_member_keeps_its_text() {
+        assert_eq!(member_value::<String>(r#""abc"#), "\"abc");
+        assert_eq!(member_value::<String>(r#""a" b"#), "\"a\" b");
+    }
 }

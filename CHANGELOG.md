@@ -265,6 +265,10 @@ workflow refuses a tag that has no matching section here.
   archetyped `other_context` content a template makes mandatory, and never sets `value` and `null_flavour` on one
   ELEMENT (RM `Inv_null_flavour_indicated`). The cases it still cannot cover
   are #3779 and #3780.
+- **A quoted query parameter on a GET query binds the string it names** (#3781).
+  On `GET /query/aql?q=…` and `GET /query/{qualified_query_name}`, `uid="123"`
+  now binds the string `123`, as `{"uid": "123"}` does in a POST body; the
+  quotes were kept as part of the value. An unquoted value reads as before.
 - **The web template keeps an ELEMENT's `value` beside its `null_flavour`.** An
   ELEMENT constraining a text `value` and a coded `null_flavour` was folded
   into one coded node with an `other` input, which dropped the `value`. That
