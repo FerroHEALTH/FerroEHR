@@ -38,13 +38,11 @@ list() {
 
 rm -rf "$DEST"
 fetch schemas/report-envelope.v2.json "$DEST/schemas/report-envelope.v2.json"
-for schema in report-envelope.v2; do
-  for validity in valid invalid; do
-    dir="schemas/examples/${schema}/${validity}"
-    while IFS= read -r name; do
-      fetch "${dir}/${name}" "$DEST/${dir}/${name}"
-    done < <(list "$dir")
-  done
+for validity in valid invalid; do
+  dir="schemas/examples/report-envelope.v2/${validity}"
+  while IFS= read -r name; do
+    fetch "${dir}/${name}" "$DEST/${dir}/${name}"
+  done < <(list "$dir")
 done
 
 cat >"$DEST/PROVENANCE.md" <<EOF
