@@ -13,7 +13,9 @@
 //! path, no AQL text and no licence id: the payload types have no field that
 //! could hold one, and [`window`] records route templates only. On by default;
 //! `[usage_report] enabled = false` (`FERROEHR__USAGE_REPORT__ENABLED=false`)
-//! stops it, and the boot line says which ([`reporter::announce`]).
+//! stops it, a CI run (`GITHUB_ACTIONS` or `CI` set to `true` or `1`) stops it
+//! whatever the switch says, and the boot line says which
+//! ([`reporter::announce`]).
 //!
 //! - [`config`]: the `[usage_report]` section.
 //! - [`payload`]: the typed report.
