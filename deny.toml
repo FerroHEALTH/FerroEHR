@@ -73,6 +73,13 @@ ignore = [
   # no attack surface. DELETING EVENT: the first paste-free Leptos release.
   # https://rustsec.org/advisories/RUSTSEC-2024-0436
   { id = "RUSTSEC-2024-0436", reason = "compile-time proc-macro via the Leptos 0.8 family (viewer); no runtime surface" },
+  # 2026-10-16 (#3798): every zip 8.x release is yanked, and utoipa-swagger-ui
+  # 10.0.1 (the latest, re-checked 2026-10-16) still requires zip ^8.6 as a
+  # build dependency to unpack its own vendored Swagger UI archive. Yanked,
+  # not an advisory: build-time only, no input from outside the build. Our
+  # own zip use is on 9.x. DELETING EVENT: the utoipa-swagger-ui release that
+  # accepts zip 9 (#3799).
+  { crate = "zip@8.6.0", reason = "yanked; build dependency of utoipa-swagger-ui 10.0.1 only, unpacking its own vendored archive (#3799)" },
 ]
 
 [licenses]
