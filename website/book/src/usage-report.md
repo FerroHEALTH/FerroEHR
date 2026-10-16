@@ -50,44 +50,56 @@ Every report carries these fields:
 
 | Field | Sent in | What it is |
 |---|---|---|
-| `schema` | both | Always `1`, the version of the report format. |
+| `schema` | both | Always `2`, the version of the report format. |
 | `event` | both | `start` or `daily`. |
 | `first_start` | `start` | `true` when this start created the instance id, which marks a new installation; `false` on every later start. |
 | `product` | both | Always `ferroehr`. |
 | `instance_id` | both | A random UUID (version 4), created at the first start and stored in the database. It is not derived from the host, the licence or anything else about the deployment. Every replica shares it, and a restore of the database keeps it. |
 | `version` | both | The server version, for example `4.3.4`. |
 | `git_sha` | both | The commit the binary was built from, 7 to 40 hex digits. A build that recorded no commit, such as one from a source tarball, sends `0000000`. |
-| `spec_profile` | both | The [`spec_profile`](installation/configuration.md#spec_profile) setting: `development` or `stable`. |
 | `licence` | both | The licence grant type: `commercial` when an installed licence permits commercial use, `non-commercial` otherwise. Never the licence id. |
 | `deployment` | both | How the instance was deployed: `helm`, `compose`, `binary` or `unknown`. It comes from `[usage_report] deployment`, which the Helm chart sets to `helm`. |
 | `uptime_s` | both | Seconds since this process started. |
-| `db_ok` | both | Whether the database answered the health check. |
-| `migrations_ok` | both | Whether the database carries this build's migrations. |
-| `postgres_major` | both | The PostgreSQL major version, for example `18`. |
 | `cpu_bucket` | both | The CPUs available to the process, as a range: `1-2`, `3-4`, `5-8`, `9-16` or `17+`. |
 | `memory_bucket` | both | The memory available to the process in GiB, the smaller of the host's memory and the container limit, as a range: `<4`, `4-8`, `8-16`, `16-32` or `32+`. Off Linux the server cannot read it and sends `<4`. |
+| `status` | both | The instance's state, below. |
 | `metrics` | `daily` | The performance aggregates below. |
+
+The `status` object carries four members:
+
+| Member | What it is |
+|---|---|
+| `db_ok` | Whether the database answered the health check. |
+| `migrations_ok` | Whether the database carries this build's migrations. |
+| `postgres_major` | The PostgreSQL major version, for example `18`. |
+| `spec_profile` | The [`spec_profile`](installation/configuration.md#spec_profile) setting: `development` or `stable`. |
+
+Earlier releases send version `1` of the format, which carries the four
+`status` members at the top level and the daily metrics described in that
+release's book.
 
 A start report, formatted here for reading (the server sends it on one line):
 
 ```json
 {
-  "schema": 1,
+  "schema": 2,
   "event": "start",
   "first_start": true,
   "product": "ferroehr",
   "instance_id": "5f0c6b2e-3d4a-4c8b-9e1f-2a3b4c5d6e7f",
   "version": "4.3.4",
   "git_sha": "1a2b3c4d",
-  "spec_profile": "stable",
   "licence": "non-commercial",
   "deployment": "helm",
   "uptime_s": 0,
-  "db_ok": true,
-  "migrations_ok": true,
-  "postgres_major": 18,
   "cpu_bucket": "3-4",
-  "memory_bucket": "8-16"
+  "memory_bucket": "8-16",
+  "status": {
+    "db_ok": true,
+    "migrations_ok": true,
+    "postgres_major": 18,
+    "spec_profile": "stable"
+  }
 }
 ```
 
@@ -100,16 +112,21 @@ daily report:
 "metrics": {
   "window_24h": {
     "requests_bucket": "1k-10k",
-    "routes": {
+    "groups": {
       "composition": {
         "p50_ms": 12.5, "p95_ms": 80.1, "p99_ms": 240.0,
         "errors_5xx": 0,
         "histogram": [10, 40, 120, 300, 90, 30, 8, 2, 0, 0, 0]
+      },
+      "aql": {
+        "p50_ms": 60.0, "p95_ms": 310.0, "p99_ms": 900.0,
+        "errors_5xx": 0,
+        "histogram": [0, 5, 40, 200, 500, 300, 120, 30, 4, 1, 0]
       }
     },
-    "aql": {
-      "executions": 1200, "slow": 3, "p95_ms": 310.0,
-      "histogram": [0, 5, 40, 200, 500, 300, 120, 30, 4, 1, 0]
+    "counters": {
+      "aql_executions": 1200,
+      "aql_slow": 3
     }
   }
 }
@@ -119,13 +136,15 @@ daily report:
   window, as a range: `0`, `1-100`, `100-1k`, `1k-10k`, `10k-100k` or
   `100k+`. Each range includes its lower bound and excludes its upper one, so
   `1-100` means 1 to 99.
-- **`routes`:** one entry per group of endpoints that served at least one
-  request. A request is placed in a group by the route template it matched,
+- **`groups`:** one entry per group of endpoints that served at least one
+  request, and `aql` when at least one AQL query ran. A request is placed in a group by the route template it matched,
   never by the path the client sent. The groups are `ehr` (EHR and
   `EHR_STATUS`), `composition` (compositions and their version history),
   `contribution`, `query` (query execution), `definition` (templates and
   stored queries), `directory`, `admin`, and `other` for everything else,
-  such as demographics, messaging and terminology.
+  such as demographics, messaging and terminology. The `aql` group counts
+  AQL executions wherever the query came from, and its `errors_5xx` is
+  always `0`.
 - **`p50_ms`, `p95_ms`, `p99_ms`:** the median, 95th and 99th percentile
   latency of the group in milliseconds, estimated from its histogram.
 - **`errors_5xx`:** the responses with a 5xx status.
@@ -133,10 +152,10 @@ daily report:
   bounds in milliseconds are 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000,
   and no bound for the last. Counts add up across instances, so a fleet
   percentile comes from summed histograms.
-- **`aql`:** AQL execution over the window. `executions` counts the queries
-  that reached execution, `slow` the executions that took longer than
+- **`counters`:** `aql_executions` counts the AQL queries that reached
+  execution, and `aql_slow` the executions that took longer than
   [`slow_aql_ms`](installation/config-server.md#usage_report) (its default
-  is in the configuration reference), and `p95_ms` and `histogram` are as above.
+  is in the configuration reference).
 
 ## What a report never contains
 

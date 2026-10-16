@@ -1,11 +1,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The report payload, version 1: the `FerroPULSE` envelope with FerroEHR's
-//! `metrics` object.
+//! The report payload, version 2: the `FerroPULSE` envelope with FerroEHR's
+//! `status` and `metrics` objects.
 //!
 //! No openEHR spec governs this — our own design. The field set, the value sets
-//! and the bounds are `FerroPULSE`'s report v1 contract; the integration tests
+//! and the bounds are `FerroPULSE`'s report v2 contract, whose `status` and
+//! `metrics` shapes are generic across products; FerroEHR fills them with the
+//! closed key sets below. The integration tests
 //! validate every payload this module renders against that contract's JSON
 //! Schemas, vendored under `corpus/ferropulse/`. Every type here is closed: a
 //! field that is not declared cannot be serialized, and the `start` and `daily`
@@ -33,13 +35,13 @@ pub const MAX_MS: f64 = 600_000.0;
 /// The largest uptime a report may carry: ten years of seconds.
 pub const MAX_UPTIME_S: u64 = 315_576_000;
 
-/// The payload schema version; serializes as the integer `1`.
+/// The payload schema version; serializes as the integer `2`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct SchemaV1;
+pub struct SchemaV2;
 
-impl Serialize for SchemaV1 {
+impl Serialize for SchemaV2 {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        serializer.serialize_u8(1)
+        serializer.serialize_u8(2)
     }
 }
 
@@ -167,9 +169,9 @@ impl RequestsBucket {
     }
 }
 
-/// One route-template group's latency and errors over the window.
+/// One group's latency and errors over the window.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct RouteStats {
+pub struct GroupStats {
     /// The median latency, in milliseconds.
     pub p50_ms: f64,
     /// The 95th percentile latency, in milliseconds.
@@ -178,51 +180,50 @@ pub struct RouteStats {
     pub p99_ms: f64,
     /// Responses with a 5xx status.
     pub errors_5xx: u64,
-    /// The request count per latency bucket.
+    /// The count per latency bucket.
     pub histogram: [u64; BUCKETS],
 }
 
-/// The route-template groups with requests in the window; an absent group had
-/// none.
+/// The groups with traffic in the window: the route-template groups and AQL
+/// execution. An absent group had none.
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]
-pub struct Routes {
+pub struct Groups {
     /// EHR and `EHR_STATUS` endpoints.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub ehr: Option<RouteStats>,
+    pub ehr: Option<GroupStats>,
     /// COMPOSITION endpoints.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub composition: Option<RouteStats>,
+    pub composition: Option<GroupStats>,
     /// CONTRIBUTION endpoints.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub contribution: Option<RouteStats>,
+    pub contribution: Option<GroupStats>,
     /// Query execution endpoints.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub query: Option<RouteStats>,
+    pub query: Option<GroupStats>,
     /// Definition endpoints (templates, archetypes, stored queries).
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub definition: Option<RouteStats>,
+    pub definition: Option<GroupStats>,
     /// DIRECTORY endpoints.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub directory: Option<RouteStats>,
+    pub directory: Option<GroupStats>,
     /// Administrative endpoints.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub admin: Option<RouteStats>,
+    pub admin: Option<GroupStats>,
     /// Every other endpoint of the API tree.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub other: Option<RouteStats>,
+    pub other: Option<GroupStats>,
+    /// AQL execution, wherever the query came from; `errors_5xx` is always 0.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub aql: Option<GroupStats>,
 }
 
-/// AQL execution over the window.
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct AqlStats {
-    /// Queries that reached execution.
-    pub executions: u64,
-    /// Executions above the configured slow threshold.
-    pub slow: u64,
-    /// The 95th percentile execution time, in milliseconds.
-    pub p95_ms: f64,
-    /// The execution count per latency bucket.
-    pub histogram: [u64; BUCKETS],
+/// The window's counters.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct Counters {
+    /// AQL queries that reached execution.
+    pub aql_executions: u64,
+    /// AQL executions above the configured slow threshold.
+    pub aql_slow: u64,
 }
 
 /// The 24-hour window a daily report covers.
@@ -230,10 +231,10 @@ pub struct AqlStats {
 pub struct Window24h {
     /// All requests of the API tree, bucketed.
     pub requests_bucket: RequestsBucket,
-    /// Per route-template group.
-    pub routes: Routes,
-    /// AQL execution.
-    pub aql: AqlStats,
+    /// Per group.
+    pub groups: Groups,
+    /// The counters.
+    pub counters: Counters,
 }
 
 /// FerroEHR's `metrics` object.
@@ -241,6 +242,19 @@ pub struct Window24h {
 pub struct Metrics {
     /// The window since the previous daily report.
     pub window_24h: Window24h,
+}
+
+/// FerroEHR's `status` object, carried by both events.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct Status {
+    /// Whether the database answered.
+    pub db_ok: bool,
+    /// Whether the schema carries the migrations.
+    pub migrations_ok: bool,
+    /// The `PostgreSQL` major version.
+    pub postgres_major: u16,
+    /// The openEHR specification generation set in force.
+    pub spec_profile: SpecProfile,
 }
 
 /// The event a report records, with the members only that event carries.
@@ -262,8 +276,8 @@ pub enum Event {
 /// One report, exactly as it is sent.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Report {
-    /// Always `1`.
-    pub schema: SchemaV1,
+    /// Always `2`.
+    pub schema: SchemaV2,
     /// The event and its event-specific members.
     #[serde(flatten)]
     pub event: Event,
@@ -275,24 +289,18 @@ pub struct Report {
     pub version: String,
     /// The commit the binary was built from.
     pub git_sha: String,
-    /// The openEHR specification generation set in force.
-    pub spec_profile: SpecProfile,
     /// The licence grant type.
     pub licence: LicenceGrant,
     /// How the instance was deployed.
     pub deployment: Deployment,
     /// Seconds since this process started.
     pub uptime_s: u64,
-    /// Whether the database answered.
-    pub db_ok: bool,
-    /// Whether the schema carries the migrations.
-    pub migrations_ok: bool,
-    /// The `PostgreSQL` major version.
-    pub postgres_major: u16,
     /// The CPUs available, bucketed.
     pub cpu_bucket: CpuBucket,
     /// The memory available, bucketed.
     pub memory_bucket: MemoryBucket,
+    /// The instance's state.
+    pub status: Status,
 }
 
 /// The `git_sha` a build reports: the commit when the build recorded one in

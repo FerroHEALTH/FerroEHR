@@ -17,6 +17,14 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **The usage report moves to FerroPULSE report format 2** (#3795). `schema`
+  is `2`; `spec_profile`, `db_ok`, `migrations_ok` and `postgres_major` move
+  into a `status` object on both reports; the daily `metrics.window_24h` holds
+  `groups` (the eight route groups and `aql`, each with p50/p95/p99, 5xx
+  count and histogram) and `counters` (`aql_executions`, `aql_slow`). The
+  report carries no new information. `ferroehr usage-report --print` prints
+  the new body.
+
 - **The usage report is off in CI** (#3794). When `GITHUB_ACTIONS` or `CI` is
   `true` or `1` in the server's environment, the server sends no usage report
   and stores no instance id, whatever `usage_report.enabled` says, and the boot

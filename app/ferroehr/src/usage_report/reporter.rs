@@ -29,7 +29,7 @@ use crate::telemetry::health::{HealthIndicator as _, HealthStatus};
 use crate::telemetry::indicators::{DbHealth, MigrationsHealth};
 use crate::usage_report::config::{Deployment, Switch, UsageReportConfig};
 use crate::usage_report::payload::{
-    CpuBucket, Event, LicenceGrant, MAX_UPTIME_S, MemoryBucket, Product, Report, SchemaV1,
+    CpuBucket, Event, LicenceGrant, MAX_UPTIME_S, MemoryBucket, Product, Report, SchemaV2, Status,
     report_git_sha,
 };
 use crate::usage_report::store::{self, DailyClaim, StoreError};
@@ -351,23 +351,25 @@ impl UsageReporter {
             == HealthStatus::Up;
         let postgres_major = store::postgres_major(&self.pool).await?;
         Ok(Report {
-            schema: SchemaV1,
+            schema: SchemaV2,
             event,
             product: Product::FerroEhr,
             instance_id,
             version: self.identity.version.clone(),
             git_sha: self.identity.git_sha.clone(),
-            spec_profile: self.identity.spec_profile,
             licence: self.identity.licence,
             deployment: self.identity.deployment,
             uptime_s: self.started.elapsed().as_secs().min(MAX_UPTIME_S),
-            db_ok,
-            migrations_ok,
-            postgres_major,
             cpu_bucket: CpuBucket::of(
                 std::thread::available_parallelism().map_or(1, std::num::NonZero::get),
             ),
             memory_bucket: MemoryBucket::of(host_memory_bytes().unwrap_or_default()),
+            status: Status {
+                db_ok,
+                migrations_ok,
+                postgres_major,
+                spec_profile: self.identity.spec_profile,
+            },
         })
     }
 

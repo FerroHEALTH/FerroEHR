@@ -1,0 +1,93 @@
+{
+  "schema": 2,
+  "event": "daily",
+  "product": "ferroterm",
+  "instance_id": "5f0c6b2e-3d4a-4c8b-9e1f-2a3b4c5d6e7f",
+  "version": "1.2.0",
+  "git_sha": "1a2b3c4d",
+  "licence": "non-commercial",
+  "deployment": "compose",
+  "uptime_s": 86400,
+  "cpu_bucket": "3-4",
+  "memory_bucket": "8-16",
+  "status": {
+    "index_ok": true,
+    "code_systems": [
+      "fhir",
+      "loinc",
+      "snomed"
+    ],
+    "viewer": true,
+    "persistence": false
+  },
+  "metrics": {
+    "window_24h": {
+      "requests_bucket": "1k-10k",
+      "groups": {
+        "lookup": {
+          "p50_ms": 1.2,
+          "p95_ms": 4.0,
+          "p99_ms": 9.5,
+          "errors_5xx": 0,
+          "histogram": [
+            0.5,
+            800,
+            300,
+            90,
+            20,
+            6,
+            2,
+            1,
+            0,
+            0,
+            0
+          ]
+        },
+        "validate_code": {
+          "p50_ms": 1.2,
+          "p95_ms": 4.0,
+          "p99_ms": 9.5,
+          "errors_5xx": 1,
+          "histogram": [
+            1200,
+            800,
+            300,
+            90,
+            20,
+            6,
+            2,
+            1,
+            0,
+            0,
+            0
+          ]
+        },
+        "expand": {
+          "p50_ms": 1.2,
+          "p95_ms": 85.0,
+          "p99_ms": 9.5,
+          "errors_5xx": 0,
+          "histogram": [
+            10,
+            40,
+            120,
+            300,
+            90,
+            30,
+            8,
+            2,
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "counters": {
+        "fhir_r4": 120,
+        "fhir_r4b": 2300,
+        "fhir_r5": 0,
+        "fhir_r6": 3
+      }
+    }
+  }
+}

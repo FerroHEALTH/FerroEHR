@@ -4,7 +4,7 @@
 //! The usage report client against a real database and a local mock collector.
 //!
 //! No openEHR spec governs this — our own design. Every payload a test sends is
-//! validated against `FerroPULSE`'s report v1 JSON Schemas, vendored with their
+//! validated against `FerroPULSE`'s report v2 JSON Schema, vendored with its
 //! own valid and invalid examples under `corpus/ferropulse/`; the examples run
 //! through the validator first, so a validator that accepts everything cannot
 //! pass the suite.
@@ -38,9 +38,6 @@ use sqlx::PgPool;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
-/// The `$id` the envelope schema's `$ref` to the metrics schema resolves to.
-const METRICS_SCHEMA_ID: &str = "https://ferropulse.eu/schemas/ferroehr-metrics.v1.json";
-
 /// The vendored contract.
 fn contract_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/ferropulse/schemas")
@@ -51,25 +48,11 @@ fn read_json(file: &Path) -> Value {
     serde_json::from_str(&text).expect("a vendored contract file is JSON")
 }
 
-/// The envelope validator, with the metrics schema registered under its `$id`
-/// so the envelope's `$ref` resolves offline.
+/// The envelope validator; `status` and `metrics` are `$defs` of the one
+/// schema, so every `$ref` resolves inside it.
 fn envelope_validator() -> jsonschema::Validator {
-    let metrics = read_json(&contract_dir().join("ferroehr-metrics.v1.json"));
-    let envelope = read_json(&contract_dir().join("report-envelope.v1.json"));
-    let registry = jsonschema::Registry::new()
-        .add(METRICS_SCHEMA_ID, metrics)
-        .expect("the metrics schema id is a URI")
-        .prepare()
-        .expect("the registry prepares");
-    jsonschema::options()
-        .with_registry(&registry)
-        .build(&envelope)
+    jsonschema::validator_for(&read_json(&contract_dir().join("report-envelope.v2.json")))
         .expect("the envelope schema compiles")
-}
-
-fn metrics_validator() -> jsonschema::Validator {
-    jsonschema::validator_for(&read_json(&contract_dir().join("ferroehr-metrics.v1.json")))
-        .expect("the metrics schema compiles")
 }
 
 /// Every JSON file under `dir`, sorted.
@@ -232,14 +215,11 @@ fn record_traffic() {
 // ── the validator itself ──────────────────────────────────────────────────────
 
 /// The vendored examples decide the validator first: every valid example
-/// passes and every invalid one fails, for both schemas.
+/// passes and every invalid one fails.
 #[test]
 fn the_contract_examples_decide_the_validator() {
     let root = contract_dir().join("examples");
-    let cases = [
-        ("report-envelope.v1", envelope_validator()),
-        ("ferroehr-metrics.v1", metrics_validator()),
-    ];
+    let cases = [("report-envelope.v2", envelope_validator())];
     for (schema, validator) in cases {
         let valid = examples(&root.join(schema).join("valid"));
         let invalid = examples(&root.join(schema).join("invalid"));
@@ -262,10 +242,10 @@ fn the_contract_examples_decide_the_validator() {
 
 // ── payload shape ─────────────────────────────────────────────────────────────
 
-/// Both events validate against the contract, and the v1 field set is pinned:
+/// Both events validate against the contract, and the v2 field set is pinned:
 /// a field added to the payload fails here before it reaches a collector.
 #[tokio::test]
-async fn start_and_daily_payloads_carry_exactly_the_v1_fields() {
+async fn start_and_daily_payloads_carry_exactly_the_v2_fields() {
     let db = testkit::db().await.expect("testkit database");
     let server = collector(204).await;
     let reporter = reporter(&db, &server);
@@ -290,18 +270,15 @@ async fn start_and_daily_payloads_carry_exactly_the_v1_fields() {
 
     let envelope = [
         "cpu_bucket",
-        "db_ok",
         "deployment",
         "event",
         "git_sha",
         "instance_id",
         "licence",
         "memory_bucket",
-        "migrations_ok",
-        "postgres_major",
         "product",
         "schema",
-        "spec_profile",
+        "status",
         "uptime_s",
         "version",
     ];
@@ -313,41 +290,61 @@ async fn start_and_daily_payloads_carry_exactly_the_v1_fields() {
     };
     assert_eq!(keys(start), with("first_start"));
     assert_eq!(keys(daily), with("metrics"));
+    let status = ["db_ok", "migrations_ok", "postgres_major", "spec_profile"];
+    assert_eq!(keys(&start["status"]), status);
+    assert_eq!(keys(&daily["status"]), status);
     assert_eq!(keys(&daily["metrics"]), ["window_24h"]);
     assert_eq!(
         keys(&daily["metrics"]["window_24h"]),
-        ["aql", "requests_bucket", "routes"]
+        ["counters", "groups", "requests_bucket"]
     );
     assert_eq!(
-        keys(&daily["metrics"]["window_24h"]["aql"]),
-        ["executions", "histogram", "p95_ms", "slow"]
+        keys(&daily["metrics"]["window_24h"]["counters"]),
+        ["aql_executions", "aql_slow"]
+    );
+    let group_members = ["errors_5xx", "histogram", "p50_ms", "p95_ms", "p99_ms"];
+    assert_eq!(
+        keys(&daily["metrics"]["window_24h"]["groups"]["composition"]),
+        group_members
     );
     assert_eq!(
-        keys(&daily["metrics"]["window_24h"]["routes"]["composition"]),
-        ["errors_5xx", "histogram", "p50_ms", "p95_ms", "p99_ms"]
+        keys(&daily["metrics"]["window_24h"]["groups"]["aql"]),
+        group_members
     );
 
     assert_eq!(start["event"], "start");
-    assert_eq!(start["schema"], 1);
+    assert_eq!(start["schema"], 2);
     assert_eq!(start["product"], "ferroehr");
     assert_eq!(start["licence"], "non-commercial");
     assert_eq!(start["deployment"], "compose");
-    assert_eq!(start["db_ok"], true);
-    assert_eq!(start["migrations_ok"], true);
-    assert_eq!(start["postgres_major"], 18);
+    assert_eq!(start["status"]["db_ok"], true);
+    assert_eq!(start["status"]["migrations_ok"], true);
+    assert_eq!(start["status"]["postgres_major"], 18);
     assert_eq!(start["instance_id"], daily["instance_id"]);
 
     let window = &daily["metrics"]["window_24h"];
     assert_eq!(window["requests_bucket"], "1-100");
-    assert_eq!(keys(&window["routes"]), ["composition", "ehr", "query"]);
-    let composition = &window["routes"]["composition"];
+    assert_eq!(
+        keys(&window["groups"]),
+        ["aql", "composition", "ehr", "query"]
+    );
+    let composition = &window["groups"]["composition"];
     assert_eq!(composition["errors_5xx"], 1);
     assert_eq!(
         composition["histogram"],
         serde_json::json!([0, 0, 40, 0, 0, 0, 0, 0, 0, 0, 1])
     );
-    assert_eq!(window["aql"]["executions"], 2);
-    assert_eq!(window["aql"]["slow"], 1, "the default threshold is 1000 ms");
+    let aql = &window["groups"]["aql"];
+    assert_eq!(aql["errors_5xx"], 0, "an AQL execution carries no status");
+    assert_eq!(
+        aql["histogram"],
+        serde_json::json!([0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0])
+    );
+    assert_eq!(window["counters"]["aql_executions"], 2);
+    assert_eq!(
+        window["counters"]["aql_slow"], 1,
+        "the default threshold is 1000 ms"
+    );
 }
 
 /// No route parameter, AQL text or licence identity can reach a report: a
@@ -402,9 +399,9 @@ async fn no_route_parameter_query_text_or_licence_id_reaches_the_payload() {
     }
     let daily = bodies.last().expect("the daily report");
     let window = &daily["metrics"]["window_24h"];
-    assert_eq!(window["aql"]["executions"], 1);
+    assert_eq!(window["counters"]["aql_executions"], 1);
     // The query ran through the service, not the HTTP layer, so it adds no route.
-    assert_eq!(keys(&window["routes"]), ["composition"]);
+    assert_eq!(keys(&window["groups"]), ["aql", "composition"]);
 }
 
 // ── behaviour ────────────────────────────────────────────────────────────────
@@ -519,8 +516,11 @@ async fn the_preview_equals_what_is_sent() {
     let [_, start, daily] = bodies.as_slice() else {
         panic!("expected three reports: {bodies:?}");
     };
+    let validator = envelope_validator();
     let rendered = |preview: &ferroehr::usage_report::reporter::Preview| {
-        serde_json::to_value(&preview.report).expect("the preview renders")
+        let body = serde_json::to_value(&preview.report).expect("the preview renders");
+        assert_valid_report(&validator, &body);
+        body
     };
     assert_eq!(
         without_uptime(rendered(&start_preview)),
