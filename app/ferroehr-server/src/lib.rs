@@ -39,6 +39,7 @@ use ferroehr::system_log::config::AuditPosture;
 use ferroehr::system_log::sender::{AuditHandle, AuditSender, SubjectResolver};
 use ferroehr::telemetry::build_info::BuildInfo;
 use ferroehr::telemetry::health::{HealthIndicator, HealthRegistry};
+use ferroehr::usage_report::config::Switch;
 use ferroehr::usage_report::reporter::{EventKind, Identity, NOTICE_URL, UsageReporter};
 use ferroehr::versioning::signature::signer::Signer;
 use ferroehr_rest::config::AppConfig;
@@ -442,11 +443,16 @@ async fn run_usage_report(
              first start creates the real one"
         );
     }
-    if !config.usage_report.enabled {
-        eprintln!(
+    match config.usage_report.switch() {
+        Switch::On => {}
+        Switch::OffByConfig => eprintln!(
             "note: the usage report is OFF (usage_report.enabled = false); this instance sends \
              nothing"
-        );
+        ),
+        Switch::OffInCi(ci) => eprintln!(
+            "note: the usage report is OFF: CI detected ({}); this instance sends nothing",
+            ci.variable()
+        ),
     }
     eprintln!("details: {NOTICE_URL}");
     Ok(())

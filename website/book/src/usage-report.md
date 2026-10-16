@@ -169,7 +169,8 @@ docker compose exec ferroehr /usr/local/bin/ferroehr usage-report --print --even
 
 The JSON goes to stdout on one line. Notes go to stderr: when the database
 holds no instance id yet, the id shown is a sample, and the first start creates
-the real one; with the report off, the command says so. It works with the
+the real one; with the report off, the command says so, and names the CI variable when a CI run
+switched it off. It works with the
 report off, and then shows the instance id stored at an earlier start. That id
 is what you give Cadasto to have stored reports erased (see
 [Your right to object](#your-right-to-object)).
@@ -202,6 +203,14 @@ Under the Helm chart the switch is `usageReport.enabled` (on the command line,
 configuration together with `deployment = "helm"`, and it refuses to render
 when `config.usage_report.enabled` or `config.usage_report.deployment` is also
 set.
+
+In a CI run the report is off whatever the switch says: when `GITHUB_ACTIONS` or
+`CI` is `true` or `1` (in any letter case) in the server's environment, it
+sends nothing, and the boot line reads `usage report OFF: CI detected
+(GITHUB_ACTIONS); nothing is sent` with the variable it found. A container does
+not inherit the CI runner's environment, so a CI job that starts the image sets
+`FERROEHR__USAGE_REPORT__ENABLED=false` itself; the collector also hides reports
+that arrive from GitHub Actions runner addresses from every dashboard.
 
 With the report off, the server sends nothing to FerroPULSE and writes nothing
 to its database for the report, and the boot line says `usage report OFF`.

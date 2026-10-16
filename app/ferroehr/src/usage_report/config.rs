@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `[usage_report]` configuration section.
+//! The `[usage_report]` configuration section, and the CI detection that
+//! switches the report off on a CI runner.
 //!
 //! No openEHR spec governs configuration or the usage report — our own design.
 
@@ -46,6 +47,59 @@ pub struct UsageReportConfig {
     pub slow_aql_ms: u64,
     /// How the instance was deployed; the deployment artifacts set it.
     pub deployment: Deployment,
+    /// The CI marker of the environment the configuration was assembled from.
+    ///
+    /// Never read from a file or a `FERROEHR__` variable: assembly sets it
+    /// from [`CiDetected::from_lookup`] over the same environment snapshot.
+    #[serde(skip)]
+    pub ci: Option<CiDetected>,
+}
+
+/// The variables that mark a CI run, in the order they are read.
+///
+/// GitHub Actions sets both on every runner
+/// (<https://docs.github.com/en/actions/reference/workflows-and-actions/variables#default-environment-variables>),
+/// and most other CI services set `CI`.
+pub const CI_VARIABLES: [&str; 2] = ["GITHUB_ACTIONS", "CI"];
+
+/// A CI run the process takes part in, named by the variable that marks it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CiDetected {
+    variable: &'static str,
+}
+
+impl CiDetected {
+    /// Returns the first of [`CI_VARIABLES`] that `lookup` reports as `true`
+    /// or `1`, compared case-insensitively.
+    ///
+    /// Any other value, `false` included, and an unset variable mark no CI
+    /// run.
+    #[must_use]
+    pub fn from_lookup<'a>(lookup: impl Fn(&str) -> Option<&'a str>) -> Option<Self> {
+        CI_VARIABLES
+            .into_iter()
+            .find(|name| {
+                lookup(name).is_some_and(|value| value == "1" || value.eq_ignore_ascii_case("true"))
+            })
+            .map(|variable| Self { variable })
+    }
+
+    /// Returns the name of the variable that marks the CI run.
+    #[must_use]
+    pub const fn variable(self) -> &'static str {
+        self.variable
+    }
+}
+
+/// Whether a process sends the report, and why not.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Switch {
+    /// The report runs.
+    On,
+    /// `usage_report.enabled = false`.
+    OffByConfig,
+    /// A CI run was detected; the configuration cannot switch it back on.
+    OffInCi(CiDetected),
 }
 
 impl Default for UsageReportConfig {
@@ -55,11 +109,26 @@ impl Default for UsageReportConfig {
             endpoint: SecretUrl::new("https://report.ferropulse.eu/v1/report"),
             slow_aql_ms: 1000,
             deployment: Deployment::Unknown,
+            ci: None,
         }
     }
 }
 
 impl UsageReportConfig {
+    /// Returns whether this process sends the report: `enabled`, and no CI run
+    /// detected.
+    ///
+    /// The configuration can only switch the report off; in CI it stays off
+    /// whatever `enabled` says.
+    #[must_use]
+    pub fn switch(&self) -> Switch {
+        match (self.enabled, self.ci) {
+            (false, _) => Switch::OffByConfig,
+            (true, Some(ci)) => Switch::OffInCi(ci),
+            (true, None) => Switch::On,
+        }
+    }
+
     /// Returns the endpoint's semantic defects, one error per defect.
     ///
     /// The endpoint must parse as an absolute URL, carry no credentials, and be
@@ -158,6 +227,87 @@ mod tests {
         );
         assert_eq!(with_endpoint("ftp://report.example/").errors().len(), 1);
         assert_eq!(with_endpoint("not a url").errors().len(), 1);
+    }
+
+    /// The switch `config` takes in the environment `vars`.
+    fn switch_in(config: &UsageReportConfig, vars: &[(&str, &'static str)]) -> Switch {
+        let config = UsageReportConfig {
+            ci: CiDetected::from_lookup(|name| {
+                vars.iter()
+                    .find(|(key, _)| *key == name)
+                    .map(|(_, value)| *value)
+            }),
+            ..config.clone()
+        };
+        config.switch()
+    }
+
+    #[test]
+    fn github_actions_true_switches_the_report_off() {
+        let on = UsageReportConfig::default();
+        for value in ["true", "TRUE", "True", "1"] {
+            assert_eq!(
+                switch_in(&on, &[("GITHUB_ACTIONS", value)]),
+                Switch::OffInCi(CiDetected {
+                    variable: "GITHUB_ACTIONS"
+                }),
+                "GITHUB_ACTIONS={value}"
+            );
+        }
+    }
+
+    #[test]
+    fn ci_one_switches_the_report_off() {
+        let switch = switch_in(&UsageReportConfig::default(), &[("CI", "1")]);
+        assert_eq!(switch, Switch::OffInCi(CiDetected { variable: "CI" }));
+        let Switch::OffInCi(ci) = switch else {
+            panic!("CI=1 is a CI run");
+        };
+        assert_eq!(ci.variable(), "CI");
+    }
+
+    #[test]
+    fn github_actions_is_named_before_ci() {
+        assert_eq!(
+            switch_in(
+                &UsageReportConfig::default(),
+                &[("CI", "true"), ("GITHUB_ACTIONS", "true")]
+            ),
+            Switch::OffInCi(CiDetected {
+                variable: "GITHUB_ACTIONS"
+            })
+        );
+    }
+
+    #[test]
+    fn ci_false_and_other_values_leave_the_report_on() {
+        let on = UsageReportConfig::default();
+        for value in ["false", "0", "", "yes", " true"] {
+            assert_eq!(
+                switch_in(&on, &[("CI", value), ("GITHUB_ACTIONS", value)]),
+                Switch::On,
+                "CI={value:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn no_ci_variable_leaves_the_report_on() {
+        assert_eq!(switch_in(&UsageReportConfig::default(), &[]), Switch::On);
+    }
+
+    #[test]
+    fn enabled_false_is_off_with_or_without_ci() {
+        let off = UsageReportConfig {
+            enabled: false,
+            ..UsageReportConfig::default()
+        };
+        assert_eq!(switch_in(&off, &[]), Switch::OffByConfig);
+        assert_eq!(switch_in(&off, &[("CI", "false")]), Switch::OffByConfig);
+        assert_eq!(
+            switch_in(&off, &[("GITHUB_ACTIONS", "true")]),
+            Switch::OffByConfig
+        );
     }
 
     #[test]

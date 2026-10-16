@@ -15,6 +15,16 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+### Changed
+
+- **The usage report is off in CI** (#3794). When `GITHUB_ACTIONS` or `CI` is
+  `true` or `1` in the server's environment, the server sends no usage report
+  and stores no instance id, whatever `usage_report.enabled` says, and the boot
+  line reads `usage report OFF: CI detected (<variable>)`. Outside CI nothing
+  changes: the report stays on by default and the switch turns it off.
+  `ferroehr usage-report --print` still prints in CI and says on stderr why the
+  instance sends nothing.
+
 ## [4.3.9] - 2026-10-15
 
 ### Added

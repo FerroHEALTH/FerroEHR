@@ -2105,6 +2105,46 @@ mod tests {
         assert!(refused.to_string().contains("usage_report.endpoint"));
     }
 
+    /// Assembly reads the CI marker from the same environment snapshot, and a
+    /// CI run switches the report off whatever `enabled` says.
+    #[test]
+    fn a_ci_environment_switches_the_usage_report_off() {
+        use crate::usage_report::config::{CiDetected, Switch};
+        type Vars<'a> = &'a [(&'a str, &'a str)];
+        let cases: [(Vars<'_>, Option<&str>); 5] = [
+            (&[("GITHUB_ACTIONS", "true")], Some("GITHUB_ACTIONS")),
+            (&[("CI", "1")], Some("CI")),
+            (
+                &[("CI", "TRUE"), ("FERROEHR__USAGE_REPORT__ENABLED", "true")],
+                Some("CI"),
+            ),
+            (&[("CI", "false")], None),
+            (&[], None),
+        ];
+        for (vars, ci) in cases {
+            let c = assemble_ok(None, &env(vars), &[]);
+            assert!(c.usage_report.enabled, "{vars:?}");
+            assert_eq!(c.usage_report.ci.map(CiDetected::variable), ci, "{vars:?}");
+            if ci.is_some() {
+                assert!(
+                    matches!(c.usage_report.switch(), Switch::OffInCi(_)),
+                    "{vars:?}"
+                );
+            } else {
+                assert_eq!(c.usage_report.switch(), Switch::On, "{vars:?}");
+            }
+        }
+        let off = assemble_ok(
+            None,
+            &env(&[
+                ("GITHUB_ACTIONS", "true"),
+                ("FERROEHR__USAGE_REPORT__ENABLED", "false"),
+            ]),
+            &[],
+        );
+        assert_eq!(off.usage_report.switch(), Switch::OffByConfig);
+    }
+
     /// The national-identifier protection section maps from the environment,
     /// and the key never renders.
     #[test]

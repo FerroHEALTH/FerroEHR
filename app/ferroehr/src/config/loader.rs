@@ -16,6 +16,7 @@ use crate::config::secret::SecretUrl;
 use crate::db::DbConfig;
 use crate::db::domain::Domain;
 use crate::extensions::events::config::EventsConfig;
+use crate::usage_report::config::CiDetected;
 use config::{Config, Environment, File, FileFormat};
 
 use super::FerroEhrConfig;
@@ -184,6 +185,7 @@ pub fn assemble<S: std::hash::BuildHasher>(
     };
 
     resolve_secret_files(&mut config, &mut errors);
+    config.usage_report.ci = CiDetected::from_lookup(|name| env.get(name).map(String::as_str));
 
     if errors.is_empty() {
         Ok(config)

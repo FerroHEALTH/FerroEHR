@@ -27,7 +27,7 @@ use crate::service::error::ErrorChain;
 use crate::telemetry::build_info::BuildInfo;
 use crate::telemetry::health::{HealthIndicator as _, HealthStatus};
 use crate::telemetry::indicators::{DbHealth, MigrationsHealth};
-use crate::usage_report::config::{Deployment, UsageReportConfig};
+use crate::usage_report::config::{Deployment, Switch, UsageReportConfig};
 use crate::usage_report::payload::{
     CpuBucket, Event, LicenceGrant, MAX_UPTIME_S, MemoryBucket, Product, Report, SchemaV1,
     report_git_sha,
@@ -392,9 +392,11 @@ impl UsageReporter {
 /// Says at INFO whether the report is on, then starts the background task
 /// when it is.
 ///
-/// `None` when the report is off, and when the HTTP client cannot be built,
-/// which is logged at DEBUG: the report never fails boot. Nothing is sent and
-/// nothing is written to the database while it is off.
+/// `None` when the report is off, by the switch or because the configuration
+/// was assembled in a CI run ([`UsageReportConfig::switch`]), and when the
+/// HTTP client cannot be built, which is logged at DEBUG: the report never
+/// fails boot. Nothing is sent and nothing is written to the database while it
+/// is off.
 #[must_use]
 pub fn start(
     config: &UsageReportConfig,
@@ -403,7 +405,7 @@ pub fn start(
     started: Instant,
 ) -> Option<JoinHandle<()>> {
     announce(config);
-    if !config.enabled {
+    if config.switch() != Switch::On {
         return None;
     }
     match UsageReporter::new(config.clone(), pool.clone(), identity, started) {
@@ -421,18 +423,21 @@ pub fn start(
 /// Logs the boot line that says whether the report is on, what it carries,
 /// and how to switch it off.
 pub fn announce(config: &UsageReportConfig) {
-    if config.enabled {
-        tracing::info!(
+    match config.switch() {
+        Switch::On => tracing::info!(
             endpoint = %config.endpoint,
             "usage report ON: instance id, version, licence type, deployment, uptime, host size \
              and coarse performance aggregates, at each start and once a day; no patient data. \
              Off: FERROEHR__USAGE_REPORT__ENABLED=false. Details: {NOTICE_URL}"
-        );
-    } else {
-        tracing::info!(
+        ),
+        Switch::OffByConfig => tracing::info!(
             "usage report OFF (usage_report.enabled = false): nothing is sent. Details: \
              {NOTICE_URL}"
-        );
+        ),
+        Switch::OffInCi(ci) => tracing::info!(
+            "usage report OFF: CI detected ({}); nothing is sent. Details: {NOTICE_URL}",
+            ci.variable()
+        ),
     }
 }
 

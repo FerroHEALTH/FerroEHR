@@ -27,7 +27,7 @@ use ferroehr::service::query::request::AqlQueryRequest;
 use ferroehr::telemetry::build_info::BuildInfo;
 use ferroehr::telemetry::health::{HealthIndicator, HealthRegistry, HealthStatus};
 use ferroehr::telemetry::indicators::{DbHealth, MigrationsHealth};
-use ferroehr::usage_report::config::{Deployment, UsageReportConfig};
+use ferroehr::usage_report::config::{CiDetected, Deployment, UsageReportConfig};
 use ferroehr::usage_report::reporter::{
     DailyOutcome, EventKind, Identity, StartOutcome, UsageReporter, start,
 };
@@ -567,6 +567,28 @@ async fn nothing_is_sent_when_disabled() {
         .await
         .expect("read the instance");
     assert_eq!(stored, None, "a disabled report stores no instance id");
+    assert!(received(&server).await.is_empty());
+}
+
+/// In a CI run the report stays off with the switch on: nothing is started,
+/// sent or stored.
+#[tokio::test]
+async fn nothing_is_sent_in_ci() {
+    let db = testkit::db().await.expect("testkit database");
+    let server = collector(204).await;
+    let pool = replica_pool(&db);
+    let config = UsageReportConfig {
+        ci: CiDetected::from_lookup(|name| (name == "GITHUB_ACTIONS").then_some("true")),
+        ..config_for(&server)
+    };
+    assert!(config.enabled, "the switch is on");
+
+    let handle = start(&config, &pool, identity(), Instant::now());
+    assert!(handle.is_none(), "a CI run starts no task");
+    let stored = ferroehr::usage_report::store::read_instance(&pool)
+        .await
+        .expect("read the instance");
+    assert_eq!(stored, None, "a CI run stores no instance id");
     assert!(received(&server).await.is_empty());
 }
 
