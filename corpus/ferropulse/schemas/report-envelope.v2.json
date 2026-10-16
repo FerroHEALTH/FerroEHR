@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ferropulse.eu/schemas/report-envelope.v2.json",
+  "title": "FerroPULSE report envelope v2",
+  "description": "One report from one product instance: a start event at each process start, or the daily report with the product's metrics. Both events carry the product's status. status and metrics have one generic shape for every product; docs/report-v2.md lists each product's keys. Contract: docs/report-v2.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "event",
+    "product",
+    "instance_id",
+    "version",
+    "git_sha",
+    "licence",
+    "deployment",
+    "uptime_s",
+    "cpu_bucket",
+    "memory_bucket",
+    "status"
+  ],
+  "properties": {
+    "schema": { "type": "integer", "const": 2 },
+    "event": { "enum": ["start", "daily"] },
+    "first_start": {
+      "description": "start only: true when this start created the instance_id.",
+      "type": "boolean"
+    },
+    "product": { "enum": ["ferroehr", "ferroterm", "ferrobridge", "ferrofed"] },
+    "instance_id": {
+      "description": "A UUID, random per installation, in the hyphenated form.",
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "version": {
+      "description": "SemVer 2.0.0; major, minor and patch have at most 9 digits.",
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})(-(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\\+[0-9a-zA-Z-]+(\\.[0-9a-zA-Z-]+)*)?$"
+    },
+    "git_sha": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" },
+    "licence": { "enum": ["non-commercial", "commercial"] },
+    "deployment": { "enum": ["helm", "compose", "binary", "unknown"] },
+    "uptime_s": {
+      "description": "Seconds, at most ten years.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 315576000
+    },
+    "cpu_bucket": { "enum": ["1-2", "3-4", "5-8", "9-16", "17+"] },
+    "memory_bucket": {
+      "description": "GiB.",
+      "enum": ["<4", "4-8", "8-16", "16-32", "32+"]
+    },
+    "status": { "$ref": "#/$defs/status" },
+    "metrics": { "$ref": "#/$defs/metrics" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "event": { "const": "start" } }, "required": ["event"] },
+      "then": { "required": ["first_start"], "properties": { "metrics": false } }
+    },
+    {
+      "if": { "properties": { "event": { "const": "daily" } }, "required": ["event"] },
+      "then": { "required": ["metrics"], "properties": { "first_start": false } }
+    }
+  ],
+  "$defs": {
+    "key": {
+      "description": "A member name inside status, groups or counters.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,31}$"
+    },
+    "token": {
+      "description": "A short lower-case token, never free text.",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._+-]{0,31}$"
+    },
+    "count": {
+      "description": "A count, at most 10,000,000 (per 24 h for metrics).",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000000
+    },
+    "ms": { "type": "number", "minimum": 0, "maximum": 600000 },
+    "histogram": {
+      "description": "Request count per latency bucket, upper bounds in ms: 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, +Inf.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/count" },
+      "minItems": 11,
+      "maxItems": 11
+    },
+    "status": {
+      "description": "Both events: the product's state facts. Each value is a boolean, a count, a token or an array of unique tokens.",
+      "type": "object",
+      "maxProperties": 32,
+      "propertyNames": { "$ref": "#/$defs/key" },
+      "additionalProperties": {
+        "oneOf": [
+          { "type": "boolean" },
+          { "$ref": "#/$defs/count" },
+          { "$ref": "#/$defs/token" },
+          {
+            "type": "array",
+            "uniqueItems": true,
+            "maxItems": 16,
+            "items": { "$ref": "#/$defs/token" }
+          }
+        ]
+      }
+    },
+    "group": {
+      "description": "Latency and 5xx responses of one group of requests in the window.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["p50_ms", "p95_ms", "p99_ms", "errors_5xx", "histogram"],
+      "properties": {
+        "p50_ms": { "$ref": "#/$defs/ms" },
+        "p95_ms": { "$ref": "#/$defs/ms" },
+        "p99_ms": { "$ref": "#/$defs/ms" },
+        "errors_5xx": { "$ref": "#/$defs/count" },
+        "histogram": { "$ref": "#/$defs/histogram" }
+      }
+    },
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requests_bucket", "groups", "counters"],
+      "properties": {
+        "requests_bucket": { "enum": ["0", "1-100", "100-1k", "1k-10k", "10k-100k", "100k+"] },
+        "groups": {
+          "description": "One entry per request group with requests in the window, grouped by route template.",
+          "type": "object",
+          "maxProperties": 32,
+          "propertyNames": { "$ref": "#/$defs/key" },
+          "additionalProperties": { "$ref": "#/$defs/group" }
+        },
+        "counters": {
+          "description": "Event counts in the window.",
+          "type": "object",
+          "maxProperties": 64,
+          "propertyNames": { "$ref": "#/$defs/key" },
+          "additionalProperties": { "$ref": "#/$defs/count" }
+        }
+      }
+    },
+    "metrics": {
+      "description": "daily only: the product's metrics of the last 24 hours.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["window_24h"],
+      "properties": {
+        "window_24h": { "$ref": "#/$defs/window" }
+      }
+    }
+  }
+}

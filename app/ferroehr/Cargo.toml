@@ -147,7 +147,7 @@ assert_fs.workspace = true
 # + fault injection (timeout, 5xx, malformed) — no network in CI.
 wiremock.workspace = true
 # The usage report suite validates every payload against FerroPULSE's vendored
-# report v1 JSON Schemas (`corpus/ferropulse/`).
+# report v2 JSON Schema (`corpus/ferropulse/`).
 jsonschema.workspace = true
 testcontainers.workspace = true
 # testcontainers-modules `rabbitmq` feature (workspace) drives the end-to-end

@@ -20,8 +20,8 @@ use std::time::Duration;
 use http::StatusCode;
 
 use crate::usage_report::payload::{
-    AqlStats, BUCKET_BOUNDS_MS, BUCKETS, MAX_COUNT, MAX_MS, Metrics, RequestsBucket, RouteStats,
-    Routes, Window24h,
+    BUCKET_BOUNDS_MS, BUCKETS, Counters, GroupStats, Groups, MAX_COUNT, MAX_MS, Metrics,
+    RequestsBucket, Window24h,
 };
 
 /// A route-template group of the report.
@@ -226,11 +226,11 @@ impl WindowCounts {
     /// Renders the report's `metrics` object.
     #[must_use]
     pub fn to_metrics(&self) -> Metrics {
-        let route = |group: RouteGroup| {
+        let group = |series: Series| {
             self.series
-                .get(&Series::Route(group))
+                .get(&series)
                 .filter(|counts| counts.total() > 0)
-                .map(|counts| RouteStats {
+                .map(|counts| GroupStats {
                     p50_ms: counts.quantile_ms(0.50),
                     p95_ms: counts.quantile_ms(0.95),
                     p99_ms: counts.quantile_ms(0.99),
@@ -247,21 +247,20 @@ impl WindowCounts {
         Metrics {
             window_24h: Window24h {
                 requests_bucket: RequestsBucket::of(requests),
-                routes: Routes {
-                    ehr: route(RouteGroup::Ehr),
-                    composition: route(RouteGroup::Composition),
-                    contribution: route(RouteGroup::Contribution),
-                    query: route(RouteGroup::Query),
-                    definition: route(RouteGroup::Definition),
-                    directory: route(RouteGroup::Directory),
-                    admin: route(RouteGroup::Admin),
-                    other: route(RouteGroup::Other),
+                groups: Groups {
+                    ehr: group(Series::Route(RouteGroup::Ehr)),
+                    composition: group(Series::Route(RouteGroup::Composition)),
+                    contribution: group(Series::Route(RouteGroup::Contribution)),
+                    query: group(Series::Route(RouteGroup::Query)),
+                    definition: group(Series::Route(RouteGroup::Definition)),
+                    directory: group(Series::Route(RouteGroup::Directory)),
+                    admin: group(Series::Route(RouteGroup::Admin)),
+                    other: group(Series::Route(RouteGroup::Other)),
+                    aql: group(Series::Aql),
                 },
-                aql: AqlStats {
-                    executions: aql.total().min(MAX_COUNT),
-                    slow: aql.slow.min(MAX_COUNT),
-                    p95_ms: aql.quantile_ms(0.95),
-                    histogram: aql.report_histogram(),
+                counters: Counters {
+                    aql_executions: aql.total().min(MAX_COUNT),
+                    aql_slow: aql.slow.min(MAX_COUNT),
                 },
             },
         }
@@ -600,9 +599,10 @@ mod tests {
         busy.errors_5xx = MAX_COUNT + 1;
         window.add(Series::Route(RouteGroup::Composition), &busy);
         let metrics = window.to_metrics();
-        let routes = &metrics.window_24h.routes;
-        assert!(routes.ehr.is_none());
-        let composition = routes
+        let groups = &metrics.window_24h.groups;
+        assert!(groups.ehr.is_none());
+        assert!(groups.aql.is_none(), "no AQL ran, so the group is absent");
+        let composition = groups
             .composition
             .as_ref()
             .expect("composition is rendered");
@@ -612,6 +612,7 @@ mod tests {
             metrics.window_24h.requests_bucket,
             RequestsBucket::AtLeast100k
         );
-        assert_eq!(metrics.window_24h.aql.executions, 0);
+        assert_eq!(metrics.window_24h.counters.aql_executions, 0);
+        assert_eq!(metrics.window_24h.counters.aql_slow, 0);
     }
 }

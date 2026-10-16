@@ -1,0 +1,21 @@
+{
+  "schema": 2,
+  "event": "daily",
+  "product": "ferroterm",
+  "instance_id": "5f0c6b2e-3d4a-4c8b-9e1f-2a3b4c5d6e7f",
+  "version": "1.2.0",
+  "git_sha": "1a2b3c4d",
+  "licence": "non-commercial",
+  "deployment": "compose",
+  "uptime_s": 86400,
+  "cpu_bucket": "3-4",
+  "memory_bucket": "8-16",
+  "status": {},
+  "metrics": {
+    "window_24h": {
+      "requests_bucket": "0",
+      "groups": {},
+      "counters": {}
+    }
+  }
+}

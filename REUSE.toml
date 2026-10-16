@@ -234,7 +234,7 @@ precedence = "override"
 SPDX-FileCopyrightText = ["openEHR Foundation", "the EHRbase contributors", "Cadasto B.V."]
 SPDX-License-Identifier = "Apache-2.0"
 
-# FerroPULSE's report v1 schemas are not clinical-model material either, so the
+# FerroPULSE's report schemas are not clinical-model material either, so the
 # broad glob above would state the wrong licence over them. They come from
 # Cadasto B.V.'s private FerroPULSE repository, whose manifest declares
 # LicenseRef-Proprietary; Cadasto B.V. holds this repository too, and the copy
