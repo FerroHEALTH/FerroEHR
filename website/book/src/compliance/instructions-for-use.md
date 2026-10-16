@@ -183,9 +183,11 @@ turn on national-identifier sealing if you store national identifiers
 
 ### The usage report
 
-Every deployment sends a daily usage report to Cadasto B.V. by default, with no
-patient data ([usage report](../usage-report.md)). Turn it off with
-`[usage_report] enabled = false`.
+Every deployment sends a usage report to Cadasto B.V. by default, at each start
+and once a day, with no patient data ([usage report](../usage-report.md)).
+Turn it off with `[usage_report] enabled = false`. A server started in a CI run
+(`GITHUB_ACTIONS` or `CI` set to `true` or `1`) sends none, whatever the switch
+says.
 
 ### Before it holds real patient data
 

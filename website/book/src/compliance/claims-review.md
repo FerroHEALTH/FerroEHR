@@ -218,6 +218,46 @@ the deployment posture too; it names `GET /management/status` now.
 
 Nothing.
 
+## The review of 2026-10-16
+
+Read on the tree after commit `e923076de`, for FerroEHR 4.3.10. The facts of
+this release checked in every text in scope: the usage report in format 2
+(#3795); the usage report off in a CI run, whatever the switch says (#3794);
+the dump and load archive on zip 9.0.4 (#3798).
+
+### Changed on 2026-10-16
+
+| # | Text | Claim | Art. 28 | Finding | Now reads |
+|---|---|---|---|---|---|
+| 1 | Book, [instructions for use](instructions-for-use.md), the usage report | "Every deployment sends a daily usage report to Cadasto B.V. by default" | (a) | the report also goes out at each start, and a server started in a CI run sends none (#3794) | both stated, with the two CI variables |
+| 2 | Book, [operations](../operations.md#the-usage-report), the usage report | "It is on by default" | (a) | off in a CI run, whatever the switch says (#3794) | "on by default outside a CI run" |
+
+### Read and kept on 2026-10-16
+
+- **The usage report's fields**: the [usage report](../usage-report.md) page
+  lists the format 2 fields and the `status` object as the server sends them,
+  and says earlier releases send format 1. The field list in the
+  [CRA risk assessment](cra-risk-assessment.md)'s outbound data flows, the
+  [shared responsibility](shared-responsibility.md) summary, the
+  [records of processing](../security/records-of-processing.md) note, the
+  [intended purpose](intended-purpose.md) and the
+  [threat model](../threat-model.md) name the same information, which format 2
+  only regroups.
+- **The CI switch**: the [usage report](../usage-report.md#switch-it-off) page
+  states the two variables, the boot line and the `--print` note as they ship,
+  and the [server configuration](../installation/config-server.md#usage_report)
+  table states the two variables.
+- **The dump and load archive**: the
+  [admin APIs](../operations-admin-apis.md#dump-and-load) page names no zip
+  library and its `compression_format` values are unchanged.
+- **The README, `SECURITY.md`, the crate READMEs, the image labels and the Helm
+  chart's description**: unchanged by this release, and none names the usage
+  report's format or the zip library.
+
+### Left open on 2026-10-16
+
+Nothing.
+
 ## Annex II 2.5, re-assessed
 
 EHDS Annex II 2.5: "The harmonised software components of an EHR system shall
@@ -278,3 +318,4 @@ cut, after the texts in scope have been read.
 | 2026-10-06 | before 4.3.5, after `d6539d470` | 15 claims, in the README, the landing page and three book pages | the chart description (#3637) |
 | 2026-10-08 | 4.3.6, after `de648fcc3` | 5 claims, in the landing page and five book pages; the chart description item closed | nothing |
 | 2026-10-15 | 4.3.9, after `606a29cce` | 14 claims, in 17 book pages, the README and the readiness row | nothing |
+| 2026-10-16 | 4.3.10, after `e923076de` | 2 claims, in two book pages | nothing |

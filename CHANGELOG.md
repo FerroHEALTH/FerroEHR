@@ -15,23 +15,36 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+## [4.3.10] - 2026-10-16
+
 ### Changed
 
 - **The usage report moves to FerroPULSE report format 2** (#3795). `schema`
   is `2`; `spec_profile`, `db_ok`, `migrations_ok` and `postgres_major` move
   into a `status` object on both reports; the daily `metrics.window_24h` holds
-  `groups` (the eight route groups and `aql`, each with p50/p95/p99, 5xx
+  `groups` (the eight endpoint groups and `aql`, each with p50/p95/p99, 5xx
   count and histogram) and `counters` (`aql_executions`, `aql_slow`). The
   report carries no new information. `ferroehr usage-report --print` prints
-  the new body.
+  the new body, and the book's usage report page lists every field.
 
-- **The usage report is off in CI** (#3794). When `GITHUB_ACTIONS` or `CI` is
-  `true` or `1` in the server's environment, the server sends no usage report
-  and stores no instance id, whatever `usage_report.enabled` says, and the boot
-  line reads `usage report OFF: CI detected (<variable>)`. Outside CI nothing
-  changes: the report stays on by default and the switch turns it off.
-  `ferroehr usage-report --print` still prints in CI and says on stderr why the
-  instance sends nothing.
+- **The admin dump and load archive is written and read with zip 9.0.4**
+  (#3798). The zip maintainers yanked every 8.x release, including the 8.6.0
+  that `POST {base}/admin/dump` and `POST {base}/admin/load` used. Nothing
+  changes for you: the routes, the archive layout and the compression are as
+  before. The build still unpacks the vendored Swagger UI with zip 8.6.0,
+  because no `utoipa-swagger-ui` release accepts zip 9 yet; that copy runs only
+  at build time and is not part of the server binary.
+
+### Fixed
+
+- **The usage report is off in CI** (#3794). A server started inside a CI job
+  reported itself to FerroPULSE like a deployment. When `GITHUB_ACTIONS` or
+  `CI` is `true` or `1` in the server's environment, the server now sends no
+  usage report and stores no instance id, whatever `usage_report.enabled`
+  says, and the boot line reads `usage report OFF: CI detected (<variable>)`.
+  Outside CI nothing changes: the report stays on by default and the switch
+  turns it off. `ferroehr usage-report --print` still prints in CI and says on
+  stderr why the instance sends nothing.
 
 ## [4.3.9] - 2026-10-15
 
@@ -11228,7 +11241,8 @@ but has not yet run in production.
   seccomp, default-deny NetworkPolicy) and golden-render validation.
 
 
-[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.9...HEAD
+[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.10...HEAD
+[4.3.10]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.9...v4.3.10
 [4.3.9]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.6...v4.3.9
 [4.3.6]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.5...v4.3.6
 [4.3.5]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.4...v4.3.5
