@@ -285,7 +285,7 @@ fhir-model = { version = "0.13.0", default-features = false, features = ["r4b", 
 # dump/load archive. default-features off keeps it to the DEFLATE method over
 # the already-present pure-Rust flate2 backend (no aes/bzip2/lzma/ppmd/zstd/xz
 # C stacks); the crate is already in the resolved graph.
-zip = { version = "8", default-features = false, features = ["deflate-flate2"] }
+zip = { version = "9.0.4", default-features = false, features = ["deflate-flate2"] }
 # `service::admin::dump_load`: the SM COMPRESSION_FORMAT member `7z`
 # (compression_format.adoc) — pure Rust, verified live on crates.io 2026-07-29
 # (0.21.3, actively maintained).
