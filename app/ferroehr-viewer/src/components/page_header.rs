@@ -3,12 +3,12 @@
 
 //! The page header every routed screen opens with.
 //!
-//! FerroUI's (`ferrohealth_ui::view::surface::page_heading`), with the
+//! FerroUI's (`ferrohealth_ui::view::surface::page_heading_live`), with the
 //! breadcrumb trail, the title, the subtitle and the screen's primary actions,
 //! so the page rhythm (header → toolbar → content) is identical across the
 //! viewer.
 
-use ferrohealth_ui::view::surface::{Header, page_heading};
+use ferrohealth_ui::view::surface::{Header, page_heading_live};
 use leptos::prelude::*;
 
 /// One breadcrumb ancestor (the current page renders as plain text after
@@ -62,15 +62,14 @@ pub fn PageHeader(
         .into_iter()
         .map(|crumb| ferrohealth_ui::view::surface::Crumb::new(crumb.label, crumb.href))
         .collect();
-    // TODO(#3804): pass the title signal once FerroUI's heading takes one
-    // (FerroHEALTH/FerroUI#51); it is read once until then.
-    page_heading(
+    page_heading_live(
         Header {
-            title: title.get_untracked(),
+            title: String::new(),
             subtitle,
             crumbs,
             mono,
         },
+        title,
         children.map(|children| children()),
     )
 }

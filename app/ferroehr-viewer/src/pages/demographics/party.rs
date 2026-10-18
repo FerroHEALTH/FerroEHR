@@ -573,8 +573,9 @@ fn party_screen(kind: PartyKind, uid: Signal<String>, selected: Memo<String>) ->
                     Crumb::new(kind.plural(), browse_href(kind)),
                 ]
                 mono=true
-            />
-            {delete}
+            >
+                {delete}
+            </PageHeader>
             {tabs}
             <div class="mt-4">
                 <div class:hidden=move || selected.get() != "party">{party}</div>
@@ -845,9 +846,9 @@ fn facts_card(state: &PartyState) -> AnyView {
     ];
     view! {
         <section class=format!("{CARD_PAD} flex flex-col gap-3") id="party-facts">
-            <div class="grid grid-cols-1 sm:grid-cols-2 items-start gap-x-4 gap-y-2 text-sm">
+            <dl class="fui-facts text-sm">
                 {facts}
-            </div>
+            </dl>
         </section>
     }
     .into_any()
@@ -929,7 +930,7 @@ fn edit_form(
     view! {
         <section class=CARD_PAD id="party-edit">
             <h2 class=CARD_TITLE>"Edit party"</h2>
-            <p class="mb-3 text-xs text-ink-muted">{hint}</p>
+            <p class="mb-3 fui-help">{hint}</p>
             <div class="flex flex-col gap-3">
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="party-identities">

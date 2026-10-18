@@ -416,7 +416,7 @@ fn run_save_section(
     view! {
         <section class=CARD_PAD>
             <div class="space-y-3">
-                <div class="flex flex-wrap items-end gap-3">
+                <div class="fui-field-flow">
                     <button type="button" class=BTN_PRIMARY disabled=empty_aql on:click=run_click>
                         "Run"
                     </button>

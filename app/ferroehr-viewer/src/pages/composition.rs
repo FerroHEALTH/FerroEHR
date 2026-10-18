@@ -736,8 +736,9 @@ pub fn CompositionPage() -> impl IntoView {
     view! {
         <Title text="Composition" />
         <div>
-            <PageHeader title=Signal::derive(move || title.get()) crumbs=crumbs mono=true />
-            {delete_action}
+            <PageHeader title=Signal::derive(move || title.get()) crumbs=crumbs mono=true>
+                {delete_action}
+            </PageHeader>
             {toolbar}
             {body}
             {edit}
@@ -783,12 +784,16 @@ fn delete_section(
             .to_owned()
     });
     view! {
-        <div class="mb-4 flex flex-wrap items-center justify-end gap-3">
-            <span class="text-xs text-ink-muted">"Deletes the latest version."</span>
+        <div class="contents">
+            <span id="composition-delete-help" class="fui-sr-only">
+                "Deletes the latest version."
+            </span>
             <button
                 id="composition-delete"
                 type="button"
                 class=BTN_DANGER
+                title="Deletes the latest version"
+                aria-describedby="composition-delete-help"
                 disabled=Signal::derive(move || delete.pending().get())
                 on:click=move |_| confirming.set(true)
             >
@@ -860,7 +865,7 @@ fn versioned_card(details: &VersionedCompositionDetails) -> AnyView {
     view! {
         <section class=CARD_PAD id="versioned-composition">
             <h2 class=CARD_TITLE>"Versioned object"</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 items-start gap-x-4 gap-y-2 text-sm">
+            <dl class="fui-facts text-sm">
                 {versioned_row("versioned object", "object-uid", details.object_uid.clone())}
                 {versioned_row("owner EHR", "owner", details.owner_id.clone())}
                 {versioned_row("created", "created", details.time_created.clone())}
@@ -873,7 +878,7 @@ fn versioned_card(details: &VersionedCompositionDetails) -> AnyView {
                 )} {versioned_row("contribution", "contribution", details.contribution_uid.clone())}
                 {versioned_row("signature", "signature", signature)}
                 {versioned_row("content", "content", content)}
-            </div>
+            </dl>
         </section>
     }
     .into_any()
@@ -890,10 +895,10 @@ fn versioned_row(label: &'static str, hook: &'static str, value: String) -> AnyV
     };
     view! {
         <div>
-            <span class="font-medium text-ink-muted mr-1">{label}":"</span>
-            <span class="font-mono break-all text-ink" data-versioned-fact=hook>
+            <dt>{label}</dt>
+            <dd class="font-mono wrap-break-word text-ink" data-versioned-fact=hook>
                 {shown}
-            </span>
+            </dd>
         </div>
     }
     .into_any()
@@ -962,7 +967,7 @@ fn edit_section(
             <div class:hidden=move || !edit_open.get()>
                 <section class=format!("{CARD_PAD} mt-3")>
                     <h2 class=CARD_TITLE>"Commit new version"</h2>
-                    <p class="mb-2 text-xs text-ink-muted">
+                    <p class="mb-2 fui-help">
                         "Commits on top of the latest version."
                     </p>
                     <div class:hidden=move || is_json()>
@@ -1071,7 +1076,7 @@ fn toolbar_section(
     };
     view! {
         <section class=format!("{CARD_PAD} mb-3")>
-            <div class="flex flex-wrap items-end gap-4">
+            <div class="fui-field-flow">
                 <FormatSelector selected=format />
                 <div class="flex items-center gap-2">
                     <label class=LABEL r#for="version-select">
@@ -1350,10 +1355,10 @@ fn audit_card(entry: Option<&VersionEntry>) -> AnyView {
     view! {
         <section class=CARD_PAD>
             <h2 class=CARD_TITLE>"Audit"</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 items-start gap-x-4 gap-y-2 text-sm">
+            <dl class="fui-facts text-sm">
                 {audit_row("version", version_id)} {audit_row("committed", committed_at)}
                 {audit_row("change type", change_type)} {audit_row("committer", committer)}
-            </div>
+            </dl>
         </section>
     }
     .into_any()
@@ -1368,8 +1373,8 @@ fn audit_row(label: &'static str, value: String) -> AnyView {
     };
     view! {
         <div>
-            <span class="font-medium text-ink-muted mr-1">{label}":"</span>
-            <span class="font-mono break-all text-ink">{shown}</span>
+            <dt>{label}</dt>
+            <dd class="font-mono wrap-break-word text-ink">{shown}</dd>
         </div>
     }
     .into_any()

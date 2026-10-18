@@ -61,6 +61,26 @@ pub fn table_shell(caption: &str, headers: &[&str], body: AnyView) -> AnyView {
     .into_any()
 }
 
+/// The table [`table_shell`] draws, its rows stacked as cards on a phone.
+///
+/// A cell that carries `data-label` (its column's name) shows the name beside
+/// its value below 40rem; the row's first cell, with none, heads the card.
+#[must_use]
+pub fn table_shell_stacked(caption: &str, headers: &[&str], body: AnyView) -> AnyView {
+    let columns: Vec<Column> = headers
+        .iter()
+        .map(|header| Column::owned(*header, *header))
+        .collect();
+    ferrohealth_ui::table::view::data_table_stacked(DataTable {
+        caption,
+        columns: &columns,
+        sort: None,
+        sort_href: &|_| String::new(),
+        body: Body::Rows(body),
+    })
+    .into_any()
+}
+
 /// The `<Transition>`/`<Suspense>` fallback every listing shares: FerroUI's
 /// skeleton standing in for the rows while the data loads.
 #[must_use]

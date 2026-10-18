@@ -27,10 +27,10 @@ use crate::adl2::TemplateFamily;
 use crate::admin::AdminAvailability;
 use crate::components::data_table::{
     CELL, CELL_MONO, ROW, TablePaging, page_rows, paging_from_url, row_total, table_footer,
-    table_shell, table_skeleton,
+    table_shell_stacked, table_skeleton,
 };
 use crate::components::empty_state::EmptyState;
-use crate::components::field::{BTN_DANGER, BTN_PRIMARY, INPUT};
+use crate::components::field::{BTN_DANGER_SMALL, BTN_PRIMARY, INPUT};
 use crate::components::page_header::PageHeader;
 use crate::components::toast::{toast_error, toast_success};
 use crate::error::ViewerError;
@@ -784,7 +784,7 @@ fn rows_view(
     );
 
     view! {
-        {table_shell(family_noun(family), headers, body)}
+        {table_shell_stacked(family_noun(family), headers, body)}
         {footer}
         <Show when=none_match>
             <div class="mt-3">
@@ -877,9 +877,9 @@ fn row_view(
                     {row.template_id}
                 </leptos_router::components::A>
             </td>
-            <td class=CELL>{row.concept}</td>
-            <td class=CELL_MONO>{row.archetype_id}</td>
-            <td class=CELL_MONO>{row.created}</td>
+            <td class=CELL data-label="Concept">{row.concept}</td>
+            <td class=CELL_MONO data-label="Archetype ID">{row.archetype_id}</td>
+            <td class=CELL_MONO data-label="Created">{row.created}</td>
             {action}
         </tr>
     }
@@ -901,10 +901,10 @@ fn delete_cell(
     };
     let on_click = move |_| pending_delete.set(Some(target.clone()));
     view! {
-        <td class=format!("{CELL} text-right")>
+        <td class=ferrohealth_ui::table::view::ACTIONS data-label="Actions">
             <button
                 type="button"
-                class=BTN_DANGER
+                class=BTN_DANGER_SMALL
                 data-template-delete=template_id.to_owned()
                 disabled=Signal::derive(move || delete.pending().get())
                 on:click=on_click

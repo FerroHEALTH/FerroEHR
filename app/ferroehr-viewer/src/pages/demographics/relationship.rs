@@ -633,15 +633,25 @@ fn party_ref_link(reference: &PartyRefView, hook: &'static str) -> AnyView {
     } else {
         reference.rm_type.clone()
     };
+    let value = party_ref_value(reference, hook);
+    view! {
+        <div>
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+        </div>
+    }
+    .into_any()
+}
+
+/// The party a `PARTY_REF` names: a link to its screen, its bare id when its
+/// abstract type has no per-kind route, or an em dash when it names none.
+fn party_ref_value(reference: &PartyRefView, hook: &'static str) -> AnyView {
     let id = reference.id.clone();
     if id.is_empty() {
         return view! {
-            <div>
-                <span class="font-medium text-ink-muted mr-1">{label}":"</span>
-                <span class="font-mono text-ink" data-relationship-end=hook>
-                    "—"
-                </span>
-            </div>
+            <span class="font-mono text-ink" data-relationship-end=hook>
+                "—"
+            </span>
         }
         .into_any();
     }
@@ -649,29 +659,23 @@ fn party_ref_link(reference: &PartyRefView, hook: &'static str) -> AnyView {
         Some(kind) => {
             let href = party_href(kind, &id);
             view! {
-                <div>
-                    <span class="font-medium text-ink-muted mr-1">{label}":"</span>
-                    <A
-                        href=href
-                        attr:class="font-mono break-all text-accent hover:underline"
-                        attr:data-relationship-end=hook
-                    >
-                        {id}
-                    </A>
-                </div>
+                <A
+                    href=href
+                    attr:class="font-mono wrap-break-word text-accent hover:underline"
+                    attr:data-relationship-end=hook
+                >
+                    {id}
+                </A>
             }
             .into_any()
         }
         None => view! {
-            <div>
-                <span class="font-medium text-ink-muted mr-1">{label}":"</span>
-                <span class="font-mono break-all text-ink" data-relationship-end=hook>
-                    {id}
-                </span>
-                <span class="ml-2 text-xs text-ink-faint">
-                    "(an abstract party type has no per-kind route)"
-                </span>
-            </div>
+            <span class="font-mono wrap-break-word text-ink" data-relationship-end=hook>
+                {id}
+            </span>
+            <span class="ml-2 text-xs text-ink-faint">
+                "(an abstract party type has no per-kind route)"
+            </span>
         }
         .into_any(),
     }
@@ -749,7 +753,7 @@ fn lookup_card() -> AnyView {
         <section class=format!("{CARD_PAD} mb-6")>
             <h2 class=CARD_TITLE>"Open a relationship"</h2>
             <form method="GET" action="/demographics/relationship" on:submit=on_submit>
-                <div class="flex flex-wrap items-end gap-3">
+                <div class="fui-field-flow">
                     <div class="flex flex-col gap-1">
                         <label class=LABEL r#for="relationship-lookup">
                             "PARTY_RELATIONSHIP id"
@@ -768,7 +772,7 @@ fn lookup_card() -> AnyView {
                     </button>
                 </div>
             </form>
-            <p class="mt-2 text-xs text-ink-muted">
+            <p class="mt-2 fui-help">
                 "A relationship is reached by its own id: the demographic API publishes no way to ask which relationships point at a given party."
             </p>
         </section>
@@ -878,11 +882,11 @@ fn create_card(source_uid: &str, source_kind: &str) -> AnyView {
     view! {
         <section class=CARD_PAD id="relationship-create">
             <h2 class=CARD_TITLE>"Create a relationship"</h2>
-            <p class="mb-3 text-xs text-ink-muted">
+            <p class="mb-3 fui-help">
                 "Both ends name a party by its versioned_object_uid — a relationship refers to the party's version container, not to one of its versions. The type you give is stored as the relationship's name, which is what openEHR reads it as."
             </p>
             <div class="flex flex-col gap-3">
-                <div class="flex flex-wrap items-end gap-3">
+                <div class="fui-field-flow">
                     <div class="flex flex-col gap-1">
                         <label class=LABEL r#for="relationship-type">
                             "Relationship type"
@@ -914,7 +918,7 @@ fn create_card(source_uid: &str, source_kind: &str) -> AnyView {
                         />
                     </div>
                 </div>
-                <div class="flex flex-wrap items-end gap-3">
+                <div class="fui-field-flow">
                     <div class="flex flex-col gap-1">
                         <label class=LABEL r#for="relationship-source">
                             "Source party id"
@@ -930,7 +934,7 @@ fn create_card(source_uid: &str, source_kind: &str) -> AnyView {
                     </div>
                     {kind_select("relationship-source-kind", &selected_source, source_kind_ref)}
                 </div>
-                <div class="flex flex-wrap items-end gap-3">
+                <div class="fui-field-flow">
                     <div class="flex flex-col gap-1">
                         <label class=LABEL r#for="relationship-target">
                             "Target party id"
@@ -1068,8 +1072,9 @@ pub fn RelationshipDetailPage() -> impl IntoView {
                 title=heading
                 crumbs=vec![Crumb::new("Relationships", "/demographics/relationship")]
                 mono=true
-            />
-            {delete}
+            >
+                {delete}
+            </PageHeader>
             {tabs}
             <div class="mt-4">
                 <div class:hidden=move || selected.get() != "relationship">{detail}</div>
@@ -1235,13 +1240,13 @@ fn relationship_section(uid: Signal<String>, latest_version: RwSignal<String>) -
 fn facts_card(state: &RelationshipState) -> AnyView {
     view! {
         <section class=CARD_PAD id="relationship-facts">
-            <div class="grid grid-cols-1 sm:grid-cols-2 items-start gap-x-4 gap-y-2 text-sm">
+            <dl class="fui-facts text-sm">
                 {fact_row("type", "type", state.name.clone())}
                 {fact_row("archetype", "archetype", state.archetype_node_id.clone())}
                 {fact_row("version", "version", state.version_uid.clone())}
                 {fact_row("time validity", "time-validity", state.time_validity.clone())}
                 {party_ref_link(&state.source, "source")} {party_ref_link(&state.target, "target")}
-            </div>
+            </dl>
         </section>
     }
     .into_any()
@@ -1287,7 +1292,7 @@ fn edit_card(
     view! {
         <section class=CARD_PAD id="relationship-edit">
             <h2 class=CARD_TITLE>"Edit relationship"</h2>
-            <p class="mb-3 text-xs text-ink-muted">
+            <p class="mb-3 fui-help">
                 "Commits a new version on top of the one loaded above (If-Match). The two ends and the time validity travel back exactly as the CDR served them — a relationship between different parties is a different relationship."
             </p>
             <div class="flex flex-col gap-3">
@@ -1443,14 +1448,14 @@ fn relationships_view(
         <div class="flex flex-col gap-4">
             <section class=CARD_PAD id="party-relationships">
                 <h2 class=CARD_TITLE>"Relationships (as source)"</h2>
-                <p class="mb-3 text-xs text-ink-muted">
+                <p class="mb-3 fui-help">
                     "These come from the party document itself, which carries the relationships this party is the source of. openEHR models the other direction as a derived attribute the CDR leaves unpopulated, so no request can list the relationships that point AT this party — open those by their own id."
                 </p>
                 {table}
             </section>
             <section class=CARD_PAD>
                 <h2 class=CARD_TITLE>"Relate this party"</h2>
-                <p class="mb-3 text-xs text-ink-muted">
+                <p class="mb-3 fui-help">
                     "Creates a PARTY_RELATIONSHIP resource with this party as its source. That resource is versioned in its own right — an extension of this CDR, not part of the released openEHR demographic API."
                 </p>
                 <a href=create_href class=BTN_PRIMARY id="party-relate">
@@ -1480,7 +1485,7 @@ fn inline_table(items: &[InlineRelationship]) -> AnyView {
             let hook = item.name.clone();
             let archetype = item.archetype_node_id.clone();
             let uid = item.uid.clone();
-            let target = party_ref_link(&item.target, "inline-target");
+            let target = party_ref_value(&item.target, "inline-target");
             view! {
                 <tr class=ROW>
                     <td class=CELL data-inline-relationship=hook>

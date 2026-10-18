@@ -535,7 +535,7 @@ fn create_ehr_section(toaster: ferrohealth_ui::widget::toast::Toasts) -> AnyView
     view! {
         <section class=format!("{CARD_PAD} mb-6")>
             <h2 class=CARD_TITLE>"Create EHR"</h2>
-            <div class="flex flex-wrap items-end gap-3">
+            <div class="fui-field-flow">
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="ehr-create-id">
                         "EHR id (optional)"
@@ -582,7 +582,7 @@ fn create_ehr_section(toaster: ferrohealth_ui::widget::toast::Toasts) -> AnyView
                     "Create EHR"
                 </button>
             </div>
-            <p class="mt-2 text-xs text-ink-muted">
+            <p class="mt-2 fui-help">
                 "Leave the subject fields blank for an anonymous EHR (the CDR mints the default EHR_STATUS), or set both to bind a subject. "
                 "Supply an EHR id to create that exact EHR — it must be a UUID, and an id already in use is refused by the CDR."
             </p>
@@ -709,7 +709,7 @@ fn finder_section() -> AnyView {
             // /ehrs?find=<id>, which EhrsPage answers with a redirect to the
             // detail route (lookup state travels in the URL).
             <form method="GET" action="/ehrs" on:submit=on_lookup>
-                <div class="flex flex-wrap items-end gap-3">
+                <div class="fui-field-flow">
                     <div class="flex flex-col gap-1">
                         // Plain label + explicit stable input id keep the SSR↔hydration
                         // association deterministic and preserve the E2E contract
@@ -731,7 +731,7 @@ fn finder_section() -> AnyView {
                     </button>
                 </div>
             </form>
-            <div class="mt-3 flex flex-wrap items-end gap-3">
+            <div class="mt-3 fui-field-flow">
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="ehr-subject-id">
                         "Subject id"

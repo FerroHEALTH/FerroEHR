@@ -19,7 +19,7 @@ use crate::scopes::{CAPABILITY_NOTE, Grant, GrantDetail, ResourceGrant, grants};
 const CARD: &str = "flex flex-col gap-1.5 rounded-control border border-edge bg-sunken p-2.5";
 
 /// The scope string itself, always shown verbatim above its reading.
-const RAW: &str = "font-mono text-xs break-all text-ink";
+const RAW: &str = "font-mono text-xs wrap-break-word text-ink";
 
 /// An accent chip (compartment, context/identity label).
 const CHIP: &str = "rounded-full bg-accent-subtle px-2 py-0.5 text-[10px] font-medium tracking-wide text-accent-ink";
@@ -54,7 +54,7 @@ pub fn fact_row(label: &'static str, value: String) -> AnyView {
     view! {
         <div class="grid grid-cols-[7rem_1fr] gap-x-3 text-sm">
             <span class="text-xs text-ink-muted">{label}</span>
-            <span class="break-all text-ink">{value}</span>
+            <span class="wrap-break-word text-ink">{value}</span>
         </div>
     }
     .into_any()
@@ -114,7 +114,7 @@ fn resource_body(resource: ResourceGrant) -> AnyView {
             <div class="flex flex-wrap items-center gap-1.5">
                 <span class=CHIP>{compartment}</span>
                 <span class="text-xs font-medium text-ink">{family}</span>
-                <span class="font-mono text-[11px] break-all text-ink-muted">{pattern}</span>
+                <span class="font-mono text-[11px] wrap-break-word text-ink-muted">{pattern}</span>
                 {broad_chip}
             </div>
             <div class="flex flex-wrap items-center gap-1">
@@ -185,7 +185,7 @@ pub fn ScopePreviewer() -> impl IntoView {
     };
     view! {
         <section class="flex flex-col gap-2">
-            <label class="text-xs font-medium text-ink" for="scope-previewer-input">
+            <label class="fui-label" for="scope-previewer-input">
                 "Preview a scope"
             </label>
             <input

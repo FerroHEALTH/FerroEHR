@@ -508,7 +508,7 @@ fn add_change_card(
         <section class=CARD_PAD id="stage-add">
             <h2 class=CARD_TITLE>"Add a change"</h2>
             <div class="flex flex-col gap-3">
-                <div class="flex flex-wrap items-end gap-3">
+                <div class="fui-field-flow">
                     {kind_row} <div class="flex flex-col gap-1" class:hidden=move || !is_create()>
                         {template_row}
                     </div> <div class="flex flex-col gap-1" class:hidden=move || !is_amend()>
@@ -659,9 +659,9 @@ fn composition_picker(
 /// supersedes, so the operator sees exactly what the member will name.
 fn preceding_readout(form: CommitForm) -> AnyView {
     view! {
-        <p class="text-xs text-ink-muted">
+        <p class="fui-help">
             <span class="font-medium">"Preceding version: "</span>
-            <span id="stage-preceding" class="font-mono break-all">
+            <span id="stage-preceding" class="font-mono wrap-break-word">
                 {move || {
                     let uid = form.preceding.get();
                     if uid.is_empty() { "not loaded yet".to_owned() } else { uid }
@@ -901,7 +901,7 @@ fn audit_card(
         <section class=CARD_PAD id="stage-audit">
             <h2 class=CARD_TITLE>"Contribution audit"</h2>
             <div class="flex flex-col gap-3">
-                <div class="flex flex-wrap items-end gap-3">
+                <div class="fui-field-flow">
                     <div class="flex flex-col gap-1">
                         <label class=LABEL r#for="stage-committer">
                             "Committer (optional)"
@@ -964,7 +964,7 @@ fn commit_result(
             Some(Err(error)) => {
                 view! {
                     <div class=WELL id="stage-diagnostic" role="alert">
-                        <p class="mb-2 text-xs text-ink-muted">
+                        <p class="mb-2 fui-help">
                             "Nothing was committed and your staged changes are untouched. The CDR refused the change set as a whole — its diagnostic follows verbatim. It always names the defect, and a shape defect also names the member index (counting from the top of the list above); a validation refusal does not, so read it against the staged documents."
                         </p>
                         <pre class="overflow-auto max-h-[40vh] whitespace-pre-wrap font-mono text-xs text-danger">
@@ -980,7 +980,7 @@ fn commit_result(
                     .version_uids
                     .iter()
                     .map(|uid| {
-                        view! { <li class="font-mono break-all">{uid.clone()}</li> }
+                        view! { <li class="font-mono wrap-break-word">{uid.clone()}</li> }
                     })
                     .collect::<Vec<_>>();
                 view! {

@@ -209,13 +209,13 @@ fn contribution_view(state: &ContributionState) -> AnyView {
     let facts = view! {
         <section class=CARD_PAD id="contribution-facts">
             <h2 class=CARD_TITLE>"Commit"</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 items-start gap-x-4 gap-y-2 text-sm">
+            <dl class="fui-facts text-sm">
                 {fact_row("contribution", "contribution-uid", state.uid.clone())}
                 {fact_row("committed", "committed", state.time_committed.clone())}
                 {fact_row("committer", "committer", state.committer.clone())}
                 {fact_row("change type", "change-type", state.change_type.clone())}
                 {fact_row("description", "description", state.description.clone())}
-            </div>
+            </dl>
         </section>
     }
     .into_any();

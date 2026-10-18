@@ -325,7 +325,7 @@ leptos_router = "0.8.14"
 # The shared FerroHEALTH console components, role tokens, stylesheet and table
 # model (FerroUI), pinned exactly: a console moves its pin after looking at its
 # own screens.
-ferrohealth-ui = "=0.1.1"
+ferrohealth-ui = "=0.1.2"
 wasm-bindgen = "0.2.129"
 wasm-bindgen-futures = "0.4"       # JsFuture for browser-side file reads (compiles on native, runs in wasm)
 console_error_panic_hook = "0.1"
@@ -472,3 +472,7 @@ inherits = "release"
 opt-level = 'z'
 lto = true
 codegen-units = 1
+
+[patch.crates-io]
+# TODO(#3802): drop this patch once ferrohealth-ui 0.1.2 is on crates.io.
+ferrohealth-ui = { git = "https://github.com/FerroHEALTH/FerroUI", rev = "e68a4577fc8768c7f10897a34ff8372ce9302528" }

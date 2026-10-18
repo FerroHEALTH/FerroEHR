@@ -27,10 +27,10 @@ use leptos_router::hooks::use_navigate;
 use crate::admin::AdminAvailability;
 use crate::components::data_table::{
     CELL, CELL_MONO, ROW, TablePaging, page_rows, paging_from_url, row_total, table_footer,
-    table_shell, table_skeleton,
+    table_shell_stacked, table_skeleton,
 };
 use crate::components::empty_state::EmptyState;
-use crate::components::field::{BTN_DANGER, BTN_PRIMARY, BTN_SECONDARY};
+use crate::components::field::{BTN_DANGER_SMALL, BTN_PRIMARY, BTN_SECONDARY, BTN_SECONDARY_SMALL};
 use crate::components::format_view::DocumentPane;
 use crate::components::page_header::PageHeader;
 use crate::components::surface::{CARD_PAD, CARD_TITLE};
@@ -107,7 +107,7 @@ pub fn QueriesPage() -> impl IntoView {
                     "Raw AQL"
                 </a>
             </PageHeader>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,3fr)_minmax(16rem,1fr)] gap-6 items-start">
                 {table} {namespaces}
             </div>
         </div>
@@ -273,7 +273,7 @@ fn stored_rows_view(
         Signal::derive(move || total),
     );
     view! {
-        {table_shell("Stored queries", &["Name", "Version", "Saved", ""], body)}
+        {table_shell_stacked("Stored queries", &["Name", "Version", "Saved", ""], body)}
         {footer}
     }
     .into_any()
@@ -328,27 +328,25 @@ fn stored_row(
             on:click=on_click
         >
             <td class=CELL_MONO>{row.name}</td>
-            <td class=CELL_MONO>{row.version}</td>
-            <td class=format!("{CELL} text-xs text-ink-muted")>{row.saved}</td>
-            <td class=format!("{CELL} text-right")>
-                // `whitespace-nowrap`: the panel is half-width, so without it the
-                // action labels wrap mid-phrase ("Delete from / CDR"). The row
-                // wraps between whole actions instead.
+            <td class=CELL_MONO data-label="Version">{row.version}</td>
+            <td class=format!("{CELL} text-xs text-ink-muted whitespace-nowrap") data-label="Saved">{row.saved}</td>
+            <td class=format!("{CELL} min-w-[15rem]") data-label="Actions">
+                // The row wraps between whole actions, never inside a label.
                 <div class="flex flex-wrap items-center justify-end gap-2 whitespace-nowrap">
                     <a
                         href=run_href
-                        class=BTN_SECONDARY
+                        class=BTN_SECONDARY_SMALL
                         data-run-stored=run_hook
                         on:click=|ev| ev.stop_propagation()
                     >
                         "Run"
                     </a>
-                    <a href=load_href class=BTN_SECONDARY on:click=|ev| ev.stop_propagation()>
+                    <a href=load_href class=BTN_SECONDARY_SMALL on:click=|ev| ev.stop_propagation()>
                         "Open in editor"
                     </a>
                     <a
                         href=builder_href
-                        class=BTN_SECONDARY
+                        class=BTN_SECONDARY_SMALL
                         data-open-in-builder=builder_hook
                         on:click=|ev| ev.stop_propagation()
                     >
@@ -382,7 +380,7 @@ fn cdr_delete_button(
     view! {
         <button
             type="button"
-            class=BTN_DANGER
+            class=BTN_DANGER_SMALL
             data-query-delete=key
             disabled=Signal::derive(move || cdr_delete.pending().get())
             on:click=on_click

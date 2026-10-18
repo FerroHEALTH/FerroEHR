@@ -35,7 +35,10 @@ use crate::builder::model::{
 };
 use crate::components::data_table::{CELL, PAGE_SIZE, ROW, table_shell, table_skeleton};
 use crate::components::empty_state::EmptyState;
-use crate::components::field::{BTN_PRIMARY, BTN_SECONDARY, LABEL, SELECT};
+use crate::components::field::{
+    BTN_DANGER_SMALL, BTN_PRIMARY, BTN_PRIMARY_SMALL, BTN_SECONDARY, BTN_SECONDARY_SMALL, INPUT,
+    LABEL, SELECT,
+};
 use crate::components::page_header::PageHeader;
 use crate::components::surface::{CARD_PAD, CARD_TITLE, WELL};
 use crate::components::toast::toast_success;
@@ -201,8 +204,8 @@ pub fn QueryBuilderPage() -> impl IntoView {
             />
             {load_notice}
             {template_step}
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-                <section class="rounded-card border border-edge bg-raised shadow-card p-4 overflow-auto max-h-[70vh]">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <section class="fui-card overflow-auto lg:max-h-[calc(100vh-8rem)]">
                     <h2 class=CARD_TITLE>"Path catalog"</h2>
                     {picker}
                 </section>
@@ -596,14 +599,14 @@ fn picker_node(
                 <span class="font-mono text-xs text-ink-muted">{rm_type}</span>
                 <button
                     type="button"
-                    class="text-xs rounded border border-accent text-accent px-1.5 hover:bg-accent-subtle"
+                    class=BTN_SECONDARY_SMALL
                     on:click=move |_| add_criterion(ctx, &add_node)
                 >
                     "+ condition"
                 </button>
                 <button
                     type="button"
-                    class="text-xs rounded border border-ok text-ok px-1.5 hover:bg-ok-subtle"
+                    class=BTN_SECONDARY_SMALL
                     class:hidden=move || !shape_is_dv.get()
                     on:click=move |_| add_column(ctx, &col_node)
                 >
@@ -758,7 +761,7 @@ fn leaf_card(criterion: &Criterion, path: Vec<usize>, ctx: BuilderCtx) -> AnyVie
                     </button>
                     <button
                         type="button"
-                        class="text-xs rounded border border-danger/40 text-danger px-1.5 hover:bg-danger-subtle"
+                        class=BTN_DANGER_SMALL
                         aria-label="Remove this condition"
                         on:click=move |_| {
                             ctx.query.update(|q| remove_at(&mut q.criteria, &remove_path));
@@ -852,7 +855,7 @@ fn group_toolbar(
             </button>
             <button
                 type="button"
-                class="text-xs rounded border border-edge-strong px-1.5 hover:bg-sunken"
+                class=BTN_SECONDARY_SMALL
                 on:click=move |_| {
                     ctx.query.update(|q| add_group_at(q, &add_path));
                     ctx.bump();
@@ -864,10 +867,9 @@ fn group_toolbar(
                 type="button"
                 class=move || {
                     if active_here() {
-                        "text-xs rounded border border-accent bg-accent-subtle px-1.5".to_owned()
+                        BTN_PRIMARY_SMALL
                     } else {
-                        "text-xs rounded border border-edge-strong px-1.5 hover:bg-sunken"
-                            .to_owned()
+                        BTN_SECONDARY_SMALL
                     }
                 }
                 on:click=move |_| ctx.active_path.set(target_set_path.clone())
@@ -876,7 +878,7 @@ fn group_toolbar(
             </button>
             <button
                 type="button"
-                class="text-xs rounded border border-danger/40 text-danger px-1.5 hover:bg-danger-subtle"
+                class=BTN_DANGER_SMALL
                 aria-label=remove_label
                 on:click=move |_| {
                     ctx.query.update(|q| remove_at(&mut q.criteria, &remove_path));
@@ -899,9 +901,9 @@ fn group_toolbar(
 /// The active/negated pill style shared by the NOT toggles.
 fn toggle_class(active: bool) -> &'static str {
     if active {
-        "text-xs font-semibold rounded border border-warn bg-warn-subtle text-warn px-1.5"
+        BTN_PRIMARY_SMALL
     } else {
-        "text-xs rounded border border-edge-strong px-1.5 hover:bg-sunken"
+        BTN_SECONDARY_SMALL
     }
 }
 
@@ -956,13 +958,13 @@ fn number_input(
     apply: impl Fn() + 'static,
 ) -> AnyView {
     view! {
-        <label class="flex flex-col gap-0.5 text-xs">
-            <span class="text-ink-muted">{label}</span>
+        <label class="fui-field">
+            <span class="fui-label">{label}</span>
             <input
                 id=id
                 type="number"
                 step="any"
-                class="rounded border border-edge-strong bg-raised px-2 py-1 text-sm w-28"
+                class="fui-input"
                 prop:value=move || signal.get()
                 on:input:target=move |ev| {
                     signal.set(ev.target().value());
@@ -1001,8 +1003,7 @@ fn quantity_editor(
     let max_field = number_input(format!("{key}-max"), "max magnitude", max_s, apply.clone());
     let units_control = units_input(unit_options, units_s, apply);
 
-    view! { <div class="flex flex-wrap items-end gap-2">{min_field}{max_field}{units_control}</div> }
-    .into_any()
+    view! { <div class="fui-field-flow">{min_field}{max_field}{units_control}</div> }.into_any()
 }
 
 /// The units control: a constrained `<select>` when the catalog supplies unit
@@ -1015,11 +1016,11 @@ fn units_input(
     if options.is_empty() {
         let apply = apply.clone();
         return view! {
-            <label class="flex flex-col gap-0.5 text-xs">
-                <span class="text-ink-muted">"units"</span>
+            <label class="fui-field">
+                <span class="fui-label">"units"</span>
                 <input
                     type="text"
-                    class="rounded border border-edge-strong bg-raised px-2 py-1 text-sm w-28"
+                    class="fui-input"
                     prop:value=move || units_s.get()
                     on:input:target=move |ev| {
                         units_s.set(ev.target().value());
@@ -1038,10 +1039,10 @@ fn units_input(
         })
         .collect::<Vec<_>>();
     view! {
-        <label class="flex flex-col gap-0.5 text-xs">
-            <span class="text-ink-muted">"units"</span>
+        <label class="fui-field">
+            <span class="fui-label">"units"</span>
             <select
-                class="rounded border border-edge-strong bg-raised px-2 py-1 text-sm"
+                class="fui-select"
                 prop:value=move || units_s.get()
                 on:change:target=move |ev| {
                     units_s.set(ev.target().value());
@@ -1070,7 +1071,7 @@ fn count_editor(min: Option<i64>, max: Option<i64>, path: Vec<usize>, ctx: Build
     };
     let min_field = number_input(format!("{key}-min"), "min count", min_s, apply.clone());
     let max_field = number_input(format!("{key}-max"), "max count", max_s, apply);
-    view! { <div class="flex flex-wrap items-end gap-2">{min_field}{max_field}</div> }.into_any()
+    view! { <div class="fui-field-flow">{min_field}{max_field}</div> }.into_any()
 }
 
 /// `DV_PROPORTION`: numerator min/max (v1 numerator-only, per the model).
@@ -1092,7 +1093,7 @@ fn proportion_editor(
     };
     let min_field = number_input(format!("{key}-min"), "min numerator", min_s, apply.clone());
     let max_field = number_input(format!("{key}-max"), "max numerator", max_s, apply);
-    view! { <div class="flex flex-wrap items-end gap-2">{min_field}{max_field}</div> }.into_any()
+    view! { <div class="fui-field-flow">{min_field}{max_field}</div> }.into_any()
 }
 
 /// How a hand-entered code on a coded criterion was answered by the CDR's
@@ -1282,13 +1283,13 @@ fn coded_terminology_field(
     let id = format!("qb-coded-terminology-{key}");
     let terminology = coded.terminology;
     view! {
-        <label class="flex flex-col gap-0.5 text-xs">
-            <span class="text-ink-muted">"terminology"</span>
+        <label class="fui-field">
+            <span class="fui-label">"terminology"</span>
             <input
                 id=id
                 type="text"
                 list="qb-terminology-options"
-                class="rounded border border-edge-strong bg-raised px-2 py-1 text-sm w-40"
+                class="fui-input"
                 prop:value=move || terminology.get()
                 on:input:target=move |ev| {
                     terminology.set(ev.target().value());
@@ -1348,13 +1349,13 @@ fn coded_code_entry(key: &str, coded: CodedCtx, path: Vec<usize>, ctx: BuilderCt
     let chip_list = coded_chip_list(coded, path, ctx);
     view! {
         <div class="space-y-1">
-            <div class="flex flex-wrap items-end gap-2">
-                <label class="flex flex-col gap-0.5 text-xs">
-                    <span class="text-ink-muted">"code"</span>
+            <div class="fui-field-flow">
+                <label class="fui-field">
+                    <span class="fui-label">"code"</span>
                     <input
                         id=code_id
                         type="text"
-                        class="rounded border border-edge-strong bg-raised px-2 py-1 text-sm w-40"
+                        class="fui-input"
                         prop:value=move || draft.get()
                         on:input:target=move |ev| draft.set(ev.target().value())
                     />
@@ -1362,7 +1363,7 @@ fn coded_code_entry(key: &str, coded: CodedCtx, path: Vec<usize>, ctx: BuilderCt
                 <button
                     id=lookup_id
                     type="button"
-                    class="text-xs rounded border border-accent text-accent px-1.5 py-1 hover:bg-accent-subtle"
+                    class=BTN_SECONDARY
                     disabled=Signal::derive(move || lookup.pending().get())
                     on:click=on_lookup
                 >
@@ -1371,7 +1372,7 @@ fn coded_code_entry(key: &str, coded: CodedCtx, path: Vec<usize>, ctx: BuilderCt
                 <button
                     id=add_id
                     type="button"
-                    class="text-xs rounded border border-edge-strong px-1.5 py-1 hover:bg-sunken"
+                    class=BTN_SECONDARY
                     on:click=on_add
                 >
                     "add"
@@ -1468,13 +1469,13 @@ fn coded_value_set(key: &str, coded: CodedCtx, path: Vec<usize>, ctx: BuilderCtx
     };
     view! {
         <div class="space-y-1">
-            <div class="flex flex-wrap items-end gap-2">
-                <label class="flex flex-col gap-0.5 text-xs">
-                    <span class="text-ink-muted">"value set (optional)"</span>
+            <div class="fui-field-flow">
+                <label class="fui-field">
+                    <span class="fui-label">"value set (optional)"</span>
                     <input
                         id=value_set_id
                         type="text"
-                        class="rounded border border-edge-strong bg-raised px-2 py-1 text-sm w-48"
+                        class="fui-input"
                         prop:value=move || draft.get()
                         on:input:target=move |ev| draft.set(ev.target().value())
                     />
@@ -1482,7 +1483,7 @@ fn coded_value_set(key: &str, coded: CodedCtx, path: Vec<usize>, ctx: BuilderCtx
                 <button
                     id=expand_id
                     type="button"
-                    class="text-xs rounded border border-edge-strong px-1.5 py-1 hover:bg-sunken"
+                    class=BTN_SECONDARY
                     disabled=Signal::derive(move || expand.pending().get())
                     on:click=on_expand
                 >
@@ -1620,10 +1621,11 @@ fn text_editor(is_contains: bool, text: String, path: Vec<usize>, ctx: BuilderCt
     let apply_ct = apply.clone();
     view! {
         <div class="flex flex-wrap items-center gap-3">
-            <label class="flex items-center gap-1 text-sm">
+            <div class="fui-segmented">
+            <label class="fui-segment">
                 <input
                     type="radio"
-                    class="accent-accent"
+                    class="fui-sr-only"
                     name=name.clone()
                     prop:checked=move || !contains.get()
                     on:change:target=move |_| {
@@ -1633,10 +1635,10 @@ fn text_editor(is_contains: bool, text: String, path: Vec<usize>, ctx: BuilderCt
                 />
                 "equals"
             </label>
-            <label class="flex items-center gap-1 text-sm">
+            <label class="fui-segment">
                 <input
                     type="radio"
-                    class="accent-accent"
+                    class="fui-sr-only"
                     name=name
                     prop:checked=move || contains.get()
                     on:change:target=move |_| {
@@ -1646,9 +1648,10 @@ fn text_editor(is_contains: bool, text: String, path: Vec<usize>, ctx: BuilderCt
                 />
                 "contains"
             </label>
+            </div>
             <input
                 type="text"
-                class="rounded border border-edge-strong bg-raised px-2 py-1 text-sm flex-1 min-w-40"
+                class="fui-input"
                 prop:value=move || text_s.get()
                 on:input:target=move |ev| {
                     text_s.set(ev.target().value());
@@ -1674,13 +1677,13 @@ fn datetime_editor(from: String, to: String, path: Vec<usize>, ctx: BuilderCtx) 
     let apply_from = apply.clone();
     let apply_to = apply;
     view! {
-        <div class="flex flex-wrap items-end gap-2">
-            <label class="flex flex-col gap-0.5 text-xs">
-                <span class="text-ink-muted">"from"</span>
+        <div class="fui-field-flow">
+            <label class="fui-field">
+                <span class="fui-label">"from"</span>
                 <input
                     type="text"
                     placeholder="2026-01-01T00:00:00Z"
-                    class="rounded border border-edge-strong bg-raised px-2 py-1 text-sm w-56"
+                    class="fui-input"
                     prop:value=move || from_s.get()
                     on:input:target=move |ev| {
                         from_s.set(ev.target().value());
@@ -1688,12 +1691,12 @@ fn datetime_editor(from: String, to: String, path: Vec<usize>, ctx: BuilderCtx) 
                     }
                 />
             </label>
-            <label class="flex flex-col gap-0.5 text-xs">
-                <span class="text-ink-muted">"to"</span>
+            <label class="fui-field">
+                <span class="fui-label">"to"</span>
                 <input
                     type="text"
                     placeholder="2026-12-31T23:59:59Z"
-                    class="rounded border border-edge-strong bg-raised px-2 py-1 text-sm w-56"
+                    class="fui-input"
                     prop:value=move || to_s.get()
                     on:input:target=move |ev| {
                         to_s.set(ev.target().value());
@@ -1714,11 +1717,11 @@ fn boolean_editor(value: bool, path: Vec<usize>, ctx: BuilderCtx) -> AnyView {
     let path_true = path.clone();
     let path_false = path;
     view! {
-        <div class="flex items-center gap-3 text-sm">
-            <label class="flex items-center gap-1">
+        <div class="fui-segmented">
+            <label class="fui-segment">
                 <input
                     type="radio"
-                    class="accent-accent"
+                    class="fui-sr-only"
                     name=name.clone()
                     prop:checked=move || val.get()
                     on:change:target=move |_| {
@@ -1735,10 +1738,10 @@ fn boolean_editor(value: bool, path: Vec<usize>, ctx: BuilderCtx) -> AnyView {
                 />
                 "true"
             </label>
-            <label class="flex items-center gap-1">
+            <label class="fui-segment">
                 <input
                     type="radio"
-                    class="accent-accent"
+                    class="fui-sr-only"
                     name=name
                     prop:checked=move || !val.get()
                     on:change:target=move |_| {
@@ -1790,33 +1793,40 @@ fn output_section(ctx: BuilderCtx) -> AnyView {
 
 /// The result-shape radio (compositions / data values / count).
 fn shape_radio(ctx: BuilderCtx, current: QueryShape) -> AnyView {
-    let option = |shape: QueryShape, label: &'static str| {
-        let checked = current == shape;
-        view! {
-            <label class="flex items-center gap-1 text-sm">
-                <input
-                    type="radio"
-                    class="accent-accent"
-                    name="qb-shape"
-                    prop:checked=checked
-                    on:change:target=move |_| {
-                        ctx.query.update(|q| q.shape = shape);
-                        ctx.bump();
-                    }
-                />
-                {label}
-            </label>
-        }
-    };
-    view! {
-        <div class="flex flex-wrap items-center gap-4">
-            {option(QueryShape::Compositions, "Compositions")}
-            {option(QueryShape::DataValues, "Data values")} {option(QueryShape::Count, "Count")}
-            {option(QueryShape::Ehrs, "EHRs (cohort)")}
-        </div>
-    }
+    let key = SHAPES
+        .iter()
+        .find(|(_, _, shape)| *shape == current)
+        .map_or("compositions", |(key, _, _)| *key);
+    ferrohealth_ui::widget::segmented::segmented(
+        "Output",
+        SHAPE_CHOICES,
+        Signal::stored(key),
+        move |chosen| {
+            if let Some((_, _, shape)) = SHAPES.iter().find(|(key, _, _)| *key == chosen) {
+                let shape = *shape;
+                ctx.query.update(|q| q.shape = shape);
+                ctx.bump();
+            }
+        },
+    )
     .into_any()
 }
+
+/// The result shapes the output choice offers: key, words and shape.
+const SHAPES: [(&str, &str, QueryShape); 4] = [
+    ("compositions", "Compositions", QueryShape::Compositions),
+    ("data-values", "Data values", QueryShape::DataValues),
+    ("count", "Count", QueryShape::Count),
+    ("ehrs", "EHRs (cohort)", QueryShape::Ehrs),
+];
+
+/// [`SHAPES`] as the segmented control's key and words.
+const SHAPE_CHOICES: &[(&str, &str)] = &[
+    ("compositions", "Compositions"),
+    ("data-values", "Data values"),
+    ("count", "Count"),
+    ("ehrs", "EHRs (cohort)"),
+];
 
 /// The projection-columns editor (data-value shape): one row per column with an
 /// alias input and a remove button; empty invites adding from the catalog.
@@ -1825,7 +1835,7 @@ fn columns_editor(ctx: BuilderCtx, columns: &[SelectedColumn]) -> AnyView {
         // An inline hint, not an `EmptyState`: the columns editor is one row of
         // the options strip beside "Order by" and "Limit".
         return view! {
-            <p class="text-xs text-ink-muted">
+            <p class="fui-help">
                 "Add projection columns with \"+ column\" in the path catalog."
             </p>
         }
@@ -1855,7 +1865,7 @@ fn columns_editor(ctx: BuilderCtx, columns: &[SelectedColumn]) -> AnyView {
                         type="text"
                         placeholder="alias"
                         aria-label=alias_label
-                        class="rounded border border-edge-strong bg-raised px-2 py-1 text-sm w-40"
+                        class="fui-input"
                         prop:value=move || alias.get()
                         on:input:target=move |ev| {
                             let value = ev.target().value();
@@ -1870,7 +1880,7 @@ fn columns_editor(ctx: BuilderCtx, columns: &[SelectedColumn]) -> AnyView {
                     />
                     <button
                         type="button"
-                        class="text-xs rounded border border-danger/40 text-danger px-1.5 hover:bg-danger-subtle"
+                        class=BTN_DANGER_SMALL
                         aria-label=remove_label
                         on:click=move |_| {
                             ctx.query
@@ -1890,7 +1900,7 @@ fn columns_editor(ctx: BuilderCtx, columns: &[SelectedColumn]) -> AnyView {
         .collect::<Vec<_>>();
     view! {
         <div class="space-y-1">
-            <div class="text-xs font-medium text-ink-muted">"Columns"</div>
+            <div class="fui-label">"Columns"</div>
             {rows}
         </div>
     }
@@ -1915,7 +1925,7 @@ fn order_row(ctx: BuilderCtx, i: usize, rule: &OrderRule) -> AnyView {
                 type="text"
                 placeholder="context/start_time/value"
                 aria-label=path_label
-                class="rounded border border-edge-strong bg-raised px-2 py-1 text-sm flex-1 min-w-48 font-mono"
+                class="fui-input font-mono"
                 prop:value=move || path_s.get()
                 on:input:target=move |ev| {
                     let value = ev.target().value();
@@ -1929,7 +1939,7 @@ fn order_row(ctx: BuilderCtx, i: usize, rule: &OrderRule) -> AnyView {
                 }
             />
             <select
-                class="rounded border border-edge-strong bg-raised px-2 py-1 text-sm"
+                class="fui-select"
                 aria-label=direction_label
                 prop:value=move || if desc { "desc" } else { "asc" }
                 on:change:target=move |ev| {
@@ -1948,7 +1958,7 @@ fn order_row(ctx: BuilderCtx, i: usize, rule: &OrderRule) -> AnyView {
             </select>
             <button
                 type="button"
-                class="text-xs rounded border border-danger/40 text-danger px-1.5 hover:bg-danger-subtle"
+                class=BTN_DANGER_SMALL
                 aria-label=remove_label
                 on:click=move |_| {
                     ctx.query
@@ -1978,10 +1988,10 @@ fn order_editor(ctx: BuilderCtx, rules: &[OrderRule]) -> AnyView {
     view! {
         <div class="space-y-1">
             <div class="flex items-center gap-2">
-                <span class="text-xs font-medium text-ink-muted">"Order by"</span>
+                <span class="fui-label">"Order by"</span>
                 <button
                     type="button"
-                    class="text-xs rounded border border-edge-strong px-1.5 hover:bg-sunken"
+                    class=BTN_SECONDARY_SMALL
                     on:click=move |_| {
                         ctx.query
                             .update(|q| {
@@ -2007,13 +2017,13 @@ fn order_editor(ctx: BuilderCtx, rules: &[OrderRule]) -> AnyView {
 fn limit_editor(ctx: BuilderCtx, limit: Option<u32>) -> AnyView {
     let limit_s = RwSignal::new(limit.map(|n| n.to_string()).unwrap_or_default());
     view! {
-        <label class="flex items-center gap-2 text-xs">
-            <span class="text-ink-muted">"Limit"</span>
+        <label class="fui-field fui-control-narrow">
+            <span class="fui-label">"Limit"</span>
             <input
                 id="qb-limit"
                 type="number"
                 min="1"
-                class="rounded border border-edge-strong bg-raised px-2 py-1 text-sm w-28"
+                class="fui-input"
                 prop:value=move || limit_s.get()
                 on:input:target=move |ev| {
                     let raw = ev.target().value();
@@ -2138,7 +2148,7 @@ fn preview_run_section(
                         }
                             .into_any()
                     }
-                }} <div class="flex flex-wrap items-end gap-3">
+                }} <div class="fui-field-flow">
                     <button type="button" class=BTN_PRIMARY disabled=disabled on:click=run_click>
                         "Run"
                     </button>
@@ -2229,39 +2239,39 @@ pub(crate) fn save_as_fields(id_prefix: &str, fields: SaveFields) -> AnyView {
             }
         })
     });
-    let field = "rounded-control border border-edge-strong bg-raised px-2 py-1 text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-accent";
+    let field = INPUT;
     view! {
         <div class="flex flex-col gap-1">
-            <div class="flex items-end gap-2">
-                <label class="flex flex-col gap-0.5 text-xs">
-                    <span class="text-ink-muted">"Namespace (optional)"</span>
+            <div class="fui-field-flow">
+                <label class="fui-field">
+                    <span class="fui-label">"Namespace (optional)"</span>
                     <input
                         id=namespace_id
                         type="text"
                         placeholder="org.example"
-                        class=format!("{field} w-40")
+                        class=field
                         prop:value=move || namespace.get()
                         on:input:target=move |ev| namespace.set(ev.target().value())
                     />
                 </label>
-                <label class="flex flex-col gap-0.5 text-xs">
-                    <span class="text-ink-muted">"Query name"</span>
+                <label class="fui-field">
+                    <span class="fui-label">"Query name"</span>
                     <input
                         id=name_id
                         type="text"
                         placeholder="my_query"
-                        class=format!("{field} w-56")
+                        class=field
                         prop:value=move || name.get()
                         on:input:target=move |ev| name.set(ev.target().value())
                     />
                 </label>
-                <label class="flex flex-col gap-0.5 text-xs">
-                    <span class="text-ink-muted">"Version (optional)"</span>
+                <label class="fui-field">
+                    <span class="fui-label">"Version (optional)"</span>
                     <input
                         id=version_id
                         type="text"
                         placeholder="1.0.0"
-                        class=format!("{field} w-28")
+                        class=field
                         prop:value=move || version.get()
                         on:input:target=move |ev| version.set(ev.target().value())
                     />
@@ -2424,33 +2434,13 @@ pub(crate) fn results_view(page: &ResultPage, is_count: bool) -> AnyView {
     let chart = crate::components::results_chart::results_chart(&page.columns, &page.rows);
     view! {
         <div>
-            <div class="mb-2 inline-flex overflow-hidden rounded-control border border-edge-strong">
-                <button
-                    type="button"
-                    class=move || {
-                        if show_chart.get() {
-                            "px-3 py-1 text-xs font-medium text-ink-muted hover:bg-sunken"
-                        } else {
-                            "px-3 py-1 text-xs font-medium bg-accent text-on-accent"
-                        }
-                    }
-                    on:click=move |_| show_chart.set(false)
-                >
-                    "Table"
-                </button>
-                <button
-                    type="button"
-                    class=move || {
-                        if show_chart.get() {
-                            "px-3 py-1 text-xs font-medium bg-accent text-on-accent"
-                        } else {
-                            "px-3 py-1 text-xs font-medium text-ink-muted hover:bg-sunken"
-                        }
-                    }
-                    on:click=move |_| show_chart.set(true)
-                >
-                    "Chart"
-                </button>
+            <div class="mb-2">
+                {ferrohealth_ui::widget::segmented::segmented(
+                    "Results view",
+                    &[("table", "Table"), ("chart", "Chart")],
+                    Signal::derive(move || if show_chart.get() { "chart" } else { "table" }),
+                    move |key| show_chart.set(key == "chart"),
+                )}
             </div>
             <div class:hidden=move || show_chart.get()>{table}</div>
             <div class:hidden=move || !show_chart.get()>{chart}</div>
@@ -2863,6 +2853,15 @@ fn set_leaf_kind(query: &mut BuilderQuery, path: &[usize], kind: CriterionKind) 
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn the_output_choices_name_every_shape_in_order() {
+        let keys: Vec<(&str, &str)> = super::SHAPES
+            .iter()
+            .map(|(key, words, _)| (*key, *words))
+            .collect();
+        assert_eq!(keys, super::SHAPE_CHOICES);
+    }
+
     // The chart derivation this screen used to own (its column-picking rule and
     // its rejection cases) now lives in `crate::chart_model`, re-specified for
     // multi-series derivation and unit-tested beside it.

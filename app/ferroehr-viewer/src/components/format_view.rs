@@ -23,7 +23,7 @@
 )]
 
 use ferrohealth_ui::highlight::Language;
-use ferrohealth_ui::widget::document::document_pane;
+use ferrohealth_ui::widget::document::document_pane_opening;
 use ferrohealth_ui::widget::segmented::segmented;
 use leptos::prelude::*;
 
@@ -140,7 +140,8 @@ impl PaneView {
 /// `body` is the raw representation text (already pretty-printed where
 /// applicable — see [`pretty_body`]); the pane never rewrites it. The Rendered
 /// view draws the template-free clinical reading when the body is a canonical
-/// openEHR JSON document, and says so when it is not.
+/// openEHR JSON document; a body with no rendered reading (XML, FLAT) offers
+/// the highlighted and raw views alone.
 #[expect(
     clippy::must_use_candidate,
     reason = "#[component] rewrites the fn; view!/mount always consumes the value"
@@ -157,33 +158,14 @@ pub fn DocumentPane(
     #[prop(optional)]
     initial_view: PaneView,
 ) -> impl IntoView {
-    // TODO(#3804): hand the opening view to FerroUI's document pane once it
-    // takes one (FerroHEALTH/FerroUI#50); it opens Highlighted until then.
-    #[expect(
-        clippy::no_effect_underscore_binding,
-        reason = "the opening view waits on FerroUI's pane taking one (FerroHEALTH/FerroUI#50)"
-    )]
-    let _opening: PaneView = initial_view;
     let rendered = Memo::new(move |_| body.with(|text| crate::clinical::render(text.as_str())));
     let language = Signal::derive(move || body.with(|text| Language::detect(text.as_str())));
+    let available = Signal::derive(move || rendered.with(Option::is_some));
     let rendered_view = view! {
-        {move || {
-            rendered
-                .with(|document| match document {
-                    Some(document) => rendered_pane(document),
-                    None => {
-                        view! {
-                            <p class="text-sm text-ink-muted">
-                                "This document has no rendered reading: it is not a canonical openEHR JSON document."
-                            </p>
-                        }
-                            .into_any()
-                    }
-                })
-        }}
+        {move || rendered.with(|document| document.as_ref().map(rendered_pane))}
     }
     .into_any();
-    document_pane(
+    document_pane_opening(
         ferrohealth_ui::widget::document::DocumentPane {
             id,
             label: "Document",
@@ -193,6 +175,8 @@ pub fn DocumentPane(
             language,
             rendered: Some(rendered_view),
         },
+        initial_view.param(),
+        available,
         |_| {},
     )
 }

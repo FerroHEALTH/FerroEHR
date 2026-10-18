@@ -137,9 +137,14 @@ pub fn OperationsPage() -> impl IntoView {
                 title="Operations"
                 subtitle="Dependency health, build provenance, the metric registry, and live log control."
             />
+            // The long provenance card takes one column; health, the log
+            // control and the configuration stack in the other, and the
+            // metric tiles run the full width under both.
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-                {health} {build} {metrics} {loggers} {config}
+                <div class="grid gap-4">{health} {loggers} {config}</div>
+                {build}
             </div>
+            <div class="mt-4">{metrics}</div>
             {dialogs}
         </div>
     }
@@ -290,7 +295,7 @@ fn definition_rows(rows: Vec<(String, String)>) -> AnyView {
             children=|(key, value)| {
                 view! {
                     <dt class="font-medium text-ink-muted">{key}</dt>
-                    <dd class="font-mono break-all text-ink">{value}</dd>
+                    <dd class="font-mono wrap-break-word text-ink">{value}</dd>
                 }
             }
         />
@@ -308,7 +313,7 @@ fn info_section(section: InfoSection) -> AnyView {
             <h3 class="mt-4 mb-1 text-xs font-semibold uppercase tracking-wide text-ink-muted">
                 {title}
             </h3>
-            <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">{rows}</dl>
+            <dl class="fui-facts text-sm sm:grid-cols-[9rem_minmax(0,1fr)]">{rows}</dl>
         </section>
     }
     .into_any()
@@ -322,7 +327,7 @@ fn build_info_body(view: BuildInfoView) -> AnyView {
     let sections = view.sections;
     view! {
         <div id="ops-build-info">
-            <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">{facts}</dl>
+            <dl class="fui-facts text-sm sm:grid-cols-[9rem_minmax(0,1fr)]">{facts}</dl>
             <For
                 each=move || sections.clone()
                 key=|section| section.key.clone()
@@ -444,10 +449,10 @@ fn metric_picker(names: Vec<String>, current: Option<&str>) -> AnyView {
         <leptos_router::components::Form
             method="GET"
             action="/operations"
-            attr:class="mt-4 flex flex-wrap items-end gap-2"
+            attr:class="mt-4 fui-field-flow"
         >
-            <label class="flex flex-col gap-1 text-xs text-ink-muted">
-                "Metric" <select id="ops-metric" name="metric" class=format!("min-w-72 {SELECT}")>
+            <label class="fui-field">
+                <span class="fui-label">"Metric"</span> <select id="ops-metric" name="metric" class=format!("min-w-72 {SELECT}")>
                     {options}
                 </select>
             </label>
@@ -587,21 +592,21 @@ fn loggers_body(
     let boot = view.boot_filter;
     view! {
         <div>
-            <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+            <dl class="fui-facts text-sm">
                 <dt class="font-medium text-ink-muted">"effective"</dt>
-                <dd id="ops-log-effective" class="font-mono break-all text-ink">
+                <dd id="ops-log-effective" class="font-mono wrap-break-word text-ink">
                     {effective}
                 </dd>
                 <dt class="font-medium text-ink-muted">"boot"</dt>
-                <dd class="font-mono break-all text-ink">{boot}</dd>
+                <dd class="font-mono wrap-break-word text-ink">{boot}</dd>
             </dl>
-            <div class="mt-3 flex flex-wrap items-end gap-2">
-                <label class="flex flex-col gap-1 text-xs text-ink-muted">
-                    "New filter directives"
+            <div class="mt-3 fui-field-flow">
+                <label class="fui-field">
+                    <span class="fui-label">"New filter directives"</span>
                     <input
                         id="ops-log-filter"
                         type="text"
-                        class=format!("w-72 {INPUT}")
+                        class=INPUT
                         placeholder="ferroehr=debug,sqlx=warn"
                         prop:value=move || draft.get()
                         on:input:target=move |ev| draft.set(ev.target().value())
@@ -627,7 +632,7 @@ fn loggers_body(
                     " Reset to boot filter"
                 </button>
             </div>
-            <p class="mt-2 text-xs text-ink-muted">
+            <p class="mt-2 fui-help">
                 "Takes effect immediately, for this CDR instance only, until it restarts."
             </p>
         </div>

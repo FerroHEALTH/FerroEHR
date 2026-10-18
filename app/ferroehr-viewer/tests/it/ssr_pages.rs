@@ -449,7 +449,7 @@ async fn the_party_browser_renders_the_kind_strip_the_lookup_the_create_form_and
     });
     assert!(html.contains(">People</h1>"), "{html}");
     // The five kinds are a closed set, and every one is a link on every browser.
-    assert_eq!(html.matches("data-kind=\"").count(), 5, "{html}");
+    assert_eq!(html.matches("data-tab=\"").count(), 5, "{html}");
     assert!(html.contains("id=\"party-lookup\""), "{html}");
     assert!(html.contains("id=\"party-create-body\""), "{html}");
     assert!(html.contains("id=\"party-create-submit\""), "{html}");

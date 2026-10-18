@@ -256,14 +256,14 @@ async fn a_subject_bound_ehr_created_in_the_viewer_carries_its_subject() {
     );
     h.shot(1, "ehr-created-with-subject").await;
 
-    // The Status tab reads the same current EHR_STATUS and spells the subject
-    // identically — one read, two renderings. It is also the tab the detail
-    // screen opens on, so the assertion below runs on the landing page; opening
-    // it explicitly first puts the tab in the URL.
+    // The Status tab reads the same current EHR_STATUS: it names the status
+    // version, and the header above it keeps the subject, shown once on the
+    // page. Opening the tab explicitly puts it in the URL.
     h.wait_css("a[href$='tab=status']").await.click().await;
     h.wait_url_contains("tab=status").await;
-    wait_text_contains(&h, "[data-status-fact='subject']", &subject_id).await;
-    wait_text_contains(&h, "[data-status-fact='subject']", SUBJECT_NAMESPACE).await;
+    wait_text_contains(&h, "[data-status-fact='version']", "::").await;
+    wait_text_contains(&h, "#ehr-identity", &subject_id).await;
+    wait_text_contains(&h, "#ehr-identity", SUBJECT_NAMESPACE).await;
     h.shot(2, "ehr-status-carries-the-subject").await;
 
     // The same subject now resolves through the finder's subject lookup, which

@@ -337,13 +337,13 @@ pub fn SystemPage() -> impl IntoView {
 fn manufacturer_card() -> AnyView {
     let manufacturer = crate::manufacturer::MANUFACTURER;
     let body = view! {
-        <dl id="manufacturer" class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+        <dl id="manufacturer" class="fui-facts text-sm">
             <dt class="font-medium text-ink-muted">"name"</dt>
             <dd class="text-ink">{manufacturer.name}</dd>
             <dt class="font-medium text-ink-muted">"postal address"</dt>
             <dd class="text-ink">{manufacturer.postal_address}</dd>
             <dt class="font-medium text-ink-muted">"contact"</dt>
-            <dd class="break-all">
+            <dd class="wrap-break-word">
                 <a
                     href=format!("mailto:{}", manufacturer.email)
                     class="text-accent-ink hover:underline"
@@ -352,7 +352,7 @@ fn manufacturer_card() -> AnyView {
                 </a>
             </dd>
             <dt class="font-medium text-ink-muted">"website"</dt>
-            <dd class="break-all">
+            <dd class="wrap-break-word">
                 <a href=manufacturer.website class="text-accent-ink hover:underline">
                     {manufacturer.website}
                 </a>
@@ -409,7 +409,7 @@ fn manifest_body(manifest: &crate::system_api::ConformanceManifest) -> AnyView {
         };
         view! {
             <dt class="font-medium text-ink-muted">{label}</dt>
-            <dd class="font-mono break-all text-ink">{shown}</dd>
+            <dd class="font-mono wrap-break-word text-ink">{shown}</dd>
         }
     })
     .collect::<Vec<_>>();
@@ -432,7 +432,7 @@ fn manifest_body(manifest: &crate::system_api::ConformanceManifest) -> AnyView {
     let empty_groups = manifest.endpoints.is_empty();
     view! {
         <div id="conformance-manifest">
-            <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">{facts}</dl>
+            <dl class="fui-facts text-sm">{facts}</dl>
             <div class="mt-3">
                 <div class="text-xs font-medium text-ink-muted mb-1">"Mounted API groups"</div>
                 <div class="flex flex-wrap gap-1">{groups}</div>
@@ -445,7 +445,7 @@ fn manifest_body(manifest: &crate::system_api::ConformanceManifest) -> AnyView {
                         }
                     })}
             </div>
-            <p class="mt-3 text-xs text-ink-muted">
+            <p class="mt-3 fui-help">
                 "The product and openEHR REST versions are in the Status card — the manifest and the status document report the same versions, so the viewer reads them in one place."
             </p>
         </div>
@@ -501,7 +501,7 @@ fn usage_card() -> AnyView {
                                 view! {
                                     <div>
                                         {table}
-                                        <p class="mt-2 text-xs text-ink-muted">
+                                        <p class="mt-2 fui-help">
                                             {format!(
                                                 "Showing the {shown} busiest of {total} templates.",
                                             )}
@@ -648,7 +648,7 @@ fn status_body(body: &str) -> Result<AnyView, ViewerError> {
         .map(|(k, v)| {
             view! {
                 <dt class="font-medium text-ink-muted">{k}</dt>
-                <dd class="font-mono break-all text-ink">{v}</dd>
+                <dd class="font-mono wrap-break-word text-ink">{v}</dd>
             }
         })
         .collect::<Vec<_>>();
@@ -665,7 +665,7 @@ fn status_body(body: &str) -> Result<AnyView, ViewerError> {
                 <span class=format!("h-1.5 w-1.5 rounded-full {dot}")></span>
                 {label}
             </span>
-            <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">{rows}</dl>
+            <dl class="mt-3 fui-facts text-sm">{rows}</dl>
         </div>
     }
     .into_any())
@@ -891,9 +891,9 @@ fn openapi_selector(family: Memo<String>) -> AnyView {
         .collect::<Vec<_>>();
     view! {
         <leptos_router::components::Form method="GET" action="/system" attr:class="mb-3">
-            <div class="flex flex-wrap items-end gap-2">
-                <label class="flex flex-col gap-1 text-xs text-ink-muted" r#for="openapi-family">
-                    "API family"
+            <div class="fui-field-flow">
+                <label class="fui-field" r#for="openapi-family">
+                    <span class="fui-label">"API family"</span>
                     <select id="openapi-family" name="openapi" class=SELECT>
                         {options}
                     </select>
@@ -932,7 +932,7 @@ fn openapi_body(doc: &serde_json::Value) -> AnyView {
                             <code class="font-mono font-semibold shrink-0 text-accent">
                                 {method}
                             </code>
-                            <span class="font-mono break-all text-ink">{path}</span>
+                            <span class="font-mono min-w-0 wrap-anywhere text-ink">{path}</span>
                         </li>
                     }
                 })

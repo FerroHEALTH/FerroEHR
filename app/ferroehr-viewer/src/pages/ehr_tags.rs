@@ -65,7 +65,7 @@ use crate::components::data_table::{
     table_shell, table_skeleton,
 };
 use crate::components::empty_state::EmptyState;
-use crate::components::field::BTN_SECONDARY;
+use crate::components::field::BTN_SECONDARY_SMALL;
 use crate::components::item_tags::{
     ItemTagRow, TagActions, TagEdit, TagGroup, TagList, TagPanelCopy, group_by_target,
     tag_filter_form, tag_panel,
@@ -906,7 +906,7 @@ pub(crate) fn ehr_tags_section(ehr_id: Signal<String>, selected: Memo<String>) -
     view! {
         <section class=CARD_PAD id="ehr-tag-browser">
             <h2 class=CARD_TITLE>"Tags in this EHR"</h2>
-            <p class="mb-3 text-xs text-ink-muted">
+            <p class="mb-3 fui-help">
                 "Every tag on every object in this EHR, grouped by the object it is on. A tag names its target without naming that target's kind, so opening a group asks the CDR which object holds that id. The container form and one version of the same object are separate collections and appear as separate groups."
             </p>
             {move || { tag_filter_form(action.get(), filters, &[("tab", "tags".to_owned())]) }}
@@ -931,6 +931,10 @@ fn browser_table(
     open: ResolveAction,
 ) -> AnyView {
     let total = row_total(groups.len());
+    // The target-path column shows only when a tag carries one.
+    let paths = groups
+        .iter()
+        .any(|group| group.tags.iter().any(|tag| !tag.target_path.is_empty()));
     let rows = view! {
         <For
             each=move || {
@@ -940,7 +944,7 @@ fn browser_table(
             key=|group| group.target.clone()
             let:group
         >
-            {group_rows(ehr_id, &group, open)}
+            {group_rows(ehr_id, &group, paths, open)}
         </For>
     }
     .into_any();
@@ -952,7 +956,11 @@ fn browser_table(
         Signal::derive(move || total),
     );
     view! {
-        {table_shell("Tagged objects", &["Key", "Value", "Target path", ""], rows)}
+        {table_shell(
+            "Tagged objects",
+            if paths { &["Key", "Value", "Target path", ""] } else { &["Key", "Value", ""] },
+            rows,
+        )}
         {footer}
     }
     .into_any()
@@ -960,7 +968,12 @@ fn browser_table(
 
 /// One target's rows: the target header with its open action, then that
 /// target's tags.
-fn group_rows(ehr_id: Signal<String>, group: &TagGroup, open: ResolveAction) -> AnyView {
+fn group_rows(
+    ehr_id: Signal<String>,
+    group: &TagGroup,
+    paths: bool,
+    open: ResolveAction,
+) -> AnyView {
     let target = group.target.clone();
     let hook = group.target.clone();
     let shown = group.target.clone();
@@ -969,15 +982,15 @@ fn group_rows(ehr_id: Signal<String>, group: &TagGroup, open: ResolveAction) -> 
         <tr class="border-b border-edge bg-sunken/60">
             <th
                 scope="rowgroup"
-                colspan="3"
+                colspan=if paths { "3" } else { "2" }
                 class="px-3 py-2 text-left font-mono text-xs font-medium text-ink"
             >
                 {shown}
             </th>
-            <td class=CELL>
+            <td class=ferrohealth_ui::table::view::ACTIONS>
                 <button
                     type="button"
-                    class=BTN_SECONDARY
+                    class=BTN_SECONDARY_SMALL
                     data-tag-target=hook
                     disabled=Signal::derive(move || open.pending().get())
                     on:click=move |_| {
@@ -990,14 +1003,14 @@ fn group_rows(ehr_id: Signal<String>, group: &TagGroup, open: ResolveAction) -> 
             </td>
         </tr>
         <For each=move || tags.clone() key=ItemTagRow::identity let:tag>
-            {browser_row(&tag)}
+            {browser_row(&tag, paths)}
         </For>
     }
     .into_any()
 }
 
 /// One tag row inside its target's group.
-fn browser_row(tag: &ItemTagRow) -> AnyView {
+fn browser_row(tag: &ItemTagRow, paths: bool) -> AnyView {
     let hook = tag.key.clone();
     let key = tag.key.clone();
     let value = tag.value.clone();
@@ -1008,7 +1021,7 @@ fn browser_row(tag: &ItemTagRow) -> AnyView {
                 {key}
             </td>
             <td class=CELL>{value}</td>
-            <td class=CELL_MONO>{target_path}</td>
+            {paths.then(|| view! { <td class=CELL_MONO>{target_path}</td> })}
             <td class=CELL></td>
         </tr>
     }

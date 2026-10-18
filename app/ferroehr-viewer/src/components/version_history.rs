@@ -18,7 +18,7 @@ use leptos::prelude::*;
 
 use crate::components::data_table::{CELL, CELL_MONO, ROW, table_shell, table_skeleton};
 use crate::components::empty_state::EmptyState;
-use crate::components::field::{BTN_SECONDARY, INPUT, LABEL};
+use crate::components::field::{BTN_SECONDARY, BTN_SECONDARY_SMALL, INPUT, LABEL};
 use crate::components::format_view::DocumentPane;
 use crate::components::notice::inline_error;
 use crate::components::surface::{CARD_PAD, CARD_TITLE};
@@ -124,7 +124,7 @@ pub fn revision_history_section(
     view! {
         <section class=CARD_PAD>
             <h2 class=CARD_TITLE>"Revision history"</h2>
-            <p class="mb-3 text-xs text-ink-muted">{labels.history_lead}</p>
+            <p class="mb-3 fui-help">{labels.history_lead}</p>
             {table}
         </section>
     }
@@ -181,7 +181,7 @@ fn history_row(entry: &VersionEntry, pinned: RwSignal<String>, row_hook: &'stati
         </button>
     }
     .attr("type", "button")
-    .attr("class", BTN_SECONDARY)
+    .attr("class", BTN_SECONDARY_SMALL)
     .attr(row_hook, hook);
     view! {
         <tr class=row_class>
@@ -189,7 +189,7 @@ fn history_row(entry: &VersionEntry, pinned: RwSignal<String>, row_hook: &'stati
             <td class=CELL>{committed}</td>
             <td class=CELL>{change_type}</td>
             <td class=CELL>{committed_by}</td>
-            <td class=CELL>{open}</td>
+            <td class=ferrohealth_ui::table::view::ACTIONS>{open}</td>
         </tr>
     }
     .into_any()
@@ -226,7 +226,7 @@ pub fn at_time_lookup_section(
     view! {
         <section class=CARD_PAD>
             <h2 class=CARD_TITLE>{labels.at_time_title}</h2>
-            <div class="flex flex-wrap items-end gap-3">
+            <div class="fui-field-flow">
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for=labels.at_time_field_id>
                         "Date and time (interpreted as UTC)"
@@ -337,7 +337,7 @@ mod tests {
         assert!(
             html.contains(&format!(
                 "<button type=\"button\" class=\"{}\" data-status-version=\"8849182c::example.org::2\">",
-                crate::components::field::BTN_SECONDARY
+                crate::components::field::BTN_SECONDARY_SMALL
             )),
             "the Open button's attributes are missing or reordered: {html}"
         );

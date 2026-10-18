@@ -19,7 +19,7 @@ use serde_json::Value;
 
 use crate::activity::ActivityPoint;
 use crate::components::activity_chart::activity_chart;
-use crate::components::data_table::{CELL, CELL_MONO, ROW, table_shell, table_skeleton};
+use crate::components::data_table::{CELL, CELL_MONO, ROW, table_shell_stacked, table_skeleton};
 use crate::components::empty_state::EmptyState;
 use crate::components::field::{BTN_SECONDARY, INPUT, LABEL};
 use crate::components::format_view::DocumentPane;
@@ -349,7 +349,7 @@ fn contributions_table(page: &ContributionPage, offset: RwSignal<u32>) -> AnyVie
         .into_any()
     });
     view! {
-        {table_shell("Contributions", &["Contribution", "Committed", "Committer", "Change type"], body)}
+        {table_shell_stacked("Contributions", &["Contribution", "Committed", "Committer", "Change type"], body)}
         <p id="contribution-total" class="mt-2 text-xs text-ink-muted">
             {total}
             " contribution(s) total"
@@ -371,9 +371,9 @@ fn contribution_row_view(row: &ContributionRow) -> AnyView {
     view! {
         <tr class=ROW>
             <td class=CELL_MONO>{row.uid.clone()}</td>
-            <td class=CELL>{row.time_committed.clone()}</td>
-            <td class=CELL>{row.committer.clone()}</td>
-            <td class=CELL title=row.change_type.clone()>
+            <td class=CELL data-label="Committed">{row.time_committed.clone()}</td>
+            <td class=CELL data-label="Committer">{row.committer.clone()}</td>
+            <td class=CELL title=row.change_type.clone() data-label="Change type">
                 {change_type}
             </td>
         </tr>
@@ -402,7 +402,7 @@ fn contribution_lookup(ehr_id: Signal<String>, selected: Memo<String>) -> AnyVie
     );
     let lookup = view! {
         <section class=format!("{CARD_PAD} mb-4")>
-            <div class="flex flex-wrap items-end gap-3">
+            <div class="fui-field-flow">
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="contribution-uid">
                         "Contribution uid"

@@ -141,8 +141,8 @@ fn axis_picker(labels: &[String], axis: RwSignal<usize>) -> AnyView {
         })
         .collect::<Vec<_>>();
     view! {
-        <label class="flex items-center gap-2 text-xs text-ink-muted">
-            "X axis"
+        <label class="flex items-center gap-2">
+            <span class="fui-label">"X axis"</span>
             <select
                 class=format!("{SELECT} w-auto")
                 data-chart-axis="picker"

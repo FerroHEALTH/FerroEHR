@@ -33,6 +33,11 @@ workflow refuses a tag that has no matching section here.
   own files. A listing that can show patient data (the demographic tags, the
   EHR tags) keeps its page in the screen and out of the URL; the other
   listings keep `?page=` (now counted from 1) and `?size=` in the URL.
+  Fields in a row share its width, every key and value list is one
+  definition grid, a page's delete action sits on its title row, the query
+  builder's controls, labels and output choice are FerroUI's, an EHR's subject
+  shows once in its header, a tag table drops an empty target-path column, and
+  a refusal no longer repeats "forbidden".
 
 ## [4.3.10] - 2026-10-16
 

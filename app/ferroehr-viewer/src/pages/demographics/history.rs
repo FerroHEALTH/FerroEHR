@@ -156,14 +156,14 @@ fn versioned_card(facts: &VersionedObjectFacts) -> AnyView {
         let shown = facts.contribution_uid.clone();
         view! {
             <div>
-                <span class="font-medium text-ink-muted mr-1">"contribution:"</span>
-                <leptos_router::components::A
+                <dt>"contribution"</dt>
+                <dd><leptos_router::components::A
                     href=href
-                    attr:class="font-mono break-all text-accent hover:underline"
+                    attr:class="font-mono wrap-break-word text-accent hover:underline"
                     attr:data-demographic-fact="contribution"
                 >
                     {shown}
-                </leptos_router::components::A>
+                </leptos_router::components::A></dd>
             </div>
         }
         .into_any()
@@ -171,14 +171,14 @@ fn versioned_card(facts: &VersionedObjectFacts) -> AnyView {
     view! {
         <section class=CARD_PAD id="demographic-versioned">
             <h2 class=CARD_TITLE>"Versioned object"</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 items-start gap-x-4 gap-y-2 text-sm">
+            <dl class="fui-facts text-sm">
                 {fact_row("versioned object", "object-uid", facts.object_uid.clone())}
                 {fact_row("created", "created", facts.time_created.clone())}
                 {fact_row("version", "version-id", facts.version_id.clone())}
                 {fact_row("lifecycle", "lifecycle", facts.lifecycle_state.clone())}
                 {fact_row("preceding version", "preceding", facts.preceding_version_uid.clone())}
                 {contribution} {fact_row("signature", "signature", signature)}
-            </div>
+            </dl>
         </section>
     }
     .into_any()

@@ -447,8 +447,8 @@ async fn the_ehr_header_names_the_subject_and_its_status_badges() {
         text.contains(&subject_id) && text.contains("e2e-patients"),
         "the header must name the subject id and its namespace (got `{text}`)"
     );
-    // Both capability badges, scoped to the header so the Status tab's own pair
-    // cannot satisfy this on its behalf.
+    // Both capability badges, in the header, the one place the page shows
+    // them.
     h.wait_css(
         "[data-status-scope='header'][data-status-flag='queryable'][data-status-value='true']",
     )
@@ -459,11 +459,12 @@ async fn the_ehr_header_names_the_subject_and_its_status_badges() {
     .await;
     h.shot(1, "header-on-compositions-tab").await;
 
-    // The Status tab shows the same two flags from the same read; the header
-    // keeps them while that tab is open.
+    // The header keeps both flags while the Status tab is open.
     h.goto(&format!("/ehrs/{ehr_id}?tab=status")).await;
-    h.wait_css("[data-status-scope='tab'][data-status-flag='queryable'][data-status-value='true']")
-        .await;
+    h.wait_css(
+        "[data-status-scope='header'][data-status-flag='queryable'][data-status-value='true']",
+    )
+    .await;
     h.wait_css("#ehr-identity").await;
     h.shot(2, "header-on-status-tab").await;
 

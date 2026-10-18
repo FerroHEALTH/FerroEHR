@@ -237,7 +237,7 @@ fn identity_strip(status: StatusFeed) -> AnyView {
                                 <span class="text-sm">
                                     <span class="font-medium text-ink-muted mr-1">"subject:"</span>
                                     <span
-                                        class="font-mono break-all text-ink"
+                                        class="font-mono wrap-break-word text-ink"
                                         data-ehr-fact="subject"
                                     >
                                         {subject}
@@ -271,9 +271,9 @@ fn summary_facts(summary: &EhrSummary) -> AnyView {
         summary_fact(status_label, summary.ehr_status_uid.clone()),
     ];
     view! {
-        <div class="grid grid-cols-1 sm:grid-cols-2 items-start gap-x-4 gap-y-2 text-sm">
+        <dl class="fui-facts text-sm">
             {facts}
-        </div>
+        </dl>
     }
     .into_any()
 }
@@ -287,8 +287,8 @@ fn summary_fact(label: String, value: String) -> AnyView {
     };
     view! {
         <div>
-            <span class="font-medium text-ink-muted mr-1">{label}":"</span>
-            <span class="font-mono break-all text-ink">{shown}</span>
+            <dt>{label}</dt>
+            <dd class="font-mono wrap-break-word text-ink">{shown}</dd>
         </div>
     }
     .into_any()
@@ -351,8 +351,9 @@ pub fn EhrDetailPage() -> impl IntoView {
                 title=Signal::derive(move || heading.get())
                 crumbs=vec![Crumb::new("EHRs", "/ehrs")]
                 mono=true
-            />
-            {delete_action}
+            >
+                {delete_action}
+            </PageHeader>
             {summary}
             {tabs}
             <div class="mt-4">
@@ -372,7 +373,7 @@ pub fn EhrDetailPage() -> impl IntoView {
     }
 }
 
-/// The admin **Delete EHR** affordance above the tab bar.
+/// The admin **Delete EHR** affordance on the page header's title row.
 ///
 /// Probe-gated (`crate::admin::when_admin_usable` — nothing renders unless the
 /// CDR advertises its Admin API as mounted). The click opens the
@@ -427,7 +428,7 @@ fn delete_section(ehr_id: Signal<String>) -> AnyView {
 
     crate::admin::when_admin_usable(gate, move || {
         view! {
-            <div class="mb-4 flex flex-wrap items-center justify-end gap-3">
+            <div class="contents">
                 <button
                     id="ehr-delete"
                     type="button"

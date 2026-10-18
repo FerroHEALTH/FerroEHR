@@ -316,53 +316,54 @@ pub fn AuditPage() -> impl IntoView {
 /// keeps the form filled.
 fn filter_form(query: Memo<leptos_router::params::ParamsMap>) -> AnyView {
     let initial = move |key: &str| query.read_untracked().get(key).unwrap_or_default();
-    let select_class = "rounded-control border border-edge bg-raised px-2 py-1.5 text-sm text-ink";
+    let select_class = crate::components::field::SELECT;
     view! {
         <leptos_router::components::Form method="GET" action="/audit" attr:class="mb-4">
-            <div class="flex flex-wrap items-end gap-2">
-                <label class="flex flex-col gap-1 text-xs text-ink-muted">
-                    "From (instant)"
+            <div class="fui-field-flow">
+                <label class="fui-field">
+                    <span class="fui-label">"From (instant)"</span>
                     <input
                         type="text"
                         name="from"
-                        class=format!("w-56 {INPUT}")
+                        class=INPUT
                         placeholder="2026-07-01T00:00:00Z"
                         value=initial("from")
                     />
                 </label>
-                <label class="flex flex-col gap-1 text-xs text-ink-muted">
-                    "To (instant)"
+                <label class="fui-field">
+                    <span class="fui-label">"To (instant)"</span>
                     <input
                         type="text"
                         name="to"
-                        class=format!("w-56 {INPUT}")
+                        class=INPUT
                         placeholder="2026-07-18T00:00:00Z"
                         value=initial("to")
                     />
                 </label>
-                <label class="flex flex-col gap-1 text-xs text-ink-muted">
-                    "Patient id"
+                <label class="fui-field">
+                    <span class="fui-label">"Patient id"</span>
                     <input
                         type="text"
                         name="patient"
-                        class=format!("w-40 {INPUT}")
+                        class=INPUT
                         value=initial("patient")
                     />
                 </label>
-                <label class="flex flex-col gap-1 text-xs text-ink-muted">
-                    "Principal"
+                <label class="fui-field">
+                    <span class="fui-label">"Principal"</span>
                     <input
                         type="text"
                         name="agent"
-                        class=format!("w-40 {INPUT}")
+                        class=INPUT
                         value=initial("agent")
                     />
                 </label>
-                <label class="flex flex-col gap-1 text-xs text-ink-muted">
+                <label class="fui-field">
                     // Initial selection via the option `selected` attribute:
                     // it server-renders (a `prop:` would not) and the select
                     // stays uncontrolled — the GET form owns the state.
-                    "Outcome" <select name="outcome" class=select_class>
+                    <span class="fui-label">"Outcome"</span>
+                    <select name="outcome" class=select_class>
                         <option value="" selected=initial("outcome").is_empty()>
                             "any"
                         </option>
@@ -380,8 +381,8 @@ fn filter_form(query: Memo<leptos_router::params::ParamsMap>) -> AnyView {
                         </option>
                     </select>
                 </label>
-                <label class="flex flex-col gap-1 text-xs text-ink-muted">
-                    "Action" <select name="action" class=select_class>
+                <label class="fui-field">
+                    <span class="fui-label">"Action"</span> <select name="action" class=select_class>
                         <option value="" selected=initial("action").is_empty()>
                             "any"
                         </option>

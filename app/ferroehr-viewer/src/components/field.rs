@@ -39,6 +39,15 @@ pub const BTN_DANGER: &str = Variant::Danger.class();
 /// The solid destructive button: the confirmation inside a danger dialog.
 pub const BTN_DESTRUCTIVE: &str = Variant::Destructive.class();
 
+/// The small secondary button: a row action inside a builder or a list.
+pub const BTN_SECONDARY_SMALL: &str = Variant::Secondary.small();
+
+/// The small primary button: the row action in force.
+pub const BTN_PRIMARY_SMALL: &str = Variant::Primary.small();
+
+/// The small danger button: a row's remove.
+pub const BTN_DANGER_SMALL: &str = Variant::Danger.small();
+
 /// One labelled text input bound to `value`, stacked label-over-control.
 ///
 /// `prop:value` carries the live state and `on:input` writes it back (the

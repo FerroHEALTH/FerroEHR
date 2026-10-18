@@ -749,7 +749,7 @@ fn render_item(ed: TreeEditor, parent_key: String, item_key: String) -> AnyView 
         <li class="flex items-center gap-1 py-0.5 text-ink-muted" data-item-id=hook>
             {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::FILE_TEXT, "14")}
             <span class="mr-1 text-xs uppercase">{ref_type}</span>
-            <span class="break-all font-mono text-xs">{id}</span>
+            <span class="wrap-break-word font-mono text-xs">{id}</span>
             <button
                 type="button"
                 class=ICON_BTN_DANGER

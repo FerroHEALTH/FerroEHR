@@ -417,7 +417,7 @@ fn namespace_tiles_view(tiles: Vec<NamespaceTile>) -> AnyView {
         .into_any();
     }
     let tiles = tiles.into_iter().map(namespace_tile).collect::<Vec<_>>();
-    view! { <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">{tiles}</div> }
+    view! { <div class="grid grid-cols-[repeat(auto-fit,minmax(14rem,1fr))] gap-3">{tiles}</div> }
         .into_any()
 }
 

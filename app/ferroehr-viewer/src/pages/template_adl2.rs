@@ -538,7 +538,7 @@ fn version_form(
     let initial = version.get_untracked().unwrap_or_default();
     view! {
         <leptos_router::components::Form method="GET" action=action attr:class="mt-3">
-            <div class="flex flex-wrap items-end gap-2">
+            <div class="fui-field-flow">
                 // The hidden field carries live state on `prop:value` with the
                 // attribute for the server pass (attributes set the initial
                 // state, properties carry the live one).
@@ -548,13 +548,13 @@ fn version_form(
                     value=tab.get_untracked().as_query()
                     prop:value=move || tab.get().as_query()
                 />
-                <label class="flex flex-col gap-1 text-xs text-ink-muted">
-                    "Release version (1.1.0, or a 1 / 1.0 prefix)"
+                <label class="fui-field">
+                    <span class="fui-label">"Release version (1.1.0, or a 1 / 1.0 prefix)"</span>
                     <input
                         id="adl2-version-input"
                         type="text"
                         name="version"
-                        class=format!("w-64 {INPUT}")
+                        class=INPUT
                         placeholder="as stored"
                         value=initial
                     />
@@ -580,7 +580,7 @@ fn catalog_tab(
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
             <section class=CARD_PAD>
                 <h2 class=CARD_TITLE>"Path catalog (WT tree)"</h2>
-                <p class="mb-2 text-xs text-ink-muted">
+                <p class="mb-2 fui-help">
                     "Built by the viewer from the served OperationalTemplateV2: the ADL2 resource \
                      serves no Web Template representation of its own."
                 </p>

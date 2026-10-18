@@ -416,7 +416,7 @@ fn delete_section(template_id: Signal<String>) -> AnyView {
 fn meta_section(detail: Resource<Result<TemplateDetail, ViewerError>>) -> AnyView {
     let entry = |label: &'static str, value: String, mono: bool| {
         let value_class = if mono {
-            "font-mono text-xs text-ink break-all"
+            "font-mono text-xs text-ink wrap-break-word"
         } else {
             "text-sm text-ink"
         };
@@ -692,7 +692,7 @@ fn inspector_body(node: &CatalogNode) -> AnyView {
     let codes_section = code_chip_section(node);
 
     view! {
-        <dl class="grid grid-cols-[6rem_1fr] gap-x-3 gap-y-1 text-sm text-ink">
+        <dl class="fui-facts text-sm text-ink">
             <dt class="font-medium text-ink-muted">"label"</dt>
             <dd>{node.label.clone()}</dd>
             <dt class="font-medium text-ink-muted">"rmType"</dt>
@@ -702,7 +702,7 @@ fn inspector_body(node: &CatalogNode) -> AnyView {
             <dt class="font-medium text-ink-muted">"selectable"</dt>
             <dd>{selectable}</dd>
             <dt class="font-medium text-ink-muted">"aqlPath"</dt>
-            <dd class="font-mono break-all">{node.aql_path.clone()}</dd>
+            <dd class="font-mono wrap-break-word">{node.aql_path.clone()}</dd>
         </dl>
         {units_section}
         {codes_section}

@@ -74,7 +74,7 @@ pub fn logical_delete_section(
     });
 
     view! {
-        <div class="mb-4 flex flex-wrap items-center justify-end gap-3">
+        <div class="contents">
             <button
                 id=copy.button_id
                 type="button"

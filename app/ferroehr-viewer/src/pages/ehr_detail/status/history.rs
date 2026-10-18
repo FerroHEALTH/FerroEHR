@@ -138,7 +138,7 @@ fn versioned_card(details: &VersionedObjectFacts) -> AnyView {
     view! {
         <section class=CARD_PAD id="versioned-ehr-status">
             <h2 class=CARD_TITLE>"Versioned EHR_STATUS"</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 items-start gap-x-4 gap-y-2 text-sm">
+            <dl class="fui-facts text-sm">
                 {fact_row("versioned object", "object-uid", details.object_uid.clone())}
                 {fact_row("owner EHR", "owner", details.owner_id.clone())}
                 {fact_row("created", "created", details.time_created.clone())}
@@ -147,7 +147,7 @@ fn versioned_card(details: &VersionedObjectFacts) -> AnyView {
                 {fact_row("preceding version", "preceding", details.preceding_version_uid.clone())}
                 {fact_row("contribution", "contribution", details.contribution_uid.clone())}
                 {fact_row("signature", "signature", signature)}
-            </div>
+            </dl>
         </section>
     }
     .into_any()

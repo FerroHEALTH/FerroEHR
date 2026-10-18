@@ -294,7 +294,7 @@ pub(super) fn edit_form(
     view! {
         <section class=CARD_PAD id="status-edit">
             <h2 class=CARD_TITLE>"Edit status"</h2>
-            <p class="mb-3 text-xs text-ink-muted">
+            <p class="mb-3 fui-help">
                 "Commits a new EHR_STATUS version on top of the one loaded above (If-Match), so a concurrent change is refused rather than overwritten. Every other attribute — the subject included — is sent back exactly as the CDR served it."
             </p>
             <div class="flex flex-col gap-3">

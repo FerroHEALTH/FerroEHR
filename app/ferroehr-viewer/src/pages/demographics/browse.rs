@@ -206,28 +206,24 @@ fn browser_screen(kind: PartyKind) -> AnyView {
     .into_any()
 }
 
-/// The kind switcher: five pill anchors, one per family. Plain anchors, so
+/// The kind switcher: FerroUI's keyed tabs, one per family. Plain anchors, so
 /// switching kind works before hydration (the router intercepts them once WASM
 /// loads).
 fn kind_switcher(current: PartyKind) -> AnyView {
-    let pills = PartyKind::ALL
+    let tabs = PartyKind::ALL
         .into_iter()
-        .map(|kind| {
-            let class = if kind == current {
-                "rounded-control px-3 py-1.5 text-sm font-medium bg-accent-subtle text-accent-ink"
-            } else {
-                "rounded-control px-3 py-1.5 text-sm font-medium text-ink-muted hover:bg-sunken"
-            };
-            view! {
-                <a href=browse_href(kind) class=class data-kind=kind.segment()>
-                    {kind.plural()}
-                </a>
-            }
-            .into_any()
+        .map(|kind| ferrohealth_ui::view::tabs::KeyedTab {
+            key: kind.segment(),
+            href: browse_href(kind),
+            label: kind.plural(),
         })
-        .collect::<Vec<_>>();
-    view! { <div class="mb-6 flex flex-wrap gap-1 border-b border-edge pb-2">{pills}</div> }
-        .into_any()
+        .collect();
+    view! {
+        <div class="mb-4">
+            {ferrohealth_ui::view::tabs::keyed_tabs("Party kinds", tabs, current.segment())}
+        </div>
+    }
+    .into_any()
 }
 
 /// The by-id lookup: a plain `<form method="GET">` whose `find` field the page
@@ -261,7 +257,7 @@ fn lookup_section(kind: PartyKind) -> AnyView {
         <section class=format!("{CARD_PAD} mb-6")>
             <h2 class=CARD_TITLE>{format!("Open a {}", kind.rm_type())}</h2>
             <form method="GET" action=browse_href(kind) on:submit=on_submit>
-                <div class="flex flex-wrap items-end gap-3">
+                <div class="fui-field-flow">
                     <div class="flex flex-col gap-1">
                         <label class=LABEL r#for="party-lookup">
                             {label}
@@ -280,7 +276,7 @@ fn lookup_section(kind: PartyKind) -> AnyView {
                     </button>
                 </div>
             </form>
-            <p class="mt-2 text-xs text-ink-muted">
+            <p class="mt-2 fui-help">
                 "Either id form works: a versioned_object_uid opens the latest version, and a full version_uid is reduced to its container — every screen here addresses the container."
             </p>
         </section>
@@ -434,7 +430,7 @@ fn create_section(kind: PartyKind, toaster: ferrohealth_ui::widget::toast::Toast
     view! {
         <section class=format!("{CARD_PAD} mb-6") id="party-create">
             <h2 class=CARD_TITLE>{format!("Create a {}", kind.rm_type())}</h2>
-            <p class="mb-3 text-xs text-ink-muted">
+            <p class="mb-3 fui-help">
                 "The document below is the smallest party this kind accepts — every attribute in it is mandatory. Replace the archetype ids and the identity details with your own, then create."
             </p>
             <label class=LABEL r#for="party-create-body">
@@ -560,7 +556,7 @@ fn tag_index_section(kind: PartyKind) -> AnyView {
     view! {
         <section class=CARD_PAD id="demographic-tag-index">
             <h2 class=CARD_TITLE>"Tag index (all kinds)"</h2>
-            <p class="mb-3 text-xs text-ink-muted">
+            <p class="mb-3 fui-help">
                 "The demographic tag list spans every party kind, and a tag names its target without naming that target's kind — so opening a row asks the CDR which kind holds it."
             </p>
             {tag_filter_form(browse_href(kind), filters, &[])}

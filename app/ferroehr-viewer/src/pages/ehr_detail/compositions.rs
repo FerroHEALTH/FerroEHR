@@ -29,7 +29,7 @@ use serde_json::Value;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::uid::uid_value_of;
 
-use crate::components::data_table::{CELL, CELL_MONO, ROW, table_shell, table_skeleton};
+use crate::components::data_table::{CELL, CELL_MONO, ROW, table_shell_stacked, table_skeleton};
 use crate::components::empty_state::EmptyState;
 use crate::components::field::{BTN_PRIMARY, BTN_SECONDARY, INPUT, LABEL, SELECT, TEXTAREA};
 use crate::components::format_view::PaneView;
@@ -311,48 +311,48 @@ fn filter_bar(ehr_id: Signal<String>, query: Memo<ParamsMap>) -> AnyView {
             // submits its own fields as the whole query string, so without
             // this the filtered result would land back on the Status tab.
             <input type="hidden" name="tab" value="compositions" />
-            <div class="flex flex-wrap items-end gap-2">
-                <label class="flex flex-col gap-1 text-xs text-ink-muted">
-                    "Template"
+            <div class="fui-field-flow">
+                <label class="fui-field">
+                    <span class="fui-label">"Template"</span>
                     <input
                         id="composition-filter-template"
                         type="text"
                         name="template"
-                        class=format!("w-56 {INPUT}")
+                        class=INPUT
                         placeholder="part of the template id"
                         value=initial("template")
                         prop:value=current("template")
                     />
                 </label>
-                <label class="flex flex-col gap-1 text-xs text-ink-muted">
-                    "From (UTC date)"
+                <label class="fui-field">
+                    <span class="fui-label">"From (UTC date)"</span>
                     <input
                         id="composition-filter-from"
                         type="date"
                         name="from"
-                        class=format!("w-44 {INPUT}")
+                        class=INPUT
                         value=initial("from")
                         prop:value=current("from")
                     />
                 </label>
-                <label class="flex flex-col gap-1 text-xs text-ink-muted">
-                    "To (UTC date)"
+                <label class="fui-field">
+                    <span class="fui-label">"To (UTC date)"</span>
                     <input
                         id="composition-filter-to"
                         type="date"
                         name="to"
-                        class=format!("w-44 {INPUT}")
+                        class=INPUT
                         value=initial("to")
                         prop:value=current("to")
                     />
                 </label>
-                <label class="flex flex-col gap-1 text-xs text-ink-muted">
-                    "Composer"
+                <label class="fui-field">
+                    <span class="fui-label">"Composer"</span>
                     <input
                         id="composition-filter-composer"
                         type="text"
                         name="composer"
-                        class=format!("w-48 {INPUT}")
+                        class=INPUT
                         placeholder="part of the composer's name"
                         value=initial("composer")
                         prop:value=current("composer")
@@ -366,7 +366,7 @@ fn filter_bar(ehr_id: Signal<String>, query: Memo<ParamsMap>) -> AnyView {
                     "Clear"
                 </a>
             </div>
-            <p class="mt-2 text-xs text-ink-muted">
+            <p class="mt-2 fui-help">
                 "Template and composer match anywhere in the value; the dates bound the composition's context start time, each covering its whole UTC day."
             </p>
         </leptos_router::components::Form>
@@ -394,7 +394,7 @@ fn commit_form(
         <section class=format!("{CARD_PAD} mt-4")>
             <h2 class=CARD_TITLE>"Commit composition"</h2>
             <div class="flex flex-col gap-3">
-                <div class="flex flex-wrap items-end gap-3">
+                <div class="fui-field-flow">
                     <div class="flex flex-col gap-1">
                         <label class=LABEL r#for="commit-format">
                             "Format"
@@ -553,7 +553,7 @@ fn compositions_table(
         query,
     );
     view! {
-        {table_shell("Compositions", &["Composition", "Name", "Template", "Started", "Composer"], body)}
+        {table_shell_stacked("Compositions", &["Composition", "Name", "Template", "Started", "Composer"], body)}
         {paging}
     }
     .into_any()
@@ -564,6 +564,10 @@ fn compositions_table(
 /// deep-linkable pane mode); the full uid stays visible.
 ///
 /// Both path segments are percent-encoded — an id carrying `/`, `#`, `?` or `%`
+/// The headers of the composition listing's columns after the first, which
+/// name a stacked row's values on a phone.
+const COMPOSITION_LABELS: [&str; 5] = ["Composition", "Name", "Template", "Started", "Composer"];
+
 /// would otherwise address a different route.
 fn composition_row(row: &[Value], ehr_id: &str) -> AnyView {
     let uid = row.first().map(cell_text).unwrap_or_default();
@@ -588,7 +592,8 @@ fn composition_row(row: &[Value], ehr_id: &str) -> AnyView {
                 }
                 .into_any()
             } else {
-                view! { <td class=CELL>{text}</td> }.into_any()
+                let label = COMPOSITION_LABELS.get(i).copied().unwrap_or_default();
+                view! { <td class=CELL data-label=label>{text}</td> }.into_any()
             }
         })
         .collect::<Vec<_>>();

@@ -649,10 +649,11 @@ pub(super) fn subject_label(state: &EhrStatusState) -> String {
     }
 }
 
-/// Render the current status's facts as a card.
+/// Render the current status's facts as a card: its version and, when the
+/// EHR is out of population queries, the warning. The subject and the two
+/// capability flags are the page header's, shown once.
 fn facts_card(state: &EhrStatusState) -> AnyView {
     let queryable = state.is_queryable;
-    let subject = subject_label(state);
     let version = if state.version_uid.is_empty() {
         "—".to_owned()
     } else {
@@ -660,22 +661,12 @@ fn facts_card(state: &EhrStatusState) -> AnyView {
     };
     view! {
         <div class=format!("{CARD_PAD} flex flex-col gap-3")>
-            <div class="flex flex-wrap gap-2 items-center">
-                {capability_badge("tab", "queryable", queryable)}
-                {capability_badge("tab", "modifiable", state.is_modifiable)}
-            </div>
-            <div class="text-sm">
-                <span class="font-medium text-ink-muted">"subject: "</span>
-                <span class="font-mono break-all text-ink" data-status-fact="subject">
-                    {subject}
-                </span>
-            </div>
-            <div class="text-sm">
-                <span class="font-medium text-ink-muted">"version: "</span>
-                <span class="font-mono break-all text-ink" data-status-fact="version">
+            <dl class="fui-facts text-sm">
+                <dt>"Version"</dt>
+                <dd class="font-mono wrap-break-word text-ink" data-status-fact="version">
                     {version}
-                </span>
-            </div>
+                </dd>
+            </dl>
             {(!queryable)
                 .then(|| {
                     view! {
