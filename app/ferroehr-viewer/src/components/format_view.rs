@@ -8,7 +8,7 @@
 //! the template detail's OPT and example tabs, a stored query's AQL).
 //!
 //! The pane is three views of one body — **Highlighted** (the default: the
-//! byte-exact document with pure-Rust syntax tokens from [`crate::highlight`]),
+//! byte-exact document with FerroUI's pure-Rust highlighter, `ferrohealth_ui::highlight`),
 //! **Raw** (the same text unstyled), and **Rendered** (the template-free
 //! clinical reading from [`crate::clinical`], offered only when the body is a
 //! canonical openEHR JSON document) — plus a copy affordance. Everything here
@@ -28,7 +28,7 @@ use leptos_use::{UseClipboardReturn, use_clipboard};
 
 use crate::clinical::{RenderedNode, RenderedRow, RenderedSection};
 use crate::format::ReprFormat;
-use crate::highlight::{Language, Token, TokenKind};
+use ferrohealth_ui::highlight::{Language, Lines, html};
 
 /// The segmented-control wrapper shared by the format selector, the pane's
 /// view-mode tabs and the example controls.
@@ -183,7 +183,7 @@ pub fn DocumentPane(
     let view_mode = RwSignal::new(initial_view);
     // Deterministic, memoized derivations of the body — never effects writing
     // signals.
-    let tokens = Memo::new(move |_| body.with(|text| crate::highlight::tokenize(text.as_str())));
+    let tokens = Memo::new(move |_| body.with(|text| highlighted(text.as_str())));
     let rendered = Memo::new(move |_| body.with(|text| crate::clinical::render(text.as_str())));
     let highlightable =
         Memo::new(move |_| body.with(|text| Language::detect(text.as_str()) != Language::Plain));
@@ -288,7 +288,7 @@ fn copy_button(body: Signal<String>) -> AnyView {
                 title="Copy the document to the clipboard"
                 on:click=on_click
             >
-                <leptos_icons::Icon icon=icondata_lu::LuClipboardCopy width="14" height="14" />
+                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::COPY, "14")}
                 "Copy"
             </button>
         </div>
@@ -301,47 +301,15 @@ fn raw_pane(body: Signal<String>) -> AnyView {
     view! { <pre class=PANE>{move || body.get()}</pre> }.into_any()
 }
 
-/// The document text with one `<span>` per syntax token.
-///
-/// A plain collected `Vec` rather than `<For>`: the token stream is a derived
-/// projection replaced wholesale whenever the body changes, and a token has no
-/// data-derived identity to key on; an index key is forbidden, and a synthetic
-/// key would be exactly that.
-fn highlighted_pane(tokens: Memo<Vec<Token>>) -> AnyView {
-    view! {
-        <pre class=PANE>
-            {move || {
-                tokens
-                    .with(|tokens| {
-                        tokens
-                            .iter()
-                            .map(|token| {
-                                view! {
-                                    <span class=token_class(token.kind)>{token.text.clone()}</span>
-                                }
-                            })
-                            .collect::<Vec<_>>()
-                    })
-            }}
-        </pre>
-    }
-    .into_any()
+/// The document text highlighted by FerroUI: one `fui-code-line` per line,
+/// one classed `<span>` per token, every character escaped.
+fn highlighted(text: &str) -> String {
+    html(Language::detect(text), text, Lines::default(), |_| None)
 }
 
-/// The design-system class for one token class (the `syntax-*` tokens in
-/// `style/tailwind.css`, defined for both themes like every other token).
-fn token_class(kind: TokenKind) -> &'static str {
-    match kind {
-        TokenKind::Plain => "",
-        TokenKind::Key => "text-syntax-key",
-        TokenKind::Str => "text-syntax-string",
-        TokenKind::Number => "text-syntax-number",
-        TokenKind::Keyword => "text-syntax-keyword",
-        TokenKind::Punctuation => "text-syntax-punctuation",
-        TokenKind::Tag => "text-syntax-tag",
-        TokenKind::Attribute => "text-syntax-attribute",
-        TokenKind::Comment => "text-syntax-comment italic",
-    }
+/// The highlighted document, written as the markup [`highlighted`] built.
+fn highlighted_pane(markup: Memo<String>) -> AnyView {
+    view! { <pre class=PANE inner_html=move || markup.get()></pre> }.into_any()
 }
 
 /// The template-free clinical rendering of a canonical openEHR document.
@@ -482,9 +450,8 @@ pub fn pretty_body(body: &str, format: ReprFormat) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::components::format_view::{PaneView, pretty_body, token_class};
+    use crate::components::format_view::{PaneView, highlighted, pretty_body};
     use crate::format::ReprFormat;
-    use crate::highlight::TokenKind;
 
     #[test]
     fn json_pretty_prints_and_xml_passes_through() {
@@ -499,27 +466,18 @@ mod tests {
     }
 
     #[test]
-    fn every_token_class_maps_to_a_design_token() {
-        // Plain text carries no class; every other kind draws from the
-        // `syntax-*` token layer (style/tailwind.css), never a raw palette
-        // utility.
-        for kind in [
-            TokenKind::Key,
-            TokenKind::Str,
-            TokenKind::Number,
-            TokenKind::Keyword,
-            TokenKind::Punctuation,
-            TokenKind::Tag,
-            TokenKind::Attribute,
-            TokenKind::Comment,
-        ] {
-            let class = token_class(kind);
-            assert!(
-                class.starts_with("text-syntax-"),
-                "{kind:?} → `{class}` is not a syntax design token"
-            );
+    fn the_highlighted_view_draws_fui_tokens_and_escapes_the_text() {
+        // Every classed token draws from FerroUI's `fui-tok-*` classes over the
+        // `syntax-*` roles, never a raw palette utility, and markup in the
+        // document stays text.
+        let markup = highlighted("{\"a\": \"<b>\", \"n\": 1, \"t\": true}");
+        for class in ["fui-tok-key", "fui-tok-string", "fui-tok-number", "fui-tok-keyword"] {
+            assert!(markup.contains(class), "{class} missing from {markup}");
         }
-        assert_eq!(token_class(TokenKind::Plain), "");
+        assert!(markup.contains("&lt;b&gt;"), "{markup}");
+        assert!(!markup.contains("<b>"), "{markup}");
+        let xml = highlighted("<a x=\"1\"/>");
+        assert!(xml.contains("fui-tok-tag") && xml.contains("fui-tok-attribute"), "{xml}");
     }
 
     #[test]

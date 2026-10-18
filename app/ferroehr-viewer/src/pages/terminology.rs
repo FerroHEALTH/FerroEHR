@@ -130,7 +130,7 @@ fn disabled_card() -> AnyView {
     view! {
         <section id="terminology-disabled" class=CARD_PAD>
             <EmptyState
-                icon=icondata_lu::LuBookX
+                icon=ferrohealth_ui::icon::Glyph::CIRCLE_X
                 message="The terminology extension is disabled on this server"
                 hint="The CDR answers its terminology routes as if unmounted. Set api_enabled = true under [terminology] in the CDR's configuration to browse terminologies, terms and value sets here."
             />
@@ -178,7 +178,7 @@ fn list_card(ids: Vec<String>, selected: Signal<String>) -> AnyView {
     if ids.is_empty() {
         return view! {
             <EmptyState
-                icon=icondata_lu::LuBookX
+                icon=ferrohealth_ui::icon::Glyph::CIRCLE_X
                 message="No terminologies"
                 hint="The CDR serves the terminology API but reports no terminology in it."
             />
@@ -691,7 +691,7 @@ fn extract_panel(extract: &TerminologyExtractView, hook: &'static str) -> AnyVie
     if extract.terms.is_empty() && extract.relationships.is_empty() {
         return view! {
             <EmptyState
-                icon=icondata_lu::LuSearchX
+                icon=ferrohealth_ui::icon::Glyph::SEARCH
                 message="Nothing in this extract"
                 hint="The CDR answered with an extract that carries no term and no relationship."
             />
@@ -733,7 +733,7 @@ fn terms_table(extract: &TerminologyExtractView, hook: &'static str) -> AnyView 
         .into_any();
     // `data-extract` names which lookup produced the table (a term definition
     // or a value-set expansion); each row's term cell carries `data-term-code`.
-    let table = table_shell(&["Term", "Language", "Preferred"], rows);
+    let table = table_shell("Terms", &["Term", "Language", "Preferred"], rows);
     view! { <div data-extract=hook>{table}</div> }.into_any()
 }
 
@@ -756,7 +756,7 @@ fn relationships_table(extract: &TerminologyExtractView) -> AnyView {
         })
         .collect_view()
         .into_any();
-    table_shell(&["Origin", "Relation", "Targets"], rows)
+    table_shell("Concept relations", &["Origin", "Relation", "Targets"], rows)
 }
 
 /// The note for a lookup the CDR answered `404` on because it knows no such

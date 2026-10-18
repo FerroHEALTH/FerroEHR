@@ -152,7 +152,7 @@ pub fn QueryBuilderPage() -> impl IntoView {
     });
     // Both outcomes toast; the CDR's diagnostic also stays inline
     // (`save_feedback`), beside the AQL it rejected.
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     Effect::new(move |_| match save_action.value().get() {
         Some(Ok(())) => toast_success(toaster, "Query saved", ""),
         Some(Err(error)) => {
@@ -554,20 +554,12 @@ fn disclosure_toggle(node_label: &str, expanded: RwSignal<bool>, has_children: b
             {move || {
                 if expanded.get() {
                     view! {
-                        <leptos_icons::Icon
-                            icon=icondata_lu::LuChevronDown
-                            width="12"
-                            height="12"
-                        />
+                        {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::CHEVRON_DOWN, "12")}
                     }
                         .into_any()
                 } else {
                     view! {
-                        <leptos_icons::Icon
-                            icon=icondata_lu::LuChevronRight
-                            width="12"
-                            height="12"
-                        />
+                        {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::CHEVRON_RIGHT, "12")}
                     }
                         .into_any()
                 }
@@ -704,7 +696,7 @@ fn criteria_section(ctx: BuilderCtx) -> AnyView {
                     None => {
                         view! {
                             <EmptyState
-                                icon=icondata_lu::LuListChecks
+                                icon=ferrohealth_ui::icon::Glyph::LIST_CHECKS
                                 message="No conditions yet"
                                 hint="Add one with \"+ condition\" from the path catalog on the left."
                             />
@@ -774,7 +766,7 @@ fn leaf_card(criterion: &Criterion, path: Vec<usize>, ctx: BuilderCtx) -> AnyVie
                             ctx.bump();
                         }
                     >
-                        <leptos_icons::Icon icon=icondata_lu::LuX width="12" height="12" />
+                        {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::X, "12")}
                     </button>
                 </div>
             </div>
@@ -895,7 +887,7 @@ fn group_toolbar(
                 {if is_root {
                     view! { "clear" }.into_any()
                 } else {
-                    view! { <leptos_icons::Icon icon=icondata_lu::LuX width="12" height="12" /> }
+                    view! { {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::X, "12")} }
                         .into_any()
                 }}
             </button>
@@ -1424,7 +1416,7 @@ fn coded_chip_list(coded: CodedCtx, path: Vec<usize>, ctx: BuilderCtx) -> AnyVie
                                 aria-label=format!("Remove code {remove_code}")
                                 on:click=move |_| remove_coded_code(ctx, coded, &path, &remove_code)
                             >
-                                <leptos_icons::Icon icon=icondata_lu::LuX width="10" height="10" />
+                                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::X, "10")}
                             </button>
                         </span>
                     }
@@ -1890,7 +1882,7 @@ fn columns_editor(ctx: BuilderCtx, columns: &[SelectedColumn]) -> AnyView {
                             ctx.bump();
                         }
                     >
-                        <leptos_icons::Icon icon=icondata_lu::LuX width="12" height="12" />
+                        {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::X, "12")}
                     </button>
                 </div>
             }
@@ -1968,7 +1960,7 @@ fn order_row(ctx: BuilderCtx, i: usize, rule: &OrderRule) -> AnyView {
                     ctx.bump();
                 }
             >
-                <leptos_icons::Icon icon=icondata_lu::LuX width="12" height="12" />
+                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::X, "12")}
             </button>
         </div>
     }
@@ -2129,11 +2121,7 @@ fn preview_run_section(
                                 )>{aql}</pre>
                                 <A href=href attr:class="text-sm text-accent hover:underline">
                                     "Open in raw editor "
-                                    <leptos_icons::Icon
-                                        icon=icondata_lu::LuArrowRight
-                                        width="12"
-                                        height="12"
-                                    />
+                                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::ARROW_RIGHT, "12")}
                                 </A>
                             </div>
                         }
@@ -2401,7 +2389,7 @@ pub(crate) fn results_view(page: &ResultPage, is_count: bool) -> AnyView {
     if page.rows.is_empty() {
         return view! {
             <EmptyState
-                icon=icondata_lu::LuSearchX
+                icon=ferrohealth_ui::icon::Glyph::SEARCH
                 message="No rows"
                 hint="The query ran and matched nothing — widen a condition or clear a filter."
             />
@@ -2428,7 +2416,7 @@ pub(crate) fn results_view(page: &ResultPage, is_count: bool) -> AnyView {
         </For>
     }
     .into_any();
-    let table = table_shell(&header_refs, body);
+    let table = table_shell("Query results", &header_refs, body);
 
     // Every non-empty page offers the table | chart pair: the chart derives one
     // series per numeric column, and a page with nothing chartable says so.
@@ -2498,7 +2486,7 @@ pub(crate) fn paging_buttons(offset: RwSignal<u32>, row_count: usize) -> AnyView
                 disabled=prev_disabled
                 on:click=move |_| offset.update(|o| *o = o.saturating_sub(PAGE_SIZE))
             >
-                <leptos_icons::Icon icon=icondata_lu::LuArrowLeft width="12" height="12" />
+                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::ARROW_LEFT, "12")}
                 " Previous"
             </button>
             <button
@@ -2508,7 +2496,7 @@ pub(crate) fn paging_buttons(offset: RwSignal<u32>, row_count: usize) -> AnyView
                 on:click=move |_| offset.update(|o| *o = o.saturating_add(PAGE_SIZE))
             >
                 "Next "
-                <leptos_icons::Icon icon=icondata_lu::LuArrowRight width="12" height="12" />
+                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::ARROW_RIGHT, "12")}
             </button>
         </div>
     }

@@ -45,7 +45,7 @@ pub fn fact_row(
     .into_any()
 }
 
-#[cfg(all(test, feature = "ssr"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::fact_row;
     use leptos::prelude::*;

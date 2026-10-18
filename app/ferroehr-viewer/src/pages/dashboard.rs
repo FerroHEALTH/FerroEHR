@@ -39,21 +39,21 @@ use crate::components::surface::{CARD_PAD, CARD_TITLE};
 use crate::error::ViewerError;
 
 /// Total EHRs — a fixed count AQL. Validated by [`tests::dashboard_aql_consts_parse`].
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 const EHR_COUNT_AQL: &str = "SELECT COUNT(*) FROM EHR e";
 /// Total compositions — a fixed count AQL.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 const COMPOSITION_COUNT_AQL: &str = "SELECT COUNT(*) FROM EHR e CONTAINS COMPOSITION c";
 /// Recent composition commit times, newest first, for the day-bucketed trend.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 const TREND_AQL: &str = "SELECT c/context/start_time/value FROM EHR e CONTAINS COMPOSITION c ORDER BY c/context/start_time/value DESC";
 /// Rows pulled for the commit-activity trend before day-bucketing.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 const TREND_FETCH: u32 = 500;
 
 /// Run a `SELECT COUNT(*)`-shaped AQL and read its single numeric cell (0 when
 /// the result set is not the expected 1×1 numeric shape).
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 async fn run_count_aql(
     state: &crate::state::AppState,
     session: &crate::session::ViewerSession,
@@ -283,7 +283,7 @@ pub fn DashboardPage() -> impl IntoView {
 fn stat_tile(
     label: &'static str,
     value: String,
-    icon: icondata_core::Icon,
+    icon: ferrohealth_ui::icon::Glyph,
     href: Option<String>,
 ) -> AnyView {
     match href {
@@ -296,10 +296,7 @@ fn stat_tile(
 fn tile_skeleton() -> AnyView {
     view! {
         <div class=CARD_PAD>
-            <thaw::Skeleton>
-                <thaw::SkeletonItem class="h-8 mb-2" />
-                <thaw::SkeletonItem class="h-4 w-2/3" />
-            </thaw::Skeleton>
+            {ferrohealth_ui::view::empty::skeleton(2, "Loading…")}
         </div>
     }
     .into_any()
@@ -330,19 +327,19 @@ fn counts_section() -> AnyView {
                                 {stat_tile(
                                     "EHRs",
                                     ehrs.to_string(),
-                                    icondata_lu::LuDatabase,
+                                    ferrohealth_ui::icon::Glyph::DATABASE,
                                     Some("/ehrs".to_owned()),
                                 )}
                                 {stat_tile(
                                     "Compositions",
                                     compositions.to_string(),
-                                    icondata_lu::LuFileText,
+                                    ferrohealth_ui::icon::Glyph::FILES,
                                     None,
                                 )}
                                 {stat_tile(
                                     "Templates",
                                     templates.to_string(),
-                                    icondata_lu::LuFileCode2,
+                                    ferrohealth_ui::icon::Glyph::FILES,
                                     Some("/templates".to_owned()),
                                 )}
                             </>
@@ -373,7 +370,7 @@ fn stored_queries_tile() -> AnyView {
                         stat_tile(
                             "Stored queries",
                             count.to_string(),
-                            icondata_lu::LuSearchCode,
+                            ferrohealth_ui::icon::Glyph::SEARCH,
                             Some("/queries".to_owned()),
                         )
                     }
@@ -408,7 +405,7 @@ fn namespace_tiles_view(tiles: Vec<NamespaceTile>) -> AnyView {
     if tiles.is_empty() {
         return view! {
             <EmptyState
-                icon=icondata_lu::LuSearchCode
+                icon=ferrohealth_ui::icon::Glyph::SEARCH
                 message="No stored queries yet"
                 hint="Save a query as namespace::name — each namespace becomes a cohort tile here."
             >
@@ -463,9 +460,7 @@ fn trend_section() -> AnyView {
     view! {
         <Suspense fallback=|| {
             view! {
-                <thaw::Skeleton>
-                    <thaw::SkeletonItem class="h-40" />
-                </thaw::Skeleton>
+                {ferrohealth_ui::view::empty::skeleton(1, "Loading…")}
             }
         }>
             {move || Suspend::new(async move {
@@ -486,7 +481,7 @@ fn trend_section() -> AnyView {
     .into_any()
 }
 
-#[cfg(all(test, feature = "ssr"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::{COMPOSITION_COUNT_AQL, EHR_COUNT_AQL, TREND_AQL};
 

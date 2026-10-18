@@ -62,7 +62,7 @@ pub mod tags;
 
 use leptos::server;
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 use serde_json::Value;
 
 use crate::components::wire::{VersionEntry, VersionedObjectFacts};
@@ -239,7 +239,7 @@ impl DemographicResource {
 
 /// The typed refusal a server function answers when a caller hands it a
 /// segment outside the closed demographic route set.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 fn unknown_segment(segment: &str, expected: &str) -> ViewerError {
     ViewerError::Invalid(format!(
         "{segment:?} is not a {expected} of the demographic API"
@@ -539,7 +539,7 @@ pub async fn resolve_party_kind(
     Ok(None)
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Flatten a container body plus a VERSION body into [`VersionedObjectFacts`].
 /// Defensive throughout — an absent attribute reads as empty rather than
 /// failing the card.
@@ -569,7 +569,7 @@ fn parse_versioned_object(
     })
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Follow a chain of object keys to a string leaf, or an empty string when any
 /// hop is absent or not a string.
 pub(crate) fn json_str(value: &Value, path: &[&str]) -> String {
@@ -702,7 +702,7 @@ mod tests {
     }
 }
 
-#[cfg(all(test, feature = "ssr"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod parse_tests {
     use super::parse_versioned_object;
 

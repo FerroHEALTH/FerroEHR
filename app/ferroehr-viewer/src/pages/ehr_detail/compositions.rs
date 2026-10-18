@@ -26,7 +26,7 @@ use leptos_router::components::A;
 use leptos_router::params::ParamsMap;
 use serde_json::Value;
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 use crate::uid::uid_value_of;
 
 use crate::components::data_table::{CELL, CELL_MONO, ROW, table_shell, table_skeleton};
@@ -40,9 +40,9 @@ use crate::format::ReprFormat;
 use crate::pages::ehr_detail::composition_filter::CompositionFilter;
 use crate::pages::ehrs::{ResultPage, cell_text, ehr_detail_href, paging_controls};
 // Server-side helpers, compiled only where the #[server] bodies exist.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 use crate::pages::ehr_detail::composition_filter::composition_query;
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 use crate::pages::ehrs::{aql_request_body, parse_result_set};
 
 /// List an EHR's compositions newest-first, one page at `offset`, narrowed by
@@ -190,7 +190,7 @@ pub(super) fn compositions_section(
     offset: Signal<u32>,
     selected: Memo<String>,
 ) -> AnyView {
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     // URL state read in SETUP: the filter values feed the resource source,
     // and the paging links carry every one of them across.
     let query = leptos_router::hooks::use_query_map();
@@ -359,7 +359,7 @@ fn filter_bar(ehr_id: Signal<String>, query: Memo<ParamsMap>) -> AnyView {
                     />
                 </label>
                 <button id="composition-filter-apply" type="submit" class=BTN_PRIMARY>
-                    <leptos_icons::Icon icon=icondata_lu::LuFunnel width="14" height="14" />
+                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::SEARCH, "14")}
                     "Filter"
                 </button>
                 <a id="composition-filter-clear" href=clear class=BTN_SECONDARY>
@@ -530,7 +530,7 @@ fn compositions_table(
                 "Widen the date window, shorten the template or composer text, or clear the filters.",
             )
         };
-        return view! { <EmptyState icon=icondata_lu::LuFileText message=message hint=hint /> }
+        return view! { <EmptyState icon=ferrohealth_ui::icon::Glyph::FILES message=message hint=hint /> }
             .into_any();
     }
     let rows = page.rows.clone();
@@ -552,7 +552,7 @@ fn compositions_table(
         query,
     );
     view! {
-        {table_shell(&["Composition", "Name", "Template", "Started", "Composer"], body)}
+        {table_shell("Compositions", &["Composition", "Name", "Template", "Started", "Composer"], body)}
         {paging}
     }
     .into_any()

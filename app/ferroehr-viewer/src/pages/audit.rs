@@ -144,7 +144,7 @@ pub async fn search_audit(
 }
 
 /// `ge`/`le`-prefix a non-empty instant for the ITI-81 `date` parameter.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 fn prefixed(prefix: &str, value: &str) -> String {
     let value = value.trim();
     if value.is_empty() {
@@ -155,7 +155,7 @@ fn prefixed(prefix: &str, value: &str) -> String {
 }
 
 /// Distil the ITI-81 `searchset` Bundle into an [`AuditPage`].
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 fn parse_bundle(body: &str, offset: u32) -> Result<AuditPage, ViewerError> {
     let bundle = serde_json::from_str::<serde_json::Value>(body)
         .map_err(|e| ViewerError::Internal(format!("AuditEvent Bundle JSON: {e}")))?;
@@ -186,7 +186,7 @@ fn parse_bundle(body: &str, offset: u32) -> Result<AuditPage, ViewerError> {
 /// Distil one stored `AuditEvent` (IHE BALP shape) into an [`AuditRow`],
 /// reading every field defensively (a missing field renders empty, never
 /// drops the record from the security log).
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 fn audit_row(resource: &serde_json::Value) -> AuditRow {
     let text = |v: Option<&serde_json::Value>| {
         v.and_then(serde_json::Value::as_str)
@@ -402,12 +402,9 @@ fn filter_form(query: Memo<leptos_router::params::ParamsMap>) -> AnyView {
                         </option>
                     </select>
                 </label>
-                <thaw::Button
-                    appearance=thaw::ButtonAppearance::Primary
-                    button_type=thaw::ButtonType::Submit
-                >
+                <button type="submit" class=crate::components::field::BTN_PRIMARY>
                     "Filter"
-                </thaw::Button>
+                </button>
             </div>
         </leptos_router::components::Form>
     }
@@ -440,7 +437,7 @@ fn page_view(page: AuditPage, query: Memo<leptos_router::params::ParamsMap>) -> 
     if !page.available {
         return view! {
             <EmptyState
-                icon=icondata_lu::LuShieldOff
+                icon=ferrohealth_ui::icon::Glyph::CIRCLE_ALERT
                 message="The local audit repository is disabled"
                 hint="Enable [audit.store] on the CDR to record and browse the ATNA audit trail here."
             />
@@ -450,7 +447,7 @@ fn page_view(page: AuditPage, query: Memo<leptos_router::params::ParamsMap>) -> 
     if page.rows.is_empty() {
         return view! {
             <EmptyState
-                icon=icondata_lu::LuShieldCheck
+                icon=ferrohealth_ui::icon::Glyph::SHIELD_CHECK
                 message="No audit records match"
                 hint="Widen the time window or clear a filter — every audited operation lands here."
             />
@@ -466,7 +463,7 @@ fn page_view(page: AuditPage, query: Memo<leptos_router::params::ParamsMap>) -> 
         .into_any();
     let footer = pagination(page.total, page.offset, query);
     view! {
-        {table_shell(
+        {table_shell("Audit records", 
             &[
                 "Recorded",
                 "Event",
@@ -545,7 +542,7 @@ fn pagination(total: u32, offset: u32, query: Memo<leptos_router::params::Params
                 href=href_for(page_index - 1)
                 attr:class="text-accent hover:underline"
             >
-                <leptos_icons::Icon icon=icondata_lu::LuArrowLeft width="12" height="12" />
+                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::ARROW_LEFT, "12")}
                 " Newer"
             </leptos_router::components::A>
         }
@@ -557,7 +554,7 @@ fn pagination(total: u32, offset: u32, query: Memo<leptos_router::params::Params
                 attr:class="text-accent hover:underline"
             >
                 "Older "
-                <leptos_icons::Icon icon=icondata_lu::LuArrowRight width="12" height="12" />
+                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::ARROW_RIGHT, "12")}
             </leptos_router::components::A>
         }
     });
@@ -571,7 +568,7 @@ fn pagination(total: u32, offset: u32, query: Memo<leptos_router::params::Params
     .into_any()
 }
 
-#[cfg(all(test, feature = "ssr"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::{audit_row, parse_bundle};
 

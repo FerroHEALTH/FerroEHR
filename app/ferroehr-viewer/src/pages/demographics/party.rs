@@ -321,7 +321,7 @@ pub async fn delete_party(
     Ok(())
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Check an operator-authored party body before it is sent: it must be a JSON
 /// object, and its `_type` must be the routed kind's RM type.
 ///
@@ -353,7 +353,7 @@ fn checked_party_body(body: &str, kind: PartyKind) -> Result<String, ViewerError
     Ok(doc.to_string())
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Flatten a canonical party body into a [`PartyState`], keeping the body
 /// verbatim. Defensive throughout — an absent attribute reads as its empty
 /// default rather than failing the tab.
@@ -399,7 +399,7 @@ fn parse_party_state(body: &str, served_etag: Option<&str>) -> Result<PartyState
     })
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// The length of a JSON array attribute as the fixed-size int the wire type
 /// carries, saturating rather than wrapping.
 fn count_of(value: Option<&Value>) -> u32 {
@@ -460,7 +460,7 @@ fn parse_details(draft: &str) -> Result<Option<Value>, String> {
     }
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Apply the form's two edits to the loaded party document and return the body
 /// to PUT.
 ///
@@ -721,7 +721,7 @@ fn party_section(
     uid: Signal<String>,
     latest_version: RwSignal<String>,
 ) -> (AnyView, PartyResource) {
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
 
     // Created BEFORE the resource: its stamp is the resource's refetch trigger.
     let save: Action<PartyEdit, Result<String, ViewerError>> = Action::new(|edit: &PartyEdit| {
@@ -974,7 +974,7 @@ fn edit_form(
                         prop:disabled=move || unseeded.get() || save.pending().get()
                         on:click=on_save
                     >
-                        <leptos_icons::Icon icon=icondata_lu::LuSave width="14" height="14" />
+                        {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::SAVE, "14")}
                         "Save party"
                     </button>
                     <Show when=move || save.pending().get()>
@@ -1087,7 +1087,7 @@ mod tests {
     }
 }
 
-#[cfg(all(test, feature = "ssr"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod wire_tests {
     use super::{apply_party_edits, checked_party_body, parse_party_state};
     use crate::pages::demographics::PartyKind;

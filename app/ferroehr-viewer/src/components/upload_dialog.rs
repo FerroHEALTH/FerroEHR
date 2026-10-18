@@ -112,7 +112,7 @@ pub fn UploadDialog(
         <div id=picker_id class="mb-2">
             <thaw::Upload accept custom_request>
                 <thaw::Button>
-                    <leptos_icons::Icon icon=icondata_lu::LuUpload width="14" height="14" />
+                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::FILE_PLUS, "14")}
                     {move || choose_label.get()}
                 </thaw::Button>
             </thaw::Upload>
@@ -133,9 +133,9 @@ pub fn UploadDialog(
             {move || match error.get() {
                 Some(message) => {
                     view! {
-                        <thaw::MessageBar intent=thaw::MessageBarIntent::Error>
-                            <thaw::MessageBarBody>{message}</thaw::MessageBarBody>
-                        </thaw::MessageBar>
+                        <div role="alert" class="fui-alert">
+                            <div>{message}</div>
+                        </div>
                     }
                         .into_any()
                 }
@@ -170,7 +170,7 @@ pub fn UploadDialog(
                             prop:disabled=move || empty.get() || pending.get()
                             on:click=move |_| on_submit.run(source.get_untracked())
                         >
-                            <leptos_icons::Icon icon=icondata_lu::LuUpload width="14" height="14" />
+                            {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::FILE_PLUS, "14")}
                             {move || submit_label.get()}
                         </button>
                     </thaw::DialogActions>

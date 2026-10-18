@@ -22,9 +22,10 @@
 //! running viewer provides:
 //!
 //! * `leptos_meta` — every routed screen sets a `<Title/>`.
-//! * `thaw::ConfigProvider` + `thaw::ToasterProvider` — the widget kit's
-//!   injections; screens resolve `ToasterInjection` in setup, and the shell is
-//!   where the running viewer mounts the toaster.
+//! * FerroUI's toast region (`provide_toasts`) — screens take its handle in
+//!   setup, and the shell is where the running viewer provides it; and
+//!   `thaw::ConfigProvider`, which the thaw widgets FerroUI does not draw yet
+//!   resolve.
 //! * `<Router>` + a `RequestUrl` — filter/search/paging state is URL state
 //!   (rules §9), read in setup through `use_query_map`.
 //! * The matched route's params (an `ArcMemo<ParamsMap>`, what a matched
@@ -41,7 +42,7 @@
 //! what puts `leptos-use`/`thaw`/`leptos-chartistry` on their non-`WASM` code
 //! paths (`Cargo.toml` §features).
 
-#![cfg(feature = "ssr")]
+#![cfg(not(target_arch = "wasm32"))]
 
 use leptos::prelude::*;
 use leptos_router::params::ParamsMap;
@@ -74,11 +75,11 @@ fn render_page(
         provide_context(leptos_router::location::RequestUrl::new(&url));
         provide_context(ArcMemo::new(move |_| map.clone()));
         provide_context(app_state());
+        let _toasts: ferrohealth_ui::widget::toast::Toasts =
+            ferrohealth_ui::widget::toast::provide_toasts();
         view! {
             <thaw::ConfigProvider>
-                <thaw::ToasterProvider>
-                    <leptos_router::components::Router>{build()}</leptos_router::components::Router>
-                </thaw::ToasterProvider>
+                <leptos_router::components::Router>{build()}</leptos_router::components::Router>
             </thaw::ConfigProvider>
         }
         .to_html()
@@ -138,13 +139,14 @@ async fn the_dashboard_renders_its_header_over_skeletons_for_every_data_section(
 // ------------------------------------------------------------------ login
 
 #[tokio::test]
-async fn the_login_screen_renders_the_wordmark_over_a_spinner_until_the_modes_resolve() {
+async fn the_login_screen_renders_the_lockup_over_a_skeleton_until_the_modes_resolve() {
     let html = render_page("/login", &[], || {
         view! { <ferroehr_viewer::pages::login::LoginPage /> }.into_any()
     });
     assert!(html.contains("FerroEHR"), "{html}");
     assert!(html.contains("Viewer"), "{html}");
-    assert!(html.contains("thaw-spinner"), "{html}");
+    assert!(html.contains("fui-skeleton"), "{html}");
+    assert!(html.contains("aria-busy=\"true\""), "{html}");
     // Which sign-in paths exist is the CDR's answer, awaited inside the
     // Suspense — so neither form is in the server pass.
     assert!(!html.contains("id=\"login-username\""), "{html}");
@@ -163,7 +165,7 @@ async fn a_refused_sign_in_renders_the_refusal_on_the_login_screen() {
     });
     assert!(html.contains("id=\"login-refused\""), "{html}");
     assert!(html.contains("Wrong username or password."), "{html}");
-    assert!(html.contains("thaw-message-bar"), "{html}");
+    assert!(html.contains("fui-alert"), "{html}");
 }
 
 // -------------------------------------------------------------- templates
@@ -257,7 +259,7 @@ async fn the_query_builder_renders_its_empty_criteria_state_and_the_default_aql(
     assert!(html.contains("Loading templates…"), "{html}");
     assert!(html.contains(">Path catalog</h2>"), "{html}");
     assert!(html.contains(">Criteria</h2>"), "{html}");
-    assert!(html.contains(">No conditions yet</p>"), "{html}");
+    assert!(html.contains(">No conditions yet</h2>"), "{html}");
     for field in [
         "id=\"qb-limit\"",
         "id=\"qb-save-namespace\"",
@@ -391,7 +393,7 @@ async fn the_ehr_detail_screen_renders_every_tab_body_in_one_server_pass() {
     assert!(html.contains("id=\"contribution-uid\""), "{html}");
     assert!(html.contains("id=\"stage-add\""), "{html}");
     assert!(html.contains("id=\"stage-list\""), "{html}");
-    assert!(html.contains(">Nothing staged yet</p>"), "{html}");
+    assert!(html.contains(">Nothing staged yet</h2>"), "{html}");
     assert!(html.contains("id=\"ehr-tag-browser\""), "{html}");
 }
 
@@ -532,7 +534,7 @@ async fn the_terminology_screen_renders_its_header_over_the_probe_skeleton() {
     });
     assert!(html.contains("id=\"terminology-screen\""), "{html}");
     assert!(html.contains(">Terminology</h1>"), "{html}");
-    assert!(html.contains("thaw-skeleton"), "{html}");
+    assert!(html.contains("fui-skeleton"), "{html}");
     // Nothing that needs the surface to exist is rendered before the probe.
     assert!(!html.contains("id=\"terminology-code\""), "{html}");
     assert!(!html.contains("id=\"terminology-disabled\""), "{html}");

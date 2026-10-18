@@ -1,11 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The dashboard stat tile: icon, tabular-nums value, muted label — the
-//! replacement for the bare number-in-a-card look.
+//! The dashboard stat tile: icon, tabular-nums value, muted label. FerroEHR
+//! keeps its own tile until FerroUI's stat card takes a label read at run time
+//! and this look (FerroHEALTH/FerroUI#35).
 
 use leptos::prelude::*;
-use leptos_icons::Icon;
+use ferrohealth_ui::icon::{Glyph, icon as glyph_icon};
 
 /// One dashboard metric tile.
 #[expect(
@@ -20,8 +21,8 @@ pub fn StatCard(
     /// The metric value, already formatted.
     #[prop(into)]
     value: Signal<String>,
-    /// The Lucide icon for the metric.
-    icon: icondata_core::Icon,
+    /// The Lucide glyph for the metric.
+    icon: Glyph,
     /// Optional link target — the whole tile navigates when set.
     #[prop(optional, into)]
     href: Option<String>,
@@ -29,7 +30,7 @@ pub fn StatCard(
     let inner = view! {
         <div class="flex items-center gap-3">
             <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-accent-subtle text-accent-ink">
-                <Icon icon width="20" height="20" />
+                {glyph_icon(icon, "20")}
             </span>
             <div class="min-w-0">
                 <div class="text-2xl font-semibold tabular-nums text-ink">

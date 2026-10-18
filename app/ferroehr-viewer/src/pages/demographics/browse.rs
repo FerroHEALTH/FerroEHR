@@ -33,7 +33,7 @@ use leptos_meta::Title;
 use leptos_router::components::{A, Redirect};
 
 use crate::components::data_table::{
-    CELL, CELL_MONO, ROW, TablePaging, page_rows, page_window, paging_from_url, row_total,
+    CELL, CELL_MONO, ROW, TablePaging, page_rows, paging_in_session, row_total,
     table_footer, table_shell, table_skeleton,
 };
 use crate::components::empty_state::EmptyState;
@@ -181,7 +181,7 @@ where
 /// One kind's browser screen: the switcher, the lookup, the create card and the
 /// tag index.
 fn browser_screen(kind: PartyKind) -> AnyView {
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     let switcher = kind_switcher(kind);
     let lookup = lookup_section(kind);
     let create = create_section(kind, toaster);
@@ -390,7 +390,7 @@ pub fn minimal_party_body(kind: PartyKind) -> String {
 /// re-model. The textarea is UNCONTROLLED with the skeleton as its child text,
 /// so the server and the client render identical markup and typing before
 /// hydration is never wiped.
-fn create_section(kind: PartyKind, toaster: thaw::ToasterInjection) -> AnyView {
+fn create_section(kind: PartyKind, toaster: ferrohealth_ui::widget::toast::Toasts) -> AnyView {
     let body_ref = NodeRef::<leptos::html::Textarea>::new();
     let create: Action<String, Result<String, ViewerError>> = Action::new(move |body: &String| {
         let body = body.clone();
@@ -455,7 +455,7 @@ fn create_section(kind: PartyKind, toaster: thaw::ToasterInjection) -> AnyView {
                     disabled=Signal::derive(move || create.pending().get())
                     on:click=on_click
                 >
-                    <leptos_icons::Icon icon=icondata_lu::LuUserPlus width="14" height="14" />
+                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::PLUS, "14")}
                     {format!("Create {}", kind.rm_type())}
                 </button>
                 <Show when=move || create.pending().get()>
@@ -492,7 +492,7 @@ fn tag_index_section(kind: PartyKind) -> AnyView {
             )
         })
     });
-    let paging = paging_from_url();
+    let paging = paging_in_session();
     let resource: Resource<Result<Vec<ItemTagRow>, ViewerError>> = Resource::new(
         move || filters.get(),
         |(key, value, path)| async move { list_demographic_tags(key, value, path).await },
@@ -542,7 +542,7 @@ fn tag_index_section(kind: PartyKind) -> AnyView {
                     Ok(tags) if tags.is_empty() => {
                         view! {
                             <EmptyState
-                                icon=icondata_lu::LuTags
+                                icon=ferrohealth_ui::icon::Glyph::LAYERS
                                 message="No demographic tags"
                                 hint="Tags are the one demographic collection the openEHR API lists. Set one on a party's Tags tab and it appears here."
                             />
@@ -588,7 +588,7 @@ fn tag_index_table(
     let rows = view! {
         <For
             each=move || {
-                let window = page_window(total, paging.page.get(), paging.size.get());
+                let window = paging.window(total);
                 page_rows(&tags, window)
             }
             key=ItemTagRow::global_identity
@@ -605,7 +605,7 @@ fn tag_index_table(
         Signal::derive(move || total),
     );
     view! {
-        {table_shell(&["Key", "Value", "Target path", "Target", ""], rows)}
+        {table_shell("Demographic tags", &["Key", "Value", "Target path", "Target", ""], rows)}
         {footer}
     }
     .into_any()
@@ -638,7 +638,7 @@ fn tag_index_row(
                         open.dispatch(container.clone());
                     }
                 >
-                    <leptos_icons::Icon icon=icondata_lu::LuEye width="14" height="14" />
+                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::SEARCH, "14")}
                     "Open party"
                 </button>
             </td>

@@ -47,7 +47,7 @@ use crate::error::ViewerError;
 
 /// One headline metric: its name, its tile label, and an optional
 /// `(label, value)` sample filter.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 type HeadlineMetric = (
     &'static str,
     &'static str,
@@ -63,7 +63,7 @@ type HeadlineMetric = (
 // NOTE: these are the Prometheus exporter's RENDERED names — `_total` is derived
 // from the counter kind, never written on the instrument — and the correspondence
 // is pinned by the CDR's `exporter_renders_the_viewer_metric_names` test.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 const HEADLINE_METRICS: [HeadlineMetric; 4] = [
     ("http_server_active_requests", "In-flight requests", None),
     (
@@ -737,7 +737,7 @@ pub async fn reset_log_filter() -> Result<LoggerView, ViewerError> {
 ///
 /// Guards the viewer session first: the server fns above are publicly
 /// reachable endpoints, and this is the one place their CDR call is made.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 async fn management_get(path: &str) -> Result<Option<String>, ViewerError> {
     let session = crate::session::require_session().await?;
     let state: crate::state::AppState = expect_context();

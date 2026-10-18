@@ -140,7 +140,7 @@ pub fn logical_delete_failure_copy(object: &str, error: &ViewerError) -> String 
 /// `title` is the short outcome ("Upload failed", "Commit failed"); `object`
 /// is the noun phrase the copy is built around.
 pub fn toast_write_failure(
-    toaster: thaw::ToasterInjection,
+    toaster: ferrohealth_ui::widget::toast::Toasts,
     title: &str,
     object: &str,
     error: &ViewerError,

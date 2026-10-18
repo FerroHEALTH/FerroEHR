@@ -11,7 +11,8 @@
 //! object is deleted or unknown ([`deleted_notice`], [`missing_notice`]), the
 //! CDR's verbatim diagnostic under the form it refused ([`diagnostic_pane`]),
 //! and the message bar a failed write shows beside its failure toast
-//! ([`failure_bar`]).
+//! ([`failure_bar`]). The refusal look is FerroUI's alert (`fui-alert`); the
+//! warning and information bars are the same shape in their tone.
 //!
 //! The viewer's feedback rule decides which one applies: a pure READ renders
 //! inline and never toasts; a MUTATION toasts on both outcomes and may keep
@@ -22,18 +23,18 @@ use leptos::prelude::*;
 use crate::components::surface::WELL;
 use crate::error::ViewerError;
 
-/// The class set of a danger-toned inline block (a refusal, a validation
-/// complaint).
-const ALERT: &str =
-    "rounded-control border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger";
+/// The class set of a refusal, a validation complaint or a failed read: the
+/// FerroUI alert.
+pub const ALERT: &str = "fui-alert";
 
-/// The class set of a whole-section notice that something is absent.
-const MISSING: &str =
-    "rounded-card border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger";
-
-/// The class set of a whole-section notice that something is deleted.
-const DELETED: &str =
+/// The class set of a warning bar, the alert's shape in the warning tone.
+pub const WARNING: &str =
     "rounded-card border border-warn/40 bg-warn-subtle px-3 py-2 text-sm text-warn";
+
+/// The class set of an information bar, the alert's shape in the
+/// information tone.
+pub const INFO: &str =
+    "rounded-card border border-info/40 bg-info-subtle px-3 py-2 text-sm text-info";
 
 /// One domain error rendered as the standard inline error bar.
 ///
@@ -46,10 +47,7 @@ const DELETED: &str =
 pub fn inline_error(error: &ViewerError) -> AnyView {
     let message = error.to_string();
     view! {
-        <div
-            role="alert"
-            class="rounded-control border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger whitespace-pre-line"
-        >
+        <div role="alert" class="fui-alert whitespace-pre-line">
             {message}
         </div>
     }
@@ -75,7 +73,7 @@ pub fn alert_note(id: &'static str, message: String) -> AnyView {
 #[must_use]
 pub fn deleted_notice(id: &'static str, message: &'static str) -> AnyView {
     view! {
-        <div role="status" id=id class=DELETED>
+        <div role="status" id=id class=WARNING>
             {message}
         </div>
     }
@@ -86,7 +84,7 @@ pub fn deleted_notice(id: &'static str, message: &'static str) -> AnyView {
 #[must_use]
 pub fn missing_notice(id: &'static str, message: &'static str) -> AnyView {
     view! {
-        <div role="alert" id=id class=MISSING>
+        <div role="alert" id=id class=ALERT>
             {message}
         </div>
     }
@@ -132,10 +130,8 @@ pub fn failure_bar(error: Signal<Option<ViewerError>>) -> AnyView {
                 .get()
                 .map(|error| {
                     view! {
-                        <div class="mt-2">
-                            <thaw::MessageBar intent=thaw::MessageBarIntent::Error>
-                                <thaw::MessageBarBody>{error.to_string()}</thaw::MessageBarBody>
-                            </thaw::MessageBar>
+                        <div role="alert" class="fui-alert mt-2 whitespace-pre-line">
+                            {error.to_string()}
                         </div>
                     }
                 })

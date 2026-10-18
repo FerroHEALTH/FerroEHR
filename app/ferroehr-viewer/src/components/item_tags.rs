@@ -49,7 +49,7 @@ use std::collections::BTreeMap;
 
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 use serde_json::Value;
 
 use crate::components::data_table::{CELL, CELL_MONO, ROW, table_shell, table_skeleton};
@@ -182,7 +182,7 @@ pub fn tag_panel(
                     Ok(Some(tags)) if tags.is_empty() => {
                         view! {
                             <EmptyState
-                                icon=icondata_lu::LuTags
+                                icon=ferrohealth_ui::icon::Glyph::LAYERS
                                 message=copy.empty_message
                                 hint=copy.empty_hint
                             />
@@ -238,7 +238,7 @@ fn tags_table(tags: Vec<ItemTagRow>, actions: TagActions) -> AnyView {
         </For>
     }
     .into_any();
-    table_shell(&["Key", "Value", "Target path", "Target", ""], rows)
+    table_shell("Item tags", &["Key", "Value", "Target path", "Target", ""], rows)
 }
 
 /// One tag row plus its delete-by-key action.
@@ -265,7 +265,7 @@ fn tag_row(tag: &ItemTagRow, actions: TagActions) -> AnyView {
                     disabled=Signal::derive(move || actions.busy.get())
                     on:click=move |_| actions.delete.run(key.clone())
                 >
-                    <leptos_icons::Icon icon=icondata_lu::LuTrash width="14" height="14" />
+                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::TRASH, "14")}
                     "Delete"
                 </button>
             </td>
@@ -438,7 +438,7 @@ pub fn tag_filter_form(
 /// sentence in `demographic_tags_get.yaml`). The parameter names are the
 /// released ones, which the viewer's own argument names deliberately do not
 /// repeat (`tag_key` on both sides would only stutter).
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 #[must_use]
 pub fn tag_filter_query(key: &str, value: &str, target_path: &str) -> String {
     let mut query = String::new();
@@ -465,7 +465,7 @@ pub fn tag_filter_query(key: &str, value: &str, target_path: &str) -> String {
 /// operation names (module docs), and it emits only the three declared members
 /// (`schemas/common/UpdateItemTag.yaml` is `additionalProperties: false`, so a
 /// re-sent `target`/`owner_id` would be a `400`).
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 #[must_use]
 pub fn merged_tag_body(
     existing: &[ItemTagRow],
@@ -496,7 +496,7 @@ pub fn merged_tag_body(
 /// (`org.openehr.rm.common.item_tag.adoc`), and an absent `target_path` is what
 /// "tags the whole object" means — so a blank field is OMITTED, never sent as
 /// `""`.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 fn update_tag(key: &str, value: &str, target_path: &str) -> Value {
     let mut entry = serde_json::Map::new();
     drop(entry.insert("key".to_owned(), Value::String(key.to_owned())));
@@ -517,7 +517,7 @@ fn update_tag(key: &str, value: &str, target_path: &str) -> Value {
 ///
 /// # Errors
 /// [`ViewerError::Internal`] when the body is not valid JSON.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 pub fn parse_item_tags(body: &str) -> Result<Vec<ItemTagRow>, ViewerError> {
     let doc: Value = serde_json::from_str(body)
         .map_err(|e| ViewerError::Internal(format!("ITEM_TAG list JSON: {e}")))?;
@@ -536,7 +536,7 @@ pub fn parse_item_tags(body: &str) -> Result<Vec<ItemTagRow>, ViewerError> {
 
 /// Follow a chain of object keys to a string leaf, or an empty string when any
 /// hop is absent or not a string.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 fn string_at(value: &Value, path: &[&str]) -> String {
     let mut current = value;
     for key in path {
@@ -637,7 +637,7 @@ mod tests {
     }
 }
 
-#[cfg(all(test, feature = "ssr"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod wire_tests {
     use super::{ItemTagRow, merged_tag_body, parse_item_tags, tag_filter_query};
     use serde_json::Value;

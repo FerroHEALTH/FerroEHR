@@ -53,7 +53,7 @@ pub(in crate::pages::ehr_detail::directory) fn create_section(
                         disabled=Signal::derive(move || create.pending().get())
                         on:click=on_create
                     >
-                        <leptos_icons::Icon icon=icondata_lu::LuPlus width="14" height="14" />
+                        {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::PLUS, "14")}
                         "Create directory"
                     </button>
                     <Show when=move || create.pending().get()>

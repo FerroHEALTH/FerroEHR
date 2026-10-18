@@ -82,7 +82,7 @@ pub struct TemplateDetail {
 /// # Errors
 /// [`ViewerError::Internal`] when the OPT fails to parse or the Web Template
 /// fails to build (the diagnostic named, never a panic).
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 pub fn template_detail_from_opt(source: String) -> Result<TemplateDetail, ViewerError> {
     let opt = openehr_its::opt14::from_xml(&source)
         .map_err(|e| ViewerError::Internal(format!("OPT 1.4 parse: {e}")))?;
@@ -354,7 +354,7 @@ pub fn TemplateDetailPage() -> impl IntoView {
 /// next action (the CDR refuses a template still referenced by a committed
 /// version with `409`).
 fn delete_section(template_id: Signal<String>) -> AnyView {
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     let gate = crate::admin::admin_gate();
     let delete: Action<String, (String, Result<(), ViewerError>)> = Action::new(|id: &String| {
         let id = id.clone();
@@ -406,7 +406,7 @@ fn delete_section(template_id: Signal<String>) -> AnyView {
                 disabled=Signal::derive(move || delete.pending().get())
                 on:click=move |_| confirming.set(true)
             >
-                <leptos_icons::Icon icon=icondata_lu::LuTrash width="14" height="14" />
+                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::TRASH, "14")}
                 "Delete template"
             </button>
             <crate::components::confirm_dialog::ConfirmDialog
@@ -455,9 +455,7 @@ fn meta_section(detail: Resource<Result<TemplateDetail, ViewerError>>) -> AnyVie
         <section class=format!("{CARD_PAD} mb-4")>
             <Suspense fallback=|| {
                 view! {
-                    <thaw::Skeleton class="h-10">
-                        <thaw::SkeletonItem />
-                    </thaw::Skeleton>
+                    {ferrohealth_ui::view::empty::skeleton(1, "Loading…")}
                 }
             }>
                 {move || {
@@ -539,11 +537,7 @@ fn wt_tab(
 /// families — the ADL2 screen imports it rather than re-declaring a copy).
 pub(crate) fn tree_skeleton() -> impl IntoView {
     view! {
-        <thaw::Skeleton>
-            <thaw::SkeletonItem class="h-4 mb-2" />
-            <thaw::SkeletonItem class="h-4 mb-2 ml-4" />
-            <thaw::SkeletonItem class="h-4 ml-4" />
-        </thaw::Skeleton>
+        {ferrohealth_ui::view::empty::skeleton(3, "Loading…")}
     }
 }
 
@@ -556,8 +550,8 @@ pub(crate) fn tree_skeleton() -> impl IntoView {
 pub(crate) fn catalog_error_view(error: &ViewerError, back_href: &'static str) -> AnyView {
     let message = error.to_string();
     view! {
-        <thaw::MessageBar intent=thaw::MessageBarIntent::Error>
-            <thaw::MessageBarBody>
+        <div role="alert" class="fui-alert">
+            <div>
                 {message} " — "
                 <leptos_router::components::A
                     href=back_href
@@ -565,8 +559,8 @@ pub(crate) fn catalog_error_view(error: &ViewerError, back_href: &'static str) -
                 >
                     "back to templates"
                 </leptos_router::components::A>
-            </thaw::MessageBarBody>
-        </thaw::MessageBar>
+            </div>
+        </div>
     }
     .into_any()
 }
@@ -633,20 +627,12 @@ pub(crate) fn CatalogTreeNode(
                 {move || {
                     if expanded.get() {
                         view! {
-                            <leptos_icons::Icon
-                                icon=icondata_lu::LuChevronDown
-                                width="12"
-                                height="12"
-                            />
+                            {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::CHEVRON_DOWN, "12")}
                         }
                             .into_any()
                     } else {
                         view! {
-                            <leptos_icons::Icon
-                                icon=icondata_lu::LuChevronRight
-                                width="12"
-                                height="12"
-                            />
+                            {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::CHEVRON_RIGHT, "12")}
                         }
                             .into_any()
                     }
@@ -866,13 +852,13 @@ mod tests {
     /// The operational template the viewer's own e2e stack is seeded with
     /// (`scripts/ui-e2e.sh`), so the derivation is pinned against the same
     /// document the browser journeys inspect.
-    #[cfg(feature = "ssr")]
+    #[cfg(not(target_arch = "wasm32"))]
     const OPT_FIXTURE: &str = include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/tests/fixtures/minimal_evaluation.opt"
     ));
 
-    #[cfg(feature = "ssr")]
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn one_parse_yields_the_source_the_meta_and_the_catalog() {
         // The screen's three panes come out of ONE parse: the source travels
@@ -897,7 +883,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "ssr")]
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn a_defective_opt_names_the_failing_stage() {
         // A refusal is a named diagnostic, never a panic — the screen renders

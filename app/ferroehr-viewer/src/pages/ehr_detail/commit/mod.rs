@@ -39,7 +39,7 @@ pub mod staged;
 use leptos::prelude::*;
 use leptos::server;
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 use serde_json::Value;
 
 use crate::components::data_table::{CELL, CELL_MONO, ROW, table_shell};
@@ -132,7 +132,7 @@ pub async fn commit_contribution(
     Ok(parse_commit_outcome(&response.body))
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Flatten the committed CONTRIBUTION into a [`CommitOutcome`].
 ///
 /// Defensive throughout — a body the CDR served without the representation
@@ -289,7 +289,7 @@ impl CommitForm {
 /// so only the visible tab fetches (never fetch-in-effect), and none is created
 /// inside a `Suspend`.
 pub(super) fn commit_section(ehr_id: Signal<String>, selected: Memo<String>) -> AnyView {
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     let form = CommitForm::new();
     let active = Memo::new(move |_| selected.get() == "commit");
 
@@ -761,7 +761,7 @@ fn draft_editor(form: CommitForm, unseeded: Signal<bool>) -> AnyView {
                 prop:disabled=move || !stageable.get()
                 on:click=move |_| form.stage()
             >
-                <leptos_icons::Icon icon=icondata_lu::LuPlus width="14" height="14" />
+                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::PLUS, "14")}
                 "Stage this change"
             </button>
         </div>
@@ -784,14 +784,14 @@ fn staging_list(form: CommitForm) -> AnyView {
             fallback=|| {
                 view! {
                     <EmptyState
-                        icon=icondata_lu::LuLayers
+                        icon=ferrohealth_ui::icon::Glyph::LAYERS
                         message="Nothing staged yet"
                         hint="Add a change above; they commit together as one contribution."
                     />
                 }
             }
         >
-            {table_shell(
+            {table_shell("Staged changes", 
                 &["Change", "Target", "Change type", ""],
                 view! {
                     <For each=move || form.staged.get() key=|change| change.seq let:change>
@@ -938,7 +938,7 @@ fn audit_card(
                         prop:disabled=move || count.get() == 0 || commit.pending().get()
                         on:click=on_commit
                     >
-                        <leptos_icons::Icon icon=icondata_lu::LuUpload width="14" height="14" />
+                        {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::FILE_PLUS, "14")}
                         {move || label.get()}
                     </button>
                     <Show when=move || commit.pending().get()>
@@ -1060,7 +1060,7 @@ mod tests {
     }
 }
 
-#[cfg(all(test, feature = "ssr"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod outcome_tests {
     use super::parse_commit_outcome;
 

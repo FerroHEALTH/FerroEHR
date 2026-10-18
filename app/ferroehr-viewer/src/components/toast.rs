@@ -1,23 +1,48 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Toast feedback helpers over `thaw`'s toaster: every mutation (upload, save,
-//! delete, commit, create) reports its outcome as a transient toast instead of
-//! scattered inline text.
+//! Toast feedback helpers over the FerroUI toast region: every mutation
+//! (upload, save, delete, commit, create) reports its outcome as a transient
+//! toast instead of scattered inline text.
 //!
-//! The shell mounts the `thaw::ToasterProvider`; screens call these with
-//! `thaw::ToasterInjection::expect_context()`.
+//! The shell provides and draws the region
+//! (`ferrohealth_ui::widget::toast::{provide_toasts, toast_region}`); screens
+//! take its handle with [`toaster`]. A toast says what happened and to which
+//! object, never what was in it.
 
+use ferrohealth_ui::tone::Tone;
+use ferrohealth_ui::widget::toast::Toasts;
 use leptos::prelude::*;
 
+/// The toast region the shell provides.
+///
+/// # Panics
+///
+/// Panics when called outside the shell, which provides the region for every
+/// guarded screen (the structural guarantee `expect_context` documents).
+#[must_use]
+pub fn toaster() -> Toasts {
+    expect_context::<Toasts>()
+}
+
+/// One toast's words: the short outcome, then the sentence that names the
+/// object and the next action.
+fn words(title: &str, body: &str) -> String {
+    if body.is_empty() {
+        title.to_owned()
+    } else {
+        format!("{title}: {body}")
+    }
+}
+
 /// Dispatch a success toast.
-pub fn toast_success(toaster: thaw::ToasterInjection, title: &str, body: &str) {
-    dispatch(toaster, thaw::ToastIntent::Success, title, body);
+pub fn toast_success(toaster: Toasts, title: &str, body: &str) {
+    toaster.push(Tone::Ok, words(title, body));
 }
 
 /// Dispatch an error toast.
-pub fn toast_error(toaster: thaw::ToasterInjection, title: &str, body: &str) {
-    dispatch(toaster, thaw::ToastIntent::Error, title, body);
+pub fn toast_error(toaster: Toasts, title: &str, body: &str) {
+    toaster.push(Tone::Bad, words(title, body));
 }
 
 /// Report one mutation's outcome as the viewer's two toasts.
@@ -29,10 +54,9 @@ pub fn toast_error(toaster: thaw::ToasterInjection, title: &str, body: &str) {
 /// that name.
 ///
 /// Dispatching a toast is a side effect on the outside world, so an `Effect` is
-/// its correct home: it never writes a signal, and it never runs on the server
-/// pass.
+/// its correct home: it never runs on the server pass.
 pub fn toast_outcome<T, S, F>(
-    toaster: thaw::ToasterInjection,
+    toaster: Toasts,
     outcome: Signal<Option<(String, Result<T, crate::error::ViewerError>)>>,
     titles: (&'static str, &'static str),
     success_body: S,
@@ -49,18 +73,16 @@ pub fn toast_outcome<T, S, F>(
     });
 }
 
-fn dispatch(toaster: thaw::ToasterInjection, intent: thaw::ToastIntent, title: &str, body: &str) {
-    let title = title.to_owned();
-    let body = body.to_owned();
-    toaster.dispatch_toast(
-        move || {
-            view! {
-                <thaw::Toast>
-                    <thaw::ToastTitle>{title}</thaw::ToastTitle>
-                    <thaw::ToastBody>{body}</thaw::ToastBody>
-                </thaw::Toast>
-            }
-        },
-        thaw::ToastOptions::default().with_intent(intent),
-    );
+#[cfg(test)]
+mod tests {
+    use super::words;
+
+    #[test]
+    fn a_toast_reads_the_outcome_then_the_sentence() {
+        assert_eq!(
+            words("Upload failed", "The CDR refused it."),
+            "Upload failed: The CDR refused it."
+        );
+        assert_eq!(words("Saved", ""), "Saved");
+    }
 }

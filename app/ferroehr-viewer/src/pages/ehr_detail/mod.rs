@@ -48,7 +48,7 @@ use leptos::prelude::*;
 use leptos::{component, server};
 use leptos_meta::Title;
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 use serde_json::Value;
 
 use crate::components::field::BTN_DANGER;
@@ -125,7 +125,7 @@ pub async fn fetch_ehr_summary(
     parse_ehr_summary(&response.body)
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Flatten an `EHR` resource body into an [`EhrSummary`]. Defensive throughout —
 /// a missing attribute reads as empty rather than failing, so a header still
 /// renders what the CDR did send.
@@ -144,7 +144,7 @@ fn parse_ehr_summary(body: &str) -> Result<EhrSummary, ViewerError> {
     })
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Follow a chain of object keys to a string leaf, or an empty string when any
 /// hop is absent or not a string.
 fn json_path(value: &Value, path: &[&str]) -> String {
@@ -181,9 +181,7 @@ fn summary_section(ehr_id: Signal<String>, status: StatusFeed) -> AnyView {
                 {identity}
                 <Suspense fallback=|| {
                     view! {
-                        <thaw::Skeleton>
-                            <thaw::SkeletonItem class="h-16" />
-                        </thaw::Skeleton>
+                        {ferrohealth_ui::view::empty::skeleton(1, "Loading…")}
                     }
                 }>
                     {move || Suspend::new(async move {
@@ -224,9 +222,7 @@ fn identity_strip(status: StatusFeed) -> AnyView {
     view! {
         <Transition fallback=|| {
             view! {
-                <thaw::Skeleton>
-                    <thaw::SkeletonItem class="h-6 mb-3" />
-                </thaw::Skeleton>
+                {ferrohealth_ui::view::empty::skeleton(1, "Loading…")}
             }
         }>
             {move || Suspend::new(async move {
@@ -389,7 +385,7 @@ pub fn EhrDetailPage() -> impl IntoView {
 /// it. On success the viewer returns to `/ehrs` (this screen's subject is
 /// gone) with a toast naming the deleted id.
 fn delete_section(ehr_id: Signal<String>) -> AnyView {
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     let gate = crate::admin::admin_gate();
     let delete: Action<String, (String, Result<(), ViewerError>)> = Action::new(|id: &String| {
         let id = id.clone();
@@ -439,7 +435,7 @@ fn delete_section(ehr_id: Signal<String>) -> AnyView {
                     disabled=Signal::derive(move || delete.pending().get())
                     on:click=move |_| confirming.set(true)
                 >
-                    <leptos_icons::Icon icon=icondata_lu::LuTrash width="14" height="14" />
+                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::TRASH, "14")}
                     "Delete EHR"
                 </button>
                 <crate::components::confirm_dialog::ConfirmDialog
@@ -491,7 +487,7 @@ fn tab_bar(ehr_id: Signal<String>, selected: Memo<String>) -> AnyView {
     .into_any()
 }
 
-#[cfg(all(test, feature = "ssr"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::parse_ehr_summary;
 

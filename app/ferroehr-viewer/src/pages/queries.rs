@@ -26,7 +26,7 @@ use leptos_router::hooks::use_navigate;
 
 use crate::admin::AdminAvailability;
 use crate::components::data_table::{
-    CELL, CELL_MONO, ROW, TablePaging, page_rows, page_window, paging_from_url, row_total,
+    CELL, CELL_MONO, ROW, TablePaging, page_rows, paging_from_url, row_total,
     table_footer, table_shell, table_skeleton,
 };
 use crate::components::empty_state::EmptyState;
@@ -53,7 +53,7 @@ type CdrQueryDelete = Action<(String, String), ((String, String), Result<(), Vie
 )]
 #[component]
 pub fn QueriesPage() -> impl IntoView {
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     // The admin probe and the CDR stored-query delete it gates (discover-and-hide:
     // no advertised admin group, no delete affordance). Created in setup so the
     // gated view can re-render without re-creating them.
@@ -241,7 +241,7 @@ fn stored_rows_view(
     if rows.is_empty() {
         return view! {
             <EmptyState
-                icon=icondata_lu::LuSearchCode
+                icon=ferrohealth_ui::icon::Glyph::SEARCH
                 message="No stored queries"
                 hint="Build one in the query builder, or write raw AQL, then save it."
             />
@@ -254,7 +254,7 @@ fn stored_rows_view(
     let body = view! {
         <For
             each=move || {
-                let window = page_window(total, paging.page.get(), paging.size.get());
+                let window = paging.window(total);
                 page_rows(&rows, window)
             }
             key=|row| format!("{}@{}", row.name, row.version)
@@ -271,7 +271,7 @@ fn stored_rows_view(
         Signal::derive(move || total),
     );
     view! {
-        {table_shell(&["Name", "Version", "Saved", ""], body)}
+        {table_shell("Stored queries", &["Name", "Version", "Saved", ""], body)}
         {footer}
     }
     .into_any()
@@ -487,7 +487,7 @@ fn namespace_cards(rows: &[StoredQueryRow]) -> AnyView {
     if groups.is_empty() {
         return view! {
             <EmptyState
-                icon=icondata_lu::LuInbox
+                icon=ferrohealth_ui::icon::Glyph::INBOX
                 message="No namespaces yet"
                 hint="Save a query as namespace::name — its namespace becomes a group here and a tile on the dashboard."
             />

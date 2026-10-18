@@ -12,20 +12,20 @@
 //!
 //! What they pin, beyond "it renders": the text a screen passes in actually
 //! reaches the document, the structural classes/attributes the E2E journeys
-//! and the stylesheet key off are present, and the two client-only kits
-//! (`thaw`'s teleported dialog, the toaster) contribute NOTHING to the server
-//! pass — the property `.claude/rules/leptos-ui.md` §8 requires, since markup
+//! and the stylesheet key off are present, and the client-only parts (`thaw`'s
+//! teleported dialog, a toast an action raises) contribute NOTHING to the
+//! server pass — the property `.claude/rules/leptos-ui.md` §8 requires, since markup
 //! the server emits and the client does not is a hydration mismatch.
 //!
-//! `ssr`-gated: `to_html` is the server-pass renderer, and the viewer's
-//! `ssr` feature is what puts `leptos-use`/`thaw`/`leptos-chartistry` on their
-//! non-`WASM` code paths (`Cargo.toml` §features).
+//! Server half only: `to_html` is the server-pass renderer, and the host
+//! target is what puts `leptos-use`/`thaw`/`leptos-chartistry` on their
+//! non-`WASM` code paths (`Cargo.toml`).
 
-#![cfg(feature = "ssr")]
+#![cfg(not(target_arch = "wasm32"))]
 
 use ferroehr_viewer::activity::ActivityPoint;
 use ferroehr_viewer::components::activity_chart::activity_chart;
-use ferroehr_viewer::components::brand::Wordmark;
+use ferroehr_viewer::components::brand::viewer_lockup;
 use ferroehr_viewer::components::confirm_dialog::ConfirmDialog;
 use ferroehr_viewer::components::empty_state::EmptyState;
 use ferroehr_viewer::components::page_header::{Crumb, PageHeader};
@@ -34,7 +34,10 @@ use ferroehr_viewer::components::scope_grants::{
 };
 use ferroehr_viewer::components::stat_card::StatCard;
 use ferroehr_viewer::components::surface::{CARD_TITLE, titled_card};
-use ferroehr_viewer::components::toast::{toast_error, toast_success};
+use ferroehr_viewer::components::toast::{toast_error, toast_outcome, toast_success};
+use ferroehr_viewer::error::ViewerError;
+use ferrohealth_ui::icon::Glyph;
+use ferrohealth_ui::widget::toast::{provide_toasts, toast_region};
 use ferroehr_viewer::components::upload_dialog::UploadDialog;
 use ferroehr_viewer::scopes::{CAPABILITY_NOTE, grants};
 use leptos::prelude::*;
@@ -61,8 +64,8 @@ fn thaw_shell(body: impl FnOnce() -> AnyView + Send + 'static) -> AnyView {
 // ---------------------------------------------------------------- brand
 
 #[test]
-fn the_wordmark_renders_the_product_name_over_an_inline_svg_mark() {
-    let html = render(|| view! { <Wordmark /> }.into_any());
+fn the_lockup_renders_the_product_name_beside_an_inline_svg_mark() {
+    let html = render(|| viewer_lockup().into_any());
     assert!(html.contains("FerroEHR"), "{html}");
     assert!(html.contains("Viewer"), "{html}");
     // Pure SVG, no asset fetch: the mark is three nodes and the edges between
@@ -71,6 +74,8 @@ fn the_wordmark_renders_the_product_name_over_an_inline_svg_mark() {
     assert!(html.contains("viewBox=\"0 0 24 24\""), "{html}");
     assert_eq!(html.matches("<circle").count(), 3, "{html}");
     assert!(html.contains("aria-hidden=\"true\""), "{html}");
+    // The lockup leads to the dashboard.
+    assert!(html.contains("href=\"/\""), "{html}");
 }
 
 // -------------------------------------------------------------- surface
@@ -102,51 +107,68 @@ fn a_full_width_titled_card_spans_both_grid_columns() {
 // ---------------------------------------------------------------- toast
 
 #[test]
-fn a_success_toast_is_dispatched_client_side_and_adds_nothing_to_the_server_pass() {
+fn a_success_toast_shows_its_outcome_and_sentence_in_the_ok_tone() {
     let html = render(|| {
-        let (toaster, _receiver) = thaw::ToasterInjection::channel();
-        toast_success(toaster, "Template uploaded", "vitals.v1 is now available.");
-        thaw_shell(|| {
-            view! {
-                <thaw::ToasterProvider>
-                    <p id="screen">"Templates"</p>
-                </thaw::ToasterProvider>
-            }
-            .into_any()
-        })
+        let toasts = provide_toasts();
+        toast_success(toasts, "Template uploaded", "vitals.v1 is now available.");
+        view! {
+            <p id="screen">"Templates"</p>
+            {toast_region(toasts)}
+        }
+        .into_any()
     });
-    // The screen under the toaster still renders …
     assert!(html.contains("Templates"), "{html}");
-    // … and the toast itself does not: it is mounted by an effect into a
-    // teleported container, which only exists in the browser. Server markup
-    // for it would be a hydration mismatch (rules §8).
-    assert!(!html.contains("thaw-toast"), "{html}");
-    assert!(!html.contains("Template uploaded"), "{html}");
-    assert!(!html.contains("vitals.v1 is now available."), "{html}");
+    // The region is a polite live region, so a screen reader reads a toast
+    // as it arrives.
+    assert!(html.contains("aria-live=\"polite\""), "{html}");
+    assert!(
+        html.contains("Template uploaded: vitals.v1 is now available."),
+        "{html}"
+    );
+    assert!(html.contains("fui-tone-ok"), "{html}");
 }
 
 #[test]
-fn an_error_toast_is_dispatched_client_side_and_adds_nothing_to_the_server_pass() {
+fn an_error_toast_shows_its_outcome_and_sentence_in_the_bad_tone() {
     let html = render(|| {
-        let (toaster, _receiver) = thaw::ToasterInjection::channel();
+        let toasts = provide_toasts();
         toast_error(
-            toaster,
+            toasts,
             "Upload failed",
             "The CDR rejected vitals.v1: duplicate template id.",
         );
-        thaw_shell(|| {
-            view! {
-                <thaw::ToasterProvider>
-                    <p id="screen">"Templates"</p>
-                </thaw::ToasterProvider>
-            }
-            .into_any()
-        })
+        toast_region(toasts).into_any()
+    });
+    assert!(html.contains("Upload failed: The CDR rejected vitals.v1"), "{html}");
+    assert!(html.contains("fui-tone-bad"), "{html}");
+}
+
+/// A mutation's outcome is toasted from an effect, which never runs on the
+/// server pass: the server emits an empty region, so the client hydrates
+/// against the same markup it starts from (rules §8).
+#[test]
+fn a_mutation_outcome_adds_no_toast_to_the_server_pass() {
+    let html = render(|| {
+        let toasts = provide_toasts();
+        let outcome: Signal<Option<(String, Result<(), ViewerError>)>> =
+            Signal::derive(|| Some(("vitals.v1".to_owned(), Ok(()))));
+        toast_outcome(
+            toasts,
+            outcome,
+            ("Template uploaded", "Upload failed"),
+            |name, ()| format!("{name} is now available."),
+            |name, error| format!("{name}: {error}"),
+        );
+        view! {
+            <p id="screen">"Templates"</p>
+            {toast_region(toasts)}
+        }
+        .into_any()
     });
     assert!(html.contains("Templates"), "{html}");
-    assert!(!html.contains("thaw-toast"), "{html}");
-    assert!(!html.contains("Upload failed"), "{html}");
-    assert!(!html.contains("duplicate template id"), "{html}");
+    assert!(html.contains("aria-live=\"polite\""), "{html}");
+    assert!(!html.contains("Template uploaded"), "{html}");
+    assert!(!html.contains("fui-toast "), "{html}");
 }
 
 // ---------------------------------------------------------- empty state
@@ -156,7 +178,7 @@ fn an_empty_state_renders_its_message_hint_and_action() {
     let html = render(|| {
         view! {
             <EmptyState
-                icon=icondata_lu::LuFileText
+                icon=Glyph::FILES
                 message="No templates yet"
                 hint="Upload your first OPT to get started"
             >
@@ -172,21 +194,26 @@ fn an_empty_state_renders_its_message_hint_and_action() {
     );
     assert!(html.contains("href=\"/templates/upload\""), "{html}");
     assert!(html.contains("Upload an OPT"), "{html}");
-    // The dashed well is what distinguishes an empty state from muted text.
-    assert!(html.contains("border-dashed"), "{html}");
+    // FerroUI's empty state is what distinguishes it from muted text.
+    assert!(html.contains("fui-empty"), "{html}");
     assert!(html.contains("<svg"), "{html}");
 }
 
 #[test]
 fn an_empty_state_without_a_hint_or_action_renders_only_its_message() {
     let html = render(|| {
-        view! { <EmptyState icon=icondata_lu::LuInbox message="No contributions in this window" /> }
+        view! { <EmptyState icon=Glyph::INBOX message="No contributions in this window" /> }
             .into_any()
     });
     assert!(html.contains("No contributions in this window"), "{html}");
-    assert!(html.contains("border-dashed"), "{html}");
-    // Exactly one paragraph: the message. A hint paragraph would be a second.
-    assert_eq!(html.matches("<p ").count(), 1, "{html}");
+    assert!(html.contains("fui-empty"), "{html}");
+    // The message is the heading, and the hint line under it says nothing.
+    assert!(html.contains(">No contributions in this window</h2>"), "{html}");
+    let hint = html
+        .split_once("class=\"fui-empty-body\">")
+        .and_then(|(_, rest)| rest.split_once("</p>"))
+        .map(|(body, _)| body.replace("<!>", "").trim().to_owned());
+    assert_eq!(hint.as_deref(), Some(""), "{html}");
     assert!(!html.contains("<a "), "{html}");
 }
 
@@ -199,7 +226,7 @@ fn a_stat_card_with_a_link_navigates_from_the_whole_tile() {
             <StatCard
                 label="EHRs"
                 value=Signal::derive(|| "1,204".to_owned())
-                icon=icondata_lu::LuUsers
+                icon=Glyph::USERS
                 href="/ehrs"
             />
         }
@@ -220,7 +247,7 @@ fn a_stat_card_without_a_link_renders_an_inert_tile() {
             <StatCard
                 label="Templates"
                 value=Signal::derive(|| "17".to_owned())
-                icon=icondata_lu::LuFileText
+                icon=Glyph::FILES
             />
         }
         .into_any()
@@ -283,7 +310,7 @@ fn an_activity_chart_without_points_renders_the_shared_empty_state() {
         html.contains("Commit a composition to see the trend"),
         "{html}"
     );
-    assert!(html.contains("border-dashed"), "{html}");
+    assert!(html.contains("fui-empty"), "{html}");
     assert!(!html.contains("_chartistry"), "{html}");
     assert!(!html.contains("data-activity-chart"), "{html}");
 }
@@ -378,7 +405,7 @@ fn an_open_confirm_dialog_also_renders_no_server_markup() {
                     title="Delete template"
                     message=Signal::derive(|| "vitals.v1 will be removed.".to_owned())
                     confirm_label="Delete"
-                    confirm_icon=icondata_lu::LuTrash
+                    confirm_icon=Glyph::TRASH
                     confirm_id="confirm-delete-template"
                     on_cancel=Callback::new(move |()| open.set(false))
                     on_confirm=Callback::new(move |()| open.set(false))
@@ -566,5 +593,5 @@ fn the_not_found_screen_offers_a_way_back_to_the_dashboard() {
         "{html}"
     );
     assert!(html.contains("href=\"/\""), "{html}");
-    assert!(html.contains("Return to the dashboard."), "{html}");
+    assert!(html.contains("Return to the dashboard"), "{html}");
 }

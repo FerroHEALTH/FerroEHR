@@ -77,9 +77,7 @@ where
     view! {
         <Transition fallback=|| {
             view! {
-                <thaw::Skeleton>
-                    <thaw::SkeletonItem class="h-24" />
-                </thaw::Skeleton>
+                {ferrohealth_ui::view::empty::skeleton(4, "Loading…")}
             }
         }>
             {move || Suspend::new(async move {
@@ -109,7 +107,7 @@ pub fn revision_history_section(
                     Ok(entries) if entries.is_empty() => {
                         view! {
                             <EmptyState
-                                icon=icondata_lu::LuHistory
+                                icon=ferrohealth_ui::icon::Glyph::REFRESH_CW
                                 message=labels.empty_message
                                 hint=labels.empty_hint
                             />
@@ -146,7 +144,7 @@ fn history_table(
         </For>
     }
     .into_any();
-    table_shell(
+    table_shell("Revision history", 
         &["Version", "Committed", "Change type", "Committer", ""],
         rows,
     )
@@ -177,7 +175,7 @@ fn history_row(entry: &VersionEntry, pinned: RwSignal<String>, row_hook: &'stati
     let committed_by = entry.committer.clone();
     let open = view! {
         <button on:click=move |_| pinned.set(target.clone())>
-            <leptos_icons::Icon icon=icondata_lu::LuEye width="14" height="14" />
+            {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::SEARCH, "14")}
             "Open"
         </button>
     }
@@ -247,7 +245,7 @@ pub fn at_time_lookup_section(
                     disabled=Signal::derive(move || at_time.pending().get())
                     on:click=on_go
                 >
-                    <leptos_icons::Icon icon=icondata_lu::LuClock width="14" height="14" />
+                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::INFO, "14")}
                     "Open that version"
                 </button>
             </div>
@@ -291,7 +289,7 @@ pub fn pinned_document_section(
                     Ok(None) => {
                         view! {
                             <EmptyState
-                                icon=icondata_lu::LuFileClock
+                                icon=ferrohealth_ui::icon::Glyph::FILES
                                 message="No version opened"
                                 hint="Open a version from the revision history above, or resolve one by date and time."
                             />
@@ -313,7 +311,7 @@ pub fn pinned_document_section(
     .into_any()
 }
 
-#[cfg(all(test, feature = "ssr"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::history_row;
     use crate::components::wire::VersionEntry;
@@ -336,13 +334,9 @@ mod tests {
             history_row(&entry, pinned, "data-status-version").to_html()
         });
         assert!(
-            html.contains(concat!(
-                "<button type=\"button\" class=\"",
-                "inline-flex items-center gap-1.5 rounded-control border border-edge-strong ",
-                "bg-raised px-3 py-1.5 text-sm font-medium text-ink hover:bg-sunken ",
-                "focus:outline-none focus:ring-2 focus:ring-accent ",
-                "disabled:opacity-50 disabled:pointer-events-none\" ",
-                "data-status-version=\"8849182c::example.org::2\">"
+            html.contains(&format!(
+                "<button type=\"button\" class=\"{}\" data-status-version=\"8849182c::example.org::2\">",
+                crate::components::field::BTN_SECONDARY
             )),
             "the Open button's attributes are missing or reordered: {html}"
         );

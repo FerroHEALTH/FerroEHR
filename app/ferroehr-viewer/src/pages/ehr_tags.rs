@@ -61,7 +61,7 @@ use leptos::server;
 use serde::{Deserialize, Serialize};
 
 use crate::components::data_table::{
-    CELL, CELL_MONO, ROW, TablePaging, page_rows, page_window, paging_from_url, row_total,
+    CELL, CELL_MONO, ROW, TablePaging, page_rows, paging_in_session, row_total,
     table_footer, table_shell, table_skeleton,
 };
 use crate::components::empty_state::EmptyState;
@@ -235,7 +235,7 @@ pub async fn set_ehr_tag(
     .await
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Insert-or-replace one tag in the collection at `url`.
 ///
 /// The plain function behind [`set_ehr_tag`] and [`set_status_tag`], so neither
@@ -321,7 +321,7 @@ pub async fn delete_ehr_tag(
     delete_tag_at(&state, &session.credential, &url, &key).await
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Delete every tag under `key` from the collection at `url`.
 ///
 /// The plain function behind [`delete_ehr_tag`] and
@@ -452,7 +452,7 @@ pub async fn resolve_ehr_target(
     Ok(None)
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// The `/ehr/{ehr_id}/{kind}/{uid_based_id}/tags` URL of one target's tag
 /// collection.
 ///
@@ -479,7 +479,7 @@ fn tags_url(
     )))
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// The `VERSIONED_EHR_STATUS` container of an EHR, read from the EHR resource's
 /// own `ehr_status` reference (`GET /ehr/{ehr_id}`).
 ///
@@ -542,7 +542,7 @@ pub async fn fetch_status_tags(
     crate::components::item_tags::parse_item_tags(&response.body)
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// The tag-collection URL of an EHR's `VERSIONED_EHR_STATUS` container.
 ///
 /// # Errors
@@ -648,7 +648,7 @@ pub(crate) fn composition_tags_section(ehr_id: Signal<String>, uid: Signal<Strin
 /// ([`fetch_status_tags`]).
 #[must_use]
 pub(crate) fn status_tags_section(ehr_id: Signal<String>, active: Signal<bool>) -> AnyView {
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     let set: Action<(String, TagEdit), Result<(), ViewerError>> =
         Action::new(|(ehr_id, edit): &(String, TagEdit)| {
             let (ehr_id, edit) = (ehr_id.clone(), edit.clone());
@@ -711,7 +711,7 @@ fn target_tags_section(
     object: &'static str,
     copy: TagPanelCopy,
 ) -> AnyView {
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     let set: Action<(String, String, TagEdit), Result<(), ViewerError>> =
         Action::new(move |(ehr_id, uid, edit): &(String, String, TagEdit)| {
             let (ehr_id, uid, edit) = (ehr_id.clone(), uid.clone(), edit.clone());
@@ -777,7 +777,7 @@ fn target_tags_section(
 /// An outside-world side-effect, which is what an `Effect` is for; the
 /// resources refetch through the actions' version stamps instead.
 fn write_toasts<SetIn, DeleteIn>(
-    toaster: thaw::ToasterInjection,
+    toaster: ferrohealth_ui::widget::toast::Toasts,
     set: Action<SetIn, Result<(), ViewerError>>,
     remove: Action<DeleteIn, Result<(), ViewerError>>,
     object: &'static str,
@@ -830,7 +830,7 @@ pub(crate) fn ehr_tags_section(ehr_id: Signal<String>, selected: Memo<String>) -
             )
         })
     });
-    let paging = paging_from_url();
+    let paging = paging_in_session();
     let resource: TagList = Resource::new(
         move || (selected.get() == "tags").then(|| (ehr_id.get(), filters.get())),
         |active| async move {
@@ -886,7 +886,7 @@ pub(crate) fn ehr_tags_section(ehr_id: Signal<String>, selected: Memo<String>) -
                     Ok(Some(tags)) if tags.is_empty() => {
                         view! {
                             <EmptyState
-                                icon=icondata_lu::LuTags
+                                icon=ferrohealth_ui::icon::Glyph::LAYERS
                                 message="No tags in this EHR"
                                 hint="Tags are free key/value markers a client sets on a composition, the EHR status or the directory; the composition viewer and the Status tab both set them."
                             />
@@ -934,7 +934,7 @@ fn browser_table(
     let rows = view! {
         <For
             each=move || {
-                let window = page_window(total, paging.page.get(), paging.size.get());
+                let window = paging.window(total);
                 page_rows(&groups, window)
             }
             key=|group| group.target.clone()
@@ -951,7 +951,7 @@ fn browser_table(
         Signal::derive(move || total),
     );
     view! {
-        {table_shell(&["Key", "Value", "Target path", ""], rows)}
+        {table_shell("Tagged objects", &["Key", "Value", "Target path", ""], rows)}
         {footer}
     }
     .into_any()
@@ -983,7 +983,7 @@ fn group_rows(ehr_id: Signal<String>, group: &TagGroup, open: ResolveAction) -> 
                         open.dispatch((ehr_id.get_untracked(), target.clone()));
                     }
                 >
-                    <leptos_icons::Icon icon=icondata_lu::LuEye width="14" height="14" />
+                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::SEARCH, "14")}
                     "Open"
                 </button>
             </td>

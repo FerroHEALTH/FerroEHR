@@ -15,7 +15,7 @@
 //! `ssr`-gated like its siblings: the service and the server function exist on
 //! the server build only.
 
-#![cfg(feature = "ssr")]
+#![cfg(not(target_arch = "wasm32"))]
 #![expect(
     clippy::expect_used,
     reason = "every step here is fixture construction — a loopback listener, a static request, \

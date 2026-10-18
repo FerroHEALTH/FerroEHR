@@ -447,7 +447,7 @@ pub async fn delete_event_subscription(
 ///
 /// The CDR reads absent, `null` and empty alike as "any"; `null` is sent
 /// because it says exactly that.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 fn predicate_value(raw: &str) -> serde_json::Value {
     let value = raw.trim();
     if value.is_empty() {
@@ -462,7 +462,7 @@ fn predicate_value(raw: &str) -> serde_json::Value {
 ///
 /// Built through `serde_json` rather than string formatting so a value carrying
 /// a quote or a backslash is escaped by the encoder.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 fn subscription_definition(name: &str, predicates: &SubscriptionPredicates) -> String {
     serde_json::json!({
         "name": name.trim(),
@@ -477,7 +477,7 @@ fn subscription_definition(name: &str, predicates: &SubscriptionPredicates) -> S
 /// The update request body: the four predicates and the enabled flag, with no
 /// name (the CDR ignores an echoed one, and sending it would suggest it could
 /// change).
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 fn subscription_update(predicates: &SubscriptionPredicates) -> String {
     serde_json::json!({
         "kind": predicate_value(&predicates.kind),
@@ -489,7 +489,7 @@ fn subscription_update(predicates: &SubscriptionPredicates) -> String {
 }
 
 /// Parse the stored record a create/update answered with.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 fn stored_record(body: &str) -> Result<SubscriptionRow, ViewerError> {
     let value = serde_json::from_str::<serde_json::Value>(body)
         .map_err(|e| ViewerError::Internal(format!("event subscription record JSON: {e}")))?;
@@ -500,7 +500,7 @@ fn stored_record(body: &str) -> Result<SubscriptionRow, ViewerError> {
 /// defensively so a missing or renamed field empties that cell rather than
 /// dropping the whole row from the listing. A `null` predicate — the CDR's
 /// wildcard — reads as the empty string.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 fn subscription_row(item: &serde_json::Value) -> SubscriptionRow {
     let text = |key: &str| {
         item.get(key)
@@ -678,7 +678,7 @@ mod tests {
 
     /// The wire shapes this module parses, pinned against the answers the CDR
     /// actually serves.
-    #[cfg(feature = "ssr")]
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn a_served_element_distils_into_a_row_and_a_null_predicate_is_the_wildcard() {
         let item = serde_json::json!({
@@ -708,7 +708,7 @@ mod tests {
         assert!(parsed.enabled);
     }
 
-    #[cfg(feature = "ssr")]
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn the_request_bodies_carry_each_value_under_its_own_key() {
         let predicates = super::SubscriptionPredicates {
@@ -737,7 +737,7 @@ mod tests {
         assert_eq!(updated["enabled"], false);
     }
 
-    #[cfg(feature = "ssr")]
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn a_value_carrying_a_quote_is_escaped_by_the_encoder() {
         let predicates = super::SubscriptionPredicates {

@@ -21,7 +21,7 @@
 use leptos::prelude::*;
 
 use crate::auth::{LoginBasic, fetch_login_screen};
-use crate::components::brand::Wordmark;
+use crate::components::brand::viewer_lockup;
 use crate::components::field::{BTN_PRIMARY, BTN_SECONDARY, INPUT, LABEL};
 use crate::components::surface::CARD_PAD;
 
@@ -93,12 +93,8 @@ pub fn LoginPage() -> impl IntoView {
                 .get()
                 .then(|| {
                     view! {
-                        <div id="login-refused" role="alert">
-                            <thaw::MessageBar intent=thaw::MessageBarIntent::Error>
-                                <thaw::MessageBarBody>
-                                    "Wrong username or password."
-                                </thaw::MessageBarBody>
-                            </thaw::MessageBar>
+                        <div id="login-refused" role="alert" class="fui-alert">
+                            "Wrong username or password."
                         </div>
                     }
                 })
@@ -113,9 +109,7 @@ pub fn LoginPage() -> impl IntoView {
                 .and_then(Result::err)
                 .map(|err| {
                     view! {
-                        <thaw::MessageBar intent=thaw::MessageBarIntent::Error>
-                            <thaw::MessageBarBody>{err.to_string()}</thaw::MessageBarBody>
-                        </thaw::MessageBar>
+                        <div role="alert" class="fui-alert">{err.to_string()}</div>
                     }
                 })
         }}
@@ -124,11 +118,7 @@ pub fn LoginPage() -> impl IntoView {
 
     let forms = view! {
         <Suspense fallback=|| {
-            view! {
-                <div class="flex justify-center py-4">
-                    <thaw::Spinner />
-                </div>
-            }
+            ferrohealth_ui::view::empty::skeleton(3, "Loading the sign-in methods…")
         }>
             {move || {
                 Suspend::new(async move {
@@ -272,7 +262,7 @@ pub fn LoginPage() -> impl IntoView {
             <div class=format!("w-full max-w-sm {CARD_PAD}")>
                 <div class="flex flex-col gap-4">
                     <div class="flex justify-center">
-                        <Wordmark />
+                        {viewer_lockup()}
                     </div>
                     {expiry_notice}
                     {refusal_notice}

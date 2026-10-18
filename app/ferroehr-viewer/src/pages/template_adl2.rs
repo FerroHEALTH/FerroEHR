@@ -129,7 +129,7 @@ pub async fn fetch_adl2_json(
 /// # Errors
 /// [`ViewerError::Internal`] when the AOM2 JSON fails to parse or the Web
 /// Template fails to build (the diagnostic named, never a panic).
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 pub fn adl2_catalog_from_json(json: &str) -> Result<CatalogNode, ViewerError> {
     let opt = openehr_its::json::from_canonical_json::<
         openehr_am::v2_4::aom2::archetype::operational_template::OperationalTemplate,
@@ -485,9 +485,7 @@ fn version_section(
             <h2 class=CARD_TITLE>"Version"</h2>
             <Transition fallback=|| {
                 view! {
-                    <thaw::Skeleton class="h-8">
-                        <thaw::SkeletonItem />
-                    </thaw::Skeleton>
+                    {ferrohealth_ui::view::empty::skeleton(1, "Loading…")}
                 }
             }>{chips}</Transition>
             {version_form(template_id, tab, version)}
@@ -629,8 +627,8 @@ fn absent_view(what: &str) -> AnyView {
          or go back to the ADL2 listing."
     );
     view! {
-        <thaw::MessageBar intent=thaw::MessageBarIntent::Warning>
-            <thaw::MessageBarBody>
+        <div role="status" class=crate::components::notice::WARNING>
+            <div>
                 {message} " "
                 <leptos_router::components::A
                     href=TemplateFamily::Adl2.href()
@@ -638,8 +636,8 @@ fn absent_view(what: &str) -> AnyView {
                 >
                     "ADL2 templates"
                 </leptos_router::components::A>
-            </thaw::MessageBarBody>
-        </thaw::MessageBar>
+            </div>
+        </div>
     }
     .into_any()
 }

@@ -31,7 +31,7 @@ use leptos::{component, server};
 use leptos_meta::Title;
 use leptos_router::components::A;
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 use serde_json::Value;
 
 use crate::components::data_table::{CELL, CELL_MONO, ROW, table_shell, table_skeleton};
@@ -107,7 +107,7 @@ pub async fn fetch_demographic_contribution(
     parse_contribution(&body)
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Flatten a CONTRIBUTION body into a [`ContributionState`]. Defensive
 /// throughout — an absent attribute reads as empty rather than failing the
 /// screen.
@@ -245,7 +245,7 @@ fn versions_section(versions: Vec<ContributionVersion>) -> AnyView {
             <section class=CARD_PAD>
                 <h2 class=CARD_TITLE>"Versions"</h2>
                 <EmptyState
-                    icon=icondata_lu::LuFileClock
+                    icon=ferrohealth_ui::icon::Glyph::FILES
                     message="No versions listed"
                     hint="A CONTRIBUTION always references at least one version; if none is listed, the CDR reported an empty change set."
                 />
@@ -262,7 +262,7 @@ fn versions_section(versions: Vec<ContributionVersion>) -> AnyView {
     view! {
         <section class=CARD_PAD>
             <h2 class=CARD_TITLE>"Versions in this contribution"</h2>
-            {table_shell(&["Type", "Version"], rows)}
+            {table_shell("Contribution versions", &["Type", "Version"], rows)}
         </section>
     }
     .into_any()
@@ -329,7 +329,7 @@ mod tests {
     }
 }
 
-#[cfg(all(test, feature = "ssr"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod wire_tests {
     use super::parse_contribution;
 

@@ -1,0 +1,53 @@
+/* SPDX-FileCopyrightText: Cadasto B.V. */
+/* SPDX-License-Identifier: BUSL-1.1 */
+/* The FerroEHR brand over FerroUI's roles: the teal and slate the viewer has
+   always drawn in. Served after ferrohealth-ui.css (src/server.rs), so these
+   values win.
+
+   Light keeps FerroUI's slate neutrals, which are the viewer's, and the teal:
+   the tint is the viewer's accent-subtle #ccfbf1, and accent text and controls
+   are its accent-hover #0f766e, since its #0d9488 falls under 4.5:1 as text on
+   the light grounds. Dark keeps the viewer's own slate (#0f172a page, #1e293b
+   cards, #0b1220 wells) and its teal #2dd4bf, #5eead4 and #042f2e, with the
+   tint translucent, since the opaque #134e4a held muted text under 4.5:1.
+   tests/it/contrast.rs holds every pairing the screens draw to WCAG 2.2 AA
+   (https://www.w3.org/TR/WCAG22/#contrast-minimum). */
+:root {
+  --accent: #0f766e;
+  --accent-hover: #115e59;
+  --accent-ink: #ffffff;
+  --accent-tint: #ccfbf1;
+  --focus: #0f766e;
+}
+
+:root[data-theme="dark"] {
+  --surface: #0f172a;
+  --surface-raised: #1e293b;
+  --surface-sunken: #0b1220;
+  --surface-head: #172033;
+  --edge: #334155;
+  --edge-strong: #475569;
+  --edge-control: #7c8ba1;
+  --accent: #2dd4bf;
+  --accent-hover: #5eead4;
+  --accent-ink: #042f2e;
+  --accent-tint: rgb(45 212 191 / 0.12);
+  --focus: #2dd4bf;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"], [data-theme="dark"]) {
+    --surface: #0f172a;
+    --surface-raised: #1e293b;
+    --surface-sunken: #0b1220;
+    --surface-head: #172033;
+    --edge: #334155;
+    --edge-strong: #475569;
+    --edge-control: #7c8ba1;
+    --accent: #2dd4bf;
+    --accent-hover: #5eead4;
+    --accent-ink: #042f2e;
+    --accent-tint: rgb(45 212 191 / 0.12);
+    --focus: #2dd4bf;
+  }
+}

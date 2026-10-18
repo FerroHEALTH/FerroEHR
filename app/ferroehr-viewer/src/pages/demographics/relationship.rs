@@ -482,7 +482,7 @@ fn parse_details_draft(draft: &str) -> Result<Option<Value>, String> {
     }
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Apply the edit form's two changes to the loaded relationship document.
 ///
 /// `base` is re-sent verbatim apart from `name` and `details`, so `source`,
@@ -526,7 +526,7 @@ fn apply_relationship_edits(base: &str, name: &str, details: &str) -> Result<Str
     })
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Flatten a canonical `PARTY_RELATIONSHIP` body into a [`RelationshipState`],
 /// keeping the body verbatim.
 ///
@@ -570,7 +570,7 @@ fn parse_relationship_state(
     })
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Flatten a party document's inline `relationships` list — "relationships in
 /// which this Party takes part as source"
 /// (`org.openehr.rm.demographic.party.adoc`).
@@ -599,7 +599,7 @@ pub(super) fn inline_relationships_of(doc: &Value) -> Vec<InlineRelationship> {
         .collect()
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Flatten one `PARTY_REF` into its three carried facts.
 fn party_ref_view(value: Option<&Value>) -> PartyRefView {
     let Some(value) = value else {
@@ -787,7 +787,7 @@ fn lookup_card() -> AnyView {
     reason = "one erased section: the create card's seven fields + validation + action wiring (rules §1)"
 )]
 fn create_card(source_uid: &str, source_kind: &str) -> AnyView {
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     let archetype_ref = NodeRef::<leptos::html::Input>::new();
     let name_ref = NodeRef::<leptos::html::Input>::new();
     let source_ref = NodeRef::<leptos::html::Input>::new();
@@ -963,7 +963,7 @@ fn create_card(source_uid: &str, source_kind: &str) -> AnyView {
                         disabled=Signal::derive(move || create.pending().get())
                         on:click=on_click
                     >
-                        <leptos_icons::Icon icon=icondata_lu::LuLink width="14" height="14" />
+                        {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::ARROW_RIGHT, "14")}
                         "Create relationship"
                     </button>
                     <Show when=move || create.pending().get()>
@@ -1126,7 +1126,7 @@ struct RelationshipEdit {
     reason = "one erased section: the relationship tab's facts + seeding + editor + document (rules §1)"
 )]
 fn relationship_section(uid: Signal<String>, latest_version: RwSignal<String>) -> AnyView {
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     let save: Action<RelationshipEdit, Result<String, ViewerError>> =
         Action::new(|edit: &RelationshipEdit| {
             let edit = edit.clone();
@@ -1331,7 +1331,7 @@ fn edit_card(
                         disabled=Signal::derive(move || save.pending().get())
                         on:click=on_save
                     >
-                        <leptos_icons::Icon icon=icondata_lu::LuSave width="14" height="14" />
+                        {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::SAVE, "14")}
                         "Save relationship"
                     </button>
                     <Show when=move || save.pending().get()>
@@ -1429,7 +1429,7 @@ fn relationships_view(
     let table = if items.is_empty() {
         view! {
             <EmptyState
-                icon=icondata_lu::LuNetwork
+                icon=ferrohealth_ui::icon::Glyph::LAYERS
                 message="No relationships on this party"
                 hint="A party document carries the relationships it is the SOURCE of. Create one below, or add it to the party's own relationships list on the Party tab."
             />
@@ -1460,7 +1460,7 @@ fn relationships_view(
                     "Creates a PARTY_RELATIONSHIP resource with this party as its source. That resource is versioned in its own right — an extension of this CDR, not part of the released openEHR demographic API."
                 </p>
                 <a href=create_href class=BTN_PRIMARY id="party-relate">
-                    <leptos_icons::Icon icon=icondata_lu::LuLink width="14" height="14" />
+                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::ARROW_RIGHT, "14")}
                     "Create a relationship"
                 </a>
             </section>
@@ -1500,7 +1500,7 @@ fn inline_table(items: &[InlineRelationship]) -> AnyView {
             .into_any()
         })
         .collect::<Vec<_>>();
-    table_shell(&["Type", "Target", "Archetype", "Own uid"], rows.into_any())
+    table_shell("Relationships", &["Type", "Target", "Archetype", "Own uid"], rows.into_any())
 }
 
 #[cfg(test)]
@@ -1607,7 +1607,7 @@ mod tests {
     }
 }
 
-#[cfg(all(test, feature = "ssr"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod wire_tests {
     use super::{apply_relationship_edits, inline_relationships_of, parse_relationship_state};
     use serde_json::Value;

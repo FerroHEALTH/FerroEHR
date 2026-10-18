@@ -1,26 +1,25 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The card surface classes: the design-system replacement for widget-kit
-//! cards in static chrome.
+//! The card surface classes: FerroUI's card, named once for the viewer.
 //!
-//! One look — token colors, hairline border, the single soft shadow level.
 //! [`titled_card`] is the assembled panel card every operational screen builds
-//! its sections from.
+//! its sections from: FerroUI's titled card.
 
 use leptos::prelude::*;
 
-/// The card surface (no padding — content decides).
-pub const CARD: &str = "rounded-card border border-edge bg-raised shadow-card";
+/// The card surface with no padding of its own (content decides): FerroUI's
+/// card, its padding taken back.
+pub const CARD: &str = "fui-card p-0";
 
-/// The card surface with the standard padding.
-pub const CARD_PAD: &str = "rounded-card border border-edge bg-raised shadow-card p-4";
+/// The card surface with the standard padding: FerroUI's card.
+pub const CARD_PAD: &str = "fui-card";
 
 /// A sunken well (code panes, read-only documents).
 pub const WELL: &str = "rounded-card border border-edge bg-sunken p-3";
 
-/// The standard section heading inside a card.
-pub const CARD_TITLE: &str = "text-sm font-semibold text-ink mb-3";
+/// The standard section heading inside a card: FerroUI's card title.
+pub const CARD_TITLE: &str = "fui-card-title";
 
 /// A titled panel card wrapping an already-erased body: the uniform section of
 /// the two-column operational panels (`/system`, `/operations`). `full_width`

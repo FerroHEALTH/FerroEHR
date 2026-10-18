@@ -113,7 +113,7 @@ pub fn QueryAqlPage() -> impl IntoView {
     // signal is written — and the viewer's mutation-feedback rule). The
     // CDR's diagnostic ALSO stays inline (save_feedback), beside the AQL
     // it rejected.
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     Effect::new(move |_| match save_action.value().get() {
         Some(Ok(())) => toast_success(toaster, "Query saved", ""),
         Some(Err(error)) => {

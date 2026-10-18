@@ -42,7 +42,7 @@ pub mod history;
 use leptos::prelude::*;
 use leptos::server;
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 use serde_json::Value;
 
 use crate::components::data_table::table_skeleton;
@@ -392,7 +392,7 @@ pub async fn fetch_status_version_at_time(
     Ok(crate::uid::uid_value_of(&response.body))
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Flatten a canonical `EHR_STATUS` body into an [`EhrStatusState`], keeping the
 /// body itself verbatim. Defensive throughout — an absent attribute reads as its
 /// `false`/empty default rather than failing the tab.
@@ -433,7 +433,7 @@ fn parse_status_state(
     })
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Flatten a `VERSIONED_EHR_STATUS` body plus a VERSION body into
 /// [`VersionedObjectFacts`]. Defensive throughout — an absent attribute reads
 /// as empty rather than failing the card.
@@ -463,7 +463,7 @@ fn parse_versioned_status(
     })
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Follow a chain of object keys to a string leaf, or an empty string when any
 /// hop is absent or not a string.
 fn json_str(value: &Value, path: &[&str]) -> String {
@@ -568,7 +568,7 @@ pub(super) fn status_section(
     ehr_id: Signal<String>,
     selected: Memo<String>,
 ) -> AnyView {
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     let StatusFeed { resource, save } = feed;
 
     // Both outcomes toast (an outside-world side-effect; the viewer's
@@ -724,9 +724,9 @@ fn document_section(resource: StatusResource) -> AnyView {
 /// same flag from the same read, so a selector has to be able to name one.
 pub(super) fn capability_badge(scope: &'static str, label: &'static str, on: bool) -> AnyView {
     let (icon, class) = if on {
-        (icondata_lu::LuCheck, "bg-ok-subtle text-ok")
+        (ferrohealth_ui::icon::Glyph::CHECK, "bg-ok-subtle text-ok")
     } else {
-        (icondata_lu::LuX, "bg-danger-subtle text-danger")
+        (ferrohealth_ui::icon::Glyph::X, "bg-danger-subtle text-danger")
     };
     let rendered_state = if on { "true" } else { "false" };
     view! {
@@ -738,14 +738,14 @@ pub(super) fn capability_badge(scope: &'static str, label: &'static str, on: boo
             data-status-flag=label
             data-status-value=rendered_state
         >
-            <leptos_icons::Icon icon width="12" height="12" />
+            {ferrohealth_ui::icon::icon(icon, "12")}
             {label}
         </span>
     }
     .into_any()
 }
 
-#[cfg(all(test, feature = "ssr"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::{parse_status_state, parse_versioned_status, status_toast_detail, subject_label};
 

@@ -1,163 +1,78 @@
+/* SPDX-FileCopyrightText: Cadasto B.V. */
+/* SPDX-License-Identifier: BUSL-1.1 */
 /* Tailwind CSS v4 entry point (standalone binary via cargo-leptos — no
    Node/npm; pin the binary with LEPTOS_TAILWIND_VERSION=v4.3.3).
 
-   The viewer design system: every screen styles against the SEMANTIC
-   tokens below (bg-surface / bg-raised / text-ink / border-edge /
-   text-accent …), never against raw palette utilities (slate-, teal-)
-   and never with per-element `dark:` overrides — dark mode is the same
-   tokens redefined under `.dark`, so both themes stay in lockstep and a
-   screen cannot be half-light half-dark. The dark toggle (shell) sets the
-   `dark` class on <html> and keeps the thaw widget theme in step. */
+   The viewer's own utilities, over FerroUI's role tokens. The values live in
+   FerroUI's stylesheet (ferrohealth-ui.css, served beside this file) and the
+   FerroEHR brand theme (style/theme.css); this file only names them as the
+   utilities the screens write (bg-raised, text-ink-muted, border-edge,
+   text-accent …), never a raw palette entry (slate-, teal-) and never a
+   per-element `dark:` override, so both themes stay in lockstep.
+   https://tailwindcss.com/docs/theme */
 
-@import "tailwindcss";
+/* `source(none)` turns off automatic detection, which would walk up out of
+   this crate and scan the whole workspace; the views are the only place a
+   class name is written. FerroUI's own classes need no scan: its stylesheet
+   defines every `fui-` class.
+   https://tailwindcss.com/docs/detecting-classes-in-source-files */
+@import "tailwindcss" source(none);
+@source "../src/**/*.rs";
 
-/* Class-driven dark mode: the shell toggle owns the `dark` class on the
-   root element (the Tailwind v4 default variant follows the OS media
-   query, which the in-app toggle cannot drive). */
-@custom-variant dark (&:where(.dark, .dark *));
+/* The theme the operator chose is the server's `data-theme` on <html>:
+   `light`, `dark`, or `system`, which follows the operating system. */
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
 
-/* ── The palette (slate neutrals, one teal accent) ─────────────────────── */
-:root {
-  --surface: #f8fafc; /* page background */
-  --raised: #ffffff; /* cards, panels, the topbar */
-  --sunken: #f1f5f9; /* code panes, wells, table header rows */
-  --edge: #e2e8f0; /* hairline borders */
-  --edge-strong: #cbd5e1; /* control borders, dividers that must read */
-  --ink: #0f172a; /* primary text */
-  --ink-muted: #64748b; /* secondary text, labels */
-  --ink-faint: #94a3b8; /* placeholders, disabled */
-  --accent: #0d9488; /* the ONE brand accent (teal) */
-  --accent-hover: #0f766e;
-  --accent-subtle: #ccfbf1; /* accent-tinted chips/backgrounds */
-  --accent-ink: #115e59; /* text on accent-subtle */
-  --on-accent: #ffffff; /* text on solid accent */
-  --ok: #059669;
-  --ok-subtle: #d1fae5;
-  --warn: #d97706;
-  --warn-subtle: #fef3c7;
-  --danger: #dc2626;
-  --danger-subtle: #fee2e2;
-
-  /* Document-viewer syntax tokens: the ONLY colours the document pane's
-     highlighter may use (one per semantic token class from
-     src/highlight.rs). Restrained hues on the sunken pane background,
-     redefined below for dark mode like every other token. */
-  --syntax-key: #1d4ed8; /* JSON member name */
-  --syntax-string: #15803d; /* string literal / XML attribute value */
-  --syntax-number: #b45309; /* JSON number */
-  --syntax-keyword: #be123c; /* true / false / null */
-  --syntax-punctuation: #64748b; /* structural punctuation */
-  --syntax-tag: #0e7490; /* XML element name */
-  --syntax-attribute: #7c3aed; /* XML attribute name */
-  --syntax-comment: #94a3b8; /* XML comment / DOCTYPE / CDATA */
-  --scrim: rgb(2 6 23 / 0.4); /* the dim behind a modal overlay */
+  @media (prefers-color-scheme: dark) {
+    &:where([data-theme="system"], [data-theme="system"] *) {
+      @slot;
+    }
+  }
 }
 
-.dark {
-  --surface: #0f172a;
-  --raised: #1e293b;
-  --sunken: #0b1220;
-  --edge: #334155;
-  --edge-strong: #475569;
-  --ink: #f1f5f9;
-  --ink-muted: #94a3b8;
-  --ink-faint: #64748b;
-  --accent: #2dd4bf;
-  --accent-hover: #5eead4;
-  --accent-subtle: #134e4a;
-  --accent-ink: #99f6e4;
-  --on-accent: #042f2e;
-  --ok: #34d399;
-  --ok-subtle: #064e3b;
-  --warn: #fbbf24;
-  --warn-subtle: #78350f;
-  --danger: #f87171;
-  --danger-subtle: #7f1d1d;
-
-  --syntax-key: #93c5fd;
-  --syntax-string: #86efac;
-  --syntax-number: #fcd34d;
-  --syntax-keyword: #fda4af;
-  --syntax-punctuation: #94a3b8;
-  --syntax-tag: #67e8f9;
-  --syntax-attribute: #c4b5fd;
-  --syntax-comment: #64748b;
-  /* A dark page needs a deeper dim than a light one to read as "behind": at
-     0.4 the scrim barely separates a raised panel from the dark surface. */
-  --scrim: rgb(2 6 23 / 0.6);
-}
-
-/* ── Semantic utilities (bg-surface, text-ink, border-edge, …) ─────────── */
+/* ── The viewer's utility names over FerroUI's roles ───────────────────── */
 @theme inline {
   --color-surface: var(--surface);
-  --color-raised: var(--raised);
-  --color-sunken: var(--sunken);
+  --color-raised: var(--surface-raised);
+  --color-sunken: var(--surface-sunken);
   --color-edge: var(--edge);
   --color-edge-strong: var(--edge-strong);
+  --color-edge-control: var(--edge-control);
   --color-ink: var(--ink);
-  --color-ink-muted: var(--ink-muted);
-  --color-ink-faint: var(--ink-faint);
+  --color-ink-muted: var(--muted);
+  /* Placeholders and disabled text: the muted role, which holds 4.5:1. */
+  --color-ink-faint: var(--muted);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
-  --color-accent-subtle: var(--accent-subtle);
-  --color-accent-ink: var(--accent-ink);
-  --color-on-accent: var(--on-accent);
+  /* An accent-tinted chip or row, and the text drawn on it. */
+  --color-accent-subtle: var(--accent-tint);
+  --color-accent-ink: var(--accent);
+  /* Text on the solid accent. */
+  --color-on-accent: var(--accent-ink);
   --color-ok: var(--ok);
-  --color-ok-subtle: var(--ok-subtle);
+  --color-ok-subtle: var(--ok-ground);
   --color-warn: var(--warn);
-  --color-warn-subtle: var(--warn-subtle);
-  --color-danger: var(--danger);
-  --color-danger-subtle: var(--danger-subtle);
+  --color-warn-subtle: var(--warn-ground);
+  --color-danger: var(--bad);
+  --color-danger-subtle: var(--bad-ground);
+  --color-info: var(--info);
+  --color-info-subtle: var(--info-ground);
   --color-syntax-key: var(--syntax-key);
   --color-syntax-string: var(--syntax-string);
   --color-syntax-number: var(--syntax-number);
   --color-syntax-keyword: var(--syntax-keyword);
-  --color-syntax-punctuation: var(--syntax-punctuation);
+  --color-syntax-punctuation: var(--muted);
   --color-syntax-tag: var(--syntax-tag);
   --color-syntax-attribute: var(--syntax-attribute);
   --color-syntax-comment: var(--syntax-comment);
-  /* `bg-scrim` — the ONE overlay backdrop; never a raw `bg-black/40`, which
-     ignores the theme and drifts per screen. */
+  /* `bg-scrim`, the ONE overlay backdrop. */
   --color-scrim: var(--scrim);
 
-  /* Shape + elevation: 8px cards, 6px controls, ONE soft shadow level. */
+  /* Shape and elevation: FerroUI's card and control radii, its one shadow. */
   --radius-card: 0.5rem;
   --radius-control: 0.375rem;
-  --shadow-card: 0 1px 2px 0 rgb(2 6 23 / 0.06);
-}
-
-/* ── Widget-kit corrections ────────────────────────────────────────────── */
-/* thaw's stock Card is a FIXED 720px box centered with `margin: auto`
-   (thaw/src/card/card.css) — inside a grid cell it floats to the middle
-   both axes: the root cause of the floating/overlapping cards in the
-   2026-07-18 screen captures. A card fills the cell it is given. */
-.thaw-card {
-  width: 100%;
-  margin: 0;
-}
-
-/* thaw's Popover surface draws from the stock Fluent neutral ramp
-   (thaw/src/popover/popover.css: `--colorNeutralBackground1`, a Fluent
-   `--shadow16`), so the user menu floated in a chrome that matched no other
-   panel in the viewer. The surface is restated in the design tokens ONCE
-   here, for every popover, instead of per call site: thaw prepends its
-   <style> to <head>, so this later rule of equal specificity wins, while a
-   Tailwind class on the widget would not (utilities are layered, and an
-   unlayered declaration beats a layered one). */
-div.thaw-popover-surface {
-  @apply rounded-card border border-edge bg-raised text-ink shadow-card;
-}
-.thaw-popover-surface__angle::before {
-  border-color: var(--edge);
-}
-
-/* ── Base ──────────────────────────────────────────────────────────────── */
-@layer base {
-  html {
-    background-color: var(--surface);
-    color: var(--ink);
-  }
-  ::placeholder {
-    color: var(--ink-faint);
-  }
+  --shadow-card: var(--shadow-card);
 }

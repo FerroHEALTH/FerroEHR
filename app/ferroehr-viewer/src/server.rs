@@ -45,6 +45,17 @@ pub fn router(app_state: AppState, leptos_options: LeptosOptions) -> axum::Route
             "/export/aql",
             axum::routing::post(crate::export::export_aql),
         )
+        // FerroUI's stylesheet and the FerroEHR brand theme, served from this
+        // origin so `style-src 'self'` holds, and the theme switch's post.
+        .route(
+            crate::app::STYLESHEET_PATH,
+            axum::routing::get(|| async { css(ferrohealth_ui::style::STYLESHEET) }),
+        )
+        .route(
+            crate::app::THEME_PATH,
+            axum::routing::get(|| async { css(BRAND_THEME) }),
+        )
+        .route(crate::theme::THEME_ROUTE, axum::routing::post(choose_theme))
         .leptos_routes_with_context(&leptos_options, routes, provide_viewer_context.clone(), {
             let options = leptos_options.clone();
             move || crate::app::shell(options.clone())
@@ -59,6 +70,60 @@ pub fn router(app_state: AppState, leptos_options: LeptosOptions) -> axum::Route
         .layer(axum::middleware::from_fn(login_guard))
         .layer(Extension(app_state));
     with_security_headers(service).with_state(leptos_options)
+}
+
+/// The FerroEHR brand theme: FerroEHR's palette over FerroUI's roles.
+const BRAND_THEME: &str = include_str!("../style/theme.css");
+
+/// A stylesheet response.
+fn css(text: &'static str) -> axum::response::Response {
+    axum::response::IntoResponse::into_response((
+        [(
+            http::header::CONTENT_TYPE,
+            http::HeaderValue::from_static("text/css; charset=utf-8"),
+        )],
+        text,
+    ))
+}
+
+/// What a theme choice posts.
+#[derive(Debug, serde::Deserialize)]
+struct ThemeChoice {
+    /// The key of the theme chosen.
+    theme: String,
+    /// The page to return to.
+    back: String,
+}
+
+/// Keeps the theme a plain form post chose in its cookie and sends the
+/// browser back to the page it came from (one of the viewer's own).
+async fn choose_theme(
+    axum::extract::Form(choice): axum::extract::Form<ThemeChoice>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse as _;
+    let Some(theme) = ferrohealth_ui::theme::Theme::parse(&choice.theme) else {
+        return (
+            http::StatusCode::BAD_REQUEST,
+            "the theme is not light, dark or system",
+        )
+            .into_response();
+    };
+    let cookie = format!(
+        "{}={}; Path=/; SameSite=Lax; HttpOnly; Max-Age=31536000",
+        crate::theme::THEME_COOKIE,
+        theme.key()
+    );
+    let mut response =
+        axum::response::Redirect::to(crate::theme::return_path(&choice.back)).into_response();
+    match http::HeaderValue::from_str(&cookie) {
+        Ok(value) => {
+            response
+                .headers_mut()
+                .insert(http::header::SET_COOKIE, value);
+            response
+        }
+        Err(_invalid) => http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
 }
 
 /// The pre-render session guard: an unauthenticated document request to a
@@ -144,6 +209,8 @@ fn sets_session_cookie(headers: &http::HeaderMap) -> bool {
 fn is_public_path(path: &str) -> bool {
     path == "/login"
         || path == "/favicon.ico"
+        || path == crate::app::STYLESHEET_PATH
+        || path == crate::app::THEME_PATH
         || path.starts_with("/auth/")
         || path.starts_with("/pkg/")
         || path.starts_with("/api/")

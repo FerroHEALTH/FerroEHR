@@ -101,7 +101,7 @@ pub async fn fetch_party_tags(
     read_party_tags(&state, &session.credential, kind, &uid).await
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Read one party's container tag collection.
 ///
 /// The plain function behind [`fetch_party_tags`], so [`set_party_tag`]'s
@@ -228,7 +228,7 @@ pub async fn delete_party_tag(
     Ok(())
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// The `/demographic/{kind}/{uid_based_id}/tags` URL of a party's container tag
 /// collection.
 fn tags_url(state: &crate::state::AppState, kind: PartyKind, uid: &str) -> String {
@@ -248,7 +248,7 @@ pub(super) fn tags_section(
     uid: Signal<String>,
     selected: Memo<String>,
 ) -> AnyView {
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     let set: Action<(String, TagEdit), Result<(), ViewerError>> =
         Action::new(move |(uid, edit): &(String, TagEdit)| {
             let (uid, edit) = (uid.clone(), edit.clone());

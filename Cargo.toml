@@ -322,6 +322,10 @@ leptos = "0.8.20"
 leptos_axum = "0.8.10"
 leptos_meta = "0.8.6"
 leptos_router = "0.8.14"
+# The shared FerroHEALTH console components, role tokens, stylesheet and table
+# model (FerroUI), pinned exactly: a console moves its pin after looking at its
+# own screens.
+ferrohealth-ui = "=0.1.0"
 # thaw: the crates.io `0.5.0-beta` (2025-05-03, the only Leptos-0.8 release) lacks
 # `#![recursion_limit = "256"]` and fails plain (non-erase_components) codegen on
 # rustc 1.96 — thaw main carries the fix, so we pin a main rev (the design doc's
@@ -329,9 +333,6 @@ leptos_router = "0.8.14"
 thaw = { git = "https://github.com/thaw-ui/thaw", rev = "0726a3d6788f07e929996e77399d83655ffaacde" }
 leptos-use = "0.19.0"
 leptos-chartistry = "0.2.3"
-leptos_icons = "0.7.1"              # pure-Rust SVG icon component (verified: requires leptos >=0.8.3)
-icondata_lu = "0.1"                 # the Lucide pack alone (the icondata umbrella pulls every pack — WASM bloat)
-icondata_core = "0.1"               # the `Icon` type itself (named in component props)
 wasm-bindgen = "0.2.126"
 wasm-bindgen-futures = "0.4"       # JsFuture for browser-side file reads (compiles on native, runs in wasm)
 console_error_panic_hook = "0.1"

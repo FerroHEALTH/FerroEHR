@@ -160,7 +160,7 @@ impl Editor {
 )]
 #[component]
 pub fn SubscriptionsPage() -> impl IntoView {
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     // The table's page window, read from the URL in SETUP (never inside the
     // suspense that fetches the rows).
     let paging = paging_from_url();
@@ -251,7 +251,7 @@ pub fn SubscriptionsPage() -> impl IntoView {
 /// rule); the CDR's diagnostic ALSO stays inline beside each form, because
 /// a `400`/`409` on a subscription write names the exact field or conflict.
 fn mutation_toasts(
-    toaster: thaw::ToasterInjection,
+    toaster: ferrohealth_ui::widget::toast::Toasts,
     create: CreateAction,
     update: UpdateAction,
     delete: DeleteAction,
@@ -504,7 +504,7 @@ fn disabled_card() -> AnyView {
     view! {
         <section id="subscriptions-disabled" class=CARD_PAD>
             <EmptyState
-                icon=icondata_lu::LuRadioTower
+                icon=ferrohealth_ui::icon::Glyph::BELL
                 message="The event-subscription API is disabled on this server"
                 hint="The CDR answers its subscription routes as if unmounted. Set admin_api = true under [events] in the CDR's configuration to administer subscriptions here."
             />
@@ -517,7 +517,7 @@ fn disabled_card() -> AnyView {
 fn empty_listing() -> AnyView {
     view! {
         <EmptyState
-            icon=icondata_lu::LuRadioTower
+            icon=ferrohealth_ui::icon::Glyph::BELL
             message="No event subscriptions"
             hint="Create the first subscription with the card above."
         />

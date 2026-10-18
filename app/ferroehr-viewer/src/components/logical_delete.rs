@@ -51,7 +51,7 @@ pub fn logical_delete_section(
     return_href: String,
     copy: LogicalDeleteCopy,
 ) -> AnyView {
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     let confirming = RwSignal::new(false);
     let navigate = leptos_router::hooks::use_navigate();
     Effect::new(move |_| match delete.value().get() {
@@ -80,7 +80,7 @@ pub fn logical_delete_section(
                 disabled=Signal::derive(move || delete.pending().get())
                 on:click=move |_| confirming.set(true)
             >
-                <leptos_icons::Icon icon=icondata_lu::LuTrash width="14" height="14" />
+                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::TRASH, "14")}
                 {copy.label}
             </button>
             <ConfirmDialog

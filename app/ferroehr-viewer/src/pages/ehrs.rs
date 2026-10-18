@@ -41,7 +41,7 @@ use crate::components::surface::{CARD_PAD, CARD_TITLE};
 use crate::components::toast::toast_success;
 use crate::error::ViewerError;
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// The fixed AQL that lists EHRs newest-first for the recent-EHRs table.
 /// Validated by [`tests::fixed_aql_parses`]; never concatenated with user
 /// input.
@@ -64,7 +64,7 @@ pub struct ResultPage {
     pub offset: u32,
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Build the `POST query/aql` request body: the fixed AQL text, the caller's
 /// parameter bindings (never string-interpolated into the query), and the
 /// `fetch`/`offset` window.
@@ -78,7 +78,7 @@ pub(crate) fn aql_request_body(aql: &str, parameters: &Value, offset: u32) -> St
     .to_string()
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Parse an AQL `RESULT_SET` JSON body into a [`ResultPage`]. The result-set
 /// shape (`columns: [{name, path}]`, `rows: [[…]]`) is the ITS-REST Query API
 /// contract.
@@ -150,7 +150,7 @@ pub async fn list_ehrs(
     parse_result_set(&response.body, offset)
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Build a subject-bound `EHR_STATUS` for `POST /ehr`: a `PARTY_SELF` whose
 /// `external_ref` (a `PARTY_REF`) carries the subject `id.value` +
 /// `namespace`, which is exactly what `GET /ehr?subject_id&subject_namespace`
@@ -193,7 +193,7 @@ pub(crate) fn subject_ehr_status(subject_id: &str, subject_namespace: &str) -> V
     })
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Pull the `ehr_id.value` out of an `EHR` resource body (the
 /// `Prefer: return=representation` response of `POST /ehr` and the body of
 /// `GET /ehr?subject_id…`).
@@ -424,7 +424,7 @@ pub fn EhrsPage() -> impl IntoView {
         .into_any();
     }
 
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     let create = create_ehr_section(toaster);
     let finder = finder_section();
     let query = leptos_router::hooks::use_query_map();
@@ -456,7 +456,7 @@ pub fn EhrsPage() -> impl IntoView {
     clippy::too_many_lines,
     reason = "one erased section: the create card's inputs + validation + action wiring (rules §1)"
 )]
-fn create_ehr_section(toaster: thaw::ToasterInjection) -> AnyView {
+fn create_ehr_section(toaster: ferrohealth_ui::widget::toast::Toasts) -> AnyView {
     // UNCONTROLLED inputs, read at dispatch — a controlled input resets to
     // its empty signal at hydration, wiping pre-WASM typing (the login
     // form's proven pattern).
@@ -818,7 +818,7 @@ fn ehrs_table(page: &ResultPage, query: Memo<leptos_router::params::ParamsMap>) 
     if page.rows.is_empty() {
         return view! {
             <EmptyState
-                icon=icondata_lu::LuDatabase
+                icon=ferrohealth_ui::icon::Glyph::DATABASE
                 message="No EHRs found"
                 hint="Create an EHR through the CDR, then browse it here."
             />
@@ -838,7 +838,7 @@ fn ehrs_table(page: &ResultPage, query: Memo<leptos_router::params::ParamsMap>) 
     .into_any();
     let paging = paging_controls(page.offset, page.rows.len(), "/ehrs", query);
     view! {
-        {table_shell(&["EHR ID", "Created"], body)}
+        {table_shell("EHRs", &["EHR ID", "Created"], body)}
         {paging}
     }
     .into_any()
@@ -936,7 +936,7 @@ pub(crate) fn cell_text(value: &Value) -> String {
     }
 }
 
-#[cfg(all(test, feature = "ssr"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::{
         LIST_EHRS_AQL, aql_request_body, cell_text, is_uuid, parse_ehr_id, parse_result_set,

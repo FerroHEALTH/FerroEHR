@@ -26,7 +26,7 @@ use leptos_meta::Title;
 use crate::adl2::TemplateFamily;
 use crate::admin::AdminAvailability;
 use crate::components::data_table::{
-    CELL, CELL_MONO, ROW, TablePaging, page_rows, page_window, paging_from_url, row_total,
+    CELL, CELL_MONO, ROW, TablePaging, page_rows, paging_from_url, row_total,
     table_footer, table_shell, table_skeleton,
 };
 use crate::components::empty_state::EmptyState;
@@ -114,7 +114,7 @@ pub async fn list_templates() -> Result<Vec<TemplateRow>, ViewerError> {
 /// Distil one Definition-list element into a [`TemplateRow`], reading each
 /// field defensively so a missing/renamed field yields an empty string rather
 /// than dropping the row.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 fn template_row(item: &serde_json::Value) -> TemplateRow {
     let text = |key: &str| {
         item.get(key)
@@ -254,7 +254,7 @@ pub async fn upload_adl2_template(
 /// (`{"template_id": …}`), or the trimmed body when the CDR echoed something
 /// else — the upload SUCCEEDED either way, so an unexpected body shape is
 /// reported as-is rather than turned into a failure.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 fn accepted_template_id(body: &str) -> String {
     if let Ok(value) = serde_json::from_str::<serde_json::Value>(body)
         && let Some(id) = value.get("template_id").and_then(serde_json::Value::as_str)
@@ -324,7 +324,7 @@ pub async fn delete_adl2_artefact(
 )]
 #[component]
 pub fn TemplatesPage() -> impl IntoView {
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     let filter = RwSignal::new(String::new());
     // The table's page window, read from the URL in SETUP (never inside the
     // suspense that fetches the list).
@@ -465,7 +465,7 @@ pub fn TemplatesPage() -> impl IntoView {
 /// `Effect` is its correct home: it writes no signal and never runs on the
 /// server pass.
 fn mutation_toasts(
-    toaster: thaw::ToasterInjection,
+    toaster: ferrohealth_ui::widget::toast::Toasts,
     upload: TemplateUploadAction,
     adl2_upload: TemplateUploadAction,
     delete: TemplateDeleteAction,
@@ -684,7 +684,7 @@ fn upload_trigger(
                 open.set(true);
             }
         >
-            <leptos_icons::Icon icon=icondata_lu::LuUpload width="14" height="14" />
+            {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::FILE_PLUS, "14")}
             {move || family.get().upload_label()}
         </button>
     }
@@ -767,7 +767,7 @@ fn rows_view(
     let body = view! {
         <For
             each=move || {
-                let window = page_window(total.get(), paging.page.get(), paging.size.get());
+                let window = paging.window(total.get());
                 matched.with(|rows| page_rows(rows, window))
             }
             key=|row| row.template_id.clone()
@@ -786,12 +786,12 @@ fn rows_view(
     let footer = table_footer("/templates", family_noun(family), paging, total);
 
     view! {
-        {table_shell(headers, body)}
+        {table_shell(family_noun(family), headers, body)}
         {footer}
         <Show when=none_match>
             <div class="mt-3">
                 <EmptyState
-                    icon=icondata_lu::LuSearchX
+                    icon=ferrohealth_ui::icon::Glyph::SEARCH
                     message="No templates match the filter"
                     hint="Clear or shorten the filter to see the whole catalogue again."
                 />
@@ -852,7 +852,7 @@ fn empty_family_state(family: TemplateFamily) -> AnyView {
             "Upload your first ADL2 operational template with the Upload ADL2 button above."
         }
     };
-    view! { <EmptyState icon=icondata_lu::LuFileCode2 message="No templates yet" hint=hint /> }
+    view! { <EmptyState icon=ferrohealth_ui::icon::Glyph::FILES message="No templates yet" hint=hint /> }
         .into_any()
 }
 
@@ -999,7 +999,7 @@ mod tests {
 
     /// Both families' listings are read through this one parser, so it is
     /// pinned against the four fields the Definition API returns.
-    #[cfg(feature = "ssr")]
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn a_list_element_distils_into_a_row_and_missing_fields_stay_empty() {
         let item = serde_json::json!({
@@ -1022,7 +1022,7 @@ mod tests {
         assert!(row.created.is_empty());
     }
 
-    #[cfg(feature = "ssr")]
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn the_upload_answer_yields_the_echoed_template_id() {
         let body = r#"{"template_id":"openEHR-EHR-COMPOSITION.cnf_minimal.v1.0.0"}"#;

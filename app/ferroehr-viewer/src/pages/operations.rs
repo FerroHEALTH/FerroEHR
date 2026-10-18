@@ -69,7 +69,7 @@ type ResetFilterAction = Action<(), Result<LoggerView, ViewerError>>;
 )]
 #[component]
 pub fn OperationsPage() -> impl IntoView {
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     let query = use_query_map();
 
     let apply: ApplyFilterAction = Action::new(|filter: &String| {
@@ -148,11 +148,7 @@ pub fn OperationsPage() -> impl IntoView {
 /// The `<Suspense>` fallback shared by every data-backed card.
 fn card_skeleton() -> impl IntoView {
     view! {
-        <thaw::Skeleton>
-            <thaw::SkeletonItem class="h-4 mb-2" />
-            <thaw::SkeletonItem class="h-4 mb-2" />
-            <thaw::SkeletonItem class="h-4" />
-        </thaw::Skeleton>
+        {ferrohealth_ui::view::empty::skeleton(3, "Loading…")}
     }
 }
 
@@ -231,9 +227,9 @@ fn readiness_body(view: ReadinessView) -> AnyView {
         .collect_view()
         .into_any();
     let table = if detailed {
-        table_shell(&["Indicator", "Status", "Detail"], rows)
+        table_shell("Health indicators", &["Indicator", "Status", "Detail"], rows)
     } else {
-        table_shell(&["Indicator", "Status"], rows)
+        table_shell("Health indicators", &["Indicator", "Status"], rows)
     };
     let scope = (!detailed).then(|| {
         view! {
@@ -413,7 +409,7 @@ fn tiles_body(tiles: Vec<MetricTile>) -> AnyView {
                 <StatCard
                     label=tile.label
                     value=Signal::derive(move || value.clone())
-                    icon=icondata_lu::LuGauge
+                    icon=ferrohealth_ui::icon::Glyph::LAYOUT_DASHBOARD
                     href=format!("/operations?metric={}", urlencoding::encode(&tile.name))
                 />
             }
@@ -484,7 +480,7 @@ fn metric_detail_body(detail: MetricDetailView) -> AnyView {
         })
         .collect_view()
         .into_any();
-    let table = table_shell(&["Labels", "Value"], rows);
+    let table = table_shell("Metric samples", &["Labels", "Value"], rows);
     let subtitle = metric_subtitle(&kind, &help);
     view! {
         <div id="ops-metric-detail" class="mt-3">
@@ -529,7 +525,7 @@ fn config_card() -> AnyView {
                 "configured for."
             </p>
             <A href="/system" attr:class=BTN_SECONDARY>
-                <leptos_icons::Icon icon=icondata_lu::LuSettings width="14" height="14" />
+                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::SETTINGS, "14")}
                 " Open runtime configuration"
             </A>
         </div>
@@ -614,11 +610,7 @@ fn loggers_body(
                     disabled=move || draft.read().trim().is_empty()
                     on:click=move |_| pending_apply.set(Some(draft.read().trim().to_owned()))
                 >
-                    <leptos_icons::Icon
-                        icon=icondata_lu::LuSlidersHorizontal
-                        width="14"
-                        height="14"
-                    />
+                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::SETTINGS, "14")}
                     " Apply filter"
                 </button>
                 <button
@@ -627,7 +619,7 @@ fn loggers_body(
                     class=BTN_SECONDARY
                     on:click=move |_| pending_reset.set(true)
                 >
-                    <leptos_icons::Icon icon=icondata_lu::LuRotateCcw width="14" height="14" />
+                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::REFRESH_CW, "14")}
                     " Reset to boot filter"
                 </button>
             </div>
@@ -662,7 +654,7 @@ fn filter_dialogs(
             title="Apply log filter"
             message=apply_message
             confirm_label="Apply filter"
-            confirm_icon=icondata_lu::LuSlidersHorizontal
+            confirm_icon=ferrohealth_ui::icon::Glyph::SETTINGS
             confirm_id="ops-log-apply-confirm"
             on_cancel=Callback::new(move |()| pending_apply.set(None))
             on_confirm=Callback::new(move |()| {
@@ -680,7 +672,7 @@ fn filter_dialogs(
                     .to_owned()
             })
             confirm_label="Reset filter"
-            confirm_icon=icondata_lu::LuRotateCcw
+            confirm_icon=ferrohealth_ui::icon::Glyph::REFRESH_CW
             confirm_id="ops-log-reset-confirm"
             on_cancel=Callback::new(move |()| pending_reset.set(false))
             on_confirm=Callback::new(move |()| {
@@ -700,13 +692,13 @@ fn filter_dialogs(
 /// an error to report.
 fn surface_absent(what: &'static str) -> AnyView {
     view! {
-        <thaw::MessageBar intent=thaw::MessageBarIntent::Info>
-            <thaw::MessageBarBody>
+        <div role="status" class=crate::components::notice::INFO>
+            <div>
                 {what}
                 " is not available: the CDR does not serve this management endpoint. Enable it "
                 "server-side ([management] — each endpoint takes its own access level)."
-            </thaw::MessageBarBody>
-        </thaw::MessageBar>
+            </div>
+        </div>
     }
     .into_any()
 }
@@ -733,7 +725,7 @@ mod tests {
     }
 }
 
-#[cfg(all(test, feature = "ssr"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod ssr_tests {
     use super::build_info_body;
     use crate::management::build_info_view;

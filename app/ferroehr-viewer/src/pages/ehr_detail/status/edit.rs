@@ -167,7 +167,7 @@ pub(super) fn parse_other_details(draft: &str) -> Result<Option<Value>, String> 
     }
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Apply the form's three edits to the loaded `EHR_STATUS` document and return
 /// the body to PUT.
 ///
@@ -335,7 +335,7 @@ pub(super) fn edit_form(
                         prop:disabled=move || unseeded.get() || save.pending().get()
                         on:click=on_save
                     >
-                        <leptos_icons::Icon icon=icondata_lu::LuSave width="14" height="14" />
+                        {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::SAVE, "14")}
                         "Save status"
                     </button>
                     <Show when=move || save.pending().get()>
@@ -413,7 +413,7 @@ mod tests {
     }
 }
 
-#[cfg(all(test, feature = "ssr"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod merge_tests {
     use super::apply_status_edits;
     use serde_json::Value;

@@ -35,7 +35,7 @@ use leptos::prelude::*;
 use leptos::{component, server};
 use leptos_meta::Title;
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 use serde_json::Value;
 
 use crate::components::empty_state::EmptyState;
@@ -48,7 +48,7 @@ use crate::components::surface::{CARD_PAD, CARD_TITLE, WELL};
 use crate::components::toast::{toast_error, toast_success};
 use crate::components::wire::VersionEntry;
 // Server-side pretty-printing happens in the #[server] body only.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 use crate::components::format_view::pretty_body;
 use crate::error::ViewerError;
 use crate::format::ReprFormat;
@@ -401,7 +401,7 @@ pub async fn fetch_versioned_composition(
     parse_versioned_details(&object_body, &version_body)
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Flatten a `VERSIONED_COMPOSITION` body plus a VERSION body into
 /// [`VersionedCompositionDetails`]. Defensive throughout — an absent attribute
 /// reads as empty rather than failing the card.
@@ -432,7 +432,7 @@ fn parse_versioned_details(
     })
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Parse a `REVISION_HISTORY` body (either the canonical `{ "items": [...] }`
 /// wrapper or a bare array) into version entries. Defensive throughout — a
 /// missing field reads as empty rather than failing.
@@ -451,7 +451,7 @@ pub(crate) fn parse_versions(body: &str) -> Result<Vec<VersionEntry>, ViewerErro
     Ok(items.iter().map(version_entry).collect())
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Flatten one `REVISION_HISTORY_ITEM` (`version_id` + `audits`) into a
 /// [`VersionEntry`], reading the first audit for the commit metadata.
 fn version_entry(item: &Value) -> VersionEntry {
@@ -474,7 +474,7 @@ fn version_entry(item: &Value) -> VersionEntry {
     }
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Follow a chain of object keys and return the terminal string value, or an
 /// empty string if any hop is missing / not a string.
 fn json_str(value: &Value, path: &[&str]) -> String {
@@ -510,7 +510,7 @@ fn pane_view_from_url() -> PaneView {
 /// Both outcomes toast; the resources refetch via `update.version()` in their
 /// own sources, and the CDR's diagnostic also stays inline in the editor.
 fn wire_commit_toast<I: Send + Sync + 'static>(
-    toaster: thaw::ToasterInjection,
+    toaster: ferrohealth_ui::widget::toast::Toasts,
     update: Action<I, Result<String, ViewerError>>,
 ) {
     Effect::new(move |_| match update.value().get() {
@@ -539,7 +539,7 @@ fn wire_commit_toast<I: Send + Sync + 'static>(
 /// side-effect, so an `Effect` is its correct home; it never runs on the
 /// server.
 fn wire_delete_outcome<I: Send + Sync + 'static>(
-    toaster: thaw::ToasterInjection,
+    toaster: ferrohealth_ui::widget::toast::Toasts,
     delete: Action<I, Result<(), ViewerError>>,
     ehr_id: Signal<String>,
 ) {
@@ -679,7 +679,7 @@ pub fn CompositionPage() -> impl IntoView {
     // Both outcomes toast; the resources refetch via `update.version()` in
     // their sources above, and the CDR's diagnostic also stays inline in the
     // editor, next to the edited body.
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     wire_commit_toast(toaster, update);
     wire_delete_outcome(toaster, delete, ehr_id);
 
@@ -792,7 +792,7 @@ fn delete_section(
                 disabled=Signal::derive(move || delete.pending().get())
                 on:click=move |_| confirming.set(true)
             >
-                <leptos_icons::Icon icon=icondata_lu::LuTrash width="14" height="14" />
+                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::TRASH, "14")}
                 "Delete composition"
             </button>
             <crate::components::confirm_dialog::ConfirmDialog
@@ -829,9 +829,7 @@ fn versioned_section(
         <div class="mt-3">
             <Transition fallback=|| {
                 view! {
-                    <thaw::Skeleton>
-                        <thaw::SkeletonItem class="h-24" />
-                    </thaw::Skeleton>
+                    {ferrohealth_ui::view::empty::skeleton(4, "Loading…")}
                 }
             }>
                 {move || Suspend::new(async move {
@@ -935,7 +933,7 @@ fn edit_section(
         }
         edit_open.set(opening);
     };
-    let commit_toaster = thaw::ToasterInjection::expect_context();
+    let commit_toaster = crate::components::toast::toaster();
     let on_commit = move |_| {
         // If-Match the NEWEST version (entries are newest-first), regardless of
         // which version the dropdown shows. An unresolved history refuses the
@@ -1151,9 +1149,7 @@ fn document_section(
     view! {
         <Transition fallback=|| {
             view! {
-                <thaw::Skeleton>
-                    <thaw::SkeletonItem class="h-64" />
-                </thaw::Skeleton>
+                {ferrohealth_ui::view::empty::skeleton(8, "Loading…")}
             }
         }>
             {move || Suspend::new(async move {
@@ -1183,7 +1179,7 @@ fn deleted_pane() -> AnyView {
     view! {
         <div id="composition-version-deleted">
             <EmptyState
-                icon=icondata_lu::LuTrash
+                icon=ferrohealth_ui::icon::Glyph::TRASH
                 message="This version was deleted at the selected instant"
                 hint="The delete committed a deleted-lifecycle version; pick an earlier version above to read it."
             />
@@ -1342,7 +1338,7 @@ fn audit_card(entry: Option<&VersionEntry>) -> AnyView {
     let Some(entry) = entry else {
         return view! {
             <EmptyState
-                icon=icondata_lu::LuShieldCheck
+                icon=ferrohealth_ui::icon::Glyph::SHIELD_CHECK
                 message="No audit for the selected version"
                 hint="Pick another version above — every committed version carries its own audit."
             />
@@ -1389,7 +1385,7 @@ fn short_version(version_id: &str) -> String {
         .map_or_else(|| version_id.to_owned(), |(_, v)| format!("v{v}"))
 }
 
-#[cfg(all(test, feature = "ssr"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::{parse_versioned_details, parse_versions, short_version};
 

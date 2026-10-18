@@ -263,7 +263,7 @@ fn chart_absent(row_count: usize) -> AnyView {
         return view! {
             <div data-chart-empty="single-row">
                 <EmptyState
-                    icon=icondata_lu::LuChartLine
+                    icon=ferrohealth_ui::icon::Glyph::LAYOUT_DASHBOARD
                     message="One row is not a trend"
                     hint="A chart needs at least two rows — widen the query's window, or relax a condition, and run it again."
                 />
@@ -274,7 +274,7 @@ fn chart_absent(row_count: usize) -> AnyView {
     view! {
         <div data-chart-empty="no-numeric-column">
             <EmptyState
-                icon=icondata_lu::LuChartLine
+                icon=ferrohealth_ui::icon::Glyph::LAYOUT_DASHBOARD
                 message="Nothing numeric to chart"
                 hint="Charting needs a column holding at least two numbers — project a quantity magnitude, a count, or an ordinal value. An ISO date/time column then becomes the X axis."
             />

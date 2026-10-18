@@ -188,11 +188,11 @@ pub async fn fetch_admin_config() -> Result<String, ViewerError> {
 /// interpolation safe; the binding travels in `query_parameters`
 /// (`docs/specs/openehr/ITS-REST/specifications/docs/query/Request.md`
 /// §Query parameters) and is matched as data.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 const TEMPLATE_USAGE_AQL: &str = "SELECT COUNT(*) FROM EHR e CONTAINS COMPOSITION c \
                                   WHERE c/archetype_details/template_id/value = $template";
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Build the `POST query/aql` request body counting the compositions committed
 /// under `template_id`.
 ///
@@ -207,11 +207,11 @@ fn template_usage_body(template_id: &str) -> String {
 }
 
 /// How many templates the repository-usage card counts.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 const USAGE_TEMPLATES: usize = 25;
 
 /// Count the compositions committed under one template, via `POST query/aql`.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 async fn template_count(
     state: &crate::state::AppState,
     session: &crate::session::ViewerSession,
@@ -459,9 +459,7 @@ fn usage_card() -> AnyView {
     let body = view! {
         <Suspense fallback=|| {
             view! {
-                <thaw::Skeleton>
-                    <thaw::SkeletonItem class="h-24" />
-                </thaw::Skeleton>
+                {ferrohealth_ui::view::empty::skeleton(4, "Loading…")}
             }
         }>
             {move || {
@@ -470,7 +468,7 @@ fn usage_card() -> AnyView {
                         Ok((rows, _)) if rows.is_empty() => {
                             view! {
                                 <EmptyState
-                                    icon=icondata_lu::LuFileCode2
+                                    icon=ferrohealth_ui::icon::Glyph::FILES
                                     message="No template usage yet"
                                     hint="Counts appear once compositions are committed against a template."
                                 />
@@ -495,7 +493,7 @@ fn usage_card() -> AnyView {
                                 })
                                 .collect_view()
                                 .into_any();
-                            let table = crate::components::data_table::table_shell(
+                            let table = crate::components::data_table::table_shell("Compositions per template", 
                                 &["Template", "Compositions"],
                                 body,
                             );
@@ -533,9 +531,7 @@ fn config_card() -> AnyView {
     let body = view! {
         <Suspense fallback=|| {
             view! {
-                <thaw::Skeleton>
-                    <thaw::SkeletonItem class="h-24" />
-                </thaw::Skeleton>
+                {ferrohealth_ui::view::empty::skeleton(4, "Loading…")}
             }
         }>
             {move || {
@@ -586,11 +582,7 @@ fn config_card() -> AnyView {
 /// The `<Suspense>` fallback shared by every data-backed card.
 fn card_skeleton() -> impl IntoView {
     view! {
-        <thaw::Skeleton>
-            <thaw::SkeletonItem class="h-4 mb-2" />
-            <thaw::SkeletonItem class="h-4 mb-2" />
-            <thaw::SkeletonItem class="h-4" />
-        </thaw::Skeleton>
+        {ferrohealth_ui::view::empty::skeleton(3, "Loading…")}
     }
 }
 
@@ -632,9 +624,9 @@ fn status_card() -> AnyView {
 fn card_error(error: &ViewerError) -> AnyView {
     let message = error.to_string();
     view! {
-        <thaw::MessageBar intent=thaw::MessageBarIntent::Error>
-            <thaw::MessageBarBody>{message}</thaw::MessageBarBody>
-        </thaw::MessageBar>
+        <div role="alert" class="fui-alert">
+            <div>{message}</div>
+        </div>
     }
     .into_any()
 }
@@ -693,11 +685,11 @@ fn smart_card() -> AnyView {
                     Ok(config) => smart_body(config),
                     Err(e) => {
                         view! {
-                            <thaw::MessageBar intent=thaw::MessageBarIntent::Warning>
-                                <thaw::MessageBarBody>
+                            <div role="status" class=crate::components::notice::WARNING>
+                                <div>
                                     {smart_probe_failure_copy(&e)}
-                                </thaw::MessageBarBody>
-                            </thaw::MessageBar>
+                                </div>
+                            </div>
                         }
                             .into_any()
                     }
@@ -761,21 +753,21 @@ pub fn smart_probe_failure_copy(error: &ViewerError) -> String {
 fn smart_body(config: Option<String>) -> AnyView {
     let Some(raw) = config else {
         return view! {
-            <thaw::MessageBar intent=thaw::MessageBarIntent::Info>
-                <thaw::MessageBarBody>
+            <div role="status" class=crate::components::notice::INFO>
+                <div>
                     "SMART is not enabled on this CDR: it serves no service-discovery document."
-                </thaw::MessageBarBody>
-            </thaw::MessageBar>
+                </div>
+            </div>
         }
         .into_any();
     };
     let Ok(doc) = serde_json::from_str::<serde_json::Value>(&raw) else {
         return view! {
-            <thaw::MessageBar intent=thaw::MessageBarIntent::Warning>
-                <thaw::MessageBarBody>
+            <div role="status" class=crate::components::notice::WARNING>
+                <div>
                     "SMART configuration returned, but it is not valid JSON."
-                </thaw::MessageBarBody>
-            </thaw::MessageBar>
+                </div>
+            </div>
         }
         .into_any();
     };
@@ -933,7 +925,7 @@ fn openapi_body(doc: &serde_json::Value) -> AnyView {
     if groups.is_empty() {
         return view! {
             <EmptyState
-                icon=icondata_lu::LuRoute
+                icon=ferrohealth_ui::icon::Glyph::COMPASS
                 message="No paths advertised"
                 hint="The CDR served an OpenAPI document with no operations in it."
             />
@@ -983,7 +975,7 @@ fn activity_log_card() -> AnyView {
                 "filterable by time window, patient, principal, outcome and action."
             </p>
             <A href="/audit" attr:class=BTN_SECONDARY>
-                <leptos_icons::Icon icon=icondata_lu::LuActivity width="14" height="14" />
+                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::HEART_PULSE, "14")}
                 " Open audit browser"
             </A>
         </div>
@@ -1124,7 +1116,7 @@ mod tests {
         assert!(!copy.contains("not enabled"), "{copy}");
     }
 
-    #[cfg(feature = "ssr")]
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn a_template_id_travels_as_a_binding_and_never_as_query_text() {
         use super::{TEMPLATE_USAGE_AQL, template_usage_body};
@@ -1158,7 +1150,7 @@ mod tests {
         assert!(!TEMPLATE_USAGE_AQL.contains('\''), "{TEMPLATE_USAGE_AQL}");
     }
 
-    #[cfg(feature = "ssr")]
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn the_repository_usage_statement_is_valid_aql() {
         // The fixed text is parsed by the real grammar, so a typo in the

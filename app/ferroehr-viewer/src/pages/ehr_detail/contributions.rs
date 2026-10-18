@@ -14,7 +14,7 @@
 use leptos::prelude::*;
 use leptos::server;
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 use serde_json::Value;
 
 use crate::activity::ActivityPoint;
@@ -35,7 +35,7 @@ const CONTRIBUTION_FETCH: u32 = 20;
 /// written to", not "which contributions are on this page"), so it reads its own
 /// window of the SAME endpoint — one reader per claim, never a second endpoint
 /// for the same fact.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 const ACTIVITY_FETCH: u32 = 200;
 
 /// One row of the EHR's contribution list. Fixed-size-safe strings; the shape
@@ -104,7 +104,7 @@ pub async fn list_contributions(
     parse_contributions(&response.body)
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Parse the contribution-list body (`{ "rows": [...], "total": N }`) into a
 /// [`ContributionPage`]. Defensive throughout — a missing field reads as empty
 /// / zero rather than failing.
@@ -127,7 +127,7 @@ fn parse_contributions(body: &str) -> Result<ContributionPage, ViewerError> {
     Ok(ContributionPage { rows, total })
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Flatten one contribution-list entry into a [`ContributionRow`], each field
 /// read defensively as a string.
 fn contribution_row(value: &Value) -> ContributionRow {
@@ -140,7 +140,7 @@ fn contribution_row(value: &Value) -> ContributionRow {
     }
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Read a top-level string field, or an empty string when absent / not a string.
 fn contribution_field(value: &Value, key: &str) -> String {
     value
@@ -234,9 +234,7 @@ fn activity_section(ehr_id: Signal<String>, selected: Memo<String>) -> AnyView {
     let body = view! {
         <Suspense fallback=|| {
             view! {
-                <thaw::Skeleton>
-                    <thaw::SkeletonItem class="h-40" />
-                </thaw::Skeleton>
+                {ferrohealth_ui::view::empty::skeleton(1, "Loading…")}
             }
         }>
             {move || Suspend::new(async move {
@@ -307,7 +305,7 @@ fn contributions_table(page: &ContributionPage, offset: RwSignal<u32>) -> AnyVie
     if page.rows.is_empty() {
         return view! {
             <EmptyState
-                icon=icondata_lu::LuInbox
+                icon=ferrohealth_ui::icon::Glyph::INBOX
                 message="No contributions"
                 hint="This EHR has no contributions on this page."
             />
@@ -351,7 +349,7 @@ fn contributions_table(page: &ContributionPage, offset: RwSignal<u32>) -> AnyVie
         .into_any()
     });
     view! {
-        {table_shell(&["Contribution", "Committed", "Committer", "Change type"], body)}
+        {table_shell("Contributions", &["Contribution", "Committed", "Committer", "Change type"], body)}
         <p id="contribution-total" class="mt-2 text-xs text-ink-muted">
             {total}
             " contribution(s) total"
@@ -457,7 +455,7 @@ fn contribution_body(body: &str) -> AnyView {
     view! { <DocumentPane body=doc_sig /> }.into_any()
 }
 
-#[cfg(all(test, feature = "ssr"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::parse_contributions;
 

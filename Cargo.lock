@@ -2861,17 +2861,15 @@ dependencies = [
  "console_error_panic_hook",
  "cookie",
  "csv",
+ "ferrohealth-ui",
  "futures",
  "http",
- "icondata_core",
- "icondata_lu",
  "indexmap 2.14.2",
  "jiff",
  "leptos",
  "leptos-chartistry",
  "leptos-use 0.19.2",
  "leptos_axum",
- "leptos_icons",
  "leptos_meta",
  "leptos_router",
  "openehr-am",
@@ -2893,6 +2891,17 @@ dependencies = [
  "urlencoding",
  "wasm-bindgen",
  "wasm-bindgen-futures",
+]
+
+[[package]]
+name = "ferrohealth-ui"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4549de75b8427ee8e7d10ca937461799af6cd5c4469af3f9bd79777e0715c655"
+dependencies = [
+ "leptos",
+ "leptos_router",
+ "serde",
 ]
 
 [[package]]
@@ -3880,15 +3889,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c97be924215abd5e630d84e95a47c710138a6559b4c55039f4f33aa897fa859"
 
 [[package]]
-name = "icondata_lu"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f25663a6cc5371e9e33c98bab870f4aa2fd68c88853f1467c8fccfaf112782b1"
-dependencies = [
- "icondata_core",
-]
-
-[[package]]
 name = "icu_collections"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4676,16 +4676,6 @@ dependencies = [
  "serde",
  "syn 3.0.3",
  "walkdir",
-]
-
-[[package]]
-name = "leptos_icons"
-version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "274959df1a852fc431b03f27d9cd3129fb0f8cca9c8d383e4d668f62543cbec9"
-dependencies = [
- "icondata_core",
- "leptos",
 ]
 
 [[package]]
