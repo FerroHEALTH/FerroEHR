@@ -15,6 +15,15 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+### Security
+
+- `cargo deny` passes again: the viewer's WebDriver test client no longer
+  reaches zip 8.6.0, and the three zip extraction advisories
+  (RUSTSEC-2026-0367, RUSTSEC-2026-0368, RUSTSEC-2026-0369) are recorded as
+  not affecting FerroEHR in the Rust-dependency VEX document, since the one
+  remaining carrier, utoipa-swagger-ui's build script, never calls the
+  extraction APIs they concern (#3806).
+
 ## [4.3.10] - 2026-10-16
 
 ### Changed
