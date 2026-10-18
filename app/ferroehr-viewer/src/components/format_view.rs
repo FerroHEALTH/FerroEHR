@@ -471,13 +471,21 @@ mod tests {
         // `syntax-*` roles, never a raw palette utility, and markup in the
         // document stays text.
         let markup = highlighted("{\"a\": \"<b>\", \"n\": 1, \"t\": true}");
-        for class in ["fui-tok-key", "fui-tok-string", "fui-tok-number", "fui-tok-keyword"] {
+        for class in [
+            "fui-tok-key",
+            "fui-tok-string",
+            "fui-tok-number",
+            "fui-tok-keyword",
+        ] {
             assert!(markup.contains(class), "{class} missing from {markup}");
         }
         assert!(markup.contains("&lt;b&gt;"), "{markup}");
         assert!(!markup.contains("<b>"), "{markup}");
         let xml = highlighted("<a x=\"1\"/>");
-        assert!(xml.contains("fui-tok-tag") && xml.contains("fui-tok-attribute"), "{xml}");
+        assert!(
+            xml.contains("fui-tok-tag") && xml.contains("fui-tok-attribute"),
+            "{xml}"
+        );
     }
 
     #[test]

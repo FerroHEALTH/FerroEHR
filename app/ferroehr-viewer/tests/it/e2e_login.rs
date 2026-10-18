@@ -45,7 +45,7 @@ async fn login_basic_authenticates_and_rejects_bad_credentials() {
         .send_keys("definitely-wrong")
         .await;
     h.wait_css("button[type=submit]").await.click().await;
-    h.wait_css(".thaw-message-bar").await;
+    h.wait_css(".fui-alert").await;
     h.shot(2, "login-error").await;
     assert!(
         h.current_url().await.contains("/login"),
@@ -107,7 +107,7 @@ async fn hydration_attaches_interactivity() {
     // The user-menu popover opens on click — DOM state only WASM can flip.
     let user_button = h.wait_css("#user-menu-trigger button").await;
     user_button.click().await;
-    h.wait_css(".thaw-popover-surface").await;
+    h.wait_css("#user-menu:popover-open").await;
     h.shot(2, "user-menu-open").await;
     h.assert_console_clean(&["401", "Failed to load resource"])
         .await;

@@ -63,7 +63,7 @@ pub fn PageHeader(
                     <li class="flex items-center gap-1.5">
                         <A
                             href=crumb.href
-                            attr:class="text-ink-muted hover:text-accent hover:underline"
+                            attr:class="text-ink-muted no-underline hover:text-accent hover:underline"
                         >
                             {crumb.label}
                         </A>

@@ -963,7 +963,7 @@ jobs:
         # from-source Dockerfile path; this build without cargo-leptos must match.
         env:
           LEPTOS_OUTPUT_NAME: ferroehr-viewer
-        run: cargo auditable build --release --locked --no-default-features --features ssr -p ferroehr-viewer
+        run: cargo auditable build --release --locked -p ferroehr-viewer
 
       - name: Strip
         run: strip target/release/ferroehr-viewer

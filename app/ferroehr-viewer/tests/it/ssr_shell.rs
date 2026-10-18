@@ -217,7 +217,9 @@ async fn the_shell_renders_its_whole_static_sidebar_around_the_matched_dashboard
     assert_eq!(sidebar_entries(&pass.html), sidebar_with_active(0));
     // The two groups, each under its heading, which names its list.
     assert_eq!(
-        sidebar(&pass.html).matches("class=\"fui-nav-group\"").count(),
+        sidebar(&pass.html)
+            .matches("class=\"fui-nav-group\"")
+            .count(),
         2,
         "{}",
         pass.html

@@ -151,7 +151,7 @@ pub fn QueryAqlPage() -> impl IntoView {
 
     view! {
         <Title text="AQL editor" />
-        <div class="p-6 space-y-4">
+        <div class="space-y-4">
             <PageHeader
                 title="Raw AQL"
                 subtitle="Write and run AQL directly, bind parameters, and save it as a stored query."

@@ -176,7 +176,7 @@ async fn client_supplied_ehr_id_creates_that_ehr_and_then_conflicts() {
         click_until_xpath(
             &h,
             "#ehr-create-submit",
-            "//*[contains(@class, 'thaw-toast-body') and contains(., 'conflicting')]",
+            "//*[contains(@class, 'fui-toast-text') and contains(., 'conflicting')]",
         )
         .await,
         "re-using EHR id {ehr_id} must surface the CDR's conflict, not a success"

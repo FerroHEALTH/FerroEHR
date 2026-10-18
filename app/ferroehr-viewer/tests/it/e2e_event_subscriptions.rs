@@ -382,7 +382,7 @@ async fn a_refused_subscription_name_never_leaves_or_reaches_the_reader_verbatim
 
     wait_text_contains(
         &h,
-        ".thaw-message-bar",
+        ".fui-alert",
         "an event subscription with that name exists",
     )
     .await;

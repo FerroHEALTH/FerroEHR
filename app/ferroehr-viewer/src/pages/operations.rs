@@ -132,7 +132,7 @@ pub fn OperationsPage() -> impl IntoView {
 
     view! {
         <Title text="Operations" />
-        <div class="p-6">
+        <div>
             <PageHeader
                 title="Operations"
                 subtitle="Dependency health, build provenance, the metric registry, and live log control."
@@ -227,7 +227,11 @@ fn readiness_body(view: ReadinessView) -> AnyView {
         .collect_view()
         .into_any();
     let table = if detailed {
-        table_shell("Health indicators", &["Indicator", "Status", "Detail"], rows)
+        table_shell(
+            "Health indicators",
+            &["Indicator", "Status", "Detail"],
+            rows,
+        )
     } else {
         table_shell("Health indicators", &["Indicator", "Status"], rows)
     };

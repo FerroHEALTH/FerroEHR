@@ -402,7 +402,7 @@ pub fn Adl2TemplateDetailPage() -> impl IntoView {
 
     view! {
         <Title text=move || format!("ADL2 template · {}", template_id.get()) />
-        <div class="p-6">
+        <div>
             <PageHeader
                 title=template_id
                 crumbs=vec![Crumb::new("Templates", TemplateFamily::Adl2.href())]

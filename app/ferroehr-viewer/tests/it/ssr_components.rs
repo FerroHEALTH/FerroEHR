@@ -35,11 +35,11 @@ use ferroehr_viewer::components::scope_grants::{
 use ferroehr_viewer::components::stat_card::StatCard;
 use ferroehr_viewer::components::surface::{CARD_TITLE, titled_card};
 use ferroehr_viewer::components::toast::{toast_error, toast_outcome, toast_success};
+use ferroehr_viewer::components::upload_dialog::UploadDialog;
 use ferroehr_viewer::error::ViewerError;
+use ferroehr_viewer::scopes::{CAPABILITY_NOTE, grants};
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::widget::toast::{provide_toasts, toast_region};
-use ferroehr_viewer::components::upload_dialog::UploadDialog;
-use ferroehr_viewer::scopes::{CAPABILITY_NOTE, grants};
 use leptos::prelude::*;
 
 /// Build a view under a fresh reactive owner and render the server pass.
@@ -139,7 +139,10 @@ fn an_error_toast_shows_its_outcome_and_sentence_in_the_bad_tone() {
         );
         toast_region(toasts).into_any()
     });
-    assert!(html.contains("Upload failed: The CDR rejected vitals.v1"), "{html}");
+    assert!(
+        html.contains("Upload failed: The CDR rejected vitals.v1"),
+        "{html}"
+    );
     assert!(html.contains("fui-tone-bad"), "{html}");
 }
 
@@ -208,7 +211,10 @@ fn an_empty_state_without_a_hint_or_action_renders_only_its_message() {
     assert!(html.contains("No contributions in this window"), "{html}");
     assert!(html.contains("fui-empty"), "{html}");
     // The message is the heading, and the hint line under it says nothing.
-    assert!(html.contains(">No contributions in this window</h2>"), "{html}");
+    assert!(
+        html.contains(">No contributions in this window</h2>"),
+        "{html}"
+    );
     let hint = html
         .split_once("class=\"fui-empty-body\">")
         .and_then(|(_, rest)| rest.split_once("</p>"))

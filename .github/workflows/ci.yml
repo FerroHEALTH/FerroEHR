@@ -1234,8 +1234,8 @@ jobs:
       # CI must fail on new commits only, never on registry drift
       # (https://doc.rust-lang.org/cargo/faq.html#why-have-cargolock-in-version-control).
       - run: cargo clippy --locked --workspace --exclude ferroehr-viewer --all-targets --all-features -- -D warnings
-      - run: cargo clippy --locked -p ferroehr-viewer --all-targets --features ssr -- -D warnings
-      - run: cargo clippy --locked -p ferroehr-viewer --target wasm32-unknown-unknown --features hydrate -- -D warnings
+      - run: cargo clippy --locked -p ferroehr-viewer --all-targets -- -D warnings
+      - run: cargo clippy --locked -p ferroehr-viewer --lib --target wasm32-unknown-unknown -- -D warnings
 
   # ── The slim server: the optional-integration features, subtracted ──────────
   # The clippy job above compiles the workspace with --all-features, so nothing
@@ -1417,7 +1417,7 @@ jobs:
       # non-pub items the public build never evaluates (#1838; measured
       # cost ~10s incremental over the public-only run).
       - run: cargo doc --locked --workspace --exclude ferroehr-viewer --all-features --no-deps --document-private-items
-      - run: cargo doc --locked -p ferroehr-viewer --features ssr --no-deps
+      - run: cargo doc --locked -p ferroehr-viewer --no-deps
       # Doc tests live HERE, not in the pg18 test job: nextest cannot run
       # doctests, so `cargo test --doc` is its own compile (default features —
       # doctests document what a default consumer gets), and this job is ~1/10
@@ -1603,8 +1603,8 @@ jobs:
       - uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
         with:
           tool: cargo-nextest
-      - run: cargo build --locked -p ferroehr-viewer --features ssr
-      - run: cargo nextest run --locked -p ferroehr-viewer --features ssr --no-tests=pass --profile ci
+      - run: cargo build --locked -p ferroehr-viewer
+      - run: cargo nextest run --locked -p ferroehr-viewer --no-tests=pass --profile ci
 
   # ── The Helm chart's lint + golden renders (issue #2110) ────────────────────
   # deploy/helm/validate.sh is the only check in the repository that pins the
@@ -2043,7 +2043,7 @@ jobs:
           # viewer binary with a `_bg.wasm`-referencing build while the site
           # tree holds `<name>.wasm`, and every page 404s its wasm. Archive
           # FIRST, cargo-leptos LAST, stage immediately.
-          cargo nextest archive -p ferroehr-viewer --features ssr \
+          cargo nextest archive -p ferroehr-viewer \
             --archive-file ui-e2e-tests.tar.zst
           bash scripts/cargo-leptos.sh build
           # One staging tree = one artifact = one cache path. The viewer

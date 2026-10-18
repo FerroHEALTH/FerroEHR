@@ -75,7 +75,7 @@ jobs:
           status=0
           {
             cargo check --workspace --exclude ferroehr-viewer --all-targets --all-features &&
-              cargo check -p ferroehr-viewer --all-targets --features ssr
+              cargo check -p ferroehr-viewer --all-targets
           } 2>&1 | tee check.log || status=$?
           echo "status=$status" >> "$GITHUB_OUTPUT"
           echo "cargo check exited ${status}"

@@ -181,9 +181,9 @@ async fn pick_composition(h: &Harness) {
         .await;
 }
 
-/// The dark page background the token layer paints: `--surface` under `.dark`
-/// is `#0f172a` (`style/tailwind.css` §palette), applied to `<html>` by
-/// `@layer base { html { background-color: var(--surface) } }`. Observing the
+/// The dark page background the theme paints: `--surface` under
+/// `data-theme="dark"` is `#0f172a` (`style/theme.css`), applied to `<html>`
+/// by FerroUI's base layer (`html { background: var(--surface) }`). Observing the
 /// computed colour is how "the theme is applied" stops being a guess; which
 /// CSSOM spelling the browser hands back is not part of the claim, which is
 /// why `wait_css_colour` compares channels.
@@ -196,25 +196,25 @@ const THEMED_TRANSITION: &str = ".transition-colors";
 /// Wait until the dark theme is fully applied AND STILL — the precondition of
 /// every dark capture.
 ///
-/// Three conditions, no sleeps. The `dark` class on `<html>` is the viewer's
-/// own switch, applied from a browser-only effect that re-reads the stored
-/// preference after hydration (rules §8), so the server pass never carries it.
+/// Three conditions, no sleeps. `data-theme="dark"` on `<html>` is the
+/// viewer's own switch, written by the server from the theme cookie, so the
+/// first paint already carries it.
 /// The resolved page background is the token layer actually having swapped,
 /// which the class alone does not prove. And a surface carrying
 /// `transition-colors` is still between its two colours at that instant, so a
 /// capture taken then freezes a half-themed frame.
 async fn wait_dark_applied(h: &Harness) {
-    h.wait_css("html.dark").await;
+    h.wait_css("html[data-theme='dark']").await;
     wait_css_colour(h, "html", "background-color", DARK_SURFACE).await;
     wait_css_value_still(h, THEMED_TRANSITION, "background-color").await;
 }
 
 /// Turn dark mode ON for this browser session and wait until it is applied.
 ///
-/// The preference persists to `localStorage`, so one flip covers every screen
-/// the session visits afterwards.
+/// The choice is a server cookie the switch posts, so one press covers every
+/// screen the session visits afterwards.
 async fn enable_dark_mode(h: &Harness) {
-    h.wait_css("button[aria-label='Toggle dark mode']")
+    h.wait_css("form[action='/theme'] button[value='dark']")
         .await
         .click()
         .await;
@@ -223,9 +223,8 @@ async fn enable_dark_mode(h: &Harness) {
 
 /// Navigate to `path` and write its DARK variant.
 ///
-/// Every navigation waits for `html.dark` again: the class is applied from a
-/// browser-only effect that re-reads the stored preference after hydration, so
-/// the server pass never carries it (rules §8).
+/// Every navigation waits for the dark theme again: the server writes it from
+/// the cookie on every page.
 async fn capture_dark(h: &Harness, dir: &Path, path: &str, slug: &str, content: Option<&str>) {
     h.goto(path).await;
     h.wait_css("footer").await;
@@ -250,7 +249,7 @@ async fn capture_dark_gated(
 ) {
     h.goto(path).await;
     h.wait_css(screen_css).await;
-    h.wait_css("html.dark").await;
+    h.wait_css("html[data-theme='dark']").await;
     if is_present(h, disabled_css).await {
         println!("SKIP docs-shots: {slug} not captured — the CDR under test does not serve it");
         return;
@@ -724,7 +723,7 @@ async fn capture_documentation_screenshots() {
     // grants, scope previewer).
     h.goto("/").await;
     h.wait_css("#user-menu-trigger button").await.click().await;
-    h.wait_css(".thaw-popover-surface").await;
+    h.wait_css("#user-menu:popover-open").await;
     shot_to(&h, &dir, "dashboard/user-menu").await;
     h.wait_xpath("//button[contains(., 'View scopes')]")
         .await
@@ -800,7 +799,7 @@ async fn dark_ordinary_screens(h: &Harness, dir: &Path) {
     // gate here is presence rather than a disabled card.
     h.goto("/terminology?terminology=openehr").await;
     h.wait_css("footer").await;
-    h.wait_css("html.dark").await;
+    h.wait_css("html[data-theme='dark']").await;
     if is_present(h, "#terminology-descriptor").await {
         wait_dark_applied(h).await;
         shot_to(h, dir, "terminology/terminology-dark").await;

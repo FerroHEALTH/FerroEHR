@@ -124,8 +124,7 @@ async fn ensure_template(h: &Harness, fixture: &str, template_id: &str) {
     h.goto("/templates").await;
     h.wait_css("#template-upload-open").await;
     // Let the list settle on either rows or the empty-state bar first.
-    h.wait_css("a[href^='/templates/'], .thaw-message-bar")
-        .await;
+    h.wait_css("a[href^='/templates/'], .fui-alert").await;
     let row_delete = format!("[data-template-delete=\"{template_id}\"]");
     if is_present(h, &row_delete).await {
         return;
@@ -481,7 +480,7 @@ async fn plain_user_is_refused_the_admin_delete() {
 
     // The failure is reported with actionable copy, and the row survives.
     h.wait_xpath(
-        "//*[contains(@class, 'thaw-toast-body') and (contains(., 'ADMIN') or contains(., 'may not delete'))]",
+        "//*[contains(@class, 'fui-toast-text') and (contains(., 'ADMIN') or contains(., 'may not delete'))]",
     )
     .await;
     h.shot(2, "delete-refused").await;

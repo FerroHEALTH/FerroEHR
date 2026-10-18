@@ -238,7 +238,11 @@ fn tags_table(tags: Vec<ItemTagRow>, actions: TagActions) -> AnyView {
         </For>
     }
     .into_any();
-    table_shell("Item tags", &["Key", "Value", "Target path", "Target", ""], rows)
+    table_shell(
+        "Item tags",
+        &["Key", "Value", "Target path", "Target", ""],
+        rows,
+    )
 }
 
 /// One tag row plus its delete-by-key action.

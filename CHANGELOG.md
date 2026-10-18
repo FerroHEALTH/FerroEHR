@@ -15,6 +15,20 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+### Changed
+
+- **The viewer draws in FerroUI, the shared FerroHEALTH component library**
+  (#3802). The shell, the navigation, the theme switch, the tables and their
+  pager, the toasts, the alerts, the loading skeletons, the buttons, fields,
+  cards and empty states, the icons and the document highlighter come from
+  `ferrohealth-ui`, the library FerroBRIDGE, FerroFED and FerroTERM share. The
+  viewer keeps its teal and slate. The theme switch offers light, dark and
+  system and is kept in a server cookie the server writes on the page, so the
+  first paint is already in your theme and nothing is kept in browser storage.
+  A listing that can show patient data (the demographic tags, the EHR tags)
+  keeps its page in the screen and out of the URL; the other listings keep
+  `?page=` (now counted from 1) and `?size=` in the URL.
+
 ## [4.3.10] - 2026-10-16
 
 ### Changed

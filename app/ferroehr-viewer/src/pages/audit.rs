@@ -299,7 +299,7 @@ pub fn AuditPage() -> impl IntoView {
 
     view! {
         <Title text="Audit log" />
-        <div class="p-6">
+        <div>
             <PageHeader
                 title="Audit log"
                 subtitle="The ATNA security audit trail: who accessed what, with what outcome (IHE ITI-81 retrieval)."
@@ -463,7 +463,7 @@ fn page_view(page: AuditPage, query: Memo<leptos_router::params::ParamsMap>) -> 
         .into_any();
     let footer = pagination(page.total, page.offset, query);
     view! {
-        {table_shell("Audit records", 
+        {table_shell("Audit records",
             &[
                 "Recorded",
                 "Event",

@@ -105,7 +105,7 @@ pub fn QueryStoredPage() -> impl IntoView {
 
     view! {
         <Title text="Run stored query" />
-        <div class="p-6 space-y-4">
+        <div class="space-y-4">
             <PageHeader
                 title="Run stored query"
                 subtitle="Execute a stored query on the CDR: choose how its version resolves, bind its parameters, page the results."

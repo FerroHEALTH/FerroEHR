@@ -713,7 +713,7 @@ pub fn RelationshipsPage() -> impl IntoView {
     let create = create_card(&source_uid, &source_kind);
     view! {
         <Title text="Relationships" />
-        <div class="p-6">
+        <div>
             <PageHeader
                 title="Party relationships"
                 subtitle="A relationship joins two parties, source to target. It is its own versioned object here — an extension of this CDR, not part of the released openEHR demographic API."
@@ -1063,7 +1063,7 @@ pub fn RelationshipDetailPage() -> impl IntoView {
 
     view! {
         <Title text="Relationship" />
-        <div class="p-6">
+        <div>
             <PageHeader
                 title=heading
                 crumbs=vec![Crumb::new("Relationships", "/demographics/relationship")]
@@ -1500,7 +1500,11 @@ fn inline_table(items: &[InlineRelationship]) -> AnyView {
             .into_any()
         })
         .collect::<Vec<_>>();
-    table_shell("Relationships", &["Type", "Target", "Archetype", "Own uid"], rows.into_any())
+    table_shell(
+        "Relationships",
+        &["Type", "Target", "Archetype", "Own uid"],
+        rows.into_any(),
+    )
 }
 
 #[cfg(test)]

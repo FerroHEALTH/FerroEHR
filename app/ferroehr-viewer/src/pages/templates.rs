@@ -26,8 +26,8 @@ use leptos_meta::Title;
 use crate::adl2::TemplateFamily;
 use crate::admin::AdminAvailability;
 use crate::components::data_table::{
-    CELL, CELL_MONO, ROW, TablePaging, page_rows, paging_from_url, row_total,
-    table_footer, table_shell, table_skeleton,
+    CELL, CELL_MONO, ROW, TablePaging, page_rows, paging_from_url, row_total, table_footer,
+    table_shell, table_skeleton,
 };
 use crate::components::empty_state::EmptyState;
 use crate::components::field::{BTN_DANGER, BTN_PRIMARY, INPUT};
@@ -433,7 +433,7 @@ pub fn TemplatesPage() -> impl IntoView {
 
     view! {
         <Title text="Templates" />
-        <div class="p-6">
+        <div>
             <PageHeader
                 title="Templates"
                 subtitle="Operational templates registered in the CDR, by archetype-model family."

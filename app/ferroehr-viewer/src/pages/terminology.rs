@@ -84,7 +84,7 @@ pub fn TerminologyPage() -> impl IntoView {
 
     view! {
         <Title text="Terminology" />
-        <div id="terminology-screen" class="p-6">
+        <div id="terminology-screen">
             <PageHeader
                 title="Terminology"
                 subtitle="Browse the terminologies the CDR serves: describe one, define a code, expand a value set, and test membership or subsumption."
@@ -756,7 +756,11 @@ fn relationships_table(extract: &TerminologyExtractView) -> AnyView {
         })
         .collect_view()
         .into_any();
-    table_shell("Concept relations", &["Origin", "Relation", "Targets"], rows)
+    table_shell(
+        "Concept relations",
+        &["Origin", "Relation", "Targets"],
+        rows,
+    )
 }
 
 /// The note for a lookup the CDR answered `404` on because it knows no such

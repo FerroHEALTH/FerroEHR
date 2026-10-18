@@ -259,7 +259,7 @@ pub fn DashboardPage() -> impl IntoView {
 
     view! {
         <Title text="Dashboard" />
-        <div class="p-6">
+        <div>
             <PageHeader
                 title="Dashboard"
                 subtitle="Repository overview, query cohorts, and recent commit activity."

@@ -726,7 +726,10 @@ pub(super) fn capability_badge(scope: &'static str, label: &'static str, on: boo
     let (icon, class) = if on {
         (ferrohealth_ui::icon::Glyph::CHECK, "bg-ok-subtle text-ok")
     } else {
-        (ferrohealth_ui::icon::Glyph::X, "bg-danger-subtle text-danger")
+        (
+            ferrohealth_ui::icon::Glyph::X,
+            "bg-danger-subtle text-danger",
+        )
     };
     let rendered_state = if on { "true" } else { "false" };
     view! {

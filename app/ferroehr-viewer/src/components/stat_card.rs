@@ -5,8 +5,8 @@
 //! keeps its own tile until FerroUI's stat card takes a label read at run time
 //! and this look (FerroHEALTH/FerroUI#35).
 
-use leptos::prelude::*;
 use ferrohealth_ui::icon::{Glyph, icon as glyph_icon};
+use leptos::prelude::*;
 
 /// One dashboard metric tile.
 #[expect(
@@ -45,7 +45,7 @@ pub fn StatCard(
         Some(href) => view! {
             <a
                 href=href
-                class="block rounded-card border border-edge bg-raised p-4 shadow-card transition-colors hover:border-accent"
+                class="block rounded-card border border-edge bg-raised p-4 text-ink no-underline shadow-card transition-colors hover:border-accent hover:text-ink"
             >
                 {inner}
             </a>

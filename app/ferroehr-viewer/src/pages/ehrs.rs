@@ -433,7 +433,7 @@ pub fn EhrsPage() -> impl IntoView {
 
     view! {
         <Title text="EHRs" />
-        <div class="p-6">
+        <div>
             <PageHeader
                 title="EHRs"
                 subtitle="Create an EHR, find one by id or subject, or browse the most recent."

@@ -193,7 +193,7 @@ pub fn DemographicContributionPage() -> impl IntoView {
 
     view! {
         <Title text="Contribution" />
-        <div class="p-6">
+        <div>
             <PageHeader
                 title=heading
                 crumbs=vec![Crumb::new("Demographics", super::browse_href(PartyKind::Person))]

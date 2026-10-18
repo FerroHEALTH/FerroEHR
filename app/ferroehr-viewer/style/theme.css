@@ -31,7 +31,7 @@
   --accent: #2dd4bf;
   --accent-hover: #5eead4;
   --accent-ink: #042f2e;
-  --accent-tint: rgb(45 212 191 / 0.12);
+  --accent-tint: rgb(45 212 191 / 0.1);
   --focus: #2dd4bf;
 }
 
@@ -47,7 +47,7 @@
     --accent: #2dd4bf;
     --accent-hover: #5eead4;
     --accent-ink: #042f2e;
-    --accent-tint: rgb(45 212 191 / 0.12);
+    --accent-tint: rgb(45 212 191 / 0.1);
     --focus: #2dd4bf;
   }
 }

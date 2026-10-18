@@ -61,8 +61,8 @@ use leptos::server;
 use serde::{Deserialize, Serialize};
 
 use crate::components::data_table::{
-    CELL, CELL_MONO, ROW, TablePaging, page_rows, paging_in_session, row_total,
-    table_footer, table_shell, table_skeleton,
+    CELL, CELL_MONO, ROW, TablePaging, page_rows, paging_in_session, row_total, table_footer,
+    table_shell, table_skeleton,
 };
 use crate::components::empty_state::EmptyState;
 use crate::components::field::BTN_SECONDARY;

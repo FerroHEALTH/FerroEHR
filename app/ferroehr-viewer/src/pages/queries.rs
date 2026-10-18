@@ -26,8 +26,8 @@ use leptos_router::hooks::use_navigate;
 
 use crate::admin::AdminAvailability;
 use crate::components::data_table::{
-    CELL, CELL_MONO, ROW, TablePaging, page_rows, paging_from_url, row_total,
-    table_footer, table_shell, table_skeleton,
+    CELL, CELL_MONO, ROW, TablePaging, page_rows, paging_from_url, row_total, table_footer,
+    table_shell, table_skeleton,
 };
 use crate::components::empty_state::EmptyState;
 use crate::components::field::{BTN_DANGER, BTN_PRIMARY, BTN_SECONDARY};
@@ -95,7 +95,7 @@ pub fn QueriesPage() -> impl IntoView {
 
     view! {
         <Title text="Stored queries" />
-        <div class="p-6">
+        <div>
             <PageHeader
                 title="Queries"
                 subtitle="The CDR's stored queries, grouped by the namespace in their qualified name."

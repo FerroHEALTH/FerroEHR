@@ -13,11 +13,10 @@ use leptos::prelude::*;
 
 /// The selected tab pill.
 const TAB_ON: &str =
-    "rounded-control px-3 py-1.5 text-sm font-medium bg-accent-subtle text-accent-ink";
+    "rounded-control px-3 py-1.5 text-sm font-medium no-underline bg-accent-subtle text-accent-ink";
 
 /// An unselected tab pill.
-const TAB_OFF: &str =
-    "rounded-control px-3 py-1.5 text-sm font-medium text-ink-muted hover:bg-sunken";
+const TAB_OFF: &str = "rounded-control px-3 py-1.5 text-sm font-medium no-underline text-ink-muted hover:bg-sunken hover:text-ink";
 
 /// One tab of a URL-driven tab strip: a plain anchor to `href`, tinted while
 /// `active`.

@@ -1,7 +1,8 @@
 # `ferroehr-viewer` — the Leptos viewer (BFF over ITS-REST)
 
-A standalone full-stack Leptos 0.8 app (cargo-leptos: `ssr` server binary +
-`hydrate` WASM client) and its own OCI image. It is a **REST client** of the
+A standalone full-stack Leptos 0.8 app (cargo-leptos: the server binary and
+the WASM client, the two halves chosen by compilation target, never by Cargo
+feature) and its own OCI image. It is a **REST client** of the
 CDR — no openEHR spec governs the viewer (our own design / product
 extension); the wire it consumes IS spec-bound (`docs/specs/openehr/ITS-REST/`
 + the served `openapi.json`).
@@ -32,24 +33,28 @@ extension); the wire it consumes IS spec-bound (`docs/specs/openehr/ITS-REST/`
 - Business logic (query-builder AST lowering, criteria validation) lives in
   component-free plain-Rust modules with ordinary unit tests; components
   stay thin.
-- Pins (root `[workspace.dependencies]`): `leptos`/`leptos_axum`/`leptos_meta`/
-  `leptos_router` 0.8.x · `thaw` at a pinned **git rev of main** (the crates.io
-  `0.5.0-beta` lacks `#![recursion_limit = "256"]` and fails plain,
-  non-`erase_components` codegen on rustc 1.96; re-pin to crates.io at 0.5
-  stable) · `leptos-use` 0.19 · `leptos-struct-table` 0.19 · `leptos-chartistry`
-  0.2.3 · `leptos_icons` 0.7.1.
+- **The components are FerroUI's** (`ferrohealth-ui`, pinned exactly in the
+  root `[workspace.dependencies]`): the shell, navigation, theme switch,
+  tables and pager, toasts, alerts, skeletons, buttons, fields, cards, empty
+  states, icons and the highlighter. Its stylesheet and the FerroEHR brand
+  (`style/theme.css`) are served from this origin (`src/server.rs`); the
+  viewer's own Tailwind utilities name FerroUI's roles (`style/tailwind.css`).
+  A component the viewer needs that FerroUI lacks is filed on FerroUI and
+  added there, never built here. Until FerroUI draws them, the dialogs, the
+  scopes drawer, the upload, the charts and the clipboard stay on `thaw` (a
+  pinned git rev of main), `leptos-use` 0.19 and `leptos-chartistry` 0.2.3.
 - **Views are built in `.into_any()`-erased sections** (rules §1): plain cargo
-  builds have no `erase_components`, and monolithic thaw view trees blow rustc's
+  builds have no `erase_components`, and monolithic view trees blow rustc's
   layout-recursion depth in `cargo test` codegen.
-- **Every listing table comes from ONE kit — `components::data_table`**: the
-  table shell, the loading skeleton (`table_skeleton`; never re-declare a
-  per-screen copy), the viewer-wide `PAGE_SIZE`, and the pagination footer
-  (`table_footer`) whose page + window size are URL state (`?page=`/`?size=`,
-  read in SETUP via `paging_from_url` — never inside a `Suspend`, so paging
-  re-renders the window without refetching). The footer's row math
-  (`page_window`/`page_rows`) is pure and unit-tested; the AQL-windowed tables
-  (EHRs, compositions, results) keep their offset controls until the wire
-  reports a total.
+- **Every listing table comes from ONE kit — `components::data_table`**, over
+  FerroUI's table model: the table, the loading skeleton (`table_skeleton`;
+  never re-declare a per-screen copy), the viewer-wide `PAGE_SIZE`, and
+  FerroUI's pager (`table_footer`). A listing that names no patient keeps its
+  page (1-based) and size in the URL (`paging_from_url`); one that can show
+  patient data keeps them in the screen (`paging_in_session`). Both are read
+  in SETUP, never inside a `Suspend`, so paging re-renders the window without
+  refetching. The AQL-windowed tables (EHRs, compositions, results) keep their
+  offset controls until the wire reports a total.
 - **Every AQL result set is charted by ONE kit — `components::results_chart`**
   (both query screens' results panes call it). What the chart shows is decided by
   the component-free, unit-tested `chart_model`: one series per mostly-numeric
@@ -66,7 +71,7 @@ extension); the wire it consumes IS spec-bound (`docs/specs/openehr/ITS-REST/`
   from the server's behaviour; NEVER write a second scope parser here. It is
   reachable on BOTH targets because the crate is taken
   `default-features = false` (the grammar is a dependency-free island; the heavy
-  ITS surfaces ride `openehr-its/full`, which the `ssr` feature adds back) — the
+  ITS surfaces ride `openehr-its/full`, which the server half adds back) — the
   previewer is a pure client-side function, not a server round-trip. The
   presentation model is the component-free, unit-tested `crate::scopes` (grants,
   chips, the master08 diagnosis for a rejected scope, the policy-source copy);
@@ -136,7 +141,7 @@ extension); the wire it consumes IS spec-bound (`docs/specs/openehr/ITS-REST/`
   name the object, name what went wrong (the CDR's own diagnostic verbatim),
   name the next action: `feedback::write_failure_copy` for writes,
   `admin::delete_failure_copy` for the destructive admin ops.
-- **A detailed inline `MessageBar` may stay BESIDE the failure toast** where
+- **A detailed inline alert (`notice::failure_bar`) may stay BESIDE the failure toast** where
   the diagnostic is worth reading line by line (template-upload validation, a
   rejected composition body, the directory conflict banner) — the toast is
   the notification, the inline bar is the detail. Never inline-only: a
@@ -254,9 +259,9 @@ unwinding to WORK, not to be fast. Do not re-file it, and do not silence
 
 ## Gates
 
-`/ui-gates`: clippy on **native (`--features ssr`) and wasm32 (hydrate)**
-targets, `cargo nextest run -p ferroehr-viewer --features ssr` (the
-featureless crate ships nowhere and skips every ssr-gated test), leptosfmt
+`/ui-gates`: clippy on **the host (the server half, `--all-targets`) and
+wasm32 (the browser half, `--lib`)**, `cargo nextest run -p ferroehr-viewer`,
+the contrast test (`tests/it/contrast.rs`), leptosfmt
 (src + tests) + cargo fmt, `bash scripts/cargo-leptos.sh build` (the wrapper,
 never a bare `cargo leptos` — it rewrites `Cargo.lock`, #2877); E2E journeys (the `e2e_*`
 modules under `tests/it/`, skip-with-reason via `UI_E2E_BASE_URL`)

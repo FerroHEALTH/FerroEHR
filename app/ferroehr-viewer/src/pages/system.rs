@@ -314,7 +314,7 @@ pub fn SystemPage() -> impl IntoView {
 
     view! {
         <Title text="System" />
-        <div class="p-6">
+        <div>
             <PageHeader
                 title="System"
                 subtitle="CDR status, the openEHR conformance manifest, SMART discovery, repository usage, the served OpenAPI documents, the redacted runtime configuration, and the manufacturer."

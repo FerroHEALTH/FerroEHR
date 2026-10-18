@@ -194,7 +194,7 @@ pub fn QueryBuilderPage() -> impl IntoView {
 
     view! {
         <Title text="Query builder" />
-        <div class="p-6 space-y-4">
+        <div class="space-y-4">
             <PageHeader
                 title="Query builder"
                 subtitle="Pick a template, walk its paths, and turn data-value leaves into criteria and columns."

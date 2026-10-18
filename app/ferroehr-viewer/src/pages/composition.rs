@@ -735,7 +735,7 @@ pub fn CompositionPage() -> impl IntoView {
 
     view! {
         <Title text="Composition" />
-        <div class="p-6">
+        <div>
             <PageHeader title=Signal::derive(move || title.get()) crumbs=crumbs mono=true />
             {delete_action}
             {toolbar}

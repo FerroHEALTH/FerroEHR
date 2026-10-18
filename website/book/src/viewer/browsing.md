@@ -38,9 +38,9 @@ format.
 ![Template detail](img/templates/template-detail.png)
 
 The list filters as you type, matching a template's id, its concept, or its
-root archetype id, and is paged by the shared footer under the table; rows on
-screen out of how many, previous/next, and 25/50/100 rows per page, all in the
-URL (see [Paging](index.md#paging)). The filter narrows the rows; the footer
+root archetype id, and is paged by the shared pager under the table; rows on
+screen out of how many, the page steps, and 25/50/100 rows per page, all in the
+URL (see [Paging](index.md#paging)). The filter narrows the rows; the pager
 counts what the filter left.
 
 The list also shows each template's root **archetype id**, and the detail

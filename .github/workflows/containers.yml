@@ -379,7 +379,7 @@ jobs:
         # from-source Dockerfile path; this build without cargo-leptos must match.
         env:
           LEPTOS_OUTPUT_NAME: ferroehr-viewer
-        run: cargo auditable build --release --locked --no-default-features --features ssr -p ferroehr-viewer
+        run: cargo auditable build --release --locked -p ferroehr-viewer
 
       - name: Strip
         run: strip target/release/ferroehr-viewer
@@ -426,6 +426,12 @@ jobs:
           # it travels WITH the bundle; the image COPYs it beside the binary,
           # which is where leptos reads it from.
           cp target/release/hash.txt target/site/hash.txt
+
+      - name: Hold the site bundle to its budget (amd64 only)
+        if: matrix.platform == 'amd64'
+        run: |
+          apt-get install -y --no-install-recommends brotli
+          bash scripts/checks/viewer-bundle.sh
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: matrix.platform == 'amd64'

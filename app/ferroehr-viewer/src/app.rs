@@ -45,9 +45,9 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                 // whose base layer then wins over Tailwind's preflight, then
                 // the FerroEHR brand theme over FerroUI's roles.
                 <HashedStylesheet options id="leptos" />
+                <MetaTags />
                 <link rel="stylesheet" href=STYLESHEET_PATH />
                 <link rel="stylesheet" href=THEME_PATH />
-                <MetaTags />
             </head>
             <body>
                 <App />

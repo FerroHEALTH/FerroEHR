@@ -151,7 +151,7 @@ async fn composition_viewer_highlights_and_renders_the_document() {
     // Highlighted is the default view: the canonical JSON member names are
     // tokenized, and the document text itself is unchanged.
     wait_pre_contains(&h, "\"_type\"").await;
-    let key = h.wait_css("pre span.text-syntax-key").await;
+    let key = h.wait_css("pre span.fui-tok-key").await;
     let key_text = key.text().await;
     assert!(
         key_text.starts_with('"'),
@@ -194,7 +194,7 @@ async fn composition_viewer_highlights_and_renders_the_document() {
         .await;
     wait_pre_contains(&h, "\"_type\"").await;
     assert!(
-        !is_present(&h, "pre span.text-syntax-key").await,
+        !is_present(&h, "pre span.fui-tok-key").await,
         "the raw view must not tokenize the document"
     );
     h.shot(3, "raw").await;

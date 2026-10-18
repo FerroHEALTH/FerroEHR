@@ -16,6 +16,8 @@
 
 mod common;
 
+mod contrast;
+
 mod ssr_components;
 mod ssr_login;
 mod ssr_pages;

@@ -37,12 +37,12 @@ leptosfmt --check app/ferroehr-viewer/src app/ferroehr-viewer/tests
 # 2. Clippy — BOTH compilation targets, in the EXACT CI feature shapes
 #    (the featureless crate ships nowhere: neither ssr nor hydrate; the
 #    wasm pass catches server-only deps leaking past the ssr feature gate)
-cargo clippy -p ferroehr-viewer --all-targets --features ssr
-cargo clippy -p ferroehr-viewer --lib --target wasm32-unknown-unknown --no-default-features --features hydrate
+cargo clippy -p ferroehr-viewer --all-targets
+cargo clippy -p ferroehr-viewer --lib --target wasm32-unknown-unknown
 
 # 3. Tests — the ssr shape the crate ships and CI instruments; a
 #    featureless run silently skips every #[cfg(feature = "ssr")] module
-cargo nextest run -p ferroehr-viewer --features ssr
+cargo nextest run -p ferroehr-viewer
 
 # 4. Full build (server bin + WASM + assets) — only when the change
 #    touches the build surface (Cargo.toml, styles, assets, features);

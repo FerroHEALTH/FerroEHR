@@ -72,8 +72,7 @@ pub(crate) async fn ensure_template_present(h: &Harness) -> bool {
     h.wait_css("#template-upload-open").await;
     // Let the list Transition resolve to either a row link or the empty-state
     // message bar before deciding whether an upload is needed.
-    h.wait_css("a[href^='/templates/'], .thaw-message-bar")
-        .await;
+    h.wait_css("a[href^='/templates/'], .fui-alert").await;
     if is_present(h, TEMPLATE_LINK).await {
         return false;
     }
@@ -147,8 +146,7 @@ async fn template_upload_lists_and_inspects_path_catalog() {
         "Templates · FerroEHR Viewer",
         "the shell's Title formatter suffixes every page title"
     );
-    h.wait_css("a[href^='/templates/'], .thaw-message-bar")
-        .await;
+    h.wait_css("a[href^='/templates/'], .fui-alert").await;
     let before = count_matching(&h, "table tbody tr").await;
     println!("template rows before upload: {before}");
     h.shot(1, "templates-before-upload").await;

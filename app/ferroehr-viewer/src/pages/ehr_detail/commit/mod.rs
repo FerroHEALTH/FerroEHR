@@ -791,7 +791,7 @@ fn staging_list(form: CommitForm) -> AnyView {
                 }
             }
         >
-            {table_shell("Staged changes", 
+            {table_shell("Staged changes",
                 &["Change", "Target", "Change type", ""],
                 view! {
                     <For each=move || form.staged.get() key=|change| change.seq let:change>

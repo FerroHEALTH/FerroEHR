@@ -319,7 +319,7 @@ pub fn TemplateDetailPage() -> impl IntoView {
 
     view! {
         <Title text=move || format!("Template · {}", template_id.get()) />
-        <div class="p-6">
+        <div>
             <PageHeader
                 title=template_id
                 crumbs=vec![Crumb::new("Templates", "/templates")]

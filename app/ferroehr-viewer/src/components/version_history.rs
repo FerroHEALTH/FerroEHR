@@ -144,7 +144,8 @@ fn history_table(
         </For>
     }
     .into_any();
-    table_shell("Revision history", 
+    table_shell(
+        "Revision history",
         &["Version", "Committed", "Change type", "Committer", ""],
         rows,
     )

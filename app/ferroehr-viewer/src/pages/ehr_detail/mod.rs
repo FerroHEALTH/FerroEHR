@@ -346,7 +346,7 @@ pub fn EhrDetailPage() -> impl IntoView {
 
     view! {
         <Title text="EHR detail" />
-        <div class="p-6">
+        <div>
             <PageHeader
                 title=Signal::derive(move || heading.get())
                 crumbs=vec![Crumb::new("EHRs", "/ehrs")]

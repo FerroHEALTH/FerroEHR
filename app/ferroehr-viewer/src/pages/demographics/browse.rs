@@ -33,8 +33,8 @@ use leptos_meta::Title;
 use leptos_router::components::{A, Redirect};
 
 use crate::components::data_table::{
-    CELL, CELL_MONO, ROW, TablePaging, page_rows, paging_in_session, row_total,
-    table_footer, table_shell, table_skeleton,
+    CELL, CELL_MONO, ROW, TablePaging, page_rows, paging_in_session, row_total, table_footer,
+    table_shell, table_skeleton,
 };
 use crate::components::empty_state::EmptyState;
 use crate::components::field::{BTN_PRIMARY, BTN_SECONDARY, INPUT, LABEL, TEXTAREA};
@@ -90,7 +90,7 @@ pub fn unknown_kind_view(segment: &str) -> AnyView {
         .collect::<Vec<_>>();
     view! {
         <Title text="Not found" />
-        <div class="p-6">
+        <div>
             <PageHeader title="Unknown party kind" />
             <section class=CARD_PAD id="demographics-unknown-kind">
                 <p class="text-sm text-ink">
@@ -195,7 +195,7 @@ fn browser_screen(kind: PartyKind) -> AnyView {
 
     view! {
         <Title text="Demographics" />
-        <div class="p-6">
+        <div>
             <PageHeader title=kind.plural().to_owned() subtitle=subtitle />
             {switcher}
             {lookup}

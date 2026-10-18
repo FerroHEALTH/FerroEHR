@@ -472,13 +472,8 @@ impl Harness {
         }
         // Evidence gathering, so this one read stays best-effort: panicking
         // here would destroy the report the caller is about to print.
-        let bar = match bounded(
-            "find(.thaw-message-bar)",
-            self.driver.find(By::Css(".thaw-message-bar")),
-        )
-        .await
-        {
-            Ok(inner) => bounded("text(.thaw-message-bar)", inner.text())
+        let bar = match bounded("find(.fui-alert)", self.driver.find(By::Css(".fui-alert"))).await {
+            Ok(inner) => bounded("text(.fui-alert)", inner.text())
                 .await
                 .unwrap_or_default(),
             Err(_) => String::new(),
@@ -1141,7 +1136,7 @@ const UPLOAD_SUBMIT: &str = "#template-upload-submit";
 
 /// The refusal diagnostic, scoped to the MODAL: the template listings render
 /// their own `MessageBar` for an empty result, which is not this one.
-const UPLOAD_DIAGNOSTIC: &str = ".thaw-dialog-surface .thaw-message-bar";
+const UPLOAD_DIAGNOSTIC: &str = ".thaw-dialog-surface .fui-alert";
 
 /// The in-flight line the upload dialog renders while its action is pending
 /// (`src/components/upload_dialog.rs`). It sits inside a `Show`, so its
@@ -1151,7 +1146,7 @@ const UPLOAD_PENDING_LINE: &str =
     "//div[contains(@class, 'thaw-dialog-surface')]//span[normalize-space(text())='Uploading…']";
 
 /// Every toast card currently on screen; each upload outcome raises one.
-const TOAST_CARD: &str = ".thaw-toast-body";
+const TOAST_CARD: &str = ".fui-toast-text";
 
 /// What the upload dialog says about a dispatch, read at one instant.
 ///

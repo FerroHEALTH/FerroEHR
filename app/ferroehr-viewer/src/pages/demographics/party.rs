@@ -565,7 +565,7 @@ fn party_screen(kind: PartyKind, uid: Signal<String>, selected: Memo<String>) ->
 
     view! {
         <Title text="Party" />
-        <div class="p-6">
+        <div>
             <PageHeader
                 title=heading
                 crumbs=vec![

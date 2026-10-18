@@ -231,7 +231,7 @@ pub fn SubscriptionsPage() -> impl IntoView {
 
     view! {
         <Title text="Subscriptions" />
-        <div id="subscriptions-screen" class="p-6">
+        <div id="subscriptions-screen">
             <PageHeader
                 title="Subscriptions"
                 subtitle="The CDR's event subscriptions: the stored filters over its committed-version event stream."

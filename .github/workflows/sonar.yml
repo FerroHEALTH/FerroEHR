@@ -204,7 +204,7 @@ jobs:
       - uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
         with:
           tool: cargo-llvm-cov,cargo-nextest
-      - run: cargo llvm-cov --no-report nextest --locked -p ferroehr-viewer --features ssr --no-tests=pass --profile ci
+      - run: cargo llvm-cov --no-report nextest --locked -p ferroehr-viewer --no-tests=pass --profile ci
       - run: cargo llvm-cov report --lcov --output-path lcov-viewer.info
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
