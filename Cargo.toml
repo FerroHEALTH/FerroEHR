@@ -335,7 +335,11 @@ icondata_core = "0.1"               # the `Icon` type itself (named in component
 wasm-bindgen = "0.2.126"
 wasm-bindgen-futures = "0.4"       # JsFuture for browser-side file reads (compiles on native, runs in wasm)
 console_error_panic_hook = "0.1"
-thirtyfour = "0.37.2"               # E2E WebDriver client (dev-dep of the viewer)
+# E2E WebDriver client (dev-dep of the viewer). Default features off: the
+# `manager` feature downloads and unpacks a WebDriver binary through zip 8
+# (RUSTSEC-2026-0367/0368/0369, #3806); the journeys reach a chromedriver
+# the harness starts.
+thirtyfour = { version = "0.37.2", default-features = false, features = ["reqwest", "rustls", "component", "cdp"] }
 
 # ── Observability (opentelemetry set is lockstep: keep versions equal) ────────
 tracing = "0.1"
