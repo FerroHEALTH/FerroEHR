@@ -37,7 +37,21 @@ workflow refuses a tag that has no matching section here.
   definition grid, a page's delete action sits on its title row, the query
   builder's controls, labels and output choice are FerroUI's, an EHR's subject
   shows once in its header, a tag table drops an empty target-path column, and
-  a refusal no longer repeats "forbidden".
+  a refusal no longer repeats "forbidden". Every JSON or AQL input (the
+  party documents, the EHR status `other_details`, the composition editor,
+  the directory JSON, the staged change, the relationship details, the AQL
+  editor and its parameters, and the template upload) is a highlighted,
+  numbered editor that opens on an indented document, and on a phone every
+  listing shows each row as a card with every column named.
+
+### Security
+
+- `cargo deny` passes again: the viewer's WebDriver test client no longer
+  reaches zip 8.6.0, and the three zip extraction advisories
+  (RUSTSEC-2026-0367, RUSTSEC-2026-0368, RUSTSEC-2026-0369) are recorded as
+  not affecting FerroEHR in the Rust-dependency VEX document, since the one
+  remaining carrier, utoipa-swagger-ui's build script, never calls the
+  extraction APIs they concern (#3806).
 
 ## [4.3.10] - 2026-10-16
 

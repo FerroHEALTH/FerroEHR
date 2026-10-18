@@ -89,3 +89,4 @@
 - [FerroHEALTH is the mother name](ferrohealth-umbrella.md) — family-level docs (manufacturer, EHDS system, CRA overview, licensing) go to the FerroHEALTH book, not FerroEHR's
 - [Podman, not Docker](podman-not-docker.md) — podman for containers and Kubernetes (kind, podman provider); DOCKER_HOST to the podman socket
 - [Agent pushes release tags](agent-pushes-release-tags.md) — create+push the signed vX.Y.Z tag, watch the run, close the milestone, clean branches; owner only merges
+- [FerroUI](ferroui.md) — every console draws in FerroUI; uniform design, shared components, all four consoles move in lockstep with each FerroUI release
