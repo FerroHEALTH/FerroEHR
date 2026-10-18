@@ -135,7 +135,7 @@ brotli-compressed, is over the number below, which it reads from this table.
 |---|---|
 | WebAssembly, brotli-compressed | 1550000 bytes |
 
-The release build on 2026-10-18, on FerroUI 0.1.1 with `thaw`, `leptos-use`
-and `leptos-chartistry` gone, measured 1408591 brotli bytes of WebAssembly
-(6394332 raw); the budget leaves about 10% for growth. Raise it only in the
+The release build on 2026-10-18, on FerroUI 0.1.2 with `thaw`, `leptos-use`
+and `leptos-chartistry` gone, measured 1418452 brotli bytes of WebAssembly;
+the budget leaves about 9% for growth. Raise it only in the
 change that needs the room, with the new measurement.

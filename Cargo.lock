@@ -2856,7 +2856,7 @@ dependencies = [
 [[package]]
 name = "ferrohealth-ui"
 version = "0.1.2"
-source = "git+https://github.com/FerroHEALTH/FerroUI?rev=e68a4577fc8768c7f10897a34ff8372ce9302528#e68a4577fc8768c7f10897a34ff8372ce9302528"
+source = "git+https://github.com/FerroHEALTH/FerroUI?rev=493c5903ee41d7a7a5a7b0dd6009dabba37e265f#493c5903ee41d7a7a5a7b0dd6009dabba37e265f"
 dependencies = [
  "leptos",
  "leptos_router",
