@@ -724,8 +724,8 @@ fn terms_table(extract: &TerminologyExtractView, hook: &'static str) -> AnyView 
                     <td class=CELL_MONO data-term-code=code_hook>
                         {rubric}
                     </td>
-                    <td class=CELL>{language}</td>
-                    <td class=CELL>{preferred}</td>
+                    <td class=CELL data-label="Language">{language}</td>
+                    <td class=CELL data-label="Preferred">{preferred}</td>
                 </tr>
             }
         })
@@ -749,8 +749,8 @@ fn relationships_table(extract: &TerminologyExtractView) -> AnyView {
             view! {
                 <tr class=ROW>
                     <td class=CELL_MONO>{origin}</td>
-                    <td class=CELL>{name}</td>
-                    <td class=CELL_MONO>{targets}</td>
+                    <td class=CELL data-label="Relation">{name}</td>
+                    <td class=CELL_MONO data-label="Targets">{targets}</td>
                 </tr>
             }
         })

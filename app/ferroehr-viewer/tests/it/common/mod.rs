@@ -1489,19 +1489,23 @@ pub(crate) async fn wait_css_value_still(h: &Harness, css: &str, property: &str)
     );
 }
 
-/// Poll until the control at `css` is present and ENABLED.
+/// Poll until the control at `css` is present, ENABLED and not read-only.
 ///
 /// The viewer keeps an edit form inert until the document it edits has been
 /// seeded into it, so this is the condition that makes typing (or saving) safe:
 /// input accepted earlier would be replaced by the seed and the save would then
-/// commit the pre-seed draft.
+/// commit the pre-seed draft. FerroUI's code editor keeps its text area
+/// read-only (not disabled) until the page hydrates and while its form is
+/// unseeded, so both properties are read.
 ///
 /// # Panics
 /// When it never becomes enabled within 15 s, or when the `WebDriver` stops
 /// answering — a stalled driver used to look exactly like an unseeded form.
 pub(crate) async fn wait_enabled(h: &Harness, css: &str) {
     for _ in 0..75 {
-        if read_enabled(h, css).await == Some(true) {
+        if read_enabled(h, css).await == Some(true)
+            && read_prop(h, css, "readOnly").await.as_deref() != Some("true")
+        {
             return;
         }
         tokio::time::sleep(Duration::from_millis(200)).await;
@@ -1591,6 +1595,7 @@ pub(crate) async fn wait_text_suffix(h: &Harness, css: &str, suffix: &str) {
 /// # Panics
 /// On any interaction failure.
 pub(crate) async fn retype(h: &Harness, css: &str, text: &str) {
+    wait_enabled(h, css).await;
     let field = h.wait_css(css).await;
     field.clear().await;
     field.send_keys(text).await;

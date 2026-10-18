@@ -44,7 +44,9 @@ use serde_json::Value;
 
 use crate::components::data_table::{CELL, CELL_MONO, ROW, table_shell};
 use crate::components::empty_state::EmptyState;
-use crate::components::field::{BTN_PRIMARY, BTN_SECONDARY, INPUT, LABEL, SELECT, TEXTAREA};
+use crate::components::field::{
+    BTN_PRIMARY, BTN_SECONDARY, Height, INPUT, LABEL, SELECT, code_field, pretty_json,
+};
 use crate::components::format_view::pretty_body;
 use crate::components::surface::{CARD_PAD, CARD_TITLE, WELL};
 use crate::components::toast::toast_success;
@@ -55,6 +57,7 @@ use crate::pages::ehr_detail::commit::staged::{
 };
 use crate::pages::ehr_detail::status::EhrStatusState;
 use crate::pages::ehrs::{ResultPage, cell_text};
+use ferrohealth_ui::highlight::Language;
 
 /// The noun phrase every commit-failure toast is built around
 /// ([`crate::feedback::write_failure_copy`]).
@@ -436,7 +439,7 @@ fn seed_amend(form: CommitForm, resource: Resource<Result<Option<String>, Viewer
         }
         form.seeded.set(key);
         form.preceding.set(version_uid);
-        form.body.set(body);
+        form.body.set(pretty_json(body));
         form.complaint.set(None);
     });
 }
@@ -741,16 +744,14 @@ fn draft_editor(form: CommitForm, unseeded: Signal<bool>) -> AnyView {
             <label class=LABEL r#for="stage-body">
                 "Document (canonical JSON)"
             </label>
-            <textarea
-                id="stage-body"
-                class=format!("{TEXTAREA} min-h-[14rem]")
-                placeholder="paste the canonical JSON document, or pick a target above to load it…"
-                prop:disabled=move || unseeded.get()
-                prop:value=move || form.body.get()
-                on:input:target=move |ev| form.body.set(ev.target().value())
-            >
-                {form.body.get_untracked()}
-            </textarea>
+            <p class="fui-help">"Paste the canonical JSON document, or pick a target above to load it."</p>
+            {code_field(
+                "stage-body",
+                Language::Json,
+                form.body,
+                Signal::derive(move || unseeded.get()),
+                Height::Document,
+            )}
         </div>
         <div class="flex items-center gap-3">
             <button
@@ -842,9 +843,9 @@ fn staged_row(form: CommitForm, change: &StagedChange) -> AnyView {
     view! {
         <tr class=ROW data-staged=seq.to_string()>
             <td class=CELL>{kind}</td>
-            <td class=CELL_MONO>{target}</td>
-            <td class=CELL>{change_type}</td>
-            <td class=CELL>
+            <td class=CELL_MONO data-label="Target">{target}</td>
+            <td class=CELL data-label="Change type">{change_type}</td>
+            <td class=CELL data-label="Actions">
                 <div class="flex gap-2">
                     <button
                         id=format!("stage-preview-{seq}")

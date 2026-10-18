@@ -29,9 +29,11 @@ use serde_json::Value;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::uid::uid_value_of;
 
-use crate::components::data_table::{CELL, CELL_MONO, ROW, table_shell_stacked, table_skeleton};
+use crate::components::data_table::{CELL, CELL_MONO, ROW, table_shell, table_skeleton};
 use crate::components::empty_state::EmptyState;
-use crate::components::field::{BTN_PRIMARY, BTN_SECONDARY, INPUT, LABEL, SELECT, TEXTAREA};
+use crate::components::field::{
+    BTN_PRIMARY, BTN_SECONDARY, Height, INPUT, LABEL, SELECT, code_field,
+};
 use crate::components::format_view::PaneView;
 use crate::components::surface::{CARD_PAD, CARD_TITLE, WELL};
 use crate::components::toast::toast_success;
@@ -39,6 +41,7 @@ use crate::error::ViewerError;
 use crate::format::ReprFormat;
 use crate::pages::ehr_detail::composition_filter::CompositionFilter;
 use crate::pages::ehrs::{ResultPage, cell_text, ehr_detail_href, paging_controls};
+use ferrohealth_ui::highlight::Language;
 // Server-side helpers, compiled only where the #[server] bodies exist.
 #[cfg(not(target_arch = "wasm32"))]
 use crate::pages::ehr_detail::composition_filter::composition_query;
@@ -430,15 +433,15 @@ fn commit_form(
                     <label class=LABEL r#for="commit-body">
                         "Composition"
                     </label>
-                    <textarea
-                        id="commit-body"
-                        class=format!("{TEXTAREA} min-h-[16rem]")
-                        placeholder="paste the composition document (JSON, XML, or FLAT)…"
-                        prop:value=move || body.get()
-                        on:input:target=move |ev| body.set(ev.target().value())
-                    >
-                        {body.get_untracked()}
-                    </textarea>
+                    <p class="fui-help">"Paste the composition document in the format chosen above."</p>
+                    {move || {
+                        let language = if format.get() == ReprFormat::CanonicalXml {
+                            Language::Xml
+                        } else {
+                            Language::Json
+                        };
+                        code_field("commit-body", language, body, Signal::stored(false), Height::Document)
+                    }}
                 </div>
                 <div class="flex items-center gap-3">
                     <button
@@ -553,7 +556,7 @@ fn compositions_table(
         query,
     );
     view! {
-        {table_shell_stacked("Compositions", &["Composition", "Name", "Template", "Started", "Composer"], body)}
+        {table_shell("Compositions", &["Composition", "Name", "Template", "Started", "Composer"], body)}
         {paging}
     }
     .into_any()

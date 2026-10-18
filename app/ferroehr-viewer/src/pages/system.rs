@@ -486,7 +486,7 @@ fn usage_card() -> AnyView {
                                             <td class=crate::components::data_table::CELL_MONO>
                                                 {template_id}
                                             </td>
-                                            <td class="px-3 py-2 text-right tabular-nums">{count}</td>
+                                            <td class=format!("{} fui-num", crate::components::data_table::CELL) data-label="Compositions">{count}</td>
                                         </tr>
                                     }
                                         .into_any()

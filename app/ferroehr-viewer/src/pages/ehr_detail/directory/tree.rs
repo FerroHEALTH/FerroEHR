@@ -31,7 +31,7 @@ use ferrohealth_ui::widget::tree::{Tree, TreeNode};
 use leptos::prelude::*;
 use serde_json::Value;
 
-use crate::components::field::{BTN_PRIMARY, BTN_SECONDARY, INPUT, TEXTAREA};
+use crate::components::field::{BTN_PRIMARY, BTN_SECONDARY, Height, INPUT, code_field};
 use crate::components::format_view::pretty_body;
 use crate::components::notice::inline_error;
 use crate::components::surface::{CARD_PAD, CARD_TITLE, WELL};
@@ -45,6 +45,7 @@ use crate::pages::ehr_detail::directory::edit::{
 use crate::pages::ehr_detail::directory::{DirectoryState, PickerResource};
 use crate::pages::ehrs::cell_text;
 use crate::uid::container_uid_of;
+use ferrohealth_ui::highlight::Language;
 
 /// A small square icon button (node actions).
 const ICON_BTN: &str = "inline-flex items-center justify-center rounded-control p-1 text-ink-muted hover:bg-sunken hover:text-ink focus:outline-none focus:ring-2 focus:ring-accent";
@@ -362,14 +363,13 @@ pub(in crate::pages::ehr_detail::directory) fn tree_editor(
             </div>
 
             <div class="mt-2 flex flex-col gap-2" class:hidden=move || !editor.advanced.get()>
-                <textarea
-                    id="directory-body"
-                    class=format!("{TEXTAREA} min-h-[16rem]")
-                    prop:value=move || editor.json_draft.get()
-                    on:input:target=move |ev| editor.json_draft.set(ev.target().value())
-                >
-                    {editor.json_draft.get_untracked()}
-                </textarea>
+                {code_field(
+                    "directory-body",
+                    Language::Json,
+                    editor.json_draft,
+                    Signal::stored(false),
+                    Height::Document,
+                )}
                 <div class="flex items-center gap-3">
                     <button type="button" class=BTN_SECONDARY on:click=on_apply_json>
                         {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::CHECK, "14")}

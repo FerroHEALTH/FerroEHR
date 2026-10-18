@@ -48,7 +48,7 @@ use serde_json::Value;
 
 use crate::components::data_table::{CELL, CELL_MONO, ROW, table_shell, table_skeleton};
 use crate::components::empty_state::EmptyState;
-use crate::components::field::{BTN_PRIMARY, INPUT, LABEL, SELECT, TEXTAREA};
+use crate::components::field::{BTN_PRIMARY, Height, INPUT, LABEL, SELECT, code_field};
 use crate::components::format_view::document_section;
 use crate::components::logical_delete::{LogicalDeleteCopy, logical_delete_section};
 use crate::components::notice::inline_error;
@@ -61,6 +61,7 @@ use crate::error::ViewerError;
 use crate::pages::demographics::party::fact_row;
 use crate::pages::demographics::{DemographicResource, PartyKind, party_href, relationship_href};
 use crate::uid::container_uid_of;
+use ferrohealth_ui::highlight::Language;
 
 /// The noun phrase every relationship write-failure toast is built around.
 const RELATIONSHIP_OBJECT: &str = "this relationship";
@@ -798,7 +799,7 @@ fn create_card(source_uid: &str, source_kind: &str) -> AnyView {
     let source_kind_ref = NodeRef::<leptos::html::Select>::new();
     let target_ref = NodeRef::<leptos::html::Input>::new();
     let target_kind_ref = NodeRef::<leptos::html::Select>::new();
-    let details_ref = NodeRef::<leptos::html::Textarea>::new();
+    let details = RwSignal::new(String::new());
     let validation = RwSignal::new(Option::<String>::None);
 
     let create: Action<RelationshipDraft, Result<String, ViewerError>> =
@@ -862,10 +863,7 @@ fn create_card(source_uid: &str, source_kind: &str) -> AnyView {
             source_kind: choice(source_kind_ref),
             target_uid: text(target_ref),
             target_kind: choice(target_kind_ref),
-            details: details_ref
-                .get_untracked()
-                .map(|el| el.value())
-                .unwrap_or_default(),
+            details: details.get_untracked(),
         };
         // The same pure judgement the server function makes, run inline first
         // so a blank field never costs a round trip.
@@ -953,11 +951,13 @@ fn create_card(source_uid: &str, source_kind: &str) -> AnyView {
                     <label class=LABEL r#for="relationship-details">
                         "details (canonical JSON ITEM_STRUCTURE — optional)"
                     </label>
-                    <textarea
-                        id="relationship-details"
-                        class=format!("{TEXTAREA} min-h-[6rem]")
-                        node_ref=details_ref
-                    ></textarea>
+                    {code_field(
+                        "relationship-details",
+                        Language::Json,
+                        details,
+                        Signal::stored(false),
+                        Height::Short,
+                    )}
                 </div>
                 <div class="flex items-center gap-3">
                     <button
@@ -1312,14 +1312,13 @@ fn edit_card(
                     <label class=LABEL r#for="relationship-edit-details">
                         "details (canonical JSON ITEM_STRUCTURE — leave blank to remove)"
                     </label>
-                    <textarea
-                        id="relationship-edit-details"
-                        class=format!("{TEXTAREA} min-h-[8rem]")
-                        prop:value=move || details_draft.get()
-                        on:input:target=move |ev| details_draft.set(ev.target().value())
-                    >
-                        {details_draft.get_untracked()}
-                    </textarea>
+                    {code_field(
+                        "relationship-edit-details",
+                        Language::Json,
+                        details_draft,
+                        Signal::stored(false),
+                        Height::Document,
+                    )}
                 </div>
                 <div class="flex items-center gap-3">
                     <button
@@ -1491,9 +1490,9 @@ fn inline_table(items: &[InlineRelationship]) -> AnyView {
                     <td class=CELL data-inline-relationship=hook>
                         {name}
                     </td>
-                    <td class=CELL>{target}</td>
-                    <td class=CELL_MONO>{archetype}</td>
-                    <td class=CELL_MONO>{uid}</td>
+                    <td class=CELL data-label="Target">{target}</td>
+                    <td class=CELL_MONO data-label="Archetype">{archetype}</td>
+                    <td class=CELL_MONO data-label="Own uid">{uid}</td>
                 </tr>
             }
             .into_any()

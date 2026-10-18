@@ -327,7 +327,6 @@ leptos_router = "0.8.14"
 # own screens.
 ferrohealth-ui = "=0.1.2"
 wasm-bindgen = "0.2.129"
-wasm-bindgen-futures = "0.4"       # JsFuture for browser-side file reads (compiles on native, runs in wasm)
 console_error_panic_hook = "0.1"
 thirtyfour = "0.37.2"               # E2E WebDriver client (dev-dep of the viewer)
 
@@ -475,4 +474,4 @@ codegen-units = 1
 
 [patch.crates-io]
 # TODO(#3802): drop this patch once ferrohealth-ui 0.1.2 is on crates.io.
-ferrohealth-ui = { git = "https://github.com/FerroHEALTH/FerroUI", rev = "493c5903ee41d7a7a5a7b0dd6009dabba37e265f" }
+ferrohealth-ui = { git = "https://github.com/FerroHEALTH/FerroUI", rev = "c0f781d4f858a17902679f1bc5aced888aaae2e8" }

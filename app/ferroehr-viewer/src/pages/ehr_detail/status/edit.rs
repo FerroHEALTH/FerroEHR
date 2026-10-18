@@ -29,10 +29,11 @@
 use leptos::prelude::*;
 use serde_json::Value;
 
-use crate::components::field::{BTN_PRIMARY, LABEL, TEXTAREA};
+use crate::components::field::{BTN_PRIMARY, Height, LABEL, code_field};
 use crate::components::surface::{CARD_PAD, CARD_TITLE, WELL};
 use crate::error::ViewerError;
 use crate::pages::ehr_detail::status::EhrStatusState;
+use ferrohealth_ui::highlight::Language;
 
 /// One dispatched status edit: the target EHR, the `If-Match` version, the
 /// verbatim document the edits apply to, and the three edited values.
@@ -227,10 +228,6 @@ pub(super) fn apply_status_edits(
 /// Every control is DISABLED until [`seed`] has loaded a document into the
 /// form: the card is mounted before the read resolves, and an edit made in it
 /// then would be silently replaced by the seed.
-#[expect(
-    clippy::too_many_lines,
-    reason = "one erased section: the edit card's two toggles + draft + validation + action wiring (rules §1)"
-)]
 pub(super) fn edit_form(
     ehr_id: Signal<String>,
     form: StatusForm,
@@ -315,17 +312,13 @@ pub(super) fn edit_form(
                     <label class=LABEL r#for="status-other-details">
                         "other_details (canonical JSON ITEM_STRUCTURE — leave blank to remove)"
                     </label>
-                    <textarea
-                        id="status-other-details"
-                        class=format!("{TEXTAREA} min-h-[10rem]")
-                        placeholder="{ \"_type\": \"ITEM_TREE\", \"archetype_node_id\": \"at0001\", … }"
-                        disabled=true
-                        prop:disabled=move || unseeded.get()
-                        prop:value=move || form.other_details.get()
-                        on:input:target=move |ev| form.other_details.set(ev.target().value())
-                    >
-                        {form.other_details.get_untracked()}
-                    </textarea>
+                    {code_field(
+                        "status-other-details",
+                        Language::Json,
+                        form.other_details,
+                        Signal::derive(move || unseeded.get()),
+                        Height::Document,
+                    )}
                 </div> <div class="flex items-center gap-3">
                     <button
                         id="status-save"

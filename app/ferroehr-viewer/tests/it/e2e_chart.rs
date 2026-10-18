@@ -30,7 +30,9 @@ use crate::common;
 
 use std::time::Duration;
 
-use common::{Harness, env, find_all, is_visible, login_basic, poll_until, poll_until_for};
+use common::{
+    Harness, env, find_all, is_visible, login_basic, poll_until, poll_until_for, wait_enabled,
+};
 use thirtyfour::prelude::*;
 
 /// A two-numeric-column query over the harness-seeded compositions
@@ -108,6 +110,7 @@ async fn results_chart_groups_series_and_toggles_them() {
     h.goto("/queries/aql").await;
     // Save/Run dispatch is hydrated behaviour (#2285's class).
     h.wait_hydrated().await;
+    wait_enabled(&h, "#aql-editor").await;
     h.wait_css("#aql-editor").await.send_keys(CHART_AQL).await;
     // Run stays DISABLED until the editor's content reaches the signal, so the
     // wait has to include the condition — a click on the disabled button is

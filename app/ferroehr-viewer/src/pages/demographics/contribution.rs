@@ -277,14 +277,14 @@ fn version_row(version: &ContributionVersion) -> AnyView {
     let href = object_href(&version.rm_type, &version_uid);
     let cell = match href {
         Some(href) => view! {
-            <td class=CELL_MONO>
+            <td class=CELL_MONO data-label="Version">
                 <A href=href attr:class="text-accent hover:underline">
                     {shown}
                 </A>
             </td>
         }
         .into_any(),
-        None => view! { <td class=CELL_MONO>{shown}</td> }.into_any(),
+        None => view! { <td class=CELL_MONO data-label="Version">{shown}</td> }.into_any(),
     };
     view! {
         <tr class=ROW>

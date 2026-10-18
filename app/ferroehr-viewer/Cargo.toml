@@ -54,10 +54,6 @@ serde_json.workspace = true
 # no clock access, so it needs no wasm js feature).
 jiff.workspace = true
 
-# JsFuture for the browser-side OPT file read; compiles on both targets, only
-# ever runs in the browser.
-wasm-bindgen-futures.workspace = true
-
 thiserror.workspace = true
 
 # Percent-encoding is ALWAYS the `urlencoding` crate (owner hard rule —

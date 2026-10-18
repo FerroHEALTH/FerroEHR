@@ -27,7 +27,7 @@ use leptos_router::hooks::use_navigate;
 use crate::admin::AdminAvailability;
 use crate::components::data_table::{
     CELL, CELL_MONO, ROW, TablePaging, page_rows, paging_from_url, row_total, table_footer,
-    table_shell_stacked, table_skeleton,
+    table_shell, table_skeleton,
 };
 use crate::components::empty_state::EmptyState;
 use crate::components::field::{BTN_DANGER_SMALL, BTN_PRIMARY, BTN_SECONDARY, BTN_SECONDARY_SMALL};
@@ -273,7 +273,7 @@ fn stored_rows_view(
         Signal::derive(move || total),
     );
     view! {
-        {table_shell_stacked("Stored queries", &["Name", "Version", "Saved", ""], body)}
+        {table_shell("Stored queries", &["Name", "Version", "Saved", ""], body)}
         {footer}
     }
     .into_any()

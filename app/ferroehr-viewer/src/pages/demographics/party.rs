@@ -45,7 +45,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::components::data_table::table_skeleton;
-use crate::components::field::{BTN_PRIMARY, LABEL, TEXTAREA};
+use crate::components::field::{BTN_PRIMARY, Height, LABEL, code_field};
 use crate::components::format_view::document_section;
 use crate::components::logical_delete::{LogicalDeleteCopy, logical_delete_section};
 use crate::components::notice::inline_error;
@@ -57,6 +57,7 @@ use crate::components::toast::toast_success;
 use crate::error::ViewerError;
 use crate::pages::demographics::{PartyKind, browse_href};
 use crate::uid::container_uid_of;
+use ferrohealth_ui::highlight::Language;
 
 /// The noun phrase every party write-failure toast is built around
 /// ([`crate::feedback::write_failure_copy`]).
@@ -871,10 +872,6 @@ pub(super) fn fact_row(label: &'static str, hook: &'static str, value: String) -
 /// Both drafts and the save are DISABLED until [`seed`] has loaded a document
 /// into the form: the card is mounted before the read resolves, and an edit
 /// typed into it then would be silently replaced by the seed.
-#[expect(
-    clippy::too_many_lines,
-    reason = "one erased section: the edit card's two drafts + validation + action wiring (rules §1)"
-)]
 fn edit_form(
     kind: PartyKind,
     form: PartyForm,
@@ -936,32 +933,25 @@ fn edit_form(
                     <label class=LABEL r#for="party-identities">
                         "identities (canonical JSON array of PARTY_IDENTITY — at least one)"
                     </label>
-                    <textarea
-                        id="party-identities"
-                        class=format!("{TEXTAREA} min-h-[10rem]")
-                        disabled=true
-                        prop:disabled=move || unseeded.get()
-                        prop:value=move || form.identities.get()
-                        on:input:target=move |ev| form.identities.set(ev.target().value())
-                    >
-                        {form.identities.get_untracked()}
-                    </textarea>
+                    {code_field(
+                        "party-identities",
+                        Language::Json,
+                        form.identities,
+                        Signal::derive(move || unseeded.get()),
+                        Height::Document,
+                    )}
                 </div>
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="party-details">
                         "details (canonical JSON ITEM_STRUCTURE — leave blank to remove)"
                     </label>
-                    <textarea
-                        id="party-details"
-                        class=format!("{TEXTAREA} min-h-[8rem]")
-                        placeholder="{ \"_type\": \"ITEM_TREE\", \"archetype_node_id\": \"at0001\", … }"
-                        disabled=true
-                        prop:disabled=move || unseeded.get()
-                        prop:value=move || form.details.get()
-                        on:input:target=move |ev| form.details.set(ev.target().value())
-                    >
-                        {form.details.get_untracked()}
-                    </textarea>
+                    {code_field(
+                        "party-details",
+                        Language::Json,
+                        form.details,
+                        Signal::derive(move || unseeded.get()),
+                        Height::Document,
+                    )}
                 </div>
                 <div class="flex items-center gap-3">
                     <button

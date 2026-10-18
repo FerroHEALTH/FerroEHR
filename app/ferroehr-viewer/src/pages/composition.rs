@@ -40,13 +40,14 @@ use serde_json::Value;
 
 use crate::components::empty_state::EmptyState;
 use crate::components::field::{
-    BTN_DANGER, BTN_PRIMARY, BTN_SECONDARY, INPUT, LABEL, SELECT, TEXTAREA,
+    BTN_DANGER, BTN_PRIMARY, BTN_SECONDARY, Height, INPUT, LABEL, SELECT, code_field, pretty_json,
 };
 use crate::components::format_view::{DocumentPane, FormatSelector, PaneView};
 use crate::components::page_header::{Crumb, PageHeader};
 use crate::components::surface::{CARD_PAD, CARD_TITLE, WELL};
 use crate::components::toast::{toast_error, toast_success};
 use crate::components::wire::VersionEntry;
+use ferrohealth_ui::highlight::Language;
 // Server-side pretty-printing happens in the #[server] body only.
 #[cfg(not(target_arch = "wasm32"))]
 use crate::components::format_view::pretty_body;
@@ -935,7 +936,7 @@ fn edit_section(
             && format.get() == ReprFormat::CanonicalJson
             && let Some(Ok(Some(current))) = document.get()
         {
-            editor_body.set(current);
+            editor_body.set(pretty_json(current));
         }
         edit_open.set(opening);
     };
@@ -974,15 +975,16 @@ fn edit_section(
                         <p class="text-sm text-ink-muted">"Switch to canonical JSON to edit."</p>
                     </div>
                     <div class:hidden=move || !is_json() class="flex flex-col gap-3">
-                        <textarea
-                            id="edit-body"
-                            class=format!("{TEXTAREA} min-h-[16rem]")
-                            placeholder="edit the composition document…"
-                            prop:value=move || editor_body.get()
-                            on:input:target=move |ev| editor_body.set(ev.target().value())
-                        >
-                            {editor_body.get_untracked()}
-                        </textarea>
+                        <label class=LABEL r#for="edit-body">
+                            "Composition (canonical JSON)"
+                        </label>
+                        {code_field(
+                            "edit-body",
+                            Language::Json,
+                            editor_body,
+                            Signal::stored(false),
+                            Height::Document,
+                        )}
                         <div class="flex items-center gap-3">
                             <button
                                 id="edit-commit"

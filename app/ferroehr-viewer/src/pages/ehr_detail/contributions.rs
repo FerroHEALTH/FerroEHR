@@ -19,7 +19,7 @@ use serde_json::Value;
 
 use crate::activity::ActivityPoint;
 use crate::components::activity_chart::activity_chart;
-use crate::components::data_table::{CELL, CELL_MONO, ROW, table_shell_stacked, table_skeleton};
+use crate::components::data_table::{CELL, CELL_MONO, ROW, table_shell, table_skeleton};
 use crate::components::empty_state::EmptyState;
 use crate::components::field::{BTN_SECONDARY, INPUT, LABEL};
 use crate::components::format_view::DocumentPane;
@@ -349,7 +349,7 @@ fn contributions_table(page: &ContributionPage, offset: RwSignal<u32>) -> AnyVie
         .into_any()
     });
     view! {
-        {table_shell_stacked("Contributions", &["Contribution", "Committed", "Committer", "Change type"], body)}
+        {table_shell("Contributions", &["Contribution", "Committed", "Committer", "Change type"], body)}
         <p id="contribution-total" class="mt-2 text-xs text-ink-muted">
             {total}
             " contribution(s) total"

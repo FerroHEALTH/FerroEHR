@@ -494,13 +494,13 @@ fn row_view(row: AuditRow) -> impl IntoView {
     view! {
         <tr class=ROW>
             <td class=CELL_MONO>{row.recorded}</td>
-            <td class=CELL>{event}</td>
-            <td class=CELL_MONO>{row.operation}</td>
-            <td class=outcome_class>{row.outcome}</td>
-            <td class=CELL_MONO>{row.principal}</td>
-            <td class=CELL_MONO>{row.patient}</td>
-            <td class=CELL_MONO>{row.resource}</td>
-            <td class=CELL>
+            <td class=CELL data-label="Event">{event}</td>
+            <td class=CELL_MONO data-label="Operation">{row.operation}</td>
+            <td class=outcome_class data-label="Outcome">{row.outcome}</td>
+            <td class=CELL_MONO data-label="Principal">{row.principal}</td>
+            <td class=CELL_MONO data-label="Patient">{row.patient}</td>
+            <td class=CELL_MONO data-label="Resource">{row.resource}</td>
+            <td class=CELL data-label="Record">
                 <details>
                     <summary class="cursor-pointer text-accent hover:underline text-xs">
                         "view"

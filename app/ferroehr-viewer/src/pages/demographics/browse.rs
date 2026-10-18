@@ -37,7 +37,7 @@ use crate::components::data_table::{
     table_shell, table_skeleton,
 };
 use crate::components::empty_state::EmptyState;
-use crate::components::field::{BTN_PRIMARY, BTN_SECONDARY, INPUT, LABEL, TEXTAREA};
+use crate::components::field::{BTN_PRIMARY, BTN_SECONDARY, Height, INPUT, LABEL, code_field};
 use crate::components::item_tags::{ItemTagRow, tag_filter_form};
 use crate::components::notice::inline_error;
 use crate::components::page_header::PageHeader;
@@ -47,6 +47,7 @@ use crate::error::ViewerError;
 use crate::pages::demographics::tags::list_demographic_tags;
 use crate::pages::demographics::{PartyKind, browse_href, party_href, resolve_party_kind};
 use crate::uid::container_uid_of;
+use ferrohealth_ui::highlight::Language;
 
 /// `/demographics` — the section's entry point, which opens the default kind's
 /// browser.
@@ -383,11 +384,11 @@ pub fn minimal_party_body(kind: PartyKind) -> String {
 /// The body is the operator's own canonical JSON, sent verbatim: a create form
 /// that assembled a party from viewer-side fields would have to invent the
 /// mandatory ones, and a party document is exactly what this screen must not
-/// re-model. The textarea is UNCONTROLLED with the skeleton as its child text,
-/// so the server and the client render identical markup and typing before
-/// hydration is never wiped.
+/// re-model. The document opens on the skeleton in FerroUI's highlighted
+/// editor, which the server draws with the same text and which takes no
+/// keystroke before the page hydrates.
 fn create_section(kind: PartyKind, toaster: ferrohealth_ui::widget::toast::Toasts) -> AnyView {
-    let body_ref = NodeRef::<leptos::html::Textarea>::new();
+    let body = RwSignal::new(minimal_party_body(kind));
     let create: Action<String, Result<String, ViewerError>> = Action::new(move |body: &String| {
         let body = body.clone();
         async move { super::party::create_party(kind.segment().to_owned(), body).await }
@@ -418,15 +419,11 @@ fn create_section(kind: PartyKind, toaster: ferrohealth_ui::widget::toast::Toast
     });
 
     let on_click = move |_| {
-        let body = body_ref
-            .get_untracked()
-            .map(|el| el.value())
-            .unwrap_or_default();
+        let body = body.get_untracked();
         if !body.trim().is_empty() {
             create.dispatch(body);
         }
     };
-    let skeleton = minimal_party_body(kind);
     view! {
         <section class=format!("{CARD_PAD} mb-6") id="party-create">
             <h2 class=CARD_TITLE>{format!("Create a {}", kind.rm_type())}</h2>
@@ -436,13 +433,13 @@ fn create_section(kind: PartyKind, toaster: ferrohealth_ui::widget::toast::Toast
             <label class=LABEL r#for="party-create-body">
                 {format!("{} document (canonical JSON)", kind.rm_type())}
             </label>
-            <textarea
-                id="party-create-body"
-                class=format!("{TEXTAREA} mt-1 min-h-[18rem]")
-                node_ref=body_ref
-            >
-                {skeleton}
-            </textarea>
+            {code_field(
+                "party-create-body",
+                Language::Json,
+                body,
+                Signal::stored(false),
+                Height::Document,
+            )}
             <div class="mt-3 flex items-center gap-3">
                 <button
                     id="party-create-submit"
@@ -622,10 +619,10 @@ fn tag_index_row(
     view! {
         <tr class=ROW>
             <td class=CELL_MONO>{key}</td>
-            <td class=CELL>{value}</td>
-            <td class=CELL_MONO>{target_path}</td>
-            <td class=CELL_MONO>{shown_target}</td>
-            <td class=CELL>
+            <td class=CELL data-label="Value">{value}</td>
+            <td class=CELL_MONO data-label="Target path">{target_path}</td>
+            <td class=CELL_MONO data-label="Target">{shown_target}</td>
+            <td class=CELL data-label="Actions">
                 <button
                     type="button"
                     class=BTN_SECONDARY

@@ -40,7 +40,7 @@ use leptos_router::components::A;
 use leptos_router::hooks::use_query_map;
 
 use crate::components::confirm_dialog::ConfirmDialog;
-use crate::components::data_table::{CELL, CELL_MONO, ROW, table_shell};
+use crate::components::data_table::{CELL, CELL_MONO, ROW, table_shell, table_shell_unstacked};
 use crate::components::field::{BTN_PRIMARY, BTN_SECONDARY, INPUT, SELECT};
 use crate::components::notice::inline_error;
 use crate::components::page_header::PageHeader;
@@ -218,12 +218,12 @@ fn readiness_body(view: ReadinessView) -> AnyView {
                 } else {
                     component.detail
                 };
-                view! { <td class=CELL>{text}</td> }
+                view! { <td class=CELL data-label="Detail">{text}</td> }
             });
             view! {
                 <tr class=ROW>
                     <td class=CELL_MONO>{component.name}</td>
-                    <td class=CELL>{pill}</td>
+                    <td class=CELL data-label="Status">{pill}</td>
                     {detail}
                 </tr>
             }
@@ -238,7 +238,7 @@ fn readiness_body(view: ReadinessView) -> AnyView {
             rows,
         )
     } else {
-        table_shell("Health indicators", &["Indicator", "Status"], rows)
+        table_shell_unstacked("Health indicators", &["Indicator", "Status"], rows)
     };
     let scope = (!detailed).then(|| {
         view! {
@@ -482,7 +482,7 @@ fn metric_detail_body(detail: MetricDetailView) -> AnyView {
             view! {
                 <tr class=ROW>
                     <td class=CELL_MONO>{labels}</td>
-                    <td class="px-3 py-2 text-right tabular-nums">{value}</td>
+                    <td class=format!("{CELL} fui-num") data-label="Value">{value}</td>
                 </tr>
             }
             .into_any()

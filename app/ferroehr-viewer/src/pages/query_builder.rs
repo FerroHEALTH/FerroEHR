@@ -2420,10 +2420,13 @@ pub(crate) fn results_view(page: &ResultPage, is_count: bool) -> AnyView {
             (key, row.clone())
         })
         .collect::<Vec<_>>();
+    let labels = std::sync::Arc::new(page.columns.clone());
     let body = view! {
-        <For each=move || rows.clone() key=|(k, _)| k.clone() let:entry>
-            {result_row(&entry.1)}
-        </For>
+        <For
+            each=move || rows.clone()
+            key=|(k, _)| k.clone()
+            children=move |entry: (String, Vec<serde_json::Value>)| result_row(&entry.1, &labels)
+        />
     }
     .into_any();
     let table = table_shell("Query results", &header_refs, body);
@@ -2449,13 +2452,16 @@ pub(crate) fn results_view(page: &ResultPage, is_count: bool) -> AnyView {
     .into_any()
 }
 
-/// One generic result row (all cells rendered as plain text).
-fn result_row(row: &[serde_json::Value]) -> AnyView {
+/// One generic result row (all cells rendered as plain text), every cell
+/// after the first named by its column so a phone stacks the row as a card.
+fn result_row(row: &[serde_json::Value], labels: &[String]) -> AnyView {
     let cells = row
         .iter()
-        .map(|value| {
+        .enumerate()
+        .map(|(i, value)| {
             let text = cell_text(value);
-            view! { <td class=CELL>{text}</td> }
+            let label = (i > 0).then(|| labels.get(i).cloned().unwrap_or_default());
+            view! { <td class=CELL data-label=label>{text}</td> }
         })
         .collect::<Vec<_>>();
     view! { <tr class=ROW>{cells}</tr> }.into_any()

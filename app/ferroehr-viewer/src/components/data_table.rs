@@ -18,7 +18,9 @@
 
 use ferrohealth_ui::table::model::Noun;
 use ferrohealth_ui::table::model::{DEFAULT_SIZE, Paging, Window, href};
-use ferrohealth_ui::table::view::{Body, Column, DataTable, Listing, data_table, link_pager};
+use ferrohealth_ui::table::view::{
+    Body, Column, DataTable, Listing, data_table, data_table_unstacked, link_pager,
+};
 use ferrohealth_ui::widget::pager::session_pager;
 use leptos::prelude::*;
 use leptos_router::params::ParamsMap;
@@ -40,17 +42,18 @@ pub const CELL_MONO: &str = "align-top fui-mono";
 /// same size.
 pub const PAGE_SIZE: u32 = DEFAULT_SIZE;
 
-/// FerroUI's data table around pre-rendered `<tr>` rows, named `caption`.
+/// FerroUI's data table around pre-rendered `<tr>` rows, named `caption`,
+/// its rows stacked as cards below 40rem.
 ///
 /// The headers are text known only at run time for a result set, so each
 /// column is an owned one; FerroUI writes `scope="col"` on every header and an
 /// explicit `<tbody>` (hydration correctness: browsers insert one otherwise).
+/// Every body cell but the row's first carries `data-label` (its column's
+/// name), which a stacked card shows beside the value; the first cell heads
+/// the card.
 #[must_use]
 pub fn table_shell(caption: &str, headers: &[&str], body: AnyView) -> AnyView {
-    let columns: Vec<Column> = headers
-        .iter()
-        .map(|header| Column::owned(*header, *header))
-        .collect();
+    let columns = owned_columns(headers);
     data_table(DataTable {
         caption,
         columns: &columns,
@@ -61,17 +64,12 @@ pub fn table_shell(caption: &str, headers: &[&str], body: AnyView) -> AnyView {
     .into_any()
 }
 
-/// The table [`table_shell`] draws, its rows stacked as cards on a phone.
-///
-/// A cell that carries `data-label` (its column's name) shows the name beside
-/// its value below 40rem; the row's first cell, with none, heads the card.
+/// The table [`table_shell`] draws, kept a grid at every width: for a small
+/// table of two short columns that fits a phone as it is.
 #[must_use]
-pub fn table_shell_stacked(caption: &str, headers: &[&str], body: AnyView) -> AnyView {
-    let columns: Vec<Column> = headers
-        .iter()
-        .map(|header| Column::owned(*header, *header))
-        .collect();
-    ferrohealth_ui::table::view::data_table_stacked(DataTable {
+pub fn table_shell_unstacked(caption: &str, headers: &[&str], body: AnyView) -> AnyView {
+    let columns = owned_columns(headers);
+    data_table_unstacked(DataTable {
         caption,
         columns: &columns,
         sort: None,
@@ -79,6 +77,14 @@ pub fn table_shell_stacked(caption: &str, headers: &[&str], body: AnyView) -> An
         body: Body::Rows(body),
     })
     .into_any()
+}
+
+/// The owned columns of `headers`.
+fn owned_columns(headers: &[&str]) -> Vec<Column> {
+    headers
+        .iter()
+        .map(|header| Column::owned(*header, *header))
+        .collect()
 }
 
 /// The `<Transition>`/`<Suspense>` fallback every listing shares: FerroUI's

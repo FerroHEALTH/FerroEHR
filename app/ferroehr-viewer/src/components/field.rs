@@ -10,8 +10,10 @@
 //! is the one assembled control: FerroUI's labelled field around a plain text
 //! input bound to a signal, which the administration forms are made of.
 
+use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::view::button::Variant;
 use ferrohealth_ui::view::form;
+use ferrohealth_ui::widget::editor::{Editor, code_editor};
 use leptos::prelude::*;
 
 /// A single-line text input.
@@ -79,4 +81,76 @@ pub fn text_field(
         </div>
     }
     .into_any()
+}
+
+/// How tall a [`code_field`] stands.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Height {
+    /// A document: at least 16rem.
+    Document,
+    /// A short value of a few lines, such as a parameter object: 6rem.
+    Short,
+}
+
+/// FerroUI's highlighted, numbered editor over `value`, its text area `id`
+/// (a `<label for=id>` names it), highlighted as `language`.
+///
+/// The text area is read-only until the page hydrates (FerroUI's editor
+/// takes no keystroke it would lose) and while `disabled` reads true.
+#[must_use]
+pub fn code_field(
+    id: &'static str,
+    language: Language,
+    value: RwSignal<String>,
+    disabled: Signal<bool>,
+    height: Height,
+) -> AnyView {
+    let hydrated = RwSignal::new(false);
+    Effect::new(move |_| hydrated.set(true));
+    let editor = code_editor(
+        Editor {
+            id,
+            language,
+            text: value.into(),
+            marks: Signal::stored(Vec::new()),
+            editable: Signal::derive(move || hydrated.get() && !disabled.get()),
+        },
+        move |text| value.set(text),
+    );
+    match height {
+        Height::Document => editor,
+        Height::Short => view! { <div class="fui-editor-short">{editor}</div> }.into_any(),
+    }
+}
+
+/// `text` pretty-printed when it is a JSON document, else as it stands, so
+/// an editor opens on an indented document whatever the server sent.
+#[must_use]
+#[expect(
+    clippy::disallowed_types,
+    reason = "the editor shows the CDR JSON wire as text; the document is parsed only to be \
+              re-indented, never read (#1694)"
+)]
+pub fn pretty_json(text: String) -> String {
+    // NOTE: no specification governs this: our own design. A text that is not
+    // JSON (XML, FLAT, a draft) is legitimately not of this form and stays.
+    serde_json::from_str::<serde_json::Value>(&text)
+        .ok()
+        .and_then(|value| serde_json::to_string_pretty(&value).ok())
+        .unwrap_or(text)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::pretty_json;
+
+    #[test]
+    fn a_json_document_is_indented_and_anything_else_kept() {
+        assert_eq!(
+            "{\n  \"_type\": \"ITEM_TREE\",\n  \"a\": 1\n}",
+            pretty_json(String::from(r#"{"_type":"ITEM_TREE","a":1}"#))
+        );
+        assert_eq!("<x/>", pretty_json(String::from("<x/>")));
+        assert_eq!("", pretty_json(String::new()));
+    }
 }

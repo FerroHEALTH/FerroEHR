@@ -685,6 +685,7 @@ async fn capture_documentation_screenshots() {
     // Raw AQL: run a data query — results table + export buttons, then the
     // chart view (the seeded quantity magnitudes over the row order).
     h.goto("/queries/aql").await;
+    wait_enabled(&h, "#aql-editor").await;
     h.wait_css("#aql-editor")
         .await
         .send_keys(

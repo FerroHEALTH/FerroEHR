@@ -21,7 +21,7 @@ use leptos_meta::Title;
 use leptos_router::hooks::use_query_map;
 
 use crate::components::data_table::table_skeleton;
-use crate::components::field::{BTN_PRIMARY, BTN_SECONDARY, LABEL, TEXTAREA};
+use crate::components::field::{BTN_PRIMARY, BTN_SECONDARY, Height, LABEL, code_field};
 use crate::components::page_header::{Crumb, PageHeader};
 use crate::components::surface::CARD_PAD;
 use crate::components::toast::toast_success;
@@ -32,6 +32,7 @@ use crate::pages::query_builder::{
 };
 use crate::queries_api::{fetch_stored_query, run_aql, store_query, validate_aql};
 use crate::query_namespace::{next_minor, qualify, split_qualified, split_query_ref};
+use ferrohealth_ui::highlight::Language;
 
 /// One stored query as `?load=` fetched it: its qualified name, the version it
 /// was read at, and its AQL. Named because the resource, its status section,
@@ -306,15 +307,7 @@ fn editor_section(
                 <label class=LABEL r#for="aql-editor">
                     "AQL"
                 </label>
-                <textarea
-                    id="aql-editor"
-                    class=format!("{TEXTAREA} h-40")
-                    placeholder="SELECT c FROM EHR e CONTAINS COMPOSITION c"
-                    prop:value=move || aql.get()
-                    on:input:target=move |ev| aql.set(ev.target().value())
-                >
-                    {aql.get_untracked()}
-                </textarea>
+                {code_field("aql-editor", Language::Aql, aql, Signal::stored(false), Height::Short)}
                 <div class="flex items-center gap-3">
                     <button
                         type="button"
@@ -364,15 +357,7 @@ fn parameters_section(params: RwSignal<String>) -> AnyView {
                 <label class=LABEL r#for="aql-params">
                     "Parameters (JSON object)"
                 </label>
-                <textarea
-                    id="aql-params"
-                    class=format!("{TEXTAREA} h-24")
-                    placeholder="{\"ehr_id\": \"...\"}"
-                    prop:value=move || params.get()
-                    on:input:target=move |ev| params.set(ev.target().value())
-                >
-                    {params.get_untracked()}
-                </textarea>
+                {code_field("aql-params", Language::Json, params, Signal::stored(false), Height::Short)}
             </div>
         </section>
     }

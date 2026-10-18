@@ -589,22 +589,22 @@ fn row_view(
                     {summary}
                 </div>
             </td>
-            <td class=CELL_MONO data-subscription-cell="kind">
+            <td class=CELL_MONO data-label="Kind" data-subscription-cell="kind">
                 {predicate_label(&row.kind)}
             </td>
-            <td class=CELL_MONO data-subscription-cell="change-type">
+            <td class=CELL_MONO data-label="Change type" data-subscription-cell="change-type">
                 {predicate_label(&row.change_type)}
             </td>
-            <td class=CELL_MONO data-subscription-cell="template">
+            <td class=CELL_MONO data-label="Template" data-subscription-cell="template">
                 {predicate_label(&row.template_id)}
             </td>
-            <td class=CELL>
+            <td class=CELL data-label="State">
                 <span class=state_class data-subscription-state=state_value>
                     {state}
                 </span>
             </td>
-            <td class=CELL_MONO>{row.created_at}</td>
-            <td class=ferrohealth_ui::table::view::ACTIONS>
+            <td class=CELL_MONO data-label="Created">{row.created_at}</td>
+            <td class=ferrohealth_ui::table::view::ACTIONS data-label="Actions">
                 <div class="flex justify-end gap-2">
                     <button
                         type="button"
