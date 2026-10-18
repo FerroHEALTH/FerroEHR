@@ -183,6 +183,7 @@ fn cdr_delete_dialog(
             title="Delete stored query from the CDR"
             message=message
             confirm_label="Delete from CDR"
+            dialog_id="stored-query-delete-confirm-dialog"
             confirm_id="stored-query-delete-confirm"
             on_cancel=Callback::new(move |()| pending_delete.set(None))
             on_confirm=Callback::new(move |()| {
@@ -241,7 +242,7 @@ fn stored_rows_view(
     if rows.is_empty() {
         return view! {
             <EmptyState
-                icon=ferrohealth_ui::icon::Glyph::SEARCH
+                icon=ferrohealth_ui::icon::Glyph::SEARCH_CODE
                 message="No stored queries"
                 hint="Build one in the query builder, or write raw AQL, then save it."
             />
@@ -266,7 +267,8 @@ fn stored_rows_view(
     .into_any();
     let footer = table_footer(
         "/queries",
-        "stored queries",
+        "Stored query pages",
+        ferrohealth_ui::table::model::Noun::new("stored query", "stored queries"),
         paging,
         Signal::derive(move || total),
     );
@@ -437,7 +439,7 @@ fn detail_panel(aql: String) -> AnyView {
                     "Run as ad-hoc AQL"
                 </button>
             </div>
-            <DocumentPane body=body />
+            <DocumentPane id="stored-query-pane" body=body />
         </div>
     }
     .into_any()

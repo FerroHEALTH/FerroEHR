@@ -36,11 +36,11 @@ async fn login_basic_authenticates_and_rejects_bad_credentials() {
     // Wrong password first: error surface, still on /login.
     h.goto("/login").await;
     h.shot(1, "login-form").await;
-    h.wait_css("#login-username")
+    h.wait_css("#sign-in-username")
         .await
         .send_keys("ferroehr")
         .await;
-    h.wait_css("#login-password")
+    h.wait_css("#sign-in-password")
         .await
         .send_keys("definitely-wrong")
         .await;
@@ -55,7 +55,7 @@ async fn login_basic_authenticates_and_rejects_bad_credentials() {
     // Right credentials: dashboard + chrome.
     login_basic(&h).await;
     h.shot(3, "dashboard-after-login").await;
-    let footer = h.wait_css("footer").await.text().await;
+    let footer = h.wait_css(common::SHELL_FOOTER).await.text().await;
     assert!(!footer.is_empty(), "authenticated footer renders");
     h.assert_console_clean(&["401", "Failed to load resource"])
         .await;
@@ -83,7 +83,7 @@ async fn login_oidc_round_trips_through_keycloak() {
     h.wait_css("#password").await.send_keys(&pass).await;
     h.wait_css("#kc-login").await.click().await;
     // Back on the viewer, authenticated.
-    h.wait_css("footer").await;
+    h.wait_css(common::SHELL_FOOTER).await;
     h.shot(2, "viewer-after-oidc").await;
     let url = h.current_url().await;
     assert!(
@@ -123,7 +123,7 @@ async fn unauthenticated_deep_link_redirects_to_login() {
     };
     h.goto("/system").await;
     h.wait_url_contains("/login").await;
-    h.wait_css("#login-username").await;
+    h.wait_css("#sign-in-username").await;
     h.shot(1, "redirected-to-login").await;
     h.assert_console_clean(&["401", "Failed to load resource"])
         .await;

@@ -534,7 +534,10 @@ async fn the_compositions_tab_pages_by_offset_and_keeps_its_tab_and_filter() {
 
     // Forward: the offset lands in the URL, the window moves to the last row,
     // and BOTH the tab and the filter ride along.
-    h.wait_css("a[data-page='next']").await.click().await;
+    h.wait_xpath("//nav[contains(@class, 'fui-pager')]//a[contains(., 'Next')]")
+        .await
+        .click()
+        .await;
     h.wait_url_contains("offset=25").await;
     let second = wait_attr_change(&h, rows, "href", &first).await;
     wait_link_count(&h, rows, 1).await;
@@ -561,7 +564,10 @@ async fn the_compositions_tab_pages_by_offset_and_keeps_its_tab_and_filter() {
 
     // Back: the first page writes the offset as its ABSENCE, the original
     // window returns, and the tab + filter survive this direction too.
-    h.wait_css("a[data-page='prev']").await.click().await;
+    h.wait_xpath("//nav[contains(@class, 'fui-pager')]//a[contains(., 'Previous')]")
+        .await
+        .click()
+        .await;
     h.wait_url_not_contains("offset=").await;
     let back = wait_attr_change(&h, rows, "href", &second).await;
     assert_eq!(back, first, "paging back must restore the first window");
@@ -614,12 +620,18 @@ async fn the_ehr_finder_pages_by_offset() {
     let first = wait_attr(&h, rows, "href").await;
     h.shot(1, "ehrs-first-page").await;
 
-    h.wait_css("a[data-page='next']").await.click().await;
+    h.wait_xpath("//nav[contains(@class, 'fui-pager')]//a[contains(., 'Next')]")
+        .await
+        .click()
+        .await;
     h.wait_url_contains("offset=25").await;
     let second = wait_attr_change(&h, rows, "href", &first).await;
     h.shot(2, "ehrs-second-page").await;
 
-    h.wait_css("a[data-page='prev']").await.click().await;
+    h.wait_xpath("//nav[contains(@class, 'fui-pager')]//a[contains(., 'Previous')]")
+        .await
+        .click()
+        .await;
     h.wait_url_not_contains("offset=").await;
     let back = wait_attr_change(&h, rows, "href", &second).await;
     assert_eq!(back, first, "paging back must restore the first window");

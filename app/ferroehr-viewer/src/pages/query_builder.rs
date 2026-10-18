@@ -2389,7 +2389,7 @@ pub(crate) fn results_view(page: &ResultPage, is_count: bool) -> AnyView {
     if page.rows.is_empty() {
         return view! {
             <EmptyState
-                icon=ferrohealth_ui::icon::Glyph::SEARCH
+                icon=ferrohealth_ui::icon::Glyph::SEARCH_X
                 message="No rows"
                 hint="The query ran and matched nothing — widen a condition or clear a filter."
             />

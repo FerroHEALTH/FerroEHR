@@ -25,6 +25,8 @@
               (#1694)"
 )]
 
+use ferrohealth_ui::table::model::{Noun, OpenWindow, Paging};
+use ferrohealth_ui::table::view::{Listing, link_open_pager};
 use leptos::prelude::*;
 use leptos::{component, server};
 use leptos_meta::Title;
@@ -472,7 +474,7 @@ fn create_ehr_section(toaster: ferrohealth_ui::widget::toast::Toasts) -> AnyView
     });
 
     // Report the outcome and, on success, navigate to the new EHR. Both are
-    // outside-world side-effects (the router, the thaw toaster), so an Effect
+    // outside-world side-effects (the router, the toast region), so an Effect
     // is their correct home; it never runs on the server pass. The route
     // instance unmounts on navigation, cleaning the Effect up. Failure toasts
     // too (the viewer's mutation-feedback rule); the CDR's validation
@@ -836,7 +838,13 @@ fn ehrs_table(page: &ResultPage, query: Memo<leptos_router::params::ParamsMap>) 
         </For>
     }
     .into_any();
-    let paging = paging_controls(page.offset, page.rows.len(), "/ehrs", query);
+    let paging = paging_controls(
+        page.offset,
+        page.rows.len(),
+        "/ehrs",
+        Noun::new("EHR", "EHRs"),
+        query,
+    );
     view! {
         {table_shell("EHRs", &["EHR ID", "Created"], body)}
         {paging}
@@ -871,59 +879,49 @@ fn ehrs_row(row: &[Value]) -> AnyView {
     view! { <tr class=ROW>{cells}</tr> }.into_any()
 }
 
-/// Prev/next paging links for an AQL-paged table at `base` (e.g. `/ehrs`).
-/// Prev appears when `offset > 0`; next appears when the page is full (there
-/// may be more). Offsets use saturating arithmetic.
+/// FerroUI's pager for an AQL-paged table at `base` (e.g. `/ehrs`), whose
+/// total the CDR does not report: Previous when `offset > 0`, Next when the
+/// page came back full (there may be more), and the range with no total.
 ///
 /// `query` is the screen's whole query map, so a page link carries every OTHER
 /// parameter across — the tab a table sits on, the filters that produced it —
 /// instead of navigating back to a bare path. Encoding is the router's own
 /// [`ParamsMap::to_query_string`], never a hand-rolled codec, and the default
-/// offset is written as its ABSENCE so the first page's URL stays clean.
+/// offset is written as its ABSENCE so the first page's URL stays clean. The
+/// window is the AQL fetch window, so the pager offers no size choice.
 ///
 /// The map is read UNTRACKED: this control renders inside the table's
-/// `Suspend`, which already re-runs on every query change, so tracking here
-/// would only add a dependency the closure already has.
-///
-/// Each step carries the same `data-page` hook the shared table footer's steps
-/// use (`prev`/`next`). The two never appear on the same screen: a table is
-/// either server-windowed (this control) or paged from rows in hand (the
-/// footer).
+/// `Suspend`, which already re-runs on every query change.
 pub(crate) fn paging_controls(
     offset: u32,
     row_count: usize,
     base: &str,
+    noun: Noun,
     query: Memo<leptos_router::params::ParamsMap>,
 ) -> AnyView {
-    let href_for = |next: u32| {
+    #[expect(
+        clippy::integer_division,
+        reason = "the page holding row `offset` IS the truncating quotient"
+    )]
+    let page = offset / PAGE_SIZE + 1;
+    let window = OpenWindow::of(
+        Paging {
+            page,
+            size: PAGE_SIZE,
+        },
+        u32::try_from(row_count).unwrap_or(u32::MAX),
+    );
+    let href = |next: Paging| {
         let mut map = query.get_untracked();
-        if next == 0 {
+        let to = next.page.saturating_sub(1).saturating_mul(PAGE_SIZE);
+        if to == 0 {
             drop(map.remove("offset"));
         } else {
-            map.replace("offset", next.to_string());
+            map.replace("offset", to.to_string());
         }
         format!("{base}{}", map.to_query_string())
     };
-    let full = u32::try_from(row_count).unwrap_or(u32::MAX) >= PAGE_SIZE;
-    let prev = (offset > 0).then(|| {
-        let href = href_for(offset.saturating_sub(PAGE_SIZE));
-        view! {
-            <A href=href attr:class=BTN_SECONDARY attr:data-page="prev">
-                "← Previous"
-            </A>
-        }
-        .into_any()
-    });
-    let next = full.then(|| {
-        let href = href_for(offset.saturating_add(PAGE_SIZE));
-        view! {
-            <A href=href attr:class=BTN_SECONDARY attr:data-page="next">
-                "Next →"
-            </A>
-        }
-        .into_any()
-    });
-    view! { <div class="mt-3 flex gap-2">{prev}{next}</div> }.into_any()
+    link_open_pager(Listing::new("Pages").noun(noun).sizes(&[]), window, &href)
 }
 
 /// Render one raw AQL cell value as display text: strings verbatim, JSON null

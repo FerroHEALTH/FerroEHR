@@ -443,6 +443,7 @@ fn delete_section(ehr_id: Signal<String>) -> AnyView {
                     title="Delete EHR"
                     message=message
                     confirm_label="Delete EHR"
+                    dialog_id="ehr-delete-confirm-dialog"
                     confirm_id="ehr-delete-confirm"
                     on_cancel=Callback::new(move |()| confirming.set(false))
                     on_confirm=Callback::new(move |()| {
@@ -456,35 +457,24 @@ fn delete_section(ehr_id: Signal<String>) -> AnyView {
     })
 }
 
-/// The URL-driven tab bar: seven pill anchors (`?tab=…`) replacing the thaw
-/// `TabList`. Selected = `bg-accent-subtle text-accent-ink`; idle =
-/// `text-ink-muted hover:bg-sunken`. Plain anchors keep the tabs working
-/// before hydration (the router intercepts them once WASM loads).
+/// The URL-driven tab bar: seven `?tab=` links, FerroUI's keyed tabs. Plain
+/// anchors keep the tabs working before hydration (the router intercepts them
+/// once WASM loads).
 fn tab_bar(ehr_id: Signal<String>, selected: Memo<String>) -> AnyView {
-    let link = move |value: &'static str, label: &'static str| {
-        let href = move || format!("/ehrs/{}?tab={value}", ehr_id.get());
-        let class = move || {
-            if selected.get() == value {
-                "rounded-control px-3 py-1.5 text-sm font-medium bg-accent-subtle text-accent-ink"
-            } else {
-                "rounded-control px-3 py-1.5 text-sm font-medium text-ink-muted hover:bg-sunken"
-            }
-        };
-        view! {
-            <a href=href class=class>
-                {label}
-            </a>
-        }
-    };
-    view! {
-        <div class="flex flex-wrap gap-1 border-b border-edge pb-2">
-            {link("status", "Status")} {link("status-history", "Status history")}
-            {link("directory", "Directory")} {link("compositions", "Compositions")}
-            {link("contributions", "Contributions")} {link("commit", "Commit")}
-            {link("tags", "Tags")}
-        </div>
-    }
-    .into_any()
+    crate::components::tab_bar::url_tabs(
+        "EHR views",
+        &[
+            ("status", "Status"),
+            ("status-history", "Status history"),
+            ("directory", "Directory"),
+            ("compositions", "Compositions"),
+            ("contributions", "Contributions"),
+            ("commit", "Commit"),
+            ("tags", "Tags"),
+        ],
+        move |value| format!("/ehrs/{}?tab={value}", ehr_id.get()),
+        selected.into(),
+    )
 }
 
 #[cfg(all(test, not(target_arch = "wasm32")))]

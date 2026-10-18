@@ -455,7 +455,7 @@ fn create_section(kind: PartyKind, toaster: ferrohealth_ui::widget::toast::Toast
                     disabled=Signal::derive(move || create.pending().get())
                     on:click=on_click
                 >
-                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::PLUS, "14")}
+                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::USER_PLUS, "14")}
                     {format!("Create {}", kind.rm_type())}
                 </button>
                 <Show when=move || create.pending().get()>
@@ -542,7 +542,7 @@ fn tag_index_section(kind: PartyKind) -> AnyView {
                     Ok(tags) if tags.is_empty() => {
                         view! {
                             <EmptyState
-                                icon=ferrohealth_ui::icon::Glyph::LAYERS
+                                icon=ferrohealth_ui::icon::Glyph::TAGS
                                 message="No demographic tags"
                                 hint="Tags are the one demographic collection the openEHR API lists. Set one on a party's Tags tab and it appears here."
                             />
@@ -600,7 +600,8 @@ fn tag_index_table(
     .into_any();
     let footer = table_footer(
         &browse_href(kind),
-        "tags",
+        "Tag pages",
+        ferrohealth_ui::table::model::Noun::new("tag", "tags"),
         paging,
         Signal::derive(move || total),
     );
@@ -638,7 +639,7 @@ fn tag_index_row(
                         open.dispatch(container.clone());
                     }
                 >
-                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::SEARCH, "14")}
+                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::EYE, "14")}
                     "Open party"
                 </button>
             </td>

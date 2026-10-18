@@ -7,15 +7,14 @@
 //! document in (the composition viewer, the EHR status tab, a contribution,
 //! the template detail's OPT and example tabs, a stored query's AQL).
 //!
-//! The pane is three views of one body — **Highlighted** (the default: the
-//! byte-exact document with FerroUI's pure-Rust highlighter, `ferrohealth_ui::highlight`),
-//! **Raw** (the same text unstyled), and **Rendered** (the template-free
-//! clinical reading from [`crate::clinical`], offered only when the body is a
-//! canonical openEHR JSON document) — plus a copy affordance. Everything here
-//! is Rust: no JS highlighter, no clipboard shim (`leptos_use::use_clipboard`
-//! wraps the Clipboard API), and both the tokenizer and the renderer are pure
-//! functions of the body string, so the server pass and client hydration emit
-//! identical markup.
+//! The pane is FerroUI's document pane (`ferrohealth_ui::widget::document`):
+//! three views of one body — **Highlighted** (the default: the byte-exact
+//! document through FerroUI's pure-Rust highlighter), **Raw** (the same text
+//! unstyled), and **Rendered** (the template-free clinical reading from
+//! [`crate::clinical`]) — plus a copy button. The selectors are FerroUI's
+//! segmented control. Everything here is Rust, and both the tokenizer and the
+//! renderer are pure functions of the body string, so the server pass and
+//! client hydration emit identical markup.
 
 #![expect(
     clippy::disallowed_types,
@@ -23,84 +22,77 @@
               (#1694)"
 )]
 
+use ferrohealth_ui::highlight::Language;
+use ferrohealth_ui::widget::document::document_pane;
+use ferrohealth_ui::widget::segmented::segmented;
 use leptos::prelude::*;
-use leptos_use::{UseClipboardReturn, use_clipboard};
 
 use crate::clinical::{RenderedNode, RenderedRow, RenderedSection};
 use crate::format::ReprFormat;
-use ferrohealth_ui::highlight::{Language, Lines, html};
-
-/// The segmented-control wrapper shared by the format selector, the pane's
-/// view-mode tabs and the example controls.
-pub(crate) const SEGMENTED: &str = "inline-flex overflow-hidden rounded-control border border-edge-strong divide-x divide-edge-strong";
-
-/// A selected segment.
-const SEGMENT_ON: &str = "px-3 py-1.5 text-sm font-medium bg-accent text-on-accent";
-
-/// An unselected segment.
-const SEGMENT_OFF: &str = "px-3 py-1.5 text-sm font-medium text-ink-muted hover:bg-sunken";
-
-/// One button of a segmented control: its label, whether it is the current
-/// choice, and what picking it does.
-///
-/// The ONE segment implementation the viewer draws — the format selector, the
-/// pane's view tabs and the example controls all call it, so a segmented
-/// control looks and behaves the same wherever it appears. The label stays a
-/// plain visible string so the E2E suite can click it by text.
-pub(crate) fn segment_button(
-    label: &'static str,
-    active: Signal<bool>,
-    on_select: impl Fn() + 'static,
-) -> AnyView {
-    let class = move || {
-        if active.get() {
-            SEGMENT_ON
-        } else {
-            SEGMENT_OFF
-        }
-    };
-    view! {
-        <button type="button" class=class on:click=move |_| on_select()>
-            {label}
-        </button>
-    }
-    .into_any()
-}
-
-/// The scroll container both text views share: monospaced, both-axis
-/// scrollable, whitespace preserved.
-const PANE: &str = "overflow-auto max-h-[70vh] whitespace-pre rounded-card border border-edge bg-sunken p-3 font-mono text-xs leading-relaxed text-ink";
 
 /// The scroll container of the rendered clinical view (proportional text, no
 /// whitespace preservation).
-const RENDERED_PANE: &str =
-    "overflow-auto max-h-[70vh] rounded-card border border-edge bg-sunken p-3 text-sm text-ink";
+const RENDERED_PANE: &str = "text-sm text-ink";
 
-/// The format-selector strip: a segmented control, one [`segment_button`] per
-/// offered format, driving the shared `selected` signal.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; view!/mount always consumes the value"
-)]
+/// The four representations a document surface offers, each its key and its
+/// words.
+const FORMATS: &[(&str, &str)] = &[
+    ("json", "JSON"),
+    ("xml", "XML"),
+    ("flat", "FLAT"),
+    ("structured", "STRUCTURED"),
+];
+
+/// The key a format carries in [`FORMATS`].
+fn format_key(format: ReprFormat) -> &'static str {
+    match format {
+        ReprFormat::CanonicalJson | ReprFormat::WebTemplate => "json",
+        ReprFormat::CanonicalXml => "xml",
+        ReprFormat::Flat => "flat",
+        ReprFormat::Structured => "structured",
+    }
+}
+
+/// The format a key of [`FORMATS`] names; anything else is canonical JSON.
+fn format_of(key: &str) -> ReprFormat {
+    match key {
+        "xml" => ReprFormat::CanonicalXml,
+        "flat" => ReprFormat::Flat,
+        "structured" => ReprFormat::Structured,
+        _ => ReprFormat::CanonicalJson,
+    }
+}
+
+/// A FerroUI segmented control over `choices`, bound to `selected` through
+/// each value's key: the one choice strip every selector of the viewer draws.
+pub(crate) fn choice_strip<T>(
+    label: &'static str,
+    choices: &'static [(&'static str, &'static str)],
+    selected: RwSignal<T>,
+    key_of: fn(T) -> &'static str,
+    value_of: fn(&str) -> T,
+) -> AnyView
+where
+    T: Copy + Send + Sync + 'static,
+{
+    segmented(
+        label,
+        choices,
+        Signal::derive(move || key_of(selected.get())),
+        move |key| selected.set(value_of(key)),
+    )
+    .into_any()
+}
+
+/// The format-selector strip: the four representations, driving the shared
+/// `selected` signal.
 #[component]
 pub fn FormatSelector(
-    /// The formats this surface offers, in display order.
-    offered: Vec<ReprFormat>,
     /// The currently selected format (shared with the surface's resource
     /// source so a change refetches).
     selected: RwSignal<ReprFormat>,
 ) -> impl IntoView {
-    let buttons = offered
-        .into_iter()
-        .map(|format| {
-            segment_button(
-                format.label(),
-                Signal::derive(move || selected.get() == format),
-                move || selected.set(format),
-            )
-        })
-        .collect::<Vec<_>>();
-    view! { <div class=SEGMENTED>{buttons}</div> }
+    choice_strip("Format", FORMATS, selected, format_key, format_of)
 }
 
 /// Which view of the document the pane is showing.
@@ -121,15 +113,6 @@ pub enum PaneView {
 }
 
 impl PaneView {
-    /// The tab label (also the E2E click target).
-    fn label(self) -> &'static str {
-        match self {
-            Self::Highlighted => "Highlighted",
-            Self::Raw => "Raw",
-            Self::Rendered => "Rendered",
-        }
-    }
-
     /// The `?view=` value that deep-links this mode.
     #[must_use]
     pub fn param(self) -> &'static str {
@@ -151,27 +134,21 @@ impl PaneView {
     }
 }
 
-/// The document pane: view tabs and a copy button above a scrollable rendering
-/// of `body`.
+/// The document pane: FerroUI's, with the view choice, the copy button and the
+/// bounded body over `body`.
 ///
 /// `body` is the raw representation text (already pretty-printed where
-/// applicable — see [`pretty_body`]); the pane never rewrites it. The tabs
-/// appear only where they mean something: the Raw/Highlighted pair is offered
-/// for a JSON or XML body (a plain-text body such as an AQL statement has
-/// nothing to highlight), and Rendered only for a canonical openEHR JSON
-/// document. Every one of those decisions is a pure function of the body, so
-/// the server and the browser always render the same tabs.
-///
-/// `initial_view` is the mode the pane OPENS in — a plain value, taken once, so
-/// the server pass and hydration agree; the reader switches tabs freely
-/// afterwards. Callers derive it from the URL in their own setup, never from an
-/// effect chasing the address bar.
+/// applicable — see [`pretty_body`]); the pane never rewrites it. The Rendered
+/// view draws the template-free clinical reading when the body is a canonical
+/// openEHR JSON document, and says so when it is not.
 #[expect(
     clippy::must_use_candidate,
     reason = "#[component] rewrites the fn; view!/mount always consumes the value"
 )]
 #[component]
 pub fn DocumentPane(
+    /// The pane's DOM id, unique on its page.
+    id: &'static str,
     /// The document text to display.
     #[prop(into)]
     body: Signal<String>,
@@ -180,138 +157,45 @@ pub fn DocumentPane(
     #[prop(optional)]
     initial_view: PaneView,
 ) -> impl IntoView {
-    let view_mode = RwSignal::new(initial_view);
-    // Deterministic, memoized derivations of the body — never effects writing
-    // signals.
-    let tokens = Memo::new(move |_| body.with(|text| highlighted(text.as_str())));
+    // TODO(#3804): hand the opening view to FerroUI's document pane once it
+    // takes one (FerroHEALTH/FerroUI#50); it opens Highlighted until then.
+    #[expect(
+        clippy::no_effect_underscore_binding,
+        reason = "the opening view waits on FerroUI's pane taking one (FerroHEALTH/FerroUI#50)"
+    )]
+    let _opening: PaneView = initial_view;
     let rendered = Memo::new(move |_| body.with(|text| crate::clinical::render(text.as_str())));
-    let highlightable =
-        Memo::new(move |_| body.with(|text| Language::detect(text.as_str()) != Language::Plain));
-
-    let toolbar = pane_toolbar(body, view_mode, rendered, highlightable);
-    let content = move || match view_mode.get() {
-        PaneView::Raw => raw_pane(body),
-        PaneView::Highlighted => highlighted_pane(tokens),
-        // A format switch can take the rendered view away (JSON → XML) while
-        // it is selected: fall back rather than render nothing.
-        PaneView::Rendered => rendered.with(|document| {
-            document
-                .as_ref()
-                .map_or_else(|| highlighted_pane(tokens), rendered_pane)
-        }),
-    };
-    view! { <div class="flex flex-col gap-2">{toolbar} {content}</div> }
-}
-
-/// The pane toolbar: the view tabs (left) and the copy affordance with its
-/// inline outcome (right).
-fn pane_toolbar(
-    body: Signal<String>,
-    view_mode: RwSignal<PaneView>,
-    rendered: Memo<Option<RenderedSection>>,
-    highlightable: Memo<bool>,
-) -> AnyView {
-    let tabs = move || {
-        let mut buttons = Vec::new();
-        if highlightable.get() {
-            buttons.push(view_tab(PaneView::Highlighted, view_mode));
-            buttons.push(view_tab(PaneView::Raw, view_mode));
-        }
-        if rendered.with(Option::is_some) {
-            buttons.push(view_tab(PaneView::Rendered, view_mode));
-        }
-        if buttons.is_empty() {
-            return ().into_any();
-        }
-        view! { <div class=SEGMENTED>{buttons}</div> }.into_any()
-    };
-    view! {
-        <div class="flex flex-wrap items-center justify-between gap-2">
-            {tabs} {copy_button(body)}
-        </div>
+    let language = Signal::derive(move || body.with(|text| Language::detect(text.as_str())));
+    let rendered_view = view! {
+        {move || {
+            rendered
+                .with(|document| match document {
+                    Some(document) => rendered_pane(document),
+                    None => {
+                        view! {
+                            <p class="text-sm text-ink-muted">
+                                "This document has no rendered reading: it is not a canonical openEHR JSON document."
+                            </p>
+                        }
+                            .into_any()
+                    }
+                })
+        }}
     }
-    .into_any()
-}
-
-/// One view tab.
-fn view_tab(mode: PaneView, view_mode: RwSignal<PaneView>) -> AnyView {
-    segment_button(
-        mode.label(),
-        Signal::derive(move || view_mode.get() == mode),
-        move || view_mode.set(mode),
+    .into_any();
+    document_pane(
+        ferrohealth_ui::widget::document::DocumentPane {
+            id,
+            label: "Document",
+            formats: &[],
+            format: Signal::derive(|| ""),
+            text: body,
+            language,
+            rendered: Some(rendered_view),
+        },
+        |_| {},
     )
 }
-
-/// The copy affordance: writes the raw document text to the system clipboard
-/// and reports the outcome inline (a read, not a CDR mutation — no toast).
-///
-/// The clipboard is reached through `leptos_use::use_clipboard`, which probes
-/// support with the Permissions/Clipboard API on the client and is a documented
-/// no-op on the server — so the server-rendered button is inert until
-/// hydration, and the view structure is identical on both sides. The transient
-/// "Copied" state is the primitive's own timeout; a browser that exposes no
-/// clipboard (an insecure origin, an old engine) reports the failure instead of
-/// silently doing nothing.
-fn copy_button(body: Signal<String>) -> AnyView {
-    let UseClipboardReturn {
-        is_supported,
-        copied,
-        copy,
-        ..
-    } = use_clipboard();
-    let unsupported = RwSignal::new(false);
-    let on_click = move |_| {
-        if is_supported.get_untracked() {
-            unsupported.set(false);
-            copy(&body.get_untracked());
-        } else {
-            unsupported.set(true);
-        }
-    };
-    let status = move || {
-        if copied.get() {
-            "Copied"
-        } else if unsupported.get() {
-            "Clipboard unavailable in this browser"
-        } else {
-            ""
-        }
-    };
-    view! {
-        <div class="flex items-center gap-2">
-            <span class="text-xs text-ink-muted" role="status" aria-live="polite">
-                {status}
-            </span>
-            <button
-                type="button"
-                class="inline-flex items-center gap-1 rounded-control border border-edge-strong px-3 py-1.5 text-sm font-medium text-ink-muted hover:bg-sunken"
-                title="Copy the document to the clipboard"
-                on:click=on_click
-            >
-                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::COPY, "14")}
-                "Copy"
-            </button>
-        </div>
-    }
-    .into_any()
-}
-
-/// The document text, unstyled.
-fn raw_pane(body: Signal<String>) -> AnyView {
-    view! { <pre class=PANE>{move || body.get()}</pre> }.into_any()
-}
-
-/// The document text highlighted by FerroUI: one `fui-code-line` per line,
-/// one classed `<span>` per token, every character escaped.
-fn highlighted(text: &str) -> String {
-    html(Language::detect(text), text, Lines::default(), |_| None)
-}
-
-/// The highlighted document, written as the markup [`highlighted`] built.
-fn highlighted_pane(markup: Memo<String>) -> AnyView {
-    view! { <pre class=PANE inner_html=move || markup.get()></pre> }.into_any()
-}
-
 /// The template-free clinical rendering of a canonical openEHR document.
 fn rendered_pane(document: &RenderedSection) -> AnyView {
     let section = section_view(document.clone());
@@ -423,7 +307,7 @@ where
                         let doc = RwSignal::new(pretty);
                         view! {
                             <div id=id>
-                                <DocumentPane body=doc />
+                                <DocumentPane id=pane_id(id) body=doc />
                             </div>
                         }
                             .into_any()
@@ -434,6 +318,16 @@ where
         </Transition>
     }
     .into_any()
+}
+
+/// The pane id of the document section `section`: FerroUI's pane takes a
+/// static id, and the sections are a closed set.
+fn pane_id(section: &'static str) -> &'static str {
+    match section {
+        "party-document" => "party-document-pane",
+        "relationship-document" => "relationship-document-pane",
+        _ => "document-pane",
+    }
 }
 
 /// Pretty-print a JSON body for display; non-JSON (XML, FLAT with odd
@@ -450,7 +344,7 @@ pub fn pretty_body(body: &str, format: ReprFormat) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::components::format_view::{PaneView, highlighted, pretty_body};
+    use crate::components::format_view::{FORMATS, PaneView, format_key, format_of, pretty_body};
     use crate::format::ReprFormat;
 
     #[test]
@@ -466,33 +360,12 @@ mod tests {
     }
 
     #[test]
-    fn the_highlighted_view_draws_fui_tokens_and_escapes_the_text() {
-        // Every classed token draws from FerroUI's `fui-tok-*` classes over the
-        // `syntax-*` roles, never a raw palette utility, and markup in the
-        // document stays text.
-        let markup = highlighted("{\"a\": \"<b>\", \"n\": 1, \"t\": true}");
-        for class in [
-            "fui-tok-key",
-            "fui-tok-string",
-            "fui-tok-number",
-            "fui-tok-keyword",
-        ] {
-            assert!(markup.contains(class), "{class} missing from {markup}");
+    fn every_offered_format_round_trips_through_its_key_and_shows_its_label() {
+        for (key, words) in FORMATS {
+            let format = format_of(key);
+            assert_eq!(format_key(format), *key);
+            assert_eq!(format.label(), *words);
         }
-        assert!(markup.contains("&lt;b&gt;"), "{markup}");
-        assert!(!markup.contains("<b>"), "{markup}");
-        let xml = highlighted("<a x=\"1\"/>");
-        assert!(
-            xml.contains("fui-tok-tag") && xml.contains("fui-tok-attribute"),
-            "{xml}"
-        );
-    }
-
-    #[test]
-    fn the_view_tabs_carry_their_e2e_labels() {
-        assert_eq!(PaneView::Highlighted.label(), "Highlighted");
-        assert_eq!(PaneView::Raw.label(), "Raw");
-        assert_eq!(PaneView::Rendered.label(), "Rendered");
     }
 
     #[test]

@@ -171,10 +171,7 @@ async fn adl2_upload_lists_and_serves_source_and_json() {
     // The family switch is URL state: the default screen is ADL 1.4, and the
     // ADL 2 pill navigates to the family this journey drives.
     h.goto("/templates").await;
-    h.wait_css("a[data-template-family='adl2']")
-        .await
-        .click()
-        .await;
+    h.wait_css("a[data-tab='adl2']").await.click().await;
     h.wait_url_contains("family=adl2").await;
     h.shot(1, "adl2-family-selected").await;
 
@@ -194,7 +191,7 @@ async fn adl2_upload_lists_and_serves_source_and_json() {
     // The AOM2 JSON pane serves the OperationalTemplateV2 projection. The
     // pretty-printed spelling (`"key": value`) only exists when the viewer
     // PARSED the body — the wire sends it unformatted.
-    h.wait_css("a[data-adl2-tab='json']").await.click().await;
+    h.wait_css("a[data-tab='json']").await.click().await;
     h.wait_url_contains("tab=json").await;
     wait_text_contains(&h, "#adl2-json-pane", "OPERATIONAL_TEMPLATE").await;
     wait_text_contains(&h, "#adl2-json-pane", "\"release_version\": \"1.0.0\"").await;
@@ -204,7 +201,7 @@ async fn adl2_upload_lists_and_serves_source_and_json() {
     // renders with the ADL 1.4 screen's own tree + inspector components: a tree
     // node exists only once the AOM2 parse and the WebTemplate build both
     // succeeded. The standing "no path catalog" note is gone with it.
-    h.wait_css("a[data-adl2-tab='catalog']").await.click().await;
+    h.wait_css("a[data-tab='catalog']").await.click().await;
     h.wait_url_contains("tab=catalog").await;
     h.wait_css("#adl2-catalog-pane ul.text-sm li button").await;
     wait_text_contains(&h, "#adl2-catalog-pane", "Node inspector").await;

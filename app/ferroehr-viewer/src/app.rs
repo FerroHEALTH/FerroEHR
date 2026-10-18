@@ -59,7 +59,7 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
 /// The product name as a human reads it — the viewer's own display name.
 ///
 /// Lowercase `ferroehr-viewer` stays reserved for technical identifiers (the
-/// crate, the asset paths, the `thaw` theme id).
+/// crate, the asset paths).
 const PRODUCT: &str = "FerroEHR Viewer";
 
 /// The path the server serves FerroUI's stylesheet at.
@@ -87,18 +87,10 @@ fn viewer_title(mut section: String) -> String {
     section
 }
 
-/// The root component: meta context, the `thaw` theme/config provider, and the
-/// router. The `theme_id` is fixed (never the component's default random UUID)
-/// so the server pass and client hydration emit an identical `data-thaw-id`
-/// and generated-style selector — a hydration-determinism requirement.
+/// The root component: the meta context and the router.
 #[expect(
     clippy::must_use_candidate,
     reason = "#[component] rewrites the fn; view!/mount always consumes the value"
-)]
-#[expect(
-    clippy::too_many_lines,
-    reason = "one route tree whose DECLARATION ORDER is load-bearing (leptos_router takes the first \
-              match), so it stays a single readable list"
 )]
 #[component]
 pub fn App() -> impl IntoView {
@@ -116,10 +108,6 @@ pub fn App() -> impl IntoView {
     });
     view! {
         <Title formatter=viewer_title text=PRODUCT />
-        <thaw::ConfigProvider
-            theme_id="ferroehr-viewer".to_owned()
-            theme=RwSignal::new(crate::theme::thaw_theme(crate::theme::current_theme()))
-        >
             <Router>
                 <Routes fallback=|| view! { <NotFound /> }>
                     // NOTE: /login uses SsrMode::Async so the sign-in form
@@ -219,7 +207,6 @@ pub fn App() -> impl IntoView {
                     </ParentRoute>
                 </Routes>
             </Router>
-        </thaw::ConfigProvider>
     }
 }
 

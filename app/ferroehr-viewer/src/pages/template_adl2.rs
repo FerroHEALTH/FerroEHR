@@ -44,6 +44,15 @@ use crate::pages::template_detail::{
 };
 use crate::pages::templates::TemplateRow;
 
+/// The ADL2 detail's views, each its `?tab=` key and its words: the closed
+/// set of [`Adl2Tab`], in display order.
+const ADL2_TABS: &[(&str, &str)] = &[
+    ("source", "Source"),
+    ("json", "AOM2 JSON"),
+    ("catalog", "Path catalog"),
+    ("example", "Example"),
+];
+
 /// Fetch the stored ADL2 operational-template SOURCE.
 ///
 /// GET `definition/template/adl2/{template_id}` (or
@@ -377,28 +386,18 @@ pub fn Adl2TemplateDetailPage() -> impl IntoView {
     let catalog_pane = catalog_tab(catalog, selected_node);
     let example_pane = example_tab(example, example_format, example_detail, example_kind);
 
-    let tab_link = move |value: Adl2Tab| {
-        let class = move || {
-            let base = "rounded-control px-3 py-1.5 text-sm font-medium transition-colors";
-            if tab.get() == value {
-                format!("{base} bg-accent-subtle text-accent-ink")
-            } else {
-                format!("{base} text-ink-muted hover:bg-sunken")
-            }
-        };
-        let href =
-            move || crate::adl2::view_href(&template_id.get(), value, version.get().as_deref());
-        view! {
-            <leptos_router::components::A
-                href=href
-                attr:class=class
-                attr:data-adl2-tab=value.as_query()
-            >
-                {value.label()}
-            </leptos_router::components::A>
-        }
-        .into_any()
-    };
+    let tabs = crate::components::tab_bar::url_tabs(
+        "ADL2 template views",
+        ADL2_TABS,
+        move |key| {
+            crate::adl2::view_href(
+                &template_id.get(),
+                Adl2Tab::from_query(key),
+                version.get().as_deref(),
+            )
+        },
+        Signal::derive(move || tab.get().as_query().to_owned()),
+    );
 
     view! {
         <Title text=move || format!("ADL2 template · {}", template_id.get()) />
@@ -409,12 +408,7 @@ pub fn Adl2TemplateDetailPage() -> impl IntoView {
                 mono=true
             />
             {versions}
-            <nav aria-label="ADL2 template views" class="flex gap-1 mb-4">
-                {tab_link(Adl2Tab::Source)}
-                {tab_link(Adl2Tab::Json)}
-                {tab_link(Adl2Tab::Catalog)}
-                {tab_link(Adl2Tab::Example)}
-            </nav>
+            {tabs}
             <div>
                 <div id="adl2-source-pane" class:hidden=move || tab.get() != Adl2Tab::Source>
                     {source_pane}
@@ -627,17 +621,13 @@ fn absent_view(what: &str) -> AnyView {
          or go back to the ADL2 listing."
     );
     view! {
-        <div role="status" class=crate::components::notice::WARNING>
-            <div>
-                {message} " "
+        {ferrohealth_ui::view::notice::notice(ferrohealth_ui::tone::Tone::Warn, ferrohealth_ui::view::notice::Announce::Status, None, view! { {message} " "
                 <leptos_router::components::A
                     href=TemplateFamily::Adl2.href()
                     attr:class="text-accent hover:underline"
                 >
                     "ADL2 templates"
-                </leptos_router::components::A>
-            </div>
-        </div>
+                </leptos_router::components::A> })}
     }
     .into_any()
 }
@@ -651,7 +641,7 @@ fn source_tab(source: Resource<Result<PaneBody, ViewerError>>) -> AnyView {
                 match source.await {
                     Ok(PaneBody::Idle) => ().into_any(),
                     Ok(PaneBody::Loaded(text)) => {
-                        view! { <crate::components::format_view::DocumentPane body=text /> }
+                        view! { <crate::components::format_view::DocumentPane id="adl2-source-document" body=text /> }
                             .into_any()
                     }
                     Ok(PaneBody::Absent) => absent_view("ADL2 source"),
@@ -676,7 +666,7 @@ fn json_tab(json: Resource<Result<PaneBody, ViewerError>>) -> AnyView {
                             &raw,
                             ReprFormat::CanonicalJson,
                         );
-                        view! { <crate::components::format_view::DocumentPane body=pretty /> }
+                        view! { <crate::components::format_view::DocumentPane id="adl2-opt-document" body=pretty /> }
                             .into_any()
                     }
                     Ok(PaneBody::Absent) => absent_view("OperationalTemplateV2 JSON"),
@@ -718,7 +708,7 @@ fn example_tab(
                                 &raw,
                                 format.get_untracked(),
                             );
-                            view! { <crate::components::format_view::DocumentPane body=pretty /> }
+                            view! { <crate::components::format_view::DocumentPane id="adl2-example-document" body=pretty /> }
                                 .into_any()
                         }
                         Ok(PaneBody::Absent) => absent_view("example composition"),

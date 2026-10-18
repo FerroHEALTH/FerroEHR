@@ -800,6 +800,7 @@ fn delete_section(
                 title="Delete composition"
                 message=message
                 confirm_label="Delete composition"
+                dialog_id="composition-delete-confirm-dialog"
                 confirm_id="composition-delete-confirm"
                 on_cancel=Callback::new(move |()| confirming.set(false))
                 on_confirm=Callback::new(move |()| {
@@ -1025,15 +1026,12 @@ fn toolbar_section(
     version_at_time: Action<(String, String, String), Result<String, ViewerError>>,
     at_time_input: RwSignal<String>,
 ) -> AnyView {
-    let offered = vec![
-        ReprFormat::CanonicalJson,
-        ReprFormat::CanonicalXml,
-        ReprFormat::Flat,
-        ReprFormat::Structured,
-    ];
     let select = view! {
         <Suspense fallback=|| {
-            view! { <thaw::Spinner size=thaw::SpinnerSize::Tiny /> }
+            ferrohealth_ui::view::empty::busy(
+                "Reading the versions",
+                ferrohealth_ui::view::empty::Busy::Inline,
+            )
         }>
             {move || Suspend::new(async move {
                 match versions.await {
@@ -1074,7 +1072,7 @@ fn toolbar_section(
     view! {
         <section class=format!("{CARD_PAD} mb-3")>
             <div class="flex flex-wrap items-end gap-4">
-                <FormatSelector offered=offered selected=format />
+                <FormatSelector selected=format />
                 <div class="flex items-center gap-2">
                     <label class=LABEL r#for="version-select">
                         "Version"
@@ -1158,7 +1156,7 @@ fn document_section(
                         let body_sig = RwSignal::new(body);
                         // Resolve inside the Transition: an SSR'd ErrorBoundary fallback
                         // mismatches at hydration in leptos 0.8.
-                        view! { <DocumentPane body=body_sig initial_view=initial_view /> }
+                        view! { <DocumentPane id="composition-pane" body=body_sig initial_view=initial_view /> }
                             .into_any()
                     }
                     Ok(None) => deleted_pane(),

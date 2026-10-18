@@ -2010,7 +2010,7 @@ jobs:
           # cargo-leptos resolves its external tools from PATH before its
           # own downloader (which failed opaque on a runner), so both it
           # and Tailwind are preinstalled deterministically.
-          tool: cargo-nextest,cargo-leptos@0.3.7,wasm-bindgen@0.2.128
+          tool: cargo-nextest,cargo-leptos@0.3.7,wasm-bindgen@0.2.129
       - name: Install the Tailwind v4 standalone binary
         if: steps.viewer-cache.outputs.cache-hit != 'true'
         run: |

@@ -264,7 +264,7 @@ pub fn DashboardPage() -> impl IntoView {
                 title="Dashboard"
                 subtitle="Repository overview, query cohorts, and recent commit activity."
             />
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">{counts} {stored}</div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">{counts} {stored}</div>
             <section class=format!("{CARD_PAD} mb-6")>
                 <h2 class=CARD_TITLE>"Query namespaces"</h2>
                 {namespaces}
@@ -333,13 +333,13 @@ fn counts_section() -> AnyView {
                                 {stat_tile(
                                     "Compositions",
                                     compositions.to_string(),
-                                    ferrohealth_ui::icon::Glyph::FILES,
+                                    ferrohealth_ui::icon::Glyph::FILE_TEXT,
                                     None,
                                 )}
                                 {stat_tile(
                                     "Templates",
                                     templates.to_string(),
-                                    ferrohealth_ui::icon::Glyph::FILES,
+                                    ferrohealth_ui::icon::Glyph::FILE_CODE,
                                     Some("/templates".to_owned()),
                                 )}
                             </>
@@ -370,7 +370,7 @@ fn stored_queries_tile() -> AnyView {
                         stat_tile(
                             "Stored queries",
                             count.to_string(),
-                            ferrohealth_ui::icon::Glyph::SEARCH,
+                            ferrohealth_ui::icon::Glyph::SEARCH_CODE,
                             Some("/queries".to_owned()),
                         )
                     }
@@ -405,7 +405,7 @@ fn namespace_tiles_view(tiles: Vec<NamespaceTile>) -> AnyView {
     if tiles.is_empty() {
         return view! {
             <EmptyState
-                icon=ferrohealth_ui::icon::Glyph::SEARCH
+                icon=ferrohealth_ui::icon::Glyph::SEARCH_CODE
                 message="No stored queries yet"
                 hint="Save a query as namespace::name — each namespace becomes a cohort tile here."
             >
@@ -417,7 +417,8 @@ fn namespace_tiles_view(tiles: Vec<NamespaceTile>) -> AnyView {
         .into_any();
     }
     let tiles = tiles.into_iter().map(namespace_tile).collect::<Vec<_>>();
-    view! { <div class="grid grid-cols-2 md:grid-cols-4 gap-3">{tiles}</div> }.into_any()
+    view! { <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">{tiles}</div> }
+        .into_any()
 }
 
 /// One namespace tile: the namespace (or the unqualified-bucket label), the

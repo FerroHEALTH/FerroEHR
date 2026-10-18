@@ -359,7 +359,7 @@ fn filter_bar(ehr_id: Signal<String>, query: Memo<ParamsMap>) -> AnyView {
                     />
                 </label>
                 <button id="composition-filter-apply" type="submit" class=BTN_PRIMARY>
-                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::SEARCH, "14")}
+                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::FUNNEL, "14")}
                     "Filter"
                 </button>
                 <a id="composition-filter-clear" href=clear class=BTN_SECONDARY>
@@ -530,7 +530,7 @@ fn compositions_table(
                 "Widen the date window, shorten the template or composer text, or clear the filters.",
             )
         };
-        return view! { <EmptyState icon=ferrohealth_ui::icon::Glyph::FILES message=message hint=hint /> }
+        return view! { <EmptyState icon=ferrohealth_ui::icon::Glyph::FILE_TEXT message=message hint=hint /> }
             .into_any();
     }
     let rows = page.rows.clone();
@@ -549,6 +549,7 @@ fn compositions_table(
         page.offset,
         page.rows.len(),
         &ehr_detail_href(ehr_id),
+        ferrohealth_ui::table::model::Noun::new("composition", "compositions"),
         query,
     );
     view! {

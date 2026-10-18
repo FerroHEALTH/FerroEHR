@@ -44,9 +44,7 @@
 //! makes that set `Location` plus — for an `Accept: text/html` request — the
 //! `302` status).
 //!
-//! `ssr`-gated like its siblings: the render path is the server one, and the
-//! `ssr` feature is what puts `leptos-use`/`thaw`/`leptos-chartistry` on their
-//! non-`WASM` code paths (`Cargo.toml` §features).
+//! Server half only, like its siblings: the render path is the server one.
 
 #![cfg(not(target_arch = "wasm32"))]
 
@@ -265,7 +263,7 @@ async fn a_probe_that_cannot_answer_leaves_its_nav_entry_out_of_the_sidebar() {
 // ------------------------------------------------------------------- topbar
 
 #[tokio::test]
-async fn the_topbar_carries_the_lockup_the_health_pill_the_theme_switch_and_the_user_menu() {
+async fn the_topbar_carries_the_lockup_the_health_pill_the_theme_toggle_and_the_user_menu() {
     let pass = render_route("/").await;
     let header = pass
         .html
@@ -287,26 +285,35 @@ async fn the_topbar_carries_the_lockup_the_health_pill_the_theme_switch_and_the_
     assert!(header.contains("fui-tone-warn"), "{header}");
     assert!(!header.contains("Checking the CDR"), "{header}");
     // The user menu's stable trigger id (the E2E journeys target it) and the
-    // theme switch, a plain form posting the choice to the server, with the
-    // system theme pressed for a request that carries no theme cookie.
+    // theme toggle, a plain form posting the other theme to the server: both
+    // buttons are in the document and the stylesheet shows the one leading
+    // away from the theme on screen, so the first paint needs no script.
     assert!(header.contains("id=\"user-menu-trigger\""), "{header}");
     assert!(header.contains("action=\"/theme\""), "{header}");
-    assert!(header.contains("aria-label=\"Theme\""), "{header}");
-    assert!(
-        header.contains("value=\"system\" aria-pressed=\"true\""),
-        "{header}"
-    );
+    assert!(header.contains("id=\"theme-to-dark\""), "{header}");
+    assert!(header.contains("id=\"theme-to-light\""), "{header}");
+    assert!(header.contains("value=\"dark\""), "{header}");
+    assert!(header.contains("value=\"light\""), "{header}");
 }
 
-/// The access drawer is a `thaw::OverlayDrawer`, which mounts through a
-/// `Teleport` gated on its open signal — so a closed drawer contributes nothing
-/// to the server document, and its body arrives only after a click on
-/// "View scopes" in the hydrated user menu.
+/// The access panel is FerroUI's side panel: an HTML popover the operator
+/// menu's "View scopes" opens with no script, drawn closed in the server
+/// document (the browser hides a popover until it is shown), its body built
+/// once so a scope typed into the previewer survives a close.
 #[tokio::test]
-async fn the_closed_access_drawer_contributes_nothing_to_the_server_document() {
+async fn the_access_panel_is_a_closed_popover_in_the_server_document() {
     let pass = render_route("/").await;
-    assert!(!pass.html.contains("id=\"access-drawer\""), "{}", pass.html);
-    assert!(!pass.html.contains("Access scopes"), "{}", pass.html);
+    assert!(
+        pass.html.contains("id=\"access-scopes\" popover=\"auto\""),
+        "{}",
+        pass.html
+    );
+    assert!(pass.html.contains("id=\"access-drawer\""), "{}", pass.html);
+    assert!(
+        pass.html.contains("popovertarget=\"access-scopes\""),
+        "the operator menu opens it: {}",
+        pass.html
+    );
 }
 
 // ------------------------------------------------------------------- footer

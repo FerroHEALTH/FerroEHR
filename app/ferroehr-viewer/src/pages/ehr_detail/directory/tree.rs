@@ -27,6 +27,7 @@
               (#1694)"
 )]
 
+use ferrohealth_ui::widget::tree::{Tree, TreeNode};
 use leptos::prelude::*;
 use serde_json::Value;
 
@@ -347,7 +348,7 @@ pub(in crate::pages::ehr_detail::directory) fn tree_editor(
                     class=BTN_SECONDARY
                     on:click=on_toggle_advanced
                 >
-                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::SQUARE_TERMINAL, "14")}
+                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::CODE, "14")}
                     {move || {
                         if editor.advanced.get() { "Hide JSON" } else { "Advanced: edit as JSON" }
                     }}
@@ -479,8 +480,7 @@ fn render_folder(ed: TreeEditor, node_key: String, is_root: bool) -> AnyView {
 
     // Dynamic icons are VIEW branches over static glyphs, never a derived
     // signal feeding one icon: a row-owned derived signal can fire after the row
-    // is disposed. An open folder with content draws the layers glyph until
-    // FerroUI vendors folder-open (FerroHEALTH/FerroUI#14).
+    // is disposed.
     let key_icon = node_key.clone();
     let folder_icon = move || {
         let expanded = ed.collapsed.with(|c| !c.contains(&key_icon));
@@ -489,9 +489,9 @@ fn render_folder(ed: TreeEditor, node_key: String, is_root: bool) -> AnyView {
                 .is_some_and(|p| !child_node_keys(t, &p).is_empty() || item_count(t, &p) > 0)
         });
         let glyph = if expanded && has_content {
-            ferrohealth_ui::icon::Glyph::LAYERS
+            ferrohealth_ui::icon::Glyph::FOLDER_OPEN
         } else {
-            ferrohealth_ui::icon::Glyph::FILES
+            ferrohealth_ui::icon::Glyph::FOLDER
         };
         ferrohealth_ui::icon::icon(glyph, "15")
     };
@@ -692,7 +692,7 @@ fn folder_actions(ed: TreeEditor, node_key: String, is_root: bool) -> AnyView {
                 title="Add subfolder"
                 on:click=on_add_folder
             >
-                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::FILE_PLUS, "14")}
+                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::FOLDER_PLUS, "14")}
             </button>
             <button
                 type="button"
@@ -747,7 +747,7 @@ fn render_item(ed: TreeEditor, parent_key: String, item_key: String) -> AnyView 
     let hook = id.clone();
     view! {
         <li class="flex items-center gap-1 py-0.5 text-ink-muted" data-item-id=hook>
-            {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::FILES, "14")}
+            {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::FILE_TEXT, "14")}
             <span class="mr-1 text-xs uppercase">{ref_type}</span>
             <span class="break-all font-mono text-xs">{id}</span>
             <button
@@ -978,43 +978,74 @@ fn save_feedback(update: Action<(String, String, String), Result<String, ViewerE
 }
 
 /// A read-only FOLDER tree (the create preview and the history / time / path
-/// panels): folders and their item references, no actions.
-pub(in crate::pages::ehr_detail::directory) fn read_only_tree(folder: &Value) -> AnyView {
-    view! { <ul class="text-sm text-ink">{read_only_folder(folder)}</ul> }.into_any()
+/// panels): FerroUI's tree view of the folders and their item references, every
+/// folder open, no actions. `id` names the tree on its page.
+pub(in crate::pages::ehr_detail::directory) fn read_only_tree(
+    id: &'static str,
+    folder: &Value,
+) -> AnyView {
+    let root = folder_node(folder, "root");
+    let mut open = std::collections::BTreeSet::new();
+    open_folders(&root, &mut open);
+    ferrohealth_ui::widget::tree::tree_view(Tree {
+        id,
+        label: "Directory",
+        nodes: Signal::derive(move || vec![root.clone()]),
+        expanded: RwSignal::new(open),
+        selected: Signal::derive(|| None),
+        on_expand: None,
+        actions: None,
+    })
 }
 
-/// One read-only FOLDER node.
-fn read_only_folder(folder: &Value) -> AnyView {
+/// Every folder key of `node` and below, so the read-only tree opens whole.
+fn open_folders(node: &TreeNode, open: &mut std::collections::BTreeSet<String>) {
+    if node.expandable {
+        open.insert(node.key.clone());
+    }
+    for child in &node.children {
+        open_folders(child, open);
+    }
+}
+
+/// One read-only FOLDER node, keyed by its position path (`path`), which is
+/// stable for a read-only document.
+fn folder_node(folder: &Value, path: &str) -> TreeNode {
     let name = folder
         .get("name")
         .and_then(|n| n.get("value"))
         .and_then(Value::as_str)
         .unwrap_or("(folder)")
         .to_owned();
-    let subfolders = folder
+    let mut children: Vec<TreeNode> = folder
         .get("folders")
         .and_then(Value::as_array)
-        .map(|folders| folders.iter().map(read_only_folder).collect::<Vec<_>>())
+        .map(|folders| {
+            folders
+                .iter()
+                .enumerate()
+                .map(|(index, child)| folder_node(child, &format!("{path}/f{index}")))
+                .collect()
+        })
         .unwrap_or_default();
-    let items = folder
-        .get("items")
-        .and_then(Value::as_array)
-        .map(|items| items.iter().map(read_only_item).collect::<Vec<_>>())
-        .unwrap_or_default();
-    view! {
-        <li class="py-0.5">
-            <span class="inline-flex items-center gap-1.5 font-medium text-ink">
-                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::FILES, "14")}
-                {name}
-            </span>
-            <ul class="ml-2 border-l border-edge pl-4">{subfolders} {items}</ul>
-        </li>
+    if let Some(items) = folder.get("items").and_then(Value::as_array) {
+        children.extend(
+            items
+                .iter()
+                .enumerate()
+                .map(|(index, item)| item_node(item, &format!("{path}/i{index}"))),
+        );
     }
-    .into_any()
+    TreeNode {
+        expandable: true,
+        children,
+        ..TreeNode::new(path.to_owned(), name)
+    }
 }
 
-/// One read-only `OBJECT_REF` item.
-fn read_only_item(item: &Value) -> AnyView {
+/// One read-only `OBJECT_REF` item: its id, with its reference type as the
+/// muted code.
+fn item_node(item: &Value, path: &str) -> TreeNode {
     let ref_type = item
         .get("type")
         .and_then(Value::as_str)
@@ -1026,12 +1057,8 @@ fn read_only_item(item: &Value) -> AnyView {
         .and_then(Value::as_str)
         .unwrap_or("(ref)")
         .to_owned();
-    view! {
-        <li class="flex items-center gap-1.5 py-0.5 text-ink-muted">
-            {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::FILES, "14")}
-            <span class="text-xs uppercase">{ref_type}</span>
-            <span class="break-all font-mono text-xs">{id}</span>
-        </li>
+    TreeNode {
+        code: Some(ref_type),
+        ..TreeNode::new(path.to_owned(), id)
     }
-    .into_any()
 }

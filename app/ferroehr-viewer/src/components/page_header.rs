@@ -1,12 +1,15 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The shared page header: breadcrumbs, title, subtitle, and an action
-//! slot — every routed screen opens with one so the page rhythm (header →
-//! toolbar → content) is identical across the viewer.
+//! The page header every routed screen opens with.
+//!
+//! FerroUI's (`ferrohealth_ui::view::surface::page_heading`), with the
+//! breadcrumb trail, the title, the subtitle and the screen's primary actions,
+//! so the page rhythm (header → toolbar → content) is identical across the
+//! viewer.
 
+use ferrohealth_ui::view::surface::{Header, page_heading};
 use leptos::prelude::*;
-use leptos_router::components::A;
 
 /// One breadcrumb ancestor (the current page renders as plain text after
 /// the linked trail).
@@ -30,9 +33,9 @@ impl Crumb {
 
 /// The standard page header.
 ///
-/// `crumbs` are the ANCESTORS only — the component renders `title` as the
+/// `crumbs` are the ANCESTORS only — the header renders `title` as the
 /// terminal crumb itself. `children` (optional) land right-aligned on the
-/// title row: the screen's primary actions.
+/// title row: the screen's primary actions, built once.
 #[expect(
     clippy::must_use_candidate,
     reason = "#[component] rewrites the fn; view!/mount always consumes the value"
@@ -55,50 +58,19 @@ pub fn PageHeader(
     #[prop(optional)]
     mono: bool,
 ) -> impl IntoView {
-    let trail = (!crumbs.is_empty()).then(|| {
-        let links = crumbs
-            .into_iter()
-            .map(|crumb| {
-                view! {
-                    <li class="flex items-center gap-1.5">
-                        <A
-                            href=crumb.href
-                            attr:class="text-ink-muted no-underline hover:text-accent hover:underline"
-                        >
-                            {crumb.label}
-                        </A>
-                        <span aria-hidden="true" class="text-ink-faint">
-                            "/"
-                        </span>
-                    </li>
-                }
-            })
-            .collect_view();
-        view! {
-            <nav aria-label="Breadcrumb" class="mb-1">
-                <ol class="flex flex-wrap items-center gap-1.5 text-sm">
-                    {links} <li aria-current="page" class="text-ink-muted">
-                        {move || title.get()}
-                    </li>
-                </ol>
-            </nav>
-        }
-    });
-    let title_class = if mono {
-        "text-xl font-semibold font-mono text-ink"
-    } else {
-        "text-xl font-semibold text-ink"
-    };
-    view! {
-        <header class="mb-6">
-            {trail} <div class="flex flex-wrap items-center justify-between gap-3">
-                <h1 class=title_class>{move || title.get()}</h1>
-                <div class="flex items-center gap-2">{children.map(|c| c())}</div>
-            </div>
-            {subtitle
-                .map(|s| {
-                    view! { <p class="mt-1 text-sm text-ink-muted">{s}</p> }
-                })}
-        </header>
-    }
+    let crumbs: Vec<ferrohealth_ui::view::surface::Crumb> = crumbs
+        .into_iter()
+        .map(|crumb| ferrohealth_ui::view::surface::Crumb::new(crumb.label, crumb.href))
+        .collect();
+    // TODO(#3804): pass the title signal once FerroUI's heading takes one
+    // (FerroHEALTH/FerroUI#51); it is read once until then.
+    page_heading(
+        Header {
+            title: title.get_untracked(),
+            subtitle,
+            crumbs,
+            mono,
+        },
+        children.map(|children| children()),
+    )
 }

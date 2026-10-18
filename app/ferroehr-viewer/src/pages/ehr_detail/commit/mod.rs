@@ -938,7 +938,7 @@ fn audit_card(
                         prop:disabled=move || count.get() == 0 || commit.pending().get()
                         on:click=on_commit
                     >
-                        {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::FILE_PLUS, "14")}
+                        {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::UPLOAD, "14")}
                         {move || label.get()}
                     </button>
                     <Show when=move || commit.pending().get()>

@@ -33,8 +33,11 @@ pub const BTN_PRIMARY: &str = Variant::Primary.class();
 /// The secondary (outlined) button.
 pub const BTN_SECONDARY: &str = Variant::Secondary.class();
 
-/// The destructive button (delete affordances, two-step confirms).
+/// The danger button: an outlined affordance that opens a removal.
 pub const BTN_DANGER: &str = Variant::Danger.class();
+
+/// The solid destructive button: the confirmation inside a danger dialog.
+pub const BTN_DESTRUCTIVE: &str = Variant::Destructive.class();
 
 /// One labelled text input bound to `value`, stacked label-over-control.
 ///

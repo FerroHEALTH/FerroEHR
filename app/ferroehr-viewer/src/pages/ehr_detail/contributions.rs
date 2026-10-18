@@ -452,7 +452,7 @@ fn contribution_body(body: &str) -> AnyView {
     let pretty =
         crate::components::format_view::pretty_body(body, crate::format::ReprFormat::CanonicalJson);
     let doc_sig = RwSignal::new(pretty);
-    view! { <DocumentPane body=doc_sig /> }.into_any()
+    view! { <DocumentPane id="contribution-pane" body=doc_sig /> }.into_any()
 }
 
 #[cfg(all(test, not(target_arch = "wasm32")))]

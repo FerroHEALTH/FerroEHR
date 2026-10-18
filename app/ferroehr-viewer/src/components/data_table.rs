@@ -16,8 +16,9 @@
 //! listing that can show patient data keeps it in the page alone
 //! ([`paging_in_session`]), never in a URL or the history.
 
+use ferrohealth_ui::table::model::Noun;
 use ferrohealth_ui::table::model::{DEFAULT_SIZE, Paging, Window, href};
-use ferrohealth_ui::table::view::link_pager;
+use ferrohealth_ui::table::view::{Body, Column, DataTable, Listing, data_table, link_pager};
 use ferrohealth_ui::widget::pager::session_pager;
 use leptos::prelude::*;
 use leptos_router::params::ParamsMap;
@@ -39,33 +40,24 @@ pub const CELL_MONO: &str = "align-top fui-mono";
 /// same size.
 pub const PAGE_SIZE: u32 = DEFAULT_SIZE;
 
-/// The styled table around pre-rendered `<tr>` rows, named `caption`.
+/// FerroUI's data table around pre-rendered `<tr>` rows, named `caption`.
 ///
-/// FerroUI's table in its scrolling box, with an explicit `<tbody>`
-/// (hydration correctness: browsers insert one otherwise, breaking DOM↔view
-/// correspondence). Every header cell carries `scope="col"`, so a screen reader
-/// announces the column name with each body cell it reads (the HTML `th`
-/// `scope` attribute). The headers are text known only at run time for a
-/// result set, so the cells are written here over FerroUI's classes.
+/// The headers are text known only at run time for a result set, so each
+/// column is an owned one; FerroUI writes `scope="col"` on every header and an
+/// explicit `<tbody>` (hydration correctness: browsers insert one otherwise).
 #[must_use]
 pub fn table_shell(caption: &str, headers: &[&str], body: AnyView) -> AnyView {
-    let head = headers
+    let columns: Vec<Column> = headers
         .iter()
-        .map(|h| view! { <th scope="col">{h.to_string()}</th> })
-        .collect_view();
-    let label = caption.to_owned();
-    let caption = caption.to_owned();
-    view! {
-        <div class="fui-table-scroll" role="region" aria-label=label tabindex="0">
-            <table class="fui-table">
-                <caption>{caption}</caption>
-                <thead>
-                    <tr>{head}</tr>
-                </thead>
-                <tbody>{body}</tbody>
-            </table>
-        </div>
-    }
+        .map(|header| Column::owned(*header, *header))
+        .collect();
+    data_table(DataTable {
+        caption,
+        columns: &columns,
+        sort: None,
+        sort_href: &|_| String::new(),
+        body: Body::Rows(body),
+    })
     .into_any()
 }
 
@@ -151,7 +143,7 @@ pub fn row_total(len: usize) -> u32 {
 /// screen, the steps, and the page-size choices.
 ///
 /// `base` is the screen's own path (`/queries`), `label` names the pager for
-/// assistive technology, `paging` comes from [`paging_from_url`] or
+/// assistive technology, `noun` names the rows in its range, `paging` comes from [`paging_from_url`] or
 /// [`paging_in_session`], and `total` is the (reactive) row count — reactive
 /// because a client-side filter changes it. The caller renders its rows through
 /// [`TablePaging::window`] + [`page_rows`] from the SAME inputs, so the pager
@@ -160,6 +152,7 @@ pub fn row_total(len: usize) -> u32 {
 pub fn table_footer(
     base: &str,
     label: &'static str,
+    noun: Noun,
     paging: TablePaging,
     total: Signal<u32>,
 ) -> AnyView {
@@ -175,9 +168,11 @@ pub fn table_footer(
                             next.write(&mut query);
                             href(&base, &query)
                         };
-                        link_pager(label, window, &link).into_any()
+                        link_pager(Listing::new(label).noun(noun), window, &link).into_any()
                     }
-                    Source::Session(state) => session_pager(label, window, state).into_any(),
+                    Source::Session(state) => {
+                        session_pager(Listing::new(label).noun(noun), window, state).into_any()
+                    }
                 }
             }}
         </div>
@@ -191,11 +186,17 @@ pub fn table_footer(
 /// `key` is the row's own stable, data-derived identity — never an index.
 /// `base` is the screen's own path and `label` names the table and its pager.
 #[must_use]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the table's rows, its paging and its words; a struct would move the same fields one \
+              indirection away"
+)]
 pub fn paged_table<R, V>(
     rows: Vec<R>,
     paging: TablePaging,
     base: &str,
     label: &'static str,
+    noun: Noun,
     headers: &[&str],
     key: fn(&R) -> String,
     row: impl Fn(R) -> V + Clone + Send + Sync + 'static,
@@ -210,7 +211,7 @@ where
         <For each=move || page_rows(&rows, paging.window(total.get())) key=key children=row />
     }
     .into_any();
-    let footer = table_footer(base, label, paging, total);
+    let footer = table_footer(base, label, noun, paging, total);
     view! {
         {table_shell(label, headers, body)}
         {footer}

@@ -46,7 +46,7 @@ pub fn router(app_state: AppState, leptos_options: LeptosOptions) -> axum::Route
             axum::routing::post(crate::export::export_aql),
         )
         // FerroUI's stylesheet and the FerroEHR brand theme, served from this
-        // origin so `style-src 'self'` holds, and the theme switch's post.
+        // origin so `style-src 'self'` holds, and the theme toggle's post.
         .route(
             crate::app::STYLESHEET_PATH,
             axum::routing::get(|| async { css(ferrohealth_ui::style::STYLESHEET) }),
@@ -233,15 +233,10 @@ fn is_public_path(path: &str) -> bool {
 /// - `script-src` carries no inline allowance: the one inline script the
 ///   viewer emits is Leptos's hydration bootstrap, and it is authorized by a
 ///   per-request nonce ([`csp_nonce_layer`]) instead.
-/// - `style-src 'unsafe-inline'` stays, and it is the honest remainder of this
-///   policy rather than an oversight. `thaw` mounts its generated stylesheets
-///   in the browser by creating `<style>` elements through the DOM with no
-///   nonce attribute (`thaw_utils::dom::mount_style`), and both `thaw` and
-///   `leptos-chartistry` render `style="…"` attributes, which `style-src-attr`
-///   inherits. Adding a nonce here would make it strictly WORSE, not better:
-///   CSP Level 3 says a nonce in a directive causes `'unsafe-inline'` in that
-///   same directive to be ignored, so a nonced `style-src` would block every
-///   one of those and leave the viewer unstyled.
+/// - `style-src 'self'`: every style the viewer uses is a stylesheet of its
+///   own origin (the Tailwind build, FerroUI's stylesheet and the brand theme),
+///   and no component writes a `style` attribute or a `<style>` element, so no
+///   inline allowance and no style nonce are needed.
 /// - `X-Frame-Options: DENY` plus `frame-ancestors 'none'` — belt and braces
 ///   against clickjacking a viewer that performs administrative writes.
 /// - `Cache-Control` — `no-store` on every document, because the viewer
@@ -379,7 +374,7 @@ fn viewer_csp(nonce: &str) -> String {
     format!(
         "default-src 'self'; \
          script-src 'self' 'wasm-unsafe-eval' 'nonce-{nonce}'; \
-         style-src 'self' 'unsafe-inline'; \
+         style-src 'self'; \
          img-src 'self' data:; \
          font-src 'self'; \
          connect-src 'self'; \
@@ -650,17 +645,14 @@ mod tests {
         );
     }
 
-    /// The style half keeps its inline allowance and must never gain a nonce:
-    /// `thaw` creates its stylesheets through the DOM without one, so a nonced
-    /// `style-src` would suppress `'unsafe-inline'` and unstyle the viewer.
+    /// Styles come from the viewer's own origin alone: no inline allowance and
+    /// no nonce, since no component writes a `style` attribute or element.
     #[test]
-    fn style_src_keeps_its_inline_allowance_and_no_nonce() {
+    fn style_src_is_the_viewers_own_origin_alone() {
         let policy = viewer_csp(SAMPLE_NONCE);
         let style_src = directive(&policy, "style-src");
-        assert!(style_src.contains("'unsafe-inline'"));
-        assert!(
-            !style_src.contains("'nonce-"),
-            "a nonce here would disable 'unsafe-inline': {style_src}"
-        );
+        assert_eq!(style_src, "style-src 'self'");
+        assert!(!style_src.contains("'unsafe-inline'"), "{style_src}");
+        assert!(!style_src.contains("'nonce-"), "{style_src}");
     }
 }

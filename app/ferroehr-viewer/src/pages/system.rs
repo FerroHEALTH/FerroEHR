@@ -468,7 +468,7 @@ fn usage_card() -> AnyView {
                         Ok((rows, _)) if rows.is_empty() => {
                             view! {
                                 <EmptyState
-                                    icon=ferrohealth_ui::icon::Glyph::FILES
+                                    icon=ferrohealth_ui::icon::Glyph::FILE_CODE
                                     message="No template usage yet"
                                     hint="Counts appear once compositions are committed against a template."
                                 />
@@ -618,8 +618,8 @@ fn status_card() -> AnyView {
     titled_card("Status", false, body)
 }
 
-/// The uniform card error state: the domain-error message in an error
-/// `MessageBar` (the same shape the removed per-card `ErrorBoundary` fallbacks
+/// The uniform card error state: the domain-error message in FerroUI's
+/// alert (the same shape the removed per-card `ErrorBoundary` fallbacks
 /// rendered).
 fn card_error(error: &ViewerError) -> AnyView {
     let message = error.to_string();
@@ -685,11 +685,7 @@ fn smart_card() -> AnyView {
                     Ok(config) => smart_body(config),
                     Err(e) => {
                         view! {
-                            <div role="status" class=crate::components::notice::WARNING>
-                                <div>
-                                    {smart_probe_failure_copy(&e)}
-                                </div>
-                            </div>
+                            {ferrohealth_ui::view::notice::notice(ferrohealth_ui::tone::Tone::Warn, ferrohealth_ui::view::notice::Announce::Status, None, view! { {smart_probe_failure_copy(&e)} })}
                         }
                             .into_any()
                     }
@@ -753,21 +749,13 @@ pub fn smart_probe_failure_copy(error: &ViewerError) -> String {
 fn smart_body(config: Option<String>) -> AnyView {
     let Some(raw) = config else {
         return view! {
-            <div role="status" class=crate::components::notice::INFO>
-                <div>
-                    "SMART is not enabled on this CDR: it serves no service-discovery document."
-                </div>
-            </div>
+            {ferrohealth_ui::view::notice::notice(ferrohealth_ui::tone::Tone::Info, ferrohealth_ui::view::notice::Announce::Status, None, view! { "SMART is not enabled on this CDR: it serves no service-discovery document." })}
         }
         .into_any();
     };
     let Ok(doc) = serde_json::from_str::<serde_json::Value>(&raw) else {
         return view! {
-            <div role="status" class=crate::components::notice::WARNING>
-                <div>
-                    "SMART configuration returned, but it is not valid JSON."
-                </div>
-            </div>
+            {ferrohealth_ui::view::notice::notice(ferrohealth_ui::tone::Tone::Warn, ferrohealth_ui::view::notice::Announce::Status, None, view! { "SMART configuration returned, but it is not valid JSON." })}
         }
         .into_any();
     };
@@ -925,7 +913,7 @@ fn openapi_body(doc: &serde_json::Value) -> AnyView {
     if groups.is_empty() {
         return view! {
             <EmptyState
-                icon=ferrohealth_ui::icon::Glyph::COMPASS
+                icon=ferrohealth_ui::icon::Glyph::ROUTE
                 message="No paths advertised"
                 hint="The CDR served an OpenAPI document with no operations in it."
             />
@@ -975,7 +963,7 @@ fn activity_log_card() -> AnyView {
                 "filterable by time window, patient, principal, outcome and action."
             </p>
             <A href="/audit" attr:class=BTN_SECONDARY>
-                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::HEART_PULSE, "14")}
+                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::ACTIVITY, "14")}
                 " Open audit browser"
             </A>
         </div>

@@ -5,7 +5,7 @@
 //!
 //! The session guard plus the persistent chrome around the routed `<Outlet/>`,
 //! drawn by FerroUI: the skip link, the top bar (the lockup, the CDR status
-//! pill carrying the declared deployment profile, the theme switch, the
+//! pill carrying the declared deployment profile, the theme toggle, the
 //! operator menu), the sandbox banner under it, the navigation (a column beside
 //! the page, a drawer on a narrow screen), and the footer.
 //!
@@ -24,18 +24,17 @@
 //! switch posts to ([`crate::theme`]); no browser storage holds anything.
 
 use ferrohealth_ui::icon::Glyph;
-use ferrohealth_ui::theme::Theme;
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::menu::{OperatorMenu, operator_menu};
 use ferrohealth_ui::view::shell::{Footer, Shell, drawer_button, shell, topbar};
 use ferrohealth_ui::view::status::{banner, pill};
-use ferrohealth_ui::view::theme_switch::theme_switch;
+use ferrohealth_ui::view::theme_switch::theme_toggle;
 use ferrohealth_ui::widget::nav::{Entry, Group, sidebar};
+use ferrohealth_ui::widget::side_panel::{SidePanel, side_panel, side_panel_trigger};
 use ferrohealth_ui::widget::toast::{provide_toasts, toast_region};
 use leptos::prelude::*;
 use leptos::server_fn::ServerFn as _;
 use leptos_router::components::{Outlet, Redirect};
-use leptos_use::{UseTimeoutFnReturn, use_interval_fn, use_timeout_fn};
 
 use crate::auth::{Logout, SessionInfo, current_session, fetch_status};
 use crate::components::brand::viewer_lockup;
@@ -50,10 +49,17 @@ const HEALTH_POLL_MS: u64 = 30_000;
 ///
 /// One second past it, so the re-check reads a cookie the server has already
 /// stopped honouring rather than racing it by a hair.
-const EXPIRY_GRACE_MS: f64 = 1_000.0;
+const EXPIRY_GRACE_MS: u64 = 1_000;
 
 /// The id of the navigation, which the drawer button opens.
 const SIDEBAR_ID: &str = "sidebar";
+
+/// The id of the access-scopes side panel, which the operator menu opens.
+const ACCESS_PANEL_ID: &str = "access-scopes";
+
+/// The operator menu's "View scopes" button: FerroUI's secondary button at
+/// the menu's full width, so it lines up with the sign-out under it.
+const SCOPES_TRIGGER: &str = "fui-button fui-button-secondary w-full";
 
 /// The id of the operator menu's popover.
 const OPERATOR_MENU_ID: &str = "user-menu";
@@ -73,13 +79,13 @@ const DATA: [Entry; 6] = [
     Entry {
         href: "/templates",
         label: "Templates",
-        glyph: Glyph::FILES,
+        glyph: Glyph::FILE_CODE,
         exact: false,
     },
     Entry {
         href: "/queries",
         label: "Queries",
-        glyph: Glyph::SEARCH,
+        glyph: Glyph::SEARCH_CODE,
         exact: false,
     },
     Entry {
@@ -97,7 +103,7 @@ const DATA: [Entry; 6] = [
     Entry {
         href: "/terminology",
         label: "Terminology",
-        glyph: Glyph::LIST_CHECKS,
+        glyph: Glyph::BOOK_A,
         exact: false,
     },
 ];
@@ -106,7 +112,7 @@ const DATA: [Entry; 6] = [
 const SUBSCRIPTIONS: Entry = Entry {
     href: "/subscriptions",
     label: "Subscriptions",
-    glyph: Glyph::BELL,
+    glyph: Glyph::RADIO_TOWER,
     exact: false,
 };
 
@@ -114,7 +120,7 @@ const SUBSCRIPTIONS: Entry = Entry {
 const OPERATIONS: Entry = Entry {
     href: "/operations",
     label: "Operations",
-    glyph: Glyph::SETTINGS,
+    glyph: Glyph::GAUGE,
     exact: false,
 };
 
@@ -186,7 +192,7 @@ fn nav_groups(subscriptions: bool, operations: bool) -> [Group; 2] {
 /// session renders a [`Redirect`] to `/login`, and a present session renders
 /// the full chrome + `<Outlet/>`. The topbar status pill reads a second
 /// resource over `fetch_status`, re-polled every `HEALTH_POLL_MS` via
-/// [`use_interval_fn`] (a no-op on the server).
+/// a browser interval (an effect, so never on the server).
 ///
 /// The shell never stays interactive over a dead session, and three browser
 /// timers/watchers see to it: the session resource is re-checked on the health
@@ -210,7 +216,6 @@ pub fn AppShell() -> impl IntoView {
     // They gate the operations and subscriptions nav entries.
     let management = crate::management::management_gate();
     let subscriptions = crate::subscriptions::event_subscription_gate();
-    let scopes_open = RwSignal::new(false);
     let toasts = provide_toasts();
 
     // The signed-out destination, computed from the URL the user is on so
@@ -227,43 +232,40 @@ pub fn AppShell() -> impl IntoView {
     // reactive write there would re-run the gate that wrote it.
     let seen_session = StoredValue::new(false);
 
-    // Browser-only: poll the CDR health endpoint on an interval, and re-check
-    // the session on the same tick — a revocation the browser never asked
-    // about surfaces within one poll even if nothing else is happening.
-    let _pausable = use_interval_fn(
-        move || {
-            status.refetch();
-            session.refetch();
-        },
-        HEALTH_POLL_MS,
-    );
+    // Browser-only (an Effect never runs on the server pass): poll the CDR
+    // health endpoint on an interval, and re-check the session on the same
+    // tick — a revocation the browser never asked about surfaces within one
+    // poll even if nothing else is happening.
+    Effect::new(move |_| {
+        match set_interval_with_handle(
+            move || {
+                status.refetch();
+                session.refetch();
+            },
+            std::time::Duration::from_millis(HEALTH_POLL_MS),
+        ) {
+            Ok(handle) => on_cleanup(move || handle.clear()),
+            Err(_refused) => leptos::logging::warn!("the browser refused the health poll timer"),
+        }
+    });
 
     // Browser-only: the session's reported deadline schedules its own
     // re-check, which catches an idle expiry the poll above cannot — a
-    // throttled background tab, a machine that slept. `use_timeout_fn` reads
-    // the delay when `start` is called, so the derived signal always hands it
-    // the freshly resolved session's remaining seconds, and each start
-    // replaces the pending timer.
-    let expiry_delay = Signal::derive(move || {
-        session
-            .get()
-            .and_then(|answer| answer.ok().flatten())
-            .map_or(EXPIRY_GRACE_MS, |info| {
-                f64::from(info.expires_in_secs).mul_add(1_000.0, EXPIRY_GRACE_MS)
-            })
-    });
-    let UseTimeoutFnReturn {
-        start: start_expiry_check,
-        ..
-    } = use_timeout_fn(
-        move |()| {
-            session.refetch();
-        },
-        expiry_delay,
-    );
+    // throttled background tab, a machine that slept. Each freshly resolved
+    // session replaces the pending timer with one at its own deadline.
+    let expiry_check = StoredValue::new(None::<TimeoutHandle>);
     Effect::new(move |_| {
-        if matches!(session.get(), Some(Ok(Some(_)))) {
-            start_expiry_check(());
+        let Some(Ok(Some(info))) = session.get() else {
+            return;
+        };
+        if let Some(pending) = expiry_check.get_value() {
+            pending.clear();
+        }
+        let delay = std::time::Duration::from_secs(u64::from(info.expires_in_secs))
+            .saturating_add(std::time::Duration::from_millis(EXPIRY_GRACE_MS));
+        match set_timeout_with_handle(move || session.refetch(), delay) {
+            Ok(handle) => expiry_check.set_value(Some(handle)),
+            Err(_refused) => leptos::logging::warn!("the browser refused the session expiry timer"),
         }
     });
 
@@ -311,7 +313,7 @@ pub fn AppShell() -> impl IntoView {
         </Suspense>
     }
     .into_any();
-    let chrome = authed_shell(session, status, management, subscriptions, scopes_open);
+    let chrome = authed_shell(session, status, management, subscriptions);
     view! { {gate} {chrome} {toast_region(toasts)} }
 }
 
@@ -405,18 +407,12 @@ fn sandbox_banner(status: Resource<Result<String, crate::error::ViewerError>>) -
 
 /// The operator menu: the identity, "View scopes" (which opens the access
 /// drawer) and the sign-out, a plain form post to the logout server function.
-fn user_menu(
-    session: Resource<Result<Option<SessionInfo>, crate::error::ViewerError>>,
-    scopes_open: RwSignal<bool>,
-    theme: Theme,
-    back: String,
-) -> AnyView {
+fn user_menu(session: Resource<Result<Option<SessionInfo>, crate::error::ViewerError>>) -> AnyView {
     // Identity text resolves the session in a resource-free section (safe to
     // re-run — it allocates no resources, so ids cannot diverge).
     view! {
         <Suspense fallback=|| ()>
             {move || {
-                let back = back.clone();
                 Suspend::new(async move {
                     let identity = session
                         .await
@@ -425,18 +421,12 @@ fn user_menu(
                         .map(|info| info.identity)
                         .unwrap_or_default();
                     let extra = view! {
-                        <div class="fui-drawer-only">{theme_switch(theme, crate::theme::THEME_ROUTE.to_owned(), back)}</div>
-                        <button
-                            type="button"
-                            id="view-scopes"
-                            class=ferrohealth_ui::view::button::Variant::Secondary.class()
-                            popovertarget=OPERATOR_MENU_ID
-                            popovertargetaction="hide"
-                            on:click=move |_| scopes_open.set(true)
-                        >
-                            {ferrohealth_ui::icon::icon(Glyph::SHIELD_CHECK, "16")}
-                            "View scopes"
-                        </button>
+                        {side_panel_trigger(
+                            ACCESS_PANEL_ID,
+                            SCOPES_TRIGGER,
+                            Glyph::SHIELD_CHECK,
+                            "View scopes",
+                        )}
                     };
                     view! {
                         <span id="user-menu-trigger" class="contents">
@@ -466,7 +456,6 @@ fn user_menu(
 /// the viewer never invents a claim it was not given.
 fn scopes_drawer(
     session: Resource<Result<Option<SessionInfo>, crate::error::ViewerError>>,
-    scopes_open: RwSignal<bool>,
 ) -> AnyView {
     let effective_access = view! {
         <Suspense fallback=|| ()>
@@ -514,24 +503,23 @@ fn scopes_drawer(
     }
     .into_any();
 
-    view! {
-        <thaw::OverlayDrawer open=scopes_open position=thaw::DrawerPosition::Right>
-            <thaw::DrawerHeader>
-                <thaw::DrawerHeaderTitle>"Access scopes"</thaw::DrawerHeaderTitle>
-            </thaw::DrawerHeader>
-            <thaw::DrawerBody>
-                // Stable id: the E2E journeys read the drawer's whole body
-                // (identity, policy source, session grants, previewer).
-                <div id="access-drawer" class="flex flex-col gap-4">
-                    {capability_note()}
-                    {effective_access}
-                    <hr class="border-edge" />
-                    <ScopePreviewer />
-                </div>
-            </thaw::DrawerBody>
-        </thaw::OverlayDrawer>
+    // Stable body id: the E2E journeys read the panel's whole body (identity,
+    // policy source, session grants, previewer).
+    let body = view! {
+        <div class="flex flex-col gap-4">
+            {capability_note()}
+            {effective_access}
+            <hr class="border-edge" />
+            <ScopePreviewer />
+        </div>
     }
-    .into_any()
+    .into_any();
+    side_panel(SidePanel {
+        id: ACCESS_PANEL_ID,
+        body_id: "access-drawer",
+        title: "Access scopes",
+        body,
+    })
 }
 
 /// The navigation, its gated entries shown once the probes answer; until then
@@ -572,9 +560,7 @@ fn authed_shell(
     subscriptions: Resource<
         Result<crate::subscriptions::SubscriptionAvailability, crate::error::ViewerError>,
     >,
-    scopes_open: RwSignal<bool>,
 ) -> AnyView {
-    let theme = crate::theme::current_theme();
     let back = leptos_router::hooks::use_location()
         .pathname
         .get_untracked();
@@ -585,15 +571,13 @@ fn authed_shell(
     .into_any();
     let end = view! {
         {status_pill(status)}
-        <div class="hidden md:block">
-            {theme_switch(theme, crate::theme::THEME_ROUTE.to_owned(), back.clone())}
-        </div>
-        {user_menu(session, scopes_open, theme, back)}
+        {theme_toggle(crate::theme::THEME_ROUTE.to_owned(), back)}
+        {user_menu(session)}
     }
     .into_any();
     let content = view! {
         <Outlet />
-        {scopes_drawer(session, scopes_open)}
+        {scopes_drawer(session)}
     }
     .into_any();
     shell(Shell {
@@ -611,7 +595,13 @@ fn authed_shell(
 
 #[cfg(test)]
 mod tests {
-    use super::nav_groups;
+    use super::{SCOPES_TRIGGER, nav_groups};
+
+    #[test]
+    fn the_scopes_trigger_is_ferrouis_secondary_button_at_full_width() {
+        let secondary = ferrohealth_ui::view::button::Variant::Secondary.class();
+        assert_eq!(SCOPES_TRIGGER, format!("{secondary} w-full"));
+    }
 
     /// Renders the groups as the token the order assertions read: each
     /// group's heading, then its entries' labels.

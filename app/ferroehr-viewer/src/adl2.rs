@@ -93,10 +93,10 @@ impl TemplateFamily {
 
     /// The upload picker's `accept` list.
     #[must_use]
-    pub fn upload_accept(self) -> &'static str {
+    pub fn upload_accept(self) -> &'static [&'static str] {
         match self {
-            Self::Adl14 => ".opt,.xml",
-            Self::Adl2 => ".adls,.adl,.opt2,.txt",
+            Self::Adl14 => &[".opt", ".xml"],
+            Self::Adl2 => &[".adls", ".adl", ".opt2", ".txt"],
         }
     }
 
@@ -113,8 +113,8 @@ impl TemplateFamily {
     #[must_use]
     pub fn upload_choose_label(self) -> &'static str {
         match self {
-            Self::Adl14 => " Choose an OPT/XML file",
-            Self::Adl2 => " Choose an ADL2 file",
+            Self::Adl14 => "Choose an OPT/XML file",
+            Self::Adl2 => "Choose an ADL2 file",
         }
     }
 

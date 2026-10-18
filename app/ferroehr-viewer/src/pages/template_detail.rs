@@ -294,28 +294,15 @@ pub fn TemplateDetailPage() -> impl IntoView {
     let meta_card = meta_section(detail);
     let delete_action = delete_section(template_id);
 
-    // The tabs are URL-driven pill links: a static-Tailwind anchor per view,
-    // the active one styled from the `selected_tab` Memo. No thaw TabList —
-    // the selected view is a shareable query param, not private widget state.
-    // All three bodies stay mounted (toggled by `class:hidden`) so each pane
-    // keeps its loaded state across tab switches.
-    let tab_link = move |value: &'static str, label: &'static str| {
-        let class = move || {
-            let base = "rounded-control px-3 py-1.5 text-sm font-medium transition-colors";
-            if selected_tab.get() == value {
-                format!("{base} bg-accent-subtle text-accent-ink")
-            } else {
-                format!("{base} text-ink-muted hover:bg-sunken")
-            }
-        };
-        let href = move || tab_href(&template_id.get(), value);
-        view! {
-            <leptos_router::components::A href=href attr:class=class>
-                {label}
-            </leptos_router::components::A>
-        }
-        .into_any()
-    };
+    // The tabs are URL-driven links (FerroUI's keyed tabs): the selected view
+    // is a shareable query param. All three bodies stay mounted (toggled by
+    // `class:hidden`) so each pane keeps its loaded state across tab switches.
+    let tabs = crate::components::tab_bar::url_tabs(
+        "Template views",
+        &[("wt", "WT"), ("opt", "OPT"), ("example", "Example")],
+        move |value| tab_href(&template_id.get(), value),
+        Signal::derive(move || selected_tab.get()),
+    );
 
     view! {
         <Title text=move || format!("Template · {}", template_id.get()) />
@@ -328,11 +315,7 @@ pub fn TemplateDetailPage() -> impl IntoView {
                 {delete_action}
             </PageHeader>
             {meta_card}
-            <nav aria-label="Template views" class="flex gap-1 mb-4">
-                {tab_link("wt", "WT")}
-                {tab_link("opt", "OPT")}
-                {tab_link("example", "Example")}
-            </nav>
+            {tabs}
             <div>
                 <div class:hidden=move || selected_tab.get() != "wt">{wt_pane}</div>
                 <div class:hidden=move || selected_tab.get() != "opt">{opt_pane}</div>
@@ -367,7 +350,7 @@ fn delete_section(template_id: Signal<String>) -> AnyView {
     // deletable object, so a bool IS the "which object" state).
     let confirming = RwSignal::new(false);
 
-    // Toast + navigation are side-effects on the outside world (the thaw
+    // Toast + navigation are side-effects on the outside world (the FerroUI
     // toaster, the router), so an Effect is their correct home; it never runs
     // on the server pass.
     let navigate = leptos_router::hooks::use_navigate();
@@ -414,6 +397,7 @@ fn delete_section(template_id: Signal<String>) -> AnyView {
                 title="Delete template"
                 message=message
                 confirm_label="Delete template"
+                dialog_id="template-delete-confirm-dialog"
                 confirm_id="template-delete-confirm"
                 on_cancel=Callback::new(move |()| confirming.set(false))
                 on_confirm=Callback::new(move |()| {
@@ -793,7 +777,7 @@ fn opt_tab(detail: Resource<Result<TemplateDetail, ViewerError>>) -> AnyView {
                         // Resolve inside the Transition: an SSR'd ErrorBoundary fallback
                         // mismatches at hydration in leptos 0.8.
                         view! {
-                            <crate::components::format_view::DocumentPane body=loaded.source />
+                            <crate::components::format_view::DocumentPane id="template-source-pane" body=loaded.source />
                         }
                             .into_any()
                     }
@@ -832,7 +816,7 @@ fn example_tab(
                             );
                             // Resolve inside the Transition: an SSR'd ErrorBoundary fallback
                             // mismatches at hydration in leptos 0.8.
-                            view! { <crate::components::format_view::DocumentPane body=pretty /> }
+                            view! { <crate::components::format_view::DocumentPane id="template-example-pane" body=pretty /> }
                                 .into_any()
                         }
                         Err(e) => crate::components::notice::inline_error(&e),

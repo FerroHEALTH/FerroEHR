@@ -437,7 +437,7 @@ fn page_view(page: AuditPage, query: Memo<leptos_router::params::ParamsMap>) -> 
     if !page.available {
         return view! {
             <EmptyState
-                icon=ferrohealth_ui::icon::Glyph::CIRCLE_ALERT
+                icon=ferrohealth_ui::icon::Glyph::SHIELD_OFF
                 message="The local audit repository is disabled"
                 hint="Enable [audit.store] on the CDR to record and browse the ATNA audit trail here."
             />

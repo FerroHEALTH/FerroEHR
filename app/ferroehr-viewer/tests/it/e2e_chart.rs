@@ -58,17 +58,15 @@ fn seeded() -> bool {
     false
 }
 
-/// How many chartistry line paths currently carry geometry. A hidden series
-/// keeps its `<path>` element but draws nothing (its Y values are `NaN`, which
-/// chartistry renders as missing data), so this is the DOM-visible count of
-/// series actually on screen.
+/// How many series lines FerroUI's chart currently draws with geometry. A
+/// hidden series draws no `<path>`, so this is the DOM-visible count of series
+/// actually on screen.
 async fn drawn_lines(h: &Harness) -> usize {
-    let paths = find_all(h, "g._chartistry_line path").await;
+    let paths = find_all(h, "[data-results-chart] path.fui-chart-line").await;
     let mut drawn = 0;
     for path in paths {
-        // NOTE: probe tier — chartistry re-renders the whole plot on every
-        // toggle, so a path found a moment ago may already be detached, and a
-        // path with no `d` yet is simply not drawn.
+        // NOTE: probe tier — the chart redraws its plot on every toggle, so a
+        // path found a moment ago may already be detached.
         if let Some(geometry) = path.read_attr("d").await
             && !geometry.trim().is_empty()
         {
@@ -151,12 +149,12 @@ async fn results_chart_groups_series_and_toggles_them() {
     );
 
     // The legend names both series.
-    h.wait_css("[data-chart-legend]").await;
-    let chips = find_all(&h, "[data-chart-series]").await;
+    h.wait_css("[data-results-chart] .fui-legend").await;
+    let chips = find_all(&h, "[data-results-chart] .fui-legend-chip").await;
     assert_eq!(chips.len(), 2, "one legend entry per series");
     let mut names = Vec::new();
     for chip in &chips {
-        names.push(chip.attr("data-chart-series").await);
+        names.push(chip.text().await.trim().to_owned());
     }
     names.sort();
     assert_eq!(
@@ -192,20 +190,15 @@ async fn results_chart_groups_series_and_toggles_them() {
 
     // Toggling one legend chip hides exactly that series.
     let chip = chips.first().expect("a legend chip");
-    let hidden = chip.attr("data-chart-series").await;
+    let hidden = chip.text().await.trim().to_owned();
     chip.click().await;
     // NOTE: probe tier — the chip is re-rendered by the toggle it just
     // dispatched, so a stale handle mid-poll is "not yet", not a failure.
-    poll_until(async || chip.read_attr("data-visible").await.as_deref() == Some("false")).await;
-    assert_eq!(
-        chip.attr("data-visible").await,
-        "false",
-        "the clicked legend chip reports `{hidden}` as hidden"
-    );
+    poll_until(async || chip.read_attr("aria-pressed").await.as_deref() == Some("false")).await;
     assert_eq!(
         chip.attr("aria-pressed").await,
         "false",
-        "the chip's pressed state follows its series"
+        "the clicked legend chip reports `{hidden}` as hidden"
     );
     wait_drawn_lines(&h, 1).await;
     h.shot(3, "chart-one-series-hidden").await;

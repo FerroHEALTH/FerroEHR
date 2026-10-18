@@ -226,7 +226,7 @@ fn contribution_view(state: &ContributionState) -> AnyView {
             {facts} {versions} <section class=CARD_PAD>
                 <h2 class=CARD_TITLE>"Document"</h2>
                 <div id="contribution-document">
-                    <DocumentPane body=pretty />
+                    <DocumentPane id="contribution-version-pane" body=pretty />
                 </div>
             </section>
         </div>
@@ -245,7 +245,7 @@ fn versions_section(versions: Vec<ContributionVersion>) -> AnyView {
             <section class=CARD_PAD>
                 <h2 class=CARD_TITLE>"Versions"</h2>
                 <EmptyState
-                    icon=ferrohealth_ui::icon::Glyph::FILES
+                    icon=ferrohealth_ui::icon::Glyph::FILE_CLOCK
                     message="No versions listed"
                     hint="A CONTRIBUTION always references at least one version; if none is listed, the CDR reported an empty change set."
                 />

@@ -130,7 +130,7 @@ fn disabled_card() -> AnyView {
     view! {
         <section id="terminology-disabled" class=CARD_PAD>
             <EmptyState
-                icon=ferrohealth_ui::icon::Glyph::CIRCLE_X
+                icon=ferrohealth_ui::icon::Glyph::BOOK_X
                 message="The terminology extension is disabled on this server"
                 hint="The CDR answers its terminology routes as if unmounted. Set api_enabled = true under [terminology] in the CDR's configuration to browse terminologies, terms and value sets here."
             />
@@ -178,7 +178,7 @@ fn list_card(ids: Vec<String>, selected: Signal<String>) -> AnyView {
     if ids.is_empty() {
         return view! {
             <EmptyState
-                icon=ferrohealth_ui::icon::Glyph::CIRCLE_X
+                icon=ferrohealth_ui::icon::Glyph::BOOK_X
                 message="No terminologies"
                 hint="The CDR serves the terminology API but reports no terminology in it."
             />
@@ -691,7 +691,7 @@ fn extract_panel(extract: &TerminologyExtractView, hook: &'static str) -> AnyVie
     if extract.terms.is_empty() && extract.relationships.is_empty() {
         return view! {
             <EmptyState
-                icon=ferrohealth_ui::icon::Glyph::SEARCH
+                icon=ferrohealth_ui::icon::Glyph::SEARCH_X
                 message="Nothing in this extract"
                 hint="The CDR answered with an extract that carries no term and no relationship."
             />

@@ -51,9 +51,8 @@ pub struct SeriesSpec {
 /// series in [`ChartModel::series`] order.
 ///
 /// `f64::NAN` marks a cell that was absent, null, or not a number —
-/// `leptos-chartistry` draws those as a gap in the line rather than a point at
-/// zero, which is also how a legend-hidden series is drawn (see
-/// [`crate::components::results_chart`]).
+/// FerroUI's chart draws those as a gap in the line rather than a point at
+/// zero (see [`crate::components::results_chart`]).
 #[derive(Debug, Clone, PartialEq)]
 pub struct ChartRow {
     /// The X position: a row ordinal, or seconds since the Unix epoch.
@@ -78,7 +77,7 @@ pub struct AxisSpec {
     pub label: String,
     /// What the X positions mean.
     pub scale: AxisScale,
-    /// The plotted rows, ascending by `x` (chartistry requires sorted data).
+    /// The plotted rows, ascending by `x` (the chart draws them in order).
     pub rows: Vec<ChartRow>,
 }
 
@@ -363,7 +362,7 @@ pub fn iso_epoch_seconds(text: &str) -> Option<f64> {
 /// times, a few months as `MM-DD hh:mm`, and a multi-year series as dates — a
 /// label never repeats what the axis already makes obvious. A tick that is not
 /// a finite instant (or is outside jiff's representable range, ±9999 years)
-/// renders as `-`, the same placeholder chartistry's own float formatter uses.
+/// renders as `-`.
 #[must_use]
 pub fn time_tick_label(seconds: f64, span_seconds: f64) -> String {
     if !seconds.is_finite() || seconds.abs() > 1e12 {

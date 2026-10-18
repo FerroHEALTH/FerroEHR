@@ -184,7 +184,7 @@ fn definition_pane(qualified: String, stored_version: String, aql: String) -> An
                 <span class="font-mono text-ink">{stored_version}</span>
                 "."
             </p>
-            <DocumentPane body=body />
+            <DocumentPane id="stored-query-pane" body=body />
             <div class="flex flex-wrap items-center gap-3 text-sm">
                 <a href=editor_href class="text-accent hover:underline">
                     "Open in editor"

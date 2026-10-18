@@ -163,8 +163,4 @@ skip-tree = []
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-# thaw (viewer UI kit): pinned to a main rev because the only Leptos-0.8
-# crates.io release (0.5.0-beta) lacks `#![recursion_limit = "256"]` and fails
-# non-erase_components codegen on rustc 1.96; main has the fix (2026-07-17).
-# Remove when thaw 0.5 stable ships and the pin returns to crates.io.
-allow-git = ["https://github.com/thaw-ui/thaw"]
+allow-git = []

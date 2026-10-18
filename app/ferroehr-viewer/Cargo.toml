@@ -74,16 +74,10 @@ futures = { workspace = true }
 # issue #2055): `http::StatusCode` names the codes the pages branch on, and
 # the crate is tiny and wasm-clean.
 http = { workspace = true }
-# The widgets FerroUI does not draw yet (the signal-driven dialog, the upload
-# field, the side drawer, the charts, the clipboard).
-thaw.workspace = true
-leptos-use = { workspace = true }
-leptos-chartistry = { workspace = true }
 
 # The browser half.
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 leptos = { workspace = true, features = ["hydrate"] }
-thaw = { workspace = true, features = ["hydrate"] }
 wasm-bindgen.workspace = true
 console_error_panic_hook.workspace = true
 
@@ -97,12 +91,6 @@ leptos = { workspace = true, features = ["ssr", "nonce"] }
 leptos_meta = { workspace = true, features = ["ssr"] }
 leptos_router = { workspace = true, features = ["ssr"] }
 leptos_axum.workspace = true
-thaw = { workspace = true, features = ["ssr"] }
-# leptos-use and chartistry MUST get their `ssr` feature on the server
-# target: without it their browser timers compile the wasm path into the
-# native binary and panic at SSR.
-leptos-use = { workspace = true, features = ["ssr", "axum"] }
-leptos-chartistry = { workspace = true, features = ["ssr"] }
 # The full ITS surface BFF-side (OPT parsing + WebTemplate building); the
 # scope grammar itself is in both halves (see the dependency comment above).
 openehr-its = { path = "../../crates/openehr-its", default-features = false, features = ["full"] }

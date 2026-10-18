@@ -18,8 +18,9 @@ pub const CARD_PAD: &str = "fui-card";
 /// A sunken well (code panes, read-only documents).
 pub const WELL: &str = "rounded-card border border-edge bg-sunken p-3";
 
-/// The standard section heading inside a card: FerroUI's card title.
-pub const CARD_TITLE: &str = "fui-card-title";
+/// The standard section heading inside a card: FerroUI's card title, one
+/// spacing step above its body wherever that body sits in the card.
+pub const CARD_TITLE: &str = "fui-card-title mb-3";
 
 /// A titled panel card wrapping an already-erased body: the uniform section of
 /// the two-column operational panels (`/system`, `/operations`). `full_width`

@@ -504,7 +504,7 @@ fn disabled_card() -> AnyView {
     view! {
         <section id="subscriptions-disabled" class=CARD_PAD>
             <EmptyState
-                icon=ferrohealth_ui::icon::Glyph::BELL
+                icon=ferrohealth_ui::icon::Glyph::RADIO_TOWER
                 message="The event-subscription API is disabled on this server"
                 hint="The CDR answers its subscription routes as if unmounted. Set admin_api = true under [events] in the CDR's configuration to administer subscriptions here."
             />
@@ -517,7 +517,7 @@ fn disabled_card() -> AnyView {
 fn empty_listing() -> AnyView {
     view! {
         <EmptyState
-            icon=ferrohealth_ui::icon::Glyph::BELL
+            icon=ferrohealth_ui::icon::Glyph::RADIO_TOWER
             message="No event subscriptions"
             hint="Create the first subscription with the card above."
         />
@@ -541,7 +541,8 @@ fn rows_view(
         rows,
         paging,
         "/subscriptions",
-        "subscriptions",
+        "Subscriptions",
+        ferrohealth_ui::table::model::Noun::new("subscription", "subscriptions"),
         &[
             "Subscription",
             "Kind",
@@ -649,7 +650,7 @@ fn delete_dialog(
         delete,
         "Delete subscription",
         "Delete subscription",
-        "subscription-delete-confirm",
+        ("subscription-delete-dialog", "subscription-delete-confirm"),
         message,
     )
 }

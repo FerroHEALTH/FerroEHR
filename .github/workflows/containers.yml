@@ -405,7 +405,7 @@ jobs:
       - uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
         if: matrix.platform == 'amd64'
         with:
-          tool: cargo-leptos@0.3.7,wasm-bindgen@0.2.128
+          tool: cargo-leptos@0.3.7,wasm-bindgen@0.2.129
 
       - name: Build the site bundle (amd64 only)
         if: matrix.platform == 'amd64'

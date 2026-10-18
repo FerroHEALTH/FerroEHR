@@ -707,7 +707,7 @@ fn document_section(resource: StatusResource) -> AnyView {
                             crate::format::ReprFormat::CanonicalJson,
                         );
                         let doc = RwSignal::new(pretty);
-                        view! { <DocumentPane body=doc /> }.into_any()
+                        view! { <DocumentPane id="ehr-status-pane" body=doc /> }.into_any()
                     }
                     Err(_) => ().into_any(),
                 }

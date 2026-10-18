@@ -8,11 +8,8 @@
 //! theme and no browser storage holds it.
 //!
 //! The FerroUI stylesheet reads `data-theme` (`system` follows
-//! `prefers-color-scheme`); the brand's accent is `style/theme.css`. The thaw
-//! widgets that FerroUI does not draw yet take the matching thaw theme from
-//! [`thaw_theme`]. No openEHR spec governs this: our own design.
-
-use std::collections::HashMap;
+//! `prefers-color-scheme`); the brand is `style/theme.css`. No openEHR spec
+//! governs this: our own design.
 
 use ferrohealth_ui::theme::Theme;
 
@@ -74,38 +71,6 @@ pub fn return_path(back: &str) -> &str {
             .all(|c| c.is_ascii_graphic() && !matches!(c, '\\' | '?' | '#'))
         && !back.split('/').any(|segment| segment == "..");
     if plain { back } else { "/" }
-}
-
-/// The teal brand ramp, Fluent variant keys 10 (darkest) → 160 (lightest);
-/// variant 80 is the primary accent.
-const BRAND: [(i32, &str); 16] = [
-    (10, "#031b19"),
-    (20, "#042f2e"),
-    (30, "#0a3f3c"),
-    (40, "#134e4a"),
-    (50, "#115e59"),
-    (60, "#0f766e"),
-    (70, "#0e857b"),
-    (80, "#0d9488"),
-    (90, "#14b8a6"),
-    (100, "#2dd4bf"),
-    (110, "#48ddc8"),
-    (120, "#5eead4"),
-    (130, "#7cf0dc"),
-    (140, "#99f6e4"),
-    (150, "#b3f9ea"),
-    (160, "#ccfbf1"),
-];
-
-/// The thaw widget theme matching `theme`; the system theme draws them light,
-/// since the server cannot know what the system asks for.
-#[must_use]
-pub fn thaw_theme(theme: Theme) -> thaw::Theme {
-    let ramp: HashMap<i32, &'static str> = BRAND.into_iter().collect();
-    match theme {
-        Theme::Dark => thaw::Theme::custom_dark(&ramp),
-        Theme::Light | Theme::System => thaw::Theme::custom_light(&ramp),
-    }
 }
 
 #[cfg(test)]

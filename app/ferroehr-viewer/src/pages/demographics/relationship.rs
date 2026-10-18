@@ -55,7 +55,7 @@ use crate::components::notice::inline_error;
 use crate::components::notice::{alert_note, deleted_notice, diagnostic_pane, missing_notice};
 use crate::components::page_header::{Crumb, PageHeader};
 use crate::components::surface::{CARD_PAD, CARD_TITLE};
-use crate::components::tab_bar::tab_link;
+use crate::components::tab_bar::url_tabs;
 use crate::components::toast::toast_success;
 use crate::error::ViewerError;
 use crate::pages::demographics::party::fact_row;
@@ -963,7 +963,7 @@ fn create_card(source_uid: &str, source_kind: &str) -> AnyView {
                         disabled=Signal::derive(move || create.pending().get())
                         on:click=on_click
                     >
-                        {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::ARROW_RIGHT, "14")}
+                        {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::LINK, "14")}
                         "Create relationship"
                     </button>
                     <Show when=move || create.pending().get()>
@@ -1081,19 +1081,12 @@ pub fn RelationshipDetailPage() -> impl IntoView {
 
 /// The relationship detail's two-tab bar.
 fn tab_bar(uid: Signal<String>, selected: Memo<String>) -> AnyView {
-    let link = move |value: &'static str, label: &'static str| {
-        tab_link(
-            move || format!("{}?tab={value}", relationship_href(uid.get().as_str())),
-            label,
-            Signal::derive(move || selected.get() == value),
-        )
-    };
-    view! {
-        <div class="flex flex-wrap gap-1 border-b border-edge pb-2">
-            {link("relationship", "Relationship")} {link("history", "History")}
-        </div>
-    }
-    .into_any()
+    url_tabs(
+        "Relationship views",
+        &[("relationship", "Relationship"), ("history", "History")],
+        move |value| format!("{}?tab={value}", relationship_href(uid.get().as_str())),
+        selected.into(),
+    )
 }
 
 /// The relationship resource shared by the tab's sections.
@@ -1377,6 +1370,7 @@ fn delete_section(uid: Signal<String>, version_uid: RwSignal<String>) -> AnyView
         LogicalDeleteCopy {
             button_id: "relationship-delete",
             label: "Delete relationship",
+            dialog_id: "relationship-delete-dialog",
             confirm_id: "relationship-delete-confirm",
             success_title: "Relationship deleted",
             object: RELATIONSHIP_OBJECT,
@@ -1429,7 +1423,7 @@ fn relationships_view(
     let table = if items.is_empty() {
         view! {
             <EmptyState
-                icon=ferrohealth_ui::icon::Glyph::LAYERS
+                icon=ferrohealth_ui::icon::Glyph::NETWORK
                 message="No relationships on this party"
                 hint="A party document carries the relationships it is the SOURCE of. Create one below, or add it to the party's own relationships list on the Party tab."
             />
@@ -1460,7 +1454,7 @@ fn relationships_view(
                     "Creates a PARTY_RELATIONSHIP resource with this party as its source. That resource is versioned in its own right — an extension of this CDR, not part of the released openEHR demographic API."
                 </p>
                 <a href=create_href class=BTN_PRIMARY id="party-relate">
-                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::ARROW_RIGHT, "14")}
+                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::LINK, "14")}
                     "Create a relationship"
                 </a>
             </section>

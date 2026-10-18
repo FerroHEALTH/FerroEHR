@@ -79,7 +79,7 @@ async fn operations_panel_reports_dependency_health_and_provenance() {
     h.wait_css("a[href='/operations']").await;
 
     h.goto("/operations").await;
-    h.wait_css("footer").await;
+    h.wait_css(common::SHELL_FOOTER).await;
 
     // Dependency health: the aggregate pill plus one row per indicator the CDR
     // evaluates. The composed stack always has a database and applied

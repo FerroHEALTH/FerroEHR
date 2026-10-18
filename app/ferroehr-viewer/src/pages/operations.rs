@@ -413,7 +413,7 @@ fn tiles_body(tiles: Vec<MetricTile>) -> AnyView {
                 <StatCard
                     label=tile.label
                     value=Signal::derive(move || value.clone())
-                    icon=ferrohealth_ui::icon::Glyph::LAYOUT_DASHBOARD
+                    icon=ferrohealth_ui::icon::Glyph::GAUGE
                     href=format!("/operations?metric={}", urlencoding::encode(&tile.name))
                 />
             }
@@ -614,7 +614,7 @@ fn loggers_body(
                     disabled=move || draft.read().trim().is_empty()
                     on:click=move |_| pending_apply.set(Some(draft.read().trim().to_owned()))
                 >
-                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::SETTINGS, "14")}
+                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::SLIDERS_HORIZONTAL, "14")}
                     " Apply filter"
                 </button>
                 <button
@@ -623,7 +623,7 @@ fn loggers_body(
                     class=BTN_SECONDARY
                     on:click=move |_| pending_reset.set(true)
                 >
-                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::REFRESH_CW, "14")}
+                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::ROTATE_CCW, "14")}
                     " Reset to boot filter"
                 </button>
             </div>
@@ -658,7 +658,8 @@ fn filter_dialogs(
             title="Apply log filter"
             message=apply_message
             confirm_label="Apply filter"
-            confirm_icon=ferrohealth_ui::icon::Glyph::SETTINGS
+            confirm_icon=ferrohealth_ui::icon::Glyph::SLIDERS_HORIZONTAL
+            dialog_id="ops-log-apply-confirm-dialog"
             confirm_id="ops-log-apply-confirm"
             on_cancel=Callback::new(move |()| pending_apply.set(None))
             on_confirm=Callback::new(move |()| {
@@ -676,7 +677,8 @@ fn filter_dialogs(
                     .to_owned()
             })
             confirm_label="Reset filter"
-            confirm_icon=ferrohealth_ui::icon::Glyph::REFRESH_CW
+            confirm_icon=ferrohealth_ui::icon::Glyph::ROTATE_CCW
+            dialog_id="ops-log-reset-confirm-dialog"
             confirm_id="ops-log-reset-confirm"
             on_cancel=Callback::new(move |()| pending_reset.set(false))
             on_confirm=Callback::new(move |()| {
@@ -696,13 +698,9 @@ fn filter_dialogs(
 /// an error to report.
 fn surface_absent(what: &'static str) -> AnyView {
     view! {
-        <div role="status" class=crate::components::notice::INFO>
-            <div>
-                {what}
+        {ferrohealth_ui::view::notice::notice(ferrohealth_ui::tone::Tone::Info, ferrohealth_ui::view::notice::Announce::Status, None, view! { {what}
                 " is not available: the CDR does not serve this management endpoint. Enable it "
-                "server-side ([management] — each endpoint takes its own access level)."
-            </div>
-        </div>
+                "server-side ([management] — each endpoint takes its own access level)." })}
     }
     .into_any()
 }

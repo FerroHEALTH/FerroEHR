@@ -107,7 +107,7 @@ pub fn revision_history_section(
                     Ok(entries) if entries.is_empty() => {
                         view! {
                             <EmptyState
-                                icon=ferrohealth_ui::icon::Glyph::REFRESH_CW
+                                icon=ferrohealth_ui::icon::Glyph::ROTATE_CCW_CLOCK
                                 message=labels.empty_message
                                 hint=labels.empty_hint
                             />
@@ -176,7 +176,7 @@ fn history_row(entry: &VersionEntry, pinned: RwSignal<String>, row_hook: &'stati
     let committed_by = entry.committer.clone();
     let open = view! {
         <button on:click=move |_| pinned.set(target.clone())>
-            {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::SEARCH, "14")}
+            {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::EYE, "14")}
             "Open"
         </button>
     }
@@ -246,7 +246,7 @@ pub fn at_time_lookup_section(
                     disabled=Signal::derive(move || at_time.pending().get())
                     on:click=on_go
                 >
-                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::INFO, "14")}
+                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::CLOCK, "14")}
                     "Open that version"
                 </button>
             </div>
@@ -282,7 +282,7 @@ pub fn pinned_document_section(
                         let doc = RwSignal::new(body);
                         view! {
                             <div id=labels.document_id>
-                                <DocumentPane body=doc />
+                                <DocumentPane id="pinned-document-pane" body=doc />
                             </div>
                         }
                             .into_any()
@@ -290,7 +290,7 @@ pub fn pinned_document_section(
                     Ok(None) => {
                         view! {
                             <EmptyState
-                                icon=ferrohealth_ui::icon::Glyph::FILES
+                                icon=ferrohealth_ui::icon::Glyph::FILE_CLOCK
                                 message="No version opened"
                                 hint="Open a version from the revision history above, or resolve one by date and time."
                             />

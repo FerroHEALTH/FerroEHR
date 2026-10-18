@@ -886,7 +886,7 @@ pub(crate) fn ehr_tags_section(ehr_id: Signal<String>, selected: Memo<String>) -
                     Ok(Some(tags)) if tags.is_empty() => {
                         view! {
                             <EmptyState
-                                icon=ferrohealth_ui::icon::Glyph::LAYERS
+                                icon=ferrohealth_ui::icon::Glyph::TAGS
                                 message="No tags in this EHR"
                                 hint="Tags are free key/value markers a client sets on a composition, the EHR status or the directory; the composition viewer and the Status tab both set them."
                             />
@@ -946,7 +946,8 @@ fn browser_table(
     .into_any();
     let footer = table_footer(
         &crate::pages::ehrs::ehr_detail_href(&ehr_id.get_untracked()),
-        "tagged objects",
+        "Tagged object pages",
+        ferrohealth_ui::table::model::Noun::new("tagged object", "tagged objects"),
         paging,
         Signal::derive(move || total),
     );
@@ -983,7 +984,7 @@ fn group_rows(ehr_id: Signal<String>, group: &TagGroup, open: ResolveAction) -> 
                         open.dispatch((ehr_id.get_untracked(), target.clone()));
                     }
                 >
-                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::SEARCH, "14")}
+                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::EYE, "14")}
                     "Open"
                 </button>
             </td>

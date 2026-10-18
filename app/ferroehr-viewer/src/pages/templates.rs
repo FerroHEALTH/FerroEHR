@@ -415,7 +415,7 @@ pub fn TemplatesPage() -> impl IntoView {
     // accepted input differing. The family comes from the URL, so both branches
     // render identically on the server pass and at hydration.
     // Opening the dialog clears BOTH halves of the previous attempt: the
-    // source, and the action value the diagnostic MessageBar renders. Leaving
+    // source, and the action value the diagnostic notice renders. Leaving
     // either behind shows the last attempt inside a dialog the reader just
     // opened fresh.
     let reset_upload = Callback::new(move |()| {
@@ -460,7 +460,7 @@ pub fn TemplatesPage() -> impl IntoView {
 /// Wire the screen's three mutations to their success/failure toasts.
 ///
 /// Every mutation toasts on BOTH outcomes; an upload rejection also keeps its
-/// inline `MessageBar`, because a validation diagnostic is worth reading line by
+/// inline notice, because a validation diagnostic is worth reading line by
 /// line. Dispatching a toast is a side-effect on the outside world, so an
 /// `Effect` is its correct home: it writes no signal and never runs on the
 /// server pass.
@@ -524,34 +524,18 @@ fn mutation_toasts(
 /// Each href carries the family alone, so switching never inherits the other
 /// listing's page window.
 fn family_switch(family: Memo<TemplateFamily>) -> AnyView {
-    let link = move |target: TemplateFamily| {
-        let class = move || {
-            let base = "rounded-control px-3 py-1.5 text-sm font-medium transition-colors";
-            if family.get() == target {
-                format!("{base} bg-accent-subtle text-accent-ink")
-            } else {
-                format!("{base} text-ink-muted hover:bg-sunken")
-            }
-        };
-        view! {
-            <leptos_router::components::A
-                href=target.href()
-                attr:class=class
-                attr:data-template-family=target.as_query()
-            >
-                {target.label()}
-            </leptos_router::components::A>
-        }
-        .into_any()
-    };
-    view! {
-        <nav aria-label="Template families" class="flex gap-1 mb-3">
-            {link(TemplateFamily::Adl14)}
-            {link(TemplateFamily::Adl2)}
-        </nav>
-    }
-    .into_any()
+    crate::components::tab_bar::url_tabs(
+        "Template families",
+        &[("adl14", "ADL 1.4"), ("adl2", "ADL 2")],
+        |key| TemplateFamily::from_query(key).href(),
+        Signal::derive(move || family.get().as_query().to_owned()),
+    )
 }
+
+/// The largest template file the upload field reads in the browser: an
+/// operational template is text of a few hundred KiB at most, and the CDR
+/// refuses larger bodies itself.
+const TEMPLATE_UPLOAD_MAX_BYTES: u64 = 16 * 1024 * 1024;
 
 /// The screen's ONE upload dialog, serving both families: the copy, the
 /// accepted file types and the dispatched action follow the URL family, and
@@ -586,18 +570,25 @@ fn upload_dialog_view(
             on_dismiss=Callback::new(move |()| open.set(false))
             title=Signal::derive(move || family.get().upload_title().to_owned())
             help=Signal::derive(move || family.get().upload_help().to_owned())
-            accept=Signal::derive(move || family.get().upload_accept().to_owned())
-            placeholder=Signal::derive(move || family.get().upload_placeholder().to_owned())
-            choose_label=Signal::derive(move || family.get().upload_choose_label().to_owned())
-            submit_label=Signal::derive(|| "Upload template".to_owned())
+            upload=Signal::derive(move || {
+                let family = family.get();
+                ferrohealth_ui::widget::upload::Upload {
+                    id: "template-upload",
+                    label: "Template source",
+                    choose: family.upload_choose_label(),
+                    accept: family.upload_accept(),
+                    max_bytes: TEMPLATE_UPLOAD_MAX_BYTES,
+                    placeholder: family.upload_placeholder(),
+                }
+            })
+            submit_label="Upload template"
             source=source
             pending=pending
             error=error
             on_submit=Callback::new(move |text: String| {
                 drop(active().dispatch(text));
             })
-            picker_id="template-upload-picker"
-            source_id="template-upload-source"
+            dialog_id="template-upload-dialog"
             submit_id="template-upload-submit"
         />
     }
@@ -624,6 +615,7 @@ fn delete_dialog(
             title="Delete template"
             message=message
             confirm_label="Delete template"
+            dialog_id="template-delete-confirm-dialog"
             confirm_id="template-delete-confirm"
             on_cancel=Callback::new(move |()| pending_delete.set(None))
             on_confirm=Callback::new(move |()| {
@@ -684,7 +676,7 @@ fn upload_trigger(
                 open.set(true);
             }
         >
-            {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::FILE_PLUS, "14")}
+            {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::UPLOAD, "14")}
             {move || family.get().upload_label()}
         </button>
     }
@@ -783,7 +775,13 @@ fn rows_view(
     };
     // `base` stays the screen's own path: the paging href carries every OTHER
     // query parameter across, `?family=` included.
-    let footer = table_footer("/templates", family_noun(family), paging, total);
+    let footer = table_footer(
+        "/templates",
+        "Template pages",
+        ferrohealth_ui::table::model::Noun::new("template", family_noun(family)),
+        paging,
+        total,
+    );
 
     view! {
         {table_shell(family_noun(family), headers, body)}
@@ -791,7 +789,7 @@ fn rows_view(
         <Show when=none_match>
             <div class="mt-3">
                 <EmptyState
-                    icon=ferrohealth_ui::icon::Glyph::SEARCH
+                    icon=ferrohealth_ui::icon::Glyph::SEARCH_X
                     message="No templates match the filter"
                     hint="Clear or shorten the filter to see the whole catalogue again."
                 />
@@ -852,7 +850,7 @@ fn empty_family_state(family: TemplateFamily) -> AnyView {
             "Upload your first ADL2 operational template with the Upload ADL2 button above."
         }
     };
-    view! { <EmptyState icon=ferrohealth_ui::icon::Glyph::FILES message="No templates yet" hint=hint /> }
+    view! { <EmptyState icon=ferrohealth_ui::icon::Glyph::FILE_CODE message="No templates yet" hint=hint /> }
         .into_any()
 }
 

@@ -34,15 +34,15 @@ extension); the wire it consumes IS spec-bound (`docs/specs/openehr/ITS-REST/`
   component-free plain-Rust modules with ordinary unit tests; components
   stay thin.
 - **The components are FerroUI's** (`ferrohealth-ui`, pinned exactly in the
-  root `[workspace.dependencies]`): the shell, navigation, theme switch,
+  root `[workspace.dependencies]`): the shell, navigation, theme toggle,
   tables and pager, toasts, alerts, skeletons, buttons, fields, cards, empty
   states, icons and the highlighter. Its stylesheet and the FerroEHR brand
   (`style/theme.css`) are served from this origin (`src/server.rs`); the
   viewer's own Tailwind utilities name FerroUI's roles (`style/tailwind.css`).
   A component the viewer needs that FerroUI lacks is filed on FerroUI and
-  added there, never built here. Until FerroUI draws them, the dialogs, the
-  scopes drawer, the upload, the charts and the clipboard stay on `thaw` (a
-  pinned git rev of main), `leptos-use` 0.19 and `leptos-chartistry` 0.2.3.
+  added there, never built here. The dialogs, the access side panel, the
+  upload field, the charts, the document pane with its copy button, the
+  segmented controls, the tree and the tabs are FerroUI's too.
 - **Views are built in `.into_any()`-erased sections** (rules §1): plain cargo
   builds have no `erase_components`, and monolithic view trees blow rustc's
   layout-recursion depth in `cargo test` codegen.
@@ -60,10 +60,10 @@ extension); the wire it consumes IS spec-bound (`docs/specs/openehr/ITS-REST/`
   the component-free, unit-tested `chart_model`: one series per mostly-numeric
   column, every ISO-8601 column offered as a real time axis with the row order as
   the fallback, and the tick-label granularity. Keep that derivation pure (it is
-  what makes the chart hydration-safe) and keep the view thin: a legend-hidden
-  series is drawn as `f64::NAN` — chartistry's missing-data marker — rather than
-  by rebuilding the chart, and each line pins its palette colour by index so
-  hiding one never recolours the others.
+  what makes the chart hydration-safe) and keep the view thin: the chart is
+  FerroUI's line chart, a missing cell is `f64::NAN` (a gap in the line), and
+  each line pins its palette colour by index so hiding one never recolours the
+  others.
 - **Every scope string the viewer EXPLAINS is read by ONE grammar and rendered
   by ONE kit.**
   The parse is `openehr_sdt::smart_scopes` — the same master08 module the
@@ -105,8 +105,8 @@ extension); the wire it consumes IS spec-bound (`docs/specs/openehr/ITS-REST/`
   over `crate::activity::bucket_by_day`**: the dashboard's commit trend and an
   EHR's contribution timeline are the same chart, the day-bucketing is a pure
   unit-tested function (no clock, no locale — that is what keeps the chart
-  hydration-stable), and charts are `leptos-chartistry` (pure Rust + SVG); a
-  JS charting binding is banned by the no-JavaScript mandate.
+  hydration-stable), and charts are FerroUI's (SVG drawn in Rust on the
+  server); a JS charting binding is banned by the no-JavaScript mandate.
 - **Every template example pane is controlled by ONE kit —
   `components::example_controls` over `crate::example_options`** (#2894):
   format, `detail_level` and `type` are three segmented controls whose

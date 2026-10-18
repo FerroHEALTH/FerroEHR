@@ -52,7 +52,7 @@ use crate::components::notice::inline_error;
 use crate::components::notice::{deleted_notice, diagnostic_pane, missing_notice};
 use crate::components::page_header::{Crumb, PageHeader};
 use crate::components::surface::{CARD_PAD, CARD_TITLE};
-use crate::components::tab_bar::tab_link;
+use crate::components::tab_bar::url_tabs;
 use crate::components::toast::toast_success;
 use crate::error::ViewerError;
 use crate::pages::demographics::{PartyKind, browse_href};
@@ -592,25 +592,22 @@ fn party_screen(kind: PartyKind, uid: Signal<String>, selected: Memo<String>) ->
 /// The URL-driven tab bar: four pill anchors (`?tab=…`). Plain anchors keep the
 /// tabs working before hydration (the router intercepts them once WASM loads).
 fn tab_bar(kind: PartyKind, uid: Signal<String>, selected: Memo<String>) -> AnyView {
-    let link = move |value: &'static str, label: &'static str| {
-        tab_link(
-            move || {
-                format!(
-                    "{}?tab={value}",
-                    super::party_href(kind, uid.get().as_str())
-                )
-            },
-            label,
-            Signal::derive(move || selected.get() == value),
-        )
-    };
-    view! {
-        <div class="flex flex-wrap gap-1 border-b border-edge pb-2">
-            {link("party", "Party")} {link("history", "History")}
-            {link("relationships", "Relationships")} {link("tags", "Tags")}
-        </div>
-    }
-    .into_any()
+    url_tabs(
+        "Party views",
+        &[
+            ("party", "Party"),
+            ("history", "History"),
+            ("relationships", "Relationships"),
+            ("tags", "Tags"),
+        ],
+        move |value| {
+            format!(
+                "{}?tab={value}",
+                super::party_href(kind, uid.get().as_str())
+            )
+        },
+        selected.into(),
+    )
 }
 
 /// The current-party resource shared by the tab's sections.
@@ -1038,6 +1035,7 @@ fn delete_section(kind: PartyKind, uid: Signal<String>, version_uid: RwSignal<St
         LogicalDeleteCopy {
             button_id: "party-delete",
             label: "Delete party",
+            dialog_id: "party-delete-dialog",
             confirm_id: "party-delete-confirm",
             success_title: "Party deleted",
             object: PARTY_OBJECT,

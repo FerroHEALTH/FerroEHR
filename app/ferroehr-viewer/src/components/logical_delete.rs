@@ -28,6 +28,8 @@ pub struct LogicalDeleteCopy {
     /// The action's label, used for the button, the dialog title and the
     /// confirming button alike ("Delete party").
     pub label: &'static str,
+    /// The confirmation dialog's DOM id.
+    pub dialog_id: &'static str,
     /// The confirming button's DOM id.
     pub confirm_id: &'static str,
     /// The success toast's title.
@@ -88,6 +90,7 @@ pub fn logical_delete_section(
                 title=copy.label
                 message=message
                 confirm_label=copy.label
+                dialog_id=copy.dialog_id
                 confirm_id=copy.confirm_id
                 on_cancel=Callback::new(move |()| confirming.set(false))
                 on_confirm=Callback::new(move |()| {

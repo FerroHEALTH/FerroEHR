@@ -1,25 +1,23 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The destructive-confirmation modal.
+//! The destructive-confirmation modal: FerroUI's modal dialog
+//! (`ferrohealth_ui::widget::dialog`) in its danger form.
 //!
 //! ONE dialog every delete affordance in the viewer opens, so "are you sure?"
 //! looks and behaves identically everywhere.
 //!
 //! State is a single source of truth: the caller owns the signal saying WHICH
 //! object is awaiting confirmation, derives `open` from it, and clears it in
-//! `on_cancel` — so the trigger, Cancel, Esc and a backdrop click all write the
+//! `on_cancel` — so the trigger, Cancel, Esc and a press outside all write the
 //! same one signal, and no second copy of "is the dialog open" can drift.
-//!
-//! Hydration: the dialog is closed on the first render of BOTH passes, and
-//! `thaw::Dialog` teleports nothing while closed, so the server HTML and the
-//! hydrated view agree (the same machinery as the shell's `OverlayDrawer`).
 
+use ferrohealth_ui::icon::{Glyph, icon};
+use ferrohealth_ui::widget::dialog::{Modal, Width, modal_dialog};
 use leptos::component;
 use leptos::prelude::*;
-use leptos::reactive::wrappers::write::SignalSetter;
 
-use crate::components::field::{BTN_DANGER, BTN_SECONDARY};
+use crate::components::field::BTN_DESTRUCTIVE;
 use crate::error::ViewerError;
 
 /// The row-driven delete confirmation a listing screen mounts once, outside its
@@ -35,18 +33,20 @@ pub fn delete_confirmation<R>(
     delete: Action<R, (String, Result<(), ViewerError>)>,
     title: &'static str,
     confirm_label: &'static str,
-    confirm_id: &'static str,
+    ids: (&'static str, &'static str),
     message: Signal<String>,
 ) -> AnyView
 where
     R: Clone + Send + Sync + 'static,
 {
+    let (dialog_id, confirm_id) = ids;
     view! {
         <ConfirmDialog
             open=Signal::derive(move || pending.get().is_some())
             title=title
             message=message
             confirm_label=confirm_label
+            dialog_id=dialog_id
             confirm_id=confirm_id
             on_cancel=Callback::new(move |()| pending.set(None))
             on_confirm=Callback::new(move |()| {
@@ -61,7 +61,7 @@ where
 }
 
 /// A modal confirmation for one destructive action: a title, the consequence
-/// copy naming the exact object, Cancel, and the confirming danger button.
+/// copy naming the exact object, Cancel, and the solid destructive confirm.
 #[expect(
     clippy::must_use_candidate,
     reason = "#[component] rewrites the fn; view!/mount always consumes the value"
@@ -83,52 +83,36 @@ pub fn ConfirmDialog(
     /// destructive-delete case this dialog was built for); a non-delete
     /// consequence — swapping a live log filter — passes its own.
     #[prop(optional, into)]
-    confirm_icon: Option<ferrohealth_ui::icon::Glyph>,
+    confirm_icon: Option<Glyph>,
+    /// The dialog's DOM id; its heading is this with `-title`.
+    dialog_id: &'static str,
     /// The confirming button's DOM id — the stable E2E hook.
     confirm_id: &'static str,
-    /// Dismissal (Cancel, Esc, backdrop click): clear the caller's target
+    /// Dismissal (Cancel, Esc, a press outside): clear the caller's target
     /// signal here.
     on_cancel: Callback<()>,
     /// Confirmation: dispatch the destructive action here.
     on_confirm: Callback<()>,
 ) -> impl IntoView {
-    // `thaw::Dialog` wants a WRITABLE open model; back it with the caller's
-    // derived signal plus a setter that only ever dismisses — the dialog never
-    // opens itself, so this stays one piece of state.
-    let icon = confirm_icon.unwrap_or(ferrohealth_ui::icon::Glyph::TRASH);
-    let dismissal = SignalSetter::map(move |value: bool| {
-        if !value {
-            on_cancel.run(());
-        }
-    });
-    view! {
-        <thaw::Dialog open=(open, dismissal)>
-            <thaw::DialogSurface>
-                <thaw::DialogBody>
-                    <thaw::DialogTitle>{title}</thaw::DialogTitle>
-                    <thaw::DialogContent>
-                        <p class="text-sm text-ink">{move || message.get()}</p>
-                    </thaw::DialogContent>
-                    <thaw::DialogActions>
-                        <button
-                            type="button"
-                            class=BTN_SECONDARY
-                            on:click=move |_| on_cancel.run(())
-                        >
-                            "Cancel"
-                        </button>
-                        <button
-                            id=confirm_id
-                            type="button"
-                            class=BTN_DANGER
-                            on:click=move |_| on_confirm.run(())
-                        >
-                            {ferrohealth_ui::icon::icon(icon, "14")}
-                            {confirm_label}
-                        </button>
-                    </thaw::DialogActions>
-                </thaw::DialogBody>
-            </thaw::DialogSurface>
-        </thaw::Dialog>
+    let glyph = confirm_icon.unwrap_or(Glyph::TRASH);
+    let body = view! { <p class="text-sm text-ink">{move || message.get()}</p> }.into_any();
+    let actions = view! {
+        <button id=confirm_id type="button" class=BTN_DESTRUCTIVE on:click=move |_| on_confirm.run(())>
+            {icon(glyph, "16")}
+            {confirm_label}
+        </button>
     }
+    .into_any();
+    modal_dialog(
+        Modal {
+            id: dialog_id,
+            title: Signal::derive(move || title.to_owned()),
+            danger: true,
+            width: Width::Narrow,
+            body,
+            actions,
+        },
+        open,
+        on_cancel,
+    )
 }

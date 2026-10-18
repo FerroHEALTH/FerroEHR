@@ -380,9 +380,10 @@ async fn a_refused_subscription_name_never_leaves_or_reaches_the_reader_verbatim
         .click()
         .await;
 
+    // FerroUI's alert-toned notice, the failure bar beside the toast.
     wait_text_contains(
         &h,
-        ".fui-alert",
+        ".fui-notice[role='alert']",
         "an event subscription with that name exists",
     )
     .await;

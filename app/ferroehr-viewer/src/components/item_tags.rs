@@ -182,7 +182,7 @@ pub fn tag_panel(
                     Ok(Some(tags)) if tags.is_empty() => {
                         view! {
                             <EmptyState
-                                icon=ferrohealth_ui::icon::Glyph::LAYERS
+                                icon=ferrohealth_ui::icon::Glyph::TAGS
                                 message=copy.empty_message
                                 hint=copy.empty_hint
                             />
