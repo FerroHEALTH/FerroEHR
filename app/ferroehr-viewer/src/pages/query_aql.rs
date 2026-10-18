@@ -307,6 +307,7 @@ fn editor_section(
                 <label class=LABEL r#for="aql-editor">
                     "AQL"
                 </label>
+                <p class="fui-help">"For example: SELECT c FROM EHR e CONTAINS COMPOSITION c"</p>
                 {code_field("aql-editor", Language::Aql, aql, Signal::stored(false), Height::Short)}
                 <div class="flex items-center gap-3">
                     <button
@@ -357,6 +358,7 @@ fn parameters_section(params: RwSignal<String>) -> AnyView {
                 <label class=LABEL r#for="aql-params">
                     "Parameters (JSON object)"
                 </label>
+                <p class="fui-help">"A JSON object of the query's parameters, such as {\"ehr_id\": \"…\"}."</p>
                 {code_field("aql-params", Language::Json, params, Signal::stored(false), Height::Short)}
             </div>
         </section>
@@ -399,26 +401,21 @@ fn run_save_section(
     };
     let save_fields = save_as_fields("aql", fields);
     view! {
-        <section class=CARD_PAD>
-            <div class="space-y-3">
-                <div class="fui-field-flow">
-                    <button type="button" class=BTN_PRIMARY disabled=empty_aql on:click=run_click>
-                        "Run"
-                    </button>
+            <section class=CARD_PAD>
+                <div class="space-y-3">
                     {save_fields}
-                    <button
-                        type="button"
-                        class=BTN_PRIMARY
-                        disabled=save_disabled
-                        on:click=save_click
-                    >
-                        "Save"
-                    </button>
+                    <div class="fui-cluster">
+                        <button type="button" class=BTN_PRIMARY disabled=empty_aql on:click=run_click>
+                            "Run"
+                        </button>
+                        <button type="button" class=BTN_SECONDARY disabled=save_disabled on:click=save_click>
+                            "Save"
+                        </button>
+                    </div>
+                    {save_feedback(save_action)}
                 </div>
-                {save_feedback(save_action)}
-            </div>
-        </section>
-    }
+            </section>
+        }
     .into_any()
 }
 

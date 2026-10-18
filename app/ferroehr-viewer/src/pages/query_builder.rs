@@ -2148,17 +2148,12 @@ fn preview_run_section(
                         }
                             .into_any()
                     }
-                }} <div class="fui-field-flow">
+                }} {save_fields}
+                <div class="fui-cluster">
                     <button type="button" class=BTN_PRIMARY disabled=disabled on:click=run_click>
                         "Run"
                     </button>
-                    {save_fields}
-                    <button
-                        type="button"
-                        class=BTN_PRIMARY
-                        disabled=save_disabled
-                        on:click=save_click
-                    >
+                    <button type="button" class=BTN_SECONDARY disabled=save_disabled on:click=save_click>
                         "Save"
                     </button>
                 </div> {save_feedback(save_action)}

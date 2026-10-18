@@ -478,4 +478,4 @@ codegen-units = 1
 
 [patch.crates-io]
 # TODO(#3802): drop this patch once ferrohealth-ui 0.1.2 is on crates.io.
-ferrohealth-ui = { git = "https://github.com/FerroHEALTH/FerroUI", rev = "c0f781d4f858a17902679f1bc5aced888aaae2e8" }
+ferrohealth-ui = { git = "https://github.com/FerroHEALTH/FerroUI", rev = "2819995914826ec69112c6523e82c3ebec82a256" }
