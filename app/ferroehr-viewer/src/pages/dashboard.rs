@@ -441,7 +441,7 @@ fn namespace_tile(tile: NamespaceTile) -> AnyView {
     view! {
         <A
             href="/queries"
-            attr:class=format!("block {CARD_PAD} transition-colors hover:border-accent")
+            attr:class=format!("block {CARD_PAD} no-underline transition-colors hover:border-accent")
         >
             <div class="font-mono font-medium truncate text-ink" data-namespace-tile=hook>
                 {tile.label}

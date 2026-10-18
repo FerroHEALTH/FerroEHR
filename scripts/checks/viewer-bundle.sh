@@ -40,17 +40,23 @@ for tool in gzip brotli; do
   fi
 done
 
-# The one file of the bundle with extension `$1`, hashed name or plain.
+# The newest file of the bundle with extension `$1`, hashed name or plain: a
+# local tree keeps the files of earlier builds beside the latest one.
 one() {
-  local found=()
+  local found=() newest=""
   shopt -s nullglob
   found=("$pkg/$name".*."$1" "$pkg/$name.$1")
   shopt -u nullglob
-  if [ "${#found[@]}" -ne 1 ] || [ ! -s "${found[0]}" ]; then
-    echo "viewer-bundle: expected one $name .$1 in $pkg, found ${#found[@]}; run scripts/cargo-leptos.sh build --release first." >&2
+  for file in "${found[@]}"; do
+    if [ -z "$newest" ] || [ "$file" -nt "$newest" ]; then
+      newest="$file"
+    fi
+  done
+  if [ -z "$newest" ] || [ ! -s "$newest" ]; then
+    echo "viewer-bundle: no $name .$1 in $pkg; run scripts/cargo-leptos.sh build --release first." >&2
     exit 1
   fi
-  printf '%s' "${found[0]}"
+  printf '%s' "$newest"
 }
 
 wasm="$(one wasm)"
