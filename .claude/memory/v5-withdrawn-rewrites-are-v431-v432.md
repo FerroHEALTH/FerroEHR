@@ -16,4 +16,4 @@ The release line as of 2026-10-19:
 
 **Why:** the owner re-grouped the work by release theme, so a note saying v5 is withdrawn would send new issues to the wrong place.
 
-**How to apply:** a patch-sized fix found while working goes to the current patch milestone (see [[new-issues-go-to-next-patch-milestone]]); demographics work goes to v5.0.0 until it is cut and then to v5.1.0; platform or application-layer refactors go to v6.0.0. When a decision is open, decide and record it on the issue rather than ask. Related: [[design-record-updated-in-the-same-turn]], [[rewrite-breaks-everything-shipped-means-released]].
+**How to apply:** an issue found while working goes to the current milestone (see [[new-issues-go-to-current-milestone]]); demographics work goes to v5.0.0 until it is cut and then to v5.1.0; platform or application-layer refactors go to v6.0.0. When a decision is open, decide and record it on the issue rather than ask. Related: [[design-record-updated-in-the-same-turn]], [[rewrite-breaks-everything-shipped-means-released]].

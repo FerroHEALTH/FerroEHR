@@ -17,4 +17,4 @@ Migration 2026-10-02: `scripts/gh/migrate-fields.sh` moved the 42 OPEN issues on
 - Watcher lanes set the type only (REST update after create); priority and effort are set at pickup. `<?/?>` in the SessionStart dump marks the gap.
 - The board's "Current focus" view filters `priority:Urgent,High`, which only works once the Priority field is added to the project in the UI (no mutation can add it).
 
-Related: [[new-issues-go-to-next-patch-milestone]], [[pr-closes-one-keyword-per-issue]].
+Related: [[new-issues-go-to-current-milestone]], [[pr-closes-one-keyword-per-issue]].
