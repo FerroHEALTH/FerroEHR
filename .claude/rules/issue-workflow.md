@@ -157,6 +157,11 @@ create`) — a missing label fails silently at apply time, not in the workflow.
 watcher's auto-unblock note says to assign one at pickup); a release is cut
 when its milestone reaches zero open issues (procedure in
 `.claude/rules/changelog.md` — changelog rename, version bumps + goldens,
-release PR, tag on the merge commit, close the milestone, ensure the next one
-exists). Issues + git survive `/clear` and `/compact`; the built-in todo tool
+release PR, tag on the merge commit, ensure the next one exists). The release
+workflow enforces both ends: its `plan` job refuses a tag when no milestone is
+titled exactly as the tag or that milestone still holds an open issue or pull
+request, naming each one, and its `milestone` job closes it once every
+leg, crates.io included, has succeeded (`scripts/release/milestone.sh`).
+After a manual or recovery release, check that the milestone is closed.
+Issues + git survive `/clear` and `/compact`; the built-in todo tool
 is session-scoped, so the tracker is the durable layer.
