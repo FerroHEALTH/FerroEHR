@@ -13,7 +13,7 @@
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::view::button::Variant;
 use ferrohealth_ui::view::form;
-use ferrohealth_ui::widget::editor::{Editor, code_editor};
+use ferrohealth_ui::widget::editor::{Editor, LineMark, code_editor};
 use leptos::prelude::*;
 
 /// A single-line text input.
@@ -92,17 +92,19 @@ pub enum Height {
     Short,
 }
 
-/// Whether the page has hydrated, set once by the root component, and the
-/// root component's owner.
+/// What every code editor on the page reads, provided once by the root
+/// component: whether the page has hydrated, and the empty set of marked
+/// lines a plain field shows.
 ///
-/// An editor inside a `Transition` keeps its mounted text area across a
-/// reload while the `Suspend` that drew it is disposed, so the signals the
-/// editor reads are made under the root owner, which outlives every screen.
+/// All of it lives in the root owner, so an editor that stays mounted while
+/// the `Suspend` that drew it reloads reads nothing disposed.
 #[derive(Debug, Clone)]
 pub struct Hydrated {
     /// True once the page has hydrated.
     pub signal: RwSignal<bool>,
-    /// The root component's owner.
+    /// No marked line.
+    pub no_marks: Signal<Vec<LineMark>>,
+    /// The root component's owner, where a field's signals are made.
     pub owner: Option<Owner>,
 }
 
@@ -111,8 +113,8 @@ pub struct Hydrated {
 ///
 /// The text area is read-only until the page hydrates (FerroUI's editor
 /// takes no keystroke it would lose) and, given `disabled`, while it reads
-/// true. `value` and `disabled` must come from state that outlives a reload
-/// of the screen.
+/// true. `value` and `disabled` come from state that outlives a reload of
+/// the screen.
 #[must_use]
 pub fn code_field(
     id: &'static str,
@@ -121,36 +123,38 @@ pub fn code_field(
     disabled: Option<Signal<bool>>,
     height: Height,
 ) -> AnyView {
-    let context = use_context::<Hydrated>();
-    let draw = move |hydrated: RwSignal<bool>| {
+    let Hydrated {
+        signal,
+        no_marks,
+        owner,
+    } = use_context::<Hydrated>().unwrap_or_else(|| Hydrated {
+        signal: RwSignal::new(false),
+        no_marks: Signal::stored(Vec::new()),
+        owner: None,
+    });
+    // NOTE: no specification governs this: our own design. The signals the
+    // editor reads are made in the root owner, which a screen's reload never disposes.
+    let signals = move || {
         let editable = match disabled {
-            Some(disabled) => Signal::derive(move || hydrated.get() && !disabled.get()),
-            None => hydrated.into(),
+            Some(disabled) => Signal::derive(move || signal.get() && !disabled.get()),
+            None => signal.into(),
         };
-        code_editor(
-            Editor {
-                id,
-                language,
-                text: value.into(),
-                marks: Signal::stored(Vec::new()),
-                editable,
-            },
-            move |text| value.set(text),
-        )
+        (editable, Signal::from(value))
     };
-    // NOTE: no specification governs this: our own design. The editor's
-    // signals are made under the root owner, so a reload's disposal leaves them.
-    let editor = match context {
-        Some(Hydrated {
-            signal,
-            owner: Some(owner),
-        }) => owner.with(|| draw(signal)),
-        Some(Hydrated {
-            signal,
-            owner: None,
-        }) => draw(signal),
-        None => draw(RwSignal::new(false)),
+    let (editable, text) = match owner {
+        Some(owner) => owner.with(signals),
+        None => signals(),
     };
+    let editor = code_editor(
+        Editor {
+            id,
+            language,
+            text,
+            marks: no_marks,
+            editable,
+        },
+        move |text| value.set(text),
+    );
     match height {
         Height::Document => editor,
         Height::Short => view! { <div class="fui-editor-short">{editor}</div> }.into_any(),

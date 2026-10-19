@@ -325,7 +325,7 @@ leptos_router = "0.8.14"
 # The shared FerroHEALTH console components, role tokens, stylesheet and table
 # model (FerroUI), pinned exactly: a console moves its pin after looking at its
 # own screens.
-ferrohealth-ui = "=0.1.2"
+ferrohealth-ui = "=0.1.3"
 wasm-bindgen = "0.2.129"
 console_error_panic_hook = "0.1"
 # E2E WebDriver client (dev-dep of the viewer). Default features off: the

@@ -89,7 +89,7 @@ fn viewer_title(mut section: String) -> String {
 
 /// Marks the page hydrated: `data-hydrated` on `<body>` for the E2E harness,
 /// and the page-wide [`Hydrated`](crate::components::field::Hydrated) the
-/// code editors read, provided under the root owner.
+/// code editors read.
 fn mark_hydration() {
     // Hydration-completion marker: effects run only in the browser (Leptos
     // book, reactivity/14), so `data-hydrated` lands on `<body>` exactly when
@@ -100,6 +100,7 @@ fn mark_hydration() {
     let hydrated = RwSignal::new(false);
     provide_context(crate::components::field::Hydrated {
         signal: hydrated,
+        no_marks: Signal::stored(Vec::new()),
         owner: Owner::current(),
     });
     Effect::new(move |_| {
