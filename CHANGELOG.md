@@ -51,6 +51,10 @@ workflow refuses a tag that has no matching section here.
   and Operations figures are compact tiles with the glyph, the number and the
   label on one line, a field and its button stack with the button on its own
   line, and a disabled field keeps its edge in the dark theme.
+- **The viewer moves to FerroUI 0.1.5** (#3815), in step with the other
+  FerroHEALTH consoles. The screens look the same: 0.1.5 adds a per-row form
+  field and a header title the viewer does not use yet, and its browser half
+  no longer asks for a wasm-bindgen of its own.
 
 ### Fixed
 

@@ -2833,14 +2833,13 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-ui"
-version = "0.1.4"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d88b6ad8bcc5dbcec89d3516434bffb4ddb342be23b103ffe956981f0435172"
+checksum = "6f9bbd2a7562d63fdf724d9489a58ecd65359282f5b9bafe67c8a3ba3b32c8b4"
 dependencies = [
  "leptos",
  "leptos_router",
  "serde",
- "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
 ]
