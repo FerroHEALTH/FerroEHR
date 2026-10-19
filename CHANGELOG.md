@@ -15,6 +15,8 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+## [5.0.0] - 2026-10-19
+
 ### Added
 
 - **`openehr-sdt` builds a canonical PARTY from a party Web Template**
@@ -11390,7 +11392,8 @@ but has not yet run in production.
   seccomp, default-deny NetworkPolicy) and golden-render validation.
 
 
-[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.11...HEAD
+[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.0.0...HEAD
+[5.0.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.11...v5.0.0
 [4.3.11]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.10...v4.3.11
 [4.3.10]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.9...v4.3.10
 [4.3.9]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.6...v4.3.9

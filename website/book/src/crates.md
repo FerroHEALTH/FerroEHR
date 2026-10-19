@@ -17,12 +17,12 @@ vendored specification text.
 | [`openehr-lang`](https://crates.io/crates/openehr-lang) | LANG 1.0.0 + 1.1.0 | The BMM meta-model and its P_BMM schema form, plus hand-written ODIN, BEL and Expression-Language readers |
 | [`openehr-query`](https://crates.io/crates/openehr-query) | QUERY 1.1.0 | AQL lexer, parser, typed AST with source spans, visitors, parameter binding, and canonical printer; the `federation` feature for the `FROM ENDPOINT` directive |
 | [`openehr-its`](https://crates.io/crates/openehr-its) | ITS-JSON, ITS-XML, ITS-REST 1.1.0 | Canonical JSON + XML codecs, the generated ITS-REST contract (axum server router, client, and an operation matcher for intermediaries), OPT 1.4 and AOM2 archetype XML |
-| [`openehr-sdt`](https://crates.io/crates/openehr-sdt) | ITS-REST 1.1.0 Simplified Formats + SMART App Launch | Simplified Formats (FLAT/STRUCTURED/Web Template, TDD import), template-independent RM-instance validation, the SMART on openEHR scope grammar |
+| [`openehr-sdt`](https://crates.io/crates/openehr-sdt) | ITS-REST 1.1.0 Simplified Formats + SMART App Launch | Simplified Formats (FLAT/STRUCTURED/Web Template, TDD import), a canonical PARTY built from a party Web Template, template-independent RM-instance validation, the SMART on openEHR scope grammar |
 
 ```toml
 [dependencies]
-openehr-rm = "0.0.86"
-openehr-its = "0.0.86"
+openehr-rm = "0.0.89"
+openehr-its = "0.0.89"
 ```
 
 All nine are **edition 2024** with an MSRV of **Rust 1.97**, and all nine
@@ -122,8 +122,8 @@ OPT 1.4 template:
 
 ```toml
 [dependencies]
-openehr-its = { version = "0.0.86", default-features = false, features = ["opt14"] }
-openehr-sdt = { version = "0.0.86", default-features = false, features = ["flat"] }
+openehr-its = { version = "0.0.89", default-features = false, features = ["opt14"] }
+openehr-sdt = { version = "0.0.89", default-features = false, features = ["flat"] }
 ```
 
 With `default-features = false` and no feature at all, `openehr-sdt` compiles
