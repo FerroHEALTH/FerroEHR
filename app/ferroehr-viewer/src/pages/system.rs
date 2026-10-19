@@ -442,7 +442,9 @@ fn manifest_body(manifest: &crate::system_api::ConformanceManifest) -> AnyView {
         <div id="conformance-manifest">
             <dl class="fui-facts text-sm">{facts}</dl>
             <div class="mt-3">
-                <div class="text-xs font-medium text-ink-muted mb-1">{tr(Msg::MountedApiGroups)}</div>
+                <div class="text-xs font-medium text-ink-muted mb-1">
+                    {tr(Msg::MountedApiGroups)}
+                </div>
                 <div class="flex flex-wrap gap-1">{groups}</div>
                 {empty_groups
                     .then(|| {
@@ -453,9 +455,7 @@ fn manifest_body(manifest: &crate::system_api::ConformanceManifest) -> AnyView {
                         }
                     })}
             </div>
-            <p class="mt-3 fui-help">
-                {tr(Msg::ProductOpenehrRestVersionsStatusCard)}
-            </p>
+            <p class="mt-3 fui-help">{tr(Msg::ProductOpenehrRestVersionsStatusCard)}</p>
         </div>
     }
     .into_any()
@@ -517,7 +517,13 @@ fn usage_card() -> AnyView {
                                     <div>
                                         {table}
                                         <p class="mt-2 fui-help">
-                                            {tr_with(Msg::ShowingBusiestTemplates, &[("shown", (shown).to_string().into()), ("total", (total).to_string().into())])}
+                                            {tr_with(
+                                                Msg::ShowingBusiestTemplates,
+                                                &[
+                                                    ("shown", (shown).to_string().into()),
+                                                    ("total", (total).to_string().into()),
+                                                ],
+                                            )}
                                         </p>
                                     </div>
                                 }
@@ -783,9 +789,7 @@ fn smart_body(config: Option<String>) -> AnyView {
                 ferrohealth_ui::tone::Tone::Info,
                 ferrohealth_ui::view::notice::Announce::Status,
                 None,
-                view! {
-                    {tr(Msg::SmartNotEnabledCdrServesNo)}
-                },
+                view! { {tr(Msg::SmartNotEnabledCdrServesNo)} },
             )}
         }
         .into_any();
@@ -892,7 +896,9 @@ fn openapi_card(family: Memo<String>) -> AnyView {
                     .await
                     .and_then(|doc_str| {
                         let doc = serde_json::from_str::<serde_json::Value>(&doc_str)
-                            .map_err(|e| ViewerError::Internal(tr_with(Msg::OpenapiJson, &[("e", (e).to_string().into())])))?;
+                            .map_err(|e| ViewerError::Internal(
+                                tr_with(Msg::OpenapiJson, &[("e", (e).to_string().into())]),
+                            ))?;
                         Ok::<_, ViewerError>(openapi_body(&doc))
                     });
                 match rendered {

@@ -259,8 +259,7 @@ fn readiness_body(view: ReadinessView) -> AnyView {
     let scope = (!detailed).then(|| {
         view! {
             <p class="mb-3 text-sm text-ink-muted">
-                {tr(Msg::StatusesOnlyDetailBehindEachOne)}
-                <code>"/management/health"</code>
+                {tr(Msg::StatusesOnlyDetailBehindEachOne)} <code>"/management/health"</code>
                 {tr(Msg::WhichDeploymentDoesNotOfferSession)}
             </p>
         }
@@ -559,8 +558,7 @@ fn config_card() -> AnyView {
             <p class="text-sm text-ink-muted">
                 {tr(Msg::CdrSEffectiveConfigurationEverySecret)}
                 {tr(Msg::SameSnapshotManagementSurfaceAdminApi)}
-                {tr(Msg::ExactlyOnePlaceSystemScreenOver)}
-                {tr(Msg::ConfiguredFor)}
+                {tr(Msg::ExactlyOnePlaceSystemScreenOver)} {tr(Msg::ConfiguredFor)}
             </p>
             <A href="/system" attr:class=BTN_SECONDARY>
                 {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::SETTINGS, "14")}
@@ -668,9 +666,7 @@ fn loggers_body(
                     {tr(Msg::ResetToBootFilter)}
                 </button>
             </div>
-            <p class="mt-2 fui-help">
-                {tr(Msg::TakesEffectImmediatelyCdrInstanceOnly)}
-            </p>
+            <p class="mt-2 fui-help">{tr(Msg::TakesEffectImmediatelyCdrInstanceOnly)}</p>
         </div>
     }
     .into_any()
@@ -712,9 +708,7 @@ fn filter_dialogs(
         <ConfirmDialog
             open=pending_reset
             title=tr(Msg::ResetLogFilter)
-            message=Signal::derive(|| {
-                {tr(Msg::RestoreCdrSBootLogFilter)}.clone()
-            })
+            message=Signal::derive(|| { { tr(Msg::RestoreCdrSBootLogFilter) }.clone() })
             confirm_label=tr(Msg::ResetFilter)
             confirm_icon=ferrohealth_ui::icon::Glyph::ROTATE_CCW
             dialog_id="ops-log-reset-confirm-dialog"

@@ -476,12 +476,8 @@ fn staging_notice() -> AnyView {
     view! {
         <section class=CARD_PAD id="stage-notice">
             <h2 class=CARD_TITLE>{tr(Msg::CommitSeveralChangesOneContribution)}</h2>
-            <p class="text-sm text-ink-muted">
-                {tr(Msg::ContributionOpenehrSAtomicChangeSet)}
-            </p>
-            <p class="mt-2 text-xs text-ink-faint">
-                {tr(Msg::StagedChangesLiveBrowserTabOnly)}
-            </p>
+            <p class="text-sm text-ink-muted">{tr(Msg::ContributionOpenehrSAtomicChangeSet)}</p>
+            <p class="mt-2 text-xs text-ink-faint">{tr(Msg::StagedChangesLiveBrowserTabOnly)}</p>
         </section>
     }
     .into_any()
@@ -749,9 +745,7 @@ fn draft_editor(form: CommitForm, unseeded: Signal<bool>) -> AnyView {
             <label class=LABEL r#for="stage-body">
                 {tr(Msg::DocumentCanonicalJson)}
             </label>
-            <p class="fui-help">
-                {tr(Msg::PasteCanonicalJsonDocumentPickTarget)}
-            </p>
+            <p class="fui-help">{tr(Msg::PasteCanonicalJsonDocumentPickTarget)}</p>
             {code_field("stage-body", Language::Json, form.body, Some(unseeded), Height::Document)}
         </div>
         <div class="flex items-center gap-3">
@@ -809,7 +803,8 @@ fn staging_list(form: CommitForm) -> AnyView {
     view! {
         <section class=CARD_PAD id="stage-list">
             <h2 class=CARD_TITLE>
-                {tr(Msg::StagedChanges)} <span id="stage-count" class="ml-2 font-normal text-ink-muted">
+                {tr(Msg::StagedChanges)}
+                <span id="stage-count" class="ml-2 font-normal text-ink-muted">
                     {move || form.staged.with(Vec::len)}
                 </span>
             </h2>
@@ -971,9 +966,7 @@ fn commit_result(
             Some(Err(error)) => {
                 view! {
                     <div class=WELL id="stage-diagnostic" role="alert">
-                        <p class="mb-2 fui-help">
-                            {tr(Msg::NothingWasCommittedYourStagedChanges)}
-                        </p>
+                        <p class="mb-2 fui-help">{tr(Msg::NothingWasCommittedYourStagedChanges)}</p>
                         <pre class="overflow-auto max-h-[40vh] whitespace-pre-wrap font-mono text-xs text-danger">
                             {error.to_string()}
                         </pre>

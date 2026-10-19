@@ -86,10 +86,7 @@ pub fn LoginPage() -> impl IntoView {
                     if expired {
                         notices
                             .push(
-                                Notice::new(
-                                        Tone::Warn,
-                                        tr(Msg::YourSessionEndedSignAgainContinue),
-                                    )
+                                Notice::new(Tone::Warn, tr(Msg::YourSessionEndedSignAgainContinue))
                                     .id("session-expired"),
                             );
                     }
@@ -101,7 +98,10 @@ pub fn LoginPage() -> impl IntoView {
                             .push(
                                 Notice::new(
                                     Tone::Warn,
-                                    tr_with(Msg::CouldNotReadCdrSLogin, &[("error", error.clone().into())]),
+                                    tr_with(
+                                        Msg::CouldNotReadCdrSLogin,
+                                        &[("error", error.clone().into())],
+                                    ),
                                 ),
                             );
                     }

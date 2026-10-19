@@ -182,7 +182,9 @@ fn history_row(entry: &VersionEntry, pinned: RwSignal<String>, row_hook: &'stati
     let open = view! {
         <button on:click=move |_| {
             pinned.set(target.clone());
-        }>{ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::EYE, "14")} {tr(Msg::Open)}</button>
+        }>
+            {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::EYE, "14")} {tr(Msg::Open)}
+        </button>
     }
     .attr("type", "button")
     .attr("class", BTN_SECONDARY_SMALL)

@@ -901,9 +901,7 @@ pub(crate) fn ehr_tags_section(ehr_id: Signal<String>, selected: Memo<String>) -
     view! {
         <section class=CARD_PAD id="ehr-tag-browser">
             <h2 class=CARD_TITLE>{tr(Msg::TagsInThisEhr)}</h2>
-            <p class="mb-3 fui-help">
-                {tr(Msg::EveryTagEveryObjectEhrGrouped)}
-            </p>
+            <p class="mb-3 fui-help">{tr(Msg::EveryTagEveryObjectEhrGrouped)}</p>
             {move || { tag_filter_form(action.get(), filters, &[("tab", "tags".to_owned())]) }}
             {table}
             {note}
@@ -953,7 +951,11 @@ fn browser_table(
     view! {
         {
             let (key, value, target_path) = (tr(Msg::Key), tr(Msg::Value), tr(Msg::TargetPath));
-            let headers: &[&str] = if paths { &[&key, &value, &target_path, ""] } else { &[&key, &value, ""] };
+            let headers: &[&str] = if paths {
+                &[&key, &value, &target_path, ""]
+            } else {
+                &[&key, &value, ""]
+            };
             table_shell(&tr(Msg::TaggedObjects), headers, rows)
         }
         {footer}

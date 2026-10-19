@@ -96,8 +96,8 @@ pub fn unknown_kind_view(segment: &str) -> AnyView {
             <PageHeader title=tr(Msg::UnknownPartyKind) />
             <section class=CARD_PAD id="demographics-unknown-kind">
                 <p class="text-sm text-ink">
-                    {tr(Msg::DemographicApiHasNoPartyKind)}
-                    <span class="font-mono">{shown}</span> {tr(Msg::TheFiveKindsAre)}
+                    {tr(Msg::DemographicApiHasNoPartyKind)} <span class="font-mono">{shown}</span>
+                    {tr(Msg::TheFiveKindsAre)}
                 </p>
                 <div class="mt-2 flex flex-wrap gap-3 text-sm">{links}</div>
             </section>
@@ -255,7 +255,9 @@ fn lookup_section(kind: PartyKind) -> AnyView {
     let label = tr_with(Msg::Id, &[("kind", (kind.rm_type()).to_string().into())]);
     view! {
         <section class=format!("{CARD_PAD} mb-6")>
-            <h2 class=CARD_TITLE>{tr_with(Msg::OpenA, &[("kind", (kind.rm_type()).to_string().into())])}</h2>
+            <h2 class=CARD_TITLE>
+                {tr_with(Msg::OpenA, &[("kind", (kind.rm_type()).to_string().into())])}
+            </h2>
             <form method="GET" action=browse_href(kind) on:submit=on_submit>
                 <div class="fui-field-flow">
                     <div class="flex flex-col gap-1">
@@ -276,9 +278,7 @@ fn lookup_section(kind: PartyKind) -> AnyView {
                     </button>
                 </div>
             </form>
-            <p class="mt-2 fui-help">
-                {tr(Msg::EitherIdFormWorksVersionedObject)}
-            </p>
+            <p class="mt-2 fui-help">{tr(Msg::EitherIdFormWorksVersionedObject)}</p>
         </section>
     }
     .into_any()
@@ -436,12 +436,15 @@ fn create_section(kind: PartyKind, toaster: ferrohealth_ui::widget::toast::Toast
     };
     view! {
         <section class=format!("{CARD_PAD} mb-6") id="party-create">
-            <h2 class=CARD_TITLE>{tr_with(Msg::CreateA, &[("kind", (kind.rm_type()).to_string().into())])}</h2>
-            <p class="mb-3 fui-help">
-                {tr(Msg::DocumentBelowSmallestPartyKindAccepts)}
-            </p>
+            <h2 class=CARD_TITLE>
+                {tr_with(Msg::CreateA, &[("kind", (kind.rm_type()).to_string().into())])}
+            </h2>
+            <p class="mb-3 fui-help">{tr(Msg::DocumentBelowSmallestPartyKindAccepts)}</p>
             <label class=LABEL r#for="party-create-body">
-                {tr_with(Msg::DocumentCanonicalJson2, &[("kind", (kind.rm_type()).to_string().into())])}
+                {tr_with(
+                    Msg::DocumentCanonicalJson2,
+                    &[("kind", (kind.rm_type()).to_string().into())],
+                )}
             </label>
             {code_field("party-create-body", Language::Json, body, None, Height::Document)}
             <div class="mt-3 flex items-center gap-3">
@@ -555,9 +558,7 @@ fn tag_index_section(kind: PartyKind) -> AnyView {
     view! {
         <section class=CARD_PAD id="demographic-tag-index">
             <h2 class=CARD_TITLE>{tr(Msg::TagIndexAllKinds)}</h2>
-            <p class="mb-3 fui-help">
-                {tr(Msg::DemographicTagListSpansEveryParty)}
-            </p>
+            <p class="mb-3 fui-help">{tr(Msg::DemographicTagListSpansEveryParty)}</p>
             {tag_filter_form(browse_href(kind), filters, &[])}
             {table}
             {note}
@@ -601,7 +602,11 @@ fn tag_index_table(
         Signal::derive(move || total),
     );
     view! {
-        {table_shell(&tr(Msg::DemographicTags), &[&tr(Msg::Key), &tr(Msg::Value), &tr(Msg::TargetPath), &tr(Msg::Target), ""], rows)}
+        {table_shell(
+            &tr(Msg::DemographicTags),
+            &[&tr(Msg::Key), &tr(Msg::Value), &tr(Msg::TargetPath), &tr(Msg::Target), ""],
+            rows,
+        )}
         {footer}
     }
     .into_any()

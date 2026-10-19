@@ -342,7 +342,16 @@ fn status_pill(status: Resource<Result<String, crate::error::ViewerError>>) -> A
                                     .unwrap_or_default();
                                 match doc.as_ref().and_then(|d| d.status.as_deref()) {
                                     Some("UP") => {
-                                        (Tone::Ok, tr_with(Msg::CdrUpV, &[("version", version.clone().into()), ("profile", profile.clone().into())]))
+                                        (
+                                            Tone::Ok,
+                                            tr_with(
+                                                Msg::CdrUpV,
+                                                &[
+                                                    ("version", version.clone().into()),
+                                                    ("profile", profile.clone().into()),
+                                                ],
+                                            ),
+                                        )
                                     }
                                     _ => (Tone::Warn, tr(Msg::CdrDegraded)),
                                 }

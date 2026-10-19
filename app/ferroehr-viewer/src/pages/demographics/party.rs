@@ -820,10 +820,7 @@ fn facts_section(
                     }
                     Ok(None) => deleted_card(),
                     Err(e) if e.status_code() == Some(http::StatusCode::NOT_FOUND) => {
-                        missing_notice(
-                            "party-not-found",
-                            tr(Msg::CdrHoldsNoPartyKindId),
-                        )
+                        missing_notice("party-not-found", tr(Msg::CdrHoldsNoPartyKindId))
                     }
                     Err(e) => inline_error(&e),
                 }

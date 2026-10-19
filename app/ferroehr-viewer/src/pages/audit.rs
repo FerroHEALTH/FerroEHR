@@ -586,7 +586,16 @@ fn pagination(total: u32, offset: u32, query: Memo<leptos_router::params::Params
     });
     view! {
         <div class="mt-3 flex items-center gap-4 text-sm text-ink-muted">
-            <span>{tr_with(Msg::OfRecords, &[("shown_from", (shown_from).to_string().into()), ("shown_to", (shown_to).to_string().into()), ("total", (total).to_string().into())])}</span>
+            <span>
+                {tr_with(
+                    Msg::OfRecords,
+                    &[
+                        ("shown_from", (shown_from).to_string().into()),
+                        ("shown_to", (shown_to).to_string().into()),
+                        ("total", (total).to_string().into()),
+                    ],
+                )}
+            </span>
             {prev}
             {next}
         </div>

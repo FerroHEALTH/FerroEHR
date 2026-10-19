@@ -112,10 +112,7 @@ pub fn QueriesPage() -> impl IntoView {
     view! {
         <Title text="Stored queries" />
         <div>
-            <PageHeader
-                title=tr(Msg::Queries)
-                subtitle=tr(Msg::CdrSStoredQueriesGroupedNamespace)
-            >
+            <PageHeader title=tr(Msg::Queries) subtitle=tr(Msg::CdrSStoredQueriesGroupedNamespace)>
                 <a href="/queries/builder" class=BTN_PRIMARY>
                     {tr(Msg::NewQuery)}
                 </a>
@@ -292,7 +289,11 @@ fn stored_rows_view(
         Signal::derive(move || total),
     );
     view! {
-        {table_shell(&tr(Msg::StoredQueries), &[&tr(Msg::Name), &tr(Msg::Version), &tr(Msg::Saved), ""], body)}
+        {table_shell(
+            &tr(Msg::StoredQueries),
+            &[&tr(Msg::Name), &tr(Msg::Version), &tr(Msg::Saved), ""],
+            body,
+        )}
         {footer}
     }
     .into_any()
@@ -350,7 +351,10 @@ fn stored_row(
             <td class=CELL_MONO data-label=tr(Msg::Version)>
                 {row.version}
             </td>
-            <td class=format!("{CELL} text-xs text-ink-muted whitespace-nowrap") data-label=tr(Msg::Saved)>
+            <td
+                class=format!("{CELL} text-xs text-ink-muted whitespace-nowrap")
+                data-label=tr(Msg::Saved)
+            >
                 {ferrohealth_ui::view::time::timestamp(&row.saved)}
             </td>
             <td class=format!("{CELL} min-w-[15rem]") data-label=tr(Msg::Actions)>

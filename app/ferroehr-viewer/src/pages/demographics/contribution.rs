@@ -203,7 +203,9 @@ pub fn DemographicContributionPage() -> impl IntoView {
         <div>
             <PageHeader
                 title=heading
-                crumbs=vec![Crumb::new(tr(Msg::Demographics), super::browse_href(PartyKind::Person))]
+                crumbs=vec![
+                    Crumb::new(tr(Msg::Demographics), super::browse_href(PartyKind::Person)),
+                ]
                 mono=true
             />
             {body}
@@ -269,7 +271,11 @@ fn versions_section(versions: Vec<ContributionVersion>) -> AnyView {
     view! {
         <section class=CARD_PAD>
             <h2 class=CARD_TITLE>{tr(Msg::VersionsInThisContribution)}</h2>
-            {table_shell(&tr(Msg::ContributionVersions), &[&tr(Msg::Type2), &tr(Msg::Version)], rows)}
+            {table_shell(
+                &tr(Msg::ContributionVersions),
+                &[&tr(Msg::Type2), &tr(Msg::Version)],
+                rows,
+            )}
         </section>
     }
     .into_any()

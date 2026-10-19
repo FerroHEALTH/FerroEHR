@@ -147,9 +147,16 @@ fn versioned_card(details: &VersionedObjectFacts) -> AnyView {
                 {fact_row("created".to_owned(), "created", details.time_created.clone())}
                 {fact_row("version".to_owned(), "version", details.version_id.clone())}
                 {fact_row("lifecycle".to_owned(), "lifecycle", details.lifecycle_state.clone())}
-                {fact_row(tr(Msg::PrecedingVersion), "preceding", details.preceding_version_uid.clone())}
-                {fact_row("contribution".to_owned(), "contribution", details.contribution_uid.clone())}
-                {fact_row("signature".to_owned(), "signature", signature)}
+                {fact_row(
+                    tr(Msg::PrecedingVersion),
+                    "preceding",
+                    details.preceding_version_uid.clone(),
+                )}
+                {fact_row(
+                    "contribution".to_owned(),
+                    "contribution",
+                    details.contribution_uid.clone(),
+                )} {fact_row("signature".to_owned(), "signature", signature)}
             </dl>
         </section>
     }

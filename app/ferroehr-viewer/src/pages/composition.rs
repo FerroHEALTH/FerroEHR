@@ -874,13 +874,21 @@ fn versioned_card(details: &VersionedCompositionDetails) -> AnyView {
                 {versioned_row(tr(Msg::OwnerEhr), "owner", details.owner_id.clone())}
                 {versioned_row("created".to_owned(), "created", details.time_created.clone())}
                 {versioned_row("version".to_owned(), "version", details.version_id.clone())}
-                {versioned_row("lifecycle".to_owned(), "lifecycle", details.lifecycle_state.clone())}
+                {versioned_row(
+                    "lifecycle".to_owned(),
+                    "lifecycle",
+                    details.lifecycle_state.clone(),
+                )}
                 {versioned_row(
                     tr(Msg::PrecedingVersion),
                     "preceding",
                     details.preceding_version_uid.clone(),
-                )} {versioned_row("contribution".to_owned(), "contribution", details.contribution_uid.clone())}
-                {versioned_row("signature".to_owned(), "signature", signature)}
+                )}
+                {versioned_row(
+                    "contribution".to_owned(),
+                    "contribution",
+                    details.contribution_uid.clone(),
+                )} {versioned_row("signature".to_owned(), "signature", signature)}
                 {versioned_row("content".to_owned(), "content", content)}
             </dl>
         </section>
@@ -962,7 +970,9 @@ fn edit_section(
     view! {
         <div class="mt-3">
             <button id="edit-new-version" type="button" class=BTN_SECONDARY on:click=toggle>
-                {move || if edit_open.get() { tr(Msg::CloseEditor) } else { tr(Msg::EditAsNewVersion) }}
+                {move || {
+                    if edit_open.get() { tr(Msg::CloseEditor) } else { tr(Msg::EditAsNewVersion) }
+                }}
             </button>
             <div class:hidden=move || !edit_open.get()>
                 <section class=format!("{CARD_PAD} mt-3")>
@@ -1043,7 +1053,9 @@ fn toolbar_section(
                     Err(_) => {
                         // Resolve inside the Suspense: an SSR'd ErrorBoundary fallback
                         // mismatches at hydration in leptos 0.8.
-                        view! { <span class="text-xs text-danger">{tr(Msg::VersionsUnavailable)}</span> }
+                        view! {
+                            <span class="text-xs text-danger">{tr(Msg::VersionsUnavailable)}</span>
+                        }
                             .into_any()
                     }
                 }
@@ -1063,15 +1075,13 @@ fn toolbar_section(
     // renders through the normal inline-error path. Deliberately not an
     // `EmptyState`: this answers the time-travel control beside it, not a data
     // region that came back empty.
-    let note = move || match version_at_time.value().get() {
-        Some(Err(ref e)) if e.status_code() == Some(http::StatusCode::NOT_FOUND) => view! {
-            <p class="mt-2 text-sm text-ink-muted">
-                {tr(Msg::NoVersionCompositionExistedTime)}
-            </p>
-        }
+    let note = move || {
+        match version_at_time.value().get() {
+        Some(Err(ref e)) if e.status_code() == Some(http::StatusCode::NOT_FOUND) => view! { <p class="mt-2 text-sm text-ink-muted">{tr(Msg::NoVersionCompositionExistedTime)}</p> }
         .into_any(),
         Some(Err(error)) => crate::components::notice::inline_error(&error),
         _ => ().into_any(),
+    }
     };
     view! {
         <section class=format!("{CARD_PAD} mb-3")>
@@ -1359,8 +1369,10 @@ fn audit_card(entry: Option<&VersionEntry>) -> AnyView {
         <section class=CARD_PAD>
             <h2 class=CARD_TITLE>{tr(Msg::Audit)}</h2>
             <dl class="fui-facts text-sm">
-                {audit_row("version".to_owned(), version_id)} {audit_row("committed".to_owned(), committed_at)}
-                {audit_row(tr(Msg::ChangeType2), change_type)} {audit_row("committer".to_owned(), committer)}
+                {audit_row("version".to_owned(), version_id)}
+                {audit_row("committed".to_owned(), committed_at)}
+                {audit_row(tr(Msg::ChangeType2), change_type)}
+                {audit_row("committer".to_owned(), committer)}
             </dl>
         </section>
     }

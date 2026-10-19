@@ -260,7 +260,8 @@ fn load_status_section(
                                 <p class="text-sm text-ink-muted">
                                     {tr(Msg::LoadedStoredQuery)}
                                     <span class="font-mono text-ink">{qualified}</span>
-                                    {tr(Msg::AtVersion)} <span class="font-mono text-ink">{version}</span>
+                                    {tr(Msg::AtVersion)}
+                                    <span class="font-mono text-ink">{version}</span>
                                     {tr(Msg::SavingStoresVersionFieldBelowVersion)}
                                     {tr(Msg::ImmutableSoNextOneProposed)}
                                 </p>
@@ -464,7 +465,9 @@ fn results_section(
                         view! {
                             <section class=CARD_PAD>
                                 <div class="flex items-center justify-between gap-2 flex-wrap mb-3">
-                                    <h2 class="text-sm font-semibold text-ink">{tr(Msg::Results)}</h2>
+                                    <h2 class="text-sm font-semibold text-ink">
+                                        {tr(Msg::Results)}
+                                    </h2>
                                     {export}
                                 </div>
                                 {body}

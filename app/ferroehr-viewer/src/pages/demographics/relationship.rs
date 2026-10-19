@@ -677,9 +677,7 @@ fn party_ref_value(reference: &PartyRefView, hook: &'static str) -> AnyView {
             <span class="font-mono wrap-break-word text-ink" data-relationship-end=hook>
                 {id}
             </span>
-            <span class="ml-2 text-xs text-ink-faint">
-                {tr(Msg::AbstractPartyTypeHasNoPer)}
-            </span>
+            <span class="ml-2 text-xs text-ink-faint">{tr(Msg::AbstractPartyTypeHasNoPer)}</span>
         }
         .into_any(),
     }
@@ -725,7 +723,9 @@ pub fn RelationshipsPage() -> impl IntoView {
             <PageHeader
                 title=tr(Msg::PartyRelationships)
                 subtitle=tr(Msg::RelationshipJoinsTwoPartiesSourceTarget)
-                crumbs=vec![Crumb::new(tr(Msg::Demographics), super::browse_href(PartyKind::Person))]
+                crumbs=vec![
+                    Crumb::new(tr(Msg::Demographics), super::browse_href(PartyKind::Person)),
+                ]
             />
             {lookup}
             {create}
@@ -776,9 +776,7 @@ fn lookup_card() -> AnyView {
                     </button>
                 </div>
             </form>
-            <p class="mt-2 fui-help">
-                {tr(Msg::RelationshipReachedOwnIdDemographicApi)}
-            </p>
+            <p class="mt-2 fui-help">{tr(Msg::RelationshipReachedOwnIdDemographicApi)}</p>
         </section>
     }
     .into_any()
@@ -886,9 +884,7 @@ fn create_card(source_uid: &str, source_kind: &str) -> AnyView {
     view! {
         <section class=CARD_PAD id="relationship-create">
             <h2 class=CARD_TITLE>{tr(Msg::CreateARelationship)}</h2>
-            <p class="mb-3 fui-help">
-                {tr(Msg::BothEndsNamePartyVersionedObject)}
-            </p>
+            <p class="mb-3 fui-help">{tr(Msg::BothEndsNamePartyVersionedObject)}</p>
             <div class="flex flex-col gap-3">
                 <div class="fui-field-flow">
                     <div class="flex flex-col gap-1">
@@ -1305,9 +1301,7 @@ fn edit_card(
     view! {
         <section class=CARD_PAD id="relationship-edit">
             <h2 class=CARD_TITLE>{tr(Msg::EditRelationship)}</h2>
-            <p class="mb-3 fui-help">
-                {tr(Msg::CommitsNewVersionTopOneLoaded)}
-            </p>
+            <p class="mb-3 fui-help">{tr(Msg::CommitsNewVersionTopOneLoaded)}</p>
             <div class="flex flex-col gap-3">
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="relationship-edit-type">
@@ -1458,16 +1452,12 @@ fn relationships_view(
         <div class="flex flex-col gap-4">
             <section class=CARD_PAD id="party-relationships">
                 <h2 class=CARD_TITLE>{tr(Msg::RelationshipsAsSource)}</h2>
-                <p class="mb-3 fui-help">
-                    {tr(Msg::TheseComeFromPartyDocumentItself)}
-                </p>
+                <p class="mb-3 fui-help">{tr(Msg::TheseComeFromPartyDocumentItself)}</p>
                 {table}
             </section>
             <section class=CARD_PAD>
                 <h2 class=CARD_TITLE>{tr(Msg::RelateThisParty)}</h2>
-                <p class="mb-3 fui-help">
-                    {tr(Msg::CreatesPartyRelationshipResourcePartySource)}
-                </p>
+                <p class="mb-3 fui-help">{tr(Msg::CreatesPartyRelationshipResourcePartySource)}</p>
                 <a href=create_href class=BTN_PRIMARY id="party-relate">
                     {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::LINK, "14")}
                     {tr(Msg::CreateARelationship)}

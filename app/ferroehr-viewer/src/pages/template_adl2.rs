@@ -407,7 +407,10 @@ pub fn Adl2TemplateDetailPage() -> impl IntoView {
     );
 
     view! {
-        <Title text=move || tr_with(Msg::Adl2Template, &[("template_id", (template_id.get()).clone().into())]) />
+        <Title text=move || tr_with(
+            Msg::Adl2Template,
+            &[("template_id", (template_id.get()).clone().into())],
+        ) />
         <div>
             <PageHeader
                 title=template_id
@@ -462,11 +465,7 @@ fn version_section(
             let (stem, _) = crate::adl2::split_hrid(&id);
             let stored = crate::adl2::family_versions(&ids, stem);
             if stored.is_empty() {
-                return view! {
-                    <p class="text-sm text-ink-muted">
-                        {tr(Msg::ListingHoldsNoOtherVersionTemplate)}
-                    </p>
-                }
+                return view! { <p class="text-sm text-ink-muted">{tr(Msg::ListingHoldsNoOtherVersionTemplate)}</p> }
                 .into_any();
             }
             let buttons = stored
@@ -589,9 +588,7 @@ fn catalog_tab(
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
             <section class=CARD_PAD>
                 <h2 class=CARD_TITLE>{tr(Msg::PathCatalogWtTree)}</h2>
-                <p class="mb-2 fui-help">
-                    tr(Msg::BuiltViewerFromServedOperationaltemplatev2Adl2)
-                </p>
+                <p class="mb-2 fui-help">tr(Msg::BuiltViewerFromServedOperationaltemplatev2Adl2)</p>
                 <div class="overflow-auto max-h-[70vh]">
                     <Transition fallback=tree_skeleton>
                         {move || Suspend::new(async move {
@@ -715,9 +712,7 @@ fn example_tab(
 ) -> AnyView {
     view! {
         <div class="space-y-3">
-            <p class="text-sm text-ink-muted">
-                tr(Msg::ExampleGeneratedFromArtefactRouteNames)
-            </p>
+            <p class="text-sm text-ink-muted">tr(Msg::ExampleGeneratedFromArtefactRouteNames)</p>
             <crate::components::example_controls::ExampleControls
                 format=format
                 detail=detail

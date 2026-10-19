@@ -295,9 +295,7 @@ pub(super) fn edit_form(
     view! {
         <section class=CARD_PAD id="status-edit">
             <h2 class=CARD_TITLE>{tr(Msg::EditStatus)}</h2>
-            <p class="mb-3 fui-help">
-                {tr(Msg::CommitsNewEhrStatusVersionTop)}
-            </p>
+            <p class="mb-3 fui-help">{tr(Msg::CommitsNewEhrStatusVersionTop)}</p>
             <div class="flex flex-col gap-3">
                 {toggle_row(
                     "status-queryable",

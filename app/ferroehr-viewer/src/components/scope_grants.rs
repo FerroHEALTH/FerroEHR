@@ -197,9 +197,7 @@ pub fn ScopePreviewer() -> impl IntoView {
                 prop:value=move || input.get()
                 on:input:target=move |ev| input.set(ev.target().value())
             />
-            <p class=NOTE>
-                {tr(Msg::OneScopeWholeSpaceSeparatedClaim)}
-            </p>
+            <p class=NOTE>{tr(Msg::OneScopeWholeSpaceSeparatedClaim)}</p>
             <div id="scope-preview-results">{results}</div>
         </section>
     }

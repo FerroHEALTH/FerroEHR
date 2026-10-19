@@ -356,7 +356,12 @@ fn contributions_table(page: &ContributionPage, offset: RwSignal<u32>) -> AnyVie
     view! {
         {table_shell(
             &tr(Msg::Contributions),
-            &[&tr(Msg::Contribution2), &tr(Msg::Committed), &tr(Msg::Committer), &tr(Msg::ChangeType)],
+            &[
+                &tr(Msg::Contribution2),
+                &tr(Msg::Committed),
+                &tr(Msg::Committer),
+                &tr(Msg::ChangeType),
+            ],
             body,
         )}
         <p id="contribution-total" class="mt-2 text-xs text-ink-muted">

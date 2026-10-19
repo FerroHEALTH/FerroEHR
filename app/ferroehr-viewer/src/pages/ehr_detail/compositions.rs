@@ -385,9 +385,7 @@ fn filter_bar(ehr_id: Signal<String>, query: Memo<ParamsMap>) -> AnyView {
                     {tr(Msg::Clear)}
                 </a>
             </div>
-            <p class="mt-2 fui-help">
-                {tr(Msg::TemplateComposerMatchAnywhereValueDates)}
-            </p>
+            <p class="mt-2 fui-help">{tr(Msg::TemplateComposerMatchAnywhereValueDates)}</p>
         </leptos_router::components::Form>
     }
     .into_any()
@@ -449,9 +447,7 @@ fn commit_form(
                     <label class=LABEL r#for="commit-body">
                         {tr(Msg::Composition2)}
                     </label>
-                    <p class="fui-help">
-                        {tr(Msg::PasteCompositionDocumentFormatChosenAbove)}
-                    </p>
+                    <p class="fui-help">{tr(Msg::PasteCompositionDocumentFormatChosenAbove)}</p>
                     {move || {
                         let language = if format.get() == ReprFormat::CanonicalXml {
                             Language::Xml
@@ -576,7 +572,13 @@ fn compositions_table(
     view! {
         {table_shell(
             &tr(Msg::Compositions),
-            &[&tr(Msg::Composition2), &tr(Msg::Name), &tr(Msg::Template), &tr(Msg::Started), &tr(Msg::Composer)],
+            &[
+                &tr(Msg::Composition2),
+                &tr(Msg::Name),
+                &tr(Msg::Template),
+                &tr(Msg::Started),
+                &tr(Msg::Composer),
+            ],
             body,
         )}
         {paging}

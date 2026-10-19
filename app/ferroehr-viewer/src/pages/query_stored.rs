@@ -276,15 +276,19 @@ fn resolution_note(
                             .into_any()
                     }
                     Ok(Some(resolved)) => {
-                        let path = tr_with(Msg::PostQuery2, &[("name", name.clone().into()), ("resolved", resolved.clone().into())]);
+                        let path = tr_with(
+                            Msg::PostQuery2,
+                            &[("name", name.clone().into()), ("resolved", resolved.clone().into())],
+                        );
                         let tail = if mode.get() == VersionResolution::Prefix {
-                            {tr(Msg::PartialPatternSoCdrRunsLatest)}
+                            { tr(Msg::PartialPatternSoCdrRunsLatest) }
                         } else {
-                            {tr(Msg::ExactlyThatVersion)}
+                            { tr(Msg::ExactlyThatVersion) }
                         };
                         view! {
                             <span class="text-ink-muted">
-                                {tr(Msg::Sends)} <span class="font-mono text-ink">{path}</span> {tail}
+                                {tr(Msg::Sends)} <span class="font-mono text-ink">{path}</span>
+                                {tail}
                             </span>
                         }
                             .into_any()
@@ -331,11 +335,7 @@ fn parameters_section(
 /// The parameter fields themselves, or the honest "none declared" note.
 fn parameter_inputs(names: &[String], bindings: RwSignal<BTreeMap<String, String>>) -> AnyView {
     if names.is_empty() {
-        return view! {
-            <p class="text-sm text-ink-muted">
-                {tr(Msg::QueryDeclaresNoParametersSoRuns)}
-            </p>
-        }
+        return view! { <p class="text-sm text-ink-muted">{tr(Msg::QueryDeclaresNoParametersSoRuns)}</p> }
         .into_any();
     }
     let fields = names
@@ -346,12 +346,10 @@ fn parameter_inputs(names: &[String], bindings: RwSignal<BTreeMap<String, String
         <div class="space-y-2">
             <div class="fui-field-flow">{fields}</div>
             <p class="fui-help">
-                {tr(Msg::ValueReadsJsonSentType)}
-                <span class="font-mono">"38.5"</span> {tr(Msg::AsANumber)}
-                <span class="font-mono">"true"</span>
+                {tr(Msg::ValueReadsJsonSentType)} <span class="font-mono">"38.5"</span>
+                {tr(Msg::AsANumber)} <span class="font-mono">"true"</span>
                 {tr(Msg::BooleanAnythingElseSentTextQuote)}
-                <span class="font-mono">"\"0123\""</span>
-                {tr(Msg::FieldLeftBlankNotSentAll)}
+                <span class="font-mono">"\"0123\""</span> {tr(Msg::FieldLeftBlankNotSentAll)}
             </p>
         </div>
     }
@@ -470,9 +468,7 @@ fn results_section(
                             paging_buttons(offset, page.rows.len())
                         } else {
                             view! {
-                                <p class="mt-3 fui-help">
-                                    {tr(Msg::QuerySetsOwnRowWindowAql)}
-                                </p>
+                                <p class="mt-3 fui-help">{tr(Msg::QuerySetsOwnRowWindowAql)}</p>
                             }
                                 .into_any()
                         };

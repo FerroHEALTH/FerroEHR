@@ -1039,7 +1039,7 @@ messages! {
     YourSessionEndedSignAgainContinue = "your-session-ended-sign-again-continue",
     /// `Loading the sign-in methods…`
     LoadingSignMethods = "loading-sign-methods",
-    /// server-side ([management] — each endpoint takes its own access level).
+    /// `server-side ([management] — each endpoint takes its own access level).`
     ServerSideManagementEachEndpointTakes = "server-side-management-each-endpoint-takes",
     ///  is not available: the CDR does not serve this management endpoint. Enable it
     NotAvailableCdrDoesNotServe = "not-available-cdr-does-not-serve",
@@ -1441,7 +1441,7 @@ messages! {
     CdrNoLongerAcceptsSessionSign = "cdr-no-longer-accepts-session-sign",
     /// This session lacks the ADMIN role — the configuration view needs an admin sign-in.
     SessionLacksAdminRoleConfigurationView = "session-lacks-admin-role-configuration-view",
-    /// The CDR's admin API is disabled — enable [admin] to expose the configuration view.
+    /// `The CDR's admin API is disabled — enable [admin] to expose the configuration view.`
     CdrSAdminApiDisabledEnable = "cdr-s-admin-api-disabled-enable",
     /// `Repository usage`
     RepositoryUsage = "repository-usage",
@@ -2041,11 +2041,11 @@ messages! {
     LaunchContext = "launch-context",
     /// "`$compartment`" is not a compartment. A resource scope is `$resource_scope_form`, and...
     NotCompartmentResourceScopeMaster08Defines = "not-compartment-resource-scope-master08-defines",
-    /// "`$rest`" carries no .<permission> tail. A resource scope is `$resource_scope_form` —...
+    /// `"'$rest'" carries no .<permission> tail. A resource scope is '$resource_scope_form' —...`
     CarriesNoPermissionTailResourceScope = "carries-no-permission-tail-resource-scope",
     /// "`$tail`" is not a permission tail. master08 allows only c (create), r (read), u...
     NotPermissionTailMaster08AllowsOnly = "not-permission-tail-master08-allows-only",
-    /// "`$resource`" is not a resource. master08 defines template-<templateId>,...
+    /// `"'$resource'" is not a resource. master08 defines template-<templateId>,...`
     NotResourceMaster08DefinesTemplateTemplateid = "not-resource-master08-defines-template-templateid",
     /// Not a resource scope. The master08 form is `$resource_scope_form` — for example...
     NotResourceScopeMaster08FormExample = "not-resource-scope-master08-form-example",

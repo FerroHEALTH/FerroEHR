@@ -402,8 +402,8 @@ fn loaded_notice(qualified: &str, version: &str, refusal: RwSignal<Option<LiftEr
     view! {
         <section class=CARD_PAD>
             <p class="text-sm text-ink-muted">
-                {tr(Msg::LoadedStoredQuery)} <span class="font-mono text-ink">{name}</span> {tr(Msg::AtVersion)}
-                <span class="font-mono text-ink">{version}</span>
+                {tr(Msg::LoadedStoredQuery)} <span class="font-mono text-ink">{name}</span>
+                {tr(Msg::AtVersion)} <span class="font-mono text-ink">{version}</span>
                 {tr(Msg::SavingStoresVersionFieldBelowVersion2)}
             </p>
             {move || {
@@ -452,7 +452,9 @@ fn template_step_section(
                     {tr(Msg::Template)}
                 </label>
                 <Suspense fallback=move || {
-                    view! { <span class="text-sm text-ink-muted">{tr(Msg::LoadingTemplates)}</span> }
+                    view! {
+                        <span class="text-sm text-ink-muted">{tr(Msg::LoadingTemplates)}</span>
+                    }
                 }>
                     {move || Suspend::new(async move {
                         match templates.await {
@@ -521,9 +523,7 @@ fn picker_section(
                         // Resolve inside the Transition: an SSR'd ErrorBoundary fallback
                         // mismatches at hydration in leptos 0.8.
                         view! {
-                            <p class="text-sm text-ink-muted">
-                                {tr(Msg::PickTemplateBrowsePaths)}
-                            </p>
+                            <p class="text-sm text-ink-muted">{tr(Msg::PickTemplateBrowsePaths)}</p>
                         }
                             .into_any()
                     }
@@ -946,11 +946,7 @@ fn leaf_editor(
         }
         CriterionKind::DateTimeRange { from, to } => datetime_editor(from, to, path, ctx),
         CriterionKind::BooleanIs { value } => boolean_editor(value, path, ctx),
-        CriterionKind::Exists => view! {
-            <p class="text-xs text-ink-muted italic">
-                {tr(Msg::PresenceCheckOnlyTypeMatchesWhen)}
-            </p>
-        }
+        CriterionKind::Exists => view! { <p class="text-xs text-ink-muted italic">{tr(Msg::PresenceCheckOnlyTypeMatchesWhen)}</p> }
         .into_any(),
     }
 }
@@ -1240,11 +1236,7 @@ fn coded_option_boxes(
     // An inline hint, not an `EmptyState`: this is one field inside a
     // leaf-condition card, and the kit's dashed box is sized for a data region.
     if options.is_empty() {
-        return view! {
-            <p class="text-xs text-ink-muted italic">
-                {tr(Msg::NoCodedOptionsTemplateNode)}
-            </p>
-        }
+        return view! { <p class="text-xs text-ink-muted italic">{tr(Msg::NoCodedOptionsTemplateNode)}</p> }
         .into_any();
     }
     let selected = coded.selected;
@@ -1430,7 +1422,10 @@ fn coded_chip_list(coded: CodedCtx, path: Vec<usize>, ctx: BuilderCtx) -> AnyVie
                             <button
                                 type="button"
                                 class="text-danger"
-                                aria-label=tr_with(Msg::RemoveCode, &[("remove_code", remove_code.clone().into())])
+                                aria-label=tr_with(
+                                    Msg::RemoveCode,
+                                    &[("remove_code", remove_code.clone().into())],
+                                )
                                 on:click=move |_| remove_coded_code(ctx, coded, &path, &remove_code)
                             >
                                 {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::X, "10")}
@@ -1574,11 +1569,7 @@ fn ordinal_editor(
     if options.is_empty() {
         // An inline hint for the same reason as the coded editor's: a single
         // field inside a leaf card, not a data region.
-        return view! {
-            <p class="text-xs text-ink-muted italic">
-                {tr(Msg::NoOrdinalStepsTemplateNode)}
-            </p>
-        }
+        return view! { <p class="text-xs text-ink-muted italic">{tr(Msg::NoOrdinalStepsTemplateNode)}</p> }
         .into_any();
     }
     let items = options
@@ -2348,8 +2339,9 @@ pub(crate) fn save_as_fields(id_prefix: &str, fields: SaveFields) -> AnyView {
                         };
                         view! {
                             <span class="text-xs text-ink-muted">
-                                {tr(Msg::SavesAs)} <span class="font-mono text-ink">{composed}</span>
-                                ": " <span class=note_class>{note_text}</span>
+                                {tr(Msg::SavesAs)}
+                                <span class="font-mono text-ink">{composed}</span> ": "
+                                <span class=note_class>{note_text}</span>
                             </span>
                         }
                     })
@@ -2387,7 +2379,9 @@ fn results_section(
                         view! {
                             <section class=CARD_PAD>
                                 <div class="flex items-center justify-between gap-2 flex-wrap mb-3">
-                                    <h2 class="text-sm font-semibold text-ink">{tr(Msg::Results)}</h2>
+                                    <h2 class="text-sm font-semibold text-ink">
+                                        {tr(Msg::Results)}
+                                    </h2>
                                     {export}
                                 </div>
                                 {body}
@@ -2429,9 +2423,7 @@ pub(crate) fn export_forms(current_aql: Signal<String>, params: Signal<String>) 
                     {tr(Msg::ExportJson)}
                 </button>
             </form>
-            <span class="text-xs text-ink-muted">
-                {tr(Msg::ExportsQuerySOwnLimitWindow)}
-            </span>
+            <span class="text-xs text-ink-muted">{tr(Msg::ExportsQuerySOwnLimitWindow)}</span>
         </div>
     }
     .into_any()

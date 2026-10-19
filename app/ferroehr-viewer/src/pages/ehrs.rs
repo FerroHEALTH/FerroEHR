@@ -444,10 +444,7 @@ pub fn EhrsPage() -> impl IntoView {
     view! {
         <Title text="EHRs" />
         <div>
-            <PageHeader
-                title=tr(Msg::Ehrs)
-                subtitle=tr(Msg::CreateEhrFindOneIdSubject)
-            />
+            <PageHeader title=tr(Msg::Ehrs) subtitle=tr(Msg::CreateEhrFindOneIdSubject) />
             {create}
             {finder}
             {table}
@@ -595,8 +592,7 @@ fn create_ehr_section(toaster: ferrohealth_ui::widget::toast::Toasts) -> AnyView
                 </button>
             </div>
             <p class="mt-2 fui-help">
-                {tr(Msg::LeaveSubjectFieldsBlankAnonymousEhr)}
-                {tr(Msg::SupplyEhrIdCreateExactEhr)}
+                {tr(Msg::LeaveSubjectFieldsBlankAnonymousEhr)} {tr(Msg::SupplyEhrIdCreateExactEhr)}
             </p>
             <div class="mt-2 text-sm">
                 <Show when=move || create.pending().get()>

@@ -241,8 +241,18 @@ fn identity_strip(status: StatusFeed) -> AnyView {
                                         {subject}
                                     </span>
                                 </span>
-                                {capability_badge("header", "queryable", Msg::FlagQueryable, state.is_queryable)}
-                                {capability_badge("header", "modifiable", Msg::FlagModifiable, state.is_modifiable)}
+                                {capability_badge(
+                                    "header",
+                                    "queryable",
+                                    Msg::FlagQueryable,
+                                    state.is_queryable,
+                                )}
+                                {capability_badge(
+                                    "header",
+                                    "modifiable",
+                                    Msg::FlagModifiable,
+                                    state.is_modifiable,
+                                )}
                             </div>
                         }
                             .into_any()

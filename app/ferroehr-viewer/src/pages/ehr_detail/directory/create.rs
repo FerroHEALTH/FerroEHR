@@ -38,9 +38,7 @@ pub(in crate::pages::ehr_detail::directory) fn create_section(
     view! {
         <section class=CARD_PAD>
             <h2 class=CARD_TITLE>{tr(Msg::CreateDirectory)}</h2>
-            <p class="mb-3 text-sm text-ink-muted">
-                {tr(Msg::EhrHasNoDirectoryYetCreate)}
-            </p>
+            <p class="mb-3 text-sm text-ink-muted">{tr(Msg::EhrHasNoDirectoryYetCreate)}</p>
             <div class="flex flex-col gap-3">
                 <div class="flex flex-col gap-1">
                     <span class=LABEL>{tr(Msg::WillBeCommitted)}</span>

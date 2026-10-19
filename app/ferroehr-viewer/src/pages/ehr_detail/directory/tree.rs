@@ -347,7 +347,13 @@ pub(in crate::pages::ehr_detail::directory) fn tree_editor(
                     <span class="text-xs text-ink-muted">
                         {move || {
                             let (folders, items) = editor.tree.with(count_tree);
-                            tr_with(Msg::FoldersItems2, &[("folders", (folders).to_string().into()), ("items", (items).to_string().into())])
+                            tr_with(
+                                Msg::FoldersItems2,
+                                &[
+                                    ("folders", (folders).to_string().into()),
+                                    ("items", (items).to_string().into()),
+                                ],
+                            )
                         }}
                     </span>
                 </div>
@@ -359,7 +365,11 @@ pub(in crate::pages::ehr_detail::directory) fn tree_editor(
                 >
                     {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::CODE, "14")}
                     {move || {
-                        if editor.advanced.get() { tr(Msg::HideJson) } else { tr(Msg::AdvancedEditAsJson) }
+                        if editor.advanced.get() {
+                            tr(Msg::HideJson)
+                        } else {
+                            tr(Msg::AdvancedEditAsJson)
+                        }
                     }}
                 </button>
             </div>
@@ -533,7 +543,12 @@ fn render_folder(ed: TreeEditor, node_key: String, is_root: bool) -> AnyView {
     view! {
         <li class="py-0.5">
             <div class="flex items-center gap-1">
-                <button type="button" class=ICON_BTN aria-label=tr(Msg::ToggleFolder) on:click=on_toggle>
+                <button
+                    type="button"
+                    class=ICON_BTN
+                    aria-label=tr(Msg::ToggleFolder)
+                    on:click=on_toggle
+                >
                     {chevron}
                 </button>
                 {folder_icon}

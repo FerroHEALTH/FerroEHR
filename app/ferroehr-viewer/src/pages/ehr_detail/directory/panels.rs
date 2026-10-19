@@ -424,7 +424,12 @@ pub(in crate::pages::ehr_detail::directory) fn time_travel_panel(
                                 Ok(value) => read_only_tree("directory-at-time-tree", &value),
                                 Err(e) => {
                                     inline_error(
-                                        &ViewerError::Internal(tr_with(Msg::DirectoryJson, &[("e", (e).to_string().into())])),
+                                        &ViewerError::Internal(
+                                            tr_with(
+                                                Msg::DirectoryJson,
+                                                &[("e", (e).to_string().into())],
+                                            ),
+                                        ),
                                     )
                                 }
                             }
@@ -499,7 +504,9 @@ pub(in crate::pages::ehr_detail::directory) fn path_panel(
                                 Ok(value) => read_only_tree("directory-at-path-tree", &value),
                                 Err(e) => {
                                     inline_error(
-                                        &ViewerError::Internal(tr_with(Msg::SubtreeJson, &[("e", (e).to_string().into())])),
+                                        &ViewerError::Internal(
+                                            tr_with(Msg::SubtreeJson, &[("e", (e).to_string().into())]),
+                                        ),
                                     )
                                 }
                             }

@@ -311,7 +311,10 @@ pub fn TemplateDetailPage() -> impl IntoView {
     );
 
     view! {
-        <Title text=move || tr_with(Msg::Template2, &[("template_id", (template_id.get()).clone().into())]) />
+        <Title text=move || tr_with(
+            Msg::Template2,
+            &[("template_id", (template_id.get()).clone().into())],
+        ) />
         <div>
             <PageHeader
                 title=template_id
@@ -674,9 +677,7 @@ pub(crate) fn node_inspector(selected: RwSignal<Option<CatalogNode>>) -> AnyView
         {move || match selected.get() {
             None => {
                 view! {
-                    <p class="text-sm text-ink-muted">
-                        {tr(Msg::SelectNodeInspectPathMetadata)}
-                    </p>
+                    <p class="text-sm text-ink-muted">{tr(Msg::SelectNodeInspectPathMetadata)}</p>
                 }
                     .into_any()
             }

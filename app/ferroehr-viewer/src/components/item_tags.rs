@@ -383,9 +383,7 @@ fn set_form(copy: TagPanelCopy, actions: TagActions) -> AnyView {
                     {tr(Msg::SaveTag)}
                 </button>
             </div>
-            <p class="mt-2 fui-help">
-                {tr(Msg::TagIdentifiedKeyTargetPathTogether)}
-            </p>
+            <p class="mt-2 fui-help">{tr(Msg::TagIdentifiedKeyTargetPathTogether)}</p>
             {move || {
                 validation
                     .get()

@@ -333,9 +333,7 @@ fn create_card(name: RwSignal<String>, draft: Draft, create: CreateAction) -> An
                     {tr(Msg::CreateSubscription)}
                 </button>
             </div>
-            <p class="mt-2 fui-help">
-                tr(Msg::NameUniqueCdrCannotChangedAfterwards)
-            </p>
+            <p class="mt-2 fui-help">tr(Msg::NameUniqueCdrCannotChangedAfterwards)</p>
             {failure}
         </section>
     }
@@ -369,13 +367,13 @@ fn edit_card(editor: Editor, update: UpdateAction) -> AnyView {
         };
         view! {
             <section id="subscription-edit" class=format!("{CARD_PAD} mb-4")>
-                <h2 class=CARD_TITLE>{tr_with(Msg::EditSubscription, &[("name", row.name.clone().into())])}</h2>
+                <h2 class=CARD_TITLE>
+                    {tr_with(Msg::EditSubscription, &[("name", row.name.clone().into())])}
+                </h2>
                 <p class="mb-3 fui-help">
                     <span class="font-medium">{tr(Msg::SubscriptionId)}</span>
                     <span class="font-mono wrap-break-word text-ink">{row.id}</span>
-                    <span class="ml-2">
-                        {tr(Msg::NameCdrSQueueKeyCannot)}
-                    </span>
+                    <span class="ml-2">{tr(Msg::NameCdrSQueueKeyCannot)}</span>
                 </p>
                 <div class="fui-field-flow">
                     {predicate_fields("edit", editor.draft)}
@@ -398,9 +396,7 @@ fn edit_card(editor: Editor, update: UpdateAction) -> AnyView {
                         {tr(Msg::Cancel)}
                     </button>
                 </div>
-                <p class="mt-2 fui-help">
-                    {tr(Msg::SavingReplacesEveryPredicateOneCleared)}
-                </p>
+                <p class="mt-2 fui-help">{tr(Msg::SavingReplacesEveryPredicateOneCleared)}</p>
             </section>
         }
         .into_any()
@@ -418,7 +414,12 @@ fn edit_card(editor: Editor, update: UpdateAction) -> AnyView {
 /// `subscription-edit-kind`, …) — both cards can be on screen at once.
 fn predicate_fields(form: &'static str, draft: Draft) -> AnyView {
     view! {
-        {text_field(format!("subscription-{form}-kind"), tr(Msg::Kind), Some("COMPOSITION".to_owned()), draft.kind)}
+        {text_field(
+            format!("subscription-{form}-kind"),
+            tr(Msg::Kind),
+            Some("COMPOSITION".to_owned()),
+            draft.kind,
+        )}
         {text_field(
             format!("subscription-{form}-change-type"),
             tr(Msg::ChangeType),
