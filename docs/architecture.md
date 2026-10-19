@@ -466,6 +466,27 @@ change to a module in the logging row above is a change to a harmonised
 component under Art 30(2) and updates the technical documentation in the same
 release.
 
+**When the central log moves to FerroSYS, the EHR system becomes three
+products.** The owner direction of 2026-10-06 (#3661, milestone v6.0.0) makes
+the access log a shared FerroHEALTH service in FerroSYS. From the release that
+ships it, the logging component is split between two products, and the
+declared EHR system is FerroEHR, FerroBRIDGE and FerroSYS. Until then FerroEHR
+ships the whole component as the table above says.
+
+| Part of the logging component | Shipped by | Annex II |
+|---|---|---|
+| Recording at the moment of access: the access-event model, the classification from FerroEHR's own data, the local durable spool that refuses an access whose record cannot be written (fail-closed), and the forwarding to FerroSYS with at-least-once delivery | FerroEHR | 3.2 (a) to (e) |
+| The central store, the review and analysis tools, retention per origin and category, the natural person's access-log route (EHDS Art 9), ITI-81 retrieval and export | FerroSYS | 3.3, 3.4 |
+
+The boundary is the forwarding: a record stays in FerroEHR's spool until
+FerroSYS has ingested it, and a FerroSYS outage queues records without
+blocking clinical reads. The split leaves the independence of the two
+harmonised components as it is (Art 2(2)(n) and (o), Art 30(1)(b)): both
+parts of the logging component sit outside FerroBRIDGE, which still meets
+FerroEHR only over ITS-REST and holds no part of the log. The technical
+documentation then covers FerroSYS's part as well, and the declaration of
+conformity names the three products with the version of each.
+
 **Points for counsel.** These are questions, and nothing in this repository
 answers them:
 
