@@ -217,9 +217,11 @@ it in readable form.
 - **System:** CDR status, the openEHR **conformance manifest** (what the
   server advertises about itself through the System API: product, vendor,
   claimed conformance profile, and the API groups it actually mounts), SMART
-  discovery, repository usage, the server's own OpenAPI documents. Pick the
-  complete surface or one API family, and the choice stays in the URL, so the
+  discovery, repository usage, the server's own OpenAPI documents (pick the
+  complete surface or one API family; the choice stays in the URL), the
   redacted runtime configuration, and a shortcut into the audit browser.
+  A Manufacturer card names Cadasto B.V., the manufacturer of each release,
+  with its postal address, contact email and website.
   ![System](img/system/system.png)
 - **Operations:** dependency health, build and spec provenance, the metric
   registry, and runtime log control. Appears only when the CDR serves its
@@ -228,6 +230,9 @@ it in readable form.
   versions the CDR publishes to a message broker. Appears only when the CDR
   serves its subscription API. See
   [Event subscriptions](subscriptions.md).
+
+The footer under every screen names the viewer and its version, the
+manufacturer (Cadasto B.V.), and an About link to that Manufacturer card.
 
 Every one of them is themed twice; [Dark mode](dark-mode.md) shows the dark
 half of the viewer screen by screen.

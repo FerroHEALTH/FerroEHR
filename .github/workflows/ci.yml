@@ -2179,6 +2179,76 @@ jobs:
           path: target/ui-e2e/screenshots/
           if-no-files-found: ignore
 
+  # The book's viewer screenshots (website/book/src/viewer/img), captured by
+  # the `e2e_docs_shots` pass against the same composed stack and prebuilt
+  # binaries the journeys use, and uploaded as `ui-docs-shots` (#3634). The
+  # development machines run no compose stack, so this is where a viewer PR
+  # gets the captures `ui-screenshot-guard` asks it to commit: download the
+  # artifact, read every image, commit the ones the change moved.
+  ui-docs-shots:
+    name: ui-docs-shots
+    needs: [changes, ui-e2e-binary, ui-e2e-viewer]
+    if: needs.changes.outputs.viewer == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        # Screenshots and short-lived test inputs only, as in ui-e2e.
+        with: # zizmor: ignore[cache-poisoning]
+          cache-targets: false
+      - uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
+        with:
+          tool: cargo-nextest
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ui-e2e-server-binary
+          path: bin/amd64
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ui-e2e-console
+          path: ui-e2e-console-stage
+      - name: Place the prebuilt viewer where the harness expects it
+        run: |
+          set -euo pipefail
+          mkdir -p target/debug target/site
+          install -m0755 ui-e2e-console-stage/ferroehr-viewer target/debug/ferroehr-viewer
+          cp ui-e2e-console-stage/hash.txt target/debug/hash.txt
+          cp -R ui-e2e-console-stage/site/. target/site/
+          test -f ui-e2e-console-stage/ui-e2e-tests.tar.zst
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Package the app image (COPY-only, seconds)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: docker/Dockerfile
+          target: runtime-prebuilt
+          load: true
+          tags: ferroehr:ui-e2e
+      - name: Build the postgres image (COPY-only, seconds)
+        run: docker buildx build --load -t ferroehr-postgres:ui-e2e docker/postgres
+      - name: Capture the documentation screenshots
+        env:
+          UI_E2E_NO_BUILD: "1"
+          UI_E2E_PREBUILT_VIEWER: "1"
+          UI_E2E_NEXTEST_ARCHIVE: ${{ github.workspace }}/ui-e2e-console-stage/ui-e2e-tests.tar.zst
+          FERROEHR_IMAGE: ferroehr:ui-e2e
+          FERROEHR_POSTGRES_IMAGE: ferroehr-postgres:ui-e2e
+          UI_E2E_SHOTS_ONLY: "1"
+          UI_E2E_DOCS_SHOTS: "1"
+        run: bash scripts/ui-e2e.sh
+      - name: Upload the documentation screenshots
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ui-docs-shots
+          path: website/book/src/viewer/img/
+          if-no-files-found: error
+
   # ── The compose/local image target (docker/Dockerfile runtime-from-source) ──
   # ui-e2e packages the shipped `runtime-prebuilt` target now (issue #335), so
   # the in-image source build that docker-compose.dev.yml (the repo-dev
@@ -2789,6 +2859,7 @@ jobs:
       - ui-e2e-binary
       - ui-e2e-viewer
       - ui-e2e
+      - ui-docs-shots
       - deploy-probe
       - server-image-from-source
       - ui-screenshot-guard
