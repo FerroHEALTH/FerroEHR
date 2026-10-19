@@ -66,7 +66,7 @@
 - [Design record updated in the same turn](design-record-updated-in-the-same-turn.md) — plan, design comment and issues updated together
 - [OPT 1.4 format is the XSD](opt14-format-is-the-xsd.md) — the ITS-XML schema defines OPT 1.4 validity
 - [Many issues per PR](many-issues-per-pr.md) — batch six to ten related issues per PR, one Closes line each
-- [v5 withdrawn; rewrites are v4.3.1/v4.3.2](v5-withdrawn-rewrites-are-v431-v432.md) — decide open design questions in-session
+- [Release line: v4.3.11, v5.0.0, v5.1.0, v6.0.0](v5-withdrawn-rewrites-are-v431-v432.md) — v5.0.0 is the demographics release (owner 2026-10-19), v5.1.0 follow-ups, v6.0.0 platform refactors
 - [Update-branch is unsigned](update-branch-is-unsigned.md) — never `gh pr update-branch`; rebase locally, force-with-lease
 - [History rewrite 2026-09-16](history-rewrite-2026-09-16.md) — never resolve "latest release" by ancestry
 - [Release cut 2026-09-16 lessons](release-cut-2026-09-16-lessons.md) — signed tag, crates-io approval, sandbox leg across storage generations
