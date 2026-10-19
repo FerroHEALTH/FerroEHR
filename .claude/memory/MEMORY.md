@@ -58,7 +58,7 @@
 - [New issues go to the next patch milestone](new-issues-go-to-next-patch-milestone.md) — current or next patch milestone, never v5.x
 - [Storage rewrite is greenfield](storage-rewrite-is-greenfield.md) — #3337: new one-concern migration sets, old databases refused at boot
 - [Rewrite needs baseline and harness](rewrite-needs-baseline-and-harness.md) — a perf rewrite ships its measurement program first
-- [Platform shape: single tenant, FerroBRIDGE](platform-shape-single-tenant-ferrobridge.md) — one instance per tenant; secondary use via FerroBRIDGE
+- [Platform shape: single tenant, FerroBRIDGE](platform-shape-single-tenant-ferrobridge.md) — one instance per tenant; secondary use via FerroBRIDGE; no central authorisation service, each product its own SMART resource server
 - [API commits are unsigned](api-commits-are-unsigned.md) — never commit via the GitHub API with the user's token
 - [Release PR: chart bump + third-party images](release-pr-chart-and-third-party-images.md) — bump `Chart.yaml` version every release
 - [No CNF perf runs during the rewrite](no-cnf-perf-runs-during-rewrite.md) — wire before/after is #3452; #3350 is the only measurement
@@ -66,7 +66,7 @@
 - [Design record updated in the same turn](design-record-updated-in-the-same-turn.md) — plan, design comment and issues updated together
 - [OPT 1.4 format is the XSD](opt14-format-is-the-xsd.md) — the ITS-XML schema defines OPT 1.4 validity
 - [Many issues per PR](many-issues-per-pr.md) — batch six to ten related issues per PR, one Closes line each
-- [v5 withdrawn; rewrites are v4.3.1/v4.3.2](v5-withdrawn-rewrites-are-v431-v432.md) — decide open design questions in-session
+- [Release line: v4.3.11, v5.0.0, v5.1.0, v6.0.0](v5-withdrawn-rewrites-are-v431-v432.md) — v5.0.0 is the demographics release (owner 2026-10-19), v5.1.0 follow-ups, v6.0.0 platform refactors
 - [Update-branch is unsigned](update-branch-is-unsigned.md) — never `gh pr update-branch`; rebase locally, force-with-lease
 - [History rewrite 2026-09-16](history-rewrite-2026-09-16.md) — never resolve "latest release" by ancestry
 - [Release cut 2026-09-16 lessons](release-cut-2026-09-16-lessons.md) — signed tag, crates-io approval, sandbox leg across storage generations
