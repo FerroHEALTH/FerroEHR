@@ -290,14 +290,15 @@ Nothing.
 
 ## The review of 2026-10-19, for 5.0.0
 
-Read on the tree after commit `dc4a6b02c`, for FerroEHR 5.0.0. The facts of
+Read on the tree after commit `ec78e7f40`, for FerroEHR 5.0.0. The facts of
 this release checked in every text in scope: `openehr-sdt` builds a canonical
 PARTY from a party Web Template and stamps the caller's `rm_version` (#3810,
 #3809); the openEHR terminology serves the `interoperability` group; archetype
 identifiers follow the BASE 1.3.0 grammar under the `development` profile
 (#3835, #3845); the nine `openehr-*` crates at `0.0.89`; only the newest
 release is supported (#3853); the viewer serves its hydration bundle on a
-route of its own (#3849).
+route of its own (#3849); the viewer draws with FerroUI 0.1.7 and chooses its
+language from `Accept-Language` or `[ui] locale`.
 
 ### Changed on 2026-10-19, for 5.0.0
 
@@ -305,6 +306,10 @@ route of its own (#3849).
   crates at `0.0.86`, three versions behind the published line; they name
   `0.0.89`. The `openehr-sdt` row names the PARTY build beside the
   composition formats.
+- **[The viewer](../viewer/index.md)**: the `ui.locale` row said a
+  deployment adds a language as a catalog file. The catalogs are embedded
+  when the viewer is built, so the row now says a new catalog reaches a
+  deployment in a rebuilt image, never at run time.
 
 ### Read and kept on 2026-10-19, for 5.0.0
 
@@ -386,4 +391,4 @@ cut, after the texts in scope have been read.
 | 2026-10-15 | 4.3.9, after `606a29cce` | 14 claims, in 17 book pages, the README and the readiness row | nothing |
 | 2026-10-16 | 4.3.10, after `e923076de` | 2 claims, in two book pages | nothing |
 | 2026-10-19 | 4.3.11, after `a15290689` | none | nothing |
-| 2026-10-19 | 5.0.0, after `dc4a6b02c` | 1 claim, in one book page | nothing |
+| 2026-10-19 | 5.0.0, after `ec78e7f40` | 2 claims, in two book pages | nothing |
