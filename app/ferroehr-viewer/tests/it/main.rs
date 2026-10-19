@@ -18,6 +18,7 @@ mod common;
 
 mod contrast;
 
+mod ssr_assets;
 mod ssr_components;
 mod ssr_login;
 mod ssr_pages;

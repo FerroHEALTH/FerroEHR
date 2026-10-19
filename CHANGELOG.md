@@ -71,6 +71,11 @@ workflow refuses a tag that has no matching section here.
 
 ### Fixed
 
+- **The viewer serves its hydration bundle on a route of its own** (#3849).
+  A `/pkg/` file the bundle lacks answers `404` and a read failure `500`,
+  each logged with its path and status; neither reaches the rendered app
+  or the sign-in redirect any more, which had answered a browser `302` for
+  its own WebAssembly and failed the `ui-e2e` journeys.
 - The template example endpoints answer `400 Bad Request` naming the root for
   a template whose root is not a COMPOSITION (an OBSERVATION or a SECTION),
   instead of an object carrying COMPOSITION members its class does not have
