@@ -978,8 +978,8 @@ fn place_direct_rm_path(
 /// Builds a `PARTY_REF` from the master05 §OBJECT_REF suffixes `|id`,
 /// `|namespace`, `|type` and the optional `|id_scheme`.
 ///
-/// All of `id`, `namespace` and `type` are mandatory on an `OBJECT_REF` (RM
-/// support `master03-identification_package.adoc` §OBJECT_REF), and a reference
+/// All of `id`, `namespace` and `type` are mandatory on an `OBJECT_REF` (BASE
+/// `base_types/master05-identification_package.adoc` §References), and a reference
 /// to a real actor has no sensible default for any of them, so each is required.
 /// A `|id_scheme` makes the id a `GENERIC_ID`; without one it is the
 /// `HIER_OBJECT_ID` a versioned party carries.
