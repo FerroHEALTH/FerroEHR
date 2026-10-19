@@ -153,6 +153,35 @@ pub fn composition_to_structured(
     Ok(structured::emit_structured(&tree))
 }
 
+/// FLAT document of a party template → canonical-JSON party (`PERSON`,
+/// `ORGANISATION`, `GROUP`, `AGENT` or `ROLE`), with the caller's
+/// [`build::BuildOptions`].
+///
+/// # Errors
+/// Path-syntax errors, plus everything [`build::build_party`] refuses.
+pub fn party_from_flat(
+    doc: &Map<String, Value>,
+    wt: &WebTemplate,
+    options: &build::BuildOptions<'_>,
+) -> Result<Value, FlatError> {
+    let tree = flat::parse_flat(doc)?;
+    build::build_party(&tree, wt, options)
+}
+
+/// STRUCTURED document of a party template → canonical-JSON party, the
+/// STRUCTURED twin of [`party_from_flat`].
+///
+/// # Errors
+/// Structure errors, plus everything [`build::build_party`] refuses.
+pub fn party_from_structured(
+    doc: &Value,
+    wt: &WebTemplate,
+    options: &build::BuildOptions<'_>,
+) -> Result<Value, FlatError> {
+    let tree = structured::parse_structured(doc)?;
+    build::build_party(&tree, wt, options)
+}
+
 /// FLAT → STRUCTURED, the pure template-free transform
 /// (`master04 §Flat to Structured`).
 ///

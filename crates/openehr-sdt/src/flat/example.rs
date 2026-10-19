@@ -49,7 +49,7 @@ use std::collections::{BTreeMap, BTreeSet, HashSet};
 use openehr_rm::v1_2::paths::{PathSegment, RmPath};
 use serde_json::{Map, Value, json};
 
-use crate::flat::build::{stamp_archetype_details, structural_from};
+use crate::flat::build::{RM_VERSION, stamp_archetype_details, structural_from};
 use crate::flat::convert::composition_from_flat;
 use crate::flat::webtemplate::model::{
     WebTemplate, WebTemplateInput, WebTemplateInputType, WebTemplateNode, WebTemplateRange,
@@ -580,7 +580,7 @@ fn insert_missing_occurrences(composition: &mut Value, node: &WebTemplateNode) {
     if let Some(id) = &node.node_id {
         instance.insert("archetype_node_id".into(), json!(id));
     }
-    stamp_archetype_details(&mut instance, node, false, "");
+    stamp_archetype_details(&mut instance, node, false, "", RM_VERSION);
     let instance = Value::Object(instance);
     for_each_at_mut(composition, owner, &mut |obj| {
         let Value::Object(m) = obj else {

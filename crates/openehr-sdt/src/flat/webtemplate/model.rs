@@ -626,6 +626,11 @@ pub struct WebTemplateSlot {
     /// The wrapper's constrained RM type (`ITEM_LIST`, `POINT_EVENT`, …; an
     /// abstract type such as `ITEM_STRUCTURE` admits every concrete subtype).
     pub rm_type: String,
+    /// The hoisted wrapper's name, the term definition of its node id, when
+    /// the template gives one; a builder names the re-materialised wrapper
+    /// with it (RM common `master03-archetyped_package.adoc` §"The LOCATABLE
+    /// class").
+    pub name: Option<String>,
 }
 
 /// A `C_CODE_PHRASE` code-list constraint on a coded RM attribute of a leaf.

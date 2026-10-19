@@ -30,6 +30,7 @@ mod flat;
 mod format_parity;
 mod master05_tables;
 mod model_walkgen;
+mod party_build;
 mod shape_tolerance;
 mod spec_vectors;
 mod structured;

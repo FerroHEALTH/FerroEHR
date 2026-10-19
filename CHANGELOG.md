@@ -15,7 +15,31 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+### Added
+
+- **`openehr-sdt` builds a canonical PARTY from a party Web Template**
+  (#3810). `flat::build::build_party` (and `flat::convert::party_from_flat` /
+  `party_from_structured`) turns a FLAT or STRUCTURED document of a `PERSON`,
+  `ORGANISATION`, `GROUP`, `AGENT` or `ROLE` template into the party, with
+  every list attribute of the demographic package (`identities`, `contacts`,
+  `addresses`, `capabilities`, `roles`, `languages`, `relationships`) built as
+  an array, no composition attribute, and a refusal for a `ctx/` key. A ROLE
+  takes its `performer` from `<root>/performer|id`, `|namespace`, `|type` and
+  an optional `|id_scheme`. The result is decoded as the root class before it
+  is returned, so a party the RM refuses is reported as an error. Simplified
+  Formats define FLAT for compositions only, so this is FerroEHR's own
+  extension over the same template walk.
+- **The `openehr-sdt` builders stamp the `ARCHETYPED.rm_version` the caller
+  chooses** (#3809). `flat::build::BuildOptions` carries it into
+  `build_composition_with`, `build_party` and `flat::tdd::from_tdd_with`;
+  `build_composition` and `from_tdd` keep stamping `1.2.0`.
+
 ### Changed
+
+- A structure the Web Template compacts away (an `ITEM_TREE` under a party
+  identity or an ENTRY, for example) is rebuilt with the name its term
+  definition gives instead of its at-code (#3810).
+- The nine `openehr-*` crates move to `0.0.88`.
 
 - **The viewer draws in FerroUI, the shared FerroHEALTH component library**
   (#3802). The shell, the navigation, the theme toggle, the tables and their
