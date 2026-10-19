@@ -258,6 +258,36 @@ the dump and load archive on zip 9.0.4 (#3798).
 
 Nothing.
 
+## The review of 2026-10-19
+
+Read on the tree after commit `a15290689`, for FerroEHR 4.3.11. The facts of
+this release checked in every text in scope: the viewer drawn in FerroUI
+0.1.6 (#3802, #3811, #3815, #3820); the viewer's tab icon (#3808); the coming
+split of the logging component with FerroSYS (#3662); the zip advisories
+judged not affecting in the Rust-dependency VEX document (#3806).
+
+### Changed on 2026-10-19
+
+Nothing. Every text in scope already states these facts.
+
+### Read and kept on 2026-10-19
+
+- **The viewer pages**: [the viewer](../viewer/index.md) names the footer's
+  manufacturer line and the System screen's Manufacturer card (#3634), and
+  [dark mode](../viewer/dark-mode.md) describes the moon and sun button and
+  the theme cookie as FerroUI draws them. No page names a component library
+  the viewer no longer uses.
+- **The logging component**: the [EHDS readiness](ehds-readiness.md) page and
+  the technical documentation say FerroEHR ships the whole logging component
+  today and that FerroSYS takes the central store, review, retention and
+  retrieval in a later release; nothing calls that split shipped.
+- **The security notices**: the release's Security entry names the VEX
+  document that records the three zip advisories as not affecting FerroEHR.
+
+### Left open on 2026-10-19
+
+Nothing.
+
 ## Annex II 2.5, re-assessed
 
 EHDS Annex II 2.5: "The harmonised software components of an EHR system shall
@@ -319,3 +349,4 @@ cut, after the texts in scope have been read.
 | 2026-10-08 | 4.3.6, after `de648fcc3` | 5 claims, in the landing page and five book pages; the chart description item closed | nothing |
 | 2026-10-15 | 4.3.9, after `606a29cce` | 14 claims, in 17 book pages, the README and the readiness row | nothing |
 | 2026-10-16 | 4.3.10, after `e923076de` | 2 claims, in two book pages | nothing |
+| 2026-10-19 | 4.3.11, after `a15290689` | none | nothing |

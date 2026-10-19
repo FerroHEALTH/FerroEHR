@@ -15,6 +15,8 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+## [4.3.11] - 2026-10-19
+
 ### Changed
 
 - **The viewer draws in FerroUI, the shared FerroHEALTH component library**
@@ -70,12 +72,17 @@ workflow refuses a tag that has no matching section here.
 
 ### Security
 
+Shipped with functional changes because: no shipped artefact is affected (the
+VEX statements below record why), so there is no security update to separate
+from the viewer changes this release carries.
+
 - `cargo deny` passes again: the viewer's WebDriver test client no longer
   reaches zip 8.6.0, and the three zip extraction advisories
   (RUSTSEC-2026-0367, RUSTSEC-2026-0368, RUSTSEC-2026-0369) are recorded as
   not affecting FerroEHR in the Rust-dependency VEX document, since the one
   remaining carrier, utoipa-swagger-ui's build script, never calls the
-  extraction APIs they concern (#3806).
+  extraction APIs they concern (#3806;
+  `security/vex/rust-advisories.openvex.json`).
 
 ## [4.3.10] - 2026-10-16
 
@@ -11303,7 +11310,8 @@ but has not yet run in production.
   seccomp, default-deny NetworkPolicy) and golden-render validation.
 
 
-[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.10...HEAD
+[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.11...HEAD
+[4.3.11]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.10...v4.3.11
 [4.3.10]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.9...v4.3.10
 [4.3.9]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.6...v4.3.9
 [4.3.6]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.5...v4.3.6
