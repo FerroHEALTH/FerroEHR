@@ -36,6 +36,20 @@ component (EHDS Art. 2(2)(n), Annex II 2.1 to 2.3) with its own releases. The
 two components meet only over the openEHR REST API, which is what keeps them
 independent of each other (EHDS Art. 30(1)(b)).
 
+The access log is planned to become a shared FerroHEALTH service in FerroSYS
+(#3661). From the release that ships it, the declared EHR system is FerroEHR,
+FerroBRIDGE and FerroSYS, and the logging component is split: FerroEHR keeps
+the recording at the moment of access (Annex II 3.2), the classification from
+its own data and the local spool that refuses an access whose record cannot
+be written, and forwards each record to FerroSYS; FerroSYS holds the central
+store, the review and analysis tools (Annex II 3.3), the retention per origin
+and category (Annex II 3.4), the natural person's access-log route (EHDS Art.
+9) and the ITI-81 retrieval. This tree then documents FerroEHR's part, the
+documentation of FerroSYS's part covers the rest, and the scope above and the
+list in `scripts/checks/technical-documentation.sh` change in the same
+release. Both parts stay outside FerroBRIDGE, so the two harmonised components
+remain independent ([`docs/architecture.md`](../architecture.md#regulatory-position-ehds-and-cra)).
+
 ## Contents
 
 | Requirement | File |
@@ -128,3 +142,4 @@ source of every release is public at its tag.
 | 2026-10-08 | 4.3.6 | The in-tree FHIR connector is removed (#3080); the ITI-81 `GET /fhir/r4/AuditEvent` route is unchanged and is now the only route in `ferroehr-rest::extensions::fhir` |
 | 2026-10-08 | 4.3.6 | The family-level documentation moved to the FerroHEALTH book at <https://ferrohealth.eu/docs/> (#3701): the statement of intended purpose for the EHR system, the shared responsibility, the post-market procedure and the manufacturer side of the CRA; 1(a) and the vulnerability-handling policy of CRA Annex VII 2 now cite it beside FerroEHR's own pages |
 | 2026-10-15 | 4.3.9 | The tamper chain's digest version 2 covers every column of an access record (#3686, audit migration 0011); records written before keep verifying under version 1, and a record moved back to it is reported. The DICOM and FHIR renderings give the client and the server one data-flow role (#3687), and a FHIR delete record carries the BALP `Delete` agent types (#3750). The physical party delete is classified and names its party (#3683). The audit store and the retention register take every connection through the typed acquire, so a connect failure is an `audit store unavailable` error (#3749). [Annex III 4](annex-iii-4-verification-and-validation.md) names the new tests, and the [hazard log](../../website/book/src/compliance/hazard-log.md) H1, H2 and H7 state the changes; [Annex III 2](annex-iii-2-performance-evaluation.md) names `GET /management/status` for the deployment posture |
+| 2026-10-19 | 4.3.11 | The scope names the planned split of the logging component with FerroSYS and the three-product EHR system that follows (#3662); 1(a) and Annex III 6 name FerroSYS as the third product from that release |

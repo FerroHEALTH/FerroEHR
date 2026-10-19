@@ -20,7 +20,8 @@ applies to EHR systems from 26 March 2029 (EHDS Art. 105).
   for a single declaration where a product is subject to more than one Union
   act requiring one. It names the EHR system, FerroEHR and FerroBRIDGE, with
   the version of each, and carries the content of EHDS Annex IV and CRA
-  Annex V.
+  Annex V. Once the central access log moves to FerroSYS (#3661), it names
+  FerroSYS as the third product and its part of the logging component.
 - **Where it is published.** EHDS Art. 39(4): a declaration drawn up in a
   digital format "shall be made accessible online for the expected lifetime of
   the EHR system and, in any event, for at least 10 years from the placing on
