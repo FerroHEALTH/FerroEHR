@@ -11,11 +11,13 @@
 # (curl + jq — this repository authors no JavaScript) and asserting BOTH
 # halves of a working login:
 #
-#   1. the browser leaves /login and lands on the authenticated Dashboard;
-#   2. the credential POST was a hydrated `fetch`, not the no-JS form
-#      navigation — a viewer whose WASM never attaches still logs in through
-#      progressive enhancement (the #2164 class), so (1) alone passes on a
-#      broken client bundle.
+#   1. the shipped WASM attaches: the hydrated app marks <body> — a viewer
+#      whose bundle never loads still logs in through the server-rendered
+#      form (the #2164 class), so a login alone passes on a broken bundle;
+#   2. the browser posts the credentials and lands on the authenticated
+#      Dashboard. The Basic login is FerroUI's sign-in card, a plain form
+#      POST to the LoginBasic server function by design (#3803), so the POST
+#      is a document navigation (#3861).
 #
 # Required (no defaults — a gate that passes without its artifact is not a
 # gate):
@@ -198,8 +200,7 @@ echo "   url=$URL"
 echo "   title=$TITLE"
 
 # Read the performance log once (reading drains it) and keep the login POST's
-# resource type: `Fetch` is the hydrated ActionForm dispatch, `Document` is the
-# progressive-enhancement form navigation.
+# resource type: the sign-in card's plain form POST is a `Document`.
 LOGIN_TYPES=$(curl -sS -X POST "$S/se/log" -H 'Content-Type: application/json' \
   -d '{"type":"performance"}' \
   | jq -r '.value[]?.message' \
@@ -223,11 +224,11 @@ case "$TITLE" in
     exit 1
     ;;
 esac
-grep -qx 'Fetch' <<<"$LOGIN_TYPES" || {
-  echo "::error::the credential POST was not a hydrated fetch (${LOGIN_TYPES:-no login POST observed}) — the shipped WASM never attached and the no-JS form carried the login (the #2164 class)"
+grep -qx 'Document' <<<"$LOGIN_TYPES" || {
+  echo "::error::the credential POST was not the sign-in card's form POST (${LOGIN_TYPES:-no login POST observed}): the login reached the Dashboard by another path"
   dump_browser_log
   exit 1
 }
 
 dump_browser_log
-echo "── the viewer image logs in through a real browser: Dashboard reached, hydrated fetch dispatched"
+echo "── the viewer image logs in through a real browser: WASM hydrated, form POST sent, Dashboard reached"
