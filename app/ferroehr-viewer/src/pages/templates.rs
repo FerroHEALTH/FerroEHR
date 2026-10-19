@@ -879,7 +879,7 @@ fn row_view(
             </td>
             <td class=CELL data-label="Concept">{row.concept}</td>
             <td class=CELL_MONO data-label="Archetype ID">{row.archetype_id}</td>
-            <td class=CELL data-label="Created">{crate::components::timestamp::timestamp(row.created)}</td>
+            <td class=CELL data-label="Created">{ferrohealth_ui::view::time::timestamp(&row.created)}</td>
             {action}
         </tr>
     }

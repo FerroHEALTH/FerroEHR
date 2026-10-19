@@ -186,7 +186,7 @@ fn history_row(entry: &VersionEntry, pinned: RwSignal<String>, row_hook: &'stati
     view! {
         <tr class=row_class>
             <td class=CELL_MONO>{shown}</td>
-            <td class=CELL data-label="Committed">{crate::components::timestamp::timestamp(committed)}</td>
+            <td class=CELL data-label="Committed">{ferrohealth_ui::view::time::timestamp(&committed)}</td>
             <td class=CELL data-label="Change type">{change_type}</td>
             <td class=CELL data-label="Committer">{committed_by}</td>
             <td class=ferrohealth_ui::table::view::ACTIONS data-label="Actions">{open}</td>

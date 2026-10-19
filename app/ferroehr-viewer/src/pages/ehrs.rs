@@ -872,7 +872,7 @@ fn ehrs_row(row: &[Value]) -> AnyView {
                 }
                 .into_any()
             } else {
-                view! { <td class=CELL data-label="Created">{crate::components::timestamp::timestamp(text)}</td> }.into_any()
+                view! { <td class=CELL data-label="Created">{ferrohealth_ui::view::time::timestamp(&text)}</td> }.into_any()
             }
         })
         .collect::<Vec<_>>();

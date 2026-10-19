@@ -493,7 +493,7 @@ fn row_view(row: AuditRow) -> impl IntoView {
     let event = format!("{} · {}", row.family, row.action);
     view! {
         <tr class=ROW>
-            <td class=CELL>{crate::components::timestamp::timestamp(row.recorded)}</td>
+            <td class=CELL>{ferrohealth_ui::view::time::timestamp(&row.recorded)}</td>
             <td class=CELL data-label="Event">{event}</td>
             <td class=CELL_MONO data-label="Operation">{row.operation}</td>
             <td class=outcome_class data-label="Outcome">{row.outcome}</td>
