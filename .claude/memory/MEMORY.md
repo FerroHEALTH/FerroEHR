@@ -58,7 +58,7 @@
 - [New issues go to the next patch milestone](new-issues-go-to-next-patch-milestone.md) — current or next patch milestone, never v5.x
 - [Storage rewrite is greenfield](storage-rewrite-is-greenfield.md) — #3337: new one-concern migration sets, old databases refused at boot
 - [Rewrite needs baseline and harness](rewrite-needs-baseline-and-harness.md) — a perf rewrite ships its measurement program first
-- [Platform shape: single tenant, FerroBRIDGE](platform-shape-single-tenant-ferrobridge.md) — one instance per tenant; secondary use via FerroBRIDGE
+- [Platform shape: single tenant, FerroBRIDGE](platform-shape-single-tenant-ferrobridge.md) — one instance per tenant; secondary use via FerroBRIDGE; no central authorisation service, each product its own SMART resource server
 - [API commits are unsigned](api-commits-are-unsigned.md) — never commit via the GitHub API with the user's token
 - [Release PR: chart bump + third-party images](release-pr-chart-and-third-party-images.md) — bump `Chart.yaml` version every release
 - [No CNF perf runs during the rewrite](no-cnf-perf-runs-during-rewrite.md) — wire before/after is #3452; #3350 is the only measurement
