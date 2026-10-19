@@ -5,7 +5,7 @@ metadata:
   type: feedback
 ---
 
-Create and push release tags myself: `git tag -s vX.Y.Z <commit> -m "vX.Y.Z"`, verify with `git tag -v`, `git push origin vX.Y.Z`. Local GPG signing is configured (`user.signingkey`, `tag.gpgsign = true`), so the tag is signed as the release lane expects. Then watch the release run, close the milestone after the tag, and clean up the release branch.
+Create and push release tags myself: `git tag -s vX.Y.Z <commit> -m "vX.Y.Z"`, verify with `git tag -v`, `git push origin vX.Y.Z`. Local GPG signing is configured (`user.signingkey`, `tag.gpgsign = true`), so the tag is signed as the release lane expects. Then watch the release run, check that its `milestone` job closed the milestone ([[release-closes-milestone]]), and clean up the release branch.
 
 **Why:** the owner, 2026-10-08: "you push everything stupid i do not do anything?" and "i never push the tags and everything you always do that", after being told to push the v4.3.5 tag himself.
 
