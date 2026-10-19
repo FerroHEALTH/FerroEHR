@@ -45,7 +45,7 @@ workflow refuses a tag that has no matching section here.
 - A structure the Web Template compacts away (an `ITEM_TREE` under a party
   identity or an ENTRY, for example) is rebuilt with the name its term
   definition gives instead of its at-code (#3810).
-- The nine `openehr-*` crates move to `0.0.88`.
+- The nine `openehr-*` crates move to `0.0.89`.
 
 - **Archetype identifiers follow the BASE 1.3.0 grammar under the
   `development` profile** (#3835, #3845). The namespaced ADL 2 form
