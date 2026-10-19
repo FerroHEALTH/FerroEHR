@@ -15,6 +15,50 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+### Added
+
+- **`openehr-sdt` builds a canonical PARTY from a party Web Template**
+  (#3810). `flat::build::build_party` (and `flat::convert::party_from_flat` /
+  `party_from_structured`) turns a FLAT or STRUCTURED document of a `PERSON`,
+  `ORGANISATION`, `GROUP`, `AGENT` or `ROLE` template into the party, with
+  every list attribute of the demographic package (`identities`, `contacts`,
+  `addresses`, `capabilities`, `roles`, `languages`, `relationships`) built as
+  an array, no composition attribute, and a refusal for a `ctx/` key. A ROLE
+  takes its `performer` from `<root>/performer|id`, `|namespace`, `|type` and
+  an optional `|id_scheme`. The result is decoded as the root class before it
+  is returned, so a party the RM refuses is reported as an error. Simplified
+  Formats define FLAT for compositions only, so this is FerroEHR's own
+  extension over the same template walk.
+  `flat::build::build_root` is the same walk for any non-COMPOSITION root,
+  and `flat::example::example_root_instance` generates an example instance of
+  such a root class for validation and tests.
+- **The openEHR terminology serves `interoperability` (672) as a term mapping
+  purpose** (#3838, SPECTERM-31): `TERM_MAPPING.purpose` validation accepts
+  it, and the terminology endpoints list it in all five languages.
+- **The `openehr-sdt` builders stamp the `ARCHETYPED.rm_version` the caller
+  chooses** (#3809). `flat::build::BuildOptions` carries it into
+  `build_composition_with`, `build_party` and `flat::tdd::from_tdd_with`;
+  `build_composition` and `from_tdd` keep stamping `1.2.0`.
+
+### Changed
+
+- A structure the Web Template compacts away (an `ITEM_TREE` under a party
+  identity or an ENTRY, for example) is rebuilt with the name its term
+  definition gives instead of its at-code (#3810).
+- The nine `openehr-*` crates move to `0.0.88`.
+
+### Fixed
+
+- The template example endpoints answer `400 Bad Request` naming the root for
+  a template whose root is not a COMPOSITION (an OBSERVATION or a SECTION),
+  instead of an object carrying COMPOSITION members its class does not have
+  (#3780). The `200` body the specification defines is an instance of a
+  versioned-object class, which such a template does not describe.
+- Same-archetype siblings told apart only by name (two EVENTs `Baseline` and
+  `Follow up` of one archetype node, for example) stay two nodes when a FLAT
+  or STRUCTURED document builds, so the example of such a template passes the
+  server's own validation (#3779).
+
 ## [4.3.11] - 2026-10-19
 
 ### Changed

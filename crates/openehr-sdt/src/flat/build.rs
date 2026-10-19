@@ -39,11 +39,12 @@ use crate::flat::webtemplate::model::{
     CodedName, WebTemplate, WebTemplateNode, WebTemplateStructuralStub,
 };
 
-/// openEHR reference-model release stamped into a rebuilt
-/// `ARCHETYPED.rm_version` (RM common `archetyped.adoc`: the "version of
-/// the openEHR reference model used to create this object" — this system
-/// creates data against the pinned RM 1.2.0).
-pub(crate) const RM_VERSION: &str = "1.2.0";
+/// The RM release stamped into `ARCHETYPED.rm_version` when the caller names none.
+///
+/// RM common `master03-archetyped_package.adoc` §ARCHETYPED: the "version of the
+/// openEHR reference model used to create this object"; this crate builds
+/// against the pinned RM 1.2.0.
+pub const RM_VERSION: &str = "1.2.0";
 
 /// Deterministic fill for RM-mandatory temporal fields the simplified form
 /// never surfaces as data (`HISTORY.origin` of a synthesised history,
@@ -54,8 +55,56 @@ pub(crate) const RM_VERSION: &str = "1.2.0";
 /// [`crate::flat::ctx`], not to these structural fills.)
 pub(crate) const DEFAULT_TIME: &str = "1970-01-01T00:00:00Z";
 
+/// What a caller chooses about a build beyond the document and the template.
+///
+/// [`BuildOptions::default`] is what [`build_composition`] uses.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct BuildOptions<'a> {
+    /// The value written verbatim into every `archetype_details.rm_version` the
+    /// build stamps. Choosing the release the object conforms to is the
+    /// caller's decision.
+    pub rm_version: &'a str,
+}
+
+impl Default for BuildOptions<'_> {
+    fn default() -> Self {
+        Self {
+            rm_version: RM_VERSION,
+        }
+    }
+}
+
+impl<'a> BuildOptions<'a> {
+    /// The options with `rm_version` stamped into every `ARCHETYPED` the build
+    /// writes.
+    #[must_use]
+    pub fn with_rm_version(mut self, rm_version: &'a str) -> Self {
+        self.rm_version = rm_version;
+        self
+    }
+}
+
 /// Converts a parsed simplified document to a canonical-JSON composition,
-/// driven by `wt`.
+/// driven by `wt`, stamping [`RM_VERSION`].
+///
+/// `now` is the caller's current timestamp, used only for the `ctx/time`
+/// default (`master04 §Context`). A document that names no `category` takes
+/// the template's default for it (`template_category`).
+///
+/// # Errors
+///
+/// As [`build_composition_with`].
+pub fn build_composition(
+    doc: &SimDocument,
+    wt: &WebTemplate,
+    now: &str,
+) -> Result<Value, FlatError> {
+    build_composition_with(doc, wt, now, &BuildOptions::default())
+}
+
+/// Converts a parsed simplified document to a canonical-JSON composition,
+/// driven by `wt`, with the caller's [`BuildOptions`].
 ///
 /// `now` is the caller's current timestamp, used only for the `ctx/time`
 /// default (`master04 §Context`). A document that names no `category` takes
@@ -69,10 +118,11 @@ pub(crate) const DEFAULT_TIME: &str = "1970-01-01T00:00:00Z";
 /// `<root>/category|code` when the document names no category and the
 /// template admits several with no default; [`FlatError::Conversion`] when the
 /// document carries nothing buildable.
-pub fn build_composition(
+pub fn build_composition_with(
     doc: &SimDocument,
     wt: &WebTemplate,
     now: &str,
+    options: &BuildOptions<'_>,
 ) -> Result<Value, FlatError> {
     let root_id = &wt.tree.id;
     let mut data_root = None;
@@ -107,15 +157,20 @@ pub fn build_composition(
     // family default (AOM 1.4 type conformance; master04 §Level Removal — the
     // collapsed wrapper's type is not carried on the FLAT wire, so it is resolved
     // from the template here).
-    let mut slot_types: Vec<(Vec<PathSegment>, String)> = Vec::new();
-    collect_slot_types(&wt.tree, &mut slot_types);
+    let build_ctx = BuildCtx::new(wt, options);
 
-    let mut comp = match build(&wt.tree, data_root, root_id, &slot_types)? {
+    let mut comp = match build(&wt.tree, data_root, root_id, &build_ctx)? {
         Some(Value::Object(m)) => m,
         _ => Map::new(),
     };
-    finish_identity(&mut comp, &wt.tree, true, &wt.template_id);
-    ensure_template_id(&mut comp, &wt.tree, &wt.template_id);
+    finish_identity(
+        &mut comp,
+        &wt.tree,
+        true,
+        &wt.template_id,
+        options.rm_version,
+    );
+    ensure_template_id(&mut comp, &wt.tree, &wt.template_id, options.rm_version);
     // Resolve `category` BEFORE the context is applied: persistent
     // compositions may optionally omit the Event context (RM ehr master05
     // §"Persistent Compositions may optionally have an Event context").
@@ -125,6 +180,129 @@ pub fn build_composition(
     apply_entry_defaults(&mut value, &defaults);
     complete_tree(&mut value);
     Ok(value)
+}
+
+/// The concrete party classes a party build produces (RM demographic
+/// `master02-demographic_package.adoc` §Class Descriptions: `PARTY` and its
+/// descendants are the versioned demographic objects).
+const PARTY_CLASSES: [&str; 5] = ["PERSON", "ORGANISATION", "GROUP", "AGENT", "ROLE"];
+
+/// Converts a parsed simplified document of a party template (a `PERSON`,
+/// `ORGANISATION`, `GROUP`, `AGENT` or `ROLE` root) to a canonical-JSON party.
+///
+/// The same template walk and level re-materialisation as
+/// [`build_composition_with`], without the composition steps: no `category`, no
+/// `ctx/` vocabulary and no entry defaults. Every list attribute of the
+/// demographic package (`identities`, `contacts`, `addresses`, `capabilities`,
+/// `roles`, `languages`, `relationships`) is built as an array, and the result
+/// is checked to decode as the root's class before it is returned.
+///
+/// NOTE: ITS-REST `simplified_formats/master04` defines FLAT for compositions only; a party build is our own extension over the same walk.
+///
+/// # Errors
+///
+/// [`FlatError::NotAPartyTemplate`] when the template root is not a party
+/// class; [`FlatError::ContextOnParty`] for a `ctx/` key;
+/// [`FlatError::UnknownPath`] for a field identifier matching no web-template
+/// node; the datum errors of [`build_composition_with`];
+/// [`FlatError::Conversion`] when the document carries no data root; and
+/// [`FlatError::PartyDecode`] when the built object does not decode as the root
+/// class (a mandatory attribute the document left empty, for example
+/// `identities`).
+pub fn build_party(
+    doc: &SimDocument,
+    wt: &WebTemplate,
+    options: &BuildOptions<'_>,
+) -> Result<Value, FlatError> {
+    let class = concrete_type(&wt.tree.rm_type);
+    if !PARTY_CLASSES.contains(&class) {
+        return Err(FlatError::NotAPartyTemplate {
+            root: wt.tree.rm_type.clone(),
+        });
+    }
+    let value = build_root(doc, wt, options)?;
+    check_party_decodes(&value, class)?;
+    Ok(value)
+}
+
+/// Converts a parsed simplified document to an instance of the template's root class.
+///
+/// The root may be any class (an ENTRY, a SECTION, a CLUSTER, a party), and
+/// the build skips the composition steps: no `category`, no `ctx/` vocabulary
+/// and no entry defaults; a `ctx/` key is refused.
+///
+/// The composition builder is [`build_composition_with`] and the checked party
+/// builder [`build_party`]; this is the walk both share for a root that is not
+/// a COMPOSITION. The result is not decoded, so the caller owns the check that
+/// it is an instance of its class.
+///
+/// NOTE: ITS-REST `simplified_formats/master04` defines FLAT for compositions only; a non-COMPOSITION root is our own extension over the same walk.
+///
+/// # Errors
+///
+/// [`FlatError::ContextOnParty`] for a `ctx/` key; [`FlatError::UnknownPath`]
+/// for a field identifier matching no web-template node; the datum errors of
+/// [`build_composition_with`]; and [`FlatError::Conversion`] when the document
+/// carries no data root.
+pub fn build_root(
+    doc: &SimDocument,
+    wt: &WebTemplate,
+    options: &BuildOptions<'_>,
+) -> Result<Value, FlatError> {
+    let root_id = &wt.tree.id;
+    let mut data_root = None;
+    for (name, child) in &doc.children {
+        match name.as_str() {
+            "ctx" => return Err(FlatError::ContextOnParty),
+            n if n == root_id => data_root = child.occurrences.first(),
+            other => return Err(FlatError::UnknownPath(other.to_owned())),
+        }
+    }
+    let Some(data_root) = data_root else {
+        return Err(FlatError::Conversion(
+            "empty simplified document: no data root".to_owned(),
+        ));
+    };
+    let build_ctx = BuildCtx::new(wt, options);
+    let mut root = match build(&wt.tree, data_root, root_id, &build_ctx)? {
+        Some(Value::Object(m)) => m,
+        _ => Map::new(),
+    };
+    finish_identity(
+        &mut root,
+        &wt.tree,
+        true,
+        &wt.template_id,
+        options.rm_version,
+    );
+    ensure_template_id(&mut root, &wt.tree, &wt.template_id, options.rm_version);
+    let mut value = Value::Object(root);
+    complete_tree(&mut value);
+    Ok(value)
+}
+
+/// Decodes `value` as the party class `class`, so a built party that the
+/// generated RM types refuse is reported here and never handed on.
+///
+/// # Errors
+///
+/// [`FlatError::PartyDecode`] carrying the strict reader's refusal.
+fn check_party_decodes(value: &Value, class: &str) -> Result<(), FlatError> {
+    use openehr_its::json::from_canonical_value;
+    use openehr_rm::v1_2::demographic;
+    let decoded = match class {
+        "PERSON" => from_canonical_value::<demographic::person::Person>(value).map(drop),
+        "ORGANISATION" => {
+            from_canonical_value::<demographic::organisation::Organisation>(value).map(drop)
+        }
+        "GROUP" => from_canonical_value::<demographic::group::Group>(value).map(drop),
+        "AGENT" => from_canonical_value::<demographic::agent::Agent>(value).map(drop),
+        _ => from_canonical_value::<demographic::role::Role>(value).map(drop),
+    };
+    decoded.map_err(|source| FlatError::PartyDecode {
+        class: class.to_owned(),
+        source,
+    })
 }
 
 /// Merge the root-level path spellings of the in-context composition
@@ -237,13 +415,49 @@ fn leaf_consumes_segment(base: &str, seg: &str) -> bool {
     )
 }
 
-/// Collect the whole template's hoisted-wrapper type narrowings as
-/// `(parsed absolute archetype path, constrained RM type)` pairs, so the builder
-/// can look a re-materialised structural node's constrained type up by its
-/// absolute path (see [`build_composition`]).
-fn collect_slot_types(node: &WebTemplateNode, out: &mut Vec<(Vec<PathSegment>, String)>) {
+/// One hoisted wrapper of the template: its parsed absolute archetype path,
+/// its constrained RM type and the name its term definition gives.
+struct SlotType {
+    /// The parsed absolute archetype path of the wrapper.
+    path: Vec<PathSegment>,
+    /// The constrained RM type.
+    rm_type: String,
+    /// The wrapper's name from the template, when it has one.
+    name: Option<String>,
+}
+
+/// What one build carries down the template walk: the template's hoisted
+/// wrappers and the `ARCHETYPED.rm_version` every archetype root is stamped
+/// with.
+struct BuildCtx<'a> {
+    /// The hoisted wrappers, looked up by absolute path.
+    slots: Vec<SlotType>,
+    /// The value written into every `archetype_details.rm_version`.
+    rm_version: &'a str,
+}
+
+impl<'a> BuildCtx<'a> {
+    /// The context for building against `wt` with `options`.
+    fn new(wt: &WebTemplate, options: &BuildOptions<'a>) -> Self {
+        let mut slots = Vec::new();
+        collect_slot_types(&wt.tree, &mut slots);
+        Self {
+            slots,
+            rm_version: options.rm_version,
+        }
+    }
+}
+
+/// Collect the whole template's hoisted-wrapper type narrowings and names, so
+/// the builder can look a re-materialised structural node's constrained type
+/// and name up by its absolute path (see [`build_composition`]).
+fn collect_slot_types(node: &WebTemplateNode, out: &mut Vec<SlotType>) {
     for slot in &node.slots {
-        out.push((rmpath::parse(&slot.path), slot.rm_type.clone()));
+        out.push(SlotType {
+            path: rmpath::parse(&slot.path),
+            rm_type: slot.rm_type.clone(),
+            name: slot.name.clone(),
+        });
     }
     for child in &node.children {
         collect_slot_types(child, out);
@@ -261,34 +475,43 @@ fn segments_match(a: &[PathSegment], b: &[PathSegment]) -> bool {
         })
 }
 
-/// Resolve, per relative segment of `child`, the template-constrained concrete RM
-/// type of the structural wrapper at that absolute path (`None` when the template
-/// records no narrowing there — the caller then falls back to
-/// [`infer_type`]). Index-aligned with the relative segment list.
-fn wrapper_types(
-    child_aql: &str,
-    rel_len: usize,
-    slots: &[(Vec<PathSegment>, String)],
-) -> Vec<Option<String>> {
+/// The template's record of one structural wrapper on a placement path: its
+/// constrained concrete RM type and its name.
+#[derive(Clone, Default)]
+struct WrapperFacts {
+    /// The constrained RM type, `None` when the template records no narrowing
+    /// (the caller then falls back to [`infer_type`]).
+    rm_type: Option<String>,
+    /// The name the template gives the wrapper, `None` when it gives none.
+    name: Option<String>,
+}
+
+/// Resolve, per relative segment of `child`, what the template records about
+/// the structural wrapper at that absolute path. Index-aligned with the
+/// relative segment list.
+fn wrapper_types(child_aql: &str, rel_len: usize, slots: &[SlotType]) -> Vec<WrapperFacts> {
     let child_abs = rmpath::parse(child_aql);
     if child_abs.len() < rel_len {
-        return vec![None; rel_len];
+        return vec![WrapperFacts::default(); rel_len];
     }
     let base = child_abs.len() - rel_len;
     (0..rel_len)
         .map(|i| {
-            let abs = child_abs.get(..=base + i)?;
-            slots
-                .iter()
-                .find(|(segs, _)| segments_match(segs, abs))
-                .map(|(_, ty)| ty.clone())
+            child_abs
+                .get(..=base + i)
+                .and_then(|abs| slots.iter().find(|slot| segments_match(&slot.path, abs)))
+                .map(|slot| WrapperFacts {
+                    rm_type: Some(slot.rm_type.clone()),
+                    name: slot.name.clone(),
+                })
+                .unwrap_or_default()
         })
         .collect()
 }
 
 /// Build the RM value for `node` from the simplified occurrence `sim`.
-/// `path` is the printed simplified path (diagnostics); `slots` is the template's
-/// hoisted-wrapper type map (see [`build_composition`]).
+/// `path` is the printed simplified path (diagnostics); `ctx` carries the
+/// template's hoisted-wrapper map and the `rm_version` to stamp.
 ///
 /// `Ok(None)` means the occurrence builds **no value**: a leaf that carries no
 /// datum part, only the `/_null_flavour` (+ `/_null_reason`) rows of master05
@@ -299,7 +522,7 @@ fn build(
     node: &WebTemplateNode,
     sim: &SimNode,
     path: &str,
-    slots: &[(Vec<PathSegment>, String)],
+    ctx: &BuildCtx<'_>,
 ) -> Result<Option<Value>, FlatError> {
     if node.has_input() {
         return build_leaf(node, sim, path);
@@ -312,7 +535,7 @@ fn build(
     // HISTORY is materialised (see below).
     let mut history_origin: Option<String> = None;
 
-    walk_template_children(node, sim, path, slots, &mut obj)?;
+    walk_template_children(node, sim, path, ctx, &mut obj)?;
     apply_container_attrs(node, sim, path, &mut obj, &mut history_origin)?;
     // Datum parts on a container node are only legal via |raw
     // (master04 §Raw canonical JSON) or as one of the few datum suffixes the
@@ -325,7 +548,7 @@ fn build(
 
     let mut value = Value::Object(obj);
     if let Value::Object(m) = &mut value {
-        finish_identity(m, node, false, "");
+        finish_identity(m, node, false, "", ctx.rm_version);
         // `OBSERVATION/history_origin` sets `data.origin` (master05 §OBSERVATION
         // `/history_origin`), applied after the mandatory HISTORY is
         // materialised so the datum-supplied origin wins the structural default.
@@ -378,7 +601,7 @@ fn walk_template_children(
     node: &WebTemplateNode,
     sim: &SimNode,
     path: &str,
-    slots: &[(Vec<PathSegment>, String)],
+    ctx: &BuildCtx<'_>,
     obj: &mut Map<String, Value>,
 ) -> Result<(), FlatError> {
     for child in &node.children {
@@ -399,8 +622,8 @@ fn walk_template_children(
                 continue; // a preserved index hole
             }
             let child_path = format!("{path}/{}:{i}", child.id);
-            let child_val = build(child, occ, &child_path, slots)?;
-            place(obj, &rel, child_val, child, occ, &child_path, slots)?;
+            let child_val = build(child, occ, &child_path, ctx)?;
+            place(obj, &rel, child_val, child, occ, &child_path, ctx)?;
         }
     }
     Ok(())
@@ -566,12 +789,15 @@ enum DirectPath {
     /// `OBSERVATION.history_origin` — the alias for `data.origin`
     /// (master05 §OBSERVATION `/history_origin`).
     HistoryOrigin,
+    /// `ROLE.performer` — the `PARTY_REF` to the actor playing the role (RM
+    /// demographic §ROLE), built from the master05 §OBJECT_REF suffixes.
+    Performer,
 }
 
 /// The direct RM-attribute path (if any) named by `seg` on a node of base RM
 /// type `host`, per the master05 per-type mapping tables.
 fn direct_rm_path(host: &str, seg: &str) -> Option<DirectPath> {
-    use DirectPath::{ActionArchetypeId, CodedGroup, HistoryOrigin, Ism, Leaf};
+    use DirectPath::{ActionArchetypeId, CodedGroup, HistoryOrigin, Ism, Leaf, Performer};
     Some(match (host, seg) {
         // master05 §§ADMIN_ENTRY, INSTRUCTION, ACTION, EVALUATION, OBSERVATION
         // `/language` (CODE_PHRASE → `language`). Output takes the master06
@@ -653,6 +879,10 @@ fn direct_rm_path(host: &str, seg: &str) -> Option<DirectPath> {
             attr: "setting",
             group: "setting",
         },
+        // RM demographic §ROLE: `performer: PARTY_REF` (1..1). A party template
+        // rarely constrains it, so its path is honoured here.
+        // NOTE: Simplified Formats define no party rows; the master05 §OBJECT_REF suffixes reused here are our own extension.
+        ("ROLE", "performer") => Performer,
         _ => return None,
     })
 }
@@ -762,8 +992,62 @@ fn place_direct_rm_path(
                 .and_then(Value::as_str)
                 .map(str::to_owned);
         }
+        DirectPath::Performer => {
+            if let Some(node) = occ
+                && !obj.contains_key("performer")
+            {
+                obj.insert("performer".to_owned(), build_party_ref(node, &sub_path)?);
+            }
+        }
     }
     Ok(true)
+}
+
+/// Builds a `PARTY_REF` from the master05 §OBJECT_REF suffixes `|id`,
+/// `|namespace`, `|type` and the optional `|id_scheme`.
+///
+/// All of `id`, `namespace` and `type` are mandatory on an `OBJECT_REF` (BASE
+/// `base_types/master05-identification_package.adoc` §References), and a reference
+/// to a real actor has no sensible default for any of them, so each is required.
+/// A `|id_scheme` makes the id a `GENERIC_ID`; without one it is the
+/// `HIER_OBJECT_ID` a versioned party carries.
+///
+/// # Errors
+/// [`FlatError::MissingRequiredSuffix`] naming the first absent suffix, and
+/// [`FlatError::UnknownSuffix`] for any other suffix.
+fn build_party_ref(node: &SimNode, path: &str) -> Result<Value, FlatError> {
+    if let Some(suffix) = node
+        .attrs
+        .keys()
+        .find(|k| !matches!(k.as_str(), "id" | "namespace" | "type" | "id_scheme"))
+    {
+        return Err(FlatError::UnknownSuffix {
+            rm_type: "PARTY_REF".to_owned(),
+            suffix: suffix.clone(),
+            path: path.to_owned(),
+        });
+    }
+    let required = |suffix: &str| {
+        node.attrs
+            .get(suffix)
+            .and_then(Value::as_str)
+            .ok_or_else(|| FlatError::MissingRequiredSuffix {
+                key: format!("{path}|{suffix}"),
+            })
+    };
+    let id = required("id")?;
+    let namespace = required("namespace")?;
+    let party_type = required("type")?;
+    let id_obj = match node.attrs.get("id_scheme").and_then(Value::as_str) {
+        Some(scheme) => json!({"_type": "GENERIC_ID", "value": id, "scheme": scheme}),
+        None => json!({"_type": "HIER_OBJECT_ID", "value": id}),
+    };
+    Ok(json!({
+        "_type": "PARTY_REF",
+        "namespace": namespace,
+        "type": party_type,
+        "id": id_obj,
+    }))
 }
 
 /// The DV_CODED_TEXT of a direct RM path bound to an openEHR terminology
@@ -873,14 +1157,14 @@ fn place(
     child: &WebTemplateNode,
     occ: &SimNode,
     path: &str,
-    slots: &[(Vec<PathSegment>, String)],
+    ctx: &BuildCtx<'_>,
 ) -> Result<(), FlatError> {
     if rel.is_empty() {
         return Ok(());
     }
-    // Per relative segment, the template-constrained concrete type of the
-    // structural wrapper at that absolute path (empty ⇒ fall back to `infer_type`).
-    let types = wrapper_types(&child.aql_path, rel.len(), slots);
+    // Per relative segment, the template-constrained concrete type and name of
+    // the structural wrapper at that absolute path.
+    let types = wrapper_types(&child.aql_path, rel.len(), &ctx.slots);
     let placement = Placement {
         rel,
         id_idx: rel.iter().rposition(|s| is_multiple(&s.attribute)),
@@ -888,7 +1172,7 @@ fn place(
         occ,
         path,
         types: &types,
-        slots,
+        ctx,
     };
     place_rec(parent, 0, child_value, &placement)
 }
@@ -904,8 +1188,20 @@ struct Placement<'a> {
     child: &'a WebTemplateNode,
     occ: &'a SimNode,
     path: &'a str,
-    types: &'a [Option<String>],
-    slots: &'a [(Vec<PathSegment>, String)],
+    types: &'a [WrapperFacts],
+    ctx: &'a BuildCtx<'a>,
+}
+
+impl Placement<'_> {
+    /// The constrained RM type of the wrapper at relative segment `i`.
+    fn type_at(&self, i: usize) -> Option<&str> {
+        self.types.get(i).and_then(|facts| facts.rm_type.as_deref())
+    }
+
+    /// The template's name for the wrapper at relative segment `i`.
+    fn name_at(&self, i: usize) -> Option<&str> {
+        self.types.get(i).and_then(|facts| facts.name.as_deref())
+    }
 }
 
 /// Materialise the wrapper chain of one relative segment, recursing into the
@@ -969,7 +1265,7 @@ fn place_own_level(
         p.rel.get(i + 1),
         p.child.name.as_deref(),
         p.child.name_coded.as_ref(),
-        p.types.get(i).and_then(Option::as_deref),
+        p.type_at(i),
     );
     if let Value::Object(m) = &mut el {
         place(
@@ -979,7 +1275,7 @@ fn place_own_level(
             p.child,
             p.occ,
             p.path,
-            p.slots,
+            p.ctx,
         )?;
         // The ELEMENT wrapper's own `_` attribute family (master05 §ELEMENT).
         apply_element_attrs(m, p.occ, p.path)?;
@@ -1012,18 +1308,24 @@ fn place_structural_level(
     else {
         return Ok(());
     };
-    let existing = arr
-        .iter()
-        .position(|e| e.get("archetype_node_id").and_then(Value::as_str) == node_id);
+    // Same-archetype siblings told apart by name (`events[at0002,'Baseline']`
+    // beside `events[at0002,'Follow up']`) are distinct nodes, so a name
+    // conjunct on the segment takes part in finding the element (BASE
+    // `architecture_overview/master11-paths.adoc` §"Using a Name-based Predicate").
+    let name = seg.predicate.name_value.as_deref();
+    let existing = arr.iter().position(|e| {
+        e.get("archetype_node_id").and_then(Value::as_str) == node_id
+            && name.is_none_or(|n| e.pointer("/name/value").and_then(Value::as_str) == Some(n))
+    });
     let idx = if let Some(pos) = existing {
         pos
     } else {
         arr.push(new_struct(
             seg,
             p.rel.get(i + 1),
+            p.name_at(i),
             None,
-            None,
-            p.types.get(i).and_then(Option::as_deref),
+            p.type_at(i),
         ));
         arr.len() - 1
     };
@@ -1064,13 +1366,7 @@ fn place_single_attribute(
     if !cur.contains_key(&seg.attribute) {
         cur.insert(
             seg.attribute.clone(),
-            new_struct(
-                seg,
-                p.rel.get(i + 1),
-                None,
-                None,
-                p.types.get(i).and_then(Option::as_deref),
-            ),
+            new_struct(seg, p.rel.get(i + 1), p.name_at(i), None, p.type_at(i)),
         );
     }
     if let Some(Value::Object(m)) = cur.get_mut(&seg.attribute) {
@@ -1323,6 +1619,7 @@ fn finish_identity(
     node: &WebTemplateNode,
     is_root: bool,
     template_id: &str,
+    rm_version: &str,
 ) {
     let rm_type = concrete_type(&node.rm_type);
     if fill_non_locatable(obj, rm_type) {
@@ -1330,7 +1627,7 @@ fn finish_identity(
     }
     stamp_locatable_identity(obj, node, rm_type);
     fill_time_anchor(obj, rm_type);
-    stamp_archetype_details(obj, node, is_root, template_id);
+    stamp_archetype_details(obj, node, is_root, template_id, rm_version);
     fill_mandatory_entry_attributes(obj, node, rm_type);
 }
 
@@ -1388,12 +1685,15 @@ fn fill_time_anchor(obj: &mut Map<String, Value>, rm_type: &str) {
     }
 }
 
-/// Stamps `archetype_details` on an archetype-root node.
+/// Stamps `archetype_details` on an archetype-root node, naming `rm_version`
+/// as the RM release the object was created to (RM common
+/// `master03-archetyped_package.adoc` §ARCHETYPED `rm_version`).
 pub(crate) fn stamp_archetype_details(
     obj: &mut Map<String, Value>,
     node: &WebTemplateNode,
     is_root: bool,
     template_id: &str,
+    rm_version: &str,
 ) {
     let is_root_arch = node
         .node_id
@@ -1416,7 +1716,7 @@ pub(crate) fn stamp_archetype_details(
                     json!({"_type": "TEMPLATE_ID", "value": template_id}),
                 );
             }
-            a.insert("rm_version".into(), json!(RM_VERSION));
+            a.insert("rm_version".into(), json!(rm_version));
             Value::Object(a)
         });
 }
@@ -1589,13 +1889,18 @@ pub(crate) fn template_category(root: &WebTemplateNode) -> Result<Value, Vec<Str
 /// template; the `openehr-template-id` REST header exists exactly because
 /// the simplified payload cannot carry it — ITS-REST
 /// `Requests_and_responses.md §openehr-template-id`).
-fn ensure_template_id(comp: &mut Map<String, Value>, root: &WebTemplateNode, template_id: &str) {
+fn ensure_template_id(
+    comp: &mut Map<String, Value>,
+    root: &WebTemplateNode,
+    template_id: &str,
+    rm_version: &str,
+) {
     let ad = comp
         .entry("archetype_details".to_owned())
         .or_insert_with(|| {
             json!({"_type": "ARCHETYPED",
                    "archetype_id": {"_type": "ARCHETYPE_ID", "value": root.node_id},
-                   "rm_version": RM_VERSION})
+                   "rm_version": rm_version})
         });
     if let Value::Object(ad) = ad {
         ad.entry("template_id".to_owned())

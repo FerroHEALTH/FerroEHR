@@ -114,12 +114,6 @@ To be continued.
 
 === Variables
 
-[.tbd]
-*TBD*: : main problem of variables is that they must have names, which are language-dependent; imagine if there were a mixture of variables added by authors in different languages. The only solution is to name them with terms.
-
-[.tbd]
-*TBD*: : Variables have to be treated as term coordinations, and should be coded e.g. using ccNNNN codes (“cc” = coordinated code). Then they can be given meanings in any language.
-
 ==== Predefined Variables
 
 A number of predefined variables can be referenced in ADL assertion expressions, without prior definition, including:

@@ -7,4 +7,5 @@
 
 mod asset_identity;
 mod property_units;
+mod term_mapping_purpose;
 mod xsd_conformance;

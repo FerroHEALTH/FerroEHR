@@ -2393,7 +2393,7 @@
                 "time": {
                     "_type": "P_BMM_SINGLE_PROPERTY",
                     "name": "time",
-                    "documentation": "Time of this event. If the width is non-zero, it is the time point of the trailing edge of the event. ",
+                    "documentation": "Time of this event. If the width is non-zero, it is the time point where the interval ends.",
                     "is_mandatory": true,
                     "type": "DV_DATE_TIME"
                 },

@@ -259,6 +259,7 @@
 		<concept id="669" rubric="公共卫生"/>
 		<concept id="670" rubric="费用报销"/>
 		<concept id="671" rubric="研究调查"/>
+		<concept id="672" rubric="互操作性"/>
 	</group>
 	<group openehr_id="event_math_function" name="事件匹配函数">
 		<concept id="145" rubric="最小值"/>

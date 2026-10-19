@@ -41,8 +41,6 @@ h|*1..1*
 |*priority*: `link:/releases/BASE/{base_release}/foundation_types.html#_integer_class[Integer^]`
 a|Requested priority of this request to be handled by server. Priority schemes are likely to be local, and use values agreed by both ends.
 
-TBD: alternative is standard coded terms
-
 h|*1..1*
 |*link_depth*: `link:/releases/BASE/{base_release}/foundation_types.html#_integer_class[Integer^]`
 a|Degree of links to follow emanating from content items specified for inclusion. The kind of links to follow is dependent on the type of Extract.

@@ -634,6 +634,7 @@ fn get_compacted(children: Vec<WebTemplateNode>, parent: &mut Hoisted) -> Vec<We
             parent.slots.push(WebTemplateSlot {
                 path: child.aql_path.clone(),
                 rm_type: child.rm_type.clone(),
+                name: child.name.clone(),
             });
             out.extend(get_compacted(child.children, parent));
         } else {

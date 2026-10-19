@@ -259,6 +259,7 @@
 		<concept id="669" rubric="saúde pública"/>
 		<concept id="670" rubric="reembolso"/>
 		<concept id="671" rubric="estudo de investigação"/>
+		<concept id="672" rubric="interoperabilidade"/>
 	</group>
 	<group openehr_id="event_math_function" name="função matemática de evento">
 		<concept id="145" rubric="mínimo"/>

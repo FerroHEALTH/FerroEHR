@@ -146,4 +146,42 @@ pub enum FlatError {
         #[source]
         source: openehr_its::xml::runtime::XmlError,
     },
+
+    /// An example COMPOSITION was asked of a template whose root is not a
+    /// COMPOSITION (an ENTRY or a SECTION, for example), which no COMPOSITION
+    /// conforms to.
+    #[error(
+        "the template root {root} is not a COMPOSITION, so no example COMPOSITION exists for it"
+    )]
+    NoExampleForRoot {
+        /// The template root's RM type.
+        root: String,
+    },
+
+    /// A party build was asked of a template whose root is not a party class
+    /// (`PERSON`, `ORGANISATION`, `GROUP`, `AGENT` or `ROLE`).
+    #[error("the template root {root} is not a PARTY class, so no party builds from it")]
+    NotAPartyTemplate {
+        /// The template root's RM type.
+        root: String,
+    },
+
+    /// A party (or other non-COMPOSITION root) document carries a `ctx/` key:
+    /// the `ctx/` vocabulary is the COMPOSITION context (ITS-REST
+    /// `simplified_formats/master06`), and such a root has none.
+    #[error(
+        "only a COMPOSITION document takes ctx/ keys: ctx/ is the COMPOSITION context vocabulary"
+    )]
+    ContextOnParty,
+
+    /// A built party does not decode as its root class; the strict canonical
+    /// reader's refusal is the source.
+    #[error("the built party does not decode as {class}")]
+    PartyDecode {
+        /// The party class the build targeted.
+        class: String,
+        /// The canonical-JSON reader's refusal.
+        #[source]
+        source: openehr_its::json::JsonParseError,
+    },
 }

@@ -24,6 +24,7 @@ use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
 use openehr_its::opt14;
+use openehr_sdt::flat::error::FlatError;
 use openehr_sdt::flat::example::{DetailLevel, example_composition};
 use openehr_sdt::flat::webtemplate::builder::build_web_template;
 use serde_json::Value;
@@ -111,6 +112,9 @@ enum TemplateOutcome {
     Refused(String),
     /// Examples were generated but carry RM-shape defects.
     Defects(Vec<String>),
+    /// The template's root is not a COMPOSITION, and the generator refused it
+    /// with `NoExampleForRoot` naming that root (#3780).
+    NoExampleForRoot,
 }
 
 /// Parses one packed OPT and checks the examples it generates at every level.
@@ -135,8 +139,17 @@ fn examine_template(path: &Path, name: &str) -> TemplateOutcome {
         DetailLevel::Medium,
         DetailLevel::Complete,
     ] {
-        let example = example_composition(&wt, level);
-        collect_element_value_defects(&example, &format!("{name}@{level:?}"), &mut defects);
+        match example_composition(&wt, level) {
+            Ok(example) => {
+                collect_element_value_defects(&example, &format!("{name}@{level:?}"), &mut defects);
+            }
+            Err(FlatError::NoExampleForRoot { root })
+                if root == wt.tree.rm_type && root != "COMPOSITION" =>
+            {
+                return TemplateOutcome::NoExampleForRoot;
+            }
+            Err(e) => defects.push(format!("{name}@{level:?}: example refused: {e}")),
+        }
     }
     if defects.is_empty() {
         TemplateOutcome::Clean
@@ -163,6 +176,7 @@ fn full_ckm_pack_parses_and_generates_valid_examples() {
     let mut parsed = 0_usize;
     let mut adjudicated = 0_usize;
     let mut unexpectedly_accepted = Vec::new();
+    let mut no_example = 0_usize;
 
     for path in &files {
         let name = file_name(path);
@@ -185,11 +199,13 @@ fn full_ckm_pack_parses_and_generates_valid_examples() {
                 let _ = writeln!(findings, "{}", defects.join("\n"));
             }
             TemplateOutcome::Refused(_) | TemplateOutcome::Defects(_) => adjudicated += 1,
+            TemplateOutcome::NoExampleForRoot => no_example += 1,
         }
     }
 
     println!(
-        "full CKM pack: {} files, {parsed} clean, {adjudicated} adjudicated",
+        "full CKM pack: {} files, {parsed} clean, {no_example} without a COMPOSITION root, \
+         {adjudicated} adjudicated",
         files.len()
     );
 

@@ -78,7 +78,7 @@ use std::sync::LazyLock;
 use openehr_rm::v1_2::paths::{PathSegment, is_archetype_root_node_id};
 use serde_json::{Map, Value, json};
 
-use crate::flat::build::{code_phrase, dv_coded_text, template_category};
+use crate::flat::build::{BuildOptions, RM_VERSION, code_phrase, dv_coded_text, template_category};
 use crate::flat::error::FlatError;
 use crate::flat::rmpath;
 use crate::flat::webtemplate::model::{WebTemplate, WebTemplateNode};
@@ -86,11 +86,6 @@ use crate::flat::webtemplate::model::{WebTemplate, WebTemplateNode};
 /// The Ocean/Marand template-data XML namespace (the default `xmlns` on a TDD
 /// root). Kept here for callers that only need the constant.
 pub const TDD_TEMPLATE_NS: &str = "http://schemas.oceanehr.com/templates";
-
-/// openEHR reference-model release stamped into a rebuilt `ARCHETYPED.rm_version`
-/// (the workspace RM pin). Shared meaning with the FLAT
-/// converter's `RM_VERSION`.
-const RM_VERSION: &str = "1.2.0";
 
 /// RM-mandatory temporal default for re-materialised wrapper nodes whose
 /// instance value the TDD does not carry at all (a fully compacted chain —
@@ -414,6 +409,55 @@ fn is_locatable(rm_type: &str) -> bool {
 /// template, or if it carries no category while the template admits several
 /// with no default.
 pub fn from_tdd(tdd_xml: &str, wt: &WebTemplate) -> Result<Value, FlatError> {
+    from_tdd_with(tdd_xml, wt, &BuildOptions::default())
+}
+
+/// Converts a TDD XML instance to a canonical-JSON `COMPOSITION`, guided by
+/// `wt`, with the caller's [`BuildOptions`]: every `archetype_details` the
+/// conversion writes names `options.rm_version`.
+///
+/// # Errors
+///
+/// As [`from_tdd`].
+pub fn from_tdd_with(
+    tdd_xml: &str,
+    wt: &WebTemplate,
+    options: &BuildOptions<'_>,
+) -> Result<Value, FlatError> {
+    let mut comp = composition_from_tdd(tdd_xml, wt)?;
+    // Every ARCHETYPED in a TDD build comes from `archetyped` or
+    // `ensure_template_id` (a TDD element is never read as one), so naming the
+    // caller's release on each of them names exactly the builder's stamps.
+    stamp_rm_version(&mut comp, options.rm_version);
+    Ok(comp)
+}
+
+/// Writes `rm_version` into every `ARCHETYPED` of a TDD build.
+fn stamp_rm_version(value: &mut Value, rm_version: &str) {
+    match value {
+        Value::Object(obj) => {
+            if obj.get("_type").and_then(Value::as_str) == Some("ARCHETYPED") {
+                obj.insert("rm_version".to_owned(), json!(rm_version));
+            }
+            for child in obj.values_mut() {
+                stamp_rm_version(child, rm_version);
+            }
+        }
+        Value::Array(items) => {
+            for item in items {
+                stamp_rm_version(item, rm_version);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// The TDD conversion itself, stamping [`RM_VERSION`].
+///
+/// # Errors
+///
+/// As [`from_tdd`].
+fn composition_from_tdd(tdd_xml: &str, wt: &WebTemplate) -> Result<Value, FlatError> {
     let root_el = parse_tree(tdd_xml)?;
     let root_id = &wt.tree.id;
 
@@ -712,14 +756,29 @@ fn is_multiple(attr: &str) -> bool {
 /// values, not wrapper nodes the FLAT/TDD builders re-materialise), which keeps
 /// single-valued structural attributes such as `OBSERVATION.data : HISTORY`
 /// correctly single. The reachability walk starts at the versioned-object roots
-/// (`COMPOSITION`, `EHR_STATUS`, `FOLDER`) and follows every class-typed
-/// attribute through the RM abstract→concrete descendant sets. Correctness
-/// reference: the attribute cardinalities in openEHR RM `common`, `composition`,
-/// `ehr`, and `data_structures`.
+/// (`COMPOSITION`, `EHR_STATUS`, `FOLDER`, the concrete parties and
+/// `PARTY_RELATIONSHIP`) and follows every class-typed attribute through the RM
+/// abstract→concrete descendant sets. Correctness reference: the attribute
+/// cardinalities in openEHR RM `common`, `composition`, `ehr`,
+/// `data_structures` and `demographic`.
 static MULTIVALUED_ATTRS: LazyLock<HashSet<&str>> = LazyLock::new(|| {
     let mut set: HashSet<&'static str> = HashSet::new();
     let mut seen: HashSet<&'static str> = HashSet::new();
-    let mut queue: Vec<&'static str> = vec!["COMPOSITION", "EHR_STATUS", "FOLDER"];
+    // The versioned-object roots: the three of the EHR (RM ehr §Overview) and
+    // the demographic ones (RM demographic `master02-demographic_package.adoc`
+    // §Versioning Semantics), so a party build reaches `identities`, `contacts`,
+    // `addresses`, `capabilities`, `roles`, `languages` and `relationships`.
+    let mut queue: Vec<&'static str> = vec![
+        "COMPOSITION",
+        "EHR_STATUS",
+        "FOLDER",
+        "PERSON",
+        "ORGANISATION",
+        "GROUP",
+        "AGENT",
+        "ROLE",
+        "PARTY_RELATIONSHIP",
+    ];
     while let Some(cls) = queue.pop() {
         if !seen.insert(cls) {
             continue;

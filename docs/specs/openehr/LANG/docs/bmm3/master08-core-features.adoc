@@ -43,9 +43,6 @@ The primary purpose of feature groups is to represent specific meta-data that na
 
 Selective _visibility_ of features to external clients is expressed in the attributes `BMM_FEATURE_GROUP._visibility_` with potential overrides achieved using `BMM_FEATURE._visibility_`, i.e. at an individual feature level. Visibility is defined using sub-types of the abstract meta-class `BMM_VISIBILITY`.
 
-[.tbd]
-TBD: define visibility meta-model; probably need to support C++/Java approach and type-based.
-
 === Differential and Flat Form
 
 In modelling or programming terms, the features defined on a particular class within a model constitute the features it _introduces with respect to its inheritance parent(s)_. We can think of this list of features as the _differential_ set. A 'top-level' class with no declared inheritance ancestor is considered to inherit by default from the `Any` class, and its feature set is relationally differential to the top class.
@@ -146,9 +143,6 @@ feature -- Access
 ----
 
 === Semantic Level
-
-[.tbd]
-TBD: this BMM feature requires review
 
 Properties also include two other Boolean meta-data items, `_is_im_runtime_` and `_is_im_infrastructure_`, which can be used to classify property values in a model according to a 'semantic level', which roughly corresponds to the continuum from domain-specific to infrastructure. These may be individually set, or both may be False. The three meaningful value settings are as follows:
 

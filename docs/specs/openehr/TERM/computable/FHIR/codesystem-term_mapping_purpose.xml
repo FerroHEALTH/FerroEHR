@@ -17,7 +17,7 @@
   </contact>
   <caseSensitive value="true"/>
   <content value="complete"/>
-  <count value="3"/>
+  <count value="4"/>
   <concept>
     <code value="669"/>
     <display value="public health"/>
@@ -76,6 +76,26 @@
     <designation>
       <language value="zh"/>
       <value value="研究调查"/>
+    </designation>
+  </concept>
+  <concept>
+    <code value="672"/>
+    <display value="interoperability"/>
+    <designation>
+      <language value="es"/>
+      <value value="interoperabilidad"/>
+    </designation>
+    <designation>
+      <language value="ja"/>
+      <value value="相互運用性"/>
+    </designation>
+    <designation>
+      <language value="pt"/>
+      <value value="interoperabilidade"/>
+    </designation>
+    <designation>
+      <language value="zh"/>
+      <value value="互操作性"/>
     </designation>
   </concept>
 </CodeSystem>

@@ -474,7 +474,8 @@ fn the_shipped_privacy_default_accepts_this_servers_own_example_composition() {
             openehr_sdt::flat::example::DetailLevel::Complete,
         ),
     ] {
-        let example = openehr_sdt::flat::example::example_composition(&wt, level);
+        let example = openehr_sdt::flat::example::example_composition(&wt, level)
+            .expect("the example builds");
         let findings = policy.findings("COMPOSITION", &example);
         assert!(
             findings.is_empty(),

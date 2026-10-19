@@ -28,7 +28,4 @@ The first case poses a possible choice - either archetype-local at-codes or exte
 * If we need to decide on a per-OPT basis, i.e. the allowed/required terminologies may differ from one OPT to the next, it can still be an input to the OPT profiling step, but now it will be an argument specific to each OPT.
 * If node-level control is needed, the choices would need to be made in the raw OPT. Note that while it is normal that some nodes be coded by one terminology, e.g. an HL7 vocabulary, and others by e.g. SNOMED CT, node-by-node selection is not needed to achieve this, because the bindings for those nodes will already state the allowed possibilities. Node-by-node choosing is only needed if there is a need to further reduce _possibilities_ to a more limited set, e.g. if within a single template, one node has a binding to both ICD10 and SNOMED CT but in a specific use, should only be coded in ICD10, but another node exists for which only SNOMED CT should be allowed, from the same two original possibilities.
 
-[.tbd]
-*TBD*: Currently there is no way to do this in ADL2. It would be easy to implement, using a set of paths of coded nodes each with the list of terminologies allowed at that point.
-
 The result of the choices, however made, is expressed in the profiled OPT by using a modified form of the normal term constraint syntax. This is described in detail in the ADL specification, in the {openehr_am_adl2}#cADL_Terminology_Constraints[Terminology Constraints] and {openehr_am_adl2}#terminology_integration_concrete_codes[Terminology Integration] sections. 

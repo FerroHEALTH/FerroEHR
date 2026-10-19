@@ -28,9 +28,9 @@ An important aspect of identification relates to the rules governing when the HR
 
 === Machine Identifiers
 
-Two machine identifiers are defined for archetypes. The `ARCHETYPE._uid_` attribute defines a machine identifier equivalent to the human readable `ARCHETYPE._archetype_id_._semantic_id_` , i.e. `ARCHETYPE_HRID` up to its major version, and changes whenever the latter does. It is defined as optional but to be practically useful would need to be mandatory for all archetypes within a custodian organisation where this identifier was in use. It could in principle be synthesised at any time for a custodian that decided to implement it.
+Two machine identifiers are defined for archetypes. The `AUTHORED_RESOURCE._uid_` attribute defines a machine identifier equivalent to the human readable `ARCHETYPE._archetype_id_._semantic_id_` , i.e. `ARCHETYPE_HRID` up to its major version, and changes whenever the latter does. It is defined as optional but to be practically useful would need to be mandatory for all archetypes within a custodian organisation where this identifier was in use. It could in principle be synthesised at any time for a custodian that decided to implement it.
 
-The `ARCHETYPE._build_uid_` attribute is also optional, and if used, is intended to provide a unique identifier that corresponds to any change in version of the artefact. At a minimum, this means generating a new UUID for each change to:
+The `AUTHORED_ARCHETYPE._build_uid_` attribute is mandatory, and is intended to provide a unique identifier that corresponds to any change in version of the artefact. At a minimum, this means generating a new UUID for each change to:
 
 * `ARCHETYPE._archetype_id_._release_version_`;
 * `ARCHETYPE._archetype_id_._build_count_`;
@@ -147,9 +147,6 @@ The `_keywords_` property is a list of Strings designed to record search keyword
 ==== Resources
 
 The `_original_resource_uri_` property is used to record one or more references to resources in each particular language.
-
-[.tbd]
-*TBD*: This property does not appear to have ever been used, and it may not be useful, since 'resources' are not typically available for each language.
 
 == Structural Definition
 

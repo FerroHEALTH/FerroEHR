@@ -35,7 +35,9 @@ use openehr_adl::opt::create_opt;
 use openehr_adl::parse::Dialect;
 use openehr_am::v2_4::aom2::constraint_model::c_complex_object::CComplexObject;
 use openehr_am::v2_4::aom2::constraint_model::c_object::CObject;
-use openehr_sdt::flat::example::{DetailLevel, ExampleType, example_composition};
+use openehr_sdt::flat::example::{
+    DetailLevel, ExampleType, example_composition, example_root_instance,
+};
 use openehr_sdt::flat::validation::validate_archetype_conformance;
 use openehr_sdt::flat::webtemplate::builder_v2_4::build_web_template_v2_4;
 use openehr_sdt::flat::webtemplate::model::{WebTemplate, WebTemplateCardinality, WebTemplateNode};
@@ -186,7 +188,7 @@ fn example_generation_validates_at_every_level() {
         DetailLevel::Medium,
         DetailLevel::Complete,
     ] {
-        let comp = example_composition(&wt, level);
+        let comp = example_composition(&wt, level).expect("the example builds");
         let msgs = validate_rm_and_terminology(&comp);
         assert!(
             msgs.is_empty(),
@@ -202,8 +204,8 @@ fn example_generation_validates_at_every_level() {
 #[test]
 fn example_generation_is_deterministic() {
     let wt = web_template(COMP_ANNOTATIONS);
-    let a = example_composition(&wt, DetailLevel::Medium);
-    let b = example_composition(&wt, DetailLevel::Medium);
+    let a = example_composition(&wt, DetailLevel::Medium).expect("the example builds");
+    let b = example_composition(&wt, DetailLevel::Medium).expect("the example builds");
     assert_eq!(a, b, "two calls produce identical JSON");
     // The output form populates a deterministic uid.
     let mut out = a.clone();
@@ -420,7 +422,9 @@ fn v2_4_archetype_conformance_walk_enforces_cardinality() {
     // A self-consistent example carries no cardinality violation against its own
     // ADL2 template (symmetric with the OPT-1.4 front end, whose generated
     // examples validate clean — `crates/openehr-its/tests/validation.rs`).
-    let comp = example_composition(&wt, DetailLevel::Complete);
+    // The template is rooted at an OBSERVATION, which has no example
+    // COMPOSITION (#3780), so the instance is the root class's own.
+    let comp = example_root_instance(&wt, DetailLevel::Complete).expect("the example builds");
     let baseline = validate_archetype_conformance(&comp, &wt);
     assert!(
         !baseline
@@ -552,7 +556,7 @@ fn v2_4_template_filler_subtree_reaches_the_web_template() {
     assert_eq!(count.rm_type, "DV_COUNT");
     // The generated Complete example must realize the mandatory leaf, and it
     // must satisfy its own template (the FLAT commit path depends on both).
-    let comp = example_composition(&wt, DetailLevel::Complete);
+    let comp = example_composition(&wt, DetailLevel::Complete).expect("the example builds");
     assert!(
         comp.pointer("/content/0/archetype_details").is_some(),
         "the filled ENTRY must be an archetype root (RM composition entry.adoc §Invariants Is_archetype_root)"
