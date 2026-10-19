@@ -377,12 +377,10 @@ fn filter_bar(ehr_id: Signal<String>, query: Memo<ParamsMap>) -> AnyView {
                             prop:value=current("composer")
                         />
                     },
-                )}
-                <button id="composition-filter-apply" type="submit" class=BTN_PRIMARY>
+                )} <button id="composition-filter-apply" type="submit" class=BTN_PRIMARY>
                     {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::FUNNEL, "14")}
                     "Filter"
-                </button>
-                <a id="composition-filter-clear" href=clear class=BTN_SECONDARY>
+                </button> <a id="composition-filter-clear" href=clear class=BTN_SECONDARY>
                     "Clear"
                 </a>
             </div>
@@ -450,7 +448,9 @@ fn commit_form(
                     <label class=LABEL r#for="commit-body">
                         "Composition"
                     </label>
-                    <p class="fui-help">"Paste the composition document in the format chosen above."</p>
+                    <p class="fui-help">
+                        "Paste the composition document in the format chosen above."
+                    </p>
                     {move || {
                         let language = if format.get() == ReprFormat::CanonicalXml {
                             Language::Xml
@@ -573,7 +573,11 @@ fn compositions_table(
         query,
     );
     view! {
-        {table_shell("Compositions", &["Composition", "Name", "Template", "Started", "Composer"], body)}
+        {table_shell(
+            "Compositions",
+            &["Composition", "Name", "Template", "Started", "Composer"],
+            body,
+        )}
         {paging}
     }
     .into_any()
@@ -618,7 +622,12 @@ fn composition_row(row: &[Value], ehr_id: &str) -> AnyView {
                 } else {
                     text.into_any()
                 };
-                view! { <td class=CELL data-label=label>{shown}</td> }.into_any()
+                view! {
+                    <td class=CELL data-label=label>
+                        {shown}
+                    </td>
+                }
+                .into_any()
             }
         })
         .collect::<Vec<_>>();

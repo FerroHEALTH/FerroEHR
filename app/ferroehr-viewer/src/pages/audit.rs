@@ -377,7 +377,14 @@ fn text_filter(
 ) -> AnyView {
     let id = format!("audit-{name}");
     let input = view! {
-        <input id=id.clone() type="text" name=name class=INPUT placeholder=placeholder value=value />
+        <input
+            id=id.clone()
+            type="text"
+            name=name
+            class=INPUT
+            placeholder=placeholder
+            value=value
+        />
     };
     keyed_field(id, label, None, input).into_any()
 }
@@ -396,7 +403,13 @@ fn choice_filter(
     // so the GET form owns the state.
     let options = choices
         .iter()
-        .map(|(value, words)| view! { <option value=*value selected=*value == current>{*words}</option> })
+        .map(|(value, words)| {
+            view! {
+                <option value=*value selected=*value == current>
+                    {*words}
+                </option>
+            }
+        })
         .collect_view();
     let select = view! {
         <select id=id.clone() name=name class=crate::components::field::SELECT>
@@ -458,7 +471,8 @@ fn page_view(page: AuditPage, query: Memo<leptos_router::params::ParamsMap>) -> 
         .into_any();
     let footer = pagination(page.total, page.offset, query);
     view! {
-        {table_shell("Audit records",
+        {table_shell(
+            "Audit records",
             &[
                 "Recorded",
                 "Event",
@@ -488,12 +502,24 @@ fn row_view(row: AuditRow) -> impl IntoView {
     view! {
         <tr class=ROW>
             <td class=CELL>{ferrohealth_ui::view::time::timestamp(&row.recorded)}</td>
-            <td class=CELL data-label="Event">{event}</td>
-            <td class=CELL_MONO data-label="Operation">{row.operation}</td>
-            <td class=outcome_class data-label="Outcome">{row.outcome}</td>
-            <td class=CELL_MONO data-label="Principal">{row.principal}</td>
-            <td class=CELL_MONO data-label="Patient">{row.patient}</td>
-            <td class=CELL_MONO data-label="Resource">{row.resource}</td>
+            <td class=CELL data-label="Event">
+                {event}
+            </td>
+            <td class=CELL_MONO data-label="Operation">
+                {row.operation}
+            </td>
+            <td class=outcome_class data-label="Outcome">
+                {row.outcome}
+            </td>
+            <td class=CELL_MONO data-label="Principal">
+                {row.principal}
+            </td>
+            <td class=CELL_MONO data-label="Patient">
+                {row.patient}
+            </td>
+            <td class=CELL_MONO data-label="Resource">
+                {row.resource}
+            </td>
             <td class=CELL data-label="Record">
                 <details>
                     <summary class="cursor-pointer text-accent hover:underline text-xs">

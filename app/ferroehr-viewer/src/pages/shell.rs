@@ -314,7 +314,11 @@ pub fn AppShell() -> impl IntoView {
     }
     .into_any();
     let chrome = authed_shell(session, status, management, subscriptions);
-    view! { {gate} {chrome} {toast_region(toasts)} }
+    view! {
+        {gate}
+        {chrome}
+        {toast_region(toasts)}
+    }
 }
 
 /// The CDR status pill: the status document's verdict, version and declared
@@ -325,7 +329,10 @@ fn status_pill(status: Resource<Result<String, crate::error::ViewerError>>) -> A
     // flashing the fallback every poll (book async/12).
     view! {
         <span id="cdr-status" class="fui-roomy-only">
-            <Transition fallback=|| pill(Tone::Neutral, "Checking the CDR")>
+            <Transition fallback=|| pill(
+                Tone::Neutral,
+                "Checking the CDR",
+            )>
                 {move || {
                     Suspend::new(async move {
                         let (tone, word) = match status.await {
@@ -507,10 +514,7 @@ fn scopes_drawer(
     // policy source, session grants, previewer).
     let body = view! {
         <div class="flex flex-col gap-4">
-            {capability_note()}
-            {effective_access}
-            <hr class="border-edge" />
-            <ScopePreviewer />
+            {capability_note()} {effective_access} <hr class="border-edge" /> <ScopePreviewer />
         </div>
     }
     .into_any();
@@ -533,7 +537,11 @@ fn navigation(
     >,
 ) -> AnyView {
     view! {
-        <Transition fallback=|| sidebar(SIDEBAR_ID, "Main", &nav_groups(false, false))>
+        <Transition fallback=|| sidebar(
+            SIDEBAR_ID,
+            "Main",
+            &nav_groups(false, false),
+        )>
             {move || {
                 Suspend::new(async move {
                     let operations = crate::management::renders_management_ops(&management.await);

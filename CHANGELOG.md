@@ -41,6 +41,22 @@ workflow refuses a tag that has no matching section here.
   definition gives instead of its at-code (#3810).
 - The nine `openehr-*` crates move to `0.0.88`.
 
+### Fixed
+
+- The template example endpoints answer `400 Bad Request` naming the root for
+  a template whose root is not a COMPOSITION (an OBSERVATION or a SECTION),
+  instead of an object carrying COMPOSITION members its class does not have
+  (#3780). The `200` body the specification defines is an instance of a
+  versioned-object class, which such a template does not describe.
+- Same-archetype siblings told apart only by name (two EVENTs `Baseline` and
+  `Follow up` of one archetype node, for example) stay two nodes when a FLAT
+  or STRUCTURED document builds, so the example of such a template passes the
+  server's own validation (#3779).
+
+## [4.3.11] - 2026-10-19
+
+### Changed
+
 - **The viewer draws in FerroUI, the shared FerroHEALTH component library**
   (#3802). The shell, the navigation, the theme toggle, the tables and their
   pager, the dialogs, the access side panel, the upload field, the charts, the
@@ -79,30 +95,32 @@ workflow refuses a tag that has no matching section here.
   FerroHEALTH consoles. The screens look the same: 0.1.5 adds a per-row form
   field and a header title the viewer does not use yet, and its browser half
   no longer asks for a wasm-bindgen of its own.
+- **The viewer moves to FerroUI 0.1.6** (#3820), in step with the other
+  FerroHEALTH consoles. The screens look the same: 0.1.6 adds the shared
+  field shapes the other consoles needed, and every viewer field already
+  draws through the library since #3819.
 
 ### Fixed
 
-- The template example endpoints answer `400 Bad Request` naming the root for
-  a template whose root is not a COMPOSITION (an OBSERVATION or a SECTION),
-  instead of an object carrying COMPOSITION members its class does not have
-  (#3780). The `200` body the specification defines is an instance of a
-  versioned-object class, which such a template does not describe.
-- Same-archetype siblings told apart only by name (two EVENTs `Baseline` and
-  `Follow up` of one archetype node, for example) stay two nodes when a FLAT
-  or STRUCTURED document builds, so the example of such a template passes the
-  server's own validation (#3779).
 - On a phone the CDR status pill no longer covers the FerroEHR mark in the
   top bar (#3812). The pill shows from a 64rem window up, where the top bar
   has room for its full words.
+- The viewer shows the FerroEHR mark as its tab icon and answers
+  `/favicon.ico` with it, instead of a `404` on every page load (#3808).
 
 ### Security
+
+Shipped with functional changes because: no shipped artefact is affected (the
+VEX statements below record why), so there is no security update to separate
+from the viewer changes this release carries.
 
 - `cargo deny` passes again: the viewer's WebDriver test client no longer
   reaches zip 8.6.0, and the three zip extraction advisories
   (RUSTSEC-2026-0367, RUSTSEC-2026-0368, RUSTSEC-2026-0369) are recorded as
   not affecting FerroEHR in the Rust-dependency VEX document, since the one
   remaining carrier, utoipa-swagger-ui's build script, never calls the
-  extraction APIs they concern (#3806).
+  extraction APIs they concern (#3806;
+  `security/vex/rust-advisories.openvex.json`).
 
 ## [4.3.10] - 2026-10-16
 
@@ -11330,7 +11348,8 @@ but has not yet run in production.
   seccomp, default-deny NetworkPolicy) and golden-render validation.
 
 
-[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.10...HEAD
+[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.11...HEAD
+[4.3.11]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.10...v4.3.11
 [4.3.10]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.9...v4.3.10
 [4.3.9]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.6...v4.3.9
 [4.3.6]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.5...v4.3.6

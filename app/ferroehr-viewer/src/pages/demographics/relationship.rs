@@ -1490,9 +1490,15 @@ fn inline_table(items: &[InlineRelationship]) -> AnyView {
                     <td class=CELL data-inline-relationship=hook>
                         {name}
                     </td>
-                    <td class=CELL data-label="Target">{target}</td>
-                    <td class=CELL_MONO data-label="Archetype">{archetype}</td>
-                    <td class=CELL_MONO data-label="Own uid">{uid}</td>
+                    <td class=CELL data-label="Target">
+                        {target}
+                    </td>
+                    <td class=CELL_MONO data-label="Archetype">
+                        {archetype}
+                    </td>
+                    <td class=CELL_MONO data-label="Own uid">
+                        {uid}
+                    </td>
                 </tr>
             }
             .into_any()

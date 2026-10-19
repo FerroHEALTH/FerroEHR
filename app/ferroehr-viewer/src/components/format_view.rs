@@ -161,10 +161,9 @@ pub fn DocumentPane(
     let rendered = Memo::new(move |_| body.with(|text| crate::clinical::render(text.as_str())));
     let language = Signal::derive(move || body.with(|text| Language::detect(text.as_str())));
     let available = Signal::derive(move || rendered.with(Option::is_some));
-    let rendered_view = view! {
-        {move || rendered.with(|document| document.as_ref().map(rendered_pane))}
-    }
-    .into_any();
+    let rendered_view =
+        view! { {move || rendered.with(|document| document.as_ref().map(rendered_pane))} }
+            .into_any();
     document_pane_opening(
         ferrohealth_ui::widget::document::DocumentPane {
             id,

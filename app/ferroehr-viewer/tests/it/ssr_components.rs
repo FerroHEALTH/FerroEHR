@@ -237,13 +237,7 @@ fn a_stat_card_with_a_link_navigates_from_the_whole_tile() {
 #[test]
 fn a_stat_card_without_a_link_renders_an_inert_tile() {
     let html = render(|| {
-        view! {
-            <StatCard
-                label="Templates"
-                value=Signal::derive(|| "17".to_owned())
-                icon=Glyph::FILES
-            />
-        }
+        view! { <StatCard label="Templates" value=Signal::derive(|| "17".to_owned()) icon=Glyph::FILES /> }
         .into_any()
     });
     assert!(html.contains("Templates"), "{html}");

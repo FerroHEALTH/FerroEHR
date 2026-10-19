@@ -847,9 +847,7 @@ fn facts_card(state: &PartyState) -> AnyView {
     ];
     view! {
         <section class=format!("{CARD_PAD} flex flex-col gap-3") id="party-facts">
-            <dl class="fui-facts text-sm">
-                {facts}
-            </dl>
+            <dl class="fui-facts text-sm">{facts}</dl>
         </section>
     }
     .into_any()

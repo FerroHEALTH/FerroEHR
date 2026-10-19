@@ -76,9 +76,7 @@ where
 {
     view! {
         <Transition fallback=|| {
-            view! {
-                {ferrohealth_ui::view::empty::skeleton(4, "Loading…")}
-            }
+            view! { {ferrohealth_ui::view::empty::skeleton(4, "Loading…")} }
         }>
             {move || Suspend::new(async move {
                 match versioned.await {
@@ -175,10 +173,9 @@ fn history_row(entry: &VersionEntry, pinned: RwSignal<String>, row_hook: &'stati
     let change_type = entry.change_type.clone();
     let committed_by = entry.committer.clone();
     let open = view! {
-        <button on:click=move |_| pinned.set(target.clone())>
-            {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::EYE, "14")}
-            "Open"
-        </button>
+        <button on:click=move |_| {
+            pinned.set(target.clone());
+        }>{ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::EYE, "14")} "Open"</button>
     }
     .attr("type", "button")
     .attr("class", BTN_SECONDARY_SMALL)
@@ -186,10 +183,18 @@ fn history_row(entry: &VersionEntry, pinned: RwSignal<String>, row_hook: &'stati
     view! {
         <tr class=row_class>
             <td class=CELL_MONO>{shown}</td>
-            <td class=CELL data-label="Committed">{ferrohealth_ui::view::time::timestamp(&committed)}</td>
-            <td class=CELL data-label="Change type">{change_type}</td>
-            <td class=CELL data-label="Committer">{committed_by}</td>
-            <td class=ferrohealth_ui::table::view::ACTIONS data-label="Actions">{open}</td>
+            <td class=CELL data-label="Committed">
+                {ferrohealth_ui::view::time::timestamp(&committed)}
+            </td>
+            <td class=CELL data-label="Change type">
+                {change_type}
+            </td>
+            <td class=CELL data-label="Committer">
+                {committed_by}
+            </td>
+            <td class=ferrohealth_ui::table::view::ACTIONS data-label="Actions">
+                {open}
+            </td>
         </tr>
     }
     .into_any()
