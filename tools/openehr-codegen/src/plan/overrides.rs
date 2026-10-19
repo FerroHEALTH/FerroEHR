@@ -83,6 +83,13 @@ pub(crate) const PRIMITIVES: &[Primitive] = &[
         reason: "Uri lowers to String until a strong-newtype override is justified.",
     },
     Primitive {
+        spec: "Hrid",
+        rust: "String",
+        citation: "BASE foundation_types (Hrid): a String constrained to the HRID syntax; \
+                   the syntax is enforced where an Hrid is held (ARCHETYPE_ID Value_valid)",
+        reason: "Hrid lowers to String; its grammar lives in the hand-written ARCHETYPE_ID impl.",
+    },
+    Primitive {
         spec: "Octet",
         rust: "u8",
         citation: "BASE foundation_types (Octet)",

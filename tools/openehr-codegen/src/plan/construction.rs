@@ -209,9 +209,10 @@ pub(crate) static CONSTRUCTION: &[Construction] = &[
         class: "ARCHETYPE_ID",
         door: Door::TierEnforced {
             citation: "docs/specs/openehr/BASE/docs/base_types/\
-                       master05-identification_package.adoc \u{a7}Syntaxes gives \
-                       `archetype_id = qualified_rm_entity, '.', domain_concept, '.v', \
-                       version_id`, but \u{a7}\u{201c}Archetype Identifiers\u{201d} carries a \
+                       master05-identification_package.adoc \u{a7}Syntaxes gives the \
+                       `archetype_id` production (the legacy ADL 1.4 form and, from BASE \
+                       1.3.0, the namespaced ADL 2 form), but \u{a7}\u{201c}Archetype \
+                       Identifiers\u{201d} carries a \
                        WARNING that \u{201c}some archetype authoring tools have historically \
                        allowed a nonconforming version part \u{2026} of the form `.v1draft` or \
                        similar\u{201d} \u{2014} i.e. the release itself states that \

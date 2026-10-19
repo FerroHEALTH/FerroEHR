@@ -6,16 +6,19 @@
 //! The openEHR `ARCHETYPE_ID` spec class, generated from the vendored BMM
 //! meta-model.
 
-/// Identifier or reference for archetypes.
+/// Globally unique identifier for an archetype, carrying the exact identification of the artefact - its complete version and, in the ADL 2 form, its namespace.
 ///
-/// Ideally, these identify globally unique archetypes. When used as a reference, only partial version information is included (major version only), and the namespace is omitted.
+/// An `ARCHETYPE_ID` is intended to carry the complete identification rather than a reduced-precision reference; a reference (which carries only a partial version, e.g. the major version only, while retaining the namespace of an ADL 2 artefact) shares the same lexical form and differs by precision and use rather than by type, with matching semantics defined by the Artefact Identification specification.
 ///
-/// Lexical form: `rm_originator  '-' rm_name  '-' rm_entity  '.' concept_name {  '-' specialisation }*  '.v' version_id`.
+/// Supports both legacy ADL 1.4 identifiers (no namespace, single major version) and ADL 2 identifiers (mandatory namespace and a three-part `major.minor.patch` version, optionally with a pre-release modifier).
+///
+/// Lexical forms: `rm_originator '-' rm_name '-' rm_entity '.' concept_name { '-' specialisation } '.v' major_version` (legacy ADL 1.4, e.g. `openEHR-EHR-SECTION.physical_examination.v2`), or `namespace '::' rm_originator '-' rm_name '-' rm_entity '.' concept_name { '-' specialisation } '.v' version_id` (ADL 2, e.g. `org.openehr::openEHR-EHR-OBSERVATION.blood_pressure.v2.1.4`).
+///
+/// The `_value_` obeys the openEHR human-readable identifier (HRID) grammar, realised by the `Hrid` primitive type; see the openEHR Artefact Identification specification for the grammar, version numbering and referencing model.
 #[doc(alias = "ARCHETYPE_ID")]
-// NOTE: the fields stay public deliberately: this class HAS a released lexical form, but it is enforced at the `openehr_base::validate::Validate` tier rather than at construction — moving it to the door would turn a validation verdict into a parse refusal, which needs its own adjudication — docs/specs/openehr/BASE/docs/base_types/master05-identification_package.adoc §Syntaxes gives `archetype_id = qualified_rm_entity, '.', domain_concept, '.v', version_id`, but §“Archetype Identifiers” carries a WARNING that “some archetype authoring tools have historically allowed a nonconforming version part … of the form `.v1draft` or similar” — i.e. the release itself states that nonconforming instances are in circulation. Refusing them at PARSE rather than at validation is an accept/reject boundary change requiring its own adjudication; the grammar is enforced today by `impl Validate for ArchetypeId`.
+// NOTE: the fields stay public deliberately: this class HAS a released lexical form, but it is enforced at the `openehr_base::validate::Validate` tier rather than at construction — moving it to the door would turn a validation verdict into a parse refusal, which needs its own adjudication — docs/specs/openehr/BASE/docs/base_types/master05-identification_package.adoc §Syntaxes gives the `archetype_id` production (the legacy ADL 1.4 form and, from BASE 1.3.0, the namespaced ADL 2 form), but §“Archetype Identifiers” carries a WARNING that “some archetype authoring tools have historically allowed a nonconforming version part … of the form `.v1draft` or similar” — i.e. the release itself states that nonconforming instances are in circulation. Refusing them at PARSE rather than at validation is an accept/reject boundary change requiring its own adjudication; the grammar is enforced today by `impl Validate for ArchetypeId`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ArchetypeId {
-    // inherited: OBJECT_ID
-    /// The value of the id in the form defined below.
+    /// The identifier string. Covariantly redefines `OBJECT_ID._value_` (`String`) as the `Hrid` primitive, so that an archetype identifier is a validated human-readable identifier by construction.
     pub value: String,
 }

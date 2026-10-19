@@ -1,0 +1,6 @@
+= A Reliable URI for Knowledge Resources
+
+There should be a standardised and reliable Uniform Resource Identifier (URI) for all released knowledge resources, in both source and operational forms. This may justify its own scheme-space, but is at least achievable within the normal http scheme-space.
+
+[.tbd]
+*To Be Continued*

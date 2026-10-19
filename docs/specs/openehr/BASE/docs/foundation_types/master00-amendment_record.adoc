@@ -6,11 +6,16 @@
 
 4+^h|*BASE Release 1.3.0 (unreleased)*
 
-|[[latest_issue]]1.3.5
+|[[latest_issue]]1.3.6
+| Introduce the `Hrid` primitive type: a `String` constrained to the human-readable identifier (HRID) grammar defined in the {openehr_base_artefact_identification}[Artefact Identification^] specification, with segment and version accessors. Resolves the ADL 2 / Base Types HRID syntax conflict ({spec_tickets}/SPECBASE-49[SPECBASE-49^], {spec_tickets}/SPECPR-363[SPECPR-363^]).
+|S Iancu
+|[[latest_issue_date]]10 Oct 2026
+
+|1.3.5
 | Clarify how `Iso8601_duration._to_seconds()_` converts durations containing years and months to seconds -- add the explicit conversion formula and a cross-reference to the `Time_Definitions` 'average' day-count constants ({spec_tickets}/SPECPR-386[SPECPR-386^]).
 |P Pazos, +
 S Iancu
-|[[latest_issue_date]]24 Jul 2026
+|24 Jul 2026
 
 |1.3.4
 | Remove the `_timezone_` function from `Iso8601_date`: an ISO 8601 date does not carry a timezone (the time shift applies only to the time part), so the accessor -- carried over from `Iso8601_date_time` / `Iso8601_time` -- is removed ({spec_tickets}/SPECPR-426[SPECPR-426^]).

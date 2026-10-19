@@ -47,7 +47,7 @@ INCLUDE_EXT=(adoc md txt csv json yaml yml robot xml opt g4)
 # crates/openehr-its/schemas/json/PROVENANCE.md when the delta leaves the
 # schemas untouched (docs/VERSIONS.md names both).
 COMPONENTS=(
-  "BASE|specifications-BASE|master (BASE 1.3.0)|45caad1bf3874b26a5ce275e27e28eff15150b4a"
+  "BASE|specifications-BASE|master (BASE 1.3.0)|707b8ac28cea1ccc4410f8e930665d473475350f"
   "RM|specifications-RM|master (RM 1.2.0)|654296bb027b03b4b076101e7171f3359f44cebc"
   "AM|specifications-AM|master (AM 2.4.0 + ADL/AOM/OPT 1.4)|2635f42c45e33f8700cc6e093b6c8af1406322e3"
   "TERM|specifications-TERM|master (TERM 3.1.0)|d2b05afd73dba9c670455ebb825ac4da6b63362f"

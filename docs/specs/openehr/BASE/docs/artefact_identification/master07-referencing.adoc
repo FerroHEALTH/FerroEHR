@@ -1,0 +1,456 @@
+= Referencing
+
+This section describes how artefacts are referenced, by other artefacts and software. The general principle for referencing is that references based on human-readable identifiers are used between source artefacts, in the same way as for software, while references in operational forms of the artefacts or from data may be in the form of either HRIDs or machine identifiers.
+
+A key semantic difference exists with references as opposed to identifiers. A reference is either a full physical artefact identifier, or else an identifier with partial version information. In both cases, a reference is used to match artefacts carrying full identification. In general, there can be several candidate matches, and therefore a matching algorithm has to be specified in each case, in order to ensure constant meaning for a given reference in all modelling and computing environments.
+
+Various forms of the references based on the HRID are used, depending on the need, as described below. These are denoted as follows:
+
+* the interface HRID reference (`ihrid_ref`), which is the same for all artefact instances sharing the same core interface, in other words, the form of the identifier including only the major version; this will match the latest release available of that major version;
+* the specific interface HRID reference (`sihrid_ref`), which is the form of the identifier including the major and minor versions, which will match a specific release of the interface;
+* the physical HRID reference (`phrid_ref`), which identifies artefact instances which are identical; this is the form of identifier with the full version identifier included.
+
+A reference carries only numeric version segments (no pre-release modifier), matching the ADL 2 `ARCHETYPE_REF` token; a pre-release version is referenced by its full identifier (an `hrid`). The grammar for this is as follows.
+
+[source, ebnf]
+--------
+    hrid_ref                =   [ namespace '::' ] hrid_root '.v' version_ref ;   (* cf. ADL 2 ARCHETYPE_REF *)
+    version_ref             =   major_version { '.' V_NUMBER } ;                  (* numeric only *)
+
+    ihrid_ref               =   [ namespace '::' ] hrid_root '.v' major_version ;                                      (* interface *)
+    sihrid_ref              =   [ namespace '::' ] hrid_root '.v' major_version '.' minor_version ;                    (* specific interface *)
+    phrid_ref               =   [ namespace '::' ] hrid_root '.v' major_version '.' minor_version '.' patch_version ;  (* physical *)
+--------
+
+A reference identifies the `namespace` of the referenced artefact: the reduced precision of a reference concerns the version only, not the namespace. A namespace is never a wildcard - an omitted namespace does not mean 'any namespace', which would make the reference ambiguous and unsafe, notably in an {openehr_query_aql}[AQL^] query. Within a source artefact, a reference without a namespace denotes an artefact in the same namespace as the referencing artefact (see <<Source Artefact References>>); elsewhere - in operational artefacts, in data and in queries - a reference to an ADL 2 artefact carries its namespace explicitly. Only a legacy (ADL 1.4) artefact, which has no namespace at all, is referenced without one.
+
+Because minor versions may add structure, a major-version-only reference does not necessarily designate all of the interface available in the latest minor version; where precise designation is required, at least a minor version should be included.
+
+By way of example, the following two archetype iHRID references denote different logical archetypes, from a data processing point of view, since their major versions are different, indicating a breaking change between the two:
+
+`org.openehr::openEHR-EHR-EVALUATION.diagnosis.*v1*` +
+`org.openehr::openEHR-EHR-EVALUATION.diagnosis.*v2*`
+
+Conversely, the following references denote physically distinct archetypes that are regarded as logically substitutable:
+
+`org.openehr::openEHR-EHR-EVALUATION.diagnosis.*v1.1.5*` +
+`org.openehr::openEHR-EHR-EVALUATION.diagnosis.*v1.1.7*`
+
+== Source Artefact References
+
+This section describes the scenarios and representation required for identifier-based referencing between design time 'source' (i.e. compiler input) artefacts.
+
+=== Archetype External References (ADL/AOM 2)
+
+In ADL 2, a direct archetype-archetype reference, known as an 'external reference' can be defined, which uses an interface reference (`ihrid_ref`), as shown in the following example.
+
+[tabs,sync-group-id=adl-example]
+====
+at-coded ADL2::
++
+[source, cadl]
+--------
+    ACTIVITY[at0001] ∈ {   -- Medication activity
+        description ∈ {
+            use_archetype ITEM_TREE [openEHR-EHR-ITEM_TREE.medication.v1]
+        }
+    }
+--------
+
+
+id-coded ADL2::
++
+[source, cadl]
+--------
+    ACTIVITY[id2] ∈ {   -- Medication activity
+        description ∈ {
+            use_archetype ITEM_TREE [openEHR-EHR-ITEM_TREE.medication.v1]
+        }
+    }
+--------
+====
+
+If such a reference does not include a namespace, the meaning is that the same namespace as the current archetype is assumed. A namespace would be included to express a reference to an archetype outside the current namespace.
+
+A reference such as the above will resolve to an actual archetype at runtime according to the following algorithm:
+
+* the most recent released version variant of `openEHR-EHR-ITEM_TREE.medication.v1`, i.e. the latest minor or patch version such as `v1.0.4`, `v1.2.49` etc OR
+* the latest release candidate version of `openEHR-EHR-ITEM_TREE.medication.v1`, e.g. `v1.2.3-rc.44`, because 'rc' versions are guaranteed to be semantically compatible with their target version
+
+Because minor versions can include structural additions, it may be that in some cases, archetype external references need to be include a minor version as well - allowing an exact structural form of the archetype (interface) to be identified. Similarly, for testing or other research purposes, it should probably be assumed that patch versions, and `-rc`, `-alpha` and `-beta` versions of an archetype, need to be referenced; a pre-release version is referenced by its full identifier.
+
+The general case is therefore assumed to be that an artefact reference is a `hrid_ref` , but most commonly an `ihrid_ref`.
+
+=== Template References to Archetypes and Templates
+
+Templates are normally designed as pre-cursors to software artefacts, such as forms, message definitions and document schemas. Consequently, their exact contents and structure are usually carefully controlled by their developers, in the interests of stability. To achieve this, references from templates to other templates or archetypes need to be able to refer to any level of version of the target artefact. During a development phase, it may be that the template references are limited to major versions of the human-readable identifier, i.e. the `ihrid_ref` . At some point it may be the case that the minor version must be included as well. As noted above, this is because minor versions of archetypes can include structural additions, and therefore affect the structure of the final document / data-set etc. It may even be the case that patch level versions need to be identified, so as to ensure no changes whatever can occur in the template, even if upgraded versions of the source artefacts become available.
+
+Such tight control is not however a universal requirement. A conscious design decision may have been taken that says that the resulting software artefact contents are whatever results from the template definition at the time of publishing, assuming references to major versions only.
+
+To accommodate these scenarios, template references to archetypes and other templates need to be legal at any version level. For example, any of the following references should be legal in a template:
+
+* `org.openehr::openEHR-EHR-EVALUATION.problem.v2`
+* `org.openehr::openEHR-EHR-EVALUATION.problem.v2.4`
+* `org.openehr::openEHR-EHR-EVALUATION.problem.v2.4.17`
+
+In development and research environments, it is reasonable to allow references to `-rc`, `-alpha` and `-beta` variants as well, using their full identifiers.
+
+The general case is therefore as for archetype external references: a template reference is a `hrid_ref` .
+
+=== Between Specialised Archetypes
+
+A specialised archetype refers to its parent using the human-readable reference, including only the major version. Two possible variants can occur:
+
+* With a non-namespaced reference. This is assumed to come from the same namespace as the specialised archetype.
+* With a namespaced identifier where the namespace is different from that of the referencing archetype. This resolves against the latest release of the referenced archetype in the locally available repository copy of the referenced namespace.
+
+The following figure shows a number of archetypes related by specialisation.
+
+[.text-center]
+.Specialisation Relationships
+image::{diagrams_uri}/specialisation_relationships.png[id=specialisation_relationships, align="center", width=80%]
+
+One question that naturally arises to do with specialisation is what happens when the parent archetype is revised. The approach is the same as for object-oriented software: all archetypes in a given 'check-out' or release must always compile at any point in time to be valid. If a revised parent is introduced that invalidates any of its inheritance children, revisions must be made to the children before the repository becomes valid as a whole again. This means that a new version of an archetype in general may require child archetypes to be re-versioned as well.
+
+== Source Artefact Relationship Constraints
+
+Related to the concept of 'references' is constraints that when evaluated at runtime, resolve to artefact identifiers. Two types are described here, which are the two kinds of archetype 'slot' definition.
+
+=== ADL 1.4 Archetype Slots
+
+In ADL 1.4, archetypes slots are defined via assertions in their slot statements. Although the specification allows for all kinds of possibilities, the only one in use is regular expressions (REs) on the archetype identifiers allowed to fill the slot. Current ADL 1.4 tooling supports REs on full (non-name-spaced) ADL 1.4 archetype identifiers, which include only the major version number, e.g.:
+
+--------
+    openEHR-EHR-EVALUATION.problem.v1
+--------
+
+Note that such REs often include disjoint patterns, by using the form `"id_pattern1|id_pattern2|id_pattern3"`.
+
+A typical slot definition using REs based on such identifiers is as follows:
+
+[source, cadl]
+--------
+    protocol matches {
+        ITEM_TREE[at0015] ∈ {
+            items cardinality ∈ {0..*; ordered} ∈ {
+                allow_archetype CLUSTER[id20] occurrences ∈ {0..1} matches {
+                    include
+                        archetype_id/value ∈ {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1/}
+                }
+            }
+        }
+    }
+--------
+
+This slot allows any archetype named `openEHR-EHR-CLUSTER.device.v1` or `openEHR-EHR-CLUSTER.device-xxx.v1`, which used the ADL 1.4 method of signifying specialised archetypes.
+
+Since legacy (ADL 1.4) identifiers carry no namespace, ADL 1.4 slot REs match identifiers without a namespace.
+
+As for external references, there is technically nothing to stop a slot RE being defined to refer to specific minor versions or builds of an archetype. The same rule applies: released archetypes should only include major versions.
+
+=== ADL 2 Archetype Slots
+
+In ADL 2 a slot can be defined using a semantic (rather than lexical) expression in which matching archetypes are defined in the form of a constraint on the archetype concept (and optionally namespace), reminiscent of the SNOMED CT post-coordination constraint syntax. This is shown in the following example.
+
+[tabs,sync-group-id=adl-example]
+====
+at-coded ADL2::
++
+[source, cadl]
+--------
+    allow_archetype CLUSTER [at0003.1] occurrences ∈ {0..1} ∈ {
+        include ∈ {True}
+            archetype_id ∈ {
+                ARCHETYPE_ID ∈ {
+                    namespace ∈ {...}
+                    concept ∈ {<< investigation_methodology OR << investigation_protocol}
+                    ...
+                }
+            }
+        }
+--------
+
+id-coded ADL2::
++
+[source, cadl]
+--------
+    allow_archetype CLUSTER [id4.1] occurrences ∈ {0..1} ∈ {
+        include ∈ {True}
+            archetype_id ∈ {
+                ARCHETYPE_ID ∈ {
+                    namespace ∈ {...}
+                    concept ∈ {<< investigation_methodology OR << investigation_protocol}
+                    ...
+                }
+            }
+        }
+--------
+====
+
+The above kind of referencing relies on an ontological underpinning for the `concept_id` part of the human-readable identifier.
+
+== AQL Query Sets
+
+AQL queries are in general authored in a 'set' in order to achieve a design objective, e.g. populate a report, screen, or for some analytical objective. Many are purely local in nature and may be considered 'throwaway'. Others are carefully designed for needs like populating a clinical guideline or performing a standard computation. Within an archetyped framework, such query sets need to be identified and managed in a similar way to other artefacts.
+
+== AQL Queries
+
+Archetype-based queries contain archetype references and paths, and can also contain template identifiers and paths. Typical examples are the paths (in green) in the following query:
+
+[tabs,sync-group-id=adl-example]
+====
+at-coded ADL2::
++
+[source, sql]
+--------
+    SELECT pulse
+    FROM EHR[ehr_id/value=$ehruid]
+     CONTAINS COMPOSITION c
+     CONTAINS OBSERVATION pulse[openEHR-EHR-OBSERVATION.pulse.v1]
+
+    WHERE c/name/value='Encounter' AND
+        c/context/start_time/value <= $endperiod AND
+        c/context/start_time/value >= $startPeriod AND
+        pulse/data/events[at0005]/data/items[at0003]/value/value < 60
+--------
+
+
+id-coded ADL2::
++
+[source, sql]
+--------
+    SELECT pulse
+    FROM EHR[ehr_id/value=$ehruid]
+     CONTAINS COMPOSITION c
+     CONTAINS OBSERVATION pulse[openEHR-EHR-OBSERVATION.pulse.v1]
+
+    WHERE c/name/value='Encounter' AND
+        c/context/start_time/value <= $endperiod AND
+        c/context/start_time/value >= $startPeriod AND
+        pulse/data/events[id6]/data/items[id4]/value/value < 60
+--------
+====
+
+The semantics of referencing in queries differ from those of the archetype-to-archetype form, due to the fact that references are normally followed by paths that refer to specific data points within the structure. For an AQL query to be correct, the path must exist in the archetype at the release matched by the reference. Since minor versions can add to the archetype 'interface' (i.e. add data points, and therefore paths, to the structure), a given path needs to reference the oldest archetype for which the path is valid. Consider the following path:
+
+[source, cadl]
+--------
+    [openEHR-EHR-OBSERVATION.pulse.v1]/data/events[at0005]/data/items[at0003]/value/value
+--------
+
+For this to be valid, the path `/data/events[at0005]/data/items[at0003]/value/value` must exist within the earliest v1.x release of the archetype openEHR-EHR-OBSERVATION.pulse.v1, i.e. v1.0.0. If this path happened to have been added in a more recent minor release, the archetype reference would need to include the first minor version containing that path.
+
+Once an AQL query processor can work with a valid path, it will match the following data:
+
+* any instance of the data point at that path in the referenced archetype;
+* any instance of a data point in a congruent path in a specialisation child archetype.
+
+An example of a congruent path in a child archetype is:
+
+[tabs,sync-group-id=adl-example]
+====
+at-coded ADL2::
++
+[source, cadl]
+--------
+    /data/events[at0005.0.4]/data/items[at0003.1]/value/value
+--------
+
+
+id-coded ADL2::
++
+[source, cadl]
+--------
+    /data/events[id6.0.4]/data/items[id4.1]/value/value
+--------
+====
+
+== Operational Artefacts
+
+Operational artefacts such as flattened archetypes and operational templates generated by compiler tools are built from source artefacts, including by reference resolution from within some source artefacts to others within the current repository of the local and imported artefacts. The particular versions of reference targets are determined by the contents of the configuration, and are thus a function of version management activities, in the same way as for software development.
+
+When an operational artefact is generated from controlled source artefacts (i.e. within a Custodian Organisation), it is possible to include the fine-grained revision information from the relevant source artefacts, so that the operational form describes exactly which set of source artefacts were used to produce it. The source artefact semantic signatures can also be included. This information can be included in a configuration section of the artefact. This would be expressed in ODIN (previously dADL) or an XML equivalent, and would list the 'configuration' of concrete artefact revisions used to generate the operational version.
+
+The structure of a Configuration is as follows:
+
+[source, ebnf]
+--------
+    configuration       =   archetype_config template_config subset_config rm_release ;
+    archetype_config    =   config_item { config_item } ;
+    template_config     =   { config_item } ;
+    subset_config       =   { config_item } ;
+    rm_release          =   rm_name release_id ;
+
+    config_item         =   identifier [ revision_id [ commit_id ] ] [ signature ] ;
+
+    signature           =   CHARACTER_SEQUENCE ;
+    revision_id         =   V_INTEGER ;
+    commit_id           =   V_INTEGER ;
+    release_id          =   V_STRING ;
+--------
+
+An example of the configuration of an operational template in a controlled environment (ODIN format) is as follows:
+
+[source, odin]
+--------
+    archetypes = <
+        [1] = <
+            id = <"org.openehr::openEHR-EHR-OBSERVATION.heartrate.v1.3.28">
+            signature = <"23895yw85y0y0">
+        >
+        [2] = <
+            id = <"au.gov.nehta::openEHR-EHR-EVALUATION.genetic-diagnosis.v1.2.0">
+            signature = <"98typrhweruhfd">
+        >
+        [3] = <
+            id = <"org.openehr::openEHR-EHR-EVALUATION.problem.v2.4.0">
+            signature = <"2rfhweiudfwieurfh">
+        >
+    >
+    templates = <
+        [1] = <
+            id = <"au.gov.nehta::openEHR-EHR-COMPOSITION.vital_signs.v5.36.1">
+        >
+    >
+    subsets = <
+        [1] = <
+            id = <"org.ihtsdo.general::cardiac_diagnoses.v18.1.0">
+        >
+    >
+    rm = <
+        name = <"org.openehr.rm">
+        release = <"1.1">
+    >
+>
+--------
+
+== References from Data
+
+=== Requirements
+
+In knowledge-enabled information environments such as those built on the archetype principles, knowledge artefacts are used to control the creation and validation of data, with the effect that data eventually stored in such systems 'conform' to the relevant artefacts. In order to be able to further process (e.g. display, modify and query) such data, references of some kind to the knowledge artefacts must be stored in the data. The requirements for such references depend on where the data are found, broadly within two possible situations, namely data within operational systems (e.g. EHR systems) and data within 'messages', 'extracts', or 'documents' sent between systems.
+
+Three requirements can be identified with respect to data within systems.
+
+* _Reconstitutability_: firstly, it must be possible to re-connect data with the archetypes, templates and subsets, used to create them. This implies that the complete identifier - namespace and full version - is recorded in data, since even a minor version may have an effect on structure.
+* _Querying_: secondly, it must be possible to know what archetypes (including major version), and therefore what path-sets can be used for querying data - given that this may well include parents of specialised archetypes, not just the archetypes used to directly create the data.
+* _Optimisation_: we can also assume that in a typical production system handling millions of health records, that the size of artefact identifiers embedded in data (especially if repeated) may be an issue, and that some kind of space optimisation may be required.
+
+Within extracts or messages, the same requirements broadly hold, but could be better restated as follows.
+
+* _Reconstitutability_: it must be possible for the receiving system to be able to determine the relationship of each data element with the artefacts(s) used to create it, so that it can be correctly reconstituted in the receiver system environment.
+* _Querying_: for ensuring the correct functioning of querying, the extract or message should potentially carry sufficient archetype lineage information the archetypes used in the data to allow querying at the receiver, particularly if the latter wants to be able to query using more general parents (e.g. a 'problem' archetype rather than some specific diagnosis specialisation).
+* _Optimisation_: a reasonable trade-off between space optimisation and clarity of representation must be used, given that messages, extracts etc flow between heterogeneous systems.
+
+=== Reconstitutability
+
+The reconstitutability requirement means recording archetype and template identifiers on the relevant nodes in the data. A basic form of this has always been used in openEHR, such that at archetype root nodes, the archetype identifier and if relevant the template identifier is recorded, and at interior nodes, the at-codes are recorded (formally, the archetype identifier and at-codes are recorded in the `LOCATABLE` .archetype_node_id attribute of each data node). For example, in data created based on openEHR Releases 1.0.2 or earlier, the archetype identifier references are of the form:
+
+`openEHR-EHR-EVALUATION.diagnosis.v1`
+
+With the identification system described here, the identifier recorded in data is the _complete_ identifier of the artefact - an `ARCHETYPE_ID` (see the openEHR {openehr_base_types}#_archetype_identifiers[Base Types^] specification) carrying the namespace and the full version identifier, i.e.:
+
+`org.openehr::openEHR-EHR-EVALUATION.diagnosis.*v1.29.0*`
+
+so that the exact artefact used to create the data can always be determined. Identifiers recorded from legacy (ADL 1.4) artefacts, which have no namespace and a major-only version (as in the first example above), remain valid, so no migration of existing data is required; such an identifier denotes the legacy artefact, and is not an abbreviation of a three-part version.
+
+=== Supporting Archetype-based Querying
+
+Querying of data in openEHR systems is assumed to be based on archetype 'path-sets', i.e. the set of paths extracted from an operational (flat-form) archetype. The paths are a slight simplification of standard X-paths. Two querying methods have been described to date, AQL and a-path, both making this assumption (see {openehr_query_aql}[The Archetype Query Language (AQL)^] ).
+
+Based on this assumption, given an archetype X used to create data, the following archetypes could be used for querying:
+
+* X, i.e. exact same version, revision & commit;
+* any previous minor or patch variant of X;
+* any of the specialisation parents of X;
+* any previous minor or patch variant of any of the specialisation parents of X.
+
+For non-specialised archetypes, the allowable querying archetypes can be deduced from the archetype reference recorded in the data. For specialised archetypes, the specialisation lineage can only be obtained from the operational form of the archetype, found in the template used to create the data. This would create a potential problem where for data imported from another site without the relevant template(s), the archetype lineage information was not available. This would prevent the query engine at the receiver system knowing how to query the data using even the more general archetypes in the lineage, that it may have access to.
+
+To address this situation, one of the following strategies is required:
+
+* include the configuration meta-data from the operational template(s) with the data when it is exchanged, i.e. in an EHR Extract.
+* include archetype lineage information in the data itself. This could be a modified form of the identifier reference in the case of specialised archetypes to allow lineage information to be stored.
+
+The second approach can be considered a generalisation of recording just the current archetype identifier, i.e. the 'lineage' for non-specialised archetypes evaluates to just that archetype id, and for specialised archetypes, it will be a list. This specification assumes that the second is used.
+
+The simplest form of this would be as a list of operational identifiers, e.g.
+
+--------
+    au.gov.nehta::openEHR-EHR-EVALUATION.genetic_diagnosis.v1.12.9,
+    org.openehr::openEHR-EHR-EVALUATION.diagnosis.v1.29.0,
+    org.openehr::openEHR-EHR-EVALUATION.problem.v2.4.18
+--------
+
+=== Formal Model
+
+A formal definition of reference catering to the above requirements is as follows:
+
+[source, ebnf]
+--------
+    archetype_data_ref  =   archetype_ver_ref { ',' archetype_ver_ref } ;
+    archetype_ver_ref   =   hrid ;   (* the complete identifier of each artefact in the lineage *)
+--------
+
+=== Optimisations
+
+In normal archetype-based data, both basic references and additional lineage information might be repeated throughout a given component, such as an openEHR or {iso_13606}[ISO 13606^] `COMPOSITION` . Consider a `COMPOSITION` documenting problems & diagnoses of the patient, where each problem is recorded using the archetype
+
+--------
+    uk.nhs.royalfree.clinical::openEHR-EHR-EVALUATION.diagnosis.v2.15.0
+--------
+
+whose lineage is:
+
+--------
+    org.openehr::openEHR-EHR-EVALUATION.diagnosis.v1.29.0
+    org.openehr::openEHR-EHR-EVALUATION.problem.v2.4.0
+--------
+
+In this example, the archetype reference lengths are 67, 53 and 50 characters respectively, i.e. a total of 170 characters. Repeated say 5 times would give 850 characters of identifier meta-data for the `COMPOSITION` , whose main clinical data could easily be similar. Even in an XML-based storage system, various kinds of compression are used, the identifier reference overhead might be considered as an unacceptable fraction of the overall data storage requirement.
+
+It is therefore worth considering various simple optimisations, while retaining clarity and comprehensibility in the data. The following ideas are currently intended to be limited to serialised forms of data. They would therefore only require changes to openEHR XML-schemas rather than the abstract reference model.
+
+==== Identifier Aliasing
+
+The most obvious optimisation is to use a set of variable references local to the data context, in this case an openEHR or ISO 13606 Extract. For example, at the top of the Extract, the following definitions could be made:
+
+--------
+    id01=uk.nhs.royalfree.clinical::openEHR-EHR-EVALUATION.diagnosis.v2.15.0,
+        org.openehr::openEHR-EHR-EVALUATION.diagnosis.v1.29.0,
+        org.openehr::openEHR-EHR-EVALUATION.problem.v2.4.0
+    id02=au.gov.nehta::openEHR-EHR-OBSERVATION.hba1c_result.v1.4.0,
+        org.openehr::openEHR-EHR-OBSERVATION.lab_result.v1.18.0
+    etc
+--------
+
+The identifiers `id01`, `id02` etc would then be used in the data, reducing the identifier overhead by perhaps 50% in some cases. This possibility would be enabled by adding an attribute to contain the variable definitions at the top of the `EHR_EXTRACT` type in the openEHR Reference Model, and in equivalent classes in other models.
+
+The use of such variables will slightly complicate querying and other data processing, since a query that returns part of a Composition would return data containing meaningless local variable names rather than proper archetype meta-data.
+
+A second question to consider is whether any parts of the identifiers could be removed. For example, it might initially appear that the reference model and class identification could be removed altogether, since the data when initially created would seem by definition to be based on the reference model and class of the archetype. However, neither are guaranteed. Consider the following two cases which use archetypes based on a different reference model to create data:
+
+* a data extractor that transforms source data, say in openEHR form, to a standard form, say in ISO 13606 form. The archetype identifiers embedded in the latter data will be the original openEHR archetype identifiers (the extractor does not create new archetypes to do its transformation work);
+* a product that is directly based on another standard, such as ISO 13606 but uses the published library of openEHR archetypes.
+
+Similarly, in the case of the class, the data may easily be based on a descendant (e.g. the `POINT_EVENT` class in openEHR) of the class mentioned in the archetype (e.g. `EVENT` ).
+
+We therefore assume that although some of the above assumptions might be available in very particular environments, they cannot be safely made in general, particularly since it can never be predicted where data may be shared.
+
+==== Reference Compression
+
+Nevertheless, it would be possible to go further in terms of removing repetition in the once-only declarations. For instance, a compressed form of the archetype lineage information could be constructed, whereby repeated sections in each subsequent identifier are replaced by a special character. The example above would become:
+
+--------
+    id01=uk.nhs.royalfree.clinical::openEHR-EHR-EVALUATION.diagnosis.v2.15.0,
+        org.openehr::~.diagnosis.v1.29.0,
+        ~::~.problem.v2.4.0
+    id02=au.gov.nehta::openEHR-EHR-OBSERVATION.hba1c_result.v1.4.0,
+        org.openehr::~.lab_result.v1.18.0
+--------
+
+The above syntax uses the `~` character in each identifier in the list to mean 'the missing parts are taken from the corresponding element(s) of the previous identifier in the list' (the inspiration is the use of the `~` in dictionaries to stand for the keyword). In this syntax, the concrete archetype used to create the data is guaranteed to appear first and in its entirety in the list.
+
+Clearly in a particular system in which archetypes were only ever used from the same reference model as the system itself is built on, an even further reduced form of these references could be created. However, if the data were ever to be shared, such references would be in danger of being non-interoperable.
+
+Whether the additional saving in space justifies the added complexity in parsing is debatable.

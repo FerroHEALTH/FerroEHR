@@ -28,7 +28,7 @@ the next ITS-BMM bump.
 
 | File | Component repo | Commit | Adopted | Why |
 |---|---|---|---|---|
-| `components/BASE/json/openehr_base_1.3.0.bmm.json` | specifications-BASE | `e48795762a0648cbe5701be58d42ec5df0c701a7` | 2026-07-25 | SPECBASE-48 invariants, SPECAM-82 CODE_PHRASE package move, SPECPR-426/386/460 fixes |
+| `components/BASE/json/openehr_base_1.3.0.bmm.json` | specifications-BASE | `707b8ac28cea1ccc4410f8e930665d473475350f` | 2026-10-19 | SPECBASE-49 `Hrid` primitive, SPECBASE-35/50 `ARCHETYPE_ID.value: Hrid` with `Value_valid` and the namespace/major/minor/patch functions; before it, SPECBASE-48 invariants, SPECAM-82 CODE_PHRASE package move, SPECPR-426/386/460 fixes |
 | `components/RM/json/openehr_rm_1.2.0.bmm.json` | specifications-RM | `654296bb027b03b4b076101e7171f3359f44cebc` | 2026-10-19 | SPECRM-103: the `INTERVAL_EVENT.time` documentation states the time is where the interval ends (documentation string only); before it, the asterisk-entity normalization of upstream PR #33 |
 | `components/TERM/json/openehr_term_3.1.0.bmm.json` | specifications-TERM | `d2b05afd73dba9c670455ebb825ac4da6b63362f` | 2026-10-19 | BMM unchanged since `1232e59b` (SPECTERM-31 touches the computable XML only); | `status` default facet `""` -> `"active"` on CODE_SET, TERMINOLOGY_GROUP, CODE, TERMINOLOGY_CONCEPT; `includes` names `openehr_base_1.3.0` |
 

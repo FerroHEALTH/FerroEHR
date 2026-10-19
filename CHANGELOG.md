@@ -44,6 +44,18 @@ workflow refuses a tag that has no matching section here.
   definition gives instead of its at-code (#3810).
 - The nine `openehr-*` crates move to `0.0.88`.
 
+- **Archetype identifiers follow the BASE 1.3.0 grammar under the
+  `development` profile** (#3835, #3845). The namespaced ADL 2 form
+  (`org.openehr::openEHR-EHR-OBSERVATION.blood_pressure.v2.1.4`, with an
+  optional `-rc`, `-alpha` or `-beta` modifier and build count) is accepted
+  wherever an `ARCHETYPE_ID` is read, and `openehr_base::v1_3::ArchetypeId`
+  gains `namespace()`, `minor_version()` and `patch_version()`. A
+  namespaceless identifier with a full version stays accepted, because AM
+  2.4.0 artefacts carry it (the conflict is reported upstream, #3844); every
+  other identifier the grammar refuses, such as a malformed namespace or
+  version modifier, is refused naming it. The `stable` profile keeps BASE
+  1.2.0's grammar.
+
 ### Fixed
 
 - The template example endpoints answer `400 Bad Request` naming the root for

@@ -90,7 +90,7 @@ The abstract type `UID_BASED_ID` and its two subtypes `HIER_OBJECT_ID` and `OBJE
 
 ==== Archetype Identifiers
 
-The `ARCHETYPE_ID` subtype defines a multi-axial identifier for archetypes, meaning that each identifier instance denotes a single archetype within a multi-dimensional space. The space is can be thought of as 3-dimensional, or as a versioned 2-dimensional space, consisting of the following axes:
+The `ARCHETYPE_ID` subtype defines a multi-axial identifier for archetypes, meaning that each identifier instance denotes a single archetype within a multi-dimensional space. The space can be thought of as 3-dimensional, or as a versioned 2-dimensional space, consisting of the following axes:
 
 * reference model entity, i.e. target of archetype, defined as:
 ** name of model issuer;
@@ -99,16 +99,16 @@ The `ARCHETYPE_ID` subtype defines a multi-axial identifier for archetypes, mean
 * domain concept;
 * version.
 
-The three outer sections are delimited by '.' characters, while the parts of the first section are delimited by `-` characters. As with any multi-axial identifier, the underlying principle of an archetype identifier is that all parts of the identifier must be able to be considered immutable. This means that no variable characteristic of an archetype (e.g. accrediting authority, which might change due to later accreditation by another authority, or may be multiple) can be included in its identifier. The explicit inclusion of version as part of the identifier means that two 'versions' of an archetype are actually two distinct archetypes. (The rules for archetype versions, revisions and other variants are given in the {openehr_am_id}[openEHR Archetype Identification specification].)
+The three outer sections are delimited by '.' characters, while the parts of the first section are delimited by `-` characters. As with any multi-axial identifier, the underlying principle of an archetype identifier is that all parts of the identifier must be able to be considered immutable. This means that no variable characteristic of an archetype (e.g. accrediting authority, which might change due to later accreditation by another authority, or may be multiple) can be included in its identifier. The explicit inclusion of version as part of the identifier means that two 'versions' of an archetype are actually two distinct archetypes. (The rules for archetype versions, revisions and other variants are given in the {openehr_base_artefact_identification}[openEHR Artefact Identification specification^].)
 
-Besides used as full physical artefact identifier, an ARCHETYPE_ID can also act as a reference used to match artefacts carrying full identification, {openehr_am_id}#_referencing[as defined] by the interface HRID reference (`ihrid_ref`) concept. In this context, it provides a shortened form of the full identifier, typically omitting namespace, with partial version information, including only the major version.
+An `ARCHETYPE_ID` carries the _exact_ identification of an archetype: its complete version and, in the ADL 2 form, its namespace. Both legacy ADL 1.4 identifiers (a single major version, no namespace) and ADL 2 identifiers (mandatory namespace and a three-part `major.minor.patch` version) are accepted, so no migration is imposed on existing instances; the namespace is mandatory in the ADL 2 form and absent from the legacy form, so a namespaceless identifier carrying a minor or patch version is not well-formed. An `ARCHETYPE_ID` is _intended_ to carry the complete identification rather than a reduced-precision reference. A reference matches artefacts at reduced _version_ precision - e.g. the major version only - but, for an ADL 2 artefact, still carries the namespace, since omitting it (for example in an AQL query) would make the match ambiguous and is unsafe; a reference otherwise shares the same lexical form, so an identifier and a reference differ by precision and use rather than by type. Reference matching semantics are defined by the referencing model of the openEHR {openehr_base_artefact_identification}#_referencing[Artefact Identification^] specification. The `_value_` of an `ARCHETYPE_ID` is an `Hrid` (Foundation Types) and obeys the shared HRID grammar by construction.
 
 Examples of archetype identifiers include:
 
-* `openEHR-EHR-SECTION.physical_examination.v2`
-* `openEHR-EHR-SECTION.physical_examination-prenatal.v1`
-* `Hl7-RIM-Act.progress_note.v1`
-* `openEHR-EHR-OBSERVATION.progress_note-naturopathy.v2`
+* `openEHR-EHR-SECTION.physical_examination.v2` (legacy ADL 1.4 form: major version only, no namespace)
+* `openEHR-EHR-SECTION.physical_examination-prenatal.v1` (legacy ADL 1.4 form with a specialised domain concept)
+* `org.openehr::openEHR-EHR-OBSERVATION.blood_pressure.v2.1.4` (ADL 2 form: mandatory namespace, three-part version)
+* `com.nedap::openEHR-EHR-OBSERVATION.pulse.v1.1.3` (ADL 2 form: namespace disambiguates the custodian)
 
 The grammar of archetype identifiers is given below in <<Syntaxes>>.
 
@@ -223,6 +223,8 @@ include::{uml_export_dir}/classes/{pkg}locatable_ref.adoc[]
 
 The identifiers defined above are defined in their string form by the following EBNF grammar rules.
 
+NOTE: The general human-readable identifier (HRID) grammar shared by archetype and template identifiers - namespacing, reference-model class qualification, concept identifiers, version numbering, and reference precision tiers - is defined canonically in the openEHR {openehr_base_artefact_identification}[Artefact Identification^] specification (realised computationally by the `Hrid` primitive type in Foundation Types). The `archetype_id` production below is a specific application of that grammar. A reference regular expression for the grammar - for validation and tooling - is given there alongside the EBNF.
+
 [source, ebnf]
 --------
 (* ------------------------- UID, OID, UUID -------------------------- *)
@@ -259,7 +261,9 @@ branch_number   = number ;
 branch_version  = number ;
 
 (* -------------------------- ARCHETYPE_ID --------------------------- *)
-archetype_id        = qualified_rm_entity, '.', domain_concept, '.v', version_id ;
+archetype_id        = ( namespace, '::', qualified_rm_entity, '.', domain_concept, '.v', version_id )   (* namespaced (ADL 2) form *)
+                    | ( qualified_rm_entity, '.', domain_concept, '.v', major_version ) ;               (* legacy (ADL 1.4) form: no namespace, major version only *)
+namespace           = alphanum-ext-str, { '.', alphanum-ext-str } ;      (* reverse domain name, e.g. org.openehr *)
 qualified_rm_entity = rm_originator, '-', rm_name, '-', rm_entity ;
 rm_originator       = alphanum-str ;     (* id of org originating the RM on which this archetype is based *)
 rm_name             = alphanum-str ;                      (* id of the RM on which the archetype is based *)
@@ -267,7 +271,11 @@ rm_entity           = alphanum-str ;                                       (* on
 domain_concept      = concept_name, { '-', specialisation } ;
 concept_name        = alphanum-str ;
 specialisation      = alphanum-str ;
-version_id          = '0' | non-zero-digit, [ number ] ;            (* numeric version identifier *)
+version_id          = major_version, [ '.', minor_version, [ '.', patch_version, [ version_modifier ] ] ] ;
+major_version       = '0' | non-zero-digit, [ number ] ;   (* reduced precision permitted: major, major.minor or major.minor.patch *)
+minor_version       = '0' | non-zero-digit, [ number ] ;
+patch_version       = '0' | non-zero-digit, [ number ] ;
+version_modifier    = ( '-rc' | '-alpha' | '-beta' ), [ '.', number ] ;  (* pre-release modifier + optional build count *)
 
 (* ------------------------- TERMINOLOGY_ID -------------------------- *)
 terminology_id = name-str, [ '(', name-str, ')' ] ;
