@@ -118,8 +118,9 @@ data, wiped nightly.
   ([go-live checklist](../security/go-live-checklist.md#2-the-deployment-profile-is-production-and-the-server-boots)).
   The shipped default is `sandbox`, which must not hold real personal data and
   says so on the banner, in the log and on `GET /rest/status`.
-- **Expected time in use.** Longer than five years, which is why the support
-  period of each release is five years
+- **Expected time in use.** Longer than five years, which is why Cadasto B.V.
+  commits to keep publishing security fixes for at least five years after
+  each release, shipped only in the newest release
   ([`SECURITY.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions)).
 
 ### The security environment FerroEHR assumes
@@ -195,7 +196,7 @@ Foreseeable misuse, and what FerroEHR does about it:
 | Reads and writes straight against the database | the domain roles limit what each credential reaches | such access bypasses authorisation and the access log ([B6](../threat-model.md#b6--the-database)) |
 | Structural validation taken for clinical correctness | validation checks structure, invariants and terminology bindings only | clinical governance is the organisation's ([threat model](../threat-model.md#what-is-explicitly-not-defended-against)) |
 | openEHR conformance results, or these pages, taken for regulatory conformity | the [compliance overview](index.md) says FerroEHR holds no certification or declaration | none |
-| A release run after its support period ends | the end date is in every release's notes and in `SECURITY.md`; the running server states it on the boot banner, in `ferroehr --version`, on `GET /management/info` and `GET /management/status`, and logs a warning at boot and daily once it has passed (#3639) | nothing refuses to run; the server does not look for newer releases |
+| A release run after a newer one is published | only the newest release is supported (`SECURITY.md`), and the release feed and advisories announce each new one; the end month of the five-year commitment is in every release's notes and the running server states it on the boot banner, in `ferroehr --version`, on `GET /management/info` and `GET /management/status`, and logs a warning at boot and daily once it has passed (#3639) | nothing refuses to run; the server does not look for newer releases |
 
 ## What the intended purpose excludes
 

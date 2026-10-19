@@ -1,0 +1,77 @@
+=== Hrid Class
+
+[cols="^1,3,5"]
+|===
+h|*Class*
+2+^h|*Hrid*
+
+h|*Description*
+2+a|A kind of String constrained to obey the syntax of an openEHR human-readable identifier (HRID), used to identify managed knowledge artefacts such as archetypes and templates.
+
+Two identifier forms are recognised: a modern (ADL 2) identifier, which is namespaced and carries a full `major.minor.patch` version, e.g. `org.openehr::openEHR-EHR-OBSERVATION.blood_pressure.v2.1.0`; and a legacy (ADL 1.4) identifier, which has no namespace and a major-only version, e.g. `openEHR-EHR-OBSERVATION.blood_pressure.v2`. The namespace is mandatory in the modern form and absent in the legacy form; `_is_namespaced_` discriminates the two. A namespaceless full-version string is therefore not a valid identifier.
+
+See the openEHR Artefact Identification specification for the grammar, version numbering, concept-identifier semantics and referencing model.
+
+h|*Inherit*
+2+|`<<_string_class,String>>`
+
+h|*Functions*
+^h|*Signature*
+^h|*Meaning*
+
+h|*1..1*
+|*is_valid* (): `<<_boolean_class,Boolean>>`
+a|True if this identifier conforms to the HRID grammar defined in the openEHR Artefact Identification specification, i.e. it is either a namespaced modern (ADL 2) identifier or an unnamespaced legacy (ADL 1.4) identifier.
+
+h|*1..1*
+|*is_namespaced* (): `<<_boolean_class,Boolean>>`
+a|True if this identifier carries a `_namespace_`, i.e. is a modern (ADL 2) identifier; False for a legacy (ADL 1.4) identifier, which has no namespace.
+
+h|*1..1*
+|*namespace* (): `<<_string_class,String>>`
+a|The namespace of the identifier, in the form of a reverse domain name, e.g. `"org.openehr"`; mandatory in a modern (ADL 2) identifier and empty for a legacy (ADL 1.4) identifier.
+
+h|*1..1*
+|*rm_publisher* (): `<<_string_class,String>>`
+a|Identifier of the organisation originating the reference model on which the identified artefact is based, e.g. `"openEHR"`.
+
+h|*1..1*
+|*rm_package* (): `<<_string_class,String>>`
+a|Identifier of the reference model top-level package closure on which the identified artefact is based, e.g. `"EHR"`.
+
+h|*1..1*
+|*rm_class* (): `<<_string_class,String>>`
+a|Name of the reference model class on which the identified artefact is based, e.g. `"OBSERVATION"`.
+
+h|*1..1*
+|*qualified_rm_class_name* (): `<<_string_class,String>>`
+a|The qualified reference model class name, i.e. `rm_publisher '-' rm_package '-' rm_class`, e.g. `"openEHR-EHR-OBSERVATION"`.
+
+h|*1..1*
+|*concept_id* (): `<<_string_class,String>>`
+a|The ontological (domain) concept identifier of the artefact, e.g. `"blood_pressure"`.
+
+h|*1..1*
+|*version_id* (): `<<_string_class,String>>`
+a|The version part of the identifier as it appears after `'.v'`, e.g. `"1"`, `"1.8.2"` or `"1.8.2-rc.4"`.
+
+h|*1..1*
+|*major_version* (): `<<_string_class,String>>`
+a|The major version, i.e. the first numeric segment of `_version_id_`, e.g. `"1"`.
+
+h|*1..1*
+|*minor_version* (): `<<_string_class,String>>`
+a|The minor version, i.e. the second numeric segment of `_version_id_`; empty if not present.
+
+h|*1..1*
+|*patch_version* (): `<<_string_class,String>>`
+a|The patch version, i.e. the third numeric segment of `_version_id_`; empty if not present.
+
+h|*1..1*
+|*version_status* (): `<<_string_class,String>>`
+a|The lifecycle status implied by the version modifier: `"alpha"`, `"beta"` or `"release_candidate"` for a pre-release version (`'-alpha'`, `'-beta'`, `'-rc'` respectively), or `"released"` when no modifier is present. These correspond to the `VERSION_STATUS` values defined in the openEHR Base Types specification.
+
+h|*1..1*
+|*build_count* (): `<<_string_class,String>>`
+a|The build count following a pre-release modifier, i.e. the number in `'-rc.'`, `'-alpha.'` or `'-beta.'`, e.g. `"4"` for `...v1.8.2-rc.4`; empty if no build count is present.
+|===

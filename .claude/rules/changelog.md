@@ -22,10 +22,12 @@ optional:
   the release is cut when the milestone reaches **zero open issues** (or
   the owner calls the cut and moves the stragglers to the next milestone).
 - **The support period goes into every release's notes.** The release lane
-  appends a "Support period" section to the notes it extracts: five years
-  from the date on the `## [X.Y.Z] - YYYY-MM-DD` heading, month and year (CRA
-  Art 13(8) and (19), Annex II point 7, `docs/law/eu/cra/text.html`;
-  `SECURITY.md` §Supported versions). The heading's date is therefore the
+  appends a "Support period" section to the notes it extracts: only the newest
+  release is supported, and Cadasto B.V. keeps publishing security fixes, in
+  the newest release, until the end of the month five years from the date on
+  the `## [X.Y.Z] - YYYY-MM-DD` heading, month and year (CRA Art 13(8), (10)
+  and (19), Annex II point 7, `docs/law/eu/cra/text.html`; `SECURITY.md`
+  §Supported versions). The heading's date is therefore the
   release date, and a heading without one stops the lane.
 - **The user information goes into every release's notes.** After the support
   period the lane appends an "Information and instructions to the user (CRA

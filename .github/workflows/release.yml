@@ -220,7 +220,7 @@ jobs:
             exit 1
           fi
           # CRA Art 13(19) and Annex II point 7: the end of the support
-          # period, at least month and year, five years from the release date.
+          # commitment, at least month and year, five years from the release date.
           released="$(sed -n "s/^## \[$VERSION\] - \([0-9-]*\).*/\1/p" CHANGELOG.md)"
           if ! end="$(date -u -d "$released +5 years" '+%B %Y')"; then
             echo "::error::The [$VERSION] heading carries no release date to count the support period from." >&2
@@ -230,7 +230,7 @@ jobs:
             echo
             echo "### Support period"
             echo
-            echo "Cadasto B.V. handles vulnerabilities in this release until the end of $end (Regulation (EU) 2024/2847 Art 13(8) and (19)). The security update for a release in its support period ships in the newest release; see [SECURITY.md](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions)."
+            echo "Only the newest release is supported. When a new release is published, every earlier release stops receiving fixes: there are no maintenance branches, no long-term-support line and no backports. If you are not on the newest release, upgrade; upgrading is free. Under the Cyber Resilience Act, Cadasto B.V. commits to keep publishing security fixes for at least five years after each release (Art 13(8)) and ships them only in the newest release (Art 13(10)). For this release that commitment runs until the end of $end (Regulation (EU) 2024/2847 Art 13(19)); see [SECURITY.md](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions)."
           } >> release-notes.md
           # CRA Art 13(18): the Annex II information and instructions to the
           # user, in the book the docs-freeze leg cuts for this tag.

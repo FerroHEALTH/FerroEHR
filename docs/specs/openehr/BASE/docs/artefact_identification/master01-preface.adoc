@@ -1,0 +1,65 @@
+= Preface
+
+== Purpose
+
+The purpose of this document is to describe the identification system for openEHR knowledge artefacts, principally archetypes and templates (including operational templates). This includes artefacts created by any organisation, including the openEHR Foundation, standards bodies, clinical modelling initiatives and government programmes.
+
+The semantics covered include:
+
+* formal human-readable and machine identifiers;
+* versioning;
+* lifecycle management and states;
+* referencing artefacts from elsewhere;
+* deal with transfer and forking;
+* supporting integrity and non-repudiation.
+
+Unless otherwise stated, in this document, the term 'artefact' refers specifically to these artefact types.
+
+The computable type representing a human-readable identifier, `Hrid`, is defined as a primitive type in the openEHR {openehr_foundation_types}[Foundation Types^] specification, and the `ARCHETYPE_ID` type in the openEHR {openehr_base_types}[Base Types^] specification. The present document is the normative source for the grammar and semantics of these identifiers.
+
+== Related Documents
+
+Prerequisite documents for reading this document include:
+
+* The {openehr_overview}[openEHR Architecture Overview^].
+* The {openehr_foundation_types}[openEHR Foundation Types Specification^] (the `Hrid` type).
+* The {openehr_base_types}[openEHR Base Types Specification^] (the `ARCHETYPE_ID` type).
+* The {openehr_resource}[openEHR Resource Model Specification^] (descriptive and lifecycle meta-data of authored artefacts).
+* The {openehr_am_overview}[openEHR Archetype Technology Overview^].
+
+Related documents include:
+
+* The {openehr_am_aom2}[openEHR Archetype Object Model 2 (AOM2) Specification^].
+* The {openehr_am_adl2}[openEHR Archetype Definition Language 2 (ADL2) Specification^].
+* The {openehr_query_aql}[openEHR Archetype Query Language (AQL) Specification^].
+
+== Status
+
+This specification is in the {spec_status} state. The development version of this document can be found at {openehr_base_development_artefact_identification}[{openehr_base_development_artefact_identification}^].
+
+This specification was relocated to the BASE component from the AM component, where it was published as the {openehr_specs}/releases/AM/Release-2.3.0/Identification.html[Archetype Identification^] specification (issue 0.7.9, AM Release 2.3.0); its history is retained in the amendment record.
+
+Known omissions or questions are indicated in the text with a 'to be determined' paragraph, as follows:
+[.tbd]
+*TBD*: (example To Be Determined paragraph)
+
+== Feedback
+
+Feedback may be provided on the {openehr_technical_list}[technical mailing list^].
+
+Issues may be raised on the {component_prs}[specifications Problem Report tracker^].
+
+To see changes made due to previously reported issues, see the {component_history}[{component} component Change Request tracker^].
+
+== Conventions
+
+Grammar is expressed in EBNF; terminal classes such as `V_ALPHANUMERIC_NAME` are given as regular expressions. Class, type and attribute names use the openEHR conventions, i.e. `TYPE_NAME`, `Primitive_type_name` and `attribute_name`.
+
+== Conformance
+
+Conformance of a data or software artifact to an openEHR specification is determined by a formal test of that artifact against the relevant {openehr_its_component}[openEHR Implementation Technology Specification(s) (ITSs)^], such as an IDL interface or an XML-schema. Since ITSs are formal derivations from underlying models, ITS conformance indicates model conformance.
+
+== Tools
+
+Various tools exist for creating and processing archetypes. The {openehr_awb}[ADL Workbench^] is a reference compiler, visualiser and editor. The openEHR tools can be {modelling_tools}[downloaded from the website^]. Source projects can be found at the {openehr_git}[openEHR Github project^].
+

@@ -2,7 +2,7 @@
 
 - Source: https://github.com/openEHR/specifications-BASE
 - Ref: master (BASE 1.3.0)
-- Commit: `45caad1bf3874b26a5ce275e27e28eff15150b4a`
+- Commit: `707b8ac28cea1ccc4410f8e930665d473475350f`
 - License: CC-BY-SA 3.0 Unported — the upstream `LICENSE` is vendored verbatim alongside
   this file, from the same pinned commit. Root reference copies:
   `LICENSE-CC-BY-SA-3.0` / `LICENSE-APACHE-2.0`.
@@ -11,7 +11,7 @@
   the vendored chapters reference as `image::{uml_diagrams_uri}/<name>.svg`,
   taken from the same pinned commit. Referenced files only — the upstream
   diagram directory is not mirrored wholesale.
-- Plus the 34 per-document figure(s) under
+- Plus the 42 per-document figure(s) under
   `docs/<doc_name>/diagrams/` and `docs/<doc_name>/images/` that the vendored
   chapters reference as `image::{diagrams_uri}/<name>` /
   `image::{images_uri}/<name>`, taken byte-for-byte from the same pinned

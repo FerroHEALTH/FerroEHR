@@ -1,0 +1,94 @@
+= Distributed Governance
+
+== Overview
+
+This section deals with how knowledge artefact identifiers are managed in the distributed environment illustrated in <<distributed_development_environment>>. Rules are needed to define how identifiers are managed in the event of an artefact coming under management, as well as transfers and forking of managed artefacts.
+
+== Management
+
+Many knowledge artefacts start life in an ad hoc way, created by a research project or expert individual. From the point of view of this specification, they are initially 'unmanaged', meaning they have no custodial organisation. Such artefacts nevertheless carry a namespace, assigned at creation, identifying their creator (e.g. a research project or vendor domain).
+
+The first step to making an artefact widely visible, and usable to the outside world is to bring it under management of an organisation that follows rules of governance and quality assurance on which the outside world can rely. This specification does not describe all these rules, just the rules for identification and meta-data of artefacts coming under management.
+
+When an artefact is first created, its lifecycle state is 'unmanaged' and its version identifier is `v0.N.P`, i.e. a 'pre- v1' version, generally recognised (e.g. by the Github {semver}[Semantic Versioning guidelines^]) as being an unstable form of the artefact that makes no promises with respect to the normal major/minor/patch versioning rules. The artefact may be given a Guid by tooling, although this will be ignored by a management organisation due to the fact that Guids assigned by ad hoc tools or direct human authoring are often copies of existing Guids (due to cut and paste) or are unreliable in some other way (improper Guid algorithm implementation).
+
+When an artefact is accepted by a Custodian Organisation, the following things happen:
+
+* its lifecycle state progresses to `initial`;
+* the namespace of its human-readable identifier is changed to that of the Custodian Organisation;
+* it is assigned a newly generated Guid as its uid;
+* if its major version number is higher than 0 it is reset to `0.0.1`, otherwise it is left unchanged;
+* various meta-data items are set, including copyright, license.
+
+In addition, a SHA-1 hash may be generated for the artefact, which is stored within the repository.
+
+== Transfer and Forking
+
+Once an artefact is under management, it evolves according to the lifecycle described earlier in this specification. Most of these steps and transitions can be considered 'details of development'. However, when an artefact is deployed, data will be created containing the artefact identifiers, and from this point, the ability to link data to the generating artefacts reliably is the critical issue. The standard approach to this is described in the next section.
+
+Challenges in data / artefact identification arise from the transfer and/or 'forking' of artefacts among Custodian Organisations. Artefacts can have two possible roles in a management organisation:
+
+* as actively developed and maintained artefacts;
+* as deployment artefacts.
+
+A Custodian Organisation may decide to cease its own maintenance of an artefact, and transfer that responsibility to another organisation, e.g. a national level CO. Usually it will continue to use the current local form of the artefact in its current deployment contexts, e.g. by local hospital systems or vendors.
+
+At the moment of acquisition by the new CO, the artefact's HRID would potentially be re-assigned.
+
+At some point the new custodian will perform maintenance work on the artefact, for example releasing a new minor or patch-level version. If such new releases are considered national standards, the _original_ CO will most likely adopt them for use. The question is: how are the new releases of the artefact identified?
+
+With respect to the human-readable identifier, two strategies are available: retain the original human-readable identifier, or change it to reflect the new CO. An argument against changing it is that identifier continuity would be preserved, ensuring that archetype references in extant queries and in data, as well as in other archetypes and templates remain valid. If it is assumed that all such references are limited to the original management domain, the size of this problem is known and most likely containable.
+
+Arguments for changing the identifier include:
+
+* a requirement of the new Custodian Organisation to be identified in the artefact; this may be a global expectation of industry as well, e.g. if the new manager is a national organisation, it will clearly be easier for vendors and system managers if the artefacts it releases carry its identifier;
+* the possibility that the original domain continues to create new local releases, perhaps in response to problems experienced locally that require unavoidable locally specific changes;
+* the new CO wants to rename the artefact to fit in better with its own ontological artefact classification;
+* if no data or queries have ever been created using the artefact in question, changing its identifier will have no concrete impact anyway;
+* if the namespace always reflects the current CO, it will be easier to know who to contact for support and other purposes.
+
+The second of these points constitutes a 'fork' in software terms, i.e. one line of development becomes two. Common sense would seem to dictate that the likelihood of forking, particularly due to the unforeseen need of dealing with local problems after an artefact has been promoted to a higher management domain, will never be zero, and that it may even be frequent.
+
+It also seems reasonable to assume that even if there were no rule or obligation to change the identifier of an artefact when it migrates from one manager to another, that it will occur by mutual consent in some situations anyway.
+
+The approach of this specification is therefore that rules must be provided that define how artefact re-identification can be effected, without actually requiring it to be done in any particular situation. Part of the requirement is to establish a machine processable concept of 'artefact equivalence'.
+
+Rules for migration are required for both the human-readable identifier and the machine identifier. With respect to the human-readable identifier, any of the following are assumed to be mutable:
+
+* `namespace`: at a minimum this will always change;
+* `concept_id`: the ontological identifier may or may not change, depending on whether the new manager wishes to locate the artefact in a different ontology;
+* _version identifier_: the version identifier will in general change, possibly as a function of whether the concept part of the identifier changes.
+
+The general case is that the transfer of an artefact to another management organisation may result in an identifier that changes in all aspects apart from the reference model related parts of the identifier, which cannot change for formal reasons.
+
+It is assumed here that when the human-readable identifier changes (no matter how minimally), the uid property must be changed as well. This is to prevent confusion between subsequent new versions of the original with releases of the transferred artefact. A new uid is further justified by the unavoidable 'migration is forking' assumption.
+
+To enable tools to determine what archetypes are equivalent, a specific section of the artefact meta-data is proposed, which records the equivalence between the current identifier and previous ones. Assuming that an artefact could migrate more than once in its life, this section would need to accommodate multiple such statements. For purposes of helping human use of this information, it is also proposed that a date be included. The section would therefore have the logical structure of a history of equivalences, as shown in the following example for an archetype ('hrid' = human-readable id):
+
+[source, odin]
+--------
+    id_history = <
+        ["2001-05-27"] = <
+            old = <
+                hrid = <"au.com.rbh::openEHR-EHR-EVALUATION.problem_desc.v2.4.1">
+                uid = <"5221C9E5-0ECA-469F-83C5-A5D5A0C6682C">
+            >
+            new = <
+                hrid = <"au.gov.nehta::openEHR-EHR-EVALUATION.problem.v1.0.1">
+                uid = <"094C8B37-F0CD-45C9-A1B7-CDFDE14C67AB">
+            >
+        >
+        ["2004-03-14"] = <
+            old = <
+                hrid = <"au.gov.nehta::openEHR-EHR-EVALUATION.problem.v1.6.3">
+                uid = <"E50290BB-890A-4344-9480-D40AF01C5BCC">
+            >
+            new = <
+                hrid = <"au.gov.doha::openEHR-EHR-EVALUATION.problem.v1.6.3">
+                uid = <"F4166F58-4EDA-4F13-B413-45A8F7A3E53D">
+            >
+        >
+    >
+--------
+
+These equivalence histories would be used by Custodian Organisations to populate artefact identifier equivalence tables that could be shared on request with other manager organisations. This system is reminiscent of the CNAME record type in the internet Domain Name System (DNS), which is used to record alias domain names for canonical domain names.

@@ -84,7 +84,7 @@ heading the deployment's active
 [`spec_profile`](../installation/configuration.md#spec_profile) with the openEHR
 specification versions it selects. Each other object the endpoint reports
 appears under its own heading, among them the manufacturer (name, postal
-address, email, website) and the release's support period. This is the card to screenshot into
+address, email, website) and the end month of the release's support commitment. This is the card to screenshot into
 an incident report: it says exactly what is running.
 
 ## Metrics

@@ -55,9 +55,12 @@ says.
   Business Source License 1.1, whose Additional Use Grant allows production
   use for non-commercial purposes only, so it is not free and open-source
   software in the sense of CRA Art. 3(48) ([licensing](../licensing.md)).
-- **The support period** of each release is five years from the month it is
-  published. The end date, month and year, is printed in each release's notes,
-  and the release-by-release statement is
+- **Only the newest release is supported.** Every earlier release stops
+  receiving fixes when a new one is published, and the remedy is to upgrade,
+  which is free. Cadasto B.V. commits to keep publishing security fixes for at
+  least five years after each release (Art 13(8)) and ships them only in the
+  newest release (Art 13(10)). The end month of that commitment is printed in
+  each release's notes, and the statement is
   [`SECURITY.md` § Supported versions](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions).
   The reasoning is in the technical documentation
   ([`cra-annex-vii-4-support-period.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/technical-documentation/cra-annex-vii-4-support-period.md)).

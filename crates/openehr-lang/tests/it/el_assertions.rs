@@ -138,8 +138,9 @@ const PINNED_SCHEMAS: &[&str] = &[
 /// regression, one that accepts more updates this line together with
 /// [`UNPARSABLE`]. A change of input moves it too: the component-repo BASE
 /// 1.3.0 file replaces the typographic quotes of three invariants with ASCII
-/// ones and adds three invariants, all of which parse.
-const PARSING_ASSERTIONS: usize = 325;
+/// ones and adds three invariants, all of which parse; SPECBASE-35 adds
+/// `ARCHETYPE_ID.Value_valid` (`value.is_valid`), which parses.
+const PARSING_ASSERTIONS: usize = 326;
 
 /// Every DISTINCT assertion string in the pinned schemas that the EL grammar
 /// refuses, adjudicated.

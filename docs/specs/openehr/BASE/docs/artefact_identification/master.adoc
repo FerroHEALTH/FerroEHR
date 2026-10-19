@@ -1,0 +1,90 @@
+//
+// ============================================ Asciidoc HEADER =============================================
+//
+include::{ref_dir}/docs/boilerplate/book_style_settings.adoc[]
+include::manifest_vars.adoc[]
+include::{ref_dir}/docs/boilerplate/global_vars.adoc[]
+
+//
+// ============================================ Asciidoc PREAMBLE =============================================
+//
+
+image::{openehr_logo}["openEHR logo",align="center"]
+
+= {spec_title}
+
+include::{ref_dir}/docs/boilerplate/full_front_block.adoc[]
+include::{ref_dir}/docs/references/reference_definitions.adoc[]
+
+//
+// ============================================= Asciidoc BODY ===============================================
+//
+
+//
+// --------------------------------------------- Preface -----------------------------------------------
+//
+== Acknowledgements
+
+=== Primary Author
+
+* Thomas Beale, Ars Semantica, UK; openEHR International Board.
+
+=== Contributors
+
+This specification has benefited from input from the openEHR and wider health informatics community. The openEHR Foundation would like to recognise the following people and institutions.
+
+* Sebastian Garde PhD, Ocean Informatics
+* Heather Leslie MD, Ocean Informatics
+* Ian McNicoll MD, MSc, Ocean Informatics UK
+* Martin van der Meer, Code24, Netherlands
+* David Moner PhD, Universitat Politècnica de València, Spain
+* Erik Sundvall PhD, Linkoping University, Sweden
+* Sebastian Iancu, Code24, Netherlands
+
+=== Trademarks
+
+* 'openEHR' is a registered trademark of The openEHR Foundation
+* 'SNOMED CT' is a registered trademark of IHTSDO
+
+=== Supporters
+
+The work reported in this paper has been funded by the following organisations:
+
+* the {openehr_industry_partners}[openEHR Industry Partners^];
+* Better d.o.o, Slovenia
+* Ocean Informatics, UK
+
+//
+// --------------------------------------------- TOC -----------------------------------------------
+//
+//toc::[left]
+
+//
+// --------------------------------------------- CHAPTERS -----------------------------------------------
+//
+
+:sectnums:
+include::master01-preface.adoc[leveloffset=+1]
+include::master02-overview.adoc[leveloffset=+1]
+include::master03-artefact_source_id.adoc[leveloffset=+1]
+include::master04-versioning.adoc[leveloffset=+1]
+include::master05-lifecycle_mgt.adoc[leveloffset=+1]
+include::master06-distributed_governance.adoc[leveloffset=+1]
+include::master07-referencing.adoc[leveloffset=+1]
+include::master08-uris.adoc[leveloffset=+1]
+include::master09-artefact_authentication.adoc[leveloffset=+1]
+include::master10-scenarios.adoc[leveloffset=+1]
+
+//
+// --------------------------------------------- Amendment Record -----------------------------------------------
+//
+:sectnums!:
+include::master00-amendment_record.adoc[leveloffset=+1]
+
+//
+// --------------------------------------------- REFERENCES -----------------------------------------------
+//
+:sectnums!:
+== References
+
+bibliography::[]

@@ -299,7 +299,8 @@ CRA Annex VII asks for four things Annex III does not, each with its own file
 in the tree: the design, development and vulnerability-handling processes
 with the software bills of materials (point 2), the cybersecurity
 [risk assessment](cra-risk-assessment.md) (point 3), the information taken
-into account to set the support period (point 4), and the standards applied or
+into account to set the support period, the five-year commitment to publish
+security fixes (point 4), and the standards applied or
 the solutions adopted in their place (point 5). The
 [hazard log](hazard-log.md) is the EHDS-side assessment of the logging
 component, which CRA Art. 13(4), as EHDS Article 104 amends it, lets the
