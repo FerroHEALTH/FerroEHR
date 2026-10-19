@@ -48,6 +48,8 @@ leptos_router.workspace = true
 # The shared FerroHEALTH console components, tokens, stylesheet, highlighters
 # and table model; it has no render-mode feature and follows leptos's.
 ferrohealth-ui.workspace = true
+# The viewer's own string catalogs under locales/, in both halves.
+fluent-templates.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 # ISO 8601 parsing/formatting for the results chart's time axis (pure —

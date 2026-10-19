@@ -182,6 +182,7 @@ overrides. Unknown keys are refused at startup, exactly as on the CDR:
 | `session.cookie_secure` | `true` | On by default; set `false` only for plain-HTTP local development. |
 | `session.secret` | empty | The session-cookie sealing key: base64 of at least 64 bytes (`openssl rand -base64 64`). Every replica of a scaled deployment must hold the same value. Empty = an ephemeral per-instance key, fine for exactly one replica. |
 | `session.secret_file` | — | Path to a file holding the sealing key; wins over `session.secret`. |
+| `ui.locale` | `en` | The language a page renders in when the browser's `Accept-Language` names none the viewer ships. English is the one language that ships today; a deployment adds one as a catalog file under `app/ferroehr-viewer/locales/<tag>/` (the viewer's words) beside FerroUI's (the components' words), with no code change. A value that is no BCP 47 language tag is a startup error. |
 
 The viewer is **stateless**: it has no database and keeps no local files of
 its own. Everything it shows, including how stored queries are grouped,

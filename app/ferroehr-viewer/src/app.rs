@@ -29,13 +29,11 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
     // The theme the request's cookie names, written on <html> so the first
     // paint is already in it (no script, no flash).
     let theme = crate::theme::current_theme();
+    let lang = crate::locale::current().tag();
     view! {
         <!DOCTYPE html>
-        // The viewer ships one locale, and its copy is written in English, so
-        // `en` is the honest declaration rather than a placeholder — an
-        // assistive technology must be told which language it is reading.
-        // TODO(#300): drive lang from the active locale when a second locale lands.
-        <html lang="en" data-theme=theme.key()>
+        // The request's locale (`crate::locale`), which the browser reads back.
+        <html lang=lang data-theme=theme.key()>
             <head>
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -123,6 +121,7 @@ fn mark_hydration() {
 #[component]
 pub fn App() -> impl IntoView {
     provide_meta_context();
+    ferrohealth_ui::i18n::provide_locale(crate::locale::current());
     mark_hydration();
     view! {
         <Title formatter=viewer_title text=PRODUCT />
@@ -229,8 +228,8 @@ pub fn App() -> impl IntoView {
 pub fn NotFound() -> impl IntoView {
     let content = ferrohealth_ui::view::surface::panel(ferrohealth_ui::view::empty::empty_state(
         ferrohealth_ui::icon::Glyph::COMPASS,
-        "Page not found",
-        "The page you requested does not exist.",
+        crate::locale::tr(crate::locale::Msg::Heading404),
+        crate::locale::tr(crate::locale::Msg::Body404),
         ferrohealth_ui::view::button::link_button(
             "/".to_owned(),
             ferrohealth_ui::view::button::Variant::Primary,
@@ -240,7 +239,7 @@ pub fn NotFound() -> impl IntoView {
     ))
     .into_any();
     view! {
-        <Title text="Not found" />
+        <Title text=crate::locale::tr(crate::locale::Msg::Title404) />
         {ferrohealth_ui::view::shell::centred(
             content,
             ferrohealth_ui::view::shell::Footer {
