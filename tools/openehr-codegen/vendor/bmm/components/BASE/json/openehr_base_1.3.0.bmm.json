@@ -77,6 +77,7 @@
                     "name": "primitive_types",
                     "classes": [
                         "Uri",
+                        "Hrid",
                         "Comparable",
                         "Ordered_Numeric",
                         "Integer",
@@ -553,6 +554,127 @@
             "ancestors": [
                 "String"
             ]
+        },
+        "Hrid": {
+            "name": "Hrid",
+            "documentation": "A kind of String constrained to obey the syntax of an openEHR human-readable identifier (HRID), used to identify managed knowledge artefacts such as archetypes and templates.\n\nTwo identifier forms are recognised: a modern (ADL 2) identifier, which is namespaced and carries a full `major.minor.patch` version, e.g. `org.openehr::openEHR-EHR-OBSERVATION.blood_pressure.v2.1.0`; and a legacy (ADL 1.4) identifier, which has no namespace and a major-only version, e.g. `openEHR-EHR-OBSERVATION.blood_pressure.v2`. The namespace is mandatory in the modern form and absent in the legacy form; `_is_namespaced_` discriminates the two. A namespaceless full-version string is therefore not a valid identifier.\n\nSee the openEHR Artefact Identification specification for the grammar, version numbering, concept-identifier semantics and referencing model.",
+            "ancestors": [
+                "String"
+            ],
+            "functions": {
+                "is_valid": {
+                    "name": "is_valid",
+                    "documentation": "True if this identifier conforms to the HRID grammar defined in the openEHR Artefact Identification specification, i.e. it is either a namespaced modern (ADL 2) identifier or an unnamespaced legacy (ADL 1.4) identifier.",
+                    "result": {
+                        "_type": "P_BMM_SIMPLE_TYPE",
+                        "type": "Boolean"
+                    }
+                },
+                "is_namespaced": {
+                    "name": "is_namespaced",
+                    "documentation": "True if this identifier carries a `_namespace_`, i.e. is a modern (ADL 2) identifier; False for a legacy (ADL 1.4) identifier, which has no namespace.",
+                    "result": {
+                        "_type": "P_BMM_SIMPLE_TYPE",
+                        "type": "Boolean"
+                    }
+                },
+                "namespace": {
+                    "name": "namespace",
+                    "documentation": "The namespace of the identifier, in the form of a reverse domain name, e.g. `\"org.openehr\"`; mandatory in a modern (ADL 2) identifier and empty for a legacy (ADL 1.4) identifier.",
+                    "result": {
+                        "_type": "P_BMM_SIMPLE_TYPE",
+                        "type": "String"
+                    }
+                },
+                "rm_publisher": {
+                    "name": "rm_publisher",
+                    "documentation": "Identifier of the organisation originating the reference model on which the identified artefact is based, e.g. `\"openEHR\"`.",
+                    "result": {
+                        "_type": "P_BMM_SIMPLE_TYPE",
+                        "type": "String"
+                    }
+                },
+                "rm_package": {
+                    "name": "rm_package",
+                    "documentation": "Identifier of the reference model top-level package closure on which the identified artefact is based, e.g. `\"EHR\"`.",
+                    "result": {
+                        "_type": "P_BMM_SIMPLE_TYPE",
+                        "type": "String"
+                    }
+                },
+                "rm_class": {
+                    "name": "rm_class",
+                    "documentation": "Name of the reference model class on which the identified artefact is based, e.g. `\"OBSERVATION\"`.",
+                    "result": {
+                        "_type": "P_BMM_SIMPLE_TYPE",
+                        "type": "String"
+                    }
+                },
+                "qualified_rm_class_name": {
+                    "name": "qualified_rm_class_name",
+                    "documentation": "The qualified reference model class name, i.e. `rm_publisher '-' rm_package '-' rm_class`, e.g. `\"openEHR-EHR-OBSERVATION\"`.",
+                    "result": {
+                        "_type": "P_BMM_SIMPLE_TYPE",
+                        "type": "String"
+                    }
+                },
+                "concept_id": {
+                    "name": "concept_id",
+                    "documentation": "The ontological (domain) concept identifier of the artefact, e.g. `\"blood_pressure\"`.",
+                    "result": {
+                        "_type": "P_BMM_SIMPLE_TYPE",
+                        "type": "String"
+                    }
+                },
+                "version_id": {
+                    "name": "version_id",
+                    "documentation": "The version part of the identifier as it appears after `'.v'`, e.g. `\"1\"`, `\"1.8.2\"` or `\"1.8.2-rc.4\"`.",
+                    "result": {
+                        "_type": "P_BMM_SIMPLE_TYPE",
+                        "type": "String"
+                    }
+                },
+                "major_version": {
+                    "name": "major_version",
+                    "documentation": "The major version, i.e. the first numeric segment of `_version_id_`, e.g. `\"1\"`.",
+                    "result": {
+                        "_type": "P_BMM_SIMPLE_TYPE",
+                        "type": "String"
+                    }
+                },
+                "minor_version": {
+                    "name": "minor_version",
+                    "documentation": "The minor version, i.e. the second numeric segment of `_version_id_`; empty if not present.",
+                    "result": {
+                        "_type": "P_BMM_SIMPLE_TYPE",
+                        "type": "String"
+                    }
+                },
+                "patch_version": {
+                    "name": "patch_version",
+                    "documentation": "The patch version, i.e. the third numeric segment of `_version_id_`; empty if not present.",
+                    "result": {
+                        "_type": "P_BMM_SIMPLE_TYPE",
+                        "type": "String"
+                    }
+                },
+                "version_status": {
+                    "name": "version_status",
+                    "documentation": "The lifecycle status implied by the version modifier: `\"alpha\"`, `\"beta\"` or `\"release_candidate\"` for a pre-release version (`'-alpha'`, `'-beta'`, `'-rc'` respectively), or `\"released\"` when no modifier is present. These correspond to the `VERSION_STATUS` values defined in the openEHR Base Types specification.",
+                    "result": {
+                        "_type": "P_BMM_SIMPLE_TYPE",
+                        "type": "String"
+                    }
+                },
+                "build_count": {
+                    "name": "build_count",
+                    "documentation": "The build count following a pre-release modifier, i.e. the number in `'-rc.'`, `'-alpha.'` or `'-beta.'`, e.g. `\"4\"` for `...v1.8.2-rc.4`; empty if no build count is present.",
+                    "result": {
+                        "_type": "P_BMM_SIMPLE_TYPE",
+                        "type": "String"
+                    }
+                }
+            }
         },
         "Ordered_Numeric": {
             "name": "Ordered_Numeric",
@@ -2907,11 +3029,28 @@
     "class_definitions": {
         "ARCHETYPE_ID": {
             "name": "ARCHETYPE_ID",
-            "documentation": "Identifier or reference for archetypes. Ideally, these identify globally unique archetypes. When used as a reference, only partial version information is included (major version only), and the namespace is omitted.\n\nLexical form: `rm_originator  '-' rm_name  '-' rm_entity  '.' concept_name {  '-' specialisation }*  '.v' version_id`.",
+            "documentation": "Globally unique identifier for an archetype, carrying the exact identification of the artefact - its complete version and, in the ADL 2 form, its namespace. An `ARCHETYPE_ID` is intended to carry the complete identification rather than a reduced-precision reference; a reference (which carries only a partial version, e.g. the major version only, while retaining the namespace of an ADL 2 artefact) shares the same lexical form and differs by precision and use rather than by type, with matching semantics defined by the Artefact Identification specification.\n\nSupports both legacy ADL 1.4 identifiers (no namespace, single major version) and ADL 2 identifiers (mandatory namespace and a three-part `major.minor.patch` version, optionally with a pre-release modifier).\n\nLexical forms: `rm_originator '-' rm_name '-' rm_entity '.' concept_name { '-' specialisation } '.v' major_version` (legacy ADL 1.4, e.g. `openEHR-EHR-SECTION.physical_examination.v2`), or `namespace '::' rm_originator '-' rm_name '-' rm_entity '.' concept_name { '-' specialisation } '.v' version_id` (ADL 2, e.g. `org.openehr::openEHR-EHR-OBSERVATION.blood_pressure.v2.1.4`).\n\nThe `_value_` obeys the openEHR human-readable identifier (HRID) grammar, realised by the `Hrid` primitive type; see the openEHR Artefact Identification specification for the grammar, version numbering and referencing model.",
             "ancestors": [
                 "OBJECT_ID"
             ],
+            "properties": {
+                "value": {
+                    "_type": "P_BMM_SINGLE_PROPERTY",
+                    "name": "value",
+                    "documentation": "The identifier string. Covariantly redefines `OBJECT_ID._value_` (`String`) as the `Hrid` primitive, so that an archetype identifier is a validated human-readable identifier by construction.",
+                    "is_mandatory": true,
+                    "type": "Hrid"
+                }
+            },
             "functions": {
+                "namespace": {
+                    "name": "namespace",
+                    "documentation": "The namespace of the identifier, in the form of a reverse domain name, e.g. `\"org.openehr\"`; mandatory in the ADL 2 form and empty for a legacy ADL 1.4 identifier.",
+                    "result": {
+                        "_type": "P_BMM_SIMPLE_TYPE",
+                        "type": "String"
+                    }
+                },
                 "qualified_rm_entity": {
                     "name": "qualified_rm_entity",
                     "documentation": "Globally qualified reference model entity, e.g.  `\"openehr-EHR-OBSERVATION\"`.",
@@ -2962,12 +3101,39 @@
                 },
                 "version_id": {
                     "name": "version_id",
-                    "documentation": "Version identification of this archetype, representing the major version, e.g. `\"1\"`.",
+                    "documentation": "Version identification of this archetype. For an ADL 2 identifier this is the three-part `major.minor.patch` version, optionally with a pre-release modifier, e.g. `\"1.8.2\"` or `\"2.0.0-rc.4\"`; for a legacy ADL 1.4 identifier it is the major version only, e.g. `\"1\"`.",
+                    "result": {
+                        "_type": "P_BMM_SIMPLE_TYPE",
+                        "type": "String"
+                    }
+                },
+                "major_version": {
+                    "name": "major_version",
+                    "documentation": "The major version, i.e. the first numeric segment of `_version_id_`, e.g. `\"1\"`.",
+                    "result": {
+                        "_type": "P_BMM_SIMPLE_TYPE",
+                        "type": "String"
+                    }
+                },
+                "minor_version": {
+                    "name": "minor_version",
+                    "documentation": "The minor version, i.e. the second numeric segment of `_version_id_`; empty for a legacy ADL 1.4 (major-only) identifier.",
+                    "result": {
+                        "_type": "P_BMM_SIMPLE_TYPE",
+                        "type": "String"
+                    }
+                },
+                "patch_version": {
+                    "name": "patch_version",
+                    "documentation": "The patch version, i.e. the third numeric segment of `_version_id_`; empty for a legacy ADL 1.4 (major-only) identifier.",
                     "result": {
                         "_type": "P_BMM_SIMPLE_TYPE",
                         "type": "String"
                     }
                 }
+            },
+            "invariants": {
+                "Value_valid": "value.is_valid"
             }
         },
         "GENERIC_ID": {

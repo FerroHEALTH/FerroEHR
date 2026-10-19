@@ -204,7 +204,7 @@ treats the first four rows as mandatory for a deployment holding patient data.
 
 | Maintenance | How often | How |
 |---|---|---|
-| Apply security updates | as soon as a release carries one; each release is supported for five years from the month it is published, and the fix for a release in that period ships in the newest release (CRA Art. 13(8) and (10)) | subscribe to the release feed and poll the security advisories ([how long a version is supported](../operations.md#how-long-the-version-you-pinned-is-supported)), then [upgrade](../operations.md#upgrades); the server's `support.status` reads `ended` once its period has passed |
+| Apply security updates | as soon as a release carries one; only the newest release is supported, and Cadasto B.V. publishes security fixes for at least five years after each release, only in the newest release (CRA Art. 13(8) and (10)) | subscribe to the release feed and poll the security advisories ([how long a version is supported](../operations.md#how-long-the-version-you-pinned-is-supported)), then [upgrade](../operations.md#upgrades); the server's `support.status` reads `ended` once the end month of the commitment has passed |
 | Take and test backups, one per domain | daily backups (the chart's backup jobs run nightly when enabled); a restore test at least once a year and after each upgrade that migrates the schema | [backup and point-in-time recovery](../operations.md#backup-and-point-in-time-recovery) |
 | Act on an access-log chain finding | the server verifies the chain daily by default (`[audit.store] verify_interval_seconds = 86400`); act on every finding | the `audit_chain` readiness indicator and the `atna_audit_chain_findings` metric ([tamper evidence](../audit.md#tamper-evidence)) |
 | Watch the access log's loss counters | continuously, with an alert | the `atna_audit_*` metrics ([observability](../operations.md#observability)) |
@@ -305,7 +305,7 @@ release.
 | 4. Intended purpose, the security environment, the essential functionalities and the security properties | [intended purpose](intended-purpose.md), [security](../security.md), and the statement for the EHR system at <https://ferrohealth.eu/docs/ehds/intended-purpose.html> |
 | 5. Circumstances that may lead to significant cybersecurity risks | [limitations](#limitations-you-should-know), [foreseeable misuse](intended-purpose.md#reasonably-foreseeable-use-and-misuse) |
 | 6. The internet address of the EU declaration of conformity | none exists ([technical documentation](technical-documentation.md#declaration-of-conformity)) |
-| 7. The technical security support, and the end date of the support period | [`SECURITY.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions), and the release notes |
+| 7. The technical security support, and the end date of the support period (the end month of the five-year commitment) | [`SECURITY.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions), and the release notes |
 | 8(a). Secure commissioning and use over the lifetime | [installing](#installing), [configuring](#configuring-a-deployment-in-the-european-union), [maintenance](#maintenance-and-how-often) |
 | 8(b). How changes to the product can affect the security of data | [configuration](../installation/configuration.md); a change to the source is a change to the product |
 | 8(c). How security-relevant updates are installed | [upgrades](../operations.md#upgrades) |

@@ -329,7 +329,9 @@ fn shallow_members_conform(items: &[Value], attr: &'static RmAttribute) -> bool 
 /// Whether a single value verifiably deserializes as the declared spec type.
 fn value_conforms(v: &Value, declared: &str, shallow: bool) -> bool {
     match declared {
-        "String" => v.is_string(),
+        // BASE 1.3.0 `Hrid` lowers to `String`; its grammar is the holding
+        // class's invariant (`ARCHETYPE_ID.Value_valid`), checked below.
+        "String" | "Hrid" => v.is_string(),
         "Boolean" => v.is_boolean(),
         // Any JSON number deserializes as `f64`.
         "Real" | "Double" => v.is_number(),

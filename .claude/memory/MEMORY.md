@@ -55,7 +55,7 @@
 - [No stress test in v4.3.0](no-stress-test-v430.md) — #3098 (LTO) moved rather than landing unmeasured
 - [Research reports go to files](research-reports-go-to-files.md) — write research deliverables to a file at once
 - [Boot refusals vs chart postures](boot-refusals-vs-chart-postures.md) — check new refusals against deploy/helm/ci/*-values.yaml
-- [New issues go to the next patch milestone](new-issues-go-to-next-patch-milestone.md) — current or next patch milestone, never v5.x
+- [New issues go to the current milestone](new-issues-go-to-current-milestone.md) — one milestone at a time; en-route issues join the current one, whatever its version
 - [Storage rewrite is greenfield](storage-rewrite-is-greenfield.md) — #3337: new one-concern migration sets, old databases refused at boot
 - [Rewrite needs baseline and harness](rewrite-needs-baseline-and-harness.md) — a perf rewrite ships its measurement program first
 - [Platform shape: single tenant, FerroBRIDGE](platform-shape-single-tenant-ferrobridge.md) — one instance per tenant; secondary use via FerroBRIDGE; no central authorisation service, each product its own SMART resource server
@@ -90,3 +90,4 @@
 - [Podman, not Docker](podman-not-docker.md) — podman for containers and Kubernetes (kind, podman provider); DOCKER_HOST to the podman socket
 - [Agent pushes release tags](agent-pushes-release-tags.md) — create+push the signed vX.Y.Z tag, watch the run, close the milestone, clean branches; owner only merges
 - [FerroUI](ferroui.md) — every console draws in FerroUI; uniform design, shared components, all four consoles move in lockstep with each FerroUI release
+- [Support: newest release only](support-newest-release-only.md): owner 2026-10-19: only the newest release is supported; CRA five years = product-wide fix commitment, shipped only in the newest (Art 13(8), 13(10))

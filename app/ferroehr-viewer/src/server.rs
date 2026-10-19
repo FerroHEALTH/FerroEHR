@@ -33,7 +33,16 @@ pub fn router(app_state: AppState, leptos_options: LeptosOptions) -> axum::Route
         leptos::context::provide_context(context_state.clone());
         provide_request_nonce();
     };
+    let pkg_route = format!("/{}", leptos_options.site_pkg_dir);
+    let pkg_dir = format!(
+        "{}/{}",
+        leptos_options.site_root, leptos_options.site_pkg_dir
+    );
     let service = axum::Router::new()
+        // The hydration bundle, served on its own: a file the bundle lacks
+        // answers 404 and a read failure 500, never the rendered app or the
+        // sign-in guard's redirect, and either is logged with its status.
+        .nest_service(&pkg_route, pkg_service(&pkg_dir))
         .route("/auth/oidc/login", axum::routing::get(crate::oidc::login))
         .route(
             "/auth/oidc/callback",
@@ -80,6 +89,44 @@ pub fn router(app_state: AppState, leptos_options: LeptosOptions) -> axum::Route
         .layer(axum::middleware::from_fn(login_guard))
         .layer(Extension(app_state));
     with_security_headers(service).with_state(leptos_options)
+}
+
+/// The service of the hydration bundle under `dir`: its files as they stand,
+/// or their brotli and gzip variants when present and asked for, with a warn
+/// for any answer that is not a served body.
+///
+/// The bundle never reaches the Leptos static fallback, which renders the
+/// whole app in place of any answer other than `200`
+/// (`leptos_axum::file_and_error_handler`), so a file it cannot serve answers
+/// its own status and never the shell's session redirect.
+fn pkg_service(dir: &str) -> axum::Router {
+    let files = tower_http::services::ServeDir::new(dir)
+        .precompressed_br()
+        .precompressed_gzip();
+    axum::Router::new()
+        .fallback_service(files)
+        .layer(axum::middleware::from_fn(warn_unserved_asset))
+}
+
+/// Logs a bundle request that did not answer with a body (`2xx`) or a
+/// revalidation (`304`), naming the path and the status it got.
+async fn warn_unserved_asset(
+    request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    let path = request
+        .extensions()
+        .get::<axum::extract::OriginalUri>()
+        .map_or_else(
+            || request.uri().path().to_owned(),
+            |uri| uri.path().to_owned(),
+        );
+    let response = next.run(request).await;
+    let status = response.status();
+    if !status.is_success() && status != http::StatusCode::NOT_MODIFIED {
+        tracing::warn!(%path, %status, "a hydration bundle request was not served");
+    }
+    response
 }
 
 /// The FerroEHR brand theme: FerroEHR's palette over FerroUI's roles.

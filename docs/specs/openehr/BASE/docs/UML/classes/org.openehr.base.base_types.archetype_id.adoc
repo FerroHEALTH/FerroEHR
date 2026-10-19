@@ -6,16 +6,33 @@ h|*Class*
 2+^h|*ARCHETYPE_ID*
 
 h|*Description*
-2+a|Identifier or reference for archetypes. Ideally, these identify globally unique archetypes. When used as a reference, only partial version information is included (major version only), and the namespace is omitted.
+2+a|Globally unique identifier for an archetype, carrying the exact identification of the artefact - its complete version and, in the ADL 2 form, its namespace. An `ARCHETYPE_ID` is intended to carry the complete identification rather than a reduced-precision reference; a reference (which carries only a partial version, e.g. the major version only, while retaining the namespace of an ADL 2 artefact) shares the same lexical form and differs by precision and use rather than by type, with matching semantics defined by the Artefact Identification specification.
 
-Lexical form: `rm_originator  '-' rm_name  '-' rm_entity  '.' concept_name \{  '-' specialisation }*  '.v' version_id`.
+Supports both legacy ADL 1.4 identifiers (no namespace, single major version) and ADL 2 identifiers (mandatory namespace and a three-part `major.minor.patch` version, optionally with a pre-release modifier).
+
+Lexical forms: `rm_originator '-' rm_name '-' rm_entity '.' concept_name \{ '-' specialisation } '.v' major_version` (legacy ADL 1.4, e.g. `openEHR-EHR-SECTION.physical_examination.v2`), or `namespace '::' rm_originator '-' rm_name '-' rm_entity '.' concept_name \{ '-' specialisation } '.v' version_id` (ADL 2, e.g. `org.openehr::openEHR-EHR-OBSERVATION.blood_pressure.v2.1.4`).
+
+The `_value_` obeys the openEHR human-readable identifier (HRID) grammar, realised by the `Hrid` primitive type; see the openEHR Artefact Identification specification for the grammar, version numbering and referencing model.
 
 h|*Inherit*
 2+|`<<_object_id_class,OBJECT_ID>>`
 
+h|*Attributes*
+^h|*Signature*
+^h|*Meaning*
+
+h|*1..1 +
+(redefined)*
+|*value*: `link:/releases/BASE/{base_release}/foundation_types.html#_hrid_class[Hrid^]`
+a|The identifier string. Covariantly redefines `OBJECT_ID._value_` (`String`) as the `Hrid` primitive, so that an archetype identifier is a validated human-readable identifier by construction.
+
 h|*Functions*
 ^h|*Signature*
 ^h|*Meaning*
+
+h|*1..1*
+|*namespace* (): `link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]`
+a|The namespace of the identifier, in the form of a reverse domain name, e.g. `"org.openehr"`; mandatory in the ADL 2 form and empty for a legacy ADL 1.4 identifier.
 
 h|*1..1*
 |*qualified_rm_entity* (): `link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]`
@@ -43,5 +60,20 @@ a|Name of specialisation of concept, if this archetype is a specialisation of an
 
 h|*1..1*
 |*version_id* (): `link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]`
-a|Version identification of this archetype, representing the major version, e.g. `"1"`.
+a|Version identification of this archetype. For an ADL 2 identifier this is the three-part `major.minor.patch` version, optionally with a pre-release modifier, e.g. `"1.8.2"` or `"2.0.0-rc.4"`; for a legacy ADL 1.4 identifier it is the major version only, e.g. `"1"`.
+
+h|*1..1*
+|*major_version* (): `link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]`
+a|The major version, i.e. the first numeric segment of `_version_id_`, e.g. `"1"`.
+
+h|*1..1*
+|*minor_version* (): `link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]`
+a|The minor version, i.e. the second numeric segment of `_version_id_`; empty for a legacy ADL 1.4 (major-only) identifier.
+
+h|*1..1*
+|*patch_version* (): `link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]`
+a|The patch version, i.e. the third numeric segment of `_version_id_`; empty for a legacy ADL 1.4 (major-only) identifier.
+
+h|*Invariants*
+2+a|__Value_valid__: `value.is_valid`
 |===

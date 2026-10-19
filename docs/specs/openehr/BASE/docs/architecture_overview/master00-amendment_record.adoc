@@ -6,11 +6,16 @@
 
 4+^h|*BASE Release 1.3.0 (unreleased)*
 
-|[[latest_issue]]1.3.1
+|[[latest_issue]]1.3.2
+| Point to the {openehr_base_artefact_identification}[Artefact Identification^] specification, relocated from the AM component to BASE ({spec_tickets}/SPECBASE-50[SPECBASE-50^]).
+|S Iancu
+|[[latest_issue_date]]10 Oct 2026
+
+|1.3.1
 | Complete the `_system_id_` documentation for {spec_tickets}/SPECPR-392[SPECPR-392^]: correct a residual `net.nhs.rmh` mention to `uk.nhs.ehr1` in a version-identifier example, and add non-normative guidance on the common forms of `_system_id_` (reverse domain name, UUID/GUID or ISO OID).
 |J Zeilstra, +
 S Iancu
-|[[latest_issue_date]]25 Jul 2026
+|25 Jul 2026
 
 |1.3.0
 | Documentation fixes and typos (including {spec_tickets}/SPECPR-392[SPECPR-392^]).

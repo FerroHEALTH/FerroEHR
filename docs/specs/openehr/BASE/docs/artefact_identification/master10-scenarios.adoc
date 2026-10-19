@@ -1,0 +1,17 @@
+= Scenarios
+
+This section describes typical scenarios to do with artefact development, deployment and querying.
+
+== Minor Version Upgrade
+
+
+
+== Major Version Upgrade
+
+
+
+== Templates using Archetypes and Subsets
+
+
+
+== Artefact Transfer / Fork

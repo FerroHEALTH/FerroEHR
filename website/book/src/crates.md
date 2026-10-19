@@ -169,9 +169,10 @@ the manufacturer and the reporting channels there apply to the crates too.
   affected and the fixed crate versions. An advisory
   that names a published crate also reaches the GitHub Advisory Database in
   OSV format. Watch the advisories; nothing in the crates contacts anyone.
-- **Support period:** five years from the month a crate version is published.
-  The fix ships in the newest published version of all nine, never as a
-  backport
+- **Support period:** only the newest published version of all nine is
+  supported. Cadasto B.V. commits to keep publishing security fixes for at
+  least five years after each version (CRA Art 13(8)), and the fix ships only
+  in the newest published version, never as a backport (Art 13(10))
   ([`SECURITY.md` § Supported versions](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions)).
   While the line is `0.0.x`, the version that carries a fix may also carry a
   breaking change (see [Versioning](#versioning)), so plan for the work of

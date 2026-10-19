@@ -1,4 +1,4 @@
-// @generated-from-template templates/openehr-base/base_types/identification/archetype_id_impl.rs — DO NOT EDIT; edit the source and re-run `openehr-codegen -- emit`.
+// @generated-from-template templates/openehr-base/overrides/v1_2/base_types/identification/archetype_id_impl.rs (per-generation override) — DO NOT EDIT; edit the source and re-run `openehr-codegen -- emit`.
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0

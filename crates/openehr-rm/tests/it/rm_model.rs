@@ -150,8 +150,9 @@ fn is_structure_root_matches_the_node_codec() {
 
 /// The primitive types are model classes in the BASE `primitive_types` package:
 /// the BASE `foundation_types` master03 §Overview table (`Octet`, `Character`,
-/// `Boolean`, `Integer`, `Integer64`, `Real`, `Double`, `String`) plus `Uri`,
-/// the `String` subtype the package also declares. The abstract markers of the
+/// `Boolean`, `Integer`, `Integer64`, `Real`, `Double`, `String`) plus `Uri`
+/// and, since BASE 1.3.0 (SPECBASE-49), `Hrid`, the `String` subtypes the
+/// package also declares. The abstract markers of the
 /// same package (`Ordered`, `Numeric`, …) are not primitives.
 #[test]
 fn the_primitives_are_the_concrete_classes_of_the_primitive_types_package() {
@@ -166,6 +167,7 @@ fn the_primitives_are_the_concrete_classes_of_the_primitive_types_package() {
             "Boolean",
             "Character",
             "Double",
+            "Hrid",
             "Integer",
             "Integer64",
             "Octet",

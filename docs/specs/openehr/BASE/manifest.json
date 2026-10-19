@@ -52,6 +52,23 @@
             "keywords": "openehr, resources"
         },
         {
+            "id": "artefact_identification",
+            "title": "Artefact Identification",
+            "title_short": "Artefact Identification",
+            "description": "openEHR Artefact Identification specification",
+            "summary": "Defines the identification system for openEHR knowledge artefacts, principally archetypes and templates: human-readable identifiers (HRID), version numbering, lifecycle management, distributed governance, referencing and artefact authentication.",
+            "micro_summary": "HRID, versioning, lifecycle, referencing",
+            "copyright_year": "2009",
+            "spec_status": "STABLE",
+            "keywords": "openehr, identification, HRID, versioning, lifecycle, governance",
+            "notes": [
+                {
+                    "link": "https://openehr.atlassian.net/wiki/spaces/ADL/pages/1278445/Knowledge+Artefact+Identification",
+                    "text": "Identification wiki page"
+                }
+            ]
+        },
+        {
             "id": "iso_18308_conformance_statement",
             "title": "ISO 18308 Conformance Statement",
             "title_short": "ISO 18308 Conformance",

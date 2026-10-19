@@ -39,6 +39,8 @@ fn primitive(name: &str) -> Option<Value> {
         "Real" | "Double" => json!(1.5),
         "Octet" => json!(0),
         "Uri" | "URI" => json!("local://x"),
+        // BASE 1.3.0 `Hrid` (Foundation Types): a String obeying the HRID grammar.
+        "Hrid" => json!("openEHR-EHR-OBSERVATION.x.v1"),
         // ISO 8601 value strings: several RM classes type their `value`
         // attribute directly as the ISO string form.
         "Iso8601_date" => json!("2020-01-01"),

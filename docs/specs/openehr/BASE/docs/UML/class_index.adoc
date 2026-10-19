@@ -83,6 +83,8 @@
 [.xcode]
 * link:/releases/BASE/{base_release}/foundation_types.html#_hash_class[Hash^]
 [.xcode]
+* link:/releases/BASE/{base_release}/foundation_types.html#_hrid_class[Hrid^]
+[.xcode]
 * link:/releases/BASE/{base_release}/foundation_types.html#_integer_class[Integer^]
 [.xcode]
 * link:/releases/BASE/{base_release}/foundation_types.html#_integer64_class[Integer64^]

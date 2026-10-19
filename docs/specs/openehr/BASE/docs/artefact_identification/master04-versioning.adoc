@@ -1,0 +1,181 @@
+= Versioning
+
+== General Model
+
+Unlike software artefacts in most modern versioning systems, knowledge artefacts are _individually_ version-controlled. This is because an archetype, template or terminology subset is, in and of itself, a potentially complex structure of data points / groups and / or terminology codes and relationships. It can in general be used on its own or with a small number of related artefacts (e.g. specialisation parents). Therefore, the version identification system applies to _each source artefact_, rather than an entire repository in the manner of typical software versioning.
+
+This has a very visible effect: it means that every 'committed' change to an artefact is like a release, whereas with software, numerous changes to source files typically occur between releases. Additionally, each artefact revision is _distinguished by its version identifier_ for the purpose of change tracking in a repository environment, whereas with software source artefacts, the logical 'name' of each entity (e.g. a class called 'LinkedList') within the source repository doesn't change, even though its contents do. To summarise:
+
+* software versioning is performed by successive snapshots of a repository, and releasing is performed by assigning a version identifier to some of the snapshots;
+* for knowledge artefacts being described here, versioning occurs _independently_ for each artefact, and 'releasing' is simply an act of publishing the artefact;
+* for knowledge artefacts, the versioned human-readable identifier is or can be used computationally, e.g. in queries and artefact references, whereas a software release identifier is not generally computed on by the software itself.
+
+== Version Numbering
+
+Despite the above differences, the numbering of versions of knowledge artefacts follows the rules for identifying software releases described by {semver}[semver.org^]. A fully-released artefact has a three-part numeric `release_version`; the version as written in an HRID (`version_id`) may however be given at reduced precision - major only, or major and minor - and may carry a pre-release modifier. This grammar is aligned with the ADL 2 base lexer tokens `ARCHETYPE_HRID`, `ARCHETYPE_REF` and `VERSION_ID` (see {openehr_am_adl2}#_base_lexer[Archetype Definition Language 2^]).
+
+Accordingly, version identifiers are based on three levels of 'versioning', identified by dot-separated numeric parts, with an optional version modifier related to the artefact lifecycle, described below. The numeric parts are:
+
+* *major version* - must be incremented with a breaking change to the artefact formal definition; may be incremented with a lesser change;
+* *minor version* - must be incremented with a non-breaking change to the artefact formal definition; may be incremented with a lesser change;
+* *patch version* - must be incremented with a change to the informal parts of the artefact;
+* *build count* - a number that is incremented every time an artefact is committed, and is reset to 1 whenever the version id is changed. It appears within an identifier only as the numeric suffix of a pre-release modifier (e.g. the `4` in `1.8.2-rc.4`); for a released version it is held as artefact meta-data (for archetypes, the `build_count` property of `ARCHETYPE_HRID`).
+
+In the above, the 'formal definition' refers to the following parts of an archetype or template only:
+
+* the identifier section;
+* the `specialize` clause;
+* the `definition` section;
+* within the `terminology` section:
+* the `text` short names of the terms in the `term_definitions` section (i.e. not the description long text or other meta-data);
+* the `term_bindings` section;
+* the `value_set` section.
+
+Lexically, the version identifier is defined as follows:
+
+[source, ebnf]
+--------
+    (* version as written in an HRID - minor and patch optional (cf. ADL 2 ARCHETYPE_VERSION_ID) *)
+    version_id        =   major_version [ '.' minor_version [ '.' patch_version [ version_modifier ] ] ] ;
+
+    (* three-part numeric version of a release (cf. ARCHETYPE_HRID.release_version); followed by a
+       version_modifier it forms the full version of a pre-release (cf. ADL 2 VERSION_ID) *)
+    release_version   =   major_version '.' minor_version '.' patch_version ;
+
+    version_modifier  =   ( '-rc' | '-alpha' | '-beta' ) [ '.' build_count ] ;
+    major_version     =   V_NUMBER ;
+    minor_version     =   V_NUMBER ;
+    patch_version     =   V_NUMBER ;
+    build_count       =   V_NUMBER ;
+    V_NUMBER          =   V_DIGIT+ ;
+    V_DIGIT           =   '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' ;
+--------
+
+This leads to identifiers such as:
+
+--------
+    1                   # major version only (reduced form, as used in a reference)
+    1.3                 # major and minor (reduced form, as used in a reference)
+    1.3.5-alpha         # alpha development version based on version 1.3.4
+    1.3.5-beta          # beta development version
+    1.3.5-rc.3          # release candidate for version 1.3.5, build 3
+    1.3.5               # release 1.3.5
+--------
+
+The following general rules are required for using version identifiers.
+
+* *First version rule*: the first version (i.e. version on creation) of an artefact is a `v0` version, i.e. `0.N.P`. Usually it is `0.0.1`, but may be a higher `v0` version to indicate maturity. The discussion of lifecycle and distributed semantics below provide more details on the initial version semantics.
+* *Incrementing rule*: when generating a release version (i.e. not a candidate or alpha version), when the major version is incremented, the minor and patch version numbers are reset to 0; when the minor version is incremented, the patch number is reset to 0.
+
+More specific rules relating to specific lifecycle states are described below.
+
+Three 'variant' versions are defined in the above syntax: 'release candidate', 'alpha' and 'beta'. The first is a standard software classification, syntactically indicated with the tag `rc`. Version numbers including `rc` are of the form `M.N.P-rc.B` (the build count `B` being optional), e.g. `1.3.5-rc.1`, where the minus sign (`-`) is understood as indicating a version that is 'prior to' the target version `1.3.5`, i.e. `1.3.5-rc.1` is an interim version leading to the stable version `1.3.5`.
+
+Another variant is indicated with the modifier `-alpha`, where `-` has the same meaning as above (i.e. indicates a version prior to the version identified by the preceding numeric identifier), and `alpha` indicates an 'alpha' development version. The magnitude of the differences in a `-alpha` version are indicated by the difference between the 3-part version identifiers of the current artefact and the previously published one on which it is based. The modifier `-beta` likewise indicates a development version prior to the version identified by the preceding numeric identifier, at a later stage of development than `-alpha`. Each modifier may be followed by an optional dot-separated build count (e.g. `1.3.5-rc.3`).
+
+Note that only the major version forms part of the artefact's _interface_, in the sense described in <<Referencing>>. The intention of that is that a breaking change causes a new artefact from the point of view of deployment. This is analogous to breaking changes in software interfaces, web service definitions etc, being seen as a distinct entity, typically deployed alongside the previous version(s).
+
+== Change Semantics
+
+As a consequence of the 3-part {semver}[semver.org^] version identification scheme, three levels of change to an artefact can be distinguished. The main question for archetype authors and tool developers is: what level of version change is _required_ for a given kind of concrete change to the artefact? Is this change a patch, a minor version or a breaking change (i.e. major version)?
+
+NOTE: There is no assumption that a change of a given technical level (i.e. as evaluated by a diff tool) will be seen equivalently by domain experts. For example a minor change that only requires the patch version to be incremented might have major implications for clinical semantics. For this reason, the version identifier may be incremented beyond the minimum level required by a mechanical comparison.
+
+Accordingly, the rules below define the _minimum necessary level of version change_, not the mandated level, which may always be higher.
+
+== Versionable 'interface' for archetypes
+
+The Semver model is designed for software, and is based on the concept of the software interface, or 'public API'. An API consists of a set of formal method signatures of routines that that client software can call. A given component of client software will be valid against a given API if all the calls (including all details of routine names, arguments, return values and types) it contains for that API do actually exist in the API. The semantics of the API should also be respected: two functions called respectively `_names_` and `_addresses_` might both return a `List<String>` value, but clearly for the API's meaning to be preserved over versions, the contents must be name and address information, not something else (e.g. address and name values, reversed).
+
+In a similar way, for an archetype or template, the idea of 'interface' can be related to an 'archetype signature', which we can define as follows.
+
+[.definition]
+Archetype signature &#x225d;    Set of `<path, RM type, AOM constraint>` for every definition node in the archetype.
+
+The paths, RM types and formal constraints are what other system components assume about an archetype, and what must therefore be maintained for a non-breaking change.
+
+Consider first the paths. An archetype path is a formal path through a hierarchical structure whose nodes are named by Reference Model class attributes, and in the case of object nodes, by at-codes (id-codes). Any given path must be a legal path through an instance structure constructable by the Reference Model on which it is based. This implies two things:
+
+* the order and naming of nodes down the hierarchy is determined by the RM;
+* the type of every object is determined by the RM;
+
+Further, each node is made unique by the use of archetype at-codes (id-codes) which distinguish sibling child objects under any attribute node. Where there are siblings (there need not always be), these codes must be defined in the archetype terminology by domain semantic definitions (e.g. 'serum sodium', 'O2 saturation level').
+
+Typical archetype paths look as follows:
+
+[.text-center]
+.Typical Paths
+image::{diagrams_uri}/paths.png[id=typical_paths, align="center", width=90%]
+
+The RM attribute names and node at-codes (id-codes) are visible within the paths (left-hand column). The node RM types implied in the paths are shown in the middle column. The first path thus corresponds to the object model reference `OBSERVATION`.`_data._events.data.items_`, and happens to be of type `ITEM`.
+
+We can show the highlighted path with code rubrics included:
+
+[tabs,sync-group-id=adl-example]
+====
+at-coded ADL2::
++
+[source, cadl]
+--------
+/data[at0001]/events[at0002|Any event|]/data[at0003]/items[at0078.11|PaO2|]
+--------
+
+id-coded ADL2::
++
+[source, cadl]
+--------
+/data[id2]/events[id3|Any event|]/data[id4]/items[id79.11|PaO2|]
+--------
+====
+
+Here `at0078.11` (`id79.11`) is defined as 'PaO2', for which the description is 'Oxygen partial pressure in arterial blood'. This defined the domain meaning of the node at this path.
+
+Paths and types constitute the structure of the archetype. In addition, the constraints (as defined by the Archetype Object Model) at each node - other than RM types - must be taken into account. These consist of constraints on values, cardinalities and occurrences.
+
+=== Interface preservation
+
+Semver-style versioning relies on the notion of _interface conformance_ between putative versions of the same logical artefact. Based on the above, we can say that _an archetype interface is preserved_ if:
+
+* for an existing path, nothing changes - no change in hierarchy or lexical at-code (id-code);
+* in the path set, no paths are deleted;
+* no change in domain meaning for at-codes (id-codes) used in the path;
+* RM type of object nodes is the same or an ancestor (i.e. super-type) of the original type;
+* the constraint(s) at each path are either identical or wider than the original.
+
+We can use this as the basis for determining required version changes for different types of concrete change to an archetype.
+
+=== Major version (breaking) changes
+
+A breaking change for an archetype is defined as one that fails to preserve the archetype interface, in the sense defined above. Practically, this will be any change that prevents data created by the previous release of the artefact validating against the new version.
+
+Examples of breaking changes are:
+
+* removal of mandatory data points or groups;
+* removal of nodes (paths);
+* move of nodes to different sub-tree;
+* change of domain definition of at-code (id-code);
+* narrowing of any constraint, including RM type of a node.
+
+Any such change necessarily requires a new major version.
+
+=== Minor version changes
+
+In the Semver approach to versioning, a 'minor' version is used to indicate a non-breaking enhancement to the 'interface', as described above.
+
+For archetypes this can be interpreted as being the following kinds of change:
+
+* constraints, including node RM types, redefined to be 'wider' (i.e. old constraint subsumed by new constraint);
+* additional definition nodes (i.e. new paths);
+* the addition of terminology bindings.
+
+Technically speaking, the addition of terminology bindings could be regarded as a patch-level change, however, its importance in practical use is usually such that a minor version would be warranted.
+
+This has the important side-effect that minor versions of a given major version may have additional semantics compared to the original major version (i.e, minor version 0) and any other intervening minor version. In other words, *specifying a major version in general may not be sufficient to designate all of the interface available* in the latest minor version. Therefore, for purposes of referencing an artefact with the expectation that the reference will designate specific elements, at least a minor version may be needed. This is discussed further in <<Referencing>>.
+
+=== Patch version changes
+
+Numerous other kinds of change are possible on an archetype which will require at least a change in the patch (3rd position) version number. These include:
+
+* changes to meta-data;
+* addition of language translations;
+* changes to wording of terminology that do not affect the sense of the definition, or the use of the term by users.

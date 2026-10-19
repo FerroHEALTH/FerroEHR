@@ -1436,14 +1436,23 @@ fn profile_generation_delta_is_pinned() {
         vec!["GENERIC_ENTRY.data: ITEM_TREE -> ITEM".to_owned()]
     );
 
-    // BASE: 1.3.0 adds exactly the legacy CODE_PHRASE class (SPECAM-82) and
-    // RESOURCE_DESCRIPTION.title over 1.2.0, and removes nothing.
+    // BASE: 1.3.0 adds exactly the legacy CODE_PHRASE class (SPECAM-82), the
+    // `Hrid` primitive (SPECBASE-49) with ARCHETYPE_ID's own `value: Hrid`
+    // redefinition (SPECBASE-35), and RESOURCE_DESCRIPTION.title over 1.2.0,
+    // and removes nothing. `Hrid` lowers to `String`, so the redefinition
+    // changes no wire type; its grammar is ARCHETYPE_ID's `Value_valid`.
     let base = testsupport::generation_attribute_delta("base", "v1_2", "v1_3")
         .expect("base generations load");
-    assert_eq!(base.classes_added, vec!["CODE_PHRASE".to_owned()]);
+    assert_eq!(
+        base.classes_added,
+        vec!["CODE_PHRASE".to_owned(), "Hrid".to_owned()]
+    );
     assert_eq!(
         base.attributes_added,
-        vec!["RESOURCE_DESCRIPTION.title".to_owned()]
+        vec![
+            "ARCHETYPE_ID.value".to_owned(),
+            "RESOURCE_DESCRIPTION.title".to_owned()
+        ]
     );
     assert_eq!(base.classes_removed, Vec::<String>::new());
     assert_eq!(base.attributes_removed, Vec::<String>::new());
