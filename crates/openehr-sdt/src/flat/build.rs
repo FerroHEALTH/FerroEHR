@@ -1280,9 +1280,15 @@ fn place_structural_level(
     else {
         return Ok(());
     };
-    let existing = arr
-        .iter()
-        .position(|e| e.get("archetype_node_id").and_then(Value::as_str) == node_id);
+    // Same-archetype siblings told apart by name (`events[at0002,'Baseline']`
+    // beside `events[at0002,'Follow up']`) are distinct nodes, so a name
+    // conjunct on the segment takes part in finding the element (BASE
+    // `architecture_overview/master11-paths.adoc` §"Using a Name-based Predicate").
+    let name = seg.predicate.name_value.as_deref();
+    let existing = arr.iter().position(|e| {
+        e.get("archetype_node_id").and_then(Value::as_str) == node_id
+            && name.is_none_or(|n| e.pointer("/name/value").and_then(Value::as_str) == Some(n))
+    });
     let idx = if let Some(pos) = existing {
         pos
     } else {

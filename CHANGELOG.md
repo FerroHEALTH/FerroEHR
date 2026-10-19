@@ -82,6 +82,15 @@ workflow refuses a tag that has no matching section here.
 
 ### Fixed
 
+- The template example endpoints answer `400 Bad Request` naming the root for
+  a template whose root is not a COMPOSITION (an OBSERVATION or a SECTION),
+  instead of an object carrying COMPOSITION members its class does not have
+  (#3780). The `200` body the specification defines is an instance of a
+  versioned-object class, which such a template does not describe.
+- Same-archetype siblings told apart only by name (two EVENTs `Baseline` and
+  `Follow up` of one archetype node, for example) stay two nodes when a FLAT
+  or STRUCTURED document builds, so the example of such a template passes the
+  server's own validation (#3779).
 - On a phone the CDR status pill no longer covers the FerroEHR mark in the
   top bar (#3812). The pill shows from a 64rem window up, where the top bar
   has room for its full words.

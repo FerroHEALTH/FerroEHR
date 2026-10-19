@@ -68,7 +68,7 @@ fn ckm_pack_examples_are_rm_shape_valid() {
             DetailLevel::Medium,
             DetailLevel::Complete,
         ] {
-            let example = example_composition(&wt, level);
+            let example = example_composition(&wt, level).expect("the example builds");
             assert_elements_carry_data_values(
                 &example,
                 &format!(

@@ -147,6 +147,17 @@ pub enum FlatError {
         source: openehr_its::xml::runtime::XmlError,
     },
 
+    /// An example COMPOSITION was asked of a template whose root is not a
+    /// COMPOSITION (an ENTRY or a SECTION, for example), which no COMPOSITION
+    /// conforms to.
+    #[error(
+        "the template root {root} is not a COMPOSITION, so no example COMPOSITION exists for it"
+    )]
+    NoExampleForRoot {
+        /// The template root's RM type.
+        root: String,
+    },
+
     /// A party build was asked of a template whose root is not a party class
     /// (`PERSON`, `ORGANISATION`, `GROUP`, `AGENT` or `ROLE`).
     #[error("the template root {root} is not a PARTY class, so no party builds from it")]

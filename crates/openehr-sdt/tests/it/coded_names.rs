@@ -151,7 +151,7 @@ fn coded_name_recorded_and_stamped() {
 
         // The example composition stamps those names as DV_CODED_TEXT, never
         // plain DV_TEXT, and each recorded (value, code) surfaces on an instance.
-        let comp = example_composition(&wt, DetailLevel::Complete);
+        let comp = example_composition(&wt, DetailLevel::Complete).expect("the example builds");
         let mut stamped = Vec::new();
         coded_names_in(&comp, &mut stamped);
         for (value, code) in &stamped {
