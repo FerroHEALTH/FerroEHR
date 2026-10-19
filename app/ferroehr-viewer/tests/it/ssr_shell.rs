@@ -44,11 +44,9 @@
 //! makes that set `Location` plus — for an `Accept: text/html` request — the
 //! `302` status).
 //!
-//! `ssr`-gated like its siblings: the render path is the server one, and the
-//! `ssr` feature is what puts `leptos-use`/`thaw`/`leptos-chartistry` on their
-//! non-`WASM` code paths (`Cargo.toml` §features).
+//! Server half only, like its siblings: the render path is the server one.
 
-#![cfg(feature = "ssr")]
+#![cfg(not(target_arch = "wasm32"))]
 
 use leptos::prelude::LeptosOptions;
 
@@ -138,11 +136,12 @@ fn app_state() -> ferroehr_viewer::state::AppState {
     }
 }
 
-/// The document's `<aside>` — the sidebar and nothing else, so the topbar's
-/// wordmark link cannot be mistaken for a nav entry.
+/// The document's navigation (FerroUI's sidebar, `<nav id="sidebar">`) — the
+/// sidebar and nothing else, so the topbar's lockup link cannot be mistaken for
+/// a nav entry.
 fn sidebar(html: &str) -> &str {
-    html.split_once("<aside")
-        .and_then(|(_, rest)| rest.split_once("</aside>"))
+    html.split_once("<nav id=\"sidebar\"")
+        .and_then(|(_, rest)| rest.split_once("</nav>"))
         .map_or("", |(inside, _)| inside)
 }
 
@@ -174,15 +173,15 @@ fn sidebar_entries(html: &str) -> Vec<String> {
         .collect()
 }
 
-/// The eight entries every deployment shows, in the order the shell's `NAV_SLOTS`
-/// table declares them — the domain group, then (across the divider) the meta
-/// group with `System` last.
+/// The eight entries every deployment shows, in the order the shell's groups
+/// declare them — the clinical-data group, then the platform group with
+/// `System` last.
 const STATIC_SIDEBAR: [&str; 8] = [
     "/ Dashboard",
     "/templates Templates",
     "/queries Queries",
     "/ehrs EHRs",
-    "/demographics/person Demographics",
+    "/demographics Demographics",
     "/terminology Terminology",
     "/audit Audit log",
     "/system System",
@@ -214,13 +213,17 @@ fn sidebar_with_active(index: usize) -> Vec<String> {
 async fn the_shell_renders_its_whole_static_sidebar_around_the_matched_dashboard() {
     let pass = render_route("/").await;
     assert_eq!(sidebar_entries(&pass.html), sidebar_with_active(0));
-    // The hairline between the domain group and the meta group, drawn once and
-    // hidden from assistive technology.
+    // The two groups, each under its heading, which names its list.
     assert_eq!(
         sidebar(&pass.html)
-            .matches("aria-hidden=\"true\" class=\"my-1.5 border-t border-edge\"")
+            .matches("class=\"fui-nav-group\"")
             .count(),
-        1,
+        2,
+        "{}",
+        pass.html
+    );
+    assert!(
+        sidebar(&pass.html).contains("aria-labelledby=\"nav-data\""),
         "{}",
         pass.html
     );
@@ -253,25 +256,22 @@ async fn a_probe_that_cannot_answer_leaves_its_nav_entry_out_of_the_sidebar() {
             "{href} should not be offered: {aside}"
         );
     }
-    // Hiding all four still leaves the divider with content on both sides.
+    // Hiding them still leaves both groups with content.
     assert_eq!(sidebar_entries(&pass.html).len(), STATIC_SIDEBAR.len());
 }
 
 // ------------------------------------------------------------------- topbar
 
 #[tokio::test]
-async fn the_topbar_carries_the_wordmark_the_health_pill_the_user_menu_and_the_dark_toggle() {
+async fn the_topbar_carries_the_lockup_the_health_pill_the_theme_toggle_and_the_user_menu() {
     let pass = render_route("/").await;
     let header = pass
         .html
         .split_once("<header")
         .and_then(|(_, rest)| rest.split_once("</header>"))
         .map_or("", |(inside, _)| inside);
-    // The mobile nav toggle and the wordmark home link.
-    assert!(
-        header.contains("aria-label=\"Toggle navigation\""),
-        "{header}"
-    );
+    // The narrow-screen drawer button and the lockup home link.
+    assert!(header.contains("popovertarget=\"sidebar\""), "{header}");
     assert!(header.contains("href=\"/\""), "{header}");
     assert!(header.contains("FerroEHR"), "{header}");
     // The health pill is a <Transition>, so "checking…" is only ever the
@@ -281,32 +281,45 @@ async fn the_topbar_carries_the_wordmark_the_health_pill_the_user_menu_and_the_d
     // CDR for a refusal that is not its.
     assert!(header.contains("Session ended"), "{header}");
     assert!(!header.contains("CDR DOWN"), "{header}");
-    assert!(!header.contains("bg-danger"), "{header}");
-    assert!(!header.contains("checking…"), "{header}");
+    assert!(!header.contains("fui-tone-bad"), "{header}");
+    assert!(header.contains("fui-tone-warn"), "{header}");
+    assert!(!header.contains("Checking the CDR"), "{header}");
     // The user menu's stable trigger id (the E2E journeys target it) and the
-    // dark-mode control, which starts on the light theme's moon icon.
+    // theme toggle, a plain form posting the other theme to the server: both
+    // buttons are in the document and the stylesheet shows the one leading
+    // away from the theme on screen, so the first paint needs no script.
     assert!(header.contains("id=\"user-menu-trigger\""), "{header}");
-    assert!(
-        header.contains("aria-label=\"Toggle dark mode\""),
-        "{header}"
-    );
+    assert!(header.contains("action=\"/theme\""), "{header}");
+    assert!(header.contains("id=\"theme-to-dark\""), "{header}");
+    assert!(header.contains("id=\"theme-to-light\""), "{header}");
+    assert!(header.contains("value=\"dark\""), "{header}");
+    assert!(header.contains("value=\"light\""), "{header}");
 }
 
-/// The access drawer is a `thaw::OverlayDrawer`, which mounts through a
-/// `Teleport` gated on its open signal — so a closed drawer contributes nothing
-/// to the server document, and its body arrives only after a click on
-/// "View scopes" in the hydrated user menu.
+/// The access panel is FerroUI's side panel: an HTML popover the operator
+/// menu's "View scopes" opens with no script, drawn closed in the server
+/// document (the browser hides a popover until it is shown), its body built
+/// once so a scope typed into the previewer survives a close.
 #[tokio::test]
-async fn the_closed_access_drawer_contributes_nothing_to_the_server_document() {
+async fn the_access_panel_is_a_closed_popover_in_the_server_document() {
     let pass = render_route("/").await;
-    assert!(!pass.html.contains("id=\"access-drawer\""), "{}", pass.html);
-    assert!(!pass.html.contains("Access scopes"), "{}", pass.html);
+    assert!(
+        pass.html.contains("id=\"access-scopes\" popover=\"auto\""),
+        "{}",
+        pass.html
+    );
+    assert!(pass.html.contains("id=\"access-drawer\""), "{}", pass.html);
+    assert!(
+        pass.html.contains("popovertarget=\"access-scopes\""),
+        "the operator menu opens it: {}",
+        pass.html
+    );
 }
 
 // ------------------------------------------------------------------- footer
 
 #[tokio::test]
-async fn the_footer_reports_the_viewer_version_and_this_session_s_scope_count() {
+async fn the_footer_reports_the_viewer_version() {
     let pass = render_route("/").await;
     let footer = pass
         .html
@@ -314,12 +327,9 @@ async fn the_footer_reports_the_viewer_version_and_this_session_s_scope_count() 
         .and_then(|(_, rest)| rest.split_once("</footer>"))
         .map_or("", |(inside, _)| inside);
     assert!(
-        footer.contains(&format!("viewer v{}", env!("CARGO_PKG_VERSION"))),
+        footer.contains("FerroEHR Viewer") && footer.contains(env!("CARGO_PKG_VERSION")),
         "{footer}"
     );
-    // No session, so no scopes — the count is a fact about the session, not a
-    // placeholder.
-    assert!(footer.contains("0 scope(s)"), "{footer}");
 }
 
 /// The footer names the manufacturer and links to its details on `/system`
@@ -332,7 +342,10 @@ async fn the_footer_names_the_manufacturer() {
         .split_once("<footer")
         .and_then(|(_, rest)| rest.split_once("</footer>"))
         .map_or("", |(inside, _)| inside);
-    assert!(footer.contains("Manufactured by Cadasto B.V."), "{footer}");
+    assert!(
+        footer.contains(ferroehr_viewer::manufacturer::MANUFACTURER.name),
+        "{footer}"
+    );
     assert!(footer.contains("href=\"/system#manufacturer\""), "{footer}");
 }
 

@@ -24,9 +24,7 @@
 
 use crate::common;
 
-use common::{
-    Harness, appears_within, env, is_present, login_basic, poll_until, wait_text_contains,
-};
+use common::{Harness, env, is_visible, login_basic, poll_until, wait_text_contains};
 use thirtyfour::prelude::*;
 
 /// The seeded ids, exported by the harness; `None` skips with a reason.
@@ -151,7 +149,7 @@ async fn composition_viewer_highlights_and_renders_the_document() {
     // Highlighted is the default view: the canonical JSON member names are
     // tokenized, and the document text itself is unchanged.
     wait_pre_contains(&h, "\"_type\"").await;
-    let key = h.wait_css("pre span.text-syntax-key").await;
+    let key = h.wait_css("pre span.fui-tok-key").await;
     let key_text = key.text().await;
     assert!(
         key_text.starts_with('"'),
@@ -173,7 +171,10 @@ async fn composition_viewer_highlights_and_renders_the_document() {
             .await
             .click()
             .await;
-        if appears_within(&h, "[data-doc-row]", std::time::Duration::from_secs(2)).await {
+        // The pane builds every view once and hides the others, so the
+        // rendered rows are in the DOM from the start: the tab took effect
+        // when they are VISIBLE.
+        if poll_until(async || is_visible(&h, "[data-doc-row]").await).await {
             rendered = true;
             break;
         }
@@ -193,8 +194,11 @@ async fn composition_viewer_highlights_and_renders_the_document() {
         .click()
         .await;
     wait_pre_contains(&h, "\"_type\"").await;
+    // The highlighted view is hidden, never removed: the raw view in sight
+    // carries no token.
+    poll_until(async || !is_visible(&h, "pre span.fui-tok-key").await).await;
     assert!(
-        !is_present(&h, "pre span.text-syntax-key").await,
+        !is_visible(&h, "pre span.fui-tok-key").await,
         "the raw view must not tokenize the document"
     );
     h.shot(3, "raw").await;
@@ -258,8 +262,8 @@ async fn login_works_with_javascript_disabled() {
     let user = env("UI_E2E_BASIC_USER").unwrap_or_else(|| "ferroehr".to_owned());
     let pass = env("UI_E2E_BASIC_PASS").unwrap_or_else(|| "ferroehr".to_owned());
     h.goto("/login").await;
-    h.wait_css("#login-username").await.send_keys(&user).await;
-    h.wait_css("#login-password").await.send_keys(&pass).await;
+    h.wait_css("#sign-in-username").await.send_keys(&user).await;
+    h.wait_css("#sign-in-password").await.send_keys(&pass).await;
     h.wait_css("button[type=submit]").await.click().await;
     h.wait_url_not_contains("/login").await;
     // The dashboard streams out-of-order, so without JS the authenticated
@@ -298,8 +302,8 @@ async fn ehr_finder_by_id_works_with_javascript_disabled() {
     let user = env("UI_E2E_BASIC_USER").unwrap_or_else(|| "ferroehr".to_owned());
     let pass = env("UI_E2E_BASIC_PASS").unwrap_or_else(|| "ferroehr".to_owned());
     h.goto("/login").await;
-    h.wait_css("#login-username").await.send_keys(&user).await;
-    h.wait_css("#login-password").await.send_keys(&pass).await;
+    h.wait_css("#sign-in-username").await.send_keys(&user).await;
+    h.wait_css("#sign-in-password").await.send_keys(&pass).await;
     h.wait_css("button[type=submit]").await.click().await;
     h.wait_url_not_contains("/login").await;
 
@@ -328,12 +332,14 @@ async fn wait_fact_contains(h: &Harness, hook: &str, needle: &str) {
     wait_text_contains(h, &format!("[data-versioned-fact='{hook}']"), needle).await;
 }
 
-/// Poll the first `<pre>` until it contains `needle`.
+/// Poll the `<pre>` of the document view in sight until it contains
+/// `needle`: the pane keeps its highlighted and raw views in the document and
+/// hides the one not chosen.
 ///
 /// # Panics
 /// When it never does, reporting what the pane said instead.
 async fn wait_pre_contains(h: &Harness, needle: &str) {
-    wait_text_contains(h, "pre", needle).await;
+    wait_text_contains(h, ".fui-document-body:not([hidden]) > pre", needle).await;
 }
 
 /// Click a format-selector button by its label.

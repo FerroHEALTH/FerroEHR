@@ -5,7 +5,7 @@
 //! discovery → the assembled service ([`ferroehr_viewer::server::router`])
 //! → serve. Wiring only — logic lives in the lib.
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     use leptos::prelude::LeptosOptions;
@@ -74,8 +74,8 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[cfg(not(feature = "ssr"))]
+#[cfg(target_arch = "wasm32")]
 fn main() {
-    // The binary is only meaningful with `ssr`; the WASM client uses
-    // `lib.rs::hydrate`. cargo-leptos always builds the bin with `ssr`.
+    // The binary is the server half alone; the WASM client enters through
+    // `lib.rs::hydrate`. cargo-leptos builds the bin for the host only.
 }

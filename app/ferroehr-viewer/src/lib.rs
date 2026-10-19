@@ -33,14 +33,9 @@
     clippy::unused_async_trait_impl,
     reason = "emitted only by the server_fn #[server] macro on the wasm target; this crate writes no such impl"
 )]
-// `hydrate` (wasm client) and `ssr` (server) are mutually exclusive build
-// modes — cargo-leptos always builds them separately. Guarded per the Cargo
-// book's prescription for genuinely exclusive features
-// (https://doc.rust-lang.org/cargo/reference/features.html#mutually-exclusive-features);
-// CI's workspace lanes therefore run `--exclude ferroehr-viewer` under
-// `--all-features` and lint/test this crate per-feature instead.
-#[cfg(all(feature = "hydrate", feature = "ssr"))]
-compile_error!("features \"hydrate\" and \"ssr\" cannot be enabled at the same time");
+// The server half (`not(target_arch = "wasm32")`) and the browser half
+// (`target_arch = "wasm32"`) are chosen by compilation target, never by Cargo
+// feature, so `--all-features` over the workspace can never turn both on.
 
 pub mod activity;
 pub mod adl2;
@@ -57,7 +52,6 @@ pub mod error;
 pub mod example_options;
 pub mod feedback;
 pub mod format;
-pub mod highlight;
 pub mod management;
 // NOTE: no openEHR spec governs this — our own design; the viewer links no
 // application crate, so it compiles the manufacturer's one source file itself.
@@ -78,23 +72,23 @@ pub mod terminology;
 pub mod theme;
 pub mod uid;
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod cdr;
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod config;
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod export;
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod oidc;
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod server;
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod session;
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod state;
 
 /// WASM entry point: attaches interactivity to the server-rendered DOM.
-#[cfg(feature = "hydrate")]
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen::prelude::wasm_bindgen]
 pub fn hydrate() {
     console_error_panic_hook::set_once();

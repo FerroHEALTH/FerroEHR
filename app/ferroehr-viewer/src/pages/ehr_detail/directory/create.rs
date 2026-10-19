@@ -43,7 +43,7 @@ pub(in crate::pages::ehr_detail::directory) fn create_section(
             <div class="flex flex-col gap-3">
                 <div class="flex flex-col gap-1">
                     <span class=LABEL>"Will be committed"</span>
-                    <div class=WELL>{read_only_tree(&empty_root_folder())}</div>
+                    <div class=WELL>{read_only_tree("directory-create-preview", &empty_root_folder())}</div>
                 </div>
                 <div class="flex items-center gap-3">
                     <button
@@ -53,7 +53,7 @@ pub(in crate::pages::ehr_detail::directory) fn create_section(
                         disabled=Signal::derive(move || create.pending().get())
                         on:click=on_create
                     >
-                        <leptos_icons::Icon icon=icondata_lu::LuPlus width="14" height="14" />
+                        {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::PLUS, "14")}
                         "Create directory"
                     </button>
                     <Show when=move || create.pending().get()>

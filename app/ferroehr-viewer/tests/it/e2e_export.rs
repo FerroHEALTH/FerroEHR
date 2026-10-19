@@ -49,7 +49,7 @@ use crate::common;
 
 use reqwest::StatusCode;
 
-use common::{Element, Harness, env, find_all, login_basic};
+use common::{Element, Harness, env, find_all, login_basic, wait_enabled};
 use thirtyfour::prelude::*;
 
 /// The query the journey exports: two scalar columns over the compositions
@@ -201,6 +201,7 @@ async fn table_on_screen(h: &Harness) -> (Vec<String>, Vec<Vec<String>>) {
 /// When the query never runs or renders no row.
 async fn run_export_query(h: &Harness) {
     h.goto("/queries/aql").await;
+    wait_enabled(h, "#aql-editor").await;
     h.wait_css("#aql-editor").await.send_keys(EXPORT_AQL).await;
     // Run stays DISABLED until the typed AQL reaches the signal, so the wait
     // has to carry that condition — a click on the disabled button is

@@ -37,7 +37,7 @@
 #   UI_E2E_NEXTEST_ARCHIVE
 #                       if set, run the journeys from this prebuilt nextest
 #                       archive (`cargo nextest archive -p ferroehr-viewer
-#                       --features ssr`) via --archive-file/--workspace-remap
+#                       `) via --archive-file/--workspace-remap
 #                       instead of compiling the test binaries here.
 #   UI_E2E_KEEP_UP      if set, skip teardown (local debugging).
 #   UI_E2E_SHOTS_ONLY   if set, skip the journeys entirely (capture pass only).
@@ -357,7 +357,7 @@ wait_http "http://127.0.0.1:$DRIVER_PORT/status"
 # workspace metadata back at this checkout (compile-time env!(...) paths are
 # unaffected — CI builds the archive on the same runner image + workspace
 # path, which the workflow documents).
-NEXTEST_TARGET=(-p ferroehr-viewer --features ssr)
+NEXTEST_TARGET=(-p ferroehr-viewer)
 if [[ -n "${UI_E2E_NEXTEST_ARCHIVE:-}" ]]; then
   NEXTEST_TARGET=(--archive-file "$UI_E2E_NEXTEST_ARCHIVE" --workspace-remap "$ROOT")
 fi

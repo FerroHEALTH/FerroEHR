@@ -25,7 +25,9 @@ use crate::components::data_table::{
     CELL, CELL_MONO, ROW, TablePaging, paged_table, paging_from_url, table_skeleton,
 };
 use crate::components::empty_state::EmptyState;
-use crate::components::field::{BTN_DANGER, BTN_PRIMARY, BTN_SECONDARY, text_field};
+use crate::components::field::{
+    BTN_DANGER_SMALL, BTN_PRIMARY, BTN_SECONDARY, BTN_SECONDARY_SMALL, text_field,
+};
 use crate::components::notice::inline_error;
 use crate::components::notice::{alert_note, failure_bar};
 use crate::components::page_header::PageHeader;
@@ -160,7 +162,7 @@ impl Editor {
 )]
 #[component]
 pub fn SubscriptionsPage() -> impl IntoView {
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     // The table's page window, read from the URL in SETUP (never inside the
     // suspense that fetches the rows).
     let paging = paging_from_url();
@@ -231,7 +233,7 @@ pub fn SubscriptionsPage() -> impl IntoView {
 
     view! {
         <Title text="Subscriptions" />
-        <div id="subscriptions-screen" class="p-6">
+        <div id="subscriptions-screen">
             <PageHeader
                 title="Subscriptions"
                 subtitle="The CDR's event subscriptions: the stored filters over its committed-version event stream."
@@ -251,7 +253,7 @@ pub fn SubscriptionsPage() -> impl IntoView {
 /// rule); the CDR's diagnostic ALSO stays inline beside each form, because
 /// a `400`/`409` on a subscription write names the exact field or conflict.
 fn mutation_toasts(
-    toaster: thaw::ToasterInjection,
+    toaster: ferrohealth_ui::widget::toast::Toasts,
     create: CreateAction,
     update: UpdateAction,
     delete: DeleteAction,
@@ -301,7 +303,7 @@ fn create_card(name: RwSignal<String>, draft: Draft, create: CreateAction) -> An
     view! {
         <section id="subscription-create" class=format!("{CARD_PAD} mb-4")>
             <h2 class=CARD_TITLE>"Create a subscription"</h2>
-            <div class="flex flex-wrap items-end gap-3">
+            <div class="fui-field-flow">
                 {text_field(
                     "subscription-create-name".to_owned(),
                     "Name",
@@ -322,7 +324,7 @@ fn create_card(name: RwSignal<String>, draft: Draft, create: CreateAction) -> An
                     "Create subscription"
                 </button>
             </div>
-            <p class="mt-2 text-xs text-ink-muted">
+            <p class="mt-2 fui-help">
                 "The name is unique on the CDR and cannot be changed afterwards — it may hold only \
                  letters, digits, and “_”, “.” or “-”. Every predicate left empty matches anything, \
                  so a subscription with none of them set receives every committed version."
@@ -361,14 +363,14 @@ fn edit_card(editor: Editor, update: UpdateAction) -> AnyView {
         view! {
             <section id="subscription-edit" class=format!("{CARD_PAD} mb-4")>
                 <h2 class=CARD_TITLE>{format!("Edit subscription {}", row.name)}</h2>
-                <p class="mb-3 text-xs text-ink-muted">
+                <p class="mb-3 fui-help">
                     <span class="font-medium">"Subscription id: "</span>
-                    <span class="font-mono break-all text-ink">{row.id}</span>
+                    <span class="font-mono wrap-break-word text-ink">{row.id}</span>
                     <span class="ml-2">
                         "The name is the CDR's queue key and cannot be changed."
                     </span>
                 </p>
-                <div class="flex flex-wrap items-end gap-3">
+                <div class="fui-field-flow">
                     {predicate_fields("edit", editor.draft)}
                     {enabled_toggle("subscription-edit-enabled", editor.draft.enabled, false)}
                     <button
@@ -389,7 +391,7 @@ fn edit_card(editor: Editor, update: UpdateAction) -> AnyView {
                         "Cancel"
                     </button>
                 </div>
-                <p class="mt-2 text-xs text-ink-muted">
+                <p class="mt-2 fui-help">
                     "Saving replaces every predicate: one cleared here becomes “any” on the CDR."
                 </p>
             </section>
@@ -504,7 +506,7 @@ fn disabled_card() -> AnyView {
     view! {
         <section id="subscriptions-disabled" class=CARD_PAD>
             <EmptyState
-                icon=icondata_lu::LuRadioTower
+                icon=ferrohealth_ui::icon::Glyph::RADIO_TOWER
                 message="The event-subscription API is disabled on this server"
                 hint="The CDR answers its subscription routes as if unmounted. Set admin_api = true under [events] in the CDR's configuration to administer subscriptions here."
             />
@@ -517,7 +519,7 @@ fn disabled_card() -> AnyView {
 fn empty_listing() -> AnyView {
     view! {
         <EmptyState
-            icon=icondata_lu::LuRadioTower
+            icon=ferrohealth_ui::icon::Glyph::RADIO_TOWER
             message="No event subscriptions"
             hint="Create the first subscription with the card above."
         />
@@ -541,7 +543,8 @@ fn rows_view(
         rows,
         paging,
         "/subscriptions",
-        "subscriptions",
+        "Subscriptions",
+        ferrohealth_ui::table::model::Noun::new("subscription", "subscriptions"),
         &[
             "Subscription",
             "Kind",
@@ -586,26 +589,26 @@ fn row_view(
                     {summary}
                 </div>
             </td>
-            <td class=CELL_MONO data-subscription-cell="kind">
+            <td class=CELL_MONO data-label="Kind" data-subscription-cell="kind">
                 {predicate_label(&row.kind)}
             </td>
-            <td class=CELL_MONO data-subscription-cell="change-type">
+            <td class=CELL_MONO data-label="Change type" data-subscription-cell="change-type">
                 {predicate_label(&row.change_type)}
             </td>
-            <td class=CELL_MONO data-subscription-cell="template">
+            <td class=CELL_MONO data-label="Template" data-subscription-cell="template">
                 {predicate_label(&row.template_id)}
             </td>
-            <td class=CELL>
+            <td class=CELL data-label="State">
                 <span class=state_class data-subscription-state=state_value>
                     {state}
                 </span>
             </td>
-            <td class=CELL_MONO>{row.created_at}</td>
-            <td class=format!("{CELL} text-right")>
+            <td class=CELL data-label="Created">{crate::components::timestamp::timestamp(row.created_at)}</td>
+            <td class=ferrohealth_ui::table::view::ACTIONS data-label="Actions">
                 <div class="flex justify-end gap-2">
                     <button
                         type="button"
-                        class=BTN_SECONDARY
+                        class=BTN_SECONDARY_SMALL
                         data-subscription-edit=edit_hook
                         on:click=move |_| editor.open(for_edit.clone())
                     >
@@ -613,7 +616,7 @@ fn row_view(
                     </button>
                     <button
                         type="button"
-                        class=BTN_DANGER
+                        class=BTN_DANGER_SMALL
                         data-subscription-delete=delete_hook
                         disabled=Signal::derive(move || delete.pending().get())
                         on:click=move |_| pending_delete.set(Some(for_delete.clone()))
@@ -649,7 +652,7 @@ fn delete_dialog(
         delete,
         "Delete subscription",
         "Delete subscription",
-        "subscription-delete-confirm",
+        ("subscription-delete-dialog", "subscription-delete-confirm"),
         message,
     )
 }

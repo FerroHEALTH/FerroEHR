@@ -22,9 +22,8 @@
 //! running viewer provides:
 //!
 //! * `leptos_meta` — every routed screen sets a `<Title/>`.
-//! * `thaw::ConfigProvider` + `thaw::ToasterProvider` — the widget kit's
-//!   injections; screens resolve `ToasterInjection` in setup, and the shell is
-//!   where the running viewer mounts the toaster.
+//! * FerroUI's toast region (`provide_toasts`) — screens take its handle in
+//!   setup, and the shell is where the running viewer provides it.
 //! * `<Router>` + a `RequestUrl` — filter/search/paging state is URL state
 //!   (rules §9), read in setup through `use_query_map`.
 //! * The matched route's params (an `ArcMemo<ParamsMap>`, what a matched
@@ -37,11 +36,9 @@
 //!   panics on `expect_context`. It is pointed at an unroutable loopback port,
 //!   and the runtime never polls the future again, so no request is ever made.
 //!
-//! `ssr`-gated: `to_html` is the server-pass renderer, and the `ssr` feature is
-//! what puts `leptos-use`/`thaw`/`leptos-chartistry` on their non-`WASM` code
-//! paths (`Cargo.toml` §features).
+//! Server half only: `to_html` is the server-pass renderer.
 
-#![cfg(feature = "ssr")]
+#![cfg(not(target_arch = "wasm32"))]
 
 use leptos::prelude::*;
 use leptos_router::params::ParamsMap;
@@ -74,14 +71,10 @@ fn render_page(
         provide_context(leptos_router::location::RequestUrl::new(&url));
         provide_context(ArcMemo::new(move |_| map.clone()));
         provide_context(app_state());
-        view! {
-            <thaw::ConfigProvider>
-                <thaw::ToasterProvider>
-                    <leptos_router::components::Router>{build()}</leptos_router::components::Router>
-                </thaw::ToasterProvider>
-            </thaw::ConfigProvider>
-        }
-        .to_html()
+        let _toasts: ferrohealth_ui::widget::toast::Toasts =
+            ferrohealth_ui::widget::toast::provide_toasts();
+        view! { <leptos_router::components::Router>{build()}</leptos_router::components::Router> }
+            .to_html()
     })
 }
 
@@ -126,8 +119,12 @@ async fn the_dashboard_renders_its_header_over_skeletons_for_every_data_section(
         html.contains("Repository overview, query cohorts, and recent commit activity."),
         "{html}"
     );
-    // The stat tiles are a four-column grid; both cards below them are titled.
-    assert!(html.contains("grid-cols-2 md:grid-cols-4"), "{html}");
+    // The stat tiles stack on a phone, pair on a tablet and run four abreast
+    // on a desktop, so no label is cut; both cards below them are titled.
+    assert!(
+        html.contains("grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"),
+        "{html}"
+    );
     assert!(html.contains(">Query namespaces</h2>"), "{html}");
     assert!(html.contains(">Commit activity</h2>"), "{html}");
     // Every one of those sections is a Resource, so the server pass is all
@@ -138,19 +135,20 @@ async fn the_dashboard_renders_its_header_over_skeletons_for_every_data_section(
 // ------------------------------------------------------------------ login
 
 #[tokio::test]
-async fn the_login_screen_renders_the_wordmark_over_a_spinner_until_the_modes_resolve() {
+async fn the_login_screen_renders_the_lockup_over_a_skeleton_until_the_modes_resolve() {
     let html = render_page("/login", &[], || {
         view! { <ferroehr_viewer::pages::login::LoginPage /> }.into_any()
     });
     assert!(html.contains("FerroEHR"), "{html}");
     assert!(html.contains("Viewer"), "{html}");
-    assert!(html.contains("thaw-spinner"), "{html}");
+    assert!(html.contains("fui-skeleton"), "{html}");
+    assert!(html.contains("aria-busy=\"true\""), "{html}");
     // Which sign-in paths exist is the CDR's answer, awaited inside the
     // Suspense — so neither form is in the server pass.
-    assert!(!html.contains("id=\"login-username\""), "{html}");
+    assert!(!html.contains("id=\"sign-in-username\""), "{html}");
     assert!(!html.contains("Sign in with OIDC"), "{html}");
     // No refusal on a plain arrival.
-    assert!(!html.contains("id=\"login-refused\""), "{html}");
+    assert!(!html.contains("id=\"sign-in-refused\""), "{html}");
 }
 
 /// A `?refused=1` arrival — where a Basic sign-in the CDR refused lands —
@@ -161,9 +159,14 @@ async fn a_refused_sign_in_renders_the_refusal_on_the_login_screen() {
     let html = render_page("/login?refused=1&next=%2Fehrs", &[], || {
         view! { <ferroehr_viewer::pages::login::LoginPage /> }.into_any()
     });
-    assert!(html.contains("id=\"login-refused\""), "{html}");
+    assert!(html.contains("id=\"sign-in-refused\""), "{html}");
     assert!(html.contains("Wrong username or password."), "{html}");
-    assert!(html.contains("thaw-message-bar"), "{html}");
+    // Announced at once, in the bad tone.
+    assert!(
+        html.contains("role=\"alert\" id=\"sign-in-refused\""),
+        "{html}"
+    );
+    assert!(html.contains("fui-tone-bad"), "{html}");
 }
 
 // -------------------------------------------------------------- templates
@@ -175,13 +178,14 @@ async fn the_templates_screen_renders_its_header_and_the_opt_upload_control() {
     });
     assert!(html.contains(">Templates</h1>"), "{html}");
     // ONE upload trigger, in the page-header action slot, labelled for the
-    // family the URL names (#2955). Its dialog is teleported by thaw and so
-    // contributes nothing to either pass; the real `<input type=file>` inside
-    // it — the no-JS mandate — is driven in the browser by every journey that
-    // seeds a template (`common::upload_via_dialog`).
+    // family the URL names (#2955). Its dialog is FerroUI's modal, drawn
+    // closed on both passes; the real `<input type=file>` inside it is driven
+    // in the browser by every journey that seeds a template
+    // (`common::upload_via_dialog`).
     assert!(html.contains("id=\"template-upload-open\""), "{html}");
     assert!(html.contains("Upload OPT"), "{html}");
-    assert!(!html.contains("type=\"file\""), "{html}");
+    assert!(html.contains("id=\"template-upload-dialog\""), "{html}");
+    assert!(!html.contains("template-upload-dialog\" open"), "{html}");
 }
 
 #[tokio::test]
@@ -257,7 +261,7 @@ async fn the_query_builder_renders_its_empty_criteria_state_and_the_default_aql(
     assert!(html.contains("Loading templates…"), "{html}");
     assert!(html.contains(">Path catalog</h2>"), "{html}");
     assert!(html.contains(">Criteria</h2>"), "{html}");
-    assert!(html.contains(">No conditions yet</p>"), "{html}");
+    assert!(html.contains(">No conditions yet</h2>"), "{html}");
     for field in [
         "id=\"qb-limit\"",
         "id=\"qb-save-namespace\"",
@@ -391,7 +395,7 @@ async fn the_ehr_detail_screen_renders_every_tab_body_in_one_server_pass() {
     assert!(html.contains("id=\"contribution-uid\""), "{html}");
     assert!(html.contains("id=\"stage-add\""), "{html}");
     assert!(html.contains("id=\"stage-list\""), "{html}");
-    assert!(html.contains(">Nothing staged yet</p>"), "{html}");
+    assert!(html.contains(">Nothing staged yet</h2>"), "{html}");
     assert!(html.contains("id=\"ehr-tag-browser\""), "{html}");
 }
 
@@ -445,7 +449,7 @@ async fn the_party_browser_renders_the_kind_strip_the_lookup_the_create_form_and
     });
     assert!(html.contains(">People</h1>"), "{html}");
     // The five kinds are a closed set, and every one is a link on every browser.
-    assert_eq!(html.matches("data-kind=\"").count(), 5, "{html}");
+    assert_eq!(html.matches("data-tab=\"").count(), 5, "{html}");
     assert!(html.contains("id=\"party-lookup\""), "{html}");
     assert!(html.contains("id=\"party-create-body\""), "{html}");
     assert!(html.contains("id=\"party-create-submit\""), "{html}");
@@ -532,7 +536,7 @@ async fn the_terminology_screen_renders_its_header_over_the_probe_skeleton() {
     });
     assert!(html.contains("id=\"terminology-screen\""), "{html}");
     assert!(html.contains(">Terminology</h1>"), "{html}");
-    assert!(html.contains("thaw-skeleton"), "{html}");
+    assert!(html.contains("fui-skeleton"), "{html}");
     // Nothing that needs the surface to exist is rendered before the probe.
     assert!(!html.contains("id=\"terminology-code\""), "{html}");
     assert!(!html.contains("id=\"terminology-disabled\""), "{html}");

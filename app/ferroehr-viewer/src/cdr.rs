@@ -420,8 +420,13 @@ impl CdrClient {
         }
         let message = diagnostic_of(&response);
         match response.status {
-            http::StatusCode::UNAUTHORIZED => Err(ViewerError::CdrUnauthorized(message)),
-            http::StatusCode::FORBIDDEN => Err(ViewerError::Forbidden(message)),
+            http::StatusCode::UNAUTHORIZED => Err(ViewerError::CdrUnauthorized(without_lead(
+                &message,
+                "unauthorized",
+            ))),
+            http::StatusCode::FORBIDDEN => {
+                Err(ViewerError::Forbidden(without_lead(&message, "forbidden")))
+            }
             status => Err(ViewerError::Cdr {
                 status: status.as_u16(),
                 message,
@@ -487,6 +492,24 @@ fn validation_errors(value: &serde_json::Value) -> Vec<String> {
 /// `issue[].diagnostics` join into one line), falling back to the raw body or
 /// the bare status. ONE reader for both vocabularies, so no screen ever hands
 /// raw JSON to a toast.
+/// `message` without a leading `word` (and the `: ` after it), which the
+/// error's own display already says, so a refusal never reads "forbidden:
+/// forbidden"; a message that is the word alone becomes the refusal's plain
+/// reason.
+fn without_lead(message: &str, word: &str) -> String {
+    let trimmed = message.trim();
+    let rest = trimmed
+        .get(..word.len())
+        .filter(|head| head.eq_ignore_ascii_case(word))
+        .and_then(|_| trimmed.get(word.len()..))
+        .map(|rest| rest.trim_start_matches([':', ' ']));
+    match rest {
+        Some("") => "the CDR refused this session".to_owned(),
+        Some(rest) => rest.to_owned(),
+        None => trimmed.to_owned(),
+    }
+}
+
 fn diagnostic_of(response: &CdrResponse) -> String {
     if let Ok(value) = serde_json::from_str::<serde_json::Value>(&response.body) {
         if value
@@ -735,6 +758,23 @@ mod tests {
         .unwrap_err();
         assert_eq!(err, ViewerError::Forbidden("scope".to_owned()));
         assert_eq!(err.status_code(), Some(http::StatusCode::FORBIDDEN));
+
+        // A diagnostic that repeats the refusal's own word reads once.
+        let err = CdrClient::expect_success(response(
+            http::StatusCode::FORBIDDEN,
+            r#"{"error":"forbidden: operation requires the 'ADMIN' role"}"#,
+        ))
+        .unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "forbidden: operation requires the 'ADMIN' role"
+        );
+        let err = CdrClient::expect_success(response(
+            http::StatusCode::FORBIDDEN,
+            r#"{"error":"forbidden"}"#,
+        ))
+        .unwrap_err();
+        assert_eq!(err.to_string(), "forbidden: the CDR refused this session");
 
         let err = CdrClient::expect_success(response(http::StatusCode::NOT_FOUND, "")).unwrap_err();
         assert_eq!(

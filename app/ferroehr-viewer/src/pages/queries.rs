@@ -26,11 +26,11 @@ use leptos_router::hooks::use_navigate;
 
 use crate::admin::AdminAvailability;
 use crate::components::data_table::{
-    CELL, CELL_MONO, ROW, TablePaging, page_rows, page_window, paging_from_url, row_total,
-    table_footer, table_shell, table_skeleton,
+    CELL, CELL_MONO, ROW, TablePaging, page_rows, paging_from_url, row_total, table_footer,
+    table_shell, table_skeleton,
 };
 use crate::components::empty_state::EmptyState;
-use crate::components::field::{BTN_DANGER, BTN_PRIMARY, BTN_SECONDARY};
+use crate::components::field::{BTN_DANGER_SMALL, BTN_PRIMARY, BTN_SECONDARY, BTN_SECONDARY_SMALL};
 use crate::components::format_view::DocumentPane;
 use crate::components::page_header::PageHeader;
 use crate::components::surface::{CARD_PAD, CARD_TITLE};
@@ -53,7 +53,7 @@ type CdrQueryDelete = Action<(String, String), ((String, String), Result<(), Vie
 )]
 #[component]
 pub fn QueriesPage() -> impl IntoView {
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     // The admin probe and the CDR stored-query delete it gates (discover-and-hide:
     // no advertised admin group, no delete affordance). Created in setup so the
     // gated view can re-render without re-creating them.
@@ -95,7 +95,7 @@ pub fn QueriesPage() -> impl IntoView {
 
     view! {
         <Title text="Stored queries" />
-        <div class="p-6">
+        <div>
             <PageHeader
                 title="Queries"
                 subtitle="The CDR's stored queries, grouped by the namespace in their qualified name."
@@ -107,7 +107,7 @@ pub fn QueriesPage() -> impl IntoView {
                     "Raw AQL"
                 </a>
             </PageHeader>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,3fr)_minmax(16rem,1fr)] gap-6 items-start">
                 {table} {namespaces}
             </div>
         </div>
@@ -183,6 +183,7 @@ fn cdr_delete_dialog(
             title="Delete stored query from the CDR"
             message=message
             confirm_label="Delete from CDR"
+            dialog_id="stored-query-delete-confirm-dialog"
             confirm_id="stored-query-delete-confirm"
             on_cancel=Callback::new(move |()| pending_delete.set(None))
             on_confirm=Callback::new(move |()| {
@@ -241,7 +242,7 @@ fn stored_rows_view(
     if rows.is_empty() {
         return view! {
             <EmptyState
-                icon=icondata_lu::LuSearchCode
+                icon=ferrohealth_ui::icon::Glyph::SEARCH_CODE
                 message="No stored queries"
                 hint="Build one in the query builder, or write raw AQL, then save it."
             />
@@ -254,7 +255,7 @@ fn stored_rows_view(
     let body = view! {
         <For
             each=move || {
-                let window = page_window(total, paging.page.get(), paging.size.get());
+                let window = paging.window(total);
                 page_rows(&rows, window)
             }
             key=|row| format!("{}@{}", row.name, row.version)
@@ -266,12 +267,13 @@ fn stored_rows_view(
     .into_any();
     let footer = table_footer(
         "/queries",
-        "stored queries",
+        "Stored query pages",
+        ferrohealth_ui::table::model::Noun::new("stored query", "stored queries"),
         paging,
         Signal::derive(move || total),
     );
     view! {
-        {table_shell(&["Name", "Version", "Saved", ""], body)}
+        {table_shell("Stored queries", &["Name", "Version", "Saved", ""], body)}
         {footer}
     }
     .into_any()
@@ -326,27 +328,25 @@ fn stored_row(
             on:click=on_click
         >
             <td class=CELL_MONO>{row.name}</td>
-            <td class=CELL_MONO>{row.version}</td>
-            <td class=format!("{CELL} text-xs text-ink-muted")>{row.saved}</td>
-            <td class=format!("{CELL} text-right")>
-                // `whitespace-nowrap`: the panel is half-width, so without it the
-                // action labels wrap mid-phrase ("Delete from / CDR"). The row
-                // wraps between whole actions instead.
-                <div class="flex flex-wrap items-center justify-end gap-2 whitespace-nowrap">
+            <td class=CELL_MONO data-label="Version">{row.version}</td>
+            <td class=format!("{CELL} text-xs text-ink-muted whitespace-nowrap") data-label="Saved">{crate::components::timestamp::timestamp(row.saved)}</td>
+            <td class=format!("{CELL} min-w-[15rem]") data-label="Actions">
+                // The row wraps between whole actions, never inside a label.
+                <div class="flex flex-wrap items-center gap-2 whitespace-nowrap">
                     <a
                         href=run_href
-                        class=BTN_SECONDARY
+                        class=BTN_SECONDARY_SMALL
                         data-run-stored=run_hook
                         on:click=|ev| ev.stop_propagation()
                     >
                         "Run"
                     </a>
-                    <a href=load_href class=BTN_SECONDARY on:click=|ev| ev.stop_propagation()>
+                    <a href=load_href class=BTN_SECONDARY_SMALL on:click=|ev| ev.stop_propagation()>
                         "Open in editor"
                     </a>
                     <a
                         href=builder_href
-                        class=BTN_SECONDARY
+                        class=BTN_SECONDARY_SMALL
                         data-open-in-builder=builder_hook
                         on:click=|ev| ev.stop_propagation()
                     >
@@ -380,7 +380,7 @@ fn cdr_delete_button(
     view! {
         <button
             type="button"
-            class=BTN_DANGER
+            class=BTN_DANGER_SMALL
             data-query-delete=key
             disabled=Signal::derive(move || cdr_delete.pending().get())
             on:click=on_click
@@ -437,7 +437,7 @@ fn detail_panel(aql: String) -> AnyView {
                     "Run as ad-hoc AQL"
                 </button>
             </div>
-            <DocumentPane body=body />
+            <DocumentPane id="stored-query-pane" body=body />
         </div>
     }
     .into_any()
@@ -487,7 +487,7 @@ fn namespace_cards(rows: &[StoredQueryRow]) -> AnyView {
     if groups.is_empty() {
         return view! {
             <EmptyState
-                icon=icondata_lu::LuInbox
+                icon=ferrohealth_ui::icon::Glyph::INBOX
                 message="No namespaces yet"
                 hint="Save a query as namespace::name — its namespace becomes a group here and a tile on the dashboard."
             />

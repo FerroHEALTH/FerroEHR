@@ -149,7 +149,7 @@ fn book_img_dir() -> PathBuf {
 /// content marker, and write a full-window PNG to `{dir}/{slug}.png`.
 async fn capture(h: &Harness, dir: &Path, path: &str, slug: &str, content: Option<&str>) {
     h.goto(path).await;
-    h.wait_css("footer").await;
+    h.wait_css(common::SHELL_FOOTER).await;
     if let Some(selector) = content {
         h.wait_css(selector).await;
     }
@@ -181,9 +181,9 @@ async fn pick_composition(h: &Harness) {
         .await;
 }
 
-/// The dark page background the token layer paints: `--surface` under `.dark`
-/// is `#0f172a` (`style/tailwind.css` §palette), applied to `<html>` by
-/// `@layer base { html { background-color: var(--surface) } }`. Observing the
+/// The dark page background the theme paints: `--surface` under
+/// `data-theme="dark"` is `#0f172a` (`style/theme.css`), applied to `<html>`
+/// by FerroUI's base layer (`html { background: var(--surface) }`). Observing the
 /// computed colour is how "the theme is applied" stops being a guess; which
 /// CSSOM spelling the browser hands back is not part of the claim, which is
 /// why `wait_css_colour` compares channels.
@@ -196,39 +196,35 @@ const THEMED_TRANSITION: &str = ".transition-colors";
 /// Wait until the dark theme is fully applied AND STILL — the precondition of
 /// every dark capture.
 ///
-/// Three conditions, no sleeps. The `dark` class on `<html>` is the viewer's
-/// own switch, applied from a browser-only effect that re-reads the stored
-/// preference after hydration (rules §8), so the server pass never carries it.
+/// Three conditions, no sleeps. `data-theme="dark"` on `<html>` is the
+/// viewer's own switch, written by the server from the theme cookie, so the
+/// first paint already carries it.
 /// The resolved page background is the token layer actually having swapped,
 /// which the class alone does not prove. And a surface carrying
 /// `transition-colors` is still between its two colours at that instant, so a
 /// capture taken then freezes a half-themed frame.
 async fn wait_dark_applied(h: &Harness) {
-    h.wait_css("html.dark").await;
+    h.wait_css("html[data-theme='dark']").await;
     wait_css_colour(h, "html", "background-color", DARK_SURFACE).await;
     wait_css_value_still(h, THEMED_TRANSITION, "background-color").await;
 }
 
 /// Turn dark mode ON for this browser session and wait until it is applied.
 ///
-/// The preference persists to `localStorage`, so one flip covers every screen
-/// the session visits afterwards.
+/// The choice is a server cookie the toggle posts, so one press covers every
+/// screen the session visits afterwards.
 async fn enable_dark_mode(h: &Harness) {
-    h.wait_css("button[aria-label='Toggle dark mode']")
-        .await
-        .click()
-        .await;
+    h.wait_css("#theme-to-dark").await.click().await;
     wait_dark_applied(h).await;
 }
 
 /// Navigate to `path` and write its DARK variant.
 ///
-/// Every navigation waits for `html.dark` again: the class is applied from a
-/// browser-only effect that re-reads the stored preference after hydration, so
-/// the server pass never carries it (rules §8).
+/// Every navigation waits for the dark theme again: the server writes it from
+/// the cookie on every page.
 async fn capture_dark(h: &Harness, dir: &Path, path: &str, slug: &str, content: Option<&str>) {
     h.goto(path).await;
-    h.wait_css("footer").await;
+    h.wait_css(common::SHELL_FOOTER).await;
     if let Some(selector) = content {
         h.wait_css(selector).await;
     }
@@ -250,7 +246,7 @@ async fn capture_dark_gated(
 ) {
     h.goto(path).await;
     h.wait_css(screen_css).await;
-    h.wait_css("html.dark").await;
+    h.wait_css("html[data-theme='dark']").await;
     if is_present(h, disabled_css).await {
         println!("SKIP docs-shots: {slug} not captured — the CDR under test does not serve it");
         return;
@@ -352,7 +348,7 @@ async fn capture_stored_query_screens(h: &Harness, dir: &Path, cdr: &str, user: 
     // tiles are derived from this same listing, and the first pass (before
     // seeding) could only show the empty state.
     h.goto("/").await;
-    h.wait_css("footer").await;
+    h.wait_css(common::SHELL_FOOTER).await;
     h.wait_css("[data-namespace-tile]").await;
     shot_to(h, dir, "dashboard/dashboard").await;
 }
@@ -377,7 +373,7 @@ async fn capture_documentation_screenshots() {
     // The login screen is captured BEFORE authenticating (there is no footer
     // yet — wait on the username field instead).
     h.goto("/login").await;
-    h.wait_css("#login-username").await;
+    h.wait_css("#sign-in-username").await;
     let login_out = dir.join("login").join("login.png");
     std::fs::create_dir_all(login_out.parent().expect("parent")).expect("dir");
     h.screenshot_to(&login_out).await;
@@ -501,7 +497,7 @@ async fn capture_documentation_screenshots() {
     // one empty-state card — which is not what this page documents, so the
     // capture is skipped with a reason rather than publishing the wrong screen.
     h.goto("/terminology?terminology=openehr").await;
-    h.wait_css("footer").await;
+    h.wait_css(common::SHELL_FOOTER).await;
     if is_present(&h, "#terminology-descriptor").await {
         shot_to(&h, &dir, "terminology/terminology").await;
     } else {
@@ -523,7 +519,7 @@ async fn capture_documentation_screenshots() {
     )
     .await;
     h.goto("/operations?metric=db_pool_connections").await;
-    h.wait_css("footer").await;
+    h.wait_css(common::SHELL_FOOTER).await;
     let detail = h.wait_css("#ops-metric-detail").await;
     // The metrics card sits below the fold on the capture window, and a
     // screenshot is the VIEWPORT: scroll the samples table into view or the
@@ -540,7 +536,7 @@ async fn capture_documentation_screenshots() {
         // both are published surfaces in their own right: the header's
         // identity strip (subject + capability badges) and the row-filter bar.
         h.goto(&format!("/ehrs/{ehr_id}")).await;
-        h.wait_css("footer").await;
+        h.wait_css(common::SHELL_FOOTER).await;
         h.wait_css("#ehr-identity").await;
         h.wait_xpath("//a[contains(., 'Compositions')]")
             .await
@@ -689,6 +685,7 @@ async fn capture_documentation_screenshots() {
     // Raw AQL: run a data query — results table + export buttons, then the
     // chart view (the seeded quantity magnitudes over the row order).
     h.goto("/queries/aql").await;
+    wait_enabled(&h, "#aql-editor").await;
     h.wait_css("#aql-editor")
         .await
         .send_keys(
@@ -714,9 +711,7 @@ async fn capture_documentation_screenshots() {
         .await
         .click()
         .await;
-    let chart = h
-        .wait_css("svg.chartistry_chart, div.overflow-x-auto svg")
-        .await;
+    let chart = h.wait_css("[data-results-chart] svg.fui-chart-svg").await;
     chart.scroll_into_view().await;
     shot_to(&h, &dir, "queries/query-results-chart").await;
 
@@ -724,7 +719,7 @@ async fn capture_documentation_screenshots() {
     // grants, scope previewer).
     h.goto("/").await;
     h.wait_css("#user-menu-trigger button").await.click().await;
-    h.wait_css(".thaw-popover-surface").await;
+    h.wait_css("#user-menu:popover-open").await;
     shot_to(&h, &dir, "dashboard/user-menu").await;
     h.wait_xpath("//button[contains(., 'View scopes')]")
         .await
@@ -799,8 +794,8 @@ async fn dark_ordinary_screens(h: &Harness, dir: &Path) {
     // if unmounted when off; its READY marker is the descriptor card, so the
     // gate here is presence rather than a disabled card.
     h.goto("/terminology?terminology=openehr").await;
-    h.wait_css("footer").await;
-    h.wait_css("html.dark").await;
+    h.wait_css(common::SHELL_FOOTER).await;
+    h.wait_css("html[data-theme='dark']").await;
     if is_present(h, "#terminology-descriptor").await {
         wait_dark_applied(h).await;
         shot_to(h, dir, "terminology/terminology-dark").await;
@@ -879,7 +874,7 @@ async fn capture_admin_screens(dir: &Path) {
     shot_to(&h, dir, "audit/audit-record").await;
 
     h.goto("/audit?patient=docs-shots-no-such-patient").await;
-    h.wait_css("footer").await;
+    h.wait_css(common::SHELL_FOOTER).await;
     h.wait_xpath("//*[contains(text(), 'No audit records match')]")
         .await;
     shot_to(&h, dir, "audit/audit-empty").await;
@@ -920,7 +915,7 @@ async fn capture_admin_screens(dir: &Path) {
     // The stored-query row's CDR delete needs a stored query on the stack (the
     // pass above seeds two over the Definition API).
     h.goto("/queries").await;
-    h.wait_css("footer").await;
+    h.wait_css(common::SHELL_FOOTER).await;
     if is_present(&h, "[data-query-delete]").await {
         shot_to(&h, dir, "queries/queries-admin-delete").await;
     } else {
@@ -932,9 +927,8 @@ async fn capture_admin_screens(dir: &Path) {
         // spells out the EHR id and what the physical delete destroys.
         h.goto(&format!("/ehrs/{ehr_id}")).await;
         h.wait_css("#ehr-delete").await.click().await;
-        // thaw's dialog is never removed from the DOM (CSSTransition hides it
-        // with `display: none`), so wait for VISIBILITY — presence would let the
-        // capture race the open.
+        // A closed `<dialog>` stays in the DOM, so wait for VISIBILITY —
+        // presence would let the capture race the open.
         wait_visible(&h, "#ehr-delete-confirm").await;
         shot_to(&h, dir, "ehrs/ehr-admin-delete").await;
     } else {

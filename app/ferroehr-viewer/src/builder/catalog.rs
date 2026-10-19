@@ -48,13 +48,13 @@ pub struct CatalogNode {
 }
 
 /// Distill the Web Template tree into the catalog (BFF-side).
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 #[must_use]
 pub fn from_web_template(wt: &openehr_sdt::flat::webtemplate::model::WebTemplate) -> CatalogNode {
     node(&wt.tree)
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 fn node(wt: &openehr_sdt::flat::webtemplate::model::WebTemplateNode) -> CatalogNode {
     use openehr_sdt::flat::webtemplate::model::WebTemplateInputType;
 
@@ -96,7 +96,7 @@ fn node(wt: &openehr_sdt::flat::webtemplate::model::WebTemplateNode) -> CatalogN
     }
 }
 
-#[cfg(all(test, feature = "ssr"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use openehr_sdt::flat::webtemplate::model::{
         WebTemplateCodedValue, WebTemplateInput, WebTemplateInputType, WebTemplateNode,

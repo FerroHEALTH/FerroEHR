@@ -49,12 +49,12 @@ use std::collections::BTreeMap;
 
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 use serde_json::Value;
 
 use crate::components::data_table::{CELL, CELL_MONO, ROW, table_shell, table_skeleton};
 use crate::components::empty_state::EmptyState;
-use crate::components::field::{BTN_DANGER, BTN_PRIMARY, BTN_SECONDARY, INPUT, LABEL};
+use crate::components::field::{BTN_DANGER_SMALL, BTN_PRIMARY, BTN_SECONDARY, INPUT, LABEL};
 use crate::components::notice::inline_error;
 use crate::components::surface::{CARD_PAD, CARD_TITLE};
 use crate::error::ViewerError;
@@ -182,7 +182,7 @@ pub fn tag_panel(
                     Ok(Some(tags)) if tags.is_empty() => {
                         view! {
                             <EmptyState
-                                icon=icondata_lu::LuTags
+                                icon=ferrohealth_ui::icon::Glyph::TAGS
                                 message=copy.empty_message
                                 hint=copy.empty_hint
                             />
@@ -206,9 +206,9 @@ pub fn tag_panel(
         let hook = subject.clone();
         (!subject.is_empty()).then(|| {
             view! {
-                <p class="mb-3 text-xs text-ink-muted">
+                <p class="mb-3 fui-help">
                     <span class="font-medium">"Collection: "</span>
-                    <span class="font-mono break-all text-ink" data-tag-collection=hook>
+                    <span class="font-mono wrap-break-word text-ink" data-tag-collection=hook>
                         {subject}
                     </span>
                 </p>
@@ -219,7 +219,7 @@ pub fn tag_panel(
         <div class="flex flex-col gap-4">
             <section class=CARD_PAD>
                 <h2 class=CARD_TITLE>{copy.title}</h2>
-                <p class="mb-3 text-xs text-ink-muted">{copy.note}</p>
+                <p class="mb-3 fui-help">{copy.note}</p>
                 {collection}
                 {table}
             </section>
@@ -231,18 +231,27 @@ pub fn tag_panel(
 
 /// The addressed collection's tags in the shared table kit, each row with its
 /// delete-by-key action.
+///
+/// The target-path column shows only when a tag carries one, so a collection of
+/// plain key/value tags draws no empty column.
 fn tags_table(tags: Vec<ItemTagRow>, actions: TagActions) -> AnyView {
+    let paths = tags.iter().any(|tag| !tag.target_path.is_empty());
     let rows = view! {
         <For each=move || tags.clone() key=ItemTagRow::identity let:tag>
-            {tag_row(&tag, actions)}
+            {tag_row(&tag, paths, actions)}
         </For>
     }
     .into_any();
-    table_shell(&["Key", "Value", "Target path", "Target", ""], rows)
+    let headers: &[&str] = if paths {
+        &["Key", "Value", "Target path", "Target", ""]
+    } else {
+        &["Key", "Value", "Target", ""]
+    };
+    table_shell("Item tags", headers, rows)
 }
 
 /// One tag row plus its delete-by-key action.
-fn tag_row(tag: &ItemTagRow, actions: TagActions) -> AnyView {
+fn tag_row(tag: &ItemTagRow, paths: bool, actions: TagActions) -> AnyView {
     let key = tag.key.clone();
     let hook = tag.key.clone();
     let shown_key = tag.key.clone();
@@ -254,18 +263,18 @@ fn tag_row(tag: &ItemTagRow, actions: TagActions) -> AnyView {
             <td class=CELL_MONO data-tag-key=hook.clone()>
                 {shown_key}
             </td>
-            <td class=CELL>{value}</td>
-            <td class=CELL_MONO>{target_path}</td>
-            <td class=CELL_MONO>{target}</td>
-            <td class=CELL>
+            <td class=CELL data-label="Value">{value}</td>
+            {paths.then(|| view! { <td class=CELL_MONO data-label="Target path">{target_path}</td> })}
+            <td class=CELL_MONO data-label="Target">{target}</td>
+            <td class=ferrohealth_ui::table::view::ACTIONS data-label="Actions">
                 <button
                     type="button"
-                    class=BTN_DANGER
+                    class=BTN_DANGER_SMALL
                     data-tag-delete=hook
                     disabled=Signal::derive(move || actions.busy.get())
                     on:click=move |_| actions.delete.run(key.clone())
                 >
-                    <leptos_icons::Icon icon=icondata_lu::LuTrash width="14" height="14" />
+                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::TRASH, "14")}
                     "Delete"
                 </button>
             </td>
@@ -309,7 +318,7 @@ fn set_form(copy: TagPanelCopy, actions: TagActions) -> AnyView {
     view! {
         <section class=CARD_PAD id=copy.form_id>
             <h2 class=CARD_TITLE>"Set a tag"</h2>
-            <div class="flex flex-wrap items-end gap-3">
+            <div class="fui-field-flow">
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="tag-key">
                         "Key"
@@ -356,7 +365,7 @@ fn set_form(copy: TagPanelCopy, actions: TagActions) -> AnyView {
                     "Save tag"
                 </button>
             </div>
-            <p class="mt-2 text-xs text-ink-muted">
+            <p class="mt-2 fui-help">
                 "A tag is identified by its key and target path together, so the same key on two different paths is two tags. Deleting addresses the key alone and removes both."
             </p>
             {move || {
@@ -416,7 +425,7 @@ pub fn tag_filter_form(
     view! {
         <form method="GET" action=action class="mb-3">
             {carried}
-            <div class="flex flex-wrap items-end gap-3">
+            <div class="fui-field-flow">
                 {field("tag-filter-key", "tag_key", "Key", key)}
                 {field("tag-filter-value", "tag_value", "Value", value)}
                 {field("tag-filter-path", "tag_target_path", "Target path", target_path)}
@@ -438,7 +447,7 @@ pub fn tag_filter_form(
 /// sentence in `demographic_tags_get.yaml`). The parameter names are the
 /// released ones, which the viewer's own argument names deliberately do not
 /// repeat (`tag_key` on both sides would only stutter).
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 #[must_use]
 pub fn tag_filter_query(key: &str, value: &str, target_path: &str) -> String {
     let mut query = String::new();
@@ -465,7 +474,7 @@ pub fn tag_filter_query(key: &str, value: &str, target_path: &str) -> String {
 /// operation names (module docs), and it emits only the three declared members
 /// (`schemas/common/UpdateItemTag.yaml` is `additionalProperties: false`, so a
 /// re-sent `target`/`owner_id` would be a `400`).
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 #[must_use]
 pub fn merged_tag_body(
     existing: &[ItemTagRow],
@@ -496,7 +505,7 @@ pub fn merged_tag_body(
 /// (`org.openehr.rm.common.item_tag.adoc`), and an absent `target_path` is what
 /// "tags the whole object" means — so a blank field is OMITTED, never sent as
 /// `""`.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 fn update_tag(key: &str, value: &str, target_path: &str) -> Value {
     let mut entry = serde_json::Map::new();
     drop(entry.insert("key".to_owned(), Value::String(key.to_owned())));
@@ -517,7 +526,7 @@ fn update_tag(key: &str, value: &str, target_path: &str) -> Value {
 ///
 /// # Errors
 /// [`ViewerError::Internal`] when the body is not valid JSON.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 pub fn parse_item_tags(body: &str) -> Result<Vec<ItemTagRow>, ViewerError> {
     let doc: Value = serde_json::from_str(body)
         .map_err(|e| ViewerError::Internal(format!("ITEM_TAG list JSON: {e}")))?;
@@ -536,7 +545,7 @@ pub fn parse_item_tags(body: &str) -> Result<Vec<ItemTagRow>, ViewerError> {
 
 /// Follow a chain of object keys to a string leaf, or an empty string when any
 /// hop is absent or not a string.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 fn string_at(value: &Value, path: &[&str]) -> String {
     let mut current = value;
     for key in path {
@@ -637,7 +646,7 @@ mod tests {
     }
 }
 
-#[cfg(all(test, feature = "ssr"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod wire_tests {
     use super::{ItemTagRow, merged_tag_body, parse_item_tags, tag_filter_query};
     use serde_json::Value;

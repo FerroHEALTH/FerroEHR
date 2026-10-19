@@ -84,7 +84,7 @@ pub fn TerminologyPage() -> impl IntoView {
 
     view! {
         <Title text="Terminology" />
-        <div id="terminology-screen" class="p-6">
+        <div id="terminology-screen">
             <PageHeader
                 title="Terminology"
                 subtitle="Browse the terminologies the CDR serves: describe one, define a code, expand a value set, and test membership or subsumption."
@@ -130,7 +130,7 @@ fn disabled_card() -> AnyView {
     view! {
         <section id="terminology-disabled" class=CARD_PAD>
             <EmptyState
-                icon=icondata_lu::LuBookX
+                icon=ferrohealth_ui::icon::Glyph::BOOK_X
                 message="The terminology extension is disabled on this server"
                 hint="The CDR answers its terminology routes as if unmounted. Set api_enabled = true under [terminology] in the CDR's configuration to browse terminologies, terms and value sets here."
             />
@@ -178,7 +178,7 @@ fn list_card(ids: Vec<String>, selected: Signal<String>) -> AnyView {
     if ids.is_empty() {
         return view! {
             <EmptyState
-                icon=icondata_lu::LuBookX
+                icon=ferrohealth_ui::icon::Glyph::BOOK_X
                 message="No terminologies"
                 hint="The CDR serves the terminology API but reports no terminology in it."
             />
@@ -272,14 +272,14 @@ fn descriptor_facts(descriptor: &TerminologyDescriptor) -> AnyView {
         .then(|| fact_row("Attributes", descriptor.attributes.join(", ")));
     let id = descriptor.terminology_id.clone();
     view! {
-        <div id="terminology-descriptor" class="flex flex-col gap-1">
+        <dl id="terminology-descriptor" class="fui-facts text-sm">
             {fact_row("Terminology", id)}
             {name}
             {publisher}
             {uri}
             {versions}
             {attributes}
-        </div>
+        </dl>
     }
     .into_any()
 }
@@ -287,9 +287,9 @@ fn descriptor_facts(descriptor: &TerminologyDescriptor) -> AnyView {
 /// One label/value row of the descriptor card.
 fn fact_row(label: &'static str, value: String) -> AnyView {
     view! {
-        <div class="grid grid-cols-1 gap-x-3 sm:grid-cols-[minmax(8rem,14rem)_1fr]">
-            <span class="text-xs text-ink-muted">{label}</span>
-            <span class="break-words text-sm text-ink">{value}</span>
+        <div>
+            <dt>{label}</dt>
+            <dd class="text-ink">{value}</dd>
         </div>
     }
     .into_any()
@@ -351,7 +351,7 @@ fn term_card(selected: Signal<String>) -> AnyView {
     view! {
         <section class=CARD_PAD>
             <h2 class=CARD_TITLE>"Define a term"</h2>
-            <div class="flex flex-wrap items-end gap-3">
+            <div class="fui-field-flow">
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="terminology-code">
                         "Term code"
@@ -462,7 +462,7 @@ fn subsumption_card(selected: Signal<String>) -> AnyView {
     view! {
         <section class=CARD_PAD>
             <h2 class=CARD_TITLE>"Test subsumption"</h2>
-            <div class="flex flex-wrap items-end gap-3">
+            <div class="fui-field-flow">
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="terminology-subsumes-ref">
                         "Reference code"
@@ -497,7 +497,7 @@ fn subsumption_card(selected: Signal<String>) -> AnyView {
                     "Test"
                 </button>
             </div>
-            <p class="mt-2 text-xs text-ink-muted">
+            <p class="mt-2 fui-help">
                 "Subsumption is strict: a code never subsumes itself."
             </p>
             <div class="mt-2 text-sm">
@@ -627,7 +627,7 @@ fn value_set_card(selected: Signal<String>) -> AnyView {
     view! {
         <section class=CARD_PAD>
             <h2 class=CARD_TITLE>"Expand a value set"</h2>
-            <div class="flex flex-wrap items-end gap-3">
+            <div class="fui-field-flow">
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="terminology-value-set-id">
                         "Value set id"
@@ -691,7 +691,7 @@ fn extract_panel(extract: &TerminologyExtractView, hook: &'static str) -> AnyVie
     if extract.terms.is_empty() && extract.relationships.is_empty() {
         return view! {
             <EmptyState
-                icon=icondata_lu::LuSearchX
+                icon=ferrohealth_ui::icon::Glyph::SEARCH_X
                 message="Nothing in this extract"
                 hint="The CDR answered with an extract that carries no term and no relationship."
             />
@@ -700,7 +700,7 @@ fn extract_panel(extract: &TerminologyExtractView, hook: &'static str) -> AnyVie
     }
     let version = (!extract.version.is_empty()).then(|| {
         let version = extract.version.clone();
-        view! { <p class="mb-2 text-xs text-ink-muted">"Terminology version " {version}</p> }
+        view! { <p class="mb-2 fui-help">"Terminology version " {version}</p> }
     });
     let terms = (!extract.terms.is_empty()).then(|| terms_table(extract, hook));
     let relationships = (!extract.relationships.is_empty()).then(|| relationships_table(extract));
@@ -724,8 +724,8 @@ fn terms_table(extract: &TerminologyExtractView, hook: &'static str) -> AnyView 
                     <td class=CELL_MONO data-term-code=code_hook>
                         {rubric}
                     </td>
-                    <td class=CELL>{language}</td>
-                    <td class=CELL>{preferred}</td>
+                    <td class=CELL data-label="Language">{language}</td>
+                    <td class=CELL data-label="Preferred">{preferred}</td>
                 </tr>
             }
         })
@@ -733,7 +733,7 @@ fn terms_table(extract: &TerminologyExtractView, hook: &'static str) -> AnyView 
         .into_any();
     // `data-extract` names which lookup produced the table (a term definition
     // or a value-set expansion); each row's term cell carries `data-term-code`.
-    let table = table_shell(&["Term", "Language", "Preferred"], rows);
+    let table = table_shell("Terms", &["Term", "Language", "Preferred"], rows);
     view! { <div data-extract=hook>{table}</div> }.into_any()
 }
 
@@ -749,14 +749,18 @@ fn relationships_table(extract: &TerminologyExtractView) -> AnyView {
             view! {
                 <tr class=ROW>
                     <td class=CELL_MONO>{origin}</td>
-                    <td class=CELL>{name}</td>
-                    <td class=CELL_MONO>{targets}</td>
+                    <td class=CELL data-label="Relation">{name}</td>
+                    <td class=CELL_MONO data-label="Targets">{targets}</td>
                 </tr>
             }
         })
         .collect_view()
         .into_any();
-    table_shell(&["Origin", "Relation", "Targets"], rows)
+    table_shell(
+        "Concept relations",
+        &["Origin", "Relation", "Targets"],
+        rows,
+    )
 }
 
 /// The note for a lookup the CDR answered `404` on because it knows no such

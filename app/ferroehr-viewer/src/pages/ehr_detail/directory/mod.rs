@@ -40,7 +40,7 @@ use leptos::server;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 use crate::uid::uid_value_of;
 
 use crate::components::data_table::table_skeleton;
@@ -207,7 +207,7 @@ pub async fn fetch_directory(
     )))
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Take a served FOLDER answer as the viewer's [`DirectoryState`], reading the
 /// version the CDR named in its `ETag` and falling back to the body's `uid`.
 ///
@@ -471,7 +471,7 @@ pub async fn list_directory_versions(
 
 /// The version numbers one history window covers, newest first: at most
 /// `window` numbers ending at `latest_n`, never below `1`.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 fn version_window(latest_n: i32, window: u32) -> Vec<i32> {
     let window = i32::try_from(window).unwrap_or(i32::MAX).max(1);
     let oldest = latest_n.saturating_sub(window).saturating_add(1).max(1);
@@ -564,7 +564,7 @@ pub async fn fetch_directory_subtree(
 /// Split an `OBJECT_VERSION_ID` into its `object_id::system` prefix and its
 /// integer version tree number (`abc::sys::3` → `("abc::sys", 3)`). Returns
 /// `None` for a branched (non-integer) version tree id.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 fn split_version_uid(uid: &str) -> Option<(String, i32)> {
     let (prefix, version) = uid.rsplit_once("::")?;
     let number = version.parse::<i32>().ok()?;
@@ -575,7 +575,7 @@ fn split_version_uid(uid: &str) -> Option<(String, i32)> {
 }
 
 /// Summarize a fetched directory FOLDER version body into a [`DirectoryVersion`].
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 fn summarize_directory_version(body: &str, number: i32, is_latest: bool) -> DirectoryVersion {
     let doc: Value = serde_json::from_str(body).unwrap_or(Value::Null);
     let version_uid = uid_value_of(body);
@@ -609,7 +609,7 @@ fn summarize_directory_version(body: &str, number: i32, is_latest: bool) -> Dire
     reason = "the tab's resources/actions/panels are wired as one unit; splitting would separate state from its wiring"
 )]
 pub(super) fn directory_section(ehr_id: Signal<String>, selected: Memo<String>) -> AnyView {
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
 
     // Write actions. `restore` reuses the directory update wire but is a
     // distinct action so its toast reads "restored".
@@ -857,7 +857,7 @@ const DIRECTORY_OBJECT: &str = "the EHR's directory";
 /// Toasts the directory deletion's outcome — the one write whose success
 /// carries no version uid, so it does not fit [`write_toast`].
 fn delete_toast<I: Send + Sync + 'static>(
-    toaster: thaw::ToasterInjection,
+    toaster: ferrohealth_ui::widget::toast::Toasts,
     delete: Action<I, Result<(), ViewerError>>,
 ) {
     Effect::new(move |_| match delete.value().get() {
@@ -902,7 +902,7 @@ where
 }
 
 fn write_toast<I: Send + Sync + 'static>(
-    toaster: thaw::ToasterInjection,
+    toaster: ferrohealth_ui::widget::toast::Toasts,
     action: Action<I, Result<String, ViewerError>>,
     title: &'static str,
     failure_title: &'static str,
@@ -921,7 +921,7 @@ fn write_toast<I: Send + Sync + 'static>(
 /// The shared optimistic-concurrency conflict toast. The user's unsaved
 /// edits are deliberately kept (the refetch trigger ignores failed writes);
 /// the conflict banner in the editor offers the explicit choices.
-fn conflict_toast(toaster: thaw::ToasterInjection) {
+fn conflict_toast(toaster: ferrohealth_ui::widget::toast::Toasts) {
     crate::components::toast::toast_error(
         toaster,
         "Directory changed on the server",
@@ -932,7 +932,7 @@ fn conflict_toast(toaster: thaw::ToasterInjection) {
 /// Convenience: the composition-picker resource type shared by the editor.
 pub(crate) type PickerResource = Resource<Result<Option<ResultPage>, ViewerError>>;
 
-#[cfg(all(test, feature = "ssr"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::{
         DIRECTORY_ARCHETYPE, FOLDER_NODE_ID, directory_state, directory_toast_detail,

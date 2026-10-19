@@ -12,7 +12,8 @@
 
 use leptos::prelude::*;
 
-/// One label/value line of a facts card.
+/// One label/value pair of a facts card, a `<div>` holding its `<dt>` and
+/// `<dd>` inside the card's `fui-facts` definition list.
 ///
 /// `hook_attr` is the family's hook attribute name and `hook` the value it
 /// carries — together the stable E2E handle on the line. An empty `value`
@@ -25,27 +26,23 @@ pub fn fact_row(
     hook: &'static str,
     value: String,
 ) -> AnyView {
-    let shown = if value.is_empty() {
-        "—".to_owned()
-    } else {
-        value
-    };
+    let shown = crate::components::timestamp::fact_value(value);
     // The hook attribute's NAME is data, so the whole attribute set is applied
     // with the custom-attribute API: attributes serialize in the order they are
     // applied, and a view-declared one would sort AFTER them.
-    let shown = view! { <span>{shown}</span> }
-        .attr("class", "font-mono break-all text-ink")
+    let shown = view! { <dd>{shown}</dd> }
+        .attr("class", "font-mono wrap-break-word text-ink")
         .attr(hook_attr, hook);
     view! {
         <div>
-            <span class="font-medium text-ink-muted mr-1">{label}":"</span>
+            <dt>{label}</dt>
             {shown}
         </div>
     }
     .into_any()
 }
 
-#[cfg(all(test, feature = "ssr"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::fact_row;
     use leptos::prelude::*;
@@ -64,7 +61,7 @@ mod tests {
         let html = render("version", "version", "8849182c::example.org::2");
         assert!(
             html.contains(
-                "<span class=\"font-mono break-all text-ink\" data-versioned-fact=\"version\">"
+                "<dd class=\"font-mono wrap-break-word text-ink\" data-versioned-fact=\"version\">"
             ),
             "the hook attribute is missing or misplaced: {html}"
         );

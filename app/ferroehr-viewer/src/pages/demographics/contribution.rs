@@ -31,7 +31,7 @@ use leptos::{component, server};
 use leptos_meta::Title;
 use leptos_router::components::A;
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 use serde_json::Value;
 
 use crate::components::data_table::{CELL, CELL_MONO, ROW, table_shell, table_skeleton};
@@ -107,7 +107,7 @@ pub async fn fetch_demographic_contribution(
     parse_contribution(&body)
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Flatten a CONTRIBUTION body into a [`ContributionState`]. Defensive
 /// throughout — an absent attribute reads as empty rather than failing the
 /// screen.
@@ -193,7 +193,7 @@ pub fn DemographicContributionPage() -> impl IntoView {
 
     view! {
         <Title text="Contribution" />
-        <div class="p-6">
+        <div>
             <PageHeader
                 title=heading
                 crumbs=vec![Crumb::new("Demographics", super::browse_href(PartyKind::Person))]
@@ -209,13 +209,13 @@ fn contribution_view(state: &ContributionState) -> AnyView {
     let facts = view! {
         <section class=CARD_PAD id="contribution-facts">
             <h2 class=CARD_TITLE>"Commit"</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 items-start gap-x-4 gap-y-2 text-sm">
+            <dl class="fui-facts text-sm">
                 {fact_row("contribution", "contribution-uid", state.uid.clone())}
                 {fact_row("committed", "committed", state.time_committed.clone())}
                 {fact_row("committer", "committer", state.committer.clone())}
                 {fact_row("change type", "change-type", state.change_type.clone())}
                 {fact_row("description", "description", state.description.clone())}
-            </div>
+            </dl>
         </section>
     }
     .into_any();
@@ -226,7 +226,7 @@ fn contribution_view(state: &ContributionState) -> AnyView {
             {facts} {versions} <section class=CARD_PAD>
                 <h2 class=CARD_TITLE>"Document"</h2>
                 <div id="contribution-document">
-                    <DocumentPane body=pretty />
+                    <DocumentPane id="contribution-version-pane" body=pretty />
                 </div>
             </section>
         </div>
@@ -245,7 +245,7 @@ fn versions_section(versions: Vec<ContributionVersion>) -> AnyView {
             <section class=CARD_PAD>
                 <h2 class=CARD_TITLE>"Versions"</h2>
                 <EmptyState
-                    icon=icondata_lu::LuFileClock
+                    icon=ferrohealth_ui::icon::Glyph::FILE_CLOCK
                     message="No versions listed"
                     hint="A CONTRIBUTION always references at least one version; if none is listed, the CDR reported an empty change set."
                 />
@@ -262,7 +262,7 @@ fn versions_section(versions: Vec<ContributionVersion>) -> AnyView {
     view! {
         <section class=CARD_PAD>
             <h2 class=CARD_TITLE>"Versions in this contribution"</h2>
-            {table_shell(&["Type", "Version"], rows)}
+            {table_shell("Contribution versions", &["Type", "Version"], rows)}
         </section>
     }
     .into_any()
@@ -277,14 +277,14 @@ fn version_row(version: &ContributionVersion) -> AnyView {
     let href = object_href(&version.rm_type, &version_uid);
     let cell = match href {
         Some(href) => view! {
-            <td class=CELL_MONO>
+            <td class=CELL_MONO data-label="Version">
                 <A href=href attr:class="text-accent hover:underline">
                     {shown}
                 </A>
             </td>
         }
         .into_any(),
-        None => view! { <td class=CELL_MONO>{shown}</td> }.into_any(),
+        None => view! { <td class=CELL_MONO data-label="Version">{shown}</td> }.into_any(),
     };
     view! {
         <tr class=ROW>
@@ -329,7 +329,7 @@ mod tests {
     }
 }
 
-#[cfg(all(test, feature = "ssr"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod wire_tests {
     use super::parse_contribution;
 

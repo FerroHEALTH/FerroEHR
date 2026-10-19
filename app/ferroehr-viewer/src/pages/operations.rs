@@ -40,7 +40,7 @@ use leptos_router::components::A;
 use leptos_router::hooks::use_query_map;
 
 use crate::components::confirm_dialog::ConfirmDialog;
-use crate::components::data_table::{CELL, CELL_MONO, ROW, table_shell};
+use crate::components::data_table::{CELL, CELL_MONO, ROW, table_shell, table_shell_unstacked};
 use crate::components::field::{BTN_PRIMARY, BTN_SECONDARY, INPUT, SELECT};
 use crate::components::notice::inline_error;
 use crate::components::page_header::PageHeader;
@@ -69,7 +69,7 @@ type ResetFilterAction = Action<(), Result<LoggerView, ViewerError>>;
 )]
 #[component]
 pub fn OperationsPage() -> impl IntoView {
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     let query = use_query_map();
 
     let apply: ApplyFilterAction = Action::new(|filter: &String| {
@@ -132,14 +132,19 @@ pub fn OperationsPage() -> impl IntoView {
 
     view! {
         <Title text="Operations" />
-        <div class="p-6">
+        <div>
             <PageHeader
                 title="Operations"
                 subtitle="Dependency health, build provenance, the metric registry, and live log control."
             />
+            // The long provenance card takes one column; health, the log
+            // control and the configuration stack in the other, and the
+            // metric tiles run the full width under both.
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-                {health} {build} {metrics} {loggers} {config}
+                <div class="grid gap-4">{health} {loggers} {config}</div>
+                {build}
             </div>
+            <div class="mt-4">{metrics}</div>
             {dialogs}
         </div>
     }
@@ -148,11 +153,7 @@ pub fn OperationsPage() -> impl IntoView {
 /// The `<Suspense>` fallback shared by every data-backed card.
 fn card_skeleton() -> impl IntoView {
     view! {
-        <thaw::Skeleton>
-            <thaw::SkeletonItem class="h-4 mb-2" />
-            <thaw::SkeletonItem class="h-4 mb-2" />
-            <thaw::SkeletonItem class="h-4" />
-        </thaw::Skeleton>
+        {ferrohealth_ui::view::empty::skeleton(3, "Loading…")}
     }
 }
 
@@ -217,12 +218,12 @@ fn readiness_body(view: ReadinessView) -> AnyView {
                 } else {
                     component.detail
                 };
-                view! { <td class=CELL>{text}</td> }
+                view! { <td class=CELL data-label="Detail">{text}</td> }
             });
             view! {
                 <tr class=ROW>
                     <td class=CELL_MONO>{component.name}</td>
-                    <td class=CELL>{pill}</td>
+                    <td class=CELL data-label="Status">{pill}</td>
                     {detail}
                 </tr>
             }
@@ -231,9 +232,13 @@ fn readiness_body(view: ReadinessView) -> AnyView {
         .collect_view()
         .into_any();
     let table = if detailed {
-        table_shell(&["Indicator", "Status", "Detail"], rows)
+        table_shell(
+            "Health indicators",
+            &["Indicator", "Status", "Detail"],
+            rows,
+        )
     } else {
-        table_shell(&["Indicator", "Status"], rows)
+        table_shell_unstacked("Health indicators", &["Indicator", "Status"], rows)
     };
     let scope = (!detailed).then(|| {
         view! {
@@ -290,7 +295,7 @@ fn definition_rows(rows: Vec<(String, String)>) -> AnyView {
             children=|(key, value)| {
                 view! {
                     <dt class="font-medium text-ink-muted">{key}</dt>
-                    <dd class="font-mono break-all text-ink">{value}</dd>
+                    <dd class="font-mono wrap-break-word text-ink">{value}</dd>
                 }
             }
         />
@@ -308,7 +313,7 @@ fn info_section(section: InfoSection) -> AnyView {
             <h3 class="mt-4 mb-1 text-xs font-semibold uppercase tracking-wide text-ink-muted">
                 {title}
             </h3>
-            <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">{rows}</dl>
+            <dl class="fui-facts text-sm sm:grid-cols-[9rem_minmax(0,1fr)]">{rows}</dl>
         </section>
     }
     .into_any()
@@ -322,7 +327,7 @@ fn build_info_body(view: BuildInfoView) -> AnyView {
     let sections = view.sections;
     view! {
         <div id="ops-build-info">
-            <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">{facts}</dl>
+            <dl class="fui-facts text-sm sm:grid-cols-[9rem_minmax(0,1fr)]">{facts}</dl>
             <For
                 each=move || sections.clone()
                 key=|section| section.key.clone()
@@ -413,7 +418,7 @@ fn tiles_body(tiles: Vec<MetricTile>) -> AnyView {
                 <StatCard
                     label=tile.label
                     value=Signal::derive(move || value.clone())
-                    icon=icondata_lu::LuGauge
+                    icon=ferrohealth_ui::icon::Glyph::GAUGE
                     href=format!("/operations?metric={}", urlencoding::encode(&tile.name))
                 />
             }
@@ -444,10 +449,10 @@ fn metric_picker(names: Vec<String>, current: Option<&str>) -> AnyView {
         <leptos_router::components::Form
             method="GET"
             action="/operations"
-            attr:class="mt-4 flex flex-wrap items-end gap-2"
+            attr:class="mt-4 fui-field-flow"
         >
-            <label class="flex flex-col gap-1 text-xs text-ink-muted">
-                "Metric" <select id="ops-metric" name="metric" class=format!("min-w-72 {SELECT}")>
+            <label class="fui-field">
+                <span class="fui-label">"Metric"</span> <select id="ops-metric" name="metric" class=format!("min-w-72 {SELECT}")>
                     {options}
                 </select>
             </label>
@@ -477,14 +482,14 @@ fn metric_detail_body(detail: MetricDetailView) -> AnyView {
             view! {
                 <tr class=ROW>
                     <td class=CELL_MONO>{labels}</td>
-                    <td class="px-3 py-2 text-right tabular-nums">{value}</td>
+                    <td class=format!("{CELL} fui-num") data-label="Value">{value}</td>
                 </tr>
             }
             .into_any()
         })
         .collect_view()
         .into_any();
-    let table = table_shell(&["Labels", "Value"], rows);
+    let table = table_shell("Metric samples", &["Labels", "Value"], rows);
     let subtitle = metric_subtitle(&kind, &help);
     view! {
         <div id="ops-metric-detail" class="mt-3">
@@ -529,7 +534,7 @@ fn config_card() -> AnyView {
                 "configured for."
             </p>
             <A href="/system" attr:class=BTN_SECONDARY>
-                <leptos_icons::Icon icon=icondata_lu::LuSettings width="14" height="14" />
+                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::SETTINGS, "14")}
                 " Open runtime configuration"
             </A>
         </div>
@@ -587,21 +592,21 @@ fn loggers_body(
     let boot = view.boot_filter;
     view! {
         <div>
-            <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+            <dl class="fui-facts text-sm">
                 <dt class="font-medium text-ink-muted">"effective"</dt>
-                <dd id="ops-log-effective" class="font-mono break-all text-ink">
+                <dd id="ops-log-effective" class="font-mono wrap-break-word text-ink">
                     {effective}
                 </dd>
                 <dt class="font-medium text-ink-muted">"boot"</dt>
-                <dd class="font-mono break-all text-ink">{boot}</dd>
+                <dd class="font-mono wrap-break-word text-ink">{boot}</dd>
             </dl>
-            <div class="mt-3 flex flex-wrap items-end gap-2">
-                <label class="flex flex-col gap-1 text-xs text-ink-muted">
-                    "New filter directives"
+            <div class="mt-3 fui-field-flow">
+                <label class="fui-field">
+                    <span class="fui-label">"New filter directives"</span>
                     <input
                         id="ops-log-filter"
                         type="text"
-                        class=format!("w-72 {INPUT}")
+                        class=INPUT
                         placeholder="ferroehr=debug,sqlx=warn"
                         prop:value=move || draft.get()
                         on:input:target=move |ev| draft.set(ev.target().value())
@@ -614,11 +619,7 @@ fn loggers_body(
                     disabled=move || draft.read().trim().is_empty()
                     on:click=move |_| pending_apply.set(Some(draft.read().trim().to_owned()))
                 >
-                    <leptos_icons::Icon
-                        icon=icondata_lu::LuSlidersHorizontal
-                        width="14"
-                        height="14"
-                    />
+                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::SLIDERS_HORIZONTAL, "14")}
                     " Apply filter"
                 </button>
                 <button
@@ -627,11 +628,11 @@ fn loggers_body(
                     class=BTN_SECONDARY
                     on:click=move |_| pending_reset.set(true)
                 >
-                    <leptos_icons::Icon icon=icondata_lu::LuRotateCcw width="14" height="14" />
+                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::ROTATE_CCW, "14")}
                     " Reset to boot filter"
                 </button>
             </div>
-            <p class="mt-2 text-xs text-ink-muted">
+            <p class="mt-2 fui-help">
                 "Takes effect immediately, for this CDR instance only, until it restarts."
             </p>
         </div>
@@ -662,7 +663,8 @@ fn filter_dialogs(
             title="Apply log filter"
             message=apply_message
             confirm_label="Apply filter"
-            confirm_icon=icondata_lu::LuSlidersHorizontal
+            confirm_icon=ferrohealth_ui::icon::Glyph::SLIDERS_HORIZONTAL
+            dialog_id="ops-log-apply-confirm-dialog"
             confirm_id="ops-log-apply-confirm"
             on_cancel=Callback::new(move |()| pending_apply.set(None))
             on_confirm=Callback::new(move |()| {
@@ -680,7 +682,8 @@ fn filter_dialogs(
                     .to_owned()
             })
             confirm_label="Reset filter"
-            confirm_icon=icondata_lu::LuRotateCcw
+            confirm_icon=ferrohealth_ui::icon::Glyph::ROTATE_CCW
+            dialog_id="ops-log-reset-confirm-dialog"
             confirm_id="ops-log-reset-confirm"
             on_cancel=Callback::new(move |()| pending_reset.set(false))
             on_confirm=Callback::new(move |()| {
@@ -700,13 +703,9 @@ fn filter_dialogs(
 /// an error to report.
 fn surface_absent(what: &'static str) -> AnyView {
     view! {
-        <thaw::MessageBar intent=thaw::MessageBarIntent::Info>
-            <thaw::MessageBarBody>
-                {what}
+        {ferrohealth_ui::view::notice::notice(ferrohealth_ui::tone::Tone::Info, ferrohealth_ui::view::notice::Announce::Status, None, view! { {what}
                 " is not available: the CDR does not serve this management endpoint. Enable it "
-                "server-side ([management] — each endpoint takes its own access level)."
-            </thaw::MessageBarBody>
-        </thaw::MessageBar>
+                "server-side ([management] — each endpoint takes its own access level)." })}
     }
     .into_any()
 }
@@ -733,7 +732,7 @@ mod tests {
     }
 }
 
-#[cfg(all(test, feature = "ssr"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod ssr_tests {
     use super::build_info_body;
     use crate::management::build_info_view;

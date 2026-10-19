@@ -25,6 +25,8 @@
               (#1694)"
 )]
 
+use ferrohealth_ui::table::model::{Noun, OpenWindow, Paging};
+use ferrohealth_ui::table::view::{Listing, link_open_pager};
 use leptos::prelude::*;
 use leptos::{component, server};
 use leptos_meta::Title;
@@ -41,7 +43,7 @@ use crate::components::surface::{CARD_PAD, CARD_TITLE};
 use crate::components::toast::toast_success;
 use crate::error::ViewerError;
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// The fixed AQL that lists EHRs newest-first for the recent-EHRs table.
 /// Validated by [`tests::fixed_aql_parses`]; never concatenated with user
 /// input.
@@ -64,7 +66,7 @@ pub struct ResultPage {
     pub offset: u32,
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Build the `POST query/aql` request body: the fixed AQL text, the caller's
 /// parameter bindings (never string-interpolated into the query), and the
 /// `fetch`/`offset` window.
@@ -78,7 +80,7 @@ pub(crate) fn aql_request_body(aql: &str, parameters: &Value, offset: u32) -> St
     .to_string()
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Parse an AQL `RESULT_SET` JSON body into a [`ResultPage`]. The result-set
 /// shape (`columns: [{name, path}]`, `rows: [[…]]`) is the ITS-REST Query API
 /// contract.
@@ -150,7 +152,7 @@ pub async fn list_ehrs(
     parse_result_set(&response.body, offset)
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Build a subject-bound `EHR_STATUS` for `POST /ehr`: a `PARTY_SELF` whose
 /// `external_ref` (a `PARTY_REF`) carries the subject `id.value` +
 /// `namespace`, which is exactly what `GET /ehr?subject_id&subject_namespace`
@@ -193,7 +195,7 @@ pub(crate) fn subject_ehr_status(subject_id: &str, subject_namespace: &str) -> V
     })
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Pull the `ehr_id.value` out of an `EHR` resource body (the
 /// `Prefer: return=representation` response of `POST /ehr` and the body of
 /// `GET /ehr?subject_id…`).
@@ -424,7 +426,7 @@ pub fn EhrsPage() -> impl IntoView {
         .into_any();
     }
 
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     let create = create_ehr_section(toaster);
     let finder = finder_section();
     let query = leptos_router::hooks::use_query_map();
@@ -433,7 +435,7 @@ pub fn EhrsPage() -> impl IntoView {
 
     view! {
         <Title text="EHRs" />
-        <div class="p-6">
+        <div>
             <PageHeader
                 title="EHRs"
                 subtitle="Create an EHR, find one by id or subject, or browse the most recent."
@@ -456,7 +458,7 @@ pub fn EhrsPage() -> impl IntoView {
     clippy::too_many_lines,
     reason = "one erased section: the create card's inputs + validation + action wiring (rules §1)"
 )]
-fn create_ehr_section(toaster: thaw::ToasterInjection) -> AnyView {
+fn create_ehr_section(toaster: ferrohealth_ui::widget::toast::Toasts) -> AnyView {
     // UNCONTROLLED inputs, read at dispatch — a controlled input resets to
     // its empty signal at hydration, wiping pre-WASM typing (the login
     // form's proven pattern).
@@ -472,7 +474,7 @@ fn create_ehr_section(toaster: thaw::ToasterInjection) -> AnyView {
     });
 
     // Report the outcome and, on success, navigate to the new EHR. Both are
-    // outside-world side-effects (the router, the thaw toaster), so an Effect
+    // outside-world side-effects (the router, the toast region), so an Effect
     // is their correct home; it never runs on the server pass. The route
     // instance unmounts on navigation, cleaning the Effect up. Failure toasts
     // too (the viewer's mutation-feedback rule); the CDR's validation
@@ -533,7 +535,7 @@ fn create_ehr_section(toaster: thaw::ToasterInjection) -> AnyView {
     view! {
         <section class=format!("{CARD_PAD} mb-6")>
             <h2 class=CARD_TITLE>"Create EHR"</h2>
-            <div class="flex flex-wrap items-end gap-3">
+            <div class="fui-field-flow">
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="ehr-create-id">
                         "EHR id (optional)"
@@ -580,7 +582,7 @@ fn create_ehr_section(toaster: thaw::ToasterInjection) -> AnyView {
                     "Create EHR"
                 </button>
             </div>
-            <p class="mt-2 text-xs text-ink-muted">
+            <p class="mt-2 fui-help">
                 "Leave the subject fields blank for an anonymous EHR (the CDR mints the default EHR_STATUS), or set both to bind a subject. "
                 "Supply an EHR id to create that exact EHR — it must be a UUID, and an id already in use is refused by the CDR."
             </p>
@@ -707,7 +709,7 @@ fn finder_section() -> AnyView {
             // /ehrs?find=<id>, which EhrsPage answers with a redirect to the
             // detail route (lookup state travels in the URL).
             <form method="GET" action="/ehrs" on:submit=on_lookup>
-                <div class="flex flex-wrap items-end gap-3">
+                <div class="fui-field-flow">
                     <div class="flex flex-col gap-1">
                         // Plain label + explicit stable input id keep the SSR↔hydration
                         // association deterministic and preserve the E2E contract
@@ -729,7 +731,7 @@ fn finder_section() -> AnyView {
                     </button>
                 </div>
             </form>
-            <div class="mt-3 flex flex-wrap items-end gap-3">
+            <div class="mt-3 fui-field-flow">
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="ehr-subject-id">
                         "Subject id"
@@ -818,7 +820,7 @@ fn ehrs_table(page: &ResultPage, query: Memo<leptos_router::params::ParamsMap>) 
     if page.rows.is_empty() {
         return view! {
             <EmptyState
-                icon=icondata_lu::LuDatabase
+                icon=ferrohealth_ui::icon::Glyph::DATABASE
                 message="No EHRs found"
                 hint="Create an EHR through the CDR, then browse it here."
             />
@@ -836,9 +838,15 @@ fn ehrs_table(page: &ResultPage, query: Memo<leptos_router::params::ParamsMap>) 
         </For>
     }
     .into_any();
-    let paging = paging_controls(page.offset, page.rows.len(), "/ehrs", query);
+    let paging = paging_controls(
+        page.offset,
+        page.rows.len(),
+        "/ehrs",
+        Noun::new("EHR", "EHRs"),
+        query,
+    );
     view! {
-        {table_shell(&["EHR ID", "Created"], body)}
+        {table_shell("EHRs", &["EHR ID", "Created"], body)}
         {paging}
     }
     .into_any()
@@ -864,66 +872,56 @@ fn ehrs_row(row: &[Value]) -> AnyView {
                 }
                 .into_any()
             } else {
-                view! { <td class=CELL>{text}</td> }.into_any()
+                view! { <td class=CELL data-label="Created">{crate::components::timestamp::timestamp(text)}</td> }.into_any()
             }
         })
         .collect::<Vec<_>>();
     view! { <tr class=ROW>{cells}</tr> }.into_any()
 }
 
-/// Prev/next paging links for an AQL-paged table at `base` (e.g. `/ehrs`).
-/// Prev appears when `offset > 0`; next appears when the page is full (there
-/// may be more). Offsets use saturating arithmetic.
+/// FerroUI's pager for an AQL-paged table at `base` (e.g. `/ehrs`), whose
+/// total the CDR does not report: Previous when `offset > 0`, Next when the
+/// page came back full (there may be more), and the range with no total.
 ///
 /// `query` is the screen's whole query map, so a page link carries every OTHER
 /// parameter across — the tab a table sits on, the filters that produced it —
 /// instead of navigating back to a bare path. Encoding is the router's own
 /// [`ParamsMap::to_query_string`], never a hand-rolled codec, and the default
-/// offset is written as its ABSENCE so the first page's URL stays clean.
+/// offset is written as its ABSENCE so the first page's URL stays clean. The
+/// window is the AQL fetch window, so the pager offers no size choice.
 ///
 /// The map is read UNTRACKED: this control renders inside the table's
-/// `Suspend`, which already re-runs on every query change, so tracking here
-/// would only add a dependency the closure already has.
-///
-/// Each step carries the same `data-page` hook the shared table footer's steps
-/// use (`prev`/`next`). The two never appear on the same screen: a table is
-/// either server-windowed (this control) or paged from rows in hand (the
-/// footer).
+/// `Suspend`, which already re-runs on every query change.
 pub(crate) fn paging_controls(
     offset: u32,
     row_count: usize,
     base: &str,
+    noun: Noun,
     query: Memo<leptos_router::params::ParamsMap>,
 ) -> AnyView {
-    let href_for = |next: u32| {
+    #[expect(
+        clippy::integer_division,
+        reason = "the page holding row `offset` IS the truncating quotient"
+    )]
+    let page = offset / PAGE_SIZE + 1;
+    let window = OpenWindow::of(
+        Paging {
+            page,
+            size: PAGE_SIZE,
+        },
+        u32::try_from(row_count).unwrap_or(u32::MAX),
+    );
+    let href = |next: Paging| {
         let mut map = query.get_untracked();
-        if next == 0 {
+        let to = next.page.saturating_sub(1).saturating_mul(PAGE_SIZE);
+        if to == 0 {
             drop(map.remove("offset"));
         } else {
-            map.replace("offset", next.to_string());
+            map.replace("offset", to.to_string());
         }
         format!("{base}{}", map.to_query_string())
     };
-    let full = u32::try_from(row_count).unwrap_or(u32::MAX) >= PAGE_SIZE;
-    let prev = (offset > 0).then(|| {
-        let href = href_for(offset.saturating_sub(PAGE_SIZE));
-        view! {
-            <A href=href attr:class=BTN_SECONDARY attr:data-page="prev">
-                "← Previous"
-            </A>
-        }
-        .into_any()
-    });
-    let next = full.then(|| {
-        let href = href_for(offset.saturating_add(PAGE_SIZE));
-        view! {
-            <A href=href attr:class=BTN_SECONDARY attr:data-page="next">
-                "Next →"
-            </A>
-        }
-        .into_any()
-    });
-    view! { <div class="mt-3 flex gap-2">{prev}{next}</div> }.into_any()
+    link_open_pager(Listing::new("Pages").noun(noun).sizes(&[]), window, &href)
 }
 
 /// Render one raw AQL cell value as display text: strings verbatim, JSON null
@@ -936,7 +934,7 @@ pub(crate) fn cell_text(value: &Value) -> String {
     }
 }
 
-#[cfg(all(test, feature = "ssr"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::{
         LIST_EHRS_AQL, aql_request_body, cell_text, is_uuid, parse_ehr_id, parse_result_set,

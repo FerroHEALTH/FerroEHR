@@ -1,26 +1,37 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The shared activity chart: ONE pure-Rust SVG line chart every
-//! events-per-day timeline in the viewer draws with — the dashboard's
-//! commit-activity trend and an EHR's contribution timeline.
+//! The shared activity chart: ONE chart every events-per-day timeline in the
+//! viewer draws with — the dashboard's commit-activity trend and an EHR's
+//! contribution timeline.
 //!
-//! Charts are `leptos-chartistry` (pure Rust + SVG): the no-JavaScript mandate
-//! bans every charting-library binding. The chart draws client-side once the
-//! container is measured and renders a placeholder on the server pass, so the
-//! surrounding view structure is identical on both passes; its points
+//! It is FerroUI's activity chart (`ferrohealth_ui::view::chart`), SVG drawn
+//! on the server, so the server pass and hydration draw the same; its points
 //! come from [`crate::activity::bucket_by_day`], a pure function of the wire
 //! data.
 
+use ferrohealth_ui::view::chart::ActivityChart;
 use leptos::prelude::*;
-use leptos_chartistry::{
-    AspectRatio, AxisMarker, Chart, IntoInner, Line, Series, TickLabels, YGridLine,
-};
 
 use crate::activity::ActivityPoint;
 use crate::components::empty_state::EmptyState;
 
-/// Render events-per-day `points` as a minimal line chart, or the shared
+/// The sentence that summarises `points`: how many `noun` over how many days,
+/// and the busiest day.
+fn summary(points: &[ActivityPoint], noun: &str) -> String {
+    let total: u64 = points.iter().map(|point| u64::from(point.count)).sum();
+    let busiest = points
+        .iter()
+        .max_by_key(|point| point.count)
+        .map(|point| point.day.as_str())
+        .unwrap_or_default();
+    format!(
+        "{total} {noun} over {} days, most on {busiest}.",
+        points.len()
+    )
+}
+
+/// Render events-per-day `points` as FerroUI's activity chart, or the shared
 /// [`EmptyState`] when there is nothing to plot.
 ///
 /// The X axis is the day index (the points are already ascending by day);
@@ -34,34 +45,52 @@ pub fn activity_chart(
     empty_hint: &'static str,
 ) -> AnyView {
     if points.is_empty() {
-        return view! { <EmptyState icon=icondata_lu::LuChartLine message=empty_message hint=empty_hint /> }
+        return view! { <EmptyState icon=ferrohealth_ui::icon::Glyph::CHART_LINE message=empty_message hint=empty_hint /> }
         .into_any();
     }
-    let data: Vec<(f64, f64)> = points
-        .iter()
-        .enumerate()
-        .map(|(index, point)| {
-            let x = f64::from(u32::try_from(index).unwrap_or(u32::MAX));
-            (x, f64::from(point.count))
-        })
-        .collect();
-    let data = RwSignal::new(data);
-    view! {
-        <div class="overflow-x-auto" data-activity-chart=series_name>
-            <Chart
-                aspect_ratio=AspectRatio::from_outer_ratio(640.0, 240.0)
-                left=TickLabels::aligned_floats()
-                bottom=TickLabels::aligned_floats()
-                inner=[
-                    AxisMarker::left_edge().into_inner(),
-                    AxisMarker::bottom_edge().into_inner(),
-                    YGridLine::default().into_inner(),
-                ]
-                series=Series::new(|(x, _): &(f64, f64)| *x)
-                    .line(Line::new(|(_, y): &(f64, f64)| *y).with_name(series_name))
-                data=data
-            />
-        </div>
+    let ends = (
+        points
+            .first()
+            .map(|point| point.day.clone())
+            .unwrap_or_default(),
+        points
+            .last()
+            .map(|point| point.day.clone())
+            .unwrap_or_default(),
+    );
+    let chart = ActivityChart {
+        name: series_name,
+        label: format!("{series_name} per day"),
+        summary: summary(points, &series_name.to_lowercase()),
+        points: (0_u32..)
+            .zip(points)
+            .map(|(day, point)| (day, point.count))
+            .collect(),
+        ends,
+    };
+    ferrohealth_ui::view::chart::activity_chart(&chart).into_any()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::summary;
+    use crate::activity::ActivityPoint;
+
+    #[test]
+    fn the_summary_counts_the_events_and_names_the_busiest_day() {
+        let points = [
+            ActivityPoint {
+                day: "2026-08-20".to_owned(),
+                count: 3,
+            },
+            ActivityPoint {
+                day: "2026-08-21".to_owned(),
+                count: 7,
+            },
+        ];
+        assert_eq!(
+            summary(&points, "commits"),
+            "10 commits over 2 days, most on 2026-08-21."
+        );
     }
-    .into_any()
 }

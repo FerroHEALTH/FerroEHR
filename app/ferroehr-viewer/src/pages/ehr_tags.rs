@@ -61,11 +61,11 @@ use leptos::server;
 use serde::{Deserialize, Serialize};
 
 use crate::components::data_table::{
-    CELL, CELL_MONO, ROW, TablePaging, page_rows, page_window, paging_from_url, row_total,
-    table_footer, table_shell, table_skeleton,
+    CELL, CELL_MONO, ROW, TablePaging, page_rows, paging_in_session, row_total, table_footer,
+    table_shell, table_skeleton,
 };
 use crate::components::empty_state::EmptyState;
-use crate::components::field::BTN_SECONDARY;
+use crate::components::field::BTN_SECONDARY_SMALL;
 use crate::components::item_tags::{
     ItemTagRow, TagActions, TagEdit, TagGroup, TagList, TagPanelCopy, group_by_target,
     tag_filter_form, tag_panel,
@@ -235,7 +235,7 @@ pub async fn set_ehr_tag(
     .await
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Insert-or-replace one tag in the collection at `url`.
 ///
 /// The plain function behind [`set_ehr_tag`] and [`set_status_tag`], so neither
@@ -321,7 +321,7 @@ pub async fn delete_ehr_tag(
     delete_tag_at(&state, &session.credential, &url, &key).await
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Delete every tag under `key` from the collection at `url`.
 ///
 /// The plain function behind [`delete_ehr_tag`] and
@@ -452,7 +452,7 @@ pub async fn resolve_ehr_target(
     Ok(None)
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// The `/ehr/{ehr_id}/{kind}/{uid_based_id}/tags` URL of one target's tag
 /// collection.
 ///
@@ -479,7 +479,7 @@ fn tags_url(
     )))
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// The `VERSIONED_EHR_STATUS` container of an EHR, read from the EHR resource's
 /// own `ehr_status` reference (`GET /ehr/{ehr_id}`).
 ///
@@ -542,7 +542,7 @@ pub async fn fetch_status_tags(
     crate::components::item_tags::parse_item_tags(&response.body)
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// The tag-collection URL of an EHR's `VERSIONED_EHR_STATUS` container.
 ///
 /// # Errors
@@ -648,7 +648,7 @@ pub(crate) fn composition_tags_section(ehr_id: Signal<String>, uid: Signal<Strin
 /// ([`fetch_status_tags`]).
 #[must_use]
 pub(crate) fn status_tags_section(ehr_id: Signal<String>, active: Signal<bool>) -> AnyView {
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     let set: Action<(String, TagEdit), Result<(), ViewerError>> =
         Action::new(|(ehr_id, edit): &(String, TagEdit)| {
             let (ehr_id, edit) = (ehr_id.clone(), edit.clone());
@@ -711,7 +711,7 @@ fn target_tags_section(
     object: &'static str,
     copy: TagPanelCopy,
 ) -> AnyView {
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     let set: Action<(String, String, TagEdit), Result<(), ViewerError>> =
         Action::new(move |(ehr_id, uid, edit): &(String, String, TagEdit)| {
             let (ehr_id, uid, edit) = (ehr_id.clone(), uid.clone(), edit.clone());
@@ -777,7 +777,7 @@ fn target_tags_section(
 /// An outside-world side-effect, which is what an `Effect` is for; the
 /// resources refetch through the actions' version stamps instead.
 fn write_toasts<SetIn, DeleteIn>(
-    toaster: thaw::ToasterInjection,
+    toaster: ferrohealth_ui::widget::toast::Toasts,
     set: Action<SetIn, Result<(), ViewerError>>,
     remove: Action<DeleteIn, Result<(), ViewerError>>,
     object: &'static str,
@@ -830,7 +830,7 @@ pub(crate) fn ehr_tags_section(ehr_id: Signal<String>, selected: Memo<String>) -
             )
         })
     });
-    let paging = paging_from_url();
+    let paging = paging_in_session();
     let resource: TagList = Resource::new(
         move || (selected.get() == "tags").then(|| (ehr_id.get(), filters.get())),
         |active| async move {
@@ -886,7 +886,7 @@ pub(crate) fn ehr_tags_section(ehr_id: Signal<String>, selected: Memo<String>) -
                     Ok(Some(tags)) if tags.is_empty() => {
                         view! {
                             <EmptyState
-                                icon=icondata_lu::LuTags
+                                icon=ferrohealth_ui::icon::Glyph::TAGS
                                 message="No tags in this EHR"
                                 hint="Tags are free key/value markers a client sets on a composition, the EHR status or the directory; the composition viewer and the Status tab both set them."
                             />
@@ -906,7 +906,7 @@ pub(crate) fn ehr_tags_section(ehr_id: Signal<String>, selected: Memo<String>) -
     view! {
         <section class=CARD_PAD id="ehr-tag-browser">
             <h2 class=CARD_TITLE>"Tags in this EHR"</h2>
-            <p class="mb-3 text-xs text-ink-muted">
+            <p class="mb-3 fui-help">
                 "Every tag on every object in this EHR, grouped by the object it is on. A tag names its target without naming that target's kind, so opening a group asks the CDR which object holds that id. The container form and one version of the same object are separate collections and appear as separate groups."
             </p>
             {move || { tag_filter_form(action.get(), filters, &[("tab", "tags".to_owned())]) }}
@@ -931,27 +931,36 @@ fn browser_table(
     open: ResolveAction,
 ) -> AnyView {
     let total = row_total(groups.len());
+    // The target-path column shows only when a tag carries one.
+    let paths = groups
+        .iter()
+        .any(|group| group.tags.iter().any(|tag| !tag.target_path.is_empty()));
     let rows = view! {
         <For
             each=move || {
-                let window = page_window(total, paging.page.get(), paging.size.get());
+                let window = paging.window(total);
                 page_rows(&groups, window)
             }
             key=|group| group.target.clone()
             let:group
         >
-            {group_rows(ehr_id, &group, open)}
+            {group_rows(ehr_id, &group, paths, open)}
         </For>
     }
     .into_any();
     let footer = table_footer(
         &crate::pages::ehrs::ehr_detail_href(&ehr_id.get_untracked()),
-        "tagged objects",
+        "Tagged object pages",
+        ferrohealth_ui::table::model::Noun::new("tagged object", "tagged objects"),
         paging,
         Signal::derive(move || total),
     );
     view! {
-        {table_shell(&["Key", "Value", "Target path", ""], rows)}
+        {table_shell(
+            "Tagged objects",
+            if paths { &["Key", "Value", "Target path", ""] } else { &["Key", "Value", ""] },
+            rows,
+        )}
         {footer}
     }
     .into_any()
@@ -959,7 +968,12 @@ fn browser_table(
 
 /// One target's rows: the target header with its open action, then that
 /// target's tags.
-fn group_rows(ehr_id: Signal<String>, group: &TagGroup, open: ResolveAction) -> AnyView {
+fn group_rows(
+    ehr_id: Signal<String>,
+    group: &TagGroup,
+    paths: bool,
+    open: ResolveAction,
+) -> AnyView {
     let target = group.target.clone();
     let hook = group.target.clone();
     let shown = group.target.clone();
@@ -968,35 +982,35 @@ fn group_rows(ehr_id: Signal<String>, group: &TagGroup, open: ResolveAction) -> 
         <tr class="border-b border-edge bg-sunken/60">
             <th
                 scope="rowgroup"
-                colspan="3"
+                colspan=if paths { "3" } else { "2" }
                 class="px-3 py-2 text-left font-mono text-xs font-medium text-ink"
             >
                 {shown}
             </th>
-            <td class=CELL>
+            <td class=ferrohealth_ui::table::view::ACTIONS>
                 <button
                     type="button"
-                    class=BTN_SECONDARY
+                    class=BTN_SECONDARY_SMALL
                     data-tag-target=hook
                     disabled=Signal::derive(move || open.pending().get())
                     on:click=move |_| {
                         open.dispatch((ehr_id.get_untracked(), target.clone()));
                     }
                 >
-                    <leptos_icons::Icon icon=icondata_lu::LuEye width="14" height="14" />
+                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::EYE, "14")}
                     "Open"
                 </button>
             </td>
         </tr>
         <For each=move || tags.clone() key=ItemTagRow::identity let:tag>
-            {browser_row(&tag)}
+            {browser_row(&tag, paths)}
         </For>
     }
     .into_any()
 }
 
 /// One tag row inside its target's group.
-fn browser_row(tag: &ItemTagRow) -> AnyView {
+fn browser_row(tag: &ItemTagRow, paths: bool) -> AnyView {
     let hook = tag.key.clone();
     let key = tag.key.clone();
     let value = tag.value.clone();
@@ -1006,9 +1020,8 @@ fn browser_row(tag: &ItemTagRow) -> AnyView {
             <td class=CELL_MONO data-tag-key=hook>
                 {key}
             </td>
-            <td class=CELL>{value}</td>
-            <td class=CELL_MONO>{target_path}</td>
-            <td class=CELL></td>
+            <td class=CELL data-label="Value" colspan=if paths { "1" } else { "2" }>{value}</td>
+            {paths.then(|| view! { <td class=CELL_MONO data-label="Target path" colspan="2">{target_path}</td> })}
         </tr>
     }
     .into_any()

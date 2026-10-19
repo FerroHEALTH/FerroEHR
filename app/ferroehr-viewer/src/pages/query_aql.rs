@@ -21,7 +21,7 @@ use leptos_meta::Title;
 use leptos_router::hooks::use_query_map;
 
 use crate::components::data_table::table_skeleton;
-use crate::components::field::{BTN_PRIMARY, BTN_SECONDARY, LABEL, TEXTAREA};
+use crate::components::field::{BTN_PRIMARY, BTN_SECONDARY, Height, LABEL, code_field};
 use crate::components::page_header::{Crumb, PageHeader};
 use crate::components::surface::CARD_PAD;
 use crate::components::toast::toast_success;
@@ -32,6 +32,7 @@ use crate::pages::query_builder::{
 };
 use crate::queries_api::{fetch_stored_query, run_aql, store_query, validate_aql};
 use crate::query_namespace::{next_minor, qualify, split_qualified, split_query_ref};
+use ferrohealth_ui::highlight::Language;
 
 /// One stored query as `?load=` fetched it: its qualified name, the version it
 /// was read at, and its AQL. Named because the resource, its status section,
@@ -113,7 +114,7 @@ pub fn QueryAqlPage() -> impl IntoView {
     // signal is written — and the viewer's mutation-feedback rule). The
     // CDR's diagnostic ALSO stays inline (save_feedback), beside the AQL
     // it rejected.
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     Effect::new(move |_| match save_action.value().get() {
         Some(Ok(())) => toast_success(toaster, "Query saved", ""),
         Some(Err(error)) => {
@@ -151,7 +152,7 @@ pub fn QueryAqlPage() -> impl IntoView {
 
     view! {
         <Title text="AQL editor" />
-        <div class="p-6 space-y-4">
+        <div class="space-y-4">
             <PageHeader
                 title="Raw AQL"
                 subtitle="Write and run AQL directly, bind parameters, and save it as a stored query."
@@ -306,15 +307,8 @@ fn editor_section(
                 <label class=LABEL r#for="aql-editor">
                     "AQL"
                 </label>
-                <textarea
-                    id="aql-editor"
-                    class=format!("{TEXTAREA} h-40")
-                    placeholder="SELECT c FROM EHR e CONTAINS COMPOSITION c"
-                    prop:value=move || aql.get()
-                    on:input:target=move |ev| aql.set(ev.target().value())
-                >
-                    {aql.get_untracked()}
-                </textarea>
+                <p class="fui-help">"For example: SELECT c FROM EHR e CONTAINS COMPOSITION c"</p>
+                {code_field("aql-editor", Language::Aql, aql, None, Height::Short)}
                 <div class="flex items-center gap-3">
                     <button
                         type="button"
@@ -364,15 +358,8 @@ fn parameters_section(params: RwSignal<String>) -> AnyView {
                 <label class=LABEL r#for="aql-params">
                     "Parameters (JSON object)"
                 </label>
-                <textarea
-                    id="aql-params"
-                    class=format!("{TEXTAREA} h-24")
-                    placeholder="{\"ehr_id\": \"...\"}"
-                    prop:value=move || params.get()
-                    on:input:target=move |ev| params.set(ev.target().value())
-                >
-                    {params.get_untracked()}
-                </textarea>
+                <p class="fui-help">"A JSON object of the query's parameters, such as {\"ehr_id\": \"…\"}."</p>
+                {code_field("aql-params", Language::Json, params, None, Height::Short)}
             </div>
         </section>
     }
@@ -414,26 +401,21 @@ fn run_save_section(
     };
     let save_fields = save_as_fields("aql", fields);
     view! {
-        <section class=CARD_PAD>
-            <div class="space-y-3">
-                <div class="flex flex-wrap items-end gap-3">
-                    <button type="button" class=BTN_PRIMARY disabled=empty_aql on:click=run_click>
-                        "Run"
-                    </button>
+            <section class=CARD_PAD>
+                <div class="space-y-3">
                     {save_fields}
-                    <button
-                        type="button"
-                        class=BTN_PRIMARY
-                        disabled=save_disabled
-                        on:click=save_click
-                    >
-                        "Save"
-                    </button>
+                    <div class="fui-cluster">
+                        <button type="button" class=BTN_PRIMARY disabled=empty_aql on:click=run_click>
+                            "Run"
+                        </button>
+                        <button type="button" class=BTN_SECONDARY disabled=save_disabled on:click=save_click>
+                            "Save"
+                        </button>
+                    </div>
+                    {save_feedback(save_action)}
                 </div>
-                {save_feedback(save_action)}
-            </div>
-        </section>
-    }
+            </section>
+        }
     .into_any()
 }
 

@@ -144,7 +144,7 @@ pub async fn search_audit(
 }
 
 /// `ge`/`le`-prefix a non-empty instant for the ITI-81 `date` parameter.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 fn prefixed(prefix: &str, value: &str) -> String {
     let value = value.trim();
     if value.is_empty() {
@@ -155,7 +155,7 @@ fn prefixed(prefix: &str, value: &str) -> String {
 }
 
 /// Distil the ITI-81 `searchset` Bundle into an [`AuditPage`].
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 fn parse_bundle(body: &str, offset: u32) -> Result<AuditPage, ViewerError> {
     let bundle = serde_json::from_str::<serde_json::Value>(body)
         .map_err(|e| ViewerError::Internal(format!("AuditEvent Bundle JSON: {e}")))?;
@@ -186,7 +186,7 @@ fn parse_bundle(body: &str, offset: u32) -> Result<AuditPage, ViewerError> {
 /// Distil one stored `AuditEvent` (IHE BALP shape) into an [`AuditRow`],
 /// reading every field defensively (a missing field renders empty, never
 /// drops the record from the security log).
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 fn audit_row(resource: &serde_json::Value) -> AuditRow {
     let text = |v: Option<&serde_json::Value>| {
         v.and_then(serde_json::Value::as_str)
@@ -299,7 +299,7 @@ pub fn AuditPage() -> impl IntoView {
 
     view! {
         <Title text="Audit log" />
-        <div class="p-6">
+        <div>
             <PageHeader
                 title="Audit log"
                 subtitle="The ATNA security audit trail: who accessed what, with what outcome (IHE ITI-81 retrieval)."
@@ -316,53 +316,54 @@ pub fn AuditPage() -> impl IntoView {
 /// keeps the form filled.
 fn filter_form(query: Memo<leptos_router::params::ParamsMap>) -> AnyView {
     let initial = move |key: &str| query.read_untracked().get(key).unwrap_or_default();
-    let select_class = "rounded-control border border-edge bg-raised px-2 py-1.5 text-sm text-ink";
+    let select_class = crate::components::field::SELECT;
     view! {
         <leptos_router::components::Form method="GET" action="/audit" attr:class="mb-4">
-            <div class="flex flex-wrap items-end gap-2">
-                <label class="flex flex-col gap-1 text-xs text-ink-muted">
-                    "From (instant)"
+            <div class="fui-field-flow">
+                <label class="fui-field">
+                    <span class="fui-label">"From (instant)"</span>
                     <input
                         type="text"
                         name="from"
-                        class=format!("w-56 {INPUT}")
+                        class=INPUT
                         placeholder="2026-07-01T00:00:00Z"
                         value=initial("from")
                     />
                 </label>
-                <label class="flex flex-col gap-1 text-xs text-ink-muted">
-                    "To (instant)"
+                <label class="fui-field">
+                    <span class="fui-label">"To (instant)"</span>
                     <input
                         type="text"
                         name="to"
-                        class=format!("w-56 {INPUT}")
+                        class=INPUT
                         placeholder="2026-07-18T00:00:00Z"
                         value=initial("to")
                     />
                 </label>
-                <label class="flex flex-col gap-1 text-xs text-ink-muted">
-                    "Patient id"
+                <label class="fui-field">
+                    <span class="fui-label">"Patient id"</span>
                     <input
                         type="text"
                         name="patient"
-                        class=format!("w-40 {INPUT}")
+                        class=INPUT
                         value=initial("patient")
                     />
                 </label>
-                <label class="flex flex-col gap-1 text-xs text-ink-muted">
-                    "Principal"
+                <label class="fui-field">
+                    <span class="fui-label">"Principal"</span>
                     <input
                         type="text"
                         name="agent"
-                        class=format!("w-40 {INPUT}")
+                        class=INPUT
                         value=initial("agent")
                     />
                 </label>
-                <label class="flex flex-col gap-1 text-xs text-ink-muted">
+                <label class="fui-field">
                     // Initial selection via the option `selected` attribute:
                     // it server-renders (a `prop:` would not) and the select
                     // stays uncontrolled — the GET form owns the state.
-                    "Outcome" <select name="outcome" class=select_class>
+                    <span class="fui-label">"Outcome"</span>
+                    <select name="outcome" class=select_class>
                         <option value="" selected=initial("outcome").is_empty()>
                             "any"
                         </option>
@@ -380,8 +381,8 @@ fn filter_form(query: Memo<leptos_router::params::ParamsMap>) -> AnyView {
                         </option>
                     </select>
                 </label>
-                <label class="flex flex-col gap-1 text-xs text-ink-muted">
-                    "Action" <select name="action" class=select_class>
+                <label class="fui-field">
+                    <span class="fui-label">"Action"</span> <select name="action" class=select_class>
                         <option value="" selected=initial("action").is_empty()>
                             "any"
                         </option>
@@ -402,12 +403,9 @@ fn filter_form(query: Memo<leptos_router::params::ParamsMap>) -> AnyView {
                         </option>
                     </select>
                 </label>
-                <thaw::Button
-                    appearance=thaw::ButtonAppearance::Primary
-                    button_type=thaw::ButtonType::Submit
-                >
+                <button type="submit" class=crate::components::field::BTN_PRIMARY>
                     "Filter"
-                </thaw::Button>
+                </button>
             </div>
         </leptos_router::components::Form>
     }
@@ -440,7 +438,7 @@ fn page_view(page: AuditPage, query: Memo<leptos_router::params::ParamsMap>) -> 
     if !page.available {
         return view! {
             <EmptyState
-                icon=icondata_lu::LuShieldOff
+                icon=ferrohealth_ui::icon::Glyph::SHIELD_OFF
                 message="The local audit repository is disabled"
                 hint="Enable [audit.store] on the CDR to record and browse the ATNA audit trail here."
             />
@@ -450,7 +448,7 @@ fn page_view(page: AuditPage, query: Memo<leptos_router::params::ParamsMap>) -> 
     if page.rows.is_empty() {
         return view! {
             <EmptyState
-                icon=icondata_lu::LuShieldCheck
+                icon=ferrohealth_ui::icon::Glyph::SHIELD_CHECK
                 message="No audit records match"
                 hint="Widen the time window or clear a filter — every audited operation lands here."
             />
@@ -466,7 +464,7 @@ fn page_view(page: AuditPage, query: Memo<leptos_router::params::ParamsMap>) -> 
         .into_any();
     let footer = pagination(page.total, page.offset, query);
     view! {
-        {table_shell(
+        {table_shell("Audit records",
             &[
                 "Recorded",
                 "Event",
@@ -495,14 +493,14 @@ fn row_view(row: AuditRow) -> impl IntoView {
     let event = format!("{} · {}", row.family, row.action);
     view! {
         <tr class=ROW>
-            <td class=CELL_MONO>{row.recorded}</td>
-            <td class=CELL>{event}</td>
-            <td class=CELL_MONO>{row.operation}</td>
-            <td class=outcome_class>{row.outcome}</td>
-            <td class=CELL_MONO>{row.principal}</td>
-            <td class=CELL_MONO>{row.patient}</td>
-            <td class=CELL_MONO>{row.resource}</td>
-            <td class=CELL>
+            <td class=CELL>{crate::components::timestamp::timestamp(row.recorded)}</td>
+            <td class=CELL data-label="Event">{event}</td>
+            <td class=CELL_MONO data-label="Operation">{row.operation}</td>
+            <td class=outcome_class data-label="Outcome">{row.outcome}</td>
+            <td class=CELL_MONO data-label="Principal">{row.principal}</td>
+            <td class=CELL_MONO data-label="Patient">{row.patient}</td>
+            <td class=CELL_MONO data-label="Resource">{row.resource}</td>
+            <td class=CELL data-label="Record">
                 <details>
                     <summary class="cursor-pointer text-accent hover:underline text-xs">
                         "view"
@@ -545,7 +543,7 @@ fn pagination(total: u32, offset: u32, query: Memo<leptos_router::params::Params
                 href=href_for(page_index - 1)
                 attr:class="text-accent hover:underline"
             >
-                <leptos_icons::Icon icon=icondata_lu::LuArrowLeft width="12" height="12" />
+                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::ARROW_LEFT, "12")}
                 " Newer"
             </leptos_router::components::A>
         }
@@ -557,7 +555,7 @@ fn pagination(total: u32, offset: u32, query: Memo<leptos_router::params::Params
                 attr:class="text-accent hover:underline"
             >
                 "Older "
-                <leptos_icons::Icon icon=icondata_lu::LuArrowRight width="12" height="12" />
+                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::ARROW_RIGHT, "12")}
             </leptos_router::components::A>
         }
     });
@@ -571,7 +569,7 @@ fn pagination(total: u32, offset: u32, query: Memo<leptos_router::params::Params
     .into_any()
 }
 
-#[cfg(all(test, feature = "ssr"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::{audit_row, parse_bundle};
 

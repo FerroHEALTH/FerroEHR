@@ -45,18 +45,19 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::components::data_table::table_skeleton;
-use crate::components::field::{BTN_PRIMARY, LABEL, TEXTAREA};
+use crate::components::field::{BTN_PRIMARY, Height, LABEL, code_field};
 use crate::components::format_view::document_section;
 use crate::components::logical_delete::{LogicalDeleteCopy, logical_delete_section};
 use crate::components::notice::inline_error;
 use crate::components::notice::{deleted_notice, diagnostic_pane, missing_notice};
 use crate::components::page_header::{Crumb, PageHeader};
 use crate::components::surface::{CARD_PAD, CARD_TITLE};
-use crate::components::tab_bar::tab_link;
+use crate::components::tab_bar::url_tabs;
 use crate::components::toast::toast_success;
 use crate::error::ViewerError;
 use crate::pages::demographics::{PartyKind, browse_href};
 use crate::uid::container_uid_of;
+use ferrohealth_ui::highlight::Language;
 
 /// The noun phrase every party write-failure toast is built around
 /// ([`crate::feedback::write_failure_copy`]).
@@ -321,7 +322,7 @@ pub async fn delete_party(
     Ok(())
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Check an operator-authored party body before it is sent: it must be a JSON
 /// object, and its `_type` must be the routed kind's RM type.
 ///
@@ -353,7 +354,7 @@ fn checked_party_body(body: &str, kind: PartyKind) -> Result<String, ViewerError
     Ok(doc.to_string())
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Flatten a canonical party body into a [`PartyState`], keeping the body
 /// verbatim. Defensive throughout — an absent attribute reads as its empty
 /// default rather than failing the tab.
@@ -399,7 +400,7 @@ fn parse_party_state(body: &str, served_etag: Option<&str>) -> Result<PartyState
     })
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// The length of a JSON array attribute as the fixed-size int the wire type
 /// carries, saturating rather than wrapping.
 fn count_of(value: Option<&Value>) -> u32 {
@@ -460,7 +461,7 @@ fn parse_details(draft: &str) -> Result<Option<Value>, String> {
     }
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Apply the form's two edits to the loaded party document and return the body
 /// to PUT.
 ///
@@ -565,7 +566,7 @@ fn party_screen(kind: PartyKind, uid: Signal<String>, selected: Memo<String>) ->
 
     view! {
         <Title text="Party" />
-        <div class="p-6">
+        <div>
             <PageHeader
                 title=heading
                 crumbs=vec![
@@ -573,8 +574,9 @@ fn party_screen(kind: PartyKind, uid: Signal<String>, selected: Memo<String>) ->
                     Crumb::new(kind.plural(), browse_href(kind)),
                 ]
                 mono=true
-            />
-            {delete}
+            >
+                {delete}
+            </PageHeader>
             {tabs}
             <div class="mt-4">
                 <div class:hidden=move || selected.get() != "party">{party}</div>
@@ -592,25 +594,22 @@ fn party_screen(kind: PartyKind, uid: Signal<String>, selected: Memo<String>) ->
 /// The URL-driven tab bar: four pill anchors (`?tab=…`). Plain anchors keep the
 /// tabs working before hydration (the router intercepts them once WASM loads).
 fn tab_bar(kind: PartyKind, uid: Signal<String>, selected: Memo<String>) -> AnyView {
-    let link = move |value: &'static str, label: &'static str| {
-        tab_link(
-            move || {
-                format!(
-                    "{}?tab={value}",
-                    super::party_href(kind, uid.get().as_str())
-                )
-            },
-            label,
-            Signal::derive(move || selected.get() == value),
-        )
-    };
-    view! {
-        <div class="flex flex-wrap gap-1 border-b border-edge pb-2">
-            {link("party", "Party")} {link("history", "History")}
-            {link("relationships", "Relationships")} {link("tags", "Tags")}
-        </div>
-    }
-    .into_any()
+    url_tabs(
+        "Party views",
+        &[
+            ("party", "Party"),
+            ("history", "History"),
+            ("relationships", "Relationships"),
+            ("tags", "Tags"),
+        ],
+        move |value| {
+            format!(
+                "{}?tab={value}",
+                super::party_href(kind, uid.get().as_str())
+            )
+        },
+        selected.into(),
+    )
 }
 
 /// The current-party resource shared by the tab's sections.
@@ -721,7 +720,7 @@ fn party_section(
     uid: Signal<String>,
     latest_version: RwSignal<String>,
 ) -> (AnyView, PartyResource) {
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
 
     // Created BEFORE the resource: its stamp is the resource's refetch trigger.
     let save: Action<PartyEdit, Result<String, ViewerError>> = Action::new(|edit: &PartyEdit| {
@@ -848,9 +847,9 @@ fn facts_card(state: &PartyState) -> AnyView {
     ];
     view! {
         <section class=format!("{CARD_PAD} flex flex-col gap-3") id="party-facts">
-            <div class="grid grid-cols-1 sm:grid-cols-2 items-start gap-x-4 gap-y-2 text-sm">
+            <dl class="fui-facts text-sm">
                 {facts}
-            </div>
+            </dl>
         </section>
     }
     .into_any()
@@ -873,10 +872,6 @@ pub(super) fn fact_row(label: &'static str, hook: &'static str, value: String) -
 /// Both drafts and the save are DISABLED until [`seed`] has loaded a document
 /// into the form: the card is mounted before the read resolves, and an edit
 /// typed into it then would be silently replaced by the seed.
-#[expect(
-    clippy::too_many_lines,
-    reason = "one erased section: the edit card's two drafts + validation + action wiring (rules §1)"
-)]
 fn edit_form(
     kind: PartyKind,
     form: PartyForm,
@@ -932,38 +927,31 @@ fn edit_form(
     view! {
         <section class=CARD_PAD id="party-edit">
             <h2 class=CARD_TITLE>"Edit party"</h2>
-            <p class="mb-3 text-xs text-ink-muted">{hint}</p>
+            <p class="mb-3 fui-help">{hint}</p>
             <div class="flex flex-col gap-3">
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="party-identities">
                         "identities (canonical JSON array of PARTY_IDENTITY — at least one)"
                     </label>
-                    <textarea
-                        id="party-identities"
-                        class=format!("{TEXTAREA} min-h-[10rem]")
-                        disabled=true
-                        prop:disabled=move || unseeded.get()
-                        prop:value=move || form.identities.get()
-                        on:input:target=move |ev| form.identities.set(ev.target().value())
-                    >
-                        {form.identities.get_untracked()}
-                    </textarea>
+                    {code_field(
+                        "party-identities",
+                        Language::Json,
+                        form.identities,
+                        Some(unseeded),
+                        Height::Document,
+                    )}
                 </div>
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="party-details">
                         "details (canonical JSON ITEM_STRUCTURE — leave blank to remove)"
                     </label>
-                    <textarea
-                        id="party-details"
-                        class=format!("{TEXTAREA} min-h-[8rem]")
-                        placeholder="{ \"_type\": \"ITEM_TREE\", \"archetype_node_id\": \"at0001\", … }"
-                        disabled=true
-                        prop:disabled=move || unseeded.get()
-                        prop:value=move || form.details.get()
-                        on:input:target=move |ev| form.details.set(ev.target().value())
-                    >
-                        {form.details.get_untracked()}
-                    </textarea>
+                    {code_field(
+                        "party-details",
+                        Language::Json,
+                        form.details,
+                        Some(unseeded),
+                        Height::Document,
+                    )}
                 </div>
                 <div class="flex items-center gap-3">
                     <button
@@ -974,7 +962,7 @@ fn edit_form(
                         prop:disabled=move || unseeded.get() || save.pending().get()
                         on:click=on_save
                     >
-                        <leptos_icons::Icon icon=icondata_lu::LuSave width="14" height="14" />
+                        {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::SAVE, "14")}
                         "Save party"
                     </button>
                     <Show when=move || save.pending().get()>
@@ -1038,6 +1026,7 @@ fn delete_section(kind: PartyKind, uid: Signal<String>, version_uid: RwSignal<St
         LogicalDeleteCopy {
             button_id: "party-delete",
             label: "Delete party",
+            dialog_id: "party-delete-dialog",
             confirm_id: "party-delete-confirm",
             success_title: "Party deleted",
             object: PARTY_OBJECT,
@@ -1087,7 +1076,7 @@ mod tests {
     }
 }
 
-#[cfg(all(test, feature = "ssr"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod wire_tests {
     use super::{apply_party_edits, checked_party_body, parse_party_state};
     use crate::pages::demographics::PartyKind;

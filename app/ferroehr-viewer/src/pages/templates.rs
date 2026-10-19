@@ -26,11 +26,11 @@ use leptos_meta::Title;
 use crate::adl2::TemplateFamily;
 use crate::admin::AdminAvailability;
 use crate::components::data_table::{
-    CELL, CELL_MONO, ROW, TablePaging, page_rows, page_window, paging_from_url, row_total,
-    table_footer, table_shell, table_skeleton,
+    CELL, CELL_MONO, ROW, TablePaging, page_rows, paging_from_url, row_total, table_footer,
+    table_shell, table_skeleton,
 };
 use crate::components::empty_state::EmptyState;
-use crate::components::field::{BTN_DANGER, BTN_PRIMARY, INPUT};
+use crate::components::field::{BTN_DANGER_SMALL, BTN_PRIMARY, INPUT};
 use crate::components::page_header::PageHeader;
 use crate::components::toast::{toast_error, toast_success};
 use crate::error::ViewerError;
@@ -114,7 +114,7 @@ pub async fn list_templates() -> Result<Vec<TemplateRow>, ViewerError> {
 /// Distil one Definition-list element into a [`TemplateRow`], reading each
 /// field defensively so a missing/renamed field yields an empty string rather
 /// than dropping the row.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 fn template_row(item: &serde_json::Value) -> TemplateRow {
     let text = |key: &str| {
         item.get(key)
@@ -254,7 +254,7 @@ pub async fn upload_adl2_template(
 /// (`{"template_id": …}`), or the trimmed body when the CDR echoed something
 /// else — the upload SUCCEEDED either way, so an unexpected body shape is
 /// reported as-is rather than turned into a failure.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 fn accepted_template_id(body: &str) -> String {
     if let Ok(value) = serde_json::from_str::<serde_json::Value>(body)
         && let Some(id) = value.get("template_id").and_then(serde_json::Value::as_str)
@@ -324,7 +324,7 @@ pub async fn delete_adl2_artefact(
 )]
 #[component]
 pub fn TemplatesPage() -> impl IntoView {
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     let filter = RwSignal::new(String::new());
     // The table's page window, read from the URL in SETUP (never inside the
     // suspense that fetches the list).
@@ -415,7 +415,7 @@ pub fn TemplatesPage() -> impl IntoView {
     // accepted input differing. The family comes from the URL, so both branches
     // render identically on the server pass and at hydration.
     // Opening the dialog clears BOTH halves of the previous attempt: the
-    // source, and the action value the diagnostic MessageBar renders. Leaving
+    // source, and the action value the diagnostic notice renders. Leaving
     // either behind shows the last attempt inside a dialog the reader just
     // opened fresh.
     let reset_upload = Callback::new(move |()| {
@@ -433,7 +433,7 @@ pub fn TemplatesPage() -> impl IntoView {
 
     view! {
         <Title text="Templates" />
-        <div class="p-6">
+        <div>
             <PageHeader
                 title="Templates"
                 subtitle="Operational templates registered in the CDR, by archetype-model family."
@@ -460,12 +460,12 @@ pub fn TemplatesPage() -> impl IntoView {
 /// Wire the screen's three mutations to their success/failure toasts.
 ///
 /// Every mutation toasts on BOTH outcomes; an upload rejection also keeps its
-/// inline `MessageBar`, because a validation diagnostic is worth reading line by
+/// inline notice, because a validation diagnostic is worth reading line by
 /// line. Dispatching a toast is a side-effect on the outside world, so an
 /// `Effect` is its correct home: it writes no signal and never runs on the
 /// server pass.
 fn mutation_toasts(
-    toaster: thaw::ToasterInjection,
+    toaster: ferrohealth_ui::widget::toast::Toasts,
     upload: TemplateUploadAction,
     adl2_upload: TemplateUploadAction,
     delete: TemplateDeleteAction,
@@ -524,34 +524,18 @@ fn mutation_toasts(
 /// Each href carries the family alone, so switching never inherits the other
 /// listing's page window.
 fn family_switch(family: Memo<TemplateFamily>) -> AnyView {
-    let link = move |target: TemplateFamily| {
-        let class = move || {
-            let base = "rounded-control px-3 py-1.5 text-sm font-medium transition-colors";
-            if family.get() == target {
-                format!("{base} bg-accent-subtle text-accent-ink")
-            } else {
-                format!("{base} text-ink-muted hover:bg-sunken")
-            }
-        };
-        view! {
-            <leptos_router::components::A
-                href=target.href()
-                attr:class=class
-                attr:data-template-family=target.as_query()
-            >
-                {target.label()}
-            </leptos_router::components::A>
-        }
-        .into_any()
-    };
-    view! {
-        <nav aria-label="Template families" class="flex gap-1 mb-3">
-            {link(TemplateFamily::Adl14)}
-            {link(TemplateFamily::Adl2)}
-        </nav>
-    }
-    .into_any()
+    crate::components::tab_bar::url_tabs(
+        "Template families",
+        &[("adl14", "ADL 1.4"), ("adl2", "ADL 2")],
+        |key| TemplateFamily::from_query(key).href(),
+        Signal::derive(move || family.get().as_query().to_owned()),
+    )
 }
+
+/// The largest template file the upload field reads in the browser: an
+/// operational template is text of a few hundred KiB at most, and the CDR
+/// refuses larger bodies itself.
+const TEMPLATE_UPLOAD_MAX_BYTES: u64 = 16 * 1024 * 1024;
 
 /// The screen's ONE upload dialog, serving both families: the copy, the
 /// accepted file types and the dispatched action follow the URL family, and
@@ -586,18 +570,25 @@ fn upload_dialog_view(
             on_dismiss=Callback::new(move |()| open.set(false))
             title=Signal::derive(move || family.get().upload_title().to_owned())
             help=Signal::derive(move || family.get().upload_help().to_owned())
-            accept=Signal::derive(move || family.get().upload_accept().to_owned())
-            placeholder=Signal::derive(move || family.get().upload_placeholder().to_owned())
-            choose_label=Signal::derive(move || family.get().upload_choose_label().to_owned())
-            submit_label=Signal::derive(|| "Upload template".to_owned())
+            upload=Signal::derive(move || {
+                let family = family.get();
+                ferrohealth_ui::widget::upload::Upload {
+                    id: "template-upload",
+                    label: "Template source",
+                    choose: family.upload_choose_label(),
+                    accept: family.upload_accept(),
+                    max_bytes: TEMPLATE_UPLOAD_MAX_BYTES,
+                    placeholder: family.upload_placeholder(),
+                }
+            })
+            submit_label="Upload template"
             source=source
             pending=pending
             error=error
             on_submit=Callback::new(move |text: String| {
                 drop(active().dispatch(text));
             })
-            picker_id="template-upload-picker"
-            source_id="template-upload-source"
+            dialog_id="template-upload-dialog"
             submit_id="template-upload-submit"
         />
     }
@@ -624,6 +615,7 @@ fn delete_dialog(
             title="Delete template"
             message=message
             confirm_label="Delete template"
+            dialog_id="template-delete-confirm-dialog"
             confirm_id="template-delete-confirm"
             on_cancel=Callback::new(move |()| pending_delete.set(None))
             on_confirm=Callback::new(move |()| {
@@ -684,7 +676,7 @@ fn upload_trigger(
                 open.set(true);
             }
         >
-            <leptos_icons::Icon icon=icondata_lu::LuUpload width="14" height="14" />
+            {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::UPLOAD, "14")}
             {move || family.get().upload_label()}
         </button>
     }
@@ -767,7 +759,7 @@ fn rows_view(
     let body = view! {
         <For
             each=move || {
-                let window = page_window(total.get(), paging.page.get(), paging.size.get());
+                let window = paging.window(total.get());
                 matched.with(|rows| page_rows(rows, window))
             }
             key=|row| row.template_id.clone()
@@ -783,15 +775,21 @@ fn rows_view(
     };
     // `base` stays the screen's own path: the paging href carries every OTHER
     // query parameter across, `?family=` included.
-    let footer = table_footer("/templates", family_noun(family), paging, total);
+    let footer = table_footer(
+        "/templates",
+        "Template pages",
+        ferrohealth_ui::table::model::Noun::new("template", family_noun(family)),
+        paging,
+        total,
+    );
 
     view! {
-        {table_shell(headers, body)}
+        {table_shell(family_noun(family), headers, body)}
         {footer}
         <Show when=none_match>
             <div class="mt-3">
                 <EmptyState
-                    icon=icondata_lu::LuSearchX
+                    icon=ferrohealth_ui::icon::Glyph::SEARCH_X
                     message="No templates match the filter"
                     hint="Clear or shorten the filter to see the whole catalogue again."
                 />
@@ -852,7 +850,7 @@ fn empty_family_state(family: TemplateFamily) -> AnyView {
             "Upload your first ADL2 operational template with the Upload ADL2 button above."
         }
     };
-    view! { <EmptyState icon=icondata_lu::LuFileCode2 message="No templates yet" hint=hint /> }
+    view! { <EmptyState icon=ferrohealth_ui::icon::Glyph::FILE_CODE message="No templates yet" hint=hint /> }
         .into_any()
 }
 
@@ -879,9 +877,9 @@ fn row_view(
                     {row.template_id}
                 </leptos_router::components::A>
             </td>
-            <td class=CELL>{row.concept}</td>
-            <td class=CELL_MONO>{row.archetype_id}</td>
-            <td class=CELL_MONO>{row.created}</td>
+            <td class=CELL data-label="Concept">{row.concept}</td>
+            <td class=CELL_MONO data-label="Archetype ID">{row.archetype_id}</td>
+            <td class=CELL data-label="Created">{crate::components::timestamp::timestamp(row.created)}</td>
             {action}
         </tr>
     }
@@ -903,10 +901,10 @@ fn delete_cell(
     };
     let on_click = move |_| pending_delete.set(Some(target.clone()));
     view! {
-        <td class=format!("{CELL} text-right")>
+        <td class=ferrohealth_ui::table::view::ACTIONS data-label="Actions">
             <button
                 type="button"
-                class=BTN_DANGER
+                class=BTN_DANGER_SMALL
                 data-template-delete=template_id.to_owned()
                 disabled=Signal::derive(move || delete.pending().get())
                 on:click=on_click
@@ -999,7 +997,7 @@ mod tests {
 
     /// Both families' listings are read through this one parser, so it is
     /// pinned against the four fields the Definition API returns.
-    #[cfg(feature = "ssr")]
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn a_list_element_distils_into_a_row_and_missing_fields_stay_empty() {
         let item = serde_json::json!({
@@ -1022,7 +1020,7 @@ mod tests {
         assert!(row.created.is_empty());
     }
 
-    #[cfg(feature = "ssr")]
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn the_upload_answer_yields_the_echoed_template_id() {
         let body = r#"{"template_id":"openEHR-EHR-COMPOSITION.cnf_minimal.v1.0.0"}"#;

@@ -75,13 +75,13 @@ Rust stable **1.98** (1.98.1), MSRV 1.97, **edition 2024**, resolver v3 (`rust-t
 ```bash
 cargo build --workspace
 cargo nextest run --workspace
-# clippy = the EXACT CI lanes (viewer excluded from --all-features: hydrate/ssr are mutually exclusive):
+# clippy = the EXACT CI lanes (the viewer has its own lanes: its server half on the host, its browser half on wasm32):
 cargo clippy --workspace --exclude ferroehr-viewer --all-targets --all-features -- -D warnings
-cargo clippy -p ferroehr-viewer --all-targets --features ssr -- -D warnings
-cargo clippy -p ferroehr-viewer --target wasm32-unknown-unknown --features hydrate -- -D warnings
+cargo clippy -p ferroehr-viewer --all-targets -- -D warnings
+cargo clippy -p ferroehr-viewer --lib --target wasm32-unknown-unknown -- -D warnings
 cargo fmt --all
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --exclude ferroehr-viewer --all-features --no-deps --document-private-items
-RUSTDOCFLAGS="-D warnings" cargo doc -p ferroehr-viewer --features ssr --no-deps
+RUSTDOCFLAGS="-D warnings" cargo doc -p ferroehr-viewer --no-deps
 cargo deny check   # subsumes cargo-audit
 bash scripts/conformance.sh   # the CNF 2.0 acceptance run → docs/conformance/<sut>/ (baseline numbers live ONLY there)
 # perf (hour-plus, exclusive SUT): CONF_PERF_CLASS=POC|S|L|R [CONF_PERF_HOURS=1..12] bash scripts/conformance.sh

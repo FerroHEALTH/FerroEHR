@@ -232,7 +232,7 @@ fn string_list(value: Option<&serde_json::Value>) -> Vec<String> {
 ///
 /// Guards the viewer session first: the server fns below are publicly
 /// reachable endpoints, and this is the one place their CDR call is made.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 async fn terminology_get(path: &str) -> Result<Option<serde_json::Value>, ViewerError> {
     let session = crate::session::require_session().await?;
     let state: crate::state::AppState = leptos::prelude::expect_context();
@@ -253,7 +253,7 @@ async fn terminology_get(path: &str) -> Result<Option<serde_json::Value>, Viewer
 /// The optional `at_date` query fragment, introduced by `lead` (`?` when it
 /// opens the query string, `&` when it extends one) — empty when the caller
 /// gave no date, which asks the CDR for the current definition.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 fn at_date_query(at_date: &str, lead: char) -> String {
     let at_date = at_date.trim();
     if at_date.is_empty() {
@@ -264,7 +264,7 @@ fn at_date_query(at_date: &str, lead: char) -> String {
 }
 
 /// Refuse a blank identifier before it reaches a CDR path or query parameter.
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 fn require_value(value: &str, what: &str) -> Result<String, ViewerError> {
     let value = value.trim();
     if value.is_empty() {

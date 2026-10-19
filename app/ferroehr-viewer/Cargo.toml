@@ -13,9 +13,12 @@ categories.workspace = true
 publish = false
 
 # Full-stack Leptos crate (cargo-leptos): the rlib feeds the server binary
-# (feature `ssr`) and the cdylib is the WASM client bundle (feature
-# `hydrate`). NOTE: no openEHR spec governs the viewer — our own design /
-# product extension; the wire it consumes is spec-bound (see CLAUDE.md).
+# and the cdylib is the WASM client bundle. The two halves are chosen by
+# compilation target, never by Cargo feature, so a workspace `--all-features`
+# build can never turn both on; a target dependency's features apply only to a
+# build for that target (the Cargo reference, resolver version 2 and later).
+# NOTE: no openEHR spec governs the viewer — our own design / product
+# extension; the wire it consumes is spec-bound (see CLAUDE.md).
 [lib]
 crate-type = ["cdylib", "rlib"]
 
@@ -26,151 +29,92 @@ path = "src/main.rs"
 [dependencies]
 openehr-query = { path = "../../crates/openehr-query" }
 
-# `openehr-sdt` is taken WITHOUT default features, so on both targets it
+# `openehr-sdt` is taken WITHOUT default features, so in the browser half it
 # contributes only the std-only SMART scope grammar (`openehr_sdt::smart_scopes`,
 # master08): the ONE parser the CDR's scope gate and the viewer's scope previewer
 # share, so what the drawer explains can never drift from what the CDR enforces.
 # Parsing a scope string is a pure function, so the previewer runs in the browser
-# rather than round-tripping the BFF; that is why this dependency is
-# unconditional. `openehr-its` without default features compiles empty. The heavy
-# surfaces (`openehr_its::opt14` and `openehr_sdt::flat` for the query-builder
-# path catalog) ride each crate's `full` feature, which the `ssr` gate below adds
-# back BFF-side, so they stay out of the WASM bundle.
+# rather than round-tripping the BFF. `openehr-its` without default features
+# compiles empty. The heavy surfaces (`openehr_its::opt14` and
+# `openehr_sdt::flat` for the query-builder path catalog) ride each crate's
+# `full` feature, which the server half below adds back, so they stay out of
+# the WASM bundle.
 openehr-its = { path = "../../crates/openehr-its", default-features = false }
 openehr-sdt = { path = "../../crates/openehr-sdt", default-features = false }
-
-# The AOM2 operational-template type the ADL2 detail screen's path catalog is
-# built from (`OperationalTemplateV2` canonical JSON in, Web Template out).
-# Server-only: the build runs BFF-side, so the WASM bundle never carries the
-# AOM2 model.
-openehr-am = { path = "../../crates/openehr-am", optional = true }
 
 leptos.workspace = true
 leptos_meta.workspace = true
 leptos_router.workspace = true
-thaw.workspace = true
+# The shared FerroHEALTH console components, tokens, stylesheet, highlighters
+# and table model; it has no render-mode feature and follows leptos's.
+ferrohealth-ui.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 # ISO 8601 parsing/formatting for the results chart's time axis (pure —
 # no clock access, so it needs no wasm js feature).
 jiff.workspace = true
 
-# Isomorphic (compiles on both targets): `use_interval_fn` for the shell's
-# health poll; its default `storage` feature also enables `web-sys/Storage`,
-# which the dark-mode toggle uses (via leptos's `web_sys` re-export) to persist
-# the theme to `localStorage`.
-leptos-use = { workspace = true }
-
-# Pure-Rust SVG icons (no JS, both targets): the Lucide pack alone plus the
-# leptos Icon component — the icondata umbrella crate pulls every pack and
-# bloats the WASM binary.
-leptos_icons.workspace = true
-icondata_lu.workspace = true
-icondata_core.workspace = true
-
-# Pure-Rust SVG charts (no JS) for the dashboard commit-activity trend.
-# Isomorphic: it renders a "Loading…" placeholder server-side and draws the
-# chart after the client measures the container. Its own `ssr` feature MUST
-# ride the `ssr` gate below (see the feature list) so the leptos-use timers it
-# uses compile the native path server-side instead of panicking at SSR — the
-# same reason `leptos-use/ssr` is required.
-leptos-chartistry = { workspace = true }
-
-# JsFuture for the browser-side OPT file read (thaw Upload custom_request);
-# compiles on both targets, only ever runs in the browser.
-wasm-bindgen-futures.workspace = true
-
 thiserror.workspace = true
 
-# server-only (behind `ssr`)
-leptos_axum = { workspace = true, optional = true }
-axum = { workspace = true, optional = true }
-tokio = { workspace = true, optional = true }
-tracing = { workspace = true, optional = true }
-tracing-subscriber = { workspace = true, optional = true }
-anyhow = { workspace = true, optional = true }
-reqwest = { workspace = true, optional = true }
-config = { workspace = true, optional = true }
-# The sealed session cookie (AES-256-GCM private jar, #2949): the whole
-# session rides one encrypted cookie so every instance can read it — the
-# viewer runs multi-instance on serverless platforms and keeps no store.
-cookie = { workspace = true, optional = true }
-base64 = { workspace = true, optional = true }
-# The browser security-header layer (`SetResponseHeaderLayer`). Server-only:
-# headers are a response property, so the hydrate target never needs it.
-tower-http = { workspace = true, optional = true }
-csv = { workspace = true, optional = true }
-openidconnect = { workspace = true, optional = true }
 # Percent-encoding is ALWAYS the `urlencoding` crate (owner hard rule —
-# never hand-rolled). Non-optional: the audit screen builds
-# filter-preserving pagination hrefs on every target (ssr, hydrate, and
-# plain featureless test builds); the crate is tiny and wasm-clean.
+# never hand-rolled). Both halves: the audit screen builds
+# filter-preserving pagination hrefs on every target.
 urlencoding = { workspace = true }
 # `Stream`/`Sink` name the server-fn transport's own signatures, which
-# `crate::session_client` re-implements on BOTH targets, and the BFF's bounded
+# `crate::session_client` re-implements in BOTH halves, and the BFF's bounded
 # concurrent fan-out (`cdr::FANOUT_CONCURRENCY`) rides the same crate. Already
 # in the wasm graph through leptos's own spawner, so the browser bundle carries
 # nothing new.
 futures = { workspace = true }
-# Typed status comparisons on every target (owner directive 2026-08-06,
+# Typed status comparisons in both halves (owner directive 2026-08-06,
 # issue #2055): `http::StatusCode` names the codes the pages branch on, and
-# the crate is tiny and wasm-clean — so it is non-optional, like urlencoding.
+# the crate is tiny and wasm-clean.
 http = { workspace = true }
 
-# browser-only (behind `hydrate`)
-wasm-bindgen = { workspace = true, optional = true }
-console_error_panic_hook = { workspace = true, optional = true }
+# The browser half.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+leptos = { workspace = true, features = ["hydrate"] }
+wasm-bindgen.workspace = true
+console_error_panic_hook.workspace = true
 
-[features]
-default = []
-hydrate = [
-    "leptos/hydrate",
-    "thaw/hydrate",
-    "dep:wasm-bindgen",
-    "dep:console_error_panic_hook",
-]
-ssr = [
-    "dep:tower-http",
-    "leptos/ssr",
-    # The per-request CSP nonce (src/main.rs): `leptos::nonce::Nonce` +
-    # `HydrationScripts` stamping `nonce=` on the bootstrap script. Named
-    # explicitly rather than inherited from leptos_axum's own dependency
-    # edge, so the strict script-src cannot lose its nonce to a feature
-    # change upstream.
-    "leptos/nonce",
-    "leptos_meta/ssr",
-    "leptos_router/ssr",
-    "thaw/ssr",
-    # leptos-use MUST get its `ssr` feature on the server target: without it
-    # its browser primitives (use_interval_fn's js-sys timer) compile the
-    # wasm path into the native binary and panic at SSR ("function not
-    # implemented on non-wasm32 targets") — caught by the W2 live smoke.
-    "leptos-use/ssr",
-    "leptos-use/axum",
-    # chartistry embeds its own leptos-use; give it the ssr path server-side.
-    "leptos-chartistry/ssr",
-    "dep:leptos_axum",
-    "dep:axum",
-    "dep:tokio",
-    "dep:tracing",
-    "dep:tracing-subscriber",
-    "dep:anyhow",
-    "dep:reqwest",
-    "dep:config",
-    "dep:cookie",
-    "dep:base64",
-    "dep:csv",
-    "dep:openidconnect",
-    # The full ITS surface BFF-side (OPT parsing + WebTemplate building); the
-    # scope grammar itself is unconditional (see the dependency comment above).
-    "openehr-its/full",
-    "openehr-sdt/full",
-    # The AOM2 OperationalTemplate reader is needed BFF-side only (the ADL2
-    # path catalog).
-    "dep:openehr-am",
-]
+# The server half.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+# The per-request CSP nonce (src/server.rs): `leptos::nonce::Nonce` +
+# `HydrationScripts` stamping `nonce=` on the bootstrap script. Named
+# explicitly rather than inherited from leptos_axum, so the strict script-src
+# cannot lose its nonce to a feature change upstream.
+leptos = { workspace = true, features = ["ssr", "nonce"] }
+leptos_meta = { workspace = true, features = ["ssr"] }
+leptos_router = { workspace = true, features = ["ssr"] }
+leptos_axum.workspace = true
+# The full ITS surface BFF-side (OPT parsing + WebTemplate building); the
+# scope grammar itself is in both halves (see the dependency comment above).
+openehr-its = { path = "../../crates/openehr-its", default-features = false, features = ["full"] }
+openehr-sdt = { path = "../../crates/openehr-sdt", default-features = false, features = ["full"] }
+# The AOM2 operational-template type the ADL2 detail screen's path catalog is
+# built from (`OperationalTemplateV2` canonical JSON in, Web Template out).
+# Server-only: the build runs BFF-side, so the WASM bundle never carries the
+# AOM2 model.
+openehr-am = { path = "../../crates/openehr-am" }
+axum.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+anyhow.workspace = true
+reqwest.workspace = true
+config.workspace = true
+# The sealed session cookie (AES-256-GCM private jar, #2949): the whole
+# session rides one encrypted cookie so every instance can read it — the
+# viewer runs multi-instance on serverless platforms and keeps no store.
+cookie.workspace = true
+base64.workspace = true
+# The browser security-header layer (`SetResponseHeaderLayer`). Server-only:
+# headers are a response property.
+tower-http.workspace = true
+csv.workspace = true
+openidconnect.workspace = true
 
-[dev-dependencies]
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 indexmap.workspace = true
 # `ServiceExt::oneshot`: the CSP-nonce tests drive a stub router through the
 # security layer in-process, with no listener.
@@ -197,10 +141,6 @@ site-pkg-dir = "pkg"
 tailwind-input-file = "style/tailwind.css"
 site-addr = "127.0.0.1:3000"
 reload-port = 3001
-bin-features = ["ssr"]
-bin-default-features = false
-lib-features = ["hydrate"]
-lib-default-features = false
 lib-profile-release = "wasm-release"
 # Content-hashed /pkg filenames (`ferroehr-viewer.<md5>.wasm`). This is what
 # makes the year-long immutable Cache-Control the server sends for /pkg

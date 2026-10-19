@@ -26,20 +26,28 @@ use leptos_router::path;
 /// (<https://docs.rs/leptos_meta/0.8/leptos_meta/fn.HashedStylesheet.html>).
 #[must_use]
 pub fn shell(options: LeptosOptions) -> impl IntoView {
+    // The theme the request's cookie names, written on <html> so the first
+    // paint is already in it (no script, no flash).
+    let theme = crate::theme::current_theme();
     view! {
         <!DOCTYPE html>
         // The viewer ships one locale, and its copy is written in English, so
         // `en` is the honest declaration rather than a placeholder — an
         // assistive technology must be told which language it is reading.
         // TODO(#300): drive lang from the active locale when a second locale lands.
-        <html lang="en">
+        <html lang="en" data-theme=theme.key()>
             <head>
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
                 <AutoReload options=options.clone() />
                 <HydrationScripts options=options.clone() />
+                // The viewer's own utilities first, then FerroUI's stylesheet,
+                // whose base layer then wins over Tailwind's preflight, then
+                // the FerroEHR brand theme over FerroUI's roles.
                 <HashedStylesheet options id="leptos" />
                 <MetaTags />
+                <link rel="stylesheet" href=STYLESHEET_PATH />
+                <link rel="stylesheet" href=THEME_PATH />
             </head>
             <body>
                 <App />
@@ -51,8 +59,14 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
 /// The product name as a human reads it — the viewer's own display name.
 ///
 /// Lowercase `ferroehr-viewer` stays reserved for technical identifiers (the
-/// crate, the asset paths, the `thaw` theme id, the `localStorage` theme key).
+/// crate, the asset paths).
 const PRODUCT: &str = "FerroEHR Viewer";
+
+/// The path the server serves FerroUI's stylesheet at.
+pub const STYLESHEET_PATH: &str = "/ferrohealth-ui.css";
+
+/// The path the server serves the FerroEHR brand theme at.
+pub const THEME_PATH: &str = "/theme.css";
 
 /// Formats one screen's section name into the document title.
 ///
@@ -73,39 +87,41 @@ fn viewer_title(mut section: String) -> String {
     section
 }
 
-/// The root component: meta context, the `thaw` theme/config provider, and the
-/// router. The `theme_id` is fixed (never the component's default random UUID)
-/// so the server pass and client hydration emit an identical `data-thaw-id`
-/// and generated-style selector — a hydration-determinism requirement.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; view!/mount always consumes the value"
-)]
-#[expect(
-    clippy::too_many_lines,
-    reason = "one route tree whose DECLARATION ORDER is load-bearing (leptos_router takes the first \
-              match), so it stays a single readable list"
-)]
-#[component]
-pub fn App() -> impl IntoView {
-    provide_meta_context();
+/// Marks the page hydrated: `data-hydrated` on `<body>` for the E2E harness,
+/// and the page-wide [`Hydrated`](crate::components::field::Hydrated) the
+/// code editors read.
+fn mark_hydration() {
     // Hydration-completion marker: effects run only in the browser (Leptos
     // book, reactivity/14), so `data-hydrated` lands on `<body>` exactly when
     // the client runtime is live and hydrated listeners exist. The E2E
     // harness waits on it before driving hydration-dependent controls — a
     // file set on the upload input BEFORE its listener exists fires no later
     // event. Set post-hydration, it cannot mismatch the SSR document.
-    Effect::new(|_| {
+    let hydrated = RwSignal::new(false);
+    provide_context(crate::components::field::Hydrated {
+        signal: hydrated,
+        no_marks: Signal::stored(Vec::new()),
+        owner: Owner::current(),
+    });
+    Effect::new(move |_| {
         if let Some(body) = document().body() {
             drop(body.set_attribute("data-hydrated", "true"));
         }
+        hydrated.set(true);
     });
+}
+
+/// The root component: the meta context and the router.
+#[expect(
+    clippy::must_use_candidate,
+    reason = "#[component] rewrites the fn; view!/mount always consumes the value"
+)]
+#[component]
+pub fn App() -> impl IntoView {
+    provide_meta_context();
+    mark_hydration();
     view! {
         <Title formatter=viewer_title text=PRODUCT />
-        <thaw::ConfigProvider
-            theme_id="ferroehr-viewer".to_owned()
-            theme=RwSignal::new(crate::theme::viewer_light())
-        >
             <Router>
                 <Routes fallback=|| view! { <NotFound /> }>
                     // NOTE: /login uses SsrMode::Async so the sign-in form
@@ -205,7 +221,6 @@ pub fn App() -> impl IntoView {
                     </ParentRoute>
                 </Routes>
             </Router>
-        </thaw::ConfigProvider>
     }
 }
 
@@ -217,21 +232,28 @@ pub fn App() -> impl IntoView {
 )]
 #[component]
 pub fn NotFound() -> impl IntoView {
+    let content = ferrohealth_ui::view::surface::panel(ferrohealth_ui::view::empty::empty_state(
+        ferrohealth_ui::icon::Glyph::COMPASS,
+        "Page not found",
+        "The page you requested does not exist.",
+        ferrohealth_ui::view::button::link_button(
+            "/".to_owned(),
+            ferrohealth_ui::view::button::Variant::Primary,
+            None,
+            "Return to the dashboard",
+        ),
+    ))
+    .into_any();
     view! {
         <Title text="Not found" />
-        <div class="p-6">
-            <thaw::Card>
-                <thaw::CardHeader>
-                    <thaw::Body1>"Page not found"</thaw::Body1>
-                </thaw::CardHeader>
-                <p class="text-sm opacity-70">
-                    "The page you requested does not exist. "
-                    <leptos_router::components::A href="/" attr:class="underline">
-                        "Return to the dashboard."
-                    </leptos_router::components::A>
-                </p>
-            </thaw::Card>
-        </div>
+        {ferrohealth_ui::view::shell::centred(
+            content,
+            ferrohealth_ui::view::shell::Footer {
+                product: PRODUCT,
+                version: env!("CARGO_PKG_VERSION"),
+                about: "/system#manufacturer",
+            },
+        )}
     }
 }
 

@@ -44,6 +44,15 @@ use crate::pages::template_detail::{
 };
 use crate::pages::templates::TemplateRow;
 
+/// The ADL2 detail's views, each its `?tab=` key and its words: the closed
+/// set of [`Adl2Tab`], in display order.
+const ADL2_TABS: &[(&str, &str)] = &[
+    ("source", "Source"),
+    ("json", "AOM2 JSON"),
+    ("catalog", "Path catalog"),
+    ("example", "Example"),
+];
+
 /// Fetch the stored ADL2 operational-template SOURCE.
 ///
 /// GET `definition/template/adl2/{template_id}` (or
@@ -129,7 +138,7 @@ pub async fn fetch_adl2_json(
 /// # Errors
 /// [`ViewerError::Internal`] when the AOM2 JSON fails to parse or the Web
 /// Template fails to build (the diagnostic named, never a panic).
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 pub fn adl2_catalog_from_json(json: &str) -> Result<CatalogNode, ViewerError> {
     let opt = openehr_its::json::from_canonical_json::<
         openehr_am::v2_4::aom2::archetype::operational_template::OperationalTemplate,
@@ -377,44 +386,29 @@ pub fn Adl2TemplateDetailPage() -> impl IntoView {
     let catalog_pane = catalog_tab(catalog, selected_node);
     let example_pane = example_tab(example, example_format, example_detail, example_kind);
 
-    let tab_link = move |value: Adl2Tab| {
-        let class = move || {
-            let base = "rounded-control px-3 py-1.5 text-sm font-medium transition-colors";
-            if tab.get() == value {
-                format!("{base} bg-accent-subtle text-accent-ink")
-            } else {
-                format!("{base} text-ink-muted hover:bg-sunken")
-            }
-        };
-        let href =
-            move || crate::adl2::view_href(&template_id.get(), value, version.get().as_deref());
-        view! {
-            <leptos_router::components::A
-                href=href
-                attr:class=class
-                attr:data-adl2-tab=value.as_query()
-            >
-                {value.label()}
-            </leptos_router::components::A>
-        }
-        .into_any()
-    };
+    let tabs = crate::components::tab_bar::url_tabs(
+        "ADL2 template views",
+        ADL2_TABS,
+        move |key| {
+            crate::adl2::view_href(
+                &template_id.get(),
+                Adl2Tab::from_query(key),
+                version.get().as_deref(),
+            )
+        },
+        Signal::derive(move || tab.get().as_query().to_owned()),
+    );
 
     view! {
         <Title text=move || format!("ADL2 template · {}", template_id.get()) />
-        <div class="p-6">
+        <div>
             <PageHeader
                 title=template_id
                 crumbs=vec![Crumb::new("Templates", TemplateFamily::Adl2.href())]
                 mono=true
             />
             {versions}
-            <nav aria-label="ADL2 template views" class="flex gap-1 mb-4">
-                {tab_link(Adl2Tab::Source)}
-                {tab_link(Adl2Tab::Json)}
-                {tab_link(Adl2Tab::Catalog)}
-                {tab_link(Adl2Tab::Example)}
-            </nav>
+            {tabs}
             <div>
                 <div id="adl2-source-pane" class:hidden=move || tab.get() != Adl2Tab::Source>
                     {source_pane}
@@ -485,9 +479,7 @@ fn version_section(
             <h2 class=CARD_TITLE>"Version"</h2>
             <Transition fallback=|| {
                 view! {
-                    <thaw::Skeleton class="h-8">
-                        <thaw::SkeletonItem />
-                    </thaw::Skeleton>
+                    {ferrohealth_ui::view::empty::skeleton(1, "Loading…")}
                 }
             }>{chips}</Transition>
             {version_form(template_id, tab, version)}
@@ -546,7 +538,7 @@ fn version_form(
     let initial = version.get_untracked().unwrap_or_default();
     view! {
         <leptos_router::components::Form method="GET" action=action attr:class="mt-3">
-            <div class="flex flex-wrap items-end gap-2">
+            <div class="fui-field-flow">
                 // The hidden field carries live state on `prop:value` with the
                 // attribute for the server pass (attributes set the initial
                 // state, properties carry the live one).
@@ -556,13 +548,13 @@ fn version_form(
                     value=tab.get_untracked().as_query()
                     prop:value=move || tab.get().as_query()
                 />
-                <label class="flex flex-col gap-1 text-xs text-ink-muted">
-                    "Release version (1.1.0, or a 1 / 1.0 prefix)"
+                <label class="fui-field">
+                    <span class="fui-label">"Release version (1.1.0, or a 1 / 1.0 prefix)"</span>
                     <input
                         id="adl2-version-input"
                         type="text"
                         name="version"
-                        class=format!("w-64 {INPUT}")
+                        class=INPUT
                         placeholder="as stored"
                         value=initial
                     />
@@ -588,7 +580,7 @@ fn catalog_tab(
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
             <section class=CARD_PAD>
                 <h2 class=CARD_TITLE>"Path catalog (WT tree)"</h2>
-                <p class="mb-2 text-xs text-ink-muted">
+                <p class="mb-2 fui-help">
                     "Built by the viewer from the served OperationalTemplateV2: the ADL2 resource \
                      serves no Web Template representation of its own."
                 </p>
@@ -629,17 +621,13 @@ fn absent_view(what: &str) -> AnyView {
          or go back to the ADL2 listing."
     );
     view! {
-        <thaw::MessageBar intent=thaw::MessageBarIntent::Warning>
-            <thaw::MessageBarBody>
-                {message} " "
+        {ferrohealth_ui::view::notice::notice(ferrohealth_ui::tone::Tone::Warn, ferrohealth_ui::view::notice::Announce::Status, None, view! { {message} " "
                 <leptos_router::components::A
                     href=TemplateFamily::Adl2.href()
                     attr:class="text-accent hover:underline"
                 >
                     "ADL2 templates"
-                </leptos_router::components::A>
-            </thaw::MessageBarBody>
-        </thaw::MessageBar>
+                </leptos_router::components::A> })}
     }
     .into_any()
 }
@@ -653,7 +641,7 @@ fn source_tab(source: Resource<Result<PaneBody, ViewerError>>) -> AnyView {
                 match source.await {
                     Ok(PaneBody::Idle) => ().into_any(),
                     Ok(PaneBody::Loaded(text)) => {
-                        view! { <crate::components::format_view::DocumentPane body=text /> }
+                        view! { <crate::components::format_view::DocumentPane id="adl2-source-document" body=text /> }
                             .into_any()
                     }
                     Ok(PaneBody::Absent) => absent_view("ADL2 source"),
@@ -678,7 +666,7 @@ fn json_tab(json: Resource<Result<PaneBody, ViewerError>>) -> AnyView {
                             &raw,
                             ReprFormat::CanonicalJson,
                         );
-                        view! { <crate::components::format_view::DocumentPane body=pretty /> }
+                        view! { <crate::components::format_view::DocumentPane id="adl2-opt-document" body=pretty /> }
                             .into_any()
                     }
                     Ok(PaneBody::Absent) => absent_view("OperationalTemplateV2 JSON"),
@@ -720,7 +708,7 @@ fn example_tab(
                                 &raw,
                                 format.get_untracked(),
                             );
-                            view! { <crate::components::format_view::DocumentPane body=pretty /> }
+                            view! { <crate::components::format_view::DocumentPane id="adl2-example-document" body=pretty /> }
                                 .into_any()
                         }
                         Ok(PaneBody::Absent) => absent_view("example composition"),

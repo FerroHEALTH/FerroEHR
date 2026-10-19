@@ -20,7 +20,7 @@ use leptos::prelude::*;
 use serde_json::Value;
 
 use crate::components::empty_state::EmptyState;
-use crate::components::field::{BTN_DANGER, BTN_SECONDARY, INPUT, LABEL};
+use crate::components::field::{BTN_DANGER, BTN_DESTRUCTIVE, BTN_SECONDARY, INPUT, LABEL};
 use crate::components::notice::inline_error;
 use crate::components::surface::{CARD_PAD, CARD_TITLE, WELL};
 use crate::error::ViewerError;
@@ -115,7 +115,7 @@ fn toolbar_body(
                         class=move || toggle_class(history_open.get())
                         on:click=move |_| history_open.update(|o| *o = !*o)
                     >
-                        <leptos_icons::Icon icon=icondata_lu::LuHistory width="14" height="14" />
+                        {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::ROTATE_CCW_CLOCK, "14")}
                         "Version history"
                     </button>
                     <button
@@ -123,7 +123,7 @@ fn toolbar_body(
                         class=move || toggle_class(time_open.get())
                         on:click=move |_| time_open.update(|o| *o = !*o)
                     >
-                        <leptos_icons::Icon icon=icondata_lu::LuClock width="14" height="14" />
+                        {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::CLOCK, "14")}
                         "At time"
                     </button>
                     <button
@@ -131,16 +131,12 @@ fn toolbar_body(
                         class=move || toggle_class(path_open.get())
                         on:click=move |_| path_open.update(|o| *o = !*o)
                     >
-                        <leptos_icons::Icon
-                            icon=icondata_lu::LuFolderSearch
-                            width="14"
-                            height="14"
-                        />
+                        {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::FOLDER_SEARCH, "14")}
                         "Path query"
                     </button>
                 </div>
                 <button type="button" class=BTN_DANGER on:click=move |_| confirm_delete.set(true)>
-                    <leptos_icons::Icon icon=icondata_lu::LuTrash width="14" height="14" />
+                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::TRASH, "14")}
                     "Delete directory"
                 </button>
             </div>
@@ -156,7 +152,7 @@ fn toolbar_body(
                 <button
                     id="directory-delete-confirm"
                     type="button"
-                    class=BTN_DANGER
+                    class=BTN_DESTRUCTIVE
                     disabled=Signal::derive(move || delete.pending().get())
                     on:click=on_delete
                 >
@@ -199,7 +195,7 @@ pub(in crate::pages::ehr_detail::directory) fn history_panel(
                         Ok(history) if history.versions.is_empty() => {
                             view! {
                                 <EmptyState
-                                    icon=icondata_lu::LuHistory
+                                    icon=ferrohealth_ui::icon::Glyph::ROTATE_CCW_CLOCK
                                     message="No versions yet"
                                     hint="This EHR has no directory — create one and its versions are listed here."
                                 />
@@ -278,7 +274,7 @@ fn load_older(has_older: bool, history_window: RwSignal<u32>) -> AnyView {
     view! {
         <div>
             <button id="directory-history-older" type="button" class=BTN_SECONDARY on:click=widen>
-                <leptos_icons::Icon icon=icondata_lu::LuChevronDown width="14" height="14" />
+                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::CHEVRON_DOWN, "14")}
                 "Load older versions"
             </button>
         </div>
@@ -328,7 +324,7 @@ fn version_preview(
     version: &DirectoryVersion,
 ) -> AnyView {
     let tree = match serde_json::from_str::<Value>(&version.body) {
-        Ok(value) => read_only_tree(&value),
+        Ok(value) => read_only_tree("directory-version-tree", &value),
         Err(e) => inline_error(&ViewerError::Internal(format!("version JSON: {e}"))),
     };
     let is_latest = version.is_latest;
@@ -361,11 +357,7 @@ fn version_preview(
                                     }
                                 }
                             >
-                                <leptos_icons::Icon
-                                    icon=icondata_lu::LuRotateCcw
-                                    width="14"
-                                    height="14"
-                                />
+                                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::ROTATE_CCW, "14")}
                                 "Restore this version"
                             </button>
                         }
@@ -415,7 +407,7 @@ pub(in crate::pages::ehr_detail::directory) fn time_travel_panel(
                         }
                         Ok(Some(DirectoryAtTime::Present(state))) => {
                             match serde_json::from_str::<Value>(&state.body) {
-                                Ok(value) => read_only_tree(&value),
+                                Ok(value) => read_only_tree("directory-at-time-tree", &value),
                                 Err(e) => {
                                     inline_error(
                                         &ViewerError::Internal(format!("directory JSON: {e}")),
@@ -426,7 +418,7 @@ pub(in crate::pages::ehr_detail::directory) fn time_travel_panel(
                         Ok(Some(DirectoryAtTime::DeletedAtTime)) => {
                             view! {
                                 <EmptyState
-                                    icon=icondata_lu::LuTriangleAlert
+                                    icon=ferrohealth_ui::icon::Glyph::TRIANGLE_ALERT
                                     message="Deleted at that time"
                                     hint="The directory had been deleted as of the selected time."
                                 />
@@ -436,7 +428,7 @@ pub(in crate::pages::ehr_detail::directory) fn time_travel_panel(
                         Ok(Some(DirectoryAtTime::NoneAtTime)) => {
                             view! {
                                 <EmptyState
-                                    icon=icondata_lu::LuClock
+                                    icon=ferrohealth_ui::icon::Glyph::CLOCK
                                     message="No directory then"
                                     hint="No directory existed at the selected time."
                                 />
@@ -490,7 +482,7 @@ pub(in crate::pages::ehr_detail::directory) fn path_panel(
                         }
                         Ok(Some(DirectorySubtree::Found(body))) => {
                             match serde_json::from_str::<Value>(&body) {
-                                Ok(value) => read_only_tree(&value),
+                                Ok(value) => read_only_tree("directory-at-path-tree", &value),
                                 Err(e) => {
                                     inline_error(
                                         &ViewerError::Internal(format!("subtree JSON: {e}")),
@@ -501,7 +493,7 @@ pub(in crate::pages::ehr_detail::directory) fn path_panel(
                         Ok(Some(DirectorySubtree::Missing)) => {
                             view! {
                                 <EmptyState
-                                    icon=icondata_lu::LuFolderX
+                                    icon=ferrohealth_ui::icon::Glyph::FOLDER_X
                                     message="No folder at that path"
                                     hint="The directory has no sub-folder matching the path."
                                 />

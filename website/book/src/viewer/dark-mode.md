@@ -1,10 +1,13 @@
 # Dark mode
 
 Every viewer screen is themed twice, and the pictures below are the proof:
-the same screens the rest of this chapter documents, captured with the topbar's
-dark-mode toggle on. The choice persists per browser (`localStorage`), so it
-survives a reload and follows you across screens; it is a display preference
-and nothing else: no screen, control, or permission changes with it.
+the same screens the rest of this chapter documents, captured in the dark
+theme. The moon button in the top bar switches to dark and the sun button
+switches back to light. Until you press either, the viewer follows your
+operating system. The viewer keeps your choice in a cookie and
+draws every page in it from the first paint, so it survives a reload and
+follows you across screens; nothing is kept in browser storage. It is a display
+preference and nothing else: no screen, control, or permission changes with it.
 
 <!-- toc -->
 

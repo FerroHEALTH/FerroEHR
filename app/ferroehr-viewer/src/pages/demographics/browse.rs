@@ -33,11 +33,11 @@ use leptos_meta::Title;
 use leptos_router::components::{A, Redirect};
 
 use crate::components::data_table::{
-    CELL, CELL_MONO, ROW, TablePaging, page_rows, page_window, paging_from_url, row_total,
-    table_footer, table_shell, table_skeleton,
+    CELL, CELL_MONO, ROW, TablePaging, page_rows, paging_in_session, row_total, table_footer,
+    table_shell, table_skeleton,
 };
 use crate::components::empty_state::EmptyState;
-use crate::components::field::{BTN_PRIMARY, BTN_SECONDARY, INPUT, LABEL, TEXTAREA};
+use crate::components::field::{BTN_PRIMARY, BTN_SECONDARY, Height, INPUT, LABEL, code_field};
 use crate::components::item_tags::{ItemTagRow, tag_filter_form};
 use crate::components::notice::inline_error;
 use crate::components::page_header::PageHeader;
@@ -47,6 +47,7 @@ use crate::error::ViewerError;
 use crate::pages::demographics::tags::list_demographic_tags;
 use crate::pages::demographics::{PartyKind, browse_href, party_href, resolve_party_kind};
 use crate::uid::container_uid_of;
+use ferrohealth_ui::highlight::Language;
 
 /// `/demographics` — the section's entry point, which opens the default kind's
 /// browser.
@@ -90,7 +91,7 @@ pub fn unknown_kind_view(segment: &str) -> AnyView {
         .collect::<Vec<_>>();
     view! {
         <Title text="Not found" />
-        <div class="p-6">
+        <div>
             <PageHeader title="Unknown party kind" />
             <section class=CARD_PAD id="demographics-unknown-kind">
                 <p class="text-sm text-ink">
@@ -181,7 +182,7 @@ where
 /// One kind's browser screen: the switcher, the lookup, the create card and the
 /// tag index.
 fn browser_screen(kind: PartyKind) -> AnyView {
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     let switcher = kind_switcher(kind);
     let lookup = lookup_section(kind);
     let create = create_section(kind, toaster);
@@ -195,7 +196,7 @@ fn browser_screen(kind: PartyKind) -> AnyView {
 
     view! {
         <Title text="Demographics" />
-        <div class="p-6">
+        <div>
             <PageHeader title=kind.plural().to_owned() subtitle=subtitle />
             {switcher}
             {lookup}
@@ -206,28 +207,24 @@ fn browser_screen(kind: PartyKind) -> AnyView {
     .into_any()
 }
 
-/// The kind switcher: five pill anchors, one per family. Plain anchors, so
+/// The kind switcher: FerroUI's keyed tabs, one per family. Plain anchors, so
 /// switching kind works before hydration (the router intercepts them once WASM
 /// loads).
 fn kind_switcher(current: PartyKind) -> AnyView {
-    let pills = PartyKind::ALL
+    let tabs = PartyKind::ALL
         .into_iter()
-        .map(|kind| {
-            let class = if kind == current {
-                "rounded-control px-3 py-1.5 text-sm font-medium bg-accent-subtle text-accent-ink"
-            } else {
-                "rounded-control px-3 py-1.5 text-sm font-medium text-ink-muted hover:bg-sunken"
-            };
-            view! {
-                <a href=browse_href(kind) class=class data-kind=kind.segment()>
-                    {kind.plural()}
-                </a>
-            }
-            .into_any()
+        .map(|kind| ferrohealth_ui::view::tabs::KeyedTab {
+            key: kind.segment(),
+            href: browse_href(kind),
+            label: kind.plural(),
         })
-        .collect::<Vec<_>>();
-    view! { <div class="mb-6 flex flex-wrap gap-1 border-b border-edge pb-2">{pills}</div> }
-        .into_any()
+        .collect();
+    view! {
+        <div class="mb-4">
+            {ferrohealth_ui::view::tabs::keyed_tabs("Party kinds", tabs, current.segment())}
+        </div>
+    }
+    .into_any()
 }
 
 /// The by-id lookup: a plain `<form method="GET">` whose `find` field the page
@@ -261,7 +258,7 @@ fn lookup_section(kind: PartyKind) -> AnyView {
         <section class=format!("{CARD_PAD} mb-6")>
             <h2 class=CARD_TITLE>{format!("Open a {}", kind.rm_type())}</h2>
             <form method="GET" action=browse_href(kind) on:submit=on_submit>
-                <div class="flex flex-wrap items-end gap-3">
+                <div class="fui-field-flow">
                     <div class="flex flex-col gap-1">
                         <label class=LABEL r#for="party-lookup">
                             {label}
@@ -280,7 +277,7 @@ fn lookup_section(kind: PartyKind) -> AnyView {
                     </button>
                 </div>
             </form>
-            <p class="mt-2 text-xs text-ink-muted">
+            <p class="mt-2 fui-help">
                 "Either id form works: a versioned_object_uid opens the latest version, and a full version_uid is reduced to its container — every screen here addresses the container."
             </p>
         </section>
@@ -387,11 +384,11 @@ pub fn minimal_party_body(kind: PartyKind) -> String {
 /// The body is the operator's own canonical JSON, sent verbatim: a create form
 /// that assembled a party from viewer-side fields would have to invent the
 /// mandatory ones, and a party document is exactly what this screen must not
-/// re-model. The textarea is UNCONTROLLED with the skeleton as its child text,
-/// so the server and the client render identical markup and typing before
-/// hydration is never wiped.
-fn create_section(kind: PartyKind, toaster: thaw::ToasterInjection) -> AnyView {
-    let body_ref = NodeRef::<leptos::html::Textarea>::new();
+/// re-model. The document opens on the skeleton in FerroUI's highlighted
+/// editor, which the server draws with the same text and which takes no
+/// keystroke before the page hydrates.
+fn create_section(kind: PartyKind, toaster: ferrohealth_ui::widget::toast::Toasts) -> AnyView {
+    let body = RwSignal::new(minimal_party_body(kind));
     let create: Action<String, Result<String, ViewerError>> = Action::new(move |body: &String| {
         let body = body.clone();
         async move { super::party::create_party(kind.segment().to_owned(), body).await }
@@ -422,31 +419,27 @@ fn create_section(kind: PartyKind, toaster: thaw::ToasterInjection) -> AnyView {
     });
 
     let on_click = move |_| {
-        let body = body_ref
-            .get_untracked()
-            .map(|el| el.value())
-            .unwrap_or_default();
+        let body = body.get_untracked();
         if !body.trim().is_empty() {
             create.dispatch(body);
         }
     };
-    let skeleton = minimal_party_body(kind);
     view! {
         <section class=format!("{CARD_PAD} mb-6") id="party-create">
             <h2 class=CARD_TITLE>{format!("Create a {}", kind.rm_type())}</h2>
-            <p class="mb-3 text-xs text-ink-muted">
+            <p class="mb-3 fui-help">
                 "The document below is the smallest party this kind accepts — every attribute in it is mandatory. Replace the archetype ids and the identity details with your own, then create."
             </p>
             <label class=LABEL r#for="party-create-body">
                 {format!("{} document (canonical JSON)", kind.rm_type())}
             </label>
-            <textarea
-                id="party-create-body"
-                class=format!("{TEXTAREA} mt-1 min-h-[18rem]")
-                node_ref=body_ref
-            >
-                {skeleton}
-            </textarea>
+            {code_field(
+                "party-create-body",
+                Language::Json,
+                body,
+                None,
+                Height::Document,
+            )}
             <div class="mt-3 flex items-center gap-3">
                 <button
                     id="party-create-submit"
@@ -455,7 +448,7 @@ fn create_section(kind: PartyKind, toaster: thaw::ToasterInjection) -> AnyView {
                     disabled=Signal::derive(move || create.pending().get())
                     on:click=on_click
                 >
-                    <leptos_icons::Icon icon=icondata_lu::LuUserPlus width="14" height="14" />
+                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::USER_PLUS, "14")}
                     {format!("Create {}", kind.rm_type())}
                 </button>
                 <Show when=move || create.pending().get()>
@@ -492,7 +485,7 @@ fn tag_index_section(kind: PartyKind) -> AnyView {
             )
         })
     });
-    let paging = paging_from_url();
+    let paging = paging_in_session();
     let resource: Resource<Result<Vec<ItemTagRow>, ViewerError>> = Resource::new(
         move || filters.get(),
         |(key, value, path)| async move { list_demographic_tags(key, value, path).await },
@@ -542,7 +535,7 @@ fn tag_index_section(kind: PartyKind) -> AnyView {
                     Ok(tags) if tags.is_empty() => {
                         view! {
                             <EmptyState
-                                icon=icondata_lu::LuTags
+                                icon=ferrohealth_ui::icon::Glyph::TAGS
                                 message="No demographic tags"
                                 hint="Tags are the one demographic collection the openEHR API lists. Set one on a party's Tags tab and it appears here."
                             />
@@ -560,7 +553,7 @@ fn tag_index_section(kind: PartyKind) -> AnyView {
     view! {
         <section class=CARD_PAD id="demographic-tag-index">
             <h2 class=CARD_TITLE>"Tag index (all kinds)"</h2>
-            <p class="mb-3 text-xs text-ink-muted">
+            <p class="mb-3 fui-help">
                 "The demographic tag list spans every party kind, and a tag names its target without naming that target's kind — so opening a row asks the CDR which kind holds it."
             </p>
             {tag_filter_form(browse_href(kind), filters, &[])}
@@ -588,7 +581,7 @@ fn tag_index_table(
     let rows = view! {
         <For
             each=move || {
-                let window = page_window(total, paging.page.get(), paging.size.get());
+                let window = paging.window(total);
                 page_rows(&tags, window)
             }
             key=ItemTagRow::global_identity
@@ -600,12 +593,13 @@ fn tag_index_table(
     .into_any();
     let footer = table_footer(
         &browse_href(kind),
-        "tags",
+        "Tag pages",
+        ferrohealth_ui::table::model::Noun::new("tag", "tags"),
         paging,
         Signal::derive(move || total),
     );
     view! {
-        {table_shell(&["Key", "Value", "Target path", "Target", ""], rows)}
+        {table_shell("Demographic tags", &["Key", "Value", "Target path", "Target", ""], rows)}
         {footer}
     }
     .into_any()
@@ -625,10 +619,10 @@ fn tag_index_row(
     view! {
         <tr class=ROW>
             <td class=CELL_MONO>{key}</td>
-            <td class=CELL>{value}</td>
-            <td class=CELL_MONO>{target_path}</td>
-            <td class=CELL_MONO>{shown_target}</td>
-            <td class=CELL>
+            <td class=CELL data-label="Value">{value}</td>
+            <td class=CELL_MONO data-label="Target path">{target_path}</td>
+            <td class=CELL_MONO data-label="Target">{shown_target}</td>
+            <td class=CELL data-label="Actions">
                 <button
                     type="button"
                     class=BTN_SECONDARY
@@ -638,7 +632,7 @@ fn tag_index_row(
                         open.dispatch(container.clone());
                     }
                 >
-                    <leptos_icons::Icon icon=icondata_lu::LuEye width="14" height="14" />
+                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::EYE, "14")}
                     "Open party"
                 </button>
             </td>

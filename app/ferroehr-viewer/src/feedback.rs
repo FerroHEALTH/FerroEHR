@@ -5,7 +5,7 @@
 //! actionable copy behind it.
 //!
 //! The rule: **a mutation toasts on success AND on failure**, a detailed
-//! inline `MessageBar` may stay beside the failure toast where the diagnostic
+//! inline notice may stay beside the failure toast where the diagnostic
 //! is worth reading, and **pure reads render inline errors only**. A screen
 //! that quietly leaves a failed write's diagnostic below the fold looks like
 //! nothing happened.
@@ -140,7 +140,7 @@ pub fn logical_delete_failure_copy(object: &str, error: &ViewerError) -> String 
 /// `title` is the short outcome ("Upload failed", "Commit failed"); `object`
 /// is the noun phrase the copy is built around.
 pub fn toast_write_failure(
-    toaster: thaw::ToasterInjection,
+    toaster: ferrohealth_ui::widget::toast::Toasts,
     title: &str,
     object: &str,
     error: &ViewerError,

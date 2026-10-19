@@ -105,7 +105,7 @@ pub fn QueryStoredPage() -> impl IntoView {
 
     view! {
         <Title text="Run stored query" />
-        <div class="p-6 space-y-4">
+        <div class="space-y-4">
             <PageHeader
                 title="Run stored query"
                 subtitle="Execute a stored query on the CDR: choose how its version resolves, bind its parameters, page the results."
@@ -184,7 +184,7 @@ fn definition_pane(qualified: String, stored_version: String, aql: String) -> An
                 <span class="font-mono text-ink">{stored_version}</span>
                 "."
             </p>
-            <DocumentPane body=body />
+            <DocumentPane id="stored-query-pane" body=body />
             <div class="flex flex-wrap items-center gap-3 text-sm">
                 <a href=editor_href class="text-accent hover:underline">
                     "Open in editor"
@@ -218,7 +218,7 @@ fn resolution_section(
     view! {
         <section class=CARD_PAD>
             <h2 class=CARD_TITLE>"Version"</h2>
-            <div class="flex flex-wrap items-end gap-3">
+            <div class="fui-field-flow">
                 <label class="flex flex-col gap-1">
                     <span class=LABEL>"Resolution"</span>
                     <select
@@ -343,8 +343,8 @@ fn parameter_inputs(names: &[String], bindings: RwSignal<BTreeMap<String, String
         .collect::<Vec<_>>();
     view! {
         <div class="space-y-2">
-            <div class="flex flex-wrap items-end gap-3">{fields}</div>
-            <p class="text-xs text-ink-muted">
+            <div class="fui-field-flow">{fields}</div>
+            <p class="fui-help">
                 "A value that reads as JSON is sent as that type — "
                 <span class="font-mono">"38.5"</span> " as a number, "
                 <span class="font-mono">"true"</span>
@@ -469,7 +469,7 @@ fn results_section(
                             paging_buttons(offset, page.rows.len())
                         } else {
                             view! {
-                                <p class="mt-3 text-xs text-ink-muted">
+                                <p class="mt-3 fui-help">
                                     "This query sets its own row window (AQL LIMIT/TOP), so the run is not paged."
                                 </p>
                             }

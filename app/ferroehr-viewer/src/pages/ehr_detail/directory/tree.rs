@@ -27,10 +27,11 @@
               (#1694)"
 )]
 
+use ferrohealth_ui::widget::tree::{Tree, TreeNode};
 use leptos::prelude::*;
 use serde_json::Value;
 
-use crate::components::field::{BTN_PRIMARY, BTN_SECONDARY, INPUT, TEXTAREA};
+use crate::components::field::{BTN_PRIMARY, BTN_SECONDARY, Height, INPUT, code_field};
 use crate::components::format_view::pretty_body;
 use crate::components::notice::inline_error;
 use crate::components::surface::{CARD_PAD, CARD_TITLE, WELL};
@@ -44,6 +45,7 @@ use crate::pages::ehr_detail::directory::edit::{
 use crate::pages::ehr_detail::directory::{DirectoryState, PickerResource};
 use crate::pages::ehrs::cell_text;
 use crate::uid::container_uid_of;
+use ferrohealth_ui::highlight::Language;
 
 /// A small square icon button (node actions).
 const ICON_BTN: &str = "inline-flex items-center justify-center rounded-control p-1 text-ink-muted hover:bg-sunken hover:text-ink focus:outline-none focus:ring-2 focus:ring-accent";
@@ -347,7 +349,7 @@ pub(in crate::pages::ehr_detail::directory) fn tree_editor(
                     class=BTN_SECONDARY
                     on:click=on_toggle_advanced
                 >
-                    <leptos_icons::Icon icon=icondata_lu::LuCode width="14" height="14" />
+                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::CODE, "14")}
                     {move || {
                         if editor.advanced.get() { "Hide JSON" } else { "Advanced: edit as JSON" }
                     }}
@@ -361,17 +363,16 @@ pub(in crate::pages::ehr_detail::directory) fn tree_editor(
             </div>
 
             <div class="mt-2 flex flex-col gap-2" class:hidden=move || !editor.advanced.get()>
-                <textarea
-                    id="directory-body"
-                    class=format!("{TEXTAREA} min-h-[16rem]")
-                    prop:value=move || editor.json_draft.get()
-                    on:input:target=move |ev| editor.json_draft.set(ev.target().value())
-                >
-                    {editor.json_draft.get_untracked()}
-                </textarea>
+                {code_field(
+                    "directory-body",
+                    Language::Json,
+                    editor.json_draft,
+                    None,
+                    Height::Document,
+                )}
                 <div class="flex items-center gap-3">
                     <button type="button" class=BTN_SECONDARY on:click=on_apply_json>
-                        <leptos_icons::Icon icon=icondata_lu::LuCheck width="14" height="14" />
+                        {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::CHECK, "14")}
                         "Apply to tree"
                     </button>
                     {move || {
@@ -427,7 +428,7 @@ pub(in crate::pages::ehr_detail::directory) fn tree_editor(
                     disabled=Signal::derive(move || update.pending().get())
                     on:click=on_save
                 >
-                    <leptos_icons::Icon icon=icondata_lu::LuSave width="14" height="14" />
+                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::SAVE, "14")}
                     "Save directory"
                 </button>
                 <button type="button" class=BTN_SECONDARY on:click=on_discard>
@@ -477,10 +478,9 @@ fn render_folder(ed: TreeEditor, node_key: String, is_root: bool) -> AnyView {
     let key_collapsed = node_key.clone();
     let is_collapsed = move || ed.collapsed.with(|c| c.contains(&key_collapsed));
 
-    // Dynamic icons are VIEW branches over static icondata values, never a
-    // derived `Signal<Icon>` fed into the `Icon` prop: the icon component's
-    // internal reactivity can fire against a row-owned derived signal after the
-    // row is disposed and panic-wedge the wasm runtime.
+    // Dynamic icons are VIEW branches over static glyphs, never a derived
+    // signal feeding one icon: a row-owned derived signal can fire after the row
+    // is disposed.
     let key_icon = node_key.clone();
     let folder_icon = move || {
         let expanded = ed.collapsed.with(|c| !c.contains(&key_icon));
@@ -488,21 +488,20 @@ fn render_folder(ed: TreeEditor, node_key: String, is_root: bool) -> AnyView {
             find_path_by_key(t, &key_icon)
                 .is_some_and(|p| !child_node_keys(t, &p).is_empty() || item_count(t, &p) > 0)
         });
-        if expanded && has_content {
-            view! { <leptos_icons::Icon icon=icondata_lu::LuFolderOpen width="15" height="15" /> }
-                .into_any()
+        let glyph = if expanded && has_content {
+            ferrohealth_ui::icon::Glyph::FOLDER_OPEN
         } else {
-            view! { <leptos_icons::Icon icon=icondata_lu::LuFolder width="15" height="15" /> }
-                .into_any()
-        }
+            ferrohealth_ui::icon::Glyph::FOLDER
+        };
+        ferrohealth_ui::icon::icon(glyph, "15")
     };
     let key_chevron = node_key.clone();
     let chevron = move || {
         if ed.collapsed.with(|c| c.contains(&key_chevron)) {
-            view! { <leptos_icons::Icon icon=icondata_lu::LuChevronRight width="14" height="14" /> }
+            view! { {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::CHEVRON_RIGHT, "14")} }
                 .into_any()
         } else {
-            view! { <leptos_icons::Icon icon=icondata_lu::LuChevronDown width="14" height="14" /> }
+            view! { {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::CHEVRON_DOWN, "14")} }
                 .into_any()
         }
     };
@@ -602,7 +601,7 @@ fn name_area(ed: TreeEditor, node_key: String) -> AnyView {
                         aria-label="Confirm rename"
                         on:click=on_confirm
                     >
-                        <leptos_icons::Icon icon=icondata_lu::LuCheck width="14" height="14" />
+                        {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::CHECK, "14")}
                     </button>
                     <button
                         type="button"
@@ -610,7 +609,7 @@ fn name_area(ed: TreeEditor, node_key: String) -> AnyView {
                         aria-label="Cancel rename"
                         on:click=on_cancel
                     >
-                        <leptos_icons::Icon icon=icondata_lu::LuX width="14" height="14" />
+                        {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::X, "14")}
                     </button>
                 </span>
             }
@@ -679,7 +678,7 @@ fn folder_actions(ed: TreeEditor, node_key: String, is_root: bool) -> AnyView {
                 title="Delete folder"
                 on:click=on_delete
             >
-                <leptos_icons::Icon icon=icondata_lu::LuTrash width="14" height="14" />
+                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::TRASH, "14")}
             </button>
         }
     });
@@ -693,7 +692,7 @@ fn folder_actions(ed: TreeEditor, node_key: String, is_root: bool) -> AnyView {
                 title="Add subfolder"
                 on:click=on_add_folder
             >
-                <leptos_icons::Icon icon=icondata_lu::LuFolderPlus width="14" height="14" />
+                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::FOLDER_PLUS, "14")}
             </button>
             <button
                 type="button"
@@ -702,7 +701,7 @@ fn folder_actions(ed: TreeEditor, node_key: String, is_root: bool) -> AnyView {
                 title="Add item reference"
                 on:click=on_add_item
             >
-                <leptos_icons::Icon icon=icondata_lu::LuFilePlus width="14" height="14" />
+                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::FILE_PLUS, "14")}
             </button>
             <button
                 type="button"
@@ -711,7 +710,7 @@ fn folder_actions(ed: TreeEditor, node_key: String, is_root: bool) -> AnyView {
                 title="Rename folder"
                 on:click=on_rename
             >
-                <leptos_icons::Icon icon=icondata_lu::LuPencil width="14" height="14" />
+                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::PENCIL, "14")}
             </button>
             {delete_button}
         </span>
@@ -748,9 +747,9 @@ fn render_item(ed: TreeEditor, parent_key: String, item_key: String) -> AnyView 
     let hook = id.clone();
     view! {
         <li class="flex items-center gap-1 py-0.5 text-ink-muted" data-item-id=hook>
-            <leptos_icons::Icon icon=icondata_lu::LuFileText width="14" height="14" />
+            {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::FILE_TEXT, "14")}
             <span class="mr-1 text-xs uppercase">{ref_type}</span>
-            <span class="break-all font-mono text-xs">{id}</span>
+            <span class="wrap-break-word font-mono text-xs">{id}</span>
             <button
                 type="button"
                 class=ICON_BTN_DANGER
@@ -758,7 +757,7 @@ fn render_item(ed: TreeEditor, parent_key: String, item_key: String) -> AnyView 
                 title="Remove item"
                 on:click=on_remove
             >
-                <leptos_icons::Icon icon=icondata_lu::LuX width="12" height="12" />
+                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::X, "12")}
             </button>
         </li>
     }
@@ -833,7 +832,7 @@ fn picker_modal(ed: TreeEditor) -> AnyView {
                 <div class="mb-3 flex items-center justify-between">
                     <h3 class=CARD_TITLE>"Add item reference"</h3>
                     <button type="button" class=ICON_BTN aria-label="Close" on:click=close>
-                        <leptos_icons::Icon icon=icondata_lu::LuX width="16" height="16" />
+                        {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::X, "16")}
                     </button>
                 </div>
 
@@ -881,7 +880,7 @@ fn picker_modal(ed: TreeEditor) -> AnyView {
                         disabled=Signal::derive(move || manual_id.with(|v| v.trim().is_empty()))
                         on:click=add_manual
                     >
-                        <leptos_icons::Icon icon=icondata_lu::LuPlus width="14" height="14" />
+                        {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::PLUS, "14")}
                         "Add reference"
                     </button>
                 </div>
@@ -951,7 +950,7 @@ fn composition_choice(ed: TreeEditor, row: &[Value]) -> AnyView {
                 <span class="block truncate text-ink">{name}</span>
                 <span class="block truncate font-mono text-xs text-ink-muted">{uid_display}</span>
             </span>
-            <leptos_icons::Icon icon=icondata_lu::LuPlus width="14" height="14" />
+            {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::PLUS, "14")}
         </button>
     }
     .into_any()
@@ -979,43 +978,74 @@ fn save_feedback(update: Action<(String, String, String), Result<String, ViewerE
 }
 
 /// A read-only FOLDER tree (the create preview and the history / time / path
-/// panels): folders and their item references, no actions.
-pub(in crate::pages::ehr_detail::directory) fn read_only_tree(folder: &Value) -> AnyView {
-    view! { <ul class="text-sm text-ink">{read_only_folder(folder)}</ul> }.into_any()
+/// panels): FerroUI's tree view of the folders and their item references, every
+/// folder open, no actions. `id` names the tree on its page.
+pub(in crate::pages::ehr_detail::directory) fn read_only_tree(
+    id: &'static str,
+    folder: &Value,
+) -> AnyView {
+    let root = folder_node(folder, "root");
+    let mut open = std::collections::BTreeSet::new();
+    open_folders(&root, &mut open);
+    ferrohealth_ui::widget::tree::tree_view(Tree {
+        id,
+        label: "Directory",
+        nodes: Signal::derive(move || vec![root.clone()]),
+        expanded: RwSignal::new(open),
+        selected: Signal::derive(|| None),
+        on_expand: None,
+        actions: None,
+    })
 }
 
-/// One read-only FOLDER node.
-fn read_only_folder(folder: &Value) -> AnyView {
+/// Every folder key of `node` and below, so the read-only tree opens whole.
+fn open_folders(node: &TreeNode, open: &mut std::collections::BTreeSet<String>) {
+    if node.expandable {
+        open.insert(node.key.clone());
+    }
+    for child in &node.children {
+        open_folders(child, open);
+    }
+}
+
+/// One read-only FOLDER node, keyed by its position path (`path`), which is
+/// stable for a read-only document.
+fn folder_node(folder: &Value, path: &str) -> TreeNode {
     let name = folder
         .get("name")
         .and_then(|n| n.get("value"))
         .and_then(Value::as_str)
         .unwrap_or("(folder)")
         .to_owned();
-    let subfolders = folder
+    let mut children: Vec<TreeNode> = folder
         .get("folders")
         .and_then(Value::as_array)
-        .map(|folders| folders.iter().map(read_only_folder).collect::<Vec<_>>())
+        .map(|folders| {
+            folders
+                .iter()
+                .enumerate()
+                .map(|(index, child)| folder_node(child, &format!("{path}/f{index}")))
+                .collect()
+        })
         .unwrap_or_default();
-    let items = folder
-        .get("items")
-        .and_then(Value::as_array)
-        .map(|items| items.iter().map(read_only_item).collect::<Vec<_>>())
-        .unwrap_or_default();
-    view! {
-        <li class="py-0.5">
-            <span class="inline-flex items-center gap-1.5 font-medium text-ink">
-                <leptos_icons::Icon icon=icondata_lu::LuFolder width="14" height="14" />
-                {name}
-            </span>
-            <ul class="ml-2 border-l border-edge pl-4">{subfolders} {items}</ul>
-        </li>
+    if let Some(items) = folder.get("items").and_then(Value::as_array) {
+        children.extend(
+            items
+                .iter()
+                .enumerate()
+                .map(|(index, item)| item_node(item, &format!("{path}/i{index}"))),
+        );
     }
-    .into_any()
+    TreeNode {
+        expandable: true,
+        children,
+        ..TreeNode::new(path.to_owned(), name)
+    }
 }
 
-/// One read-only `OBJECT_REF` item.
-fn read_only_item(item: &Value) -> AnyView {
+/// One read-only `OBJECT_REF` item: its id, with its reference type as the
+/// muted code.
+fn item_node(item: &Value, path: &str) -> TreeNode {
     let ref_type = item
         .get("type")
         .and_then(Value::as_str)
@@ -1027,12 +1057,8 @@ fn read_only_item(item: &Value) -> AnyView {
         .and_then(Value::as_str)
         .unwrap_or("(ref)")
         .to_owned();
-    view! {
-        <li class="flex items-center gap-1.5 py-0.5 text-ink-muted">
-            <leptos_icons::Icon icon=icondata_lu::LuFileText width="14" height="14" />
-            <span class="text-xs uppercase">{ref_type}</span>
-            <span class="break-all font-mono text-xs">{id}</span>
-        </li>
+    TreeNode {
+        code: Some(ref_type),
+        ..TreeNode::new(path.to_owned(), id)
     }
-    .into_any()
 }

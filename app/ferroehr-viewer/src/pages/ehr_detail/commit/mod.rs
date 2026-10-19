@@ -39,12 +39,14 @@ pub mod staged;
 use leptos::prelude::*;
 use leptos::server;
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 use serde_json::Value;
 
 use crate::components::data_table::{CELL, CELL_MONO, ROW, table_shell};
 use crate::components::empty_state::EmptyState;
-use crate::components::field::{BTN_PRIMARY, BTN_SECONDARY, INPUT, LABEL, SELECT, TEXTAREA};
+use crate::components::field::{
+    BTN_PRIMARY, BTN_SECONDARY, Height, INPUT, LABEL, SELECT, code_field, pretty_json,
+};
 use crate::components::format_view::pretty_body;
 use crate::components::surface::{CARD_PAD, CARD_TITLE, WELL};
 use crate::components::toast::toast_success;
@@ -55,6 +57,7 @@ use crate::pages::ehr_detail::commit::staged::{
 };
 use crate::pages::ehr_detail::status::EhrStatusState;
 use crate::pages::ehrs::{ResultPage, cell_text};
+use ferrohealth_ui::highlight::Language;
 
 /// The noun phrase every commit-failure toast is built around
 /// ([`crate::feedback::write_failure_copy`]).
@@ -132,7 +135,7 @@ pub async fn commit_contribution(
     Ok(parse_commit_outcome(&response.body))
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Flatten the committed CONTRIBUTION into a [`CommitOutcome`].
 ///
 /// Defensive throughout — a body the CDR served without the representation
@@ -289,7 +292,7 @@ impl CommitForm {
 /// so only the visible tab fetches (never fetch-in-effect), and none is created
 /// inside a `Suspend`.
 pub(super) fn commit_section(ehr_id: Signal<String>, selected: Memo<String>) -> AnyView {
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     let form = CommitForm::new();
     let active = Memo::new(move |_| selected.get() == "commit");
 
@@ -436,7 +439,7 @@ fn seed_amend(form: CommitForm, resource: Resource<Result<Option<String>, Viewer
         }
         form.seeded.set(key);
         form.preceding.set(version_uid);
-        form.body.set(body);
+        form.body.set(pretty_json(body));
         form.complaint.set(None);
     });
 }
@@ -508,7 +511,7 @@ fn add_change_card(
         <section class=CARD_PAD id="stage-add">
             <h2 class=CARD_TITLE>"Add a change"</h2>
             <div class="flex flex-col gap-3">
-                <div class="flex flex-wrap items-end gap-3">
+                <div class="fui-field-flow">
                     {kind_row} <div class="flex flex-col gap-1" class:hidden=move || !is_create()>
                         {template_row}
                     </div> <div class="flex flex-col gap-1" class:hidden=move || !is_amend()>
@@ -659,9 +662,9 @@ fn composition_picker(
 /// supersedes, so the operator sees exactly what the member will name.
 fn preceding_readout(form: CommitForm) -> AnyView {
     view! {
-        <p class="text-xs text-ink-muted">
+        <p class="fui-help">
             <span class="font-medium">"Preceding version: "</span>
-            <span id="stage-preceding" class="font-mono break-all">
+            <span id="stage-preceding" class="font-mono wrap-break-word">
                 {move || {
                     let uid = form.preceding.get();
                     if uid.is_empty() { "not loaded yet".to_owned() } else { uid }
@@ -741,16 +744,14 @@ fn draft_editor(form: CommitForm, unseeded: Signal<bool>) -> AnyView {
             <label class=LABEL r#for="stage-body">
                 "Document (canonical JSON)"
             </label>
-            <textarea
-                id="stage-body"
-                class=format!("{TEXTAREA} min-h-[14rem]")
-                placeholder="paste the canonical JSON document, or pick a target above to load it…"
-                prop:disabled=move || unseeded.get()
-                prop:value=move || form.body.get()
-                on:input:target=move |ev| form.body.set(ev.target().value())
-            >
-                {form.body.get_untracked()}
-            </textarea>
+            <p class="fui-help">"Paste the canonical JSON document, or pick a target above to load it."</p>
+            {code_field(
+                "stage-body",
+                Language::Json,
+                form.body,
+                Some(unseeded),
+                Height::Document,
+            )}
         </div>
         <div class="flex items-center gap-3">
             <button
@@ -761,7 +762,7 @@ fn draft_editor(form: CommitForm, unseeded: Signal<bool>) -> AnyView {
                 prop:disabled=move || !stageable.get()
                 on:click=move |_| form.stage()
             >
-                <leptos_icons::Icon icon=icondata_lu::LuPlus width="14" height="14" />
+                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::PLUS, "14")}
                 "Stage this change"
             </button>
         </div>
@@ -784,14 +785,14 @@ fn staging_list(form: CommitForm) -> AnyView {
             fallback=|| {
                 view! {
                     <EmptyState
-                        icon=icondata_lu::LuLayers
+                        icon=ferrohealth_ui::icon::Glyph::LAYERS
                         message="Nothing staged yet"
                         hint="Add a change above; they commit together as one contribution."
                     />
                 }
             }
         >
-            {table_shell(
+            {table_shell("Staged changes",
                 &["Change", "Target", "Change type", ""],
                 view! {
                     <For each=move || form.staged.get() key=|change| change.seq let:change>
@@ -842,9 +843,9 @@ fn staged_row(form: CommitForm, change: &StagedChange) -> AnyView {
     view! {
         <tr class=ROW data-staged=seq.to_string()>
             <td class=CELL>{kind}</td>
-            <td class=CELL_MONO>{target}</td>
-            <td class=CELL>{change_type}</td>
-            <td class=CELL>
+            <td class=CELL_MONO data-label="Target">{target}</td>
+            <td class=CELL data-label="Change type">{change_type}</td>
+            <td class=CELL data-label="Actions">
                 <div class="flex gap-2">
                     <button
                         id=format!("stage-preview-{seq}")
@@ -901,7 +902,7 @@ fn audit_card(
         <section class=CARD_PAD id="stage-audit">
             <h2 class=CARD_TITLE>"Contribution audit"</h2>
             <div class="flex flex-col gap-3">
-                <div class="flex flex-wrap items-end gap-3">
+                <div class="fui-field-flow">
                     <div class="flex flex-col gap-1">
                         <label class=LABEL r#for="stage-committer">
                             "Committer (optional)"
@@ -938,7 +939,7 @@ fn audit_card(
                         prop:disabled=move || count.get() == 0 || commit.pending().get()
                         on:click=on_commit
                     >
-                        <leptos_icons::Icon icon=icondata_lu::LuUpload width="14" height="14" />
+                        {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::UPLOAD, "14")}
                         {move || label.get()}
                     </button>
                     <Show when=move || commit.pending().get()>
@@ -964,7 +965,7 @@ fn commit_result(
             Some(Err(error)) => {
                 view! {
                     <div class=WELL id="stage-diagnostic" role="alert">
-                        <p class="mb-2 text-xs text-ink-muted">
+                        <p class="mb-2 fui-help">
                             "Nothing was committed and your staged changes are untouched. The CDR refused the change set as a whole — its diagnostic follows verbatim. It always names the defect, and a shape defect also names the member index (counting from the top of the list above); a validation refusal does not, so read it against the staged documents."
                         </p>
                         <pre class="overflow-auto max-h-[40vh] whitespace-pre-wrap font-mono text-xs text-danger">
@@ -980,7 +981,7 @@ fn commit_result(
                     .version_uids
                     .iter()
                     .map(|uid| {
-                        view! { <li class="font-mono break-all">{uid.clone()}</li> }
+                        view! { <li class="font-mono wrap-break-word">{uid.clone()}</li> }
                     })
                     .collect::<Vec<_>>();
                 view! {
@@ -1060,7 +1061,7 @@ mod tests {
     }
 }
 
-#[cfg(all(test, feature = "ssr"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod outcome_tests {
     use super::parse_commit_outcome;
 

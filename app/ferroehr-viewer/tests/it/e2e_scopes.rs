@@ -58,7 +58,7 @@ async fn open_access_drawer(h: &Harness) {
     // hydration is silently lost (#2285's class).
     h.wait_hydrated().await;
     h.wait_css("#user-menu-trigger button").await.click().await;
-    h.wait_css(".thaw-popover-surface").await;
+    h.wait_css("#user-menu:popover-open").await;
     h.wait_xpath("//button[contains(., 'View scopes')]")
         .await
         .click()

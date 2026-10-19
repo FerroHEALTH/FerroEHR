@@ -48,7 +48,7 @@ use leptos::prelude::*;
 use leptos::{component, server};
 use leptos_meta::Title;
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 use serde_json::Value;
 
 use crate::components::field::BTN_DANGER;
@@ -125,7 +125,7 @@ pub async fn fetch_ehr_summary(
     parse_ehr_summary(&response.body)
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Flatten an `EHR` resource body into an [`EhrSummary`]. Defensive throughout —
 /// a missing attribute reads as empty rather than failing, so a header still
 /// renders what the CDR did send.
@@ -144,7 +144,7 @@ fn parse_ehr_summary(body: &str) -> Result<EhrSummary, ViewerError> {
     })
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Follow a chain of object keys to a string leaf, or an empty string when any
 /// hop is absent or not a string.
 fn json_path(value: &Value, path: &[&str]) -> String {
@@ -181,9 +181,7 @@ fn summary_section(ehr_id: Signal<String>, status: StatusFeed) -> AnyView {
                 {identity}
                 <Suspense fallback=|| {
                     view! {
-                        <thaw::Skeleton>
-                            <thaw::SkeletonItem class="h-16" />
-                        </thaw::Skeleton>
+                        {ferrohealth_ui::view::empty::skeleton(1, "Loading…")}
                     }
                 }>
                     {move || Suspend::new(async move {
@@ -224,9 +222,7 @@ fn identity_strip(status: StatusFeed) -> AnyView {
     view! {
         <Transition fallback=|| {
             view! {
-                <thaw::Skeleton>
-                    <thaw::SkeletonItem class="h-6 mb-3" />
-                </thaw::Skeleton>
+                {ferrohealth_ui::view::empty::skeleton(1, "Loading…")}
             }
         }>
             {move || Suspend::new(async move {
@@ -241,7 +237,7 @@ fn identity_strip(status: StatusFeed) -> AnyView {
                                 <span class="text-sm">
                                     <span class="font-medium text-ink-muted mr-1">"subject:"</span>
                                     <span
-                                        class="font-mono break-all text-ink"
+                                        class="font-mono wrap-break-word text-ink"
                                         data-ehr-fact="subject"
                                     >
                                         {subject}
@@ -275,24 +271,20 @@ fn summary_facts(summary: &EhrSummary) -> AnyView {
         summary_fact(status_label, summary.ehr_status_uid.clone()),
     ];
     view! {
-        <div class="grid grid-cols-1 sm:grid-cols-2 items-start gap-x-4 gap-y-2 text-sm">
+        <dl class="fui-facts text-sm">
             {facts}
-        </div>
+        </dl>
     }
     .into_any()
 }
 
 /// One label/value line of the summary card (an absent value shows an em dash).
 fn summary_fact(label: String, value: String) -> AnyView {
-    let shown = if value.is_empty() {
-        "—".to_owned()
-    } else {
-        value
-    };
+    let shown = crate::components::timestamp::fact_value(value);
     view! {
         <div>
-            <span class="font-medium text-ink-muted mr-1">{label}":"</span>
-            <span class="font-mono break-all text-ink">{shown}</span>
+            <dt>{label}</dt>
+            <dd class="font-mono wrap-break-word text-ink">{shown}</dd>
         </div>
     }
     .into_any()
@@ -350,13 +342,14 @@ pub fn EhrDetailPage() -> impl IntoView {
 
     view! {
         <Title text="EHR detail" />
-        <div class="p-6">
+        <div>
             <PageHeader
                 title=Signal::derive(move || heading.get())
                 crumbs=vec![Crumb::new("EHRs", "/ehrs")]
                 mono=true
-            />
-            {delete_action}
+            >
+                {delete_action}
+            </PageHeader>
             {summary}
             {tabs}
             <div class="mt-4">
@@ -376,7 +369,7 @@ pub fn EhrDetailPage() -> impl IntoView {
     }
 }
 
-/// The admin **Delete EHR** affordance above the tab bar.
+/// The admin **Delete EHR** affordance on the page header's title row.
 ///
 /// Probe-gated (`crate::admin::when_admin_usable` — nothing renders unless the
 /// CDR advertises its Admin API as mounted). The click opens the
@@ -389,7 +382,7 @@ pub fn EhrDetailPage() -> impl IntoView {
 /// it. On success the viewer returns to `/ehrs` (this screen's subject is
 /// gone) with a toast naming the deleted id.
 fn delete_section(ehr_id: Signal<String>) -> AnyView {
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     let gate = crate::admin::admin_gate();
     let delete: Action<String, (String, Result<(), ViewerError>)> = Action::new(|id: &String| {
         let id = id.clone();
@@ -431,7 +424,7 @@ fn delete_section(ehr_id: Signal<String>) -> AnyView {
 
     crate::admin::when_admin_usable(gate, move || {
         view! {
-            <div class="mb-4 flex flex-wrap items-center justify-end gap-3">
+            <div class="contents">
                 <button
                     id="ehr-delete"
                     type="button"
@@ -439,7 +432,7 @@ fn delete_section(ehr_id: Signal<String>) -> AnyView {
                     disabled=Signal::derive(move || delete.pending().get())
                     on:click=move |_| confirming.set(true)
                 >
-                    <leptos_icons::Icon icon=icondata_lu::LuTrash width="14" height="14" />
+                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::TRASH, "14")}
                     "Delete EHR"
                 </button>
                 <crate::components::confirm_dialog::ConfirmDialog
@@ -447,6 +440,7 @@ fn delete_section(ehr_id: Signal<String>) -> AnyView {
                     title="Delete EHR"
                     message=message
                     confirm_label="Delete EHR"
+                    dialog_id="ehr-delete-confirm-dialog"
                     confirm_id="ehr-delete-confirm"
                     on_cancel=Callback::new(move |()| confirming.set(false))
                     on_confirm=Callback::new(move |()| {
@@ -460,38 +454,27 @@ fn delete_section(ehr_id: Signal<String>) -> AnyView {
     })
 }
 
-/// The URL-driven tab bar: seven pill anchors (`?tab=…`) replacing the thaw
-/// `TabList`. Selected = `bg-accent-subtle text-accent-ink`; idle =
-/// `text-ink-muted hover:bg-sunken`. Plain anchors keep the tabs working
-/// before hydration (the router intercepts them once WASM loads).
+/// The URL-driven tab bar: seven `?tab=` links, FerroUI's keyed tabs. Plain
+/// anchors keep the tabs working before hydration (the router intercepts them
+/// once WASM loads).
 fn tab_bar(ehr_id: Signal<String>, selected: Memo<String>) -> AnyView {
-    let link = move |value: &'static str, label: &'static str| {
-        let href = move || format!("/ehrs/{}?tab={value}", ehr_id.get());
-        let class = move || {
-            if selected.get() == value {
-                "rounded-control px-3 py-1.5 text-sm font-medium bg-accent-subtle text-accent-ink"
-            } else {
-                "rounded-control px-3 py-1.5 text-sm font-medium text-ink-muted hover:bg-sunken"
-            }
-        };
-        view! {
-            <a href=href class=class>
-                {label}
-            </a>
-        }
-    };
-    view! {
-        <div class="flex flex-wrap gap-1 border-b border-edge pb-2">
-            {link("status", "Status")} {link("status-history", "Status history")}
-            {link("directory", "Directory")} {link("compositions", "Compositions")}
-            {link("contributions", "Contributions")} {link("commit", "Commit")}
-            {link("tags", "Tags")}
-        </div>
-    }
-    .into_any()
+    crate::components::tab_bar::url_tabs(
+        "EHR views",
+        &[
+            ("status", "Status"),
+            ("status-history", "Status history"),
+            ("directory", "Directory"),
+            ("compositions", "Compositions"),
+            ("contributions", "Contributions"),
+            ("commit", "Commit"),
+            ("tags", "Tags"),
+        ],
+        move |value| format!("/ehrs/{}?tab={value}", ehr_id.get()),
+        selected.into(),
+    )
 }
 
-#[cfg(all(test, feature = "ssr"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::parse_ehr_summary;
 

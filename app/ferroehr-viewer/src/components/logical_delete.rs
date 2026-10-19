@@ -28,6 +28,8 @@ pub struct LogicalDeleteCopy {
     /// The action's label, used for the button, the dialog title and the
     /// confirming button alike ("Delete party").
     pub label: &'static str,
+    /// The confirmation dialog's DOM id.
+    pub dialog_id: &'static str,
     /// The confirming button's DOM id.
     pub confirm_id: &'static str,
     /// The success toast's title.
@@ -51,7 +53,7 @@ pub fn logical_delete_section(
     return_href: String,
     copy: LogicalDeleteCopy,
 ) -> AnyView {
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     let confirming = RwSignal::new(false);
     let navigate = leptos_router::hooks::use_navigate();
     Effect::new(move |_| match delete.value().get() {
@@ -72,7 +74,7 @@ pub fn logical_delete_section(
     });
 
     view! {
-        <div class="mb-4 flex flex-wrap items-center justify-end gap-3">
+        <div class="contents">
             <button
                 id=copy.button_id
                 type="button"
@@ -80,7 +82,7 @@ pub fn logical_delete_section(
                 disabled=Signal::derive(move || delete.pending().get())
                 on:click=move |_| confirming.set(true)
             >
-                <leptos_icons::Icon icon=icondata_lu::LuTrash width="14" height="14" />
+                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::TRASH, "14")}
                 {copy.label}
             </button>
             <ConfirmDialog
@@ -88,6 +90,7 @@ pub fn logical_delete_section(
                 title=copy.label
                 message=message
                 confirm_label=copy.label
+                dialog_id=copy.dialog_id
                 confirm_id=copy.confirm_id
                 on_cancel=Callback::new(move |()| confirming.set(false))
                 on_confirm=Callback::new(move |()| {

@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The inline notice kit: the small alert, status and diagnostic blocks a
-//! screen renders BESIDE the thing they are about.
+//! screen renders BESIDE the thing they are about, each FerroUI's notice
+//! (`ferrohealth_ui::view::notice`) in its tone.
 //!
 //! Five shapes, each with exactly one definition so a failed read, a refusal,
 //! an absence and a rejected write look the same wherever they land: the
@@ -17,43 +18,23 @@
 //! inline and never toasts; a MUTATION toasts on both outcomes and may keep
 //! the detail inline beside the toast.
 
+use ferrohealth_ui::tone::Tone;
+use ferrohealth_ui::view::notice::{Announce, notice};
 use leptos::prelude::*;
 
 use crate::components::surface::WELL;
 use crate::error::ViewerError;
-
-/// The class set of a danger-toned inline block (a refusal, a validation
-/// complaint).
-const ALERT: &str =
-    "rounded-control border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger";
-
-/// The class set of a whole-section notice that something is absent.
-const MISSING: &str =
-    "rounded-card border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger";
-
-/// The class set of a whole-section notice that something is deleted.
-const DELETED: &str =
-    "rounded-card border border-warn/40 bg-warn-subtle px-3 py-2 text-sm text-warn";
 
 /// One domain error rendered as the standard inline error bar.
 ///
 /// Used by data sections that resolve their `Result` inside `<Suspense>`
 /// (SSR'd `ErrorBoundary` fallbacks mismatch at hydration in leptos 0.8, so
 /// sections render content-or-this directly; errors never render as nothing).
-/// Newlines survive (`whitespace-pre-line`), because a CDR diagnostic carrying
+/// FerroUI's notice keeps line breaks, because a CDR diagnostic carrying
 /// `validationErrors` puts one violation per line.
 #[must_use]
 pub fn inline_error(error: &ViewerError) -> AnyView {
-    let message = error.to_string();
-    view! {
-        <div
-            role="alert"
-            class="rounded-control border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger whitespace-pre-line"
-        >
-            {message}
-        </div>
-    }
-    .into_any()
+    notice(Tone::Bad, Announce::Alert, None, error.to_string()).into_any()
 }
 
 /// A danger-toned note beside the control it is about: a client-side
@@ -62,35 +43,20 @@ pub fn inline_error(error: &ViewerError) -> AnyView {
 /// `id` is the block's stable E2E hook.
 #[must_use]
 pub fn alert_note(id: &'static str, message: String) -> AnyView {
-    view! {
-        <p role="alert" id=id class=ALERT>
-            {message}
-        </p>
-    }
-    .into_any()
+    notice(Tone::Bad, Announce::Alert, Some(id), message).into_any()
 }
 
 /// The whole-section notice that an object's current version is logically
 /// deleted — a first-class state, so it is `role="status"`, not an alert.
 #[must_use]
 pub fn deleted_notice(id: &'static str, message: &'static str) -> AnyView {
-    view! {
-        <div role="status" id=id class=DELETED>
-            {message}
-        </div>
-    }
-    .into_any()
+    notice(Tone::Warn, Announce::Status, Some(id), message).into_any()
 }
 
 /// The whole-section notice that the CDR holds no object with this id.
 #[must_use]
 pub fn missing_notice(id: &'static str, message: &'static str) -> AnyView {
-    view! {
-        <div role="alert" id=id class=MISSING>
-            {message}
-        </div>
-    }
-    .into_any()
+    notice(Tone::Bad, Announce::Alert, Some(id), message).into_any()
 }
 
 /// The CDR's own diagnostic for a refused write, verbatim, in a scrollable
@@ -119,11 +85,11 @@ pub fn diagnostic_pane(id: &'static str, error: Signal<Option<ViewerError>>) -> 
     .into_any()
 }
 
-/// The CDR's own diagnostic for a failed write as a message bar, inline beside
-/// the failure toast.
+/// The CDR's own diagnostic for a failed write as a notice, inline beside the
+/// failure toast.
 ///
-/// Nothing renders while `error` is `None`, so the bar occupies no space until
-/// a write is actually refused.
+/// Nothing renders while `error` is `None`, so the notice occupies no space
+/// until a write is actually refused.
 #[must_use]
 pub fn failure_bar(error: Signal<Option<ViewerError>>) -> AnyView {
     view! {
@@ -133,9 +99,7 @@ pub fn failure_bar(error: Signal<Option<ViewerError>>) -> AnyView {
                 .map(|error| {
                     view! {
                         <div class="mt-2">
-                            <thaw::MessageBar intent=thaw::MessageBarIntent::Error>
-                                <thaw::MessageBarBody>{error.to_string()}</thaw::MessageBarBody>
-                            </thaw::MessageBar>
+                            {notice(Tone::Bad, Announce::Alert, None, error.to_string())}
                         </div>
                     }
                 })

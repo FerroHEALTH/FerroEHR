@@ -103,6 +103,10 @@ impl Harness {
         let mut caps = DesiredCapabilities::chrome();
         caps.add_arg("--headless=new").expect("caps");
         caps.add_arg("--window-size=1440,900").expect("caps");
+        // The system theme reads light whatever the host prefers, so a journey
+        // and a light screenshot see the same page on every machine.
+        caps.add_arg("--blink-settings=preferredColorScheme=1")
+            .expect("caps");
         // Image-mode OIDC: the composed viewer advertises the in-network
         // issuer host (`keycloak`); the browser resolves it to the host-
         // mapped port. A no-op in host mode (nothing references the name).
@@ -253,6 +257,10 @@ impl Harness {
         let mut caps = DesiredCapabilities::chrome();
         caps.add_arg("--headless=new").expect("caps");
         caps.add_arg("--window-size=1440,900").expect("caps");
+        // The system theme reads light whatever the host prefers, so a journey
+        // and a light screenshot see the same page on every machine.
+        caps.add_arg("--blink-settings=preferredColorScheme=1")
+            .expect("caps");
         // Image-mode OIDC: the composed viewer advertises the in-network
         // issuer host (`keycloak`); the browser resolves it to the host-
         // mapped port. A no-op in host mode (nothing references the name).
@@ -410,7 +418,7 @@ impl Harness {
         }
     }
 
-    /// Wait until no toast card is on screen (a visible `thaw` toast overlays
+    /// Wait until no toast card is on screen (a visible toast overlays
     /// the bottom-right corner and INTERCEPTS clicks on buttons underneath —
     /// an explicit condition, not a sleep). Toasts auto-dismiss; bounded wait.
     ///
@@ -472,13 +480,8 @@ impl Harness {
         }
         // Evidence gathering, so this one read stays best-effort: panicking
         // here would destroy the report the caller is about to print.
-        let bar = match bounded(
-            "find(.thaw-message-bar)",
-            self.driver.find(By::Css(".thaw-message-bar")),
-        )
-        .await
-        {
-            Ok(inner) => bounded("text(.thaw-message-bar)", inner.text())
+        let bar = match bounded("find(alert)", self.driver.find(By::Css("[role='alert']"))).await {
+            Ok(inner) => bounded("text(alert)", inner.text())
                 .await
                 .unwrap_or_default(),
             Err(_) => String::new(),
@@ -1035,9 +1038,8 @@ pub(crate) async fn is_present(h: &Harness, css: &str) -> bool {
 
 /// Whether `css` matches a currently VISIBLE element.
 ///
-/// thaw's dialog is never removed from the DOM: `leptos_transition_group`'s
-/// `CSSTransition` hides it with `display: none`, so a closed dialog is still
-/// findable. Openness is therefore visibility, never mere presence.
+/// FerroUI's dialog is never removed from the DOM: a closed `<dialog>` is
+/// still findable. Openness is therefore visibility, never mere presence.
 ///
 /// # Panics
 /// When the `WebDriver` answers with anything but an absence ([`is_absence`]).
@@ -1051,10 +1053,9 @@ pub(crate) async fn is_visible(h: &Harness, css: &str) -> bool {
 /// Whether ANY element matching `css` is displayed.
 ///
 /// [`is_visible`] answers for the FIRST match, which is the wrong question
-/// about a dialog: a page mounts one surface per dialog and thaw's `Teleport`
-/// never unmounts one after its first open, so a journey that has opened two
-/// leaves a closed surface ahead of the open one in document order. "Is a
-/// modal up" has to look at all of them or it answers about the wrong one.
+/// about a dialog: a page holds one `<dialog>` per dialog, closed ones ahead
+/// of an open one in document order. "Is a modal up" has to look at all of
+/// them or it answers about the wrong one.
 pub(crate) async fn is_any_visible(h: &Harness, css: &str) -> bool {
     for element in find_all(h, css).await {
         if element.read_displayed().await == Some(true) {
@@ -1064,30 +1065,24 @@ pub(crate) async fn is_any_visible(h: &Harness, css: &str) -> bool {
     false
 }
 
-/// thaw's modal surface — the panel itself.
-const DIALOG_SURFACE: &str = ".thaw-dialog-surface";
+/// The footer of the signed-in shell, the authenticated-chrome marker: the
+/// shell's footer follows its `.fui-body`, while the centred sign-in page and
+/// the not-found page carry a footer with no body beside it.
+pub(crate) const SHELL_FOOTER: &str = ".fui-body ~ footer";
 
-/// thaw's modal backdrop: a full-viewport element rendered under every open
-/// dialog and kept displayed while the dialog fades out.
-const DIALOG_BACKDROP: &str = ".thaw-dialog-surface__backdrop";
-
-/// thaw's modal surface MID-OPEN: `leptos_transition_group`'s `CSSTransition`
-/// adds `{name}-enter-active` when the surface starts appearing and removes it
-/// when the transition ends, and thaw's `DialogSurface` names its transition
-/// `fade-in-scale-up-transition` (a 250 ms opacity + scale).
-const DIALOG_ENTERING: &str = ".thaw-dialog-surface.fade-in-scale-up-transition-enter-active";
+/// FerroUI's modal dialog while it is open (`showModal()` sets `open`); its
+/// `::backdrop` covers the page under it.
+const DIALOG_SURFACE: &str = "dialog.fui-modal[open]";
 
 /// Establish the precondition every page-level click has: nothing is covering
 /// the page.
 ///
-/// The backdrop spans the viewport, so a click issued while one is up lands on
-/// it instead of the control and `WebDriver` reports `ElementClickIntercepted`.
-/// Two situations produce one: a dialog that is still fading out, and a dialog
-/// that is deliberately still open because the CDR refused what it sent (the
-/// upload dialog keeps its diagnostic beside the input that caused it). Waiting
-/// alone answers only the first, so an open surface is dismissed through the
-/// dialog's own Escape path — the same exit a person takes — and the wait then
-/// covers the fade.
+/// A modal's backdrop spans the viewport, so a click issued while one is up
+/// lands on it instead of the control and `WebDriver` reports
+/// `ElementClickIntercepted`. A dialog can be deliberately still open because
+/// the CDR refused what it sent (the upload dialog keeps its diagnostic beside
+/// the input that caused it), so an open dialog is dismissed through its own
+/// Escape path — the same exit a person takes — and the wait covers the close.
 ///
 /// # Panics
 /// When a backdrop is still up after 15 s.
@@ -1101,31 +1096,20 @@ pub(crate) async fn clear_dialog_overlay(h: &Harness) {
             .await,
         );
     }
-    wait_hidden(h, DIALOG_BACKDROP).await;
+    wait_hidden(h, DIALOG_SURFACE).await;
 }
 
-/// Wait until the dialog holding `control_css` is open AND STILL: that control
-/// visible, with no dialog anywhere mid-enter.
+/// Wait until the dialog holding `control_css` is open: that control visible.
 ///
-/// Takes a control INSIDE the target dialog rather than matching the surface
-/// class, because a page mounts one surface per dialog and thaw's `Teleport`
-/// mounts each subtree on its first open and never unmounts it. A journey that
-/// uploads and then deletes leaves two surfaces in the DOM, and a bare
-/// `.thaw-dialog-surface` match answers for whichever comes first — which is
-/// the CLOSED one, so the wait could never be satisfied.
-///
-/// Visibility alone is not readiness either: a control clicked while the
-/// surface is still scaling up is clicked at coordinates it has already left,
-/// which `WebDriver` reports as a perfectly successful click on nothing.
-/// [`DIALOG_ENTERING`] is the transition's own in-flight marker and is checked
-/// across the page, so "this control is visible and nothing is entering" is
-/// observable rather than timed.
+/// Takes a control INSIDE the target dialog rather than matching the dialog
+/// element, because a page holds one `<dialog>` per dialog, and a bare match
+/// answers for whichever comes first — which can be a CLOSED one.
 ///
 /// # Panics
 /// When the dialog is not open and settled within 15 s.
 pub(crate) async fn wait_dialog_settled(h: &Harness, control_css: &str) {
     for _ in 0..75 {
-        if is_visible(h, control_css).await && !is_present(h, DIALOG_ENTERING).await {
+        if is_visible(h, control_css).await {
             return;
         }
         tokio::time::sleep(Duration::from_millis(200)).await;
@@ -1140,18 +1124,16 @@ pub(crate) async fn wait_dialog_settled(h: &Harness, control_css: &str) {
 const UPLOAD_SUBMIT: &str = "#template-upload-submit";
 
 /// The refusal diagnostic, scoped to the MODAL: the template listings render
-/// their own `MessageBar` for an empty result, which is not this one.
-const UPLOAD_DIAGNOSTIC: &str = ".thaw-dialog-surface .thaw-message-bar";
+/// their own notice for an empty result, which is not this one.
+const UPLOAD_DIAGNOSTIC: &str = "dialog.fui-modal[open] .fui-alert";
 
-/// The in-flight line the upload dialog renders while its action is pending
-/// (`src/components/upload_dialog.rs`). It sits inside a `Show`, so its
-/// presence IS the pending state; matched by its rendered text because the
-/// line carries no id of its own.
+/// The in-flight line FerroUI's upload field renders while the upload is
+/// pending: its presence IS the pending state.
 const UPLOAD_PENDING_LINE: &str =
-    "//div[contains(@class, 'thaw-dialog-surface')]//span[normalize-space(text())='Uploading…']";
+    "//dialog[@open]//p[contains(@class, 'fui-spinner')][contains(., 'Uploading')]";
 
 /// Every toast card currently on screen; each upload outcome raises one.
-const TOAST_CARD: &str = ".thaw-toast-body";
+const TOAST_CARD: &str = ".fui-toast-text";
 
 /// What the upload dialog says about a dispatch, read at one instant.
 ///
@@ -1246,7 +1228,7 @@ pub(crate) async fn upload_via_dialog(h: &Harness, path: &str) {
     clear_dialog_overlay(h).await;
     h.wait_css("#template-upload-open").await.click().await;
     wait_dialog_settled(h, UPLOAD_SUBMIT).await;
-    h.wait_css("#template-upload-picker input[type=file]")
+    h.wait_css("#template-upload-file")
         .await
         .send_keys(path)
         .await;
@@ -1507,19 +1489,23 @@ pub(crate) async fn wait_css_value_still(h: &Harness, css: &str, property: &str)
     );
 }
 
-/// Poll until the control at `css` is present and ENABLED.
+/// Poll until the control at `css` is present, ENABLED and not read-only.
 ///
 /// The viewer keeps an edit form inert until the document it edits has been
 /// seeded into it, so this is the condition that makes typing (or saving) safe:
 /// input accepted earlier would be replaced by the seed and the save would then
-/// commit the pre-seed draft.
+/// commit the pre-seed draft. FerroUI's code editor keeps its text area
+/// read-only (not disabled) until the page hydrates and while its form is
+/// unseeded, so both properties are read.
 ///
 /// # Panics
 /// When it never becomes enabled within 15 s, or when the `WebDriver` stops
 /// answering — a stalled driver used to look exactly like an unseeded form.
 pub(crate) async fn wait_enabled(h: &Harness, css: &str) {
     for _ in 0..75 {
-        if read_enabled(h, css).await == Some(true) {
+        if read_enabled(h, css).await == Some(true)
+            && read_prop(h, css, "readOnly").await.as_deref() != Some("true")
+        {
             return;
         }
         tokio::time::sleep(Duration::from_millis(200)).await;
@@ -1609,6 +1595,7 @@ pub(crate) async fn wait_text_suffix(h: &Harness, css: &str, suffix: &str) {
 /// # Panics
 /// On any interaction failure.
 pub(crate) async fn retype(h: &Harness, css: &str, text: &str) {
+    wait_enabled(h, css).await;
     let field = h.wait_css(css).await;
     field.clear().await;
     field.send_keys(text).await;
@@ -1655,7 +1642,7 @@ pub(crate) async fn wait_hidden(h: &Harness, css: &str) {
 
 /// Poll until `css` is VISIBLE — the mirror of [`wait_hidden`].
 ///
-/// thaw keeps a closed dialog in the DOM, so "the dialog opened" is a
+/// A closed `<dialog>` stays in the DOM, so "the dialog opened" is a
 /// visibility condition and never mere presence ([`is_visible`]).
 ///
 /// # Panics
@@ -1800,16 +1787,12 @@ pub(crate) async fn confirm_in_dialog(h: &Harness, trigger_css: &str, confirm_id
          never landed (pre-hydration) or a dialog opened whose confirm id is not \
          `{confirm_id}`"
     );
-    // The confirm button is visible from the first frame of the 250 ms enter
-    // transition, and a click landing mid-scale can miss the moving target
-    // without the driver reporting anything (#3200).
     wait_dialog_settled(h, &confirm_css).await;
     h.wait_css(&confirm_css).await.click().await;
-    // The dialog hides on confirm — that it hid proves the click landed. The
-    // backdrop outlives the button by the length of the fade, so the journey's
-    // next click needs it gone too (#3134).
+    // The dialog closes on confirm — that it closed proves the click landed,
+    // and the journey's next click needs its backdrop gone (#3134).
     wait_hidden(h, &confirm_css).await;
-    wait_hidden(h, DIALOG_BACKDROP).await;
+    wait_hidden(h, DIALOG_SURFACE).await;
 }
 
 /// Log in through the Basic form (journeys that need a session).
@@ -1833,8 +1816,8 @@ pub(crate) async fn login_basic_as(h: &Harness, user: &str, pass: &str) {
     let user = user.to_owned();
     let pass = pass.to_owned();
     h.goto("/login").await;
-    h.wait_css("#login-username").await.send_keys(&user).await;
-    h.wait_css("#login-password").await.send_keys(&pass).await;
+    h.wait_css("#sign-in-username").await.send_keys(&user).await;
+    h.wait_css("#sign-in-password").await.send_keys(&pass).await;
     // Submit with a bounded retry: a click landing exactly while hydration
     // swaps the form can be lost (the ActionForm is valid both pre- and
     // post-hydration, but the swap instant is a real race). Each attempt
@@ -1869,7 +1852,7 @@ pub(crate) async fn login_basic_as(h: &Harness, user: &str, pass: &str) {
         }
     }
     // The shell footer is the authenticated-chrome marker.
-    h.wait_css("footer").await;
+    h.wait_css(SHELL_FOOTER).await;
 }
 
 #[cfg(test)]

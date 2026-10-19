@@ -143,7 +143,7 @@ async fn ensure_adl2_template_present(h: &Harness, relative: &str, hrid: &str) -
     // Let the listing Transition resolve — to a row link, the rendered table,
     // the empty state, or an inline error — before deciding whether an upload
     // is needed.
-    h.wait_css("a[href^='/templates/adl2/'], table, .border-dashed, [role='alert']")
+    h.wait_css("a[href^='/templates/adl2/'], table, .fui-empty, [role='alert']")
         .await;
     let link = row_link(hrid);
     if is_present(h, &link).await {
@@ -171,10 +171,7 @@ async fn adl2_upload_lists_and_serves_source_and_json() {
     // The family switch is URL state: the default screen is ADL 1.4, and the
     // ADL 2 pill navigates to the family this journey drives.
     h.goto("/templates").await;
-    h.wait_css("a[data-template-family='adl2']")
-        .await
-        .click()
-        .await;
+    h.wait_css("a[data-tab='adl2']").await.click().await;
     h.wait_url_contains("family=adl2").await;
     h.shot(1, "adl2-family-selected").await;
 
@@ -194,7 +191,7 @@ async fn adl2_upload_lists_and_serves_source_and_json() {
     // The AOM2 JSON pane serves the OperationalTemplateV2 projection. The
     // pretty-printed spelling (`"key": value`) only exists when the viewer
     // PARSED the body — the wire sends it unformatted.
-    h.wait_css("a[data-adl2-tab='json']").await.click().await;
+    h.wait_css("a[data-tab='json']").await.click().await;
     h.wait_url_contains("tab=json").await;
     wait_text_contains(&h, "#adl2-json-pane", "OPERATIONAL_TEMPLATE").await;
     wait_text_contains(&h, "#adl2-json-pane", "\"release_version\": \"1.0.0\"").await;
@@ -204,7 +201,7 @@ async fn adl2_upload_lists_and_serves_source_and_json() {
     // renders with the ADL 1.4 screen's own tree + inspector components: a tree
     // node exists only once the AOM2 parse and the WebTemplate build both
     // succeeded. The standing "no path catalog" note is gone with it.
-    h.wait_css("a[data-adl2-tab='catalog']").await.click().await;
+    h.wait_css("a[data-tab='catalog']").await.click().await;
     h.wait_url_contains("tab=catalog").await;
     h.wait_css("#adl2-catalog-pane ul.text-sm li button").await;
     wait_text_contains(&h, "#adl2-catalog-pane", "Node inspector").await;
@@ -326,14 +323,9 @@ async fn an_unparseable_adl2_source_surfaces_the_engine_diagnostic() {
 
     // The engine reports AOM2 rule codes with their positions; both the code
     // and its message must survive the trip to the screen unedited.
-    wait_text_contains(
-        &h,
-        ".thaw-message-bar",
-        "syntactically invalid ADL2 content",
-    )
-    .await;
-    wait_text_contains(&h, ".thaw-message-bar", "missing terminology section").await;
-    wait_text_contains(&h, ".thaw-message-bar", "SAON").await;
+    wait_text_contains(&h, ".fui-alert", "syntactically invalid ADL2 content").await;
+    wait_text_contains(&h, ".fui-alert", "missing terminology section").await;
+    wait_text_contains(&h, ".fui-alert", "SAON").await;
     // The failure ALSO toasts — an inline-only refusal reads as "nothing
     // happened" (the viewer's mutation-feedback rule).
     assert!(

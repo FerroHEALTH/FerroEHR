@@ -82,7 +82,7 @@ pub struct TemplateDetail {
 /// # Errors
 /// [`ViewerError::Internal`] when the OPT fails to parse or the Web Template
 /// fails to build (the diagnostic named, never a panic).
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 pub fn template_detail_from_opt(source: String) -> Result<TemplateDetail, ViewerError> {
     let opt = openehr_its::opt14::from_xml(&source)
         .map_err(|e| ViewerError::Internal(format!("OPT 1.4 parse: {e}")))?;
@@ -294,32 +294,19 @@ pub fn TemplateDetailPage() -> impl IntoView {
     let meta_card = meta_section(detail);
     let delete_action = delete_section(template_id);
 
-    // The tabs are URL-driven pill links: a static-Tailwind anchor per view,
-    // the active one styled from the `selected_tab` Memo. No thaw TabList —
-    // the selected view is a shareable query param, not private widget state.
-    // All three bodies stay mounted (toggled by `class:hidden`) so each pane
-    // keeps its loaded state across tab switches.
-    let tab_link = move |value: &'static str, label: &'static str| {
-        let class = move || {
-            let base = "rounded-control px-3 py-1.5 text-sm font-medium transition-colors";
-            if selected_tab.get() == value {
-                format!("{base} bg-accent-subtle text-accent-ink")
-            } else {
-                format!("{base} text-ink-muted hover:bg-sunken")
-            }
-        };
-        let href = move || tab_href(&template_id.get(), value);
-        view! {
-            <leptos_router::components::A href=href attr:class=class>
-                {label}
-            </leptos_router::components::A>
-        }
-        .into_any()
-    };
+    // The tabs are URL-driven links (FerroUI's keyed tabs): the selected view
+    // is a shareable query param. All three bodies stay mounted (toggled by
+    // `class:hidden`) so each pane keeps its loaded state across tab switches.
+    let tabs = crate::components::tab_bar::url_tabs(
+        "Template views",
+        &[("wt", "WT"), ("opt", "OPT"), ("example", "Example")],
+        move |value| tab_href(&template_id.get(), value),
+        Signal::derive(move || selected_tab.get()),
+    );
 
     view! {
         <Title text=move || format!("Template · {}", template_id.get()) />
-        <div class="p-6">
+        <div>
             <PageHeader
                 title=template_id
                 crumbs=vec![Crumb::new("Templates", "/templates")]
@@ -328,11 +315,7 @@ pub fn TemplateDetailPage() -> impl IntoView {
                 {delete_action}
             </PageHeader>
             {meta_card}
-            <nav aria-label="Template views" class="flex gap-1 mb-4">
-                {tab_link("wt", "WT")}
-                {tab_link("opt", "OPT")}
-                {tab_link("example", "Example")}
-            </nav>
+            {tabs}
             <div>
                 <div class:hidden=move || selected_tab.get() != "wt">{wt_pane}</div>
                 <div class:hidden=move || selected_tab.get() != "opt">{opt_pane}</div>
@@ -354,7 +337,7 @@ pub fn TemplateDetailPage() -> impl IntoView {
 /// next action (the CDR refuses a template still referenced by a committed
 /// version with `409`).
 fn delete_section(template_id: Signal<String>) -> AnyView {
-    let toaster = thaw::ToasterInjection::expect_context();
+    let toaster = crate::components::toast::toaster();
     let gate = crate::admin::admin_gate();
     let delete: Action<String, (String, Result<(), ViewerError>)> = Action::new(|id: &String| {
         let id = id.clone();
@@ -367,7 +350,7 @@ fn delete_section(template_id: Signal<String>) -> AnyView {
     // deletable object, so a bool IS the "which object" state).
     let confirming = RwSignal::new(false);
 
-    // Toast + navigation are side-effects on the outside world (the thaw
+    // Toast + navigation are side-effects on the outside world (the FerroUI
     // toaster, the router), so an Effect is their correct home; it never runs
     // on the server pass.
     let navigate = leptos_router::hooks::use_navigate();
@@ -406,7 +389,7 @@ fn delete_section(template_id: Signal<String>) -> AnyView {
                 disabled=Signal::derive(move || delete.pending().get())
                 on:click=move |_| confirming.set(true)
             >
-                <leptos_icons::Icon icon=icondata_lu::LuTrash width="14" height="14" />
+                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::TRASH, "14")}
                 "Delete template"
             </button>
             <crate::components::confirm_dialog::ConfirmDialog
@@ -414,6 +397,7 @@ fn delete_section(template_id: Signal<String>) -> AnyView {
                 title="Delete template"
                 message=message
                 confirm_label="Delete template"
+                dialog_id="template-delete-confirm-dialog"
                 confirm_id="template-delete-confirm"
                 on_cancel=Callback::new(move |()| confirming.set(false))
                 on_confirm=Callback::new(move |()| {
@@ -432,7 +416,7 @@ fn delete_section(template_id: Signal<String>) -> AnyView {
 fn meta_section(detail: Resource<Result<TemplateDetail, ViewerError>>) -> AnyView {
     let entry = |label: &'static str, value: String, mono: bool| {
         let value_class = if mono {
-            "font-mono text-xs text-ink break-all"
+            "font-mono text-xs text-ink wrap-break-word"
         } else {
             "text-sm text-ink"
         };
@@ -455,9 +439,7 @@ fn meta_section(detail: Resource<Result<TemplateDetail, ViewerError>>) -> AnyVie
         <section class=format!("{CARD_PAD} mb-4")>
             <Suspense fallback=|| {
                 view! {
-                    <thaw::Skeleton class="h-10">
-                        <thaw::SkeletonItem />
-                    </thaw::Skeleton>
+                    {ferrohealth_ui::view::empty::skeleton(1, "Loading…")}
                 }
             }>
                 {move || {
@@ -539,11 +521,7 @@ fn wt_tab(
 /// families — the ADL2 screen imports it rather than re-declaring a copy).
 pub(crate) fn tree_skeleton() -> impl IntoView {
     view! {
-        <thaw::Skeleton>
-            <thaw::SkeletonItem class="h-4 mb-2" />
-            <thaw::SkeletonItem class="h-4 mb-2 ml-4" />
-            <thaw::SkeletonItem class="h-4 ml-4" />
-        </thaw::Skeleton>
+        {ferrohealth_ui::view::empty::skeleton(3, "Loading…")}
     }
 }
 
@@ -556,8 +534,8 @@ pub(crate) fn tree_skeleton() -> impl IntoView {
 pub(crate) fn catalog_error_view(error: &ViewerError, back_href: &'static str) -> AnyView {
     let message = error.to_string();
     view! {
-        <thaw::MessageBar intent=thaw::MessageBarIntent::Error>
-            <thaw::MessageBarBody>
+        <div role="alert" class="fui-alert">
+            <div>
                 {message} " — "
                 <leptos_router::components::A
                     href=back_href
@@ -565,8 +543,8 @@ pub(crate) fn catalog_error_view(error: &ViewerError, back_href: &'static str) -
                 >
                     "back to templates"
                 </leptos_router::components::A>
-            </thaw::MessageBarBody>
-        </thaw::MessageBar>
+            </div>
+        </div>
     }
     .into_any()
 }
@@ -633,20 +611,12 @@ pub(crate) fn CatalogTreeNode(
                 {move || {
                     if expanded.get() {
                         view! {
-                            <leptos_icons::Icon
-                                icon=icondata_lu::LuChevronDown
-                                width="12"
-                                height="12"
-                            />
+                            {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::CHEVRON_DOWN, "12")}
                         }
                             .into_any()
                     } else {
                         view! {
-                            <leptos_icons::Icon
-                                icon=icondata_lu::LuChevronRight
-                                width="12"
-                                height="12"
-                            />
+                            {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::CHEVRON_RIGHT, "12")}
                         }
                             .into_any()
                     }
@@ -722,7 +692,7 @@ fn inspector_body(node: &CatalogNode) -> AnyView {
     let codes_section = code_chip_section(node);
 
     view! {
-        <dl class="grid grid-cols-[6rem_1fr] gap-x-3 gap-y-1 text-sm text-ink">
+        <dl class="fui-facts text-sm text-ink">
             <dt class="font-medium text-ink-muted">"label"</dt>
             <dd>{node.label.clone()}</dd>
             <dt class="font-medium text-ink-muted">"rmType"</dt>
@@ -732,7 +702,7 @@ fn inspector_body(node: &CatalogNode) -> AnyView {
             <dt class="font-medium text-ink-muted">"selectable"</dt>
             <dd>{selectable}</dd>
             <dt class="font-medium text-ink-muted">"aqlPath"</dt>
-            <dd class="font-mono break-all">{node.aql_path.clone()}</dd>
+            <dd class="font-mono wrap-break-word">{node.aql_path.clone()}</dd>
         </dl>
         {units_section}
         {codes_section}
@@ -807,7 +777,7 @@ fn opt_tab(detail: Resource<Result<TemplateDetail, ViewerError>>) -> AnyView {
                         // Resolve inside the Transition: an SSR'd ErrorBoundary fallback
                         // mismatches at hydration in leptos 0.8.
                         view! {
-                            <crate::components::format_view::DocumentPane body=loaded.source />
+                            <crate::components::format_view::DocumentPane id="template-source-pane" body=loaded.source />
                         }
                             .into_any()
                     }
@@ -846,7 +816,7 @@ fn example_tab(
                             );
                             // Resolve inside the Transition: an SSR'd ErrorBoundary fallback
                             // mismatches at hydration in leptos 0.8.
-                            view! { <crate::components::format_view::DocumentPane body=pretty /> }
+                            view! { <crate::components::format_view::DocumentPane id="template-example-pane" body=pretty /> }
                                 .into_any()
                         }
                         Err(e) => crate::components::notice::inline_error(&e),
@@ -866,13 +836,13 @@ mod tests {
     /// The operational template the viewer's own e2e stack is seeded with
     /// (`scripts/ui-e2e.sh`), so the derivation is pinned against the same
     /// document the browser journeys inspect.
-    #[cfg(feature = "ssr")]
+    #[cfg(not(target_arch = "wasm32"))]
     const OPT_FIXTURE: &str = include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/tests/fixtures/minimal_evaluation.opt"
     ));
 
-    #[cfg(feature = "ssr")]
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn one_parse_yields_the_source_the_meta_and_the_catalog() {
         // The screen's three panes come out of ONE parse: the source travels
@@ -897,7 +867,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "ssr")]
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn a_defective_opt_names_the_failing_stage() {
         // A refusal is a named diagnostic, never a panic — the screen renders

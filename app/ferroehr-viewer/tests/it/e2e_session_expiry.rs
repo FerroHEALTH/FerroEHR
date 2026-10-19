@@ -47,7 +47,7 @@ const SESSION_COOKIE: &str = "ferroehr_viewer_session";
 const UNATTENDED_WAIT: Duration = Duration::from_mins(1);
 
 /// The authenticated chrome, by the selectors the other journeys drive it with.
-const AUTHED_CHROME: [&str; 2] = ["#user-menu-trigger", "footer"];
+const AUTHED_CHROME: [&str; 2] = ["#user-menu-trigger", common::SHELL_FOOTER];
 
 /// Deliberate console noise: every server function called with the cookie gone
 /// answers an error status, which the browser logs as a failed load. Nothing
@@ -121,8 +121,8 @@ async fn a_revoked_session_signs_the_ui_out_with_no_interaction_at_all() {
 async fn sign_in_on_this_page(h: &Harness) {
     let user = env("UI_E2E_BASIC_USER").unwrap_or_else(|| "ferroehr".to_owned());
     let pass = env("UI_E2E_BASIC_PASS").unwrap_or_else(|| "ferroehr".to_owned());
-    h.wait_css("#login-username").await.send_keys(&user).await;
-    h.wait_css("#login-password").await.send_keys(&pass).await;
+    h.wait_css("#sign-in-username").await.send_keys(&user).await;
+    h.wait_css("#sign-in-password").await.send_keys(&pass).await;
     h.wait_css("button[type=submit]").await.click().await;
 }
 
@@ -132,7 +132,7 @@ async fn assert_signed_in_again(h: &Harness) {
     for chrome in AUTHED_CHROME {
         h.wait_css(chrome).await;
     }
-    wait_css_absent(h, "#login-username").await;
+    wait_css_absent(h, "#sign-in-username").await;
 }
 
 /// The signed-out transition lands on `/login?expired=1&next=…`; signing in
@@ -169,7 +169,7 @@ async fn signing_in_again_after_an_explicit_sign_out_renders_the_chrome() {
     login_basic(&h).await;
     h.goto("/templates").await;
     h.wait_css("#user-menu-trigger button").await.click().await;
-    h.wait_css(".thaw-popover-surface").await;
+    h.wait_css("#user-menu:popover-open").await;
     h.wait_xpath("//button[normalize-space()='Sign out']")
         .await
         .click()
@@ -243,7 +243,7 @@ async fn returning_through_oidc_from_the_expired_card_renders_the_chrome() {
     h.wait_css("#username").await.send_keys(&user).await;
     h.wait_css("#password").await.send_keys(&pass).await;
     h.wait_css("#kc-login").await.click().await;
-    h.wait_css("footer").await;
+    h.wait_css(common::SHELL_FOOTER).await;
     h.goto("/templates").await;
     revoke_session(&h).await;
     h.wait_css("a[href='/ehrs']").await.click().await;

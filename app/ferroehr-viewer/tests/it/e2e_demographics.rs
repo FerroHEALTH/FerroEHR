@@ -264,7 +264,7 @@ async fn party_create_read_update_and_history() {
     login_basic(&h).await;
     h.goto("/demographics/person").await;
     // The kind switcher and the wire-honest lookup are the screen's spine.
-    h.wait_css("[data-kind='organisation']").await;
+    h.wait_css("[data-tab='organisation']").await;
     h.wait_css("#party-lookup").await;
     h.shot(1, "party-browser").await;
 
@@ -273,7 +273,7 @@ async fn party_create_read_update_and_history() {
     // has to be driven off the param reactively. Clicking a pill and reading the
     // create skeleton back is what proves it: a screen that read its kind once
     // would still say PERSON here.
-    h.wait_css("[data-kind='organisation']").await.click().await;
+    h.wait_css("[data-tab='organisation']").await.click().await;
     h.wait_url_contains("/demographics/organisation").await;
     assert!(
         wait_kind_screen(&h, "Organisations", "ORGANISATION").await,
@@ -282,7 +282,7 @@ async fn party_create_read_update_and_history() {
     );
     h.shot(2, "kind-switched").await;
     // …and back, so the rest of the journey runs on the person screen.
-    h.wait_css("[data-kind='person']").await.click().await;
+    h.wait_css("[data-tab='person']").await.click().await;
     h.wait_url_contains("/demographics/person").await;
     assert!(
         wait_kind_screen(&h, "People", "PERSON").await,

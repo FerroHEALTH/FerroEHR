@@ -234,15 +234,19 @@ half of the viewer screen by screen.
 
 ### Paging
 
-Every listing is paged, and the page lives in the **URL**: a page is
-shareable and bookmarkable, a reload lands on the same rows, and the browser's
-back and forward buttons walk the pages. The tables the viewer holds in full
-(**Templates**, **Queries**) share one footer under the table: which rows are on
-screen out of how many (`26–50 of 137 templates`), previous/next, and a
-rows-per-page choice of 25/50/100 (`?page=` and `?size=`). The AQL-backed
+Every listing is paged. The tables the viewer holds in full share one pager
+under the table: which rows are on screen out of how many (`26-50 of 137`),
+First, Previous, the page you are on, Next and Last (a step you cannot take
+stays in place and says "(unavailable)"), and a rows-per-page choice of
+25/50/100. On a listing that names no patient (**Templates**, **Queries**,
+**Subscriptions**) the page lives in the **URL** (`?page=`, counted from 1,
+and `?size=`): a page is shareable and bookmarkable, a reload lands on the same
+rows, and the browser's back and forward buttons walk the pages. A listing that
+can show patient data (the demographic tags, an EHR's tags) keeps its page in
+the screen and never in a URL. The AQL-backed
 listings (EHRs, an EHR's compositions) page through `?offset=` links, and the
-audit browser through `?page=` beside its filters. Every one of these controls
-is a plain link, so paging works before the page's WebAssembly loads, and a
+audit browser through `?page=` beside its filters. Every URL control is a
+plain link, so paging works before the page's WebAssembly loads, and a
 page link carries the screen's other parameters (the tab you are on, the
 filters you set) across with it.
 

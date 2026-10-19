@@ -29,10 +29,11 @@
 use leptos::prelude::*;
 use serde_json::Value;
 
-use crate::components::field::{BTN_PRIMARY, LABEL, TEXTAREA};
+use crate::components::field::{BTN_PRIMARY, Height, LABEL, code_field};
 use crate::components::surface::{CARD_PAD, CARD_TITLE, WELL};
 use crate::error::ViewerError;
 use crate::pages::ehr_detail::status::EhrStatusState;
+use ferrohealth_ui::highlight::Language;
 
 /// One dispatched status edit: the target EHR, the `If-Match` version, the
 /// verbatim document the edits apply to, and the three edited values.
@@ -167,7 +168,7 @@ pub(super) fn parse_other_details(draft: &str) -> Result<Option<Value>, String> 
     }
 }
 
-#[cfg(feature = "ssr")]
+#[cfg(not(target_arch = "wasm32"))]
 /// Apply the form's three edits to the loaded `EHR_STATUS` document and return
 /// the body to PUT.
 ///
@@ -227,10 +228,6 @@ pub(super) fn apply_status_edits(
 /// Every control is DISABLED until [`seed`] has loaded a document into the
 /// form: the card is mounted before the read resolves, and an edit made in it
 /// then would be silently replaced by the seed.
-#[expect(
-    clippy::too_many_lines,
-    reason = "one erased section: the edit card's two toggles + draft + validation + action wiring (rules §1)"
-)]
 pub(super) fn edit_form(
     ehr_id: Signal<String>,
     form: StatusForm,
@@ -294,7 +291,7 @@ pub(super) fn edit_form(
     view! {
         <section class=CARD_PAD id="status-edit">
             <h2 class=CARD_TITLE>"Edit status"</h2>
-            <p class="mb-3 text-xs text-ink-muted">
+            <p class="mb-3 fui-help">
                 "Commits a new EHR_STATUS version on top of the one loaded above (If-Match), so a concurrent change is refused rather than overwritten. Every other attribute — the subject included — is sent back exactly as the CDR served it."
             </p>
             <div class="flex flex-col gap-3">
@@ -315,17 +312,13 @@ pub(super) fn edit_form(
                     <label class=LABEL r#for="status-other-details">
                         "other_details (canonical JSON ITEM_STRUCTURE — leave blank to remove)"
                     </label>
-                    <textarea
-                        id="status-other-details"
-                        class=format!("{TEXTAREA} min-h-[10rem]")
-                        placeholder="{ \"_type\": \"ITEM_TREE\", \"archetype_node_id\": \"at0001\", … }"
-                        disabled=true
-                        prop:disabled=move || unseeded.get()
-                        prop:value=move || form.other_details.get()
-                        on:input:target=move |ev| form.other_details.set(ev.target().value())
-                    >
-                        {form.other_details.get_untracked()}
-                    </textarea>
+                    {code_field(
+                        "status-other-details",
+                        Language::Json,
+                        form.other_details,
+                        Some(unseeded),
+                        Height::Document,
+                    )}
                 </div> <div class="flex items-center gap-3">
                     <button
                         id="status-save"
@@ -335,7 +328,7 @@ pub(super) fn edit_form(
                         prop:disabled=move || unseeded.get() || save.pending().get()
                         on:click=on_save
                     >
-                        <leptos_icons::Icon icon=icondata_lu::LuSave width="14" height="14" />
+                        {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::SAVE, "14")}
                         "Save status"
                     </button>
                     <Show when=move || save.pending().get()>
@@ -413,7 +406,7 @@ mod tests {
     }
 }
 
-#[cfg(all(test, feature = "ssr"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod merge_tests {
     use super::apply_status_edits;
     use serde_json::Value;
