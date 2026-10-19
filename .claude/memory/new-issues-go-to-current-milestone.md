@@ -7,7 +7,7 @@ metadata:
 
 The tracker works one milestone at a time. An issue filed while working a milestone, an en-route finding, a follow-up or an upstream report included, goes in the CURRENT milestone and is fixed before the cut (fix-first). That holds whatever the current milestone's version is, a patch, a minor or a major such as v5.0.0.
 
-The exceptions: a `blocked-upstream` issue carries no milestone, and work the owner has placed in a later themed milestone (the release line in [[v5-withdrawn-rewrites-are-v431-v432]]) stays there. An issue blocked from the current cut by something outside this repository moves to the next milestone with a comment saying why.
+The exceptions: a `blocked-upstream` issue keeps its label and carries the milestone where its work lands once unblocked, by default the next milestone after the current one, with a comment naming what it waits on (it moves to the current milestone when the wait ends); an `upstream-report` follows `.claude/rules/cnf-triage.md`; and work the owner has placed in a later themed milestone (the release line in [[v5-withdrawn-rewrites-are-v431-v432]]) stays there. An issue blocked from the current cut by something outside this repository moves to the next milestone with a comment saying why.
 
 **Why:** on 2026-09-14 the owner said "add all these new ones to milestone 4.3.1 please, not to v5", when v5.x held the withdrawn application-layer rewrites. The v5.0.0, v5.1.0 and v6.0.0 milestones exist again (owner, 2026-10-19), so "never v5.x" would now send work away from the release being cut. The owner's direction on 2026-10-19 is one milestone at a time, with en-route issues in the current one.
 

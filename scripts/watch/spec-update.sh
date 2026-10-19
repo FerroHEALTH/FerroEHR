@@ -539,7 +539,7 @@ while IFS="$US" read -r key component summary source resolved fixv comps status 
       if [[ "$DRY_RUN" = "1" ]]; then
         echo "DRY-RUN would unblock #$num ($key): $summary"
       else
-        gh issue comment "$num" --body "Auto-unblock (spec-update watcher): the normative text for $key has landed upstream — $summary. Re-vendor the component at pickup; this issue is implementable now — assign it to the current milestone when picked up (blocked issues carry no milestone)." >/dev/null
+        gh issue comment "$num" --body "Auto-unblock (spec-update watcher): the normative text for $key has landed upstream — $summary. Re-vendor the component at pickup; this issue is implementable now — move it to the current milestone when picked up." >/dev/null
         gh issue edit "$num" --remove-label blocked-upstream >/dev/null
         echo "unblocked #$num ($key)"
       fi

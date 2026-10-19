@@ -152,9 +152,13 @@ applying a label raises a fresh run with the current label set by itself — a
 RE-RUN of the failed job still re-uses its stale payload, so let the new run
 report instead. A label referenced by CI must exist in the repo (`gh label
 create`) — a missing label fails silently at apply time, not in the workflow.
-**Milestones = releases** (vX.Y.Z): a milestone is a delivery promise — a
-`blocked-upstream` issue carries NO milestone (it cannot promise; the
-watcher's auto-unblock note says to assign one at pickup); a release is cut
+**Milestones = releases** (vX.Y.Z): a milestone is a delivery promise, and
+the tracker works one milestone at a time (owner, 2026-10-19). A
+`blocked-upstream` issue keeps its label and carries the milestone where its
+work lands once unblocked, by default the next milestone after the current
+one, with a comment naming what it waits on; when the wait ends it moves to
+the current milestone (the watcher's auto-unblock note says so). An
+`upstream-report` follows `.claude/rules/cnf-triage.md`. A release is cut
 when its milestone reaches zero open issues (procedure in
 `.claude/rules/changelog.md` — changelog rename, version bumps + goldens,
 release PR, tag on the merge commit, ensure the next one exists). The release
