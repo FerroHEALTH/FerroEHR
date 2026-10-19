@@ -20,6 +20,7 @@
               (#1694)"
 )]
 
+use ferrohealth_ui::view::form::field;
 use leptos::prelude::*;
 use leptos::server;
 use leptos_router::components::A;
@@ -315,52 +316,68 @@ fn filter_bar(ehr_id: Signal<String>, query: Memo<ParamsMap>) -> AnyView {
             // this the filtered result would land back on the Status tab.
             <input type="hidden" name="tab" value="compositions" />
             <div class="fui-field-flow">
-                <label class="fui-field">
-                    <span class="fui-label">"Template"</span>
-                    <input
-                        id="composition-filter-template"
-                        type="text"
-                        name="template"
-                        class=INPUT
-                        placeholder="part of the template id"
-                        value=initial("template")
-                        prop:value=current("template")
-                    />
-                </label>
-                <label class="fui-field">
-                    <span class="fui-label">"From (UTC date)"</span>
-                    <input
-                        id="composition-filter-from"
-                        type="date"
-                        name="from"
-                        class=INPUT
-                        value=initial("from")
-                        prop:value=current("from")
-                    />
-                </label>
-                <label class="fui-field">
-                    <span class="fui-label">"To (UTC date)"</span>
-                    <input
-                        id="composition-filter-to"
-                        type="date"
-                        name="to"
-                        class=INPUT
-                        value=initial("to")
-                        prop:value=current("to")
-                    />
-                </label>
-                <label class="fui-field">
-                    <span class="fui-label">"Composer"</span>
-                    <input
-                        id="composition-filter-composer"
-                        type="text"
-                        name="composer"
-                        class=INPUT
-                        placeholder="part of the composer's name"
-                        value=initial("composer")
-                        prop:value=current("composer")
-                    />
-                </label>
+                {field(
+                    "composition-filter-template",
+                    "Template",
+                    None,
+                    view! {
+                        <input
+                            id="composition-filter-template"
+                            type="text"
+                            name="template"
+                            class=INPUT
+                            placeholder="part of the template id"
+                            value=initial("template")
+                            prop:value=current("template")
+                        />
+                    },
+                )}
+                {field(
+                    "composition-filter-from",
+                    "From (UTC date)",
+                    None,
+                    view! {
+                        <input
+                            id="composition-filter-from"
+                            type="date"
+                            name="from"
+                            class=INPUT
+                            value=initial("from")
+                            prop:value=current("from")
+                        />
+                    },
+                )}
+                {field(
+                    "composition-filter-to",
+                    "To (UTC date)",
+                    None,
+                    view! {
+                        <input
+                            id="composition-filter-to"
+                            type="date"
+                            name="to"
+                            class=INPUT
+                            value=initial("to")
+                            prop:value=current("to")
+                        />
+                    },
+                )}
+                {field(
+                    "composition-filter-composer",
+                    "Composer",
+                    None,
+                    view! {
+                        <input
+                            id="composition-filter-composer"
+                            type="text"
+                            name="composer"
+                            class=INPUT
+                            placeholder="part of the composer's name"
+                            value=initial("composer")
+                            prop:value=current("composer")
+                        />
+                    },
+                )}
                 <button id="composition-filter-apply" type="submit" class=BTN_PRIMARY>
                     {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::FUNNEL, "14")}
                     "Filter"

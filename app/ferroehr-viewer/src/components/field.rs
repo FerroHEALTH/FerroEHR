@@ -64,23 +64,17 @@ pub fn text_field(
     placeholder: Option<&'static str>,
     value: RwSignal<String>,
 ) -> AnyView {
-    let field_id = id.clone();
-    view! {
-        <div class="fui-field">
-            <label class=LABEL r#for=id>
-                {label}
-            </label>
-            <input
-                id=field_id
-                type="text"
-                class=INPUT
-                placeholder=placeholder
-                prop:value=move || value.get()
-                on:input:target=move |ev| value.set(ev.target().value())
-            />
-        </div>
-    }
-    .into_any()
+    let input = view! {
+        <input
+            id=id.clone()
+            type="text"
+            class=INPUT
+            placeholder=placeholder
+            prop:value=move || value.get()
+            on:input:target=move |ev| value.set(ev.target().value())
+        />
+    };
+    form::keyed_field(id, label, None, input).into_any()
 }
 
 /// How tall a [`code_field`] stands.

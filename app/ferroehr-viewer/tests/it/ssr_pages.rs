@@ -575,6 +575,31 @@ async fn the_audit_screen_renders_a_get_filter_form_over_every_outcome_and_actio
     }
 }
 
+// Every filter is a FerroUI field: a label above its control, naming the
+// control by id (WCAG 2.2 SC 1.3.1, the HTML label element's `for`).
+#[tokio::test]
+async fn every_audit_filter_is_named_by_its_own_label() {
+    let html = render_page("/audit", &[], || {
+        view! { <ferroehr_viewer::pages::audit::AuditPage /> }.into_any()
+    });
+    for field in ["from", "to", "patient", "agent", "outcome", "action"] {
+        assert!(
+            html.contains(&format!(
+                "<label for=\"audit-{field}\" class=\"fui-label\">"
+            )),
+            "the {field} filter has no label naming it: {html}"
+        );
+        assert!(
+            html.contains(&format!("id=\"audit-{field}\"")),
+            "the {field} filter carries no id: {html}"
+        );
+    }
+    assert!(
+        !html.contains("<label class=\"fui-field\">"),
+        "a filter is still a hand-built label wrapper: {html}"
+    );
+}
+
 // ----------------------------------------------------------------- system
 
 #[tokio::test]

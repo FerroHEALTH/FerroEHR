@@ -33,6 +33,7 @@
 //! failing card never blanks the page, and a management endpoint the deployment
 //! left off renders as a first-class absent state rather than an error.
 
+use ferrohealth_ui::view::form::field;
 use leptos::component;
 use leptos::prelude::*;
 use leptos_meta::Title;
@@ -453,11 +454,16 @@ fn metric_picker(names: Vec<String>, current: Option<&str>) -> AnyView {
             action="/operations"
             attr:class="mt-4 fui-field-flow"
         >
-            <label class="fui-field">
-                <span class="fui-label">"Metric"</span> <select id="ops-metric" name="metric" class=format!("min-w-72 {SELECT}")>
-                    {options}
-                </select>
-            </label>
+            {field(
+                "ops-metric",
+                "Metric",
+                None,
+                view! {
+                    <select id="ops-metric" name="metric" class=format!("min-w-72 {SELECT}")>
+                        {options}
+                    </select>
+                },
+            )}
             <button id="ops-metric-inspect" type="submit" class=BTN_SECONDARY>
                 "Inspect"
             </button>
@@ -603,17 +609,21 @@ fn loggers_body(
                 <dd class="font-mono wrap-break-word text-ink">{boot}</dd>
             </dl>
             <div class="mt-3 fui-field-flow">
-                <label class="fui-field">
-                    <span class="fui-label">"New filter directives"</span>
-                    <input
-                        id="ops-log-filter"
-                        type="text"
-                        class=INPUT
-                        placeholder="ferroehr=debug,sqlx=warn"
-                        prop:value=move || draft.get()
-                        on:input:target=move |ev| draft.set(ev.target().value())
-                    />
-                </label>
+                {field(
+                    "ops-log-filter",
+                    "New filter directives",
+                    None,
+                    view! {
+                        <input
+                            id="ops-log-filter"
+                            type="text"
+                            class=INPUT
+                            placeholder="ferroehr=debug,sqlx=warn"
+                            prop:value=move || draft.get()
+                            on:input:target=move |ev| draft.set(ev.target().value())
+                        />
+                    },
+                )}
                 <button
                     id="ops-log-apply"
                     type="button"

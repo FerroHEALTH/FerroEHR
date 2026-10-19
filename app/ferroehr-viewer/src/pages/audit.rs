@@ -21,6 +21,7 @@
               hydrate target"
 )]
 
+use ferrohealth_ui::view::form::keyed_field;
 use leptos::prelude::*;
 use leptos::{component, server};
 use leptos_meta::Title;
@@ -316,93 +317,26 @@ pub fn AuditPage() -> impl IntoView {
 /// keeps the form filled.
 fn filter_form(query: Memo<leptos_router::params::ParamsMap>) -> AnyView {
     let initial = move |key: &str| query.read_untracked().get(key).unwrap_or_default();
-    let select_class = crate::components::field::SELECT;
+    let from = text_filter(
+        "from",
+        "From (instant)",
+        Some("2026-07-01T00:00:00Z"),
+        initial("from"),
+    );
+    let to = text_filter(
+        "to",
+        "To (instant)",
+        Some("2026-07-18T00:00:00Z"),
+        initial("to"),
+    );
+    let patient = text_filter("patient", "Patient id", None, initial("patient"));
+    let agent = text_filter("agent", "Principal", None, initial("agent"));
+    let outcome = choice_filter("outcome", "Outcome", &OUTCOMES, &initial("outcome"));
+    let action = choice_filter("action", "Action", &ACTIONS, &initial("action"));
     view! {
         <leptos_router::components::Form method="GET" action="/audit" attr:class="mb-4">
             <div class="fui-field-flow">
-                <label class="fui-field">
-                    <span class="fui-label">"From (instant)"</span>
-                    <input
-                        type="text"
-                        name="from"
-                        class=INPUT
-                        placeholder="2026-07-01T00:00:00Z"
-                        value=initial("from")
-                    />
-                </label>
-                <label class="fui-field">
-                    <span class="fui-label">"To (instant)"</span>
-                    <input
-                        type="text"
-                        name="to"
-                        class=INPUT
-                        placeholder="2026-07-18T00:00:00Z"
-                        value=initial("to")
-                    />
-                </label>
-                <label class="fui-field">
-                    <span class="fui-label">"Patient id"</span>
-                    <input
-                        type="text"
-                        name="patient"
-                        class=INPUT
-                        value=initial("patient")
-                    />
-                </label>
-                <label class="fui-field">
-                    <span class="fui-label">"Principal"</span>
-                    <input
-                        type="text"
-                        name="agent"
-                        class=INPUT
-                        value=initial("agent")
-                    />
-                </label>
-                <label class="fui-field">
-                    // Initial selection via the option `selected` attribute:
-                    // it server-renders (a `prop:` would not) and the select
-                    // stays uncontrolled — the GET form owns the state.
-                    <span class="fui-label">"Outcome"</span>
-                    <select name="outcome" class=select_class>
-                        <option value="" selected=initial("outcome").is_empty()>
-                            "any"
-                        </option>
-                        <option value="0" selected=initial("outcome") == "0">
-                            "success"
-                        </option>
-                        <option value="4" selected=initial("outcome") == "4">
-                            "minor failure"
-                        </option>
-                        <option value="8" selected=initial("outcome") == "8">
-                            "serious failure"
-                        </option>
-                        <option value="12" selected=initial("outcome") == "12">
-                            "major failure"
-                        </option>
-                    </select>
-                </label>
-                <label class="fui-field">
-                    <span class="fui-label">"Action"</span> <select name="action" class=select_class>
-                        <option value="" selected=initial("action").is_empty()>
-                            "any"
-                        </option>
-                        <option value="C" selected=initial("action") == "C">
-                            "create"
-                        </option>
-                        <option value="R" selected=initial("action") == "R">
-                            "read"
-                        </option>
-                        <option value="U" selected=initial("action") == "U">
-                            "update"
-                        </option>
-                        <option value="D" selected=initial("action") == "D">
-                            "delete"
-                        </option>
-                        <option value="E" selected=initial("action") == "E">
-                            "execute"
-                        </option>
-                    </select>
-                </label>
+                {from} {to} {patient} {agent} {outcome} {action}
                 <button type="submit" class=crate::components::field::BTN_PRIMARY>
                     "Filter"
                 </button>
@@ -410,6 +344,66 @@ fn filter_form(query: Memo<leptos_router::params::ParamsMap>) -> AnyView {
         </leptos_router::components::Form>
     }
     .into_any()
+}
+
+/// The outcome choices of the filter, as the value the query carries and
+/// the words shown.
+const OUTCOMES: [(&str, &str); 5] = [
+    ("", "any"),
+    ("0", "success"),
+    ("4", "minor failure"),
+    ("8", "serious failure"),
+    ("12", "major failure"),
+];
+
+/// The action choices of the filter, as the value the query carries and the
+/// words shown.
+const ACTIONS: [(&str, &str); 6] = [
+    ("", "any"),
+    ("C", "create"),
+    ("R", "read"),
+    ("U", "update"),
+    ("D", "delete"),
+    ("E", "execute"),
+];
+
+/// One text filter of the form, the query parameter `name` seeded with
+/// `value`.
+fn text_filter(
+    name: &'static str,
+    label: &'static str,
+    placeholder: Option<&'static str>,
+    value: String,
+) -> AnyView {
+    let id = format!("audit-{name}");
+    let input = view! {
+        <input id=id.clone() type="text" name=name class=INPUT placeholder=placeholder value=value />
+    };
+    keyed_field(id, label, None, input).into_any()
+}
+
+/// One choice filter of the form, the query parameter `name` with `current`
+/// selected.
+fn choice_filter(
+    name: &'static str,
+    label: &'static str,
+    choices: &[(&'static str, &'static str)],
+    current: &str,
+) -> AnyView {
+    let id = format!("audit-{name}");
+    // Initial selection via the option `selected` attribute: it
+    // server-renders (a `prop:` would not) and the select stays uncontrolled,
+    // so the GET form owns the state.
+    let options = choices
+        .iter()
+        .map(|(value, words)| view! { <option value=*value selected=*value == current>{*words}</option> })
+        .collect_view();
+    let select = view! {
+        <select id=id.clone() name=name class=crate::components::field::SELECT>
+            {options}
+        </select>
+    };
+    keyed_field(id, label, None, select).into_any()
 }
 
 /// The record table: the page resource under `<Transition>` (old rows stay
