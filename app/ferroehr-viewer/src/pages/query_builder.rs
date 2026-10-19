@@ -558,12 +558,18 @@ fn disclosure_toggle(node_label: &str, expanded: RwSignal<bool>, has_children: b
             {move || {
                 if expanded.get() {
                     view! {
-                        {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::CHEVRON_DOWN, "12")}
+                        {ferrohealth_ui::icon::icon(
+                            ferrohealth_ui::icon::Glyph::CHEVRON_DOWN,
+                            "12",
+                        )}
                     }
                         .into_any()
                 } else {
                     view! {
-                        {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::CHEVRON_RIGHT, "12")}
+                        {ferrohealth_ui::icon::icon(
+                            ferrohealth_ui::icon::Glyph::CHEVRON_RIGHT,
+                            "12",
+                        )}
                     }
                         .into_any()
                 }
@@ -867,11 +873,7 @@ fn group_toolbar(
             <button
                 type="button"
                 class=move || {
-                    if active_here() {
-                        BTN_PRIMARY_SMALL
-                    } else {
-                        BTN_SECONDARY_SMALL
-                    }
+                    if active_here() { BTN_PRIMARY_SMALL } else { BTN_SECONDARY_SMALL }
                 }
                 on:click=move |_| ctx.active_path.set(target_set_path.clone())
             >
@@ -1364,13 +1366,7 @@ fn coded_code_entry(key: &str, coded: CodedCtx, path: Vec<usize>, ctx: BuilderCt
                     on:click=on_lookup
                 >
                     "look up"
-                </button>
-                <button
-                    id=add_id
-                    type="button"
-                    class=BTN_SECONDARY
-                    on:click=on_add
-                >
+                </button> <button id=add_id type="button" class=BTN_SECONDARY on:click=on_add>
                     "add"
                 </button>
             </div>
@@ -1622,32 +1618,32 @@ fn text_editor(is_contains: bool, text: String, path: Vec<usize>, ctx: BuilderCt
     view! {
         <div class="flex flex-wrap items-center gap-3">
             <div class="fui-segmented">
-            <label class="fui-segment">
-                <input
-                    type="radio"
-                    class="fui-sr-only"
-                    name=name.clone()
-                    prop:checked=move || !contains.get()
-                    on:change:target=move |_| {
-                        contains.set(false);
-                        apply_eq();
-                    }
-                />
-                "equals"
-            </label>
-            <label class="fui-segment">
-                <input
-                    type="radio"
-                    class="fui-sr-only"
-                    name=name
-                    prop:checked=move || contains.get()
-                    on:change:target=move |_| {
-                        contains.set(true);
-                        apply_ct();
-                    }
-                />
-                "contains"
-            </label>
+                <label class="fui-segment">
+                    <input
+                        type="radio"
+                        class="fui-sr-only"
+                        name=name.clone()
+                        prop:checked=move || !contains.get()
+                        on:change:target=move |_| {
+                            contains.set(false);
+                            apply_eq();
+                        }
+                    />
+                    "equals"
+                </label>
+                <label class="fui-segment">
+                    <input
+                        type="radio"
+                        class="fui-sr-only"
+                        name=name
+                        prop:checked=move || contains.get()
+                        on:change:target=move |_| {
+                            contains.set(true);
+                            apply_ct();
+                        }
+                    />
+                    "contains"
+                </label>
             </div>
             <input
                 type="text"
@@ -1846,11 +1842,7 @@ fn columns_editor(ctx: BuilderCtx, columns: &[SelectedColumn]) -> AnyView {
     if columns.is_empty() {
         // An inline hint, not an `EmptyState`: the columns editor is one row of
         // the options strip beside "Order by" and "Limit".
-        return view! {
-            <p class="fui-help">
-                "Add projection columns with \"+ column\" in the path catalog."
-            </p>
-        }
+        return view! { <p class="fui-help">"Add projection columns with \"+ column\" in the path catalog."</p> }
         .into_any();
     }
     let rows = columns
@@ -2140,7 +2132,10 @@ fn preview_run_section(
                                 )>{aql}</pre>
                                 <A href=href attr:class="text-sm text-accent hover:underline">
                                     "Open in raw editor "
-                                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::ARROW_RIGHT, "12")}
+                                    {ferrohealth_ui::icon::icon(
+                                        ferrohealth_ui::icon::Glyph::ARROW_RIGHT,
+                                        "12",
+                                    )}
                                 </A>
                             </div>
                         }
@@ -2157,12 +2152,16 @@ fn preview_run_section(
                         }
                             .into_any()
                     }
-                }} {save_fields}
-                <div class="fui-cluster">
+                }} {save_fields} <div class="fui-cluster">
                     <button type="button" class=BTN_PRIMARY disabled=disabled on:click=run_click>
                         "Run"
                     </button>
-                    <button type="button" class=BTN_SECONDARY disabled=save_disabled on:click=save_click>
+                    <button
+                        type="button"
+                        class=BTN_SECONDARY
+                        disabled=save_disabled
+                        on:click=save_click
+                    >
                         "Save"
                     </button>
                 </div> {save_feedback(save_action)}
@@ -2477,7 +2476,11 @@ fn result_row(row: &[serde_json::Value], labels: &[String]) -> AnyView {
         .map(|(i, value)| {
             let text = cell_text(value);
             let label = (i > 0).then(|| labels.get(i).cloned().unwrap_or_default());
-            view! { <td class=CELL data-label=label>{text}</td> }
+            view! {
+                <td class=CELL data-label=label>
+                    {text}
+                </td>
+            }
         })
         .collect::<Vec<_>>();
     view! { <tr class=ROW>{cells}</tr> }.into_any()

@@ -835,9 +835,7 @@ fn versioned_section(
     view! {
         <div class="mt-3">
             <Transition fallback=|| {
-                view! {
-                    {ferrohealth_ui::view::empty::skeleton(4, "Loading…")}
-                }
+                view! { {ferrohealth_ui::view::empty::skeleton(4, "Loading…")} }
             }>
                 {move || Suspend::new(async move {
                     match versioned.await {
@@ -964,9 +962,7 @@ fn edit_section(
             <div class:hidden=move || !edit_open.get()>
                 <section class=format!("{CARD_PAD} mt-3")>
                     <h2 class=CARD_TITLE>"Commit new version"</h2>
-                    <p class="mb-2 fui-help">
-                        "Commits on top of the latest version."
-                    </p>
+                    <p class="mb-2 fui-help">"Commits on top of the latest version."</p>
                     <div class:hidden=move || is_json()>
                         <p class="text-sm text-ink-muted">"Switch to canonical JSON to edit."</p>
                     </div>
@@ -1149,9 +1145,7 @@ fn document_section(
 ) -> AnyView {
     view! {
         <Transition fallback=|| {
-            view! {
-                {ferrohealth_ui::view::empty::skeleton(8, "Loading…")}
-            }
+            view! { {ferrohealth_ui::view::empty::skeleton(8, "Loading…")} }
         }>
             {move || Suspend::new(async move {
                 match document.await {
@@ -1159,7 +1153,13 @@ fn document_section(
                         let body_sig = RwSignal::new(body);
                         // Resolve inside the Transition: an SSR'd ErrorBoundary fallback
                         // mismatches at hydration in leptos 0.8.
-                        view! { <DocumentPane id="composition-pane" body=body_sig initial_view=initial_view /> }
+                        view! {
+                            <DocumentPane
+                                id="composition-pane"
+                                body=body_sig
+                                initial_view=initial_view
+                            />
+                        }
                             .into_any()
                     }
                     Ok(None) => deleted_pane(),

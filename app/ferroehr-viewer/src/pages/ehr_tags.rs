@@ -1020,8 +1020,17 @@ fn browser_row(tag: &ItemTagRow, paths: bool) -> AnyView {
             <td class=CELL_MONO data-tag-key=hook>
                 {key}
             </td>
-            <td class=CELL data-label="Value" colspan=if paths { "1" } else { "2" }>{value}</td>
-            {paths.then(|| view! { <td class=CELL_MONO data-label="Target path" colspan="2">{target_path}</td> })}
+            <td class=CELL data-label="Value" colspan=if paths { "1" } else { "2" }>
+                {value}
+            </td>
+            {paths
+                .then(|| {
+                    view! {
+                        <td class=CELL_MONO data-label="Target path" colspan="2">
+                            {target_path}
+                        </td>
+                    }
+                })}
         </tr>
     }
     .into_any()

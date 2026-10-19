@@ -264,7 +264,9 @@ pub fn DashboardPage() -> impl IntoView {
                 title="Dashboard"
                 subtitle="Repository overview, query cohorts, and recent commit activity."
             />
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">{counts} {stored}</div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+                {counts} {stored}
+            </div>
             <section class=format!("{CARD_PAD} mb-6")>
                 <h2 class=CARD_TITLE>"Query namespaces"</h2>
                 {namespaces}
@@ -294,12 +296,8 @@ fn stat_tile(
 
 /// A single stat-tile skeleton (a card-shaped placeholder).
 fn tile_skeleton() -> AnyView {
-    view! {
-        <div class=CARD_PAD>
-            {ferrohealth_ui::view::empty::skeleton(2, "Loading…")}
-        </div>
-    }
-    .into_any()
+    view! { <div class=CARD_PAD>{ferrohealth_ui::view::empty::skeleton(2, "Loading…")}</div> }
+        .into_any()
 }
 
 /// Three stat-tile skeletons for the counts section's loading state (keeps the
@@ -442,7 +440,9 @@ fn namespace_tile(tile: NamespaceTile) -> AnyView {
     view! {
         <A
             href="/queries"
-            attr:class=format!("block {CARD_PAD} no-underline transition-colors hover:border-accent")
+            attr:class=format!(
+                "block {CARD_PAD} no-underline transition-colors hover:border-accent",
+            )
         >
             <div class="font-mono font-medium truncate text-ink" data-namespace-tile=hook>
                 {tile.label}
@@ -460,9 +460,7 @@ fn trend_section() -> AnyView {
     let resource = Resource::new(|| (), |()| async move { commit_trend().await });
     view! {
         <Suspense fallback=|| {
-            view! {
-                {ferrohealth_ui::view::empty::skeleton(1, "Loading…")}
-            }
+            view! { {ferrohealth_ui::view::empty::skeleton(1, "Loading…")} }
         }>
             {move || Suspend::new(async move {
                 match resource.await {

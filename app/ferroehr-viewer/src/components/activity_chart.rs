@@ -45,7 +45,13 @@ pub fn activity_chart(
     empty_hint: &'static str,
 ) -> AnyView {
     if points.is_empty() {
-        return view! { <EmptyState icon=ferrohealth_ui::icon::Glyph::CHART_LINE message=empty_message hint=empty_hint /> }
+        return view! {
+            <EmptyState
+                icon=ferrohealth_ui::icon::Glyph::CHART_LINE
+                message=empty_message
+                hint=empty_hint
+            />
+        }
         .into_any();
     }
     let ends = (

@@ -233,9 +233,7 @@ fn activity_section(ehr_id: Signal<String>, selected: Memo<String>) -> AnyView {
     );
     let body = view! {
         <Suspense fallback=|| {
-            view! {
-                {ferrohealth_ui::view::empty::skeleton(1, "Loading…")}
-            }
+            view! { {ferrohealth_ui::view::empty::skeleton(1, "Loading…")} }
         }>
             {move || Suspend::new(async move {
                 match resource.await {
@@ -349,7 +347,11 @@ fn contributions_table(page: &ContributionPage, offset: RwSignal<u32>) -> AnyVie
         .into_any()
     });
     view! {
-        {table_shell("Contributions", &["Contribution", "Committed", "Committer", "Change type"], body)}
+        {table_shell(
+            "Contributions",
+            &["Contribution", "Committed", "Committer", "Change type"],
+            body,
+        )}
         <p id="contribution-total" class="mt-2 text-xs text-ink-muted">
             {total}
             " contribution(s) total"
@@ -371,8 +373,12 @@ fn contribution_row_view(row: &ContributionRow) -> AnyView {
     view! {
         <tr class=ROW>
             <td class=CELL_MONO>{row.uid.clone()}</td>
-            <td class=CELL data-label="Committed">{ferrohealth_ui::view::time::timestamp(&row.time_committed)}</td>
-            <td class=CELL data-label="Committer">{row.committer.clone()}</td>
+            <td class=CELL data-label="Committed">
+                {ferrohealth_ui::view::time::timestamp(&row.time_committed)}
+            </td>
+            <td class=CELL data-label="Committer">
+                {row.committer.clone()}
+            </td>
             <td class=CELL title=row.change_type.clone() data-label="Change type">
                 {change_type}
             </td>

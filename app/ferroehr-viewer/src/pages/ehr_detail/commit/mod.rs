@@ -744,14 +744,10 @@ fn draft_editor(form: CommitForm, unseeded: Signal<bool>) -> AnyView {
             <label class=LABEL r#for="stage-body">
                 "Document (canonical JSON)"
             </label>
-            <p class="fui-help">"Paste the canonical JSON document, or pick a target above to load it."</p>
-            {code_field(
-                "stage-body",
-                Language::Json,
-                form.body,
-                Some(unseeded),
-                Height::Document,
-            )}
+            <p class="fui-help">
+                "Paste the canonical JSON document, or pick a target above to load it."
+            </p>
+            {code_field("stage-body", Language::Json, form.body, Some(unseeded), Height::Document)}
         </div>
         <div class="flex items-center gap-3">
             <button
@@ -792,7 +788,8 @@ fn staging_list(form: CommitForm) -> AnyView {
                 }
             }
         >
-            {table_shell("Staged changes",
+            {table_shell(
+                "Staged changes",
                 &["Change", "Target", "Change type", ""],
                 view! {
                     <For each=move || form.staged.get() key=|change| change.seq let:change>
@@ -843,8 +840,12 @@ fn staged_row(form: CommitForm, change: &StagedChange) -> AnyView {
     view! {
         <tr class=ROW data-staged=seq.to_string()>
             <td class=CELL>{kind}</td>
-            <td class=CELL_MONO data-label="Target">{target}</td>
-            <td class=CELL data-label="Change type">{change_type}</td>
+            <td class=CELL_MONO data-label="Target">
+                {target}
+            </td>
+            <td class=CELL data-label="Change type">
+                {change_type}
+            </td>
             <td class=CELL data-label="Actions">
                 <div class="flex gap-2">
                     <button

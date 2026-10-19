@@ -115,7 +115,10 @@ fn toolbar_body(
                         class=move || toggle_class(history_open.get())
                         on:click=move |_| history_open.update(|o| *o = !*o)
                     >
-                        {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::ROTATE_CCW_CLOCK, "14")}
+                        {ferrohealth_ui::icon::icon(
+                            ferrohealth_ui::icon::Glyph::ROTATE_CCW_CLOCK,
+                            "14",
+                        )}
                         "Version history"
                     </button>
                     <button
@@ -131,7 +134,10 @@ fn toolbar_body(
                         class=move || toggle_class(path_open.get())
                         on:click=move |_| path_open.update(|o| *o = !*o)
                     >
-                        {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::FOLDER_SEARCH, "14")}
+                        {ferrohealth_ui::icon::icon(
+                            ferrohealth_ui::icon::Glyph::FOLDER_SEARCH,
+                            "14",
+                        )}
                         "Path query"
                     </button>
                 </div>
@@ -357,7 +363,10 @@ fn version_preview(
                                     }
                                 }
                             >
-                                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::ROTATE_CCW, "14")}
+                                {ferrohealth_ui::icon::icon(
+                                    ferrohealth_ui::icon::Glyph::ROTATE_CCW,
+                                    "14",
+                                )}
                                 "Restore this version"
                             </button>
                         }
