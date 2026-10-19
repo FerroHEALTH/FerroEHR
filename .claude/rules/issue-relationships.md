@@ -75,8 +75,9 @@ direction.**
 
 **Upstream waits** (owner rulings 2026-08-01): `blocked-upstream` keeps its
 narrow meaning — resolved in upstream Jira, normative text not yet published
-(a **label**, no milestone). A wait on a defect WE reported instead points at
-the in-repo `upstream-report` issue with a native `blocked-by` edge (the
+(a **label**; the issue carries the milestone where its work lands once
+unblocked, by default the next one, `issue-workflow.md` §Milestones). A wait
+on a defect WE reported instead points at the in-repo `upstream-report` issue with a native `blocked-by` edge (the
 report itself carries `upstream-confirmed` once verified). A wait with no
 in-repo counterpart stays label-only — you cannot be `blocked_by` a Jira
 ticket.
