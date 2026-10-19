@@ -176,8 +176,8 @@ counts="$(printf '%s\n' "$found" | sed -n 's/^\([^:]*\):[0-9]*:.*/\1/p' | LC_ALL
 
 if [ "$update" -eq 1 ]; then
   {
-    echo "# SPDX-FileCopyrightText: Cadasto B.V."
-    echo "# SPDX-License-Identifier: BUSL-1.1"
+    printf '# %s: %s\n' "SPDX-FileCopyrightText" "Cadasto B.V."
+    printf '# %s: %s\n' "SPDX-License-Identifier" "BUSL-1.1"
     echo "# The stray literals each file may still hold while its strings move to"
     echo "# the catalogs; rewritten by scripts/checks/stray-literals.sh --update."
     if [ -n "$counts" ]; then printf '%s\n' "$counts"; fi
