@@ -17,7 +17,7 @@ h|*Attributes*
 
 h|*1..1*
 |*time*: `link:/releases/RM/{rm_release}/data_types.html#_dv_date_time_class[DV_DATE_TIME^]`
-a|Time of this event. If the width is non-zero, it is the time point of the trailing edge of the event.
+a|Time of this event. If the width is non-zero, it is the time point where the interval ends.
 
 h|*0..1*
 |*state*: `<<_item_structure_class,ITEM_STRUCTURE>>`

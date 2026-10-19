@@ -264,6 +264,7 @@
 		<concept id="669" rubric="公衆衛生"/>
 		<concept id="670" rubric="償還"/>
 		<concept id="671" rubric="研究"/>
+		<concept id="672" rubric="相互運用性"/>
 	</group>
 	<group openehr_id="event_math_function" name="event math function">
 		<concept id="145" rubric="最小"/>

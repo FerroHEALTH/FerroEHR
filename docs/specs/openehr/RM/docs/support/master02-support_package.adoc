@@ -4,7 +4,7 @@
 
 The Support Reference Model comprises types used throughout the openEHR models, including
 assumed primitive types defined outside of openEHR. The package structure is illustrated below. 
-The `assumed_types` 'pseudo-package' stands for types assumed by the openEHR specifcations
+The `assumed_types` 'pseudo-package' stands for types assumed by the openEHR specifications
 to exist in an implementation technology, such as a programming language, schema language or database
 environment. The four Support packages define the semantics respectively for constants, terminology
 access, access to externally defined scientific units and conversion information. The class

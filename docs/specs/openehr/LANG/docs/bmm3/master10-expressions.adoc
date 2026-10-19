@@ -135,9 +135,6 @@ feature
 
 The `defined` predicate is used to test whether an instance that is mapped to an external data access method exists in the data context (regardless of its value there).
 
-[.tbd]
-TBD: this might be replaced by another approach.
-
 === Decision Tables
 
 The BMM `expression` package contains the meta-class `EL_DECISION_TABLE` that defines an abstract _decision table_ construct, consisting of an ordered set of `_items_`, each of type `EL_DECISION_BRANCH`, and having a `_result_` of any expression type (including another decision table). Two concrete subtypes of each of these abstract meta-types are used to represent two common kinds of decision structure found in procedural and most object-oriented programming languages: 

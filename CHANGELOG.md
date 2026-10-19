@@ -29,6 +29,9 @@ workflow refuses a tag that has no matching section here.
   is returned, so a party the RM refuses is reported as an error. Simplified
   Formats define FLAT for compositions only, so this is FerroEHR's own
   extension over the same template walk.
+- **The openEHR terminology serves `interoperability` (672) as a term mapping
+  purpose** (#3838, SPECTERM-31): `TERM_MAPPING.purpose` validation accepts
+  it, and the terminology endpoints list it in all five languages.
 - **The `openehr-sdt` builders stamp the `ARCHETYPED.rm_version` the caller
   chooses** (#3809). `flat::build::BuildOptions` carries it into
   `build_composition_with`, `build_party` and `flat::tdd::from_tdd_with`;

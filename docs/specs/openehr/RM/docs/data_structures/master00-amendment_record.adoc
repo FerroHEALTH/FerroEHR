@@ -4,12 +4,19 @@
 |===
 |Issue|Details|Raiser|Completed
 
+|[[latest_issue]]1.7.5
+|{spec_tickets}/SPECRM-103[SPECRM-103^]: Documentation fixes and typos: +
+ Clarify that `EVENT._time_` of an `INTERVAL_EVENT` is the time point where the interval ends (fixes {spec_tickets}/SPECPR-438[SPECPR-438^]).
+|S Kohler, +
+ I McNicoll
+|[[latest_issue_date]]16 Oct 2026
+
 4+^h|*RM Release 1.1.0*
 
-|[[latest_issue]]1.7.4
+|1.7.4
 |{spec_tickets}/SPECPUB-7[SPECPUB-7^]: Convert citations to bibtex form.
 |T Beale
-|[[latest_issue_date]]15 Dec 2019
+|15 Dec 2019
 
 |
 |{spec_tickets}/SPECRM-77[SPECRM-77^]. Add `ELEMENT._null_reason_`.

@@ -429,6 +429,7 @@ h| *Code*      h| *Description*       h| *Status*
 | *669*      a| public health       | active
 | *670*      a| reimbursement       | active
 | *671*      a| research study       | active
+| *672*      a| interoperability       | active
 |===
 
 === Event Math Function

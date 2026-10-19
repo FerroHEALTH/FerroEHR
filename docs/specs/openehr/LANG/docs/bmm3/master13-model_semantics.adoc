@@ -69,9 +69,3 @@ Multiple inheritance is typically used in the definition of classes that have a 
 [.text-center]
 .Multiple inheritance
 image::{images_uri}/awb_multiple_inheritance.png[id=awb_multiple_inheritance, align="center", width="45%"]
-
-=== Inheritance and Invariants, Pre-conditions and Post-conditions
-
-[.tbd]
-TBD
-

@@ -39,7 +39,7 @@ pub struct PointEvent<T> {
     pub feeder_audit: Option<FeederAudit>,
 
     // inherited: EVENT
-    /// Time of this event. If the width is non-zero, it is the time point of the trailing edge of the event.
+    /// Time of this event. If the width is non-zero, it is the time point where the interval ends.
     pub time: DvDateTime,
     /// Optional state data for this event.
     pub state: Option<ItemStructure>,

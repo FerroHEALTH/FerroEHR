@@ -4,12 +4,17 @@
 |===
 |Issue|Details|Raiser|Completed
 
+|[[latest_issue]]1.8.2
+|Correct typographical errors in Support package overview and Terminology package (typos reported in {spec_tickets}/SPECPR-453[SPECPR-453^]).
+|R Kavanagh
+|[[latest_issue_date]]16 Oct 2026
+
 4+^h|*RM Release 1.1.0*
 
-|[[latest_issue]]1.8.1
+|1.8.1
 |{spec_tickets}/SPECPUB-7[SPECPUB-7^]: Convert citations to bibtex form.
 |T Beale
-|[[latest_issue_date]]15 Dec 2019
+|15 Dec 2019
 
 |
 |{spec_tickets}/SPECRM-85[SPECRM-85^]: Correct typographical errors: correct repeated inclusion of `TERMINOLOGY_SERVICE` class to `MEASUREMENT_SERVICE` (error reported in {spec_tickets}/SPECPR-344[SPECPR-344^]).

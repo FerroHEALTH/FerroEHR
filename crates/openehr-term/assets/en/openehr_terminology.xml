@@ -264,6 +264,7 @@
 		<concept id="669" rubric="public health"/>
 		<concept id="670" rubric="reimbursement"/>
 		<concept id="671" rubric="research study"/>
+		<concept id="672" rubric="interoperability"/>
 	</group>
 	<group openehr_id="event_math_function" name="event math function">
 		<concept id="145" rubric="minimum"/>

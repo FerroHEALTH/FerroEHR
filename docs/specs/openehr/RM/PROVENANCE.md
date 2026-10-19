@@ -2,7 +2,7 @@
 
 - Source: https://github.com/openEHR/specifications-RM
 - Ref: master (RM 1.2.0)
-- Commit: `e0f7c9a24fe9b9cd568adb48c6dd53ac66e43647`
+- Commit: `654296bb027b03b4b076101e7171f3359f44cebc`
 - License: CC-BY-SA 3.0 Unported — the upstream `LICENSE` is vendored verbatim alongside
   this file, from the same pinned commit. Root reference copies:
   `LICENSE-CC-BY-SA-3.0` / `LICENSE-APACHE-2.0`.

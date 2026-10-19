@@ -2,6 +2,3 @@
 
 The `description` section of a specialised archetype or template always replaces that of the parent in the flattened result. The obvious alternative would be automatic inclusion of the corresponding `description` section elements from  precursor archetypes back up the specialisation lineage. The replacement approach is justified by the thinking that the documentary view of a specialised archetype, and particular a template, in their flattened form is likely to be most useful if it consists of the descriptions created by the developers of those specialised artefacts, rather than an accumulation of copies of the documentation elements down the lineage, since tools or special visualisations could provide views of each part of the description back up the specialisation hierarchy if required.
 
-[.tbd]
-*TBD*: A third alternative, used in some programming languages the enable comments to be inherited might be to optionally include the test of a descriptive element of a parent archetype within the corresponding element of the child, for example by including a special string like `<<precursor>>` somewhere in the text. The flattener would search for this, and if found, include the text from the parent. To have the effect of inclusion of all parent text elements, something like `<<all_precursors>>` could be used.
-
