@@ -110,6 +110,14 @@ The following table provides a cross-reference from openEHR foundation types to 
 | `xs:anyURI`
 | `{type: "string", format: "uri"}`
 
+| `Hrid`
+| Human-readable knowledge-artefact identifier (a `String` constrained to the HRID syntax)
+| `java.lang.String`
+| `System.String`
+| `string`
+| `xs:string` (pattern-restricted)
+| `{type: "string", pattern: "..."}`
+
 | `Array<T>`
 | Contiguous Array
 | `Array<T>`

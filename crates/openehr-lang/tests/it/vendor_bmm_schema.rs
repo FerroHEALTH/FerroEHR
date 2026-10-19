@@ -554,7 +554,7 @@ fn pinned_cases() -> Vec<PinnedCase> {
         PinnedCase {
             file: "AM/json/openehr_am_1.4.0.bmm.json",
             outcome: PinnedOutcome::Model(
-                110,
+                111,
                 &[
                     "class `Cardinality` is contained within 2 package listing(s) (org.openehr.am.aom14.archetype.constraint_model, org.openehr.base.foundation_types.interval); a class must be contained within exactly one package",
                     "class `CARDINALITY` is contained within 2 package listing(s) (org.openehr.am.aom14.archetype.constraint_model, org.openehr.base.foundation_types.interval); a class must be contained within exactly one package",
@@ -612,8 +612,8 @@ fn pinned_cases() -> Vec<PinnedCase> {
         },
         PinnedCase {
             file: "BASE/json/openehr_base_1.3.0.bmm.json",
-            outcome: PinnedOutcome::Model(72, &[]),
-            adjudication: "the pinned BASE generation is self-contained and model-valid",
+            outcome: PinnedOutcome::Model(73, &[]),
+            adjudication: "the pinned BASE generation is self-contained and model-valid; SPECBASE-49 adds the `Hrid` primitive (73 classes), which the including AM 1.4.0, RM 1.2.0 and TERM 3.1.0 models count too",
         },
         PinnedCase {
             file: "LANG/json/openehr_lang_1.0.0.bmm.json",
@@ -691,7 +691,7 @@ fn pinned_cases() -> Vec<PinnedCase> {
         PinnedCase {
             file: "RM/json/openehr_rm_1.2.0.bmm.json",
             outcome: PinnedOutcome::Model(
-                213,
+                214,
                 &[
                     "class `AUTHORED_RESOURCE` is contained within 2 package listing(s) (org.openehr.base.resource, org.openehr.rm.common.resource); a class must be contained within exactly one package",
                     "class `RESOURCE_DESCRIPTION` is contained within 2 package listing(s) (org.openehr.base.resource, org.openehr.rm.common.resource); a class must be contained within exactly one package",
@@ -713,7 +713,7 @@ fn pinned_cases() -> Vec<PinnedCase> {
         },
         PinnedCase {
             file: "TERM/json/openehr_term_3.1.0.bmm.json",
-            outcome: PinnedOutcome::Model(78, &[]),
+            outcome: PinnedOutcome::Model(79, &[]),
             adjudication: "the component-repo TERM 3.1.0 file includes openehr_base_1.3.0, which defines String, List and Iso8601_date, so its six classes materialise beside the 72 BASE classes and are each listed in exactly one package",
         },
     ]

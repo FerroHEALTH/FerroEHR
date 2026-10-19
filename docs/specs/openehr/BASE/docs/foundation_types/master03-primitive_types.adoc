@@ -47,6 +47,8 @@ include::{uml_export_dir}/classes/{pkg}string.adoc[]
 
 include::{uml_export_dir}/classes/{pkg}uri.adoc[]
 
+include::{uml_export_dir}/classes/{pkg}hrid.adoc[]
+
 include::{uml_export_dir}/classes/{pkg}numeric.adoc[]
 
 include::{uml_export_dir}/classes/{pkg}ordered_numeric.adoc[]

@@ -45,7 +45,7 @@ workflow refuses a tag that has no matching section here.
 - A structure the Web Template compacts away (an `ITEM_TREE` under a party
   identity or an ENTRY, for example) is rebuilt with the name its term
   definition gives instead of its at-code (#3810).
-- The nine `openehr-*` crates move to `0.0.88`.
+- The nine `openehr-*` crates move to `0.0.89`.
 - **Only the newest release is supported** (#3853). When a new release is
   published, every earlier release stops receiving fixes: there are no
   maintenance branches, no long-term-support line and no backports. If you are
@@ -57,6 +57,17 @@ workflow refuses a tag that has no matching section here.
   The end month of that commitment stays on the boot banner, in
   `ferroehr --version` and in the management documents; the banner line now
   reads `newest release only; fixes published until the end of <month>`.
+- **Archetype identifiers follow the BASE 1.3.0 grammar under the
+  `development` profile** (#3835, #3845). The namespaced ADL 2 form
+  (`org.openehr::openEHR-EHR-OBSERVATION.blood_pressure.v2.1.4`, with an
+  optional `-rc`, `-alpha` or `-beta` modifier and build count) is accepted
+  wherever an `ARCHETYPE_ID` is read, and `openehr_base::v1_3::ArchetypeId`
+  gains `namespace()`, `minor_version()` and `patch_version()`. A
+  namespaceless identifier with a full version stays accepted, because AM
+  2.4.0 artefacts carry it (the conflict is reported upstream, #3844); every
+  other identifier the grammar refuses, such as a malformed namespace or
+  version modifier, is refused naming it. The `stable` profile keeps BASE
+  1.2.0's grammar.
 
 ### Fixed
 

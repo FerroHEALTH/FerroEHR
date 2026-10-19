@@ -218,7 +218,7 @@ The package structure of the version 1.4 form of the AM is shown below.
 .Structure of the ADL 1.4 `org.openehr.am` package
 image::{openehr_am_uml_diagrams}/AM-aom14-packages.svg[id=aom_14_packages, align="center"]
 
-Another key specification is the Archetype Identification specification, which defines semantics for archetype identifiers, versioning and life-cycle. The formal specifications may be found on the {openehr_am}[Archetype Model index page].
+Another key specification is the {openehr_base_artefact_identification}[Artefact Identification^] specification in the BASE component, which defines semantics for archetype and template identifiers, versioning and life-cycle. The formal archetype specifications may be found on the {openehr_am}[Archetype Model index page^].
 
 == Service Model (SM)
 

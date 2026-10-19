@@ -15,6 +15,7 @@
 
 mod common;
 
+mod archetype_id_grammar;
 mod canonical_json_literals;
 mod category_default;
 mod ckm_full_pack;

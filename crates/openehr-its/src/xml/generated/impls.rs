@@ -114,7 +114,7 @@ impl crate::xml::runtime::ToXml
             __e.push_attribute((*k, v.as_str()));
         }
         w.write_start(__e)?;
-        self.value.write_xml(w, "value", Some("String"))?;
+        self.value.write_xml(w, "value", Some("Hrid"))?;
         w.write_end(tag)?;
         Ok(())
     }

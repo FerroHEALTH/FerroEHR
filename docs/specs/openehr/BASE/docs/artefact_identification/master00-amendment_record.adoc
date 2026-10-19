@@ -1,0 +1,163 @@
+= Amendment Record
+
+[cols="1,6,2,2", options="header"]
+|===
+|Issue|Details|Raiser, Implementer|Completed
+
+4+^h|*BASE Release 1.3.0 (unreleased)*
+
+|[[latest_issue]]1.0.0
+|{spec_tickets}/SPECBASE-50[SPECBASE-50^]: Relocate the AM Archetype Identification specification (issue 0.7.9, AM Release 2.3.0) to the BASE component as the Artefact Identification specification. Addresses {spec_tickets}/SPECPR-463[SPECPR-463^].
+|S Iancu
+|[[latest_issue_date]]10 Oct 2026
+
+|
+|Follow AOM2 issue 2.4.2: the `namespace` of `ARCHETYPE_HRID` is mandatory, and `physical_id` returns an `Hrid` ({spec_tickets}/SPECBASE-50[SPECBASE-50^], {spec_tickets}/SPECAM-103[SPECAM-103^]).
+|S Iancu
+|10 Oct 2026
+
+|
+|Correct editorial defects carried over from the AM document: restore a truncated lifecycle rule, fix typos, the ODIN example syntax and date, the AQL example quotes and the identifier lengths in the optimisation example ({spec_tickets}/SPECBASE-50[SPECBASE-50^]).
+|S Iancu
+|10 Oct 2026
+
+|
+|Preface: state where the document came from, use the BASE feedback channel and the current titles of related documents; add missing external-link markers; use `sectnums`; add the BASE release row to this record ({spec_tickets}/SPECBASE-50[SPECBASE-50^]).
+|S Iancu
+|10 Oct 2026
+
+|
+|Make the merged chapters consistent: the complete ADL 2 identifier carries the full version, while reduced-precision forms are references; `release_version` is the three-part numeric version; references from data use the complete identifier (`archetype_ver_ref = hrid`); the namespace rules for references are stated once; the build count after `-rc` is optional; replace the outdated terms 'extension', 'miniHRID' and 'instance UID'; data examples use full versions ({spec_tickets}/SPECBASE-50[SPECBASE-50^]).
+|S Iancu
+|10 Oct 2026
+
+|
+|Every artefact is assigned a namespace at creation (that of its creating organisation, e.g. a vendor); the namespace no longer distinguishes managed from unmanaged artefacts, and is never omitted, wildcarded or inferred in an identifier. Only legacy (ADL 1.4) identifiers have no namespace. Add a vendor namespace example ({spec_tickets}/SPECBASE-50[SPECBASE-50^]).
+|I McNicoll, +
+S Iancu
+|10 Oct 2026
+
+|
+|Align the identifying properties with the AOM2 `ARCHETYPE_HRID` and the BASE Resource Model: `rm_package`, `version_status` (BASE `VERSION_STATUS`), `build_count`, `semantic_id`; the machine identifier `uid` from `AUTHORED_RESOURCE` and the per-build `build_uid` of `AUTHORED_ARCHETYPE` ({spec_tickets}/SPECBASE-50[SPECBASE-50^]).
+|S Iancu
+|10 Oct 2026
+
+|
+|References from data: the identifier recorded in data is the complete `ARCHETYPE_ID` (namespace and full version); legacy ADL 1.4 identifiers remain valid and are not read as abbreviated three-part versions ({spec_tickets}/SPECBASE-35[SPECBASE-35^], {spec_tickets}/SPECPR-474[SPECPR-474^]).
+|S Iancu
+|10 Oct 2026
+
+|
+|Align the reference grammar (`hrid_ref` and the interface, specific interface and physical tiers) with the ADL 2 `ARCHETYPE_REF` token: numeric version parts only, a pre-release version being referenced by its full identifier. State that a namespace is never a wildcard, and when a reference may omit it ({spec_tickets}/SPECBASE-50[SPECBASE-50^]).
+|S Iancu
+|10 Oct 2026
+
+|
+|Replace the version identifier grammar by the HRID version grammar aligned with the ADL 2 base lexer: reduced-precision `version_id`, full `release_version`, `-beta` modifier, optional `build_count` after a pre-release modifier (replacing `extension` and `issue_number`) ({spec_tickets}/SPECBASE-50[SPECBASE-50^]).
+|S Iancu, +
+J Holslag
+|10 Oct 2026
+
+|
+|Replace the identifier grammar by the HRID grammar aligned with the ADL 2 base lexer: a namespaced modern (ADL 2) form and a legacy (ADL 1.4) form, `rm_package` instead of `rm_closure`; remove the statement that it simplifies the `ARCHETYPE_ID` grammar; add an informative regular expression ({spec_tickets}/SPECBASE-50[SPECBASE-50^], {spec_tickets}/SPECPR-363[SPECPR-363^]).
+|S Iancu
+|10 Oct 2026
+
+|
+|Generalise the purpose and scope from archetypes to knowledge artefacts; state the BASE computable types (`Hrid`, `ARCHETYPE_ID`) and the location of the machine identifier (`AUTHORED_RESOURCE._uid_`) ({spec_tickets}/SPECBASE-50[SPECBASE-50^]).
+|S Iancu
+|10 Oct 2026
+
+4+^h|*AM Release 2.3.0*
+
+|0.7.9
+|{spec_tickets}/SPECPUB-7[SPECPUB-7^]: Convert citations to bibtex form.
+|T Beale
+|15 Dec 2019
+
+|0.7.8
+|{spec_tickets}/SPECAM-58[SPECAM-58^]. Correct errors and improve examples - S Garde review Nov 2018. Change `_instance_uid_` to `_build_uid_`.
+|S Garde
+|18 Nov 2018
+
+4+^h|*AM Release 2.2.0*
+
+4+^h|*AM Release 2.1.0*
+
+|0.7.7
+|{spec_tickets}/SPECAM-52[SPECAM-52^]Improve explanation of version number progression in section 4.2; correct version identifier grammar (addresses {spec_tickets}/SPECPR-254[SPECPR-254^]).
+|E Sundvall
+|13 Feb 2018
+
+|
+|Correct formatting, re-instate Archetype model diagram at start of section 3.
+|T Beale
+|28 Jan 2018
+
+|0.7.6
+|{spec_tickets}/SPECAM-41[SPECAM-41^]. Correct 'unstable' to 'alpha'; correct version-related typo; update versioning incrementing rules.
+|S Garde
+|18 Jun 2017
+
+4+^h|*AM Release 2.0.6*
+
+|0.7.5 
+|Replace `'-unstable'` with `'-alpha'` to be compatible with typical tools.
+|I McNicoll
+|01 Feb 2015
+
+|0.7.4 
+|Replace `'+uNNN'` with `'-unstable'`; simplify the number after `'rc'` to an integer build count.
+|S Garde, +
+ I McNicoll, +
+ H Leslie
+|29 Sep 2014
+
+|0.7.3 
+|Remove `_build_count_`, replace with `_build_uid_`. 
+|I McNicoll +
+ T Beale |28 May 2014
+
+|0.7.2 
+|Change `ARCHEYTPE_HRID._commit_number_` to `_instance_uid_`. Build_count reset to 1 on each version change. Adjust diagrams and explanations. 
+|S Garde +
+ I McNicoll +
+ T Beale |21 May 2014
+
+|0.7.1 
+|Simplify development state in lifecycle; merge 'initial' and rename 'draft'. 
+|S Garde +
+ I McNicoll |09 May 2014
+
+|0.7.0 
+|Rewrite referencing section; update 'problem description; further grammar improvements. 
+|T Beale 
+|20 Jun 2013
+
+|0.6.5 
+|Remove errors and ambiguities to do with explanation of human readable identifier; improve nomenclature; rewrite grammar. 
+|T Beale 
+|15 Jun 2013
+
+|0.6.0 
+|Major update based on CKM clinical group analysis, and feedback from the CIMI and openEHR communities. 
+|S Garde +
+ H Leslie +
+ I McNicoll +
+ T Beale 
+|21 Apr 2013
+
+|0.2.0 
+|Refinements to do with template identification. +
+ Review from Medical Centrum Alkmaar (Netherlands).
+|T Beale +
+ M van der Meer
+|01 Feb 2010
+
+|0.1.0 
+|Initial Writing. 
+|T Beale 
+|09 Jul 2009
+
+|===
+

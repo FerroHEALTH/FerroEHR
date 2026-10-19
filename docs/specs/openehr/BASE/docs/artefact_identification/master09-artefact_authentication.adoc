@@ -1,0 +1,45 @@
+= Artefact Authentication
+
+In theory, revision information should be reliable, and no two physical knowledge artefacts should exist that are either identical but have different identifiers and/or revision information, or are different but are identified as being the same. However, in practical systems, such situations can occur due to uncontrolled artefact creation, uncontrolled copying, and errors in version management.
+
+[.tbd]
+_TBD_: hashing on source v operational artefacts? Consider templates that don't change but referenced archetypes that do.
+
+== Integrity Check
+
+It is therefore useful to be able to determine whether two artefacts (usually purported copies or subsequent revisions) are the same or not, even if the version information is the same. This can be achieved by the use of a digital hash function (e.g. SHA-1, MD5), which generates a 'fingerprint' of the artefact. Two archetypes with the same hash value must be the same – hash functions generate a different result if even a single bit is different in the input stream. However, applying such functions to the typical file representation of an archetype or template will not usually have the desired result. This is because differences in white-space and non-significant ordering, which make no difference to the semantics – will still generate different hash values. Other semantically insignificant differences include changes to meta-data values, such as descriptions, etc may have been changed (e.g. to correct spelling, improving wording), and changes or additions to translations.
+
+As a consequence, the input to a hashing function for the purpose of generating a semantic signature of an openEHR knowledge artefact must be some canonical form of the original literal artefact, that is impervious to differences of the above types while retaining differences that will affect computation with such artefacts. The integrity check process is illustrated below.
+
+[.text-center]
+.Integrity Check Scheme
+image::{diagrams_uri}/integrity_check.png[id=integrity_check, align="center", width=60%]
+
+== Authentication
+
+A second need to do with validity of knowledge artefacts is establishing their authenticity, i.e. their true origin. The usual way of supporting authentication is with a digital signature. A typical scheme based on the public key infrastructure (PKI) concept is for the producer of an artefact to sign it with their private key, and for the public key to be used by a consumer of the artefact to decrypt the signed entity.
+
+In the case of openEHR knowledge artefacts, the need is to know the originating Custodian Organisation of an artefact. The PKI approach is for each CO to generate a key pair, and to provide the public key to the Central Governance Authority. Signing is then carried out using the CO private key on the hash digest already generated for an artefact. The modified process is illustrated in below.
+
+[.text-center]
+.Digital Signing
+image::{diagrams_uri}/signing.png[id=signing, align="center", width=80%]
+
+== Canonical Form – Archetype 'semantic view'
+
+For hashing and signing to be useful, the input artefacts need to have two characteristics. Firstly, we need to know that the artefact has been validated, since there is no use in disseminating digitally authenticated but useless artefacts. Secondly, the effects of 'non-semantic' changes in the artefact must be removed. This requires a syntactic canonical form.
+
+Both requirements can be achieved for archetypes and templates with a canonical form based on a 'semantic view' of an archetype, analogous to the 'interface class' idea in software development. The semantic view is created from a specific serialisation of the abstract syntax tree (AST) form of the artefact, which is its computable form. The full AST form is in fact defined by the openEHR AOM, but this contains all textual meta-data from the description, ontology and other sections of the archetype. The 'semantic' form of this model, suitable for generating a normalised serialisation for hashing has the following reduced form:
+
+* the identifier;
+* specialisation identifier, where present;
+* concept code;
+* definition section (comments stripped).
+
+These objects would be represented in the same form as defined by the AOM. A suitable serialisation is the ODIN syntax form. XML forms could be used, but they depend on which schema variant is in use, and there is no single normative openEHR XML-schema for the AOM.
+
+[.tbd]
+_TBD_: canonical forms of other artefact types. Since all forms of archetypes and templates are now AOM-based (as of 1.5), a single canonical algorithm based on the AOM (with TOM extensions) can be described.
+
+[.tbd]
+_TBD_: Operational template hashing & signing is required
