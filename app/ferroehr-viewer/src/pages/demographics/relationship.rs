@@ -955,7 +955,7 @@ fn create_card(source_uid: &str, source_kind: &str) -> AnyView {
                         "relationship-details",
                         Language::Json,
                         details,
-                        Signal::stored(false),
+                        None,
                         Height::Short,
                     )}
                 </div>
@@ -1316,7 +1316,7 @@ fn edit_card(
                         "relationship-edit-details",
                         Language::Json,
                         details_draft,
-                        Signal::stored(false),
+                        None,
                         Height::Document,
                     )}
                 </div>

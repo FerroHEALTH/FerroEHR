@@ -316,7 +316,7 @@ pub(super) fn edit_form(
                         "status-other-details",
                         Language::Json,
                         form.other_details,
-                        Signal::derive(move || unseeded.get()),
+                        Some(unseeded),
                         Height::Document,
                     )}
                 </div> <div class="flex items-center gap-3">

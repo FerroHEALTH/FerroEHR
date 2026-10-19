@@ -87,6 +87,29 @@ fn viewer_title(mut section: String) -> String {
     section
 }
 
+/// Marks the page hydrated: `data-hydrated` on `<body>` for the E2E harness,
+/// and the page-wide [`Hydrated`](crate::components::field::Hydrated) the
+/// code editors read, provided under the root owner.
+fn mark_hydration() {
+    // Hydration-completion marker: effects run only in the browser (Leptos
+    // book, reactivity/14), so `data-hydrated` lands on `<body>` exactly when
+    // the client runtime is live and hydrated listeners exist. The E2E
+    // harness waits on it before driving hydration-dependent controls — a
+    // file set on the upload input BEFORE its listener exists fires no later
+    // event. Set post-hydration, it cannot mismatch the SSR document.
+    let hydrated = RwSignal::new(false);
+    provide_context(crate::components::field::Hydrated {
+        signal: hydrated,
+        owner: Owner::current(),
+    });
+    Effect::new(move |_| {
+        if let Some(body) = document().body() {
+            drop(body.set_attribute("data-hydrated", "true"));
+        }
+        hydrated.set(true);
+    });
+}
+
 /// The root component: the meta context and the router.
 #[expect(
     clippy::must_use_candidate,
@@ -95,17 +118,7 @@ fn viewer_title(mut section: String) -> String {
 #[component]
 pub fn App() -> impl IntoView {
     provide_meta_context();
-    // Hydration-completion marker: effects run only in the browser (Leptos
-    // book, reactivity/14), so `data-hydrated` lands on `<body>` exactly when
-    // the client runtime is live and hydrated listeners exist. The E2E
-    // harness waits on it before driving hydration-dependent controls — a
-    // file set on the upload input BEFORE its listener exists fires no later
-    // event. Set post-hydration, it cannot mismatch the SSR document.
-    Effect::new(|_| {
-        if let Some(body) = document().body() {
-            drop(body.set_attribute("data-hydrated", "true"));
-        }
-    });
+    mark_hydration();
     view! {
         <Title formatter=viewer_title text=PRODUCT />
             <Router>

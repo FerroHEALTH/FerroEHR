@@ -937,7 +937,7 @@ fn edit_form(
                         "party-identities",
                         Language::Json,
                         form.identities,
-                        Signal::derive(move || unseeded.get()),
+                        Some(unseeded),
                         Height::Document,
                     )}
                 </div>
@@ -949,7 +949,7 @@ fn edit_form(
                         "party-details",
                         Language::Json,
                         form.details,
-                        Signal::derive(move || unseeded.get()),
+                        Some(unseeded),
                         Height::Document,
                     )}
                 </div>

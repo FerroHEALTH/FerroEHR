@@ -982,7 +982,7 @@ fn edit_section(
                             "edit-body",
                             Language::Json,
                             editor_body,
-                            Signal::stored(false),
+                            None,
                             Height::Document,
                         )}
                         <div class="flex items-center gap-3">

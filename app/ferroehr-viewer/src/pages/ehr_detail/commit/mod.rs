@@ -749,7 +749,7 @@ fn draft_editor(form: CommitForm, unseeded: Signal<bool>) -> AnyView {
                 "stage-body",
                 Language::Json,
                 form.body,
-                Signal::derive(move || unseeded.get()),
+                Some(unseeded),
                 Height::Document,
             )}
         </div>

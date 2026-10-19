@@ -92,31 +92,65 @@ pub enum Height {
     Short,
 }
 
+/// Whether the page has hydrated, set once by the root component, and the
+/// root component's owner.
+///
+/// An editor inside a `Transition` keeps its mounted text area across a
+/// reload while the `Suspend` that drew it is disposed, so the signals the
+/// editor reads are made under the root owner, which outlives every screen.
+#[derive(Debug, Clone)]
+pub struct Hydrated {
+    /// True once the page has hydrated.
+    pub signal: RwSignal<bool>,
+    /// The root component's owner.
+    pub owner: Option<Owner>,
+}
+
 /// FerroUI's highlighted, numbered editor over `value`, its text area `id`
 /// (a `<label for=id>` names it), highlighted as `language`.
 ///
 /// The text area is read-only until the page hydrates (FerroUI's editor
-/// takes no keystroke it would lose) and while `disabled` reads true.
+/// takes no keystroke it would lose) and, given `disabled`, while it reads
+/// true. `value` and `disabled` must come from state that outlives a reload
+/// of the screen.
 #[must_use]
 pub fn code_field(
     id: &'static str,
     language: Language,
     value: RwSignal<String>,
-    disabled: Signal<bool>,
+    disabled: Option<Signal<bool>>,
     height: Height,
 ) -> AnyView {
-    let hydrated = RwSignal::new(false);
-    Effect::new(move |_| hydrated.set(true));
-    let editor = code_editor(
-        Editor {
-            id,
-            language,
-            text: value.into(),
-            marks: Signal::stored(Vec::new()),
-            editable: Signal::derive(move || hydrated.get() && !disabled.get()),
-        },
-        move |text| value.set(text),
-    );
+    let context = use_context::<Hydrated>();
+    let draw = move |hydrated: RwSignal<bool>| {
+        let editable = match disabled {
+            Some(disabled) => Signal::derive(move || hydrated.get() && !disabled.get()),
+            None => hydrated.into(),
+        };
+        code_editor(
+            Editor {
+                id,
+                language,
+                text: value.into(),
+                marks: Signal::stored(Vec::new()),
+                editable,
+            },
+            move |text| value.set(text),
+        )
+    };
+    // NOTE: no specification governs this: our own design. The editor's
+    // signals are made under the root owner, so a reload's disposal leaves them.
+    let editor = match context {
+        Some(Hydrated {
+            signal,
+            owner: Some(owner),
+        }) => owner.with(|| draw(signal)),
+        Some(Hydrated {
+            signal,
+            owner: None,
+        }) => draw(signal),
+        None => draw(RwSignal::new(false)),
+    };
     match height {
         Height::Document => editor,
         Height::Short => view! { <div class="fui-editor-short">{editor}</div> }.into_any(),

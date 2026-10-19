@@ -308,7 +308,7 @@ fn editor_section(
                     "AQL"
                 </label>
                 <p class="fui-help">"For example: SELECT c FROM EHR e CONTAINS COMPOSITION c"</p>
-                {code_field("aql-editor", Language::Aql, aql, Signal::stored(false), Height::Short)}
+                {code_field("aql-editor", Language::Aql, aql, None, Height::Short)}
                 <div class="flex items-center gap-3">
                     <button
                         type="button"
@@ -359,7 +359,7 @@ fn parameters_section(params: RwSignal<String>) -> AnyView {
                     "Parameters (JSON object)"
                 </label>
                 <p class="fui-help">"A JSON object of the query's parameters, such as {\"ehr_id\": \"…\"}."</p>
-                {code_field("aql-params", Language::Json, params, Signal::stored(false), Height::Short)}
+                {code_field("aql-params", Language::Json, params, None, Height::Short)}
             </div>
         </section>
     }

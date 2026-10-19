@@ -437,7 +437,7 @@ fn create_section(kind: PartyKind, toaster: ferrohealth_ui::widget::toast::Toast
                 "party-create-body",
                 Language::Json,
                 body,
-                Signal::stored(false),
+                None,
                 Height::Document,
             )}
             <div class="mt-3 flex items-center gap-3">

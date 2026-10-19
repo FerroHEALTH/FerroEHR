@@ -367,7 +367,7 @@ pub(in crate::pages::ehr_detail::directory) fn tree_editor(
                     "directory-body",
                     Language::Json,
                     editor.json_draft,
-                    Signal::stored(false),
+                    None,
                     Height::Document,
                 )}
                 <div class="flex items-center gap-3">

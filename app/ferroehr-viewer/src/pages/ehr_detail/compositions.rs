@@ -440,7 +440,7 @@ fn commit_form(
                         } else {
                             Language::Json
                         };
-                        code_field("commit-body", language, body, Signal::stored(false), Height::Document)
+                        code_field("commit-body", language, body, None, Height::Document)
                     }}
                 </div>
                 <div class="flex items-center gap-3">
