@@ -24,6 +24,25 @@ pub struct ViewerConfig {
     pub login: LoginConfig,
     /// Session behaviour.
     pub session: SessionConfig,
+    /// The language the viewer renders in.
+    pub ui: UiConfig,
+}
+
+/// `[ui]`: the language the viewer renders in.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct UiConfig {
+    /// The BCP 47 tag of the locale a page renders in when the request's
+    /// `Accept-Language` names no language the viewer's catalog holds.
+    pub locale: String,
+}
+
+impl Default for UiConfig {
+    fn default() -> Self {
+        Self {
+            locale: String::from("en"),
+        }
+    }
 }
 
 /// Where and how to reach the CDR.
@@ -270,6 +289,13 @@ pub fn load() -> Result<ViewerConfig, ConfigError> {
             ))
         })?;
         secret.trim().clone_into(&mut cfg.session.secret);
+    }
+
+    if ferrohealth_ui::i18n::Locale::parse(&cfg.ui.locale).is_err() {
+        return Err(ConfigError(format!(
+            "ui.locale `{}` is not a language tag",
+            cfg.ui.locale
+        )));
     }
 
     if cfg.auth.oidc.enabled {

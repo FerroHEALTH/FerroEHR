@@ -52,6 +52,7 @@ pub mod error;
 pub mod example_options;
 pub mod feedback;
 pub mod format;
+pub mod locale;
 pub mod management;
 // NOTE: no openEHR spec governs this — our own design; the viewer links no
 // application crate, so it compiles the manufacturer's one source file itself.

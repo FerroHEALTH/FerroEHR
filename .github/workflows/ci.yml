@@ -667,6 +667,22 @@ jobs:
       - name: Comment style on changed Rust files
         run: bash scripts/checks/comment-style.sh --all
 
+  # No viewer string a reader sees outside its catalog under
+  # app/ferroehr-viewer/locales/, beyond the per-file baseline the remaining
+  # strings hold while they move (#300).
+  stray-literals:
+    name: stray-literals
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Stray literals in the viewer
+        run: bash scripts/checks/stray-literals.sh app/ferroehr-viewer/src
+
   spec-citations:
     name: spec-citations
     if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
@@ -2833,6 +2849,7 @@ jobs:
       - ferroterm-index-layout
       - hosted-deploy-script
       - comment-style
+      - stray-literals
       - default-style
       - e2e-waits
       - docs-claims

@@ -326,7 +326,12 @@ leptos_router = "0.8.14"
 # The shared FerroHEALTH console components, role tokens, stylesheet and table
 # model (FerroUI), pinned exactly: a console moves its pin after looking at its
 # own screens.
-ferrohealth-ui = "=0.1.6"
+ferrohealth-ui = "=0.1.7"
+# The viewer's string catalogs (#300): Project Fluent messages embedded at
+# build time from app/ferroehr-viewer/locales/, the crate and version
+# ferrohealth-ui catalogs its own words with, so one locale drives both.
+# Verified against crates.io on 2026-10-19.
+fluent-templates = { version = "0.15.1", default-features = false, features = ["macros", "walkdir"] }
 wasm-bindgen = "0.2.129"
 console_error_panic_hook = "0.1"
 # E2E WebDriver client (dev-dep of the viewer). Default features off: the
