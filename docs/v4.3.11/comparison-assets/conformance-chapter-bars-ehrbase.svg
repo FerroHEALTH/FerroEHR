@@ -1,0 +1,139 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 908 1156" width="908" height="1156" role="img">
+<style>
+text { fill: #52514e; font: 12px -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; }
+.title { fill: #0b0b0b; font-weight: 600; }
+.muted { fill: #8a8880; font-size: 11px; }
+.grid { stroke: #e4e2dd; stroke-width: 1; }
+.cell-label { fill: #ffffff; font-size: 11px; }
+.cell-label-dim { fill: #0b0b0b; font-size: 11px; }
+.ev-passed { fill: #0072b2; }
+.ev-failed { fill: #d55e00; }
+.ev-inconclusive { fill: #e69f00; }
+.ev-not-evidenced { fill: #cbc9c2; }
+.ev-not-claimed { fill: #edece8; }
+.cell-required { stroke: #52514e; stroke-width: 1.2; }
+.cell-optional { stroke: #cbc9c2; stroke-width: 1; stroke-dasharray: 3 2; }
+.bar-passed { fill: #0072b2; }
+.bar-failed { fill: #d55e00; }
+.bar-errored { fill: #e69f00; }
+.bar-na { fill: #cbc9c2; }
+.seg-label { fill: #ffffff; font-size: 10.5px; }
+.seg-label-dim { fill: #0b0b0b; font-size: 10.5px; }
+@media (prefers-color-scheme: dark) {
+text { fill: #c3c2b7; }
+.title { fill: #ffffff; }
+.muted { fill: #8f8e85; }
+.grid { stroke: #3a3a38; }
+.cell-label { fill: #ffffff; }
+.cell-label-dim { fill: #e8e6e0; }
+.ev-passed { fill: #3987e5; }
+.ev-failed { fill: #e5484d; }
+.ev-inconclusive { fill: #f5a623; }
+.ev-not-evidenced { fill: #4a4a47; }
+.ev-not-claimed { fill: #2b2b29; }
+.cell-required { stroke: #c3c2b7; }
+.cell-optional { stroke: #4a4a47; }
+.bar-passed { fill: #3987e5; }
+.bar-failed { fill: #e5484d; }
+.bar-errored { fill: #d9a514; }
+.bar-na { fill: #4a4a47; }
+.seg-label-dim { fill: #e8e6e0; }
+}
+</style>
+
+<style>
+.chap-row { fill: #f1efe9; }
+.chap-name { fill: #0b0b0b; font-size: 12.5px; font-weight: 600; }
+.band-label { fill: #52514e; font-size: 11px; }
+.band-empty { fill: #a5a39b; font-size: 10.5px; font-style: italic; }
+.count { font-size: 10.5px; }
+.count-strong { font-weight: 600; }
+.count-passed { fill: #00639b; }
+.count-failed { fill: #c0530b; font-weight: 600; }
+.count-errored { fill: #9a7100; }
+.count-na { fill: #7d7b74; }
+.na-line { stroke: #9d9b93; stroke-width: 2; }
+@media (prefers-color-scheme: dark) {
+.chap-row { fill: #2b2b29; }
+.chap-name { fill: #ffffff; }
+.band-label { fill: #c3c2b7; }
+.band-empty { fill: #6f6e68; }
+.count-passed { fill: #4f97ee; }
+.count-failed { fill: #f2696d; }
+.count-errored { fill: #d9a514; }
+.count-na { fill: #8f8e85; }
+.na-line { stroke: #6d6d69; }
+}
+</style>
+<defs>
+<pattern id="na-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+<rect width="6" height="6" class="bar-na"/>
+<line x1="3" y1="0" x2="3" y2="6" class="na-line"/>
+</pattern>
+</defs>
+<text x="24" y="28" class="title">Schedule outcomes by chapter — ehrbase 2.34.0</text>
+<rect x="24" y="38" width="14" height="14" rx="3" class="bar-passed"/><text x="31" y="49" class="seg-label" text-anchor="middle">✓</text><text x="44" y="49" class="muted">passed</text><rect x="103.2" y="38" width="14" height="14" rx="3" class="bar-failed"/><text x="110.2" y="49" class="seg-label" text-anchor="middle">✕</text><text x="123.2" y="49" class="muted">FAILED</text><rect x="182.4" y="38" width="14" height="14" rx="3" class="bar-errored"/><text x="189.4" y="49" class="seg-label-dim" text-anchor="middle">?</text><text x="202.4" y="49" class="muted">errored</text><rect x="268.8" y="38" width="14" height="14" rx="3" fill="url(#na-hatch)"/><text x="275.8" y="49" class="seg-label-dim" text-anchor="middle">○</text><text x="288.8" y="49" class="muted">cited N/A (not executed)</text><text x="884" y="49" class="muted" text-anchor="end">this chart's scale: 137 cases = full bar</text>
+<rect x="24" y="66" width="860" height="20" rx="4" class="chap-row"/><text x="34" y="80.5" class="chap-name">EHR</text><text x="700" y="80.5" class="muted" text-anchor="end">459 cases</text>
+<text x="752" y="80.5" class="count count-passed count-strong" text-anchor="end">✓ 113</text><text x="794" y="80.5" class="count count-failed count-strong" text-anchor="end">✕ 59</text><text x="836" y="80.5" class="count count-errored count-strong" text-anchor="end">? 167</text><text x="878" y="80.5" class="count count-na count-strong" text-anchor="end">○ 120</text>
+<text x="220" y="102.5" class="band-label" text-anchor="end">EHR resource</text><rect x="230" y="93" width="61.75182481751825" height="12" class="bar-passed"/><rect x="291.75182481751824" y="93" width="13.722627737226277" height="12" class="bar-failed"/><rect x="305.4744525547445" y="93" width="17.153284671532848" height="12" fill="url(#na-hatch)"/><text x="752" y="102.5" class="count count-passed" text-anchor="end">✓ 18</text><text x="794" y="102.5" class="count count-failed" text-anchor="end">✕ 4</text><text x="878" y="102.5" class="count count-na" text-anchor="end">○ 5</text>
+<text x="220" y="120.5" class="band-label" text-anchor="end">EHR_STATUS</text><rect x="230" y="111" width="48.02919708029197" height="12" class="bar-passed"/><rect x="278.02919708029196" y="111" width="92.62773722627738" height="12" class="bar-failed"/><rect x="370.6569343065693" y="111" width="10.291970802919709" height="12" class="bar-errored"/><rect x="380.94890510948903" y="111" width="24.014598540145986" height="12" fill="url(#na-hatch)"/><text x="752" y="120.5" class="count count-passed" text-anchor="end">✓ 14</text><text x="794" y="120.5" class="count count-failed" text-anchor="end">✕ 27</text><text x="836" y="120.5" class="count count-errored" text-anchor="end">? 3</text><text x="878" y="120.5" class="count count-na" text-anchor="end">○ 7</text>
+<text x="220" y="138.5" class="band-label" text-anchor="end">COMPOSITION</text><rect x="230" y="129" width="37.737226277372265" height="12" class="bar-passed"/><rect x="267.73722627737226" y="129" width="3.4306569343065694" height="12" class="bar-failed"/><rect x="271.1678832116788" y="129" width="349.9270072992701" height="12" class="bar-errored"/><rect x="621.094890510949" y="129" width="78.9051094890511" height="12" fill="url(#na-hatch)"/><text x="752" y="138.5" class="count count-passed" text-anchor="end">✓ 11</text><text x="794" y="138.5" class="count count-failed" text-anchor="end">✕ 1</text><text x="836" y="138.5" class="count count-errored" text-anchor="end">? 102</text><text x="878" y="138.5" class="count count-na" text-anchor="end">○ 23</text>
+<text x="220" y="156.5" class="band-label" text-anchor="end">DIRECTORY</text><rect x="230" y="147" width="209.27007299270073" height="12" class="bar-passed"/><rect x="439.27007299270076" y="147" width="44.5985401459854" height="12" class="bar-failed"/><rect x="483.86861313868616" y="147" width="3.4306569343065694" height="12" class="bar-errored"/><rect x="487.2992700729927" y="147" width="27.445255474452555" height="12" fill="url(#na-hatch)"/><text x="752" y="156.5" class="count count-passed" text-anchor="end">✓ 61</text><text x="794" y="156.5" class="count count-failed" text-anchor="end">✕ 13</text><text x="836" y="156.5" class="count count-errored" text-anchor="end">? 1</text><text x="878" y="156.5" class="count count-na" text-anchor="end">○ 8</text>
+<text x="220" y="174.5" class="band-label" text-anchor="end">CONTRIBUTION</text><rect x="230" y="165" width="24.014598540145986" height="12" class="bar-passed"/><rect x="254.01459854014598" y="165" width="44.5985401459854" height="12" class="bar-failed"/><rect x="298.6131386861314" y="165" width="205.83941605839416" height="12" class="bar-errored"/><rect x="504.4525547445255" y="165" width="54.89051094890511" height="12" fill="url(#na-hatch)"/><text x="752" y="174.5" class="count count-passed" text-anchor="end">✓ 7</text><text x="794" y="174.5" class="count count-failed" text-anchor="end">✕ 13</text><text x="836" y="174.5" class="count count-errored" text-anchor="end">? 60</text><text x="878" y="174.5" class="count count-na" text-anchor="end">○ 16</text>
+<text x="220" y="192.5" class="band-label" text-anchor="end">Item tags</text><rect x="230" y="183" width="202.4087591240876" height="12" fill="url(#na-hatch)"/><text x="878" y="192.5" class="count count-na" text-anchor="end">○ 59</text>
+<text x="220" y="210.5" class="band-label" text-anchor="end">Revision history</text><rect x="230" y="201" width="6.861313868613139" height="12" class="bar-passed"/><rect x="236.86131386861314" y="201" width="3.4306569343065694" height="12" class="bar-failed"/><rect x="240.2919708029197" y="201" width="3.4306569343065694" height="12" class="bar-errored"/><rect x="243.72262773722628" y="201" width="6.861313868613139" height="12" fill="url(#na-hatch)"/><text x="752" y="210.5" class="count count-passed" text-anchor="end">✓ 2</text><text x="794" y="210.5" class="count count-failed" text-anchor="end">✕ 1</text><text x="836" y="210.5" class="count count-errored" text-anchor="end">? 1</text><text x="878" y="210.5" class="count count-na" text-anchor="end">○ 2</text>
+<rect x="24" y="224" width="860" height="20" rx="4" class="chap-row"/><text x="34" y="238.5" class="chap-name">Definitions</text><text x="700" y="238.5" class="muted" text-anchor="end">105 cases</text>
+<text x="752" y="238.5" class="count count-passed count-strong" text-anchor="end">✓ 23</text><text x="794" y="238.5" class="count count-failed count-strong" text-anchor="end">✕ 18</text><text x="836" y="238.5" class="count count-errored count-strong" text-anchor="end">? 15</text><text x="878" y="238.5" class="count count-na count-strong" text-anchor="end">○ 49</text>
+<text x="220" y="260.5" class="band-label" text-anchor="end">ADL 1.4 templates</text><rect x="230" y="251" width="24.014598540145986" height="12" class="bar-passed"/><rect x="254.01459854014598" y="251" width="27.445255474452555" height="12" class="bar-failed"/><rect x="281.45985401459853" y="251" width="48.02919708029197" height="12" class="bar-errored"/><rect x="329.4890510948905" y="251" width="37.737226277372265" height="12" fill="url(#na-hatch)"/><text x="752" y="260.5" class="count count-passed" text-anchor="end">✓ 7</text><text x="794" y="260.5" class="count count-failed" text-anchor="end">✕ 8</text><text x="836" y="260.5" class="count count-errored" text-anchor="end">? 14</text><text x="878" y="260.5" class="count count-na" text-anchor="end">○ 11</text>
+<text x="220" y="278.5" class="band-label" text-anchor="end">ADL 2 artefacts</text><rect x="230" y="269" width="116.64233576642336" height="12" fill="url(#na-hatch)"/><text x="878" y="278.5" class="count count-na" text-anchor="end">○ 34</text>
+<text x="220" y="296.5" class="band-label" text-anchor="end">Stored queries</text><rect x="230" y="287" width="54.89051094890511" height="12" class="bar-passed"/><rect x="284.8905109489051" y="287" width="34.306569343065696" height="12" class="bar-failed"/><rect x="319.1970802919708" y="287" width="3.4306569343065694" height="12" class="bar-errored"/><rect x="322.62773722627736" y="287" width="13.722627737226277" height="12" fill="url(#na-hatch)"/><text x="752" y="296.5" class="count count-passed" text-anchor="end">✓ 16</text><text x="794" y="296.5" class="count count-failed" text-anchor="end">✕ 10</text><text x="836" y="296.5" class="count count-errored" text-anchor="end">? 1</text><text x="878" y="296.5" class="count count-na" text-anchor="end">○ 4</text>
+<rect x="24" y="310" width="860" height="20" rx="4" class="chap-row"/><text x="34" y="324.5" class="chap-name">Query</text><text x="700" y="324.5" class="muted" text-anchor="end">59 cases</text>
+<text x="752" y="324.5" class="count count-passed count-strong" text-anchor="end">✓ 9</text><text x="794" y="324.5" class="count count-failed count-strong" text-anchor="end">✕ 4</text><text x="836" y="324.5" class="count count-errored count-strong" text-anchor="end">? 37</text><text x="878" y="324.5" class="count count-na count-strong" text-anchor="end">○ 9</text>
+<text x="220" y="346.5" class="band-label" text-anchor="end">Ad-hoc AQL</text><rect x="230" y="337" width="24.014598540145986" height="12" class="bar-passed"/><rect x="254.01459854014598" y="337" width="10.291970802919709" height="12" class="bar-failed"/><rect x="264.3065693430657" y="337" width="102.91970802919708" height="12" class="bar-errored"/><rect x="367.22627737226276" y="337" width="27.445255474452555" height="12" fill="url(#na-hatch)"/><text x="752" y="346.5" class="count count-passed" text-anchor="end">✓ 7</text><text x="794" y="346.5" class="count count-failed" text-anchor="end">✕ 3</text><text x="836" y="346.5" class="count count-errored" text-anchor="end">? 30</text><text x="878" y="346.5" class="count count-na" text-anchor="end">○ 8</text>
+<text x="220" y="364.5" class="band-label" text-anchor="end">Stored query execution</text><rect x="230" y="355" width="6.861313868613139" height="12" class="bar-passed"/><rect x="236.86131386861314" y="355" width="3.4306569343065694" height="12" class="bar-failed"/><rect x="240.2919708029197" y="355" width="24.014598540145986" height="12" class="bar-errored"/><rect x="264.3065693430657" y="355" width="3.4306569343065694" height="12" fill="url(#na-hatch)"/><text x="752" y="364.5" class="count count-passed" text-anchor="end">✓ 2</text><text x="794" y="364.5" class="count count-failed" text-anchor="end">✕ 1</text><text x="836" y="364.5" class="count count-errored" text-anchor="end">? 7</text><text x="878" y="364.5" class="count count-na" text-anchor="end">○ 1</text>
+<rect x="24" y="378" width="860" height="20" rx="4" class="chap-row"/><text x="34" y="392.5" class="chap-name">Demographic</text><text x="700" y="392.5" class="muted" text-anchor="end">114 cases</text>
+<text x="878" y="392.5" class="count count-na count-strong" text-anchor="end">○ 114</text>
+<text x="220" y="414.5" class="band-label" text-anchor="end">Parties</text><rect x="230" y="405" width="301.8978102189781" height="12" fill="url(#na-hatch)"/><text x="878" y="414.5" class="count count-na" text-anchor="end">○ 88</text>
+<text x="220" y="432.5" class="band-label" text-anchor="end">Party relationships</text><rect x="230" y="423" width="65.18248175182482" height="12" fill="url(#na-hatch)"/><text x="878" y="432.5" class="count count-na" text-anchor="end">○ 19</text>
+<text x="220" y="450.5" class="band-label" text-anchor="end">Versioned party</text><rect x="230" y="441" width="24.014598540145986" height="12" fill="url(#na-hatch)"/><text x="878" y="450.5" class="count count-na" text-anchor="end">○ 7</text>
+<rect x="24" y="464" width="860" height="20" rx="4" class="chap-row"/><text x="34" y="478.5" class="chap-name">Messaging</text><text x="700" y="478.5" class="muted" text-anchor="end">48 cases</text>
+<text x="878" y="478.5" class="count count-na count-strong" text-anchor="end">○ 48</text>
+<text x="220" y="500.5" class="band-label" text-anchor="end">EHR Extract</text><rect x="230" y="491" width="109.78102189781022" height="12" fill="url(#na-hatch)"/><text x="878" y="500.5" class="count count-na" text-anchor="end">○ 32</text>
+<text x="220" y="518.5" class="band-label" text-anchor="end">TDD</text><rect x="230" y="509" width="54.89051094890511" height="12" fill="url(#na-hatch)"/><text x="878" y="518.5" class="count count-na" text-anchor="end">○ 16</text>
+<rect x="24" y="532" width="860" height="20" rx="4" class="chap-row"/><text x="34" y="546.5" class="chap-name">Admin</text><text x="700" y="546.5" class="muted" text-anchor="end">56 cases</text>
+<text x="878" y="546.5" class="count count-na count-strong" text-anchor="end">○ 56</text>
+<text x="220" y="568.5" class="band-label" text-anchor="end">Admin service</text><rect x="230" y="559" width="89.1970802919708" height="12" fill="url(#na-hatch)"/><text x="878" y="568.5" class="count count-na" text-anchor="end">○ 26</text>
+<text x="220" y="586.5" class="band-label" text-anchor="end">Archive</text><rect x="230" y="577" width="51.45985401459854" height="12" fill="url(#na-hatch)"/><text x="878" y="586.5" class="count count-na" text-anchor="end">○ 15</text>
+<text x="220" y="604.5" class="band-label" text-anchor="end">Dump &amp; load</text><rect x="230" y="595" width="51.45985401459854" height="12" fill="url(#na-hatch)"/><text x="878" y="604.5" class="count count-na" text-anchor="end">○ 15</text>
+<rect x="24" y="618" width="860" height="20" rx="4" class="chap-row"/><text x="34" y="632.5" class="chap-name">System</text><text x="700" y="632.5" class="muted" text-anchor="end">1 case</text>
+<text x="878" y="632.5" class="count count-na count-strong" text-anchor="end">○ 1</text>
+<text x="220" y="654.5" class="band-label" text-anchor="end">Conformance manifest</text><rect x="230" y="645" width="3.4306569343065694" height="12" fill="url(#na-hatch)"/><text x="878" y="654.5" class="count count-na" text-anchor="end">○ 1</text>
+<rect x="24" y="668" width="860" height="20" rx="4" class="chap-row"/><text x="34" y="682.5" class="chap-name">Content validation</text><text x="700" y="682.5" class="muted" text-anchor="end">123 cases</text>
+<text x="794" y="682.5" class="count count-failed count-strong" text-anchor="end">✕ 67</text><text x="836" y="682.5" class="count count-errored count-strong" text-anchor="end">? 56</text>
+<text x="220" y="704.5" class="band-label" text-anchor="end">Data types</text><rect x="230" y="695" width="51.45985401459854" height="12" class="bar-failed"/><rect x="281.45985401459853" y="695" width="126.93430656934306" height="12" class="bar-errored"/><text x="794" y="704.5" class="count count-failed" text-anchor="end">✕ 15</text><text x="836" y="704.5" class="count count-errored" text-anchor="end">? 37</text>
+<text x="220" y="722.5" class="band-label" text-anchor="end">Interval data types</text><rect x="230" y="713" width="37.737226277372265" height="12" class="bar-failed"/><rect x="267.73722627737226" y="713" width="65.18248175182482" height="12" class="bar-errored"/><text x="794" y="722.5" class="count count-failed" text-anchor="end">✕ 11</text><text x="836" y="722.5" class="count count-errored" text-anchor="end">? 19</text>
+<text x="220" y="740.5" class="band-label" text-anchor="end">Structure &amp; cardinality</text><rect x="230" y="731" width="140.65693430656935" height="12" class="bar-failed"/><text x="794" y="740.5" class="count count-failed" text-anchor="end">✕ 41</text>
+<rect x="24" y="754" width="860" height="20" rx="4" class="chap-row"/><text x="34" y="768.5" class="chap-name">Simplified formats</text><text x="700" y="768.5" class="muted" text-anchor="end">71 cases</text>
+<text x="878" y="768.5" class="count count-na count-strong" text-anchor="end">○ 71</text>
+<text x="220" y="790.5" class="band-label" text-anchor="end">FLAT &amp; STRUCTURED</text><rect x="230" y="781" width="75.47445255474453" height="12" fill="url(#na-hatch)"/><text x="878" y="790.5" class="count count-na" text-anchor="end">○ 22</text>
+<text x="220" y="808.5" class="band-label" text-anchor="end">Web Template</text><rect x="230" y="799" width="17.153284671532848" height="12" fill="url(#na-hatch)"/><text x="878" y="808.5" class="count count-na" text-anchor="end">○ 5</text>
+<text x="220" y="826.5" class="band-label" text-anchor="end">Path mapping</text><rect x="230" y="817" width="106.35036496350365" height="12" fill="url(#na-hatch)"/><text x="878" y="826.5" class="count count-na" text-anchor="end">○ 31</text>
+<text x="220" y="844.5" class="band-label" text-anchor="end">Scope &amp; legacy media</text><rect x="230" y="835" width="44.5985401459854" height="12" fill="url(#na-hatch)"/><text x="878" y="844.5" class="count count-na" text-anchor="end">○ 13</text>
+<rect x="24" y="858" width="860" height="20" rx="4" class="chap-row"/><text x="34" y="872.5" class="chap-name">Security &amp; privacy</text><text x="700" y="872.5" class="muted" text-anchor="end">6 cases</text>
+<text x="752" y="872.5" class="count count-passed count-strong" text-anchor="end">✓ 3</text><text x="878" y="872.5" class="count count-na count-strong" text-anchor="end">○ 3</text>
+<text x="220" y="894.5" class="band-label" text-anchor="end">Authenticated access</text><rect x="230" y="885" width="6.861313868613139" height="12" class="bar-passed"/><text x="752" y="894.5" class="count count-passed" text-anchor="end">✓ 2</text>
+<text x="220" y="912.5" class="band-label" text-anchor="end">Authorization separation</text><rect x="230" y="903" width="3.4306569343065694" height="12" fill="url(#na-hatch)"/><text x="878" y="912.5" class="count count-na" text-anchor="end">○ 1</text>
+<text x="220" y="930.5" class="band-label" text-anchor="end">Audit accountability</text><rect x="230" y="921" width="3.4306569343065694" height="12" fill="url(#na-hatch)"/><text x="878" y="930.5" class="count count-na" text-anchor="end">○ 1</text>
+<text x="220" y="948.5" class="band-label" text-anchor="end">Anonymous EHRs</text><rect x="230" y="939" width="3.4306569343065694" height="12" fill="url(#na-hatch)"/><text x="878" y="948.5" class="count count-na" text-anchor="end">○ 1</text>
+<text x="220" y="966.5" class="band-label" text-anchor="end">EHR/demographic separation</text><rect x="230" y="957" width="3.4306569343065694" height="12" class="bar-passed"/><text x="752" y="966.5" class="count count-passed" text-anchor="end">✓ 1</text>
+<rect x="24" y="980" width="860" height="20" rx="4" class="chap-row"/><text x="34" y="994.5" class="chap-name">Signing</text><text x="700" y="994.5" class="muted" text-anchor="end">13 cases</text>
+<text x="878" y="994.5" class="count count-na count-strong" text-anchor="end">○ 13</text>
+<text x="220" y="1016.5" class="band-label" text-anchor="end">Version signing</text><rect x="230" y="1007" width="44.5985401459854" height="12" fill="url(#na-hatch)"/><text x="878" y="1016.5" class="count count-na" text-anchor="end">○ 13</text>
+<rect x="24" y="1030" width="860" height="20" rx="4" class="chap-row"/><text x="34" y="1044.5" class="chap-name">SMART App Launch</text><text x="700" y="1044.5" class="muted" text-anchor="end">3 cases</text>
+<text x="878" y="1044.5" class="count count-na count-strong" text-anchor="end">○ 3</text>
+<text x="220" y="1066.5" class="band-label" text-anchor="end">Discovery</text><rect x="230" y="1057" width="3.4306569343065694" height="12" fill="url(#na-hatch)"/><text x="878" y="1066.5" class="count count-na" text-anchor="end">○ 1</text>
+<text x="220" y="1084.5" class="band-label" text-anchor="end">Resource scopes</text><rect x="230" y="1075" width="6.861313868613139" height="12" fill="url(#na-hatch)"/><text x="878" y="1084.5" class="count count-na" text-anchor="end">○ 2</text>
+<rect x="24" y="1098" width="860" height="20" rx="4" class="chap-row"/><text x="34" y="1112.5" class="chap-name">Performance</text><text x="700" y="1112.5" class="muted" text-anchor="end">no cases</text>
+
+<text x="220" y="1134.5" class="band-label" text-anchor="end">Hospital simulation</text><text x="230" y="1134.5" class="band-empty">no cases</text>
+</svg>
