@@ -2222,6 +2222,20 @@ fn save_feedback(save_action: SaveAction) -> AnyView {
     .into_any()
 }
 
+/// What a save-as version field means: the server-assigned version, an
+/// explicit immutable one, or a pattern the store refuses.
+fn version_meaning(version: &str) -> Result<String, String> {
+    let version = version.trim();
+    let args = [("version", version.to_owned().into())];
+    if version.is_empty() {
+        Ok(tr(Msg::ServerAssignsVersionReplacingQueryStored))
+    } else if is_full_semver(version) {
+        Ok(tr_with(Msg::ANewImmutableVersion, &args))
+    } else {
+        Err(tr_with(Msg::NotVersionStoreUseMajorMinor, &args))
+    }
+}
+
 /// The shared **Save as** fields both query screens use: the optional
 /// **namespace** beside the query **name**, plus the effective qualified name
 /// the save will write.
@@ -2260,24 +2274,7 @@ pub(crate) fn save_as_fields(id_prefix: &str, fields: SaveFields) -> AnyView {
     // What the version field currently means for the save: an explicit
     // immutable version, the server-assigned one, or a pattern that cannot be
     // stored at (blocked before any request — `SaveFields::version_is_unstorable`).
-    let version_note = Signal::derive(move || {
-        version.with(|version| {
-            let version = version.trim();
-            if version.is_empty() {
-                Ok(tr(Msg::ServerAssignsVersionReplacingQueryStored))
-            } else if is_full_semver(version) {
-                Ok(tr_with(
-                    Msg::ANewImmutableVersion,
-                    &[("version", (version).to_string().into())],
-                ))
-            } else {
-                Err(tr_with(
-                    Msg::NotVersionStoreUseMajorMinor,
-                    &[("version", (version).to_string().into())],
-                ))
-            }
-        })
-    });
+    let version_note = Signal::derive(move || version.with(|version| version_meaning(version)));
     let input_class = INPUT;
     view! {
         <div class="flex flex-col gap-1">
