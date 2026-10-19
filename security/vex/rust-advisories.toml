@@ -60,8 +60,8 @@
 id = "https://ferroehr.eu/vex/rust-dependency-advisories"
 author = "Cadasto B.V."
 role = "vendor"
-timestamp = "2026-10-18T00:00:00Z"
-version = 8
+timestamp = "2026-10-19T00:00:00Z"
+version = 9
 
 # What the statements are about: the released server binary, the container
 # image built from it, and the viewer image. The server artifacts carry the
@@ -125,36 +125,12 @@ signing mode changes.\
 """
 
 [[accepted]]
-id = "RUSTSEC-2026-0173"
-crate = "proc-macro-error2"
-carriers = [
-  "reactive_stores_macro",
-]
-workspace_roots = ["ferroehr-viewer"]
-status = "not_affected"
-justification = "vulnerable_code_not_present"
-impact = """
-An UNMAINTAINED-crate advisory, not a vulnerability: RustSec records no flaw \
-and no patched version, only that the author has stated the crate is no longer \
-maintained. `proc-macro-error2` is a procedural-macro dependency of \
-`reactive_stores_macro` 0.2, which the viewer's `thaw` UI crates pull in (the \
-Leptos 0.8.22 macro crates no longer depend on it), and the viewer is the only \
-workspace member it is reachable from. A \
-proc-macro executes in the \
-COMPILER during the build and its code is not linked into any shipped \
-artifact, so it is absent from both the server binary and the container image \
-this document describes. It goes away when `thaw` moves to a \
-`reactive_stores` release without it; re-evaluate at the next `thaw` bump.\
-"""
-
-[[accepted]]
 id = "RUSTSEC-2024-0436"
 crate = "paste"
 version = "1.0.15"
 carriers = [
   "either_of",
   "leptos",
-  "leptos-use",
   "reactive_graph",
   "reactive_stores",
   "tachys",
@@ -165,7 +141,7 @@ justification = "vulnerable_code_not_present"
 impact = """
 An UNMAINTAINED-crate advisory, not a vulnerability: the author archived the \
 repository and RustSec records no flaw and no patched version. `paste` is a \
-procedural macro that pastes tokens at compile time, reached only through six \
+procedural macro that pastes tokens at compile time, reached only through five \
 crates of the Leptos 0.8 family in the viewer (`cargo tree -i paste@1.0.15`); \
 the server stopped reaching it when `utoipa-axum` 0.3 moved to `pastey`. Like \
 every proc-macro it runs inside the compiler and links into nothing that ships, \

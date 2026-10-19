@@ -60,13 +60,6 @@ ignore = [
   # release (upgrade the day it ships).
   # https://rustsec.org/advisories/RUSTSEC-2023-0071
   { id = "RUSTSEC-2023-0071", reason = "no fix upstream; RSA verification only in the OIDC path, and the pgp signing path is off by default (digest mode) and key-algorithm-agnostic" },
-  # 2026-07-18: unmaintained-crate advisory only (no vulnerability); a
-  # build-time proc-macro dependency of leptos_macro (0.8.20 is the latest
-  # leptos, re-verified 2026-09-10). DELETING EVENT: a leptos release that
-  # drops proc-macro-error2 — cargo's future-incompat report flags the crate
-  # too, so upstream has two reasons to move.
-  # https://rustsec.org/advisories/RUSTSEC-2026-0173
-  { id = "RUSTSEC-2026-0173", reason = "unmaintained advisory; compile-time proc-macro via leptos_macro (viewer), no runtime exposure" },
   # 2026-07-15: `paste` (proc-macro) is archived/unmaintained. utoipa-axum 0.3
   # moved to `pastey` (2026-09-30), so the Leptos 0.8 family in the viewer is
   # the only carrier left. Compile-time-only token pasting, no runtime code,
