@@ -55,6 +55,10 @@ workflow refuses a tag that has no matching section here.
   FerroHEALTH consoles. The screens look the same: 0.1.5 adds a per-row form
   field and a header title the viewer does not use yet, and its browser half
   no longer asks for a wasm-bindgen of its own.
+- **The viewer moves to FerroUI 0.1.6** (#3820), in step with the other
+  FerroHEALTH consoles. The screens look the same: 0.1.6 adds the shared
+  field shapes the other consoles needed, and every viewer field already
+  draws through the library since #3819.
 
 ### Fixed
 
