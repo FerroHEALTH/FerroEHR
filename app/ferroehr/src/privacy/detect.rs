@@ -131,8 +131,8 @@ static BUILT_IN_RULES: [IdentifierRule; 8] = [
         key: "fi-hetu",
         jurisdiction: "FI",
         label: "henkilötunnus (personal identity code)",
-        source: "Digital and Population Data Services Agency, \
-                     https://dvv.fi/en/personal-identity-code",
+        source: "Valtioneuvoston asetus väestötietojärjestelmästä 128/2010, 2 §, \
+                     https://www.finlex.fi/fi/laki/ajantasa/2010/20100128",
         collision: "The token shape itself is the narrowing: six digits, a century sign, \
                         three digits and a control character. Among tokens of exactly that \
                         shape one in 31 matches by chance; free clinical text produces the \
@@ -398,8 +398,8 @@ static FI_HETU_TOKEN: LazyLock<Regex> = LazyLock::new(|| {
         .expect("the Finnish personal-identity-code pattern should compile")
 });
 
-/// The control characters, indexed by the remainder modulo 31 — the table the
-/// Digital and Population Data Services Agency publishes.
+/// The control characters, indexed by the remainder modulo 31 — the table of
+/// Valtioneuvoston asetus väestötietojärjestelmästä 128/2010, 2 §.
 const FI_HETU_CONTROL: &[u8; 31] = b"0123456789ABCDEFHJKLMNPRSTUVWXY";
 
 /// FI — the control character is the nine digits of the date and individual
