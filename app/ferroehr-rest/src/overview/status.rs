@@ -70,9 +70,9 @@ pub(crate) struct FullStatus {
     /// The declared deployment posture (#3226): the profile, the separations
     /// it has not made and the ones it accepted by name.
     deployment: DeploymentPosture,
-    /// The support period of this release and where it stands today
-    /// (`docs/law/eu/cra/text.html Art. 13(19)`): `status` is `ended` once the
-    /// release is out of support.
+    /// The end month of the commitment to publish fixes for this release and
+    /// where it stands today (`docs/law/eu/cra/text.html Art. 13(19)`):
+    /// `status` is `ended` once that month has passed.
     support: SupportReport,
 }
 

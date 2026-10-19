@@ -358,9 +358,11 @@ tags are signed and the tags are protected by a ruleset.
   between an idea and a released binary; the mitigation is machine enforcement
   and it is honestly recorded in
   [GOVERNANCE.md](https://github.com/FerroHEALTH/FerroEHR/blob/main/GOVERNANCE.md).
-- **Fixes ship in the newest release only.** Each release is supported for
-  five years, and a fix for it arrives as a newer release; there is no
-  maintenance branch to backport to. See
+- **Fixes ship in the newest release only.** Only the newest release is
+  supported, and a fix arrives as a newer release; there is no maintenance
+  branch to backport to. Cadasto B.V. commits to keep publishing security
+  fixes for at least five years after each release (CRA Art 13(8) and
+  (10)). See
   [SECURITY.md](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions).
 
 ## What each database credential can reach

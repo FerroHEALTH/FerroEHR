@@ -46,6 +46,17 @@ workflow refuses a tag that has no matching section here.
   identity or an ENTRY, for example) is rebuilt with the name its term
   definition gives instead of its at-code (#3810).
 - The nine `openehr-*` crates move to `0.0.88`.
+- **Only the newest release is supported** (#3853). When a new release is
+  published, every earlier release stops receiving fixes: there are no
+  maintenance branches, no long-term-support line and no backports. If you are
+  not on the newest release, upgrade; upgrading is free. Under the Cyber
+  Resilience Act, Cadasto B.V. commits to keep publishing security fixes for at
+  least five years after each release (Art 13(8)) and ships them only in the
+  newest release (Art 13(10)). `SECURITY.md`, the release notes and the
+  compliance pages say so in place of a five-year support period per release.
+  The end month of that commitment stays on the boot banner, in
+  `ferroehr --version` and in the management documents; the banner line now
+  reads `newest release only; fixes published until the end of <month>`.
 
 ### Fixed
 

@@ -7,8 +7,10 @@
 //! five years", and Art. 13(19) asks that its end date, "including at least
 //! the month and the year", be specified, and that "where technically
 //! feasible" the product display a notification once it "has reached the end
-//! of its support period". The support period runs five years from the month
-//! the release is published; the release date is the `CHANGELOG.md` heading
+//! of its support period". Only the newest release is supported, and Art.
+//! 13(10) has every security fix ship in it; the period stated here is the
+//! commitment to keep publishing those fixes, five years from the month the
+//! release is published. The release date is the `CHANGELOG.md` heading
 //! `## [X.Y.Z] - YYYY-MM-DD` of this package version, embedded at build time
 //! by `build.rs`. A build of a version with no dated heading is not a release
 //! and carries no support period.
@@ -44,9 +46,10 @@ pub struct SupportPeriod {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SupportStatus {
-    /// The support period has not ended.
+    /// The commitment to publish fixes has not ended; the release itself is
+    /// supported only while it is the newest.
     Supported,
-    /// The support period has ended: the release is out of support.
+    /// The commitment to publish fixes has ended.
     Ended,
     /// The build is not a release, so it has no support period.
     Unreleased,
@@ -135,9 +138,9 @@ impl SupportPeriod {
         };
         let month = end.strftime("%B %Y");
         match self.status_on(today) {
-            SupportStatus::Ended => format!("ENDED at the end of {month}"),
+            SupportStatus::Ended => format!("fix commitment ENDED at the end of {month}"),
             SupportStatus::Supported | SupportStatus::Unreleased => {
-                format!("until the end of {month}")
+                format!("newest release only; fixes published until the end of {month}")
             }
         }
     }
@@ -151,9 +154,9 @@ impl SupportPeriod {
         }
         let end = self.end_month()?;
         Some(format!(
-            "this release reached the end of its support period at the end of {}: {} no \
-             longer handles its vulnerabilities, so move to the newest release \
-             (Regulation (EU) 2024/2847 Art. 13(19))",
+            "the commitment to publish security fixes for this release ended at the end \
+             of {}, and only the newest release is supported: {} ships every fix in \
+             the newest release, so upgrade (Regulation (EU) 2024/2847 Art. 13(19))",
             end.strftime("%B %Y"),
             MANUFACTURER.name
         ))
@@ -231,7 +234,7 @@ mod tests {
         assert_eq!(period.status_on(date("2031-11-01")), SupportStatus::Ended);
         assert_eq!(
             period.describe_on(date("2027-01-01")),
-            "until the end of October 2031"
+            "newest release only; fixes published until the end of October 2031"
         );
     }
 
@@ -260,7 +263,7 @@ mod tests {
         assert!(notice.contains("Art. 13(19)"), "{notice}");
         assert_eq!(
             period.describe_on(date("2031-03-01")),
-            "ENDED at the end of February 2031"
+            "fix commitment ENDED at the end of February 2031"
         );
         assert_eq!(
             serde_json::to_value(after).expect("serialize")["status"],
