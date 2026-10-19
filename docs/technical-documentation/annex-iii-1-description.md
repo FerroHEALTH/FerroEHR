@@ -26,7 +26,8 @@ beside the EHDS points they repeat. Book pages are cited from
   and on `GET /management/info`.
 - **Date:** the date on the release's heading in
   [`CHANGELOG.md`](../../CHANGELOG.md) (`## [X.Y.Z] - YYYY-MM-DD`), which the
-  release lane requires and from which the support period is computed.
+  release lane requires and from which the end month of the five-year support
+  commitment is computed.
 - **The other product of the system:** FerroBRIDGE, with its own version and
   date on its own releases. From the release that moves the central access
   log to FerroSYS (#3661), FerroSYS is the third product, with its own
@@ -87,8 +88,9 @@ compliance with essential cybersecurity requirements"
   bills of materials attached to the release (see
   [`cra-annex-vii-2-design-and-vulnerability-handling.md`](cra-annex-vii-2-design-and-vulnerability-handling.md)).
 - Update requirements: upgrades in place with append-only migrations, the
-  image pinned by digest, and the support period of each release
-  ([`operations.md`](../../website/book/src/operations.md#upgrades),
+  image pinned by digest, and the support policy: only the newest release
+  is supported, and security fixes ship only in it for at least five years
+  after each release ([`operations.md`](../../website/book/src/operations.md#upgrades),
   [`SECURITY.md`](../../SECURITY.md#supported-versions)).
 
 State: available.

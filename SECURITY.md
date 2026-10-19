@@ -22,32 +22,43 @@ Cadasto B.V. is the manufacturer of each tagged FerroEHR release under the
 Cyber Resilience Act, Regulation (EU) 2024/2847 (the position is recorded in
 [`docs/architecture.md`](docs/architecture.md#regulatory-position-ehds-and-cra)).
 
-**The support period of a release is five years from the month it is
-published.** CRA Art 13(8) sets five years as the minimum where a product is
-expected to be in use for longer, and a clinical data repository is. The end
-date (month and year, Art 13(19) and Annex II point 7) is printed in each
-release's notes and in the table below. During that period vulnerabilities in
-the release are handled under Annex I Part II.
+**Only the newest release is supported.** When a new release is published,
+every earlier release stops receiving fixes: there are no maintenance
+branches, no long-term-support line and no backports. If you are not on the
+newest release, upgrade; upgrading is free. Under the Cyber Resilience Act,
+Cadasto B.V. commits to keep publishing security fixes for at least five years
+after each release (Art 13(8)) and ships them only in the newest release
+(Art 13(10)).
 
-**The security update for a release in its support period ships in the newest
-release.** There are no maintenance branches, no long-term-support line and
-no backports; the reasoning under CRA Art 13(10) is in the FerroHEALTH
-[security policy](https://ferrohealth.eu/docs/security.html).
+The five years are a commitment for the product as a whole. Art 13(8) sets five years as the minimum where a product is
+expected to be in use for longer, and a clinical data repository is. Art 13(10)
+lets the manufacturer deliver security updates only in the version last placed
+on the market, provided users of earlier versions receive it free of charge
+with no added cost to adjust their environment, which is how every FerroEHR
+upgrade is delivered. The end month of the commitment for a release (month
+and year, Art 13(19) and Annex II point 7) is printed in its release notes:
+it is the date until which Cadasto B.V. keeps shipping fixed releases, and the
+release itself is supported only while it is the newest. Vulnerabilities are
+handled under Annex I Part II; the FerroHEALTH
+[security policy](https://ferrohealth.eu/docs/security.html) states the same
+policy for every FerroHEALTH product.
 
-| Artifact | Version line | Support period | Where the update ships |
-|---|---|---|---|
-| The server (GitHub releases, container images) | product SemVer, currently `4.x` | five years from the month of each `vX.Y.Z` tag; the end date is in the release notes | the newest `vX.Y.Z` tag |
-| The Helm chart (`oci://ghcr.io/ferrohealth/charts`) | its own SemVer, independent of the server | five years from the month the chart version is published | the newest published chart version |
-| The `openehr-*` crates (crates.io) | their own lockstep `0.0.x` line | five years from the month of publication | the newest published version of all nine |
+| Artifact | Supported version | Fixes ship in |
+|---|---|---|
+| The server (GitHub releases, container images) | the newest published `vX.Y.Z` tag | the newest `vX.Y.Z` tag |
+| The Helm chart (`oci://ghcr.io/ferrohealth/charts`) | the newest published chart version | the newest published chart version |
+| The `openehr-*` crates (crates.io) | the newest published version of all nine | the newest published version of all nine |
 
-Releases published before 2026-10-06 carry no end date in their notes; their
-support period is five years from the month of their tag all the same.
+Releases published before 2026-10-06 carry no end month in their notes. The
+same rule applies to them: they are supported only while they are the newest,
+and a fix for a vulnerability in one ships in the newest release.
 
-**The running server states its own support period.** The end month is on the
+**The running server states the end month of the commitment.** It is on the
 boot banner, in `ferroehr --version`, under `support` in
 `GET /management/info` and in `GET /management/status` as `support.status`
-(`supported`, `ended` or `unreleased`). Once the period has ended the server
-logs a warning at boot and once a day (Art 13(19)). It does not contact anyone
+(`supported`, `ended` or `unreleased`; `supported` means the commitment for
+that release is still running, and says nothing about whether a newer release
+exists). Once the end month has passed the server logs a warning at boot and once a day (Art 13(19)). It does not contact anyone
 to look for a newer release. To hear of new releases and fixes, subscribe to
 the release feed, `https://github.com/FerroHEALTH/FerroEHR/releases.atom`, and
 poll the published advisories,

@@ -60,8 +60,11 @@ release".
 - **Release date:** the date on the release's heading in the
   [changelog](https://github.com/FerroHEALTH/FerroEHR/blob/main/CHANGELOG.md),
   `## [X.Y.Z] - YYYY-MM-DD`.
-- **Support period:** five years from the month of the release date; the end
-  month is in the release notes and in
+- **Support period:** only the newest release is supported. Cadasto B.V.
+  commits to keep publishing security fixes for at least five years after each
+  release (CRA Art 13(8)) and ships them only in the newest release (Art
+  13(10)); the end month of that commitment is in the release notes, and the
+  policy is in
   [`SECURITY.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions).
 
 ## (c) Intended purpose

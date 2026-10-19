@@ -214,7 +214,8 @@ These are open, and nothing in this repository answers them:
    `SECURITY.md` states, is the maintainers' proposal and needs Cadasto B.V.'s
    confirmation.
 8. Who on the board of Cadasto B.V. decides a cessation of operations, and
-   whether a successor would take over the support periods.
+   whether a successor would take over the commitment to keep publishing
+   security fixes for five years after each release.
 9. Whether the certified scope of Cadasto B.V.'s ISO 9001, ISO/IEC 27001 and
    NEN 7510 certificates covers the development and release of FerroEHR, the
    procedures in this file, and a FerroEHR service Cadasto B.V. hosts for

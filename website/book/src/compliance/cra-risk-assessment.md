@@ -78,8 +78,10 @@ the clinical payload, the demographic parties and their identifiers, the
 EHR-to-subject link, the access log, the version history, the signing keys,
 the credentials, instance separation and availability.
 
-**The expected time in use** is longer than five years, so the support period
-of each release is five years from the month it is published (CRA Art. 13(8);
+**The expected time in use** is longer than five years, so Cadasto B.V.
+commits to keep publishing security fixes for at least five years after each
+release, shipped only in the newest release, which is the one release
+supported (CRA Art. 13(8) and (10);
 [`SECURITY.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions)
 carries the reasoning, which is Annex VII point 4).
 
@@ -262,10 +264,10 @@ available updates to users, and the option to temporarily postpone them"
   advisory listing
   (`GET https://api.github.com/repos/FerroHEALTH/FerroEHR/security-advisories`)
   are the subscription route `SECURITY.md` names. The running server states
-  its support period (five years from the month of its release date) on the
-  boot banner, in `ferroehr --version`, on `GET /management/info` and on
-  `GET /management/status` as `support.status`, and once the period has ended
-  it logs a warning at boot and once a day (Art. 13(19)).
+  the end month of the commitment for its release (five years from the month
+  of its release date) on the boot banner, in `ferroehr --version`, on
+  `GET /management/info` and on `GET /management/status` as
+  `support.status`, and once that month has passed it logs a warning at boot and once a day (Art. 13(19)).
 - **No in-product update check.** The server does not contact anyone to learn
   of a newer release. The point names "the notification of available updates
   to users" and is silent on whether the product itself must deliver it.

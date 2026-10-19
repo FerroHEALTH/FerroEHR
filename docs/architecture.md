@@ -448,6 +448,16 @@ same licence and the same holder:
   product: no page calls FerroEHR certified, and a page that relies on the
   certification for the development process or a hosted service says so only
   once the owner has confirmed that the scope covers it.
+- Only the newest release is supported (owner, 2026-10-19, #3853). When a new
+  release is published, every earlier release stops receiving fixes: there
+  are no maintenance branches, no long-term-support line and no backports,
+  and the remedy is to upgrade, which is free. The CRA support period is a
+  commitment for the product: Cadasto B.V. keeps publishing security fixes for
+  at least five years after each release is placed on the market (CRA Art
+  13(8)) and delivers them only in the version last placed on the market (Art
+  13(10)). The end month of that commitment is printed per release (Art
+  13(19), Annex II point 7); it is the date until which fixed releases keep
+  coming, and a release counts as supported only while it is the newest.
 
 **The EHR system is FerroEHR and FerroBRIDGE together.** EHDS Art 25(1) asks an
 EHR system to include both harmonised software components:
@@ -492,7 +502,7 @@ answers them:
 
 1. Whether CRA Art 13(10), which lets a manufacturer patch only the latest
    version when earlier versions' users get it free of charge, holds for
-   commercial licensees under BUSL-1.1 (the support period, #3610).
+   commercial licensees under BUSL-1.1 (the support period, #3610, #3647).
 2. The scope of the EHDS Art 35 register: whether a download under the public
    licence supplies an economic operator.
 3. Whether a deployment that modifies the source and puts the result into
