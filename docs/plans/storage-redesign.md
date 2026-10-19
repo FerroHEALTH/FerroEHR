@@ -671,8 +671,7 @@ The owner's architecture drawing (2026-09-14) places FerroEHR inside a
 **FerroHEALTH instance** beside sibling products and proposed platform
 services: FerroTERM (terminology), FerroBRIDGE (FHIR R4 facade and the
 OMOP CDM load, live), FerroCHART (template to form), and, proposed, FerroPIX
-(master patient index, IHE PIX/PIXm/PDQ/PDQm), FerroSMART (OAuth 2.0, OIDC,
-SMART authorisation server), FerroSYS (health, telemetry, event log,
+(master patient index, IHE PIX/PIXm/PDQ/PDQm), FerroSYS (health, telemetry, event log,
 notification subscriptions, install and deploy) and FerroFED (XCPD patient
 discovery, distributed AQL). Veredictum stays the external acceptance
 instrument. Two statements on the drawing bind this plan and are absorbed by
@@ -688,13 +687,14 @@ The other seams the drawing shows are contracts FerroEHR exposes, filed under
 the v4.3.2 program #3377 and specified by the open standard each realises,
 never by a sibling's internals; every seam keeps a local default so nothing in
 FerroEHR depends on a sibling being present: FerroPIX as an `I_EHR_INDEX`
-provider behind an `EhrIndexProvider` seam (ITI-83, ITI-78; #3380), FerroSMART
-as RFC 7662 introspection beside JWT validation plus SMART launch context as
-ABAC attributes (#3381), the FerroSYS seam over the operator surfaces (#3382),
-and the federation node contract for FerroFED over ITS-REST (#3383). Each
+provider behind an `EhrIndexProvider` seam (ITI-83, ITI-78; #3380), the FerroSYS seam over the operator surfaces (#3382),
+and the federation node contract for FerroFED over ITS-REST (#3383). The
+family has no central authorisation service (owner, 2026-10-19; #3381 closed):
+each product is its own SMART resource server, because one central service
+would hold the signing key every product's access depends on. Each
 platform service is its own product in its own repository (owner, 2026-09-14:
 FerroFED gets one, like FerroTERM, FerroBRIDGE and FerroCHART), so nothing of a
-gateway, an authorisation server, an MPI or a control plane is built here;
+gateway, an MPI or a control plane is built here;
 #3383 reads the openEHR Federation Working Group's "Proposal for Federation
 Tier with AQL" (v0.9.0 release candidate, CC0) and its Apache-2.0 reference
 gateway as input for the node contract, never as a specification. The
