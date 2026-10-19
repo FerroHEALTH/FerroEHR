@@ -30,6 +30,7 @@
               (#1694)"
 )]
 
+use ferrohealth_ui::view::form::field;
 use leptos::prelude::*;
 use leptos::{component, server};
 use leptos_meta::Title;
@@ -892,12 +893,16 @@ fn openapi_selector(family: Memo<String>) -> AnyView {
     view! {
         <leptos_router::components::Form method="GET" action="/system" attr:class="mb-3">
             <div class="fui-field-flow">
-                <label class="fui-field" r#for="openapi-family">
-                    <span class="fui-label">"API family"</span>
-                    <select id="openapi-family" name="openapi" class=SELECT>
-                        {options}
-                    </select>
-                </label>
+                {field(
+                    "openapi-family",
+                    "API family",
+                    None,
+                    view! {
+                        <select id="openapi-family" name="openapi" class=SELECT>
+                            {options}
+                        </select>
+                    },
+                )}
                 <button id="openapi-family-show" type="submit" class=BTN_SECONDARY>
                     "Show"
                 </button>

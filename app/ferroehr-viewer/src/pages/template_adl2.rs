@@ -26,6 +26,7 @@
 //! Absence (`404`) is `Ok(None)`, a first-class state rather than an error;
 //! tab and version state live in the URL.
 
+use ferrohealth_ui::view::form::field;
 use leptos::prelude::*;
 use leptos::{component, server};
 use leptos_meta::Title;
@@ -548,17 +549,21 @@ fn version_form(
                     value=tab.get_untracked().as_query()
                     prop:value=move || tab.get().as_query()
                 />
-                <label class="fui-field">
-                    <span class="fui-label">"Release version (1.1.0, or a 1 / 1.0 prefix)"</span>
-                    <input
-                        id="adl2-version-input"
-                        type="text"
-                        name="version"
-                        class=INPUT
-                        placeholder="as stored"
-                        value=initial
-                    />
-                </label>
+                {field(
+                    "adl2-version-input",
+                    "Release version (1.1.0, or a 1 / 1.0 prefix)",
+                    None,
+                    view! {
+                        <input
+                            id="adl2-version-input"
+                            type="text"
+                            name="version"
+                            class=INPUT
+                            placeholder="as stored"
+                            value=initial
+                        />
+                    },
+                )}
                 <button id="adl2-version-apply" type="submit" class=BTN_SECONDARY>
                     "Show version"
                 </button>

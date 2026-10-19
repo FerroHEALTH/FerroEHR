@@ -21,6 +21,7 @@
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 
+use ferrohealth_ui::view::form::{field, keyed_field};
 use leptos::component;
 use leptos::prelude::*;
 use leptos_meta::Title;
@@ -957,23 +958,20 @@ fn number_input(
     signal: RwSignal<String>,
     apply: impl Fn() + 'static,
 ) -> AnyView {
-    view! {
-        <label class="fui-field">
-            <span class="fui-label">{label}</span>
-            <input
-                id=id
-                type="number"
-                step="any"
-                class="fui-input"
-                prop:value=move || signal.get()
-                on:input:target=move |ev| {
-                    signal.set(ev.target().value());
-                    apply();
-                }
-            />
-        </label>
-    }
-    .into_any()
+    let input = view! {
+        <input
+            id=id.clone()
+            type="number"
+            step="any"
+            class="fui-input"
+            prop:value=move || signal.get()
+            on:input:target=move |ev| {
+                signal.set(ev.target().value());
+                apply();
+            }
+        />
+    };
+    keyed_field(id, label, None, input).into_any()
 }
 
 /// `DV_QUANTITY`: magnitude min/max plus a units selector (a `<select>` from
@@ -1001,7 +999,7 @@ fn quantity_editor(
     let unit_options = meta.map(|m| m.unit_options).unwrap_or_default();
     let min_field = number_input(format!("{key}-min"), "min magnitude", min_s, apply.clone());
     let max_field = number_input(format!("{key}-max"), "max magnitude", max_s, apply.clone());
-    let units_control = units_input(unit_options, units_s, apply);
+    let units_control = units_input(format!("{key}-units"), unit_options, units_s, apply);
 
     view! { <div class="fui-field-flow">{min_field}{max_field}{units_control}</div> }.into_any()
 }
@@ -1009,27 +1007,26 @@ fn quantity_editor(
 /// The units control: a constrained `<select>` when the catalog supplies unit
 /// options, else a free-text input.
 fn units_input(
+    id: String,
     options: Vec<String>,
     units_s: RwSignal<String>,
     apply: impl Fn() + Clone + 'static,
 ) -> AnyView {
     if options.is_empty() {
         let apply = apply.clone();
-        return view! {
-            <label class="fui-field">
-                <span class="fui-label">"units"</span>
-                <input
-                    type="text"
-                    class="fui-input"
-                    prop:value=move || units_s.get()
-                    on:input:target=move |ev| {
-                        units_s.set(ev.target().value());
-                        apply();
-                    }
-                />
-            </label>
-        }
-        .into_any();
+        let input = view! {
+            <input
+                id=id.clone()
+                type="text"
+                class="fui-input"
+                prop:value=move || units_s.get()
+                on:input:target=move |ev| {
+                    units_s.set(ev.target().value());
+                    apply();
+                }
+            />
+        };
+        return keyed_field(id, "units", None, input).into_any();
     }
     let opts = options
         .into_iter()
@@ -1038,23 +1035,21 @@ fn units_input(
             view! { <option value=u>{label}</option> }
         })
         .collect::<Vec<_>>();
-    view! {
-        <label class="fui-field">
-            <span class="fui-label">"units"</span>
-            <select
-                class="fui-select"
-                prop:value=move || units_s.get()
-                on:change:target=move |ev| {
-                    units_s.set(ev.target().value());
-                    apply();
-                }
-            >
-                <option value="">"(any units)"</option>
-                {opts}
-            </select>
-        </label>
-    }
-    .into_any()
+    let select = view! {
+        <select
+            id=id.clone()
+            class="fui-select"
+            prop:value=move || units_s.get()
+            on:change:target=move |ev| {
+                units_s.set(ev.target().value());
+                apply();
+            }
+        >
+            <option value="">"(any units)"</option>
+            {opts}
+        </select>
+    };
+    keyed_field(id, "units", None, select).into_any()
 }
 
 /// `DV_COUNT`: integer magnitude min/max.
@@ -1282,23 +1277,20 @@ fn coded_terminology_field(
 ) -> AnyView {
     let id = format!("qb-coded-terminology-{key}");
     let terminology = coded.terminology;
-    view! {
-        <label class="fui-field">
-            <span class="fui-label">"terminology"</span>
-            <input
-                id=id
-                type="text"
-                list="qb-terminology-options"
-                class="fui-input"
-                prop:value=move || terminology.get()
-                on:input:target=move |ev| {
-                    terminology.set(ev.target().value());
-                    apply_coded(ctx, coded, &path);
-                }
-            />
-        </label>
-    }
-    .into_any()
+    let input = view! {
+        <input
+            id=id.clone()
+            type="text"
+            list="qb-terminology-options"
+            class="fui-input"
+            prop:value=move || terminology.get()
+            on:input:target=move |ev| {
+                terminology.set(ev.target().value());
+                apply_coded(ctx, coded, &path);
+            }
+        />
+    };
+    keyed_field(id, "terminology", None, input).into_any()
 }
 
 /// The code entry: type a code, then either look its rubric up in the named
@@ -1350,16 +1342,20 @@ fn coded_code_entry(key: &str, coded: CodedCtx, path: Vec<usize>, ctx: BuilderCt
     view! {
         <div class="space-y-1">
             <div class="fui-field-flow">
-                <label class="fui-field">
-                    <span class="fui-label">"code"</span>
-                    <input
-                        id=code_id
-                        type="text"
-                        class="fui-input"
-                        prop:value=move || draft.get()
-                        on:input:target=move |ev| draft.set(ev.target().value())
-                    />
-                </label>
+                {keyed_field(
+                    code_id.clone(),
+                    "code",
+                    None,
+                    view! {
+                        <input
+                            id=code_id
+                            type="text"
+                            class="fui-input"
+                            prop:value=move || draft.get()
+                            on:input:target=move |ev| draft.set(ev.target().value())
+                        />
+                    },
+                )}
                 <button
                     id=lookup_id
                     type="button"
@@ -1470,16 +1466,20 @@ fn coded_value_set(key: &str, coded: CodedCtx, path: Vec<usize>, ctx: BuilderCtx
     view! {
         <div class="space-y-1">
             <div class="fui-field-flow">
-                <label class="fui-field">
-                    <span class="fui-label">"value set (optional)"</span>
-                    <input
-                        id=value_set_id
-                        type="text"
-                        class="fui-input"
-                        prop:value=move || draft.get()
-                        on:input:target=move |ev| draft.set(ev.target().value())
-                    />
-                </label>
+                {keyed_field(
+                    value_set_id.clone(),
+                    "value set (optional)",
+                    None,
+                    view! {
+                        <input
+                            id=value_set_id
+                            type="text"
+                            class="fui-input"
+                            prop:value=move || draft.get()
+                            on:input:target=move |ev| draft.set(ev.target().value())
+                        />
+                    },
+                )}
                 <button
                     id=expand_id
                     type="button"
@@ -1667,6 +1667,8 @@ fn text_editor(is_contains: bool, text: String, path: Vec<usize>, ctx: BuilderCt
 fn datetime_editor(from: String, to: String, path: Vec<usize>, ctx: BuilderCtx) -> AnyView {
     let from_s = RwSignal::new(from);
     let to_s = RwSignal::new(to);
+    let key = path_key(&path);
+    let (from_id, to_id) = (format!("{key}-from"), format!("{key}-to"));
     let apply = move || {
         let kind = CriterionKind::DateTimeRange {
             from: from_s.get_untracked(),
@@ -1678,32 +1680,42 @@ fn datetime_editor(from: String, to: String, path: Vec<usize>, ctx: BuilderCtx) 
     let apply_to = apply;
     view! {
         <div class="fui-field-flow">
-            <label class="fui-field">
-                <span class="fui-label">"from"</span>
-                <input
-                    type="text"
-                    placeholder="2026-01-01T00:00:00Z"
-                    class="fui-input"
-                    prop:value=move || from_s.get()
-                    on:input:target=move |ev| {
-                        from_s.set(ev.target().value());
-                        apply_from();
-                    }
-                />
-            </label>
-            <label class="fui-field">
-                <span class="fui-label">"to"</span>
-                <input
-                    type="text"
-                    placeholder="2026-12-31T23:59:59Z"
-                    class="fui-input"
-                    prop:value=move || to_s.get()
-                    on:input:target=move |ev| {
-                        to_s.set(ev.target().value());
-                        apply_to();
-                    }
-                />
-            </label>
+            {keyed_field(
+                from_id.clone(),
+                "from",
+                None,
+                view! {
+                    <input
+                        id=from_id
+                        type="text"
+                        placeholder="2026-01-01T00:00:00Z"
+                        class="fui-input"
+                        prop:value=move || from_s.get()
+                        on:input:target=move |ev| {
+                            from_s.set(ev.target().value());
+                            apply_from();
+                        }
+                    />
+                },
+            )}
+            {keyed_field(
+                to_id.clone(),
+                "to",
+                None,
+                view! {
+                    <input
+                        id=to_id
+                        type="text"
+                        placeholder="2026-12-31T23:59:59Z"
+                        class="fui-input"
+                        prop:value=move || to_s.get()
+                        on:input:target=move |ev| {
+                            to_s.set(ev.target().value());
+                            apply_to();
+                        }
+                    />
+                },
+            )}
         </div>
     }
     .into_any()
@@ -2016,25 +2028,22 @@ fn order_editor(ctx: BuilderCtx, rules: &[OrderRule]) -> AnyView {
 /// The limit editor: a numeric fetch size; empty clears the limit.
 fn limit_editor(ctx: BuilderCtx, limit: Option<u32>) -> AnyView {
     let limit_s = RwSignal::new(limit.map(|n| n.to_string()).unwrap_or_default());
-    view! {
-        <label class="fui-field fui-control-narrow">
-            <span class="fui-label">"Limit"</span>
-            <input
-                id="qb-limit"
-                type="number"
-                min="1"
-                class="fui-input"
-                prop:value=move || limit_s.get()
-                on:input:target=move |ev| {
-                    let raw = ev.target().value();
-                    limit_s.set(raw.clone());
-                    let parsed = raw.trim().parse::<u32>().ok();
-                    ctx.query.update(|q| q.limit = parsed);
-                }
-            />
-        </label>
-    }
-    .into_any()
+    let input = view! {
+        <input
+            id="qb-limit"
+            type="number"
+            min="1"
+            class="fui-input fui-control-narrow"
+            prop:value=move || limit_s.get()
+            on:input:target=move |ev| {
+                let raw = ev.target().value();
+                limit_s.set(raw.clone());
+                let parsed = raw.trim().parse::<u32>().ok();
+                ctx.query.update(|q| q.limit = parsed);
+            }
+        />
+    };
+    field("qb-limit", "Limit", None, input).into_any()
 }
 
 // ---------------------------------------------------------------------------
@@ -2234,43 +2243,55 @@ pub(crate) fn save_as_fields(id_prefix: &str, fields: SaveFields) -> AnyView {
             }
         })
     });
-    let field = INPUT;
+    let input_class = INPUT;
     view! {
         <div class="flex flex-col gap-1">
             <div class="fui-field-flow">
-                <label class="fui-field">
-                    <span class="fui-label">"Namespace (optional)"</span>
-                    <input
-                        id=namespace_id
-                        type="text"
-                        placeholder="org.example"
-                        class=field
-                        prop:value=move || namespace.get()
-                        on:input:target=move |ev| namespace.set(ev.target().value())
-                    />
-                </label>
-                <label class="fui-field">
-                    <span class="fui-label">"Query name"</span>
-                    <input
-                        id=name_id
-                        type="text"
-                        placeholder="my_query"
-                        class=field
-                        prop:value=move || name.get()
-                        on:input:target=move |ev| name.set(ev.target().value())
-                    />
-                </label>
-                <label class="fui-field">
-                    <span class="fui-label">"Version (optional)"</span>
-                    <input
-                        id=version_id
-                        type="text"
-                        placeholder="1.0.0"
-                        class=field
-                        prop:value=move || version.get()
-                        on:input:target=move |ev| version.set(ev.target().value())
-                    />
-                </label>
+                {keyed_field(
+                    namespace_id.clone(),
+                    "Namespace (optional)",
+                    None,
+                    view! {
+                        <input
+                            id=namespace_id
+                            type="text"
+                            placeholder="org.example"
+                            class=input_class
+                            prop:value=move || namespace.get()
+                            on:input:target=move |ev| namespace.set(ev.target().value())
+                        />
+                    },
+                )}
+                {keyed_field(
+                    name_id.clone(),
+                    "Query name",
+                    None,
+                    view! {
+                        <input
+                            id=name_id
+                            type="text"
+                            placeholder="my_query"
+                            class=input_class
+                            prop:value=move || name.get()
+                            on:input:target=move |ev| name.set(ev.target().value())
+                        />
+                    },
+                )}
+                {keyed_field(
+                    version_id.clone(),
+                    "Version (optional)",
+                    None,
+                    view! {
+                        <input
+                            id=version_id
+                            type="text"
+                            placeholder="1.0.0"
+                            class=input_class
+                            prop:value=move || version.get()
+                            on:input:target=move |ev| version.set(ev.target().value())
+                        />
+                    },
+                )}
             </div>
             {move || {
                 qualified
