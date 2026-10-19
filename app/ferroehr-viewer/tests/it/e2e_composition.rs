@@ -243,7 +243,7 @@ async fn composition_viewer_reads_versioned_object_and_version_envelope() {
     let options = select.find_all(By::Tag("option")).await;
     options.last().expect("a version option").click().await;
     wait_fact_contains(&h, "version", "::1").await;
-    wait_fact_contains(&h, "preceding", "—").await;
+    wait_fact_contains(&h, "preceding", "(no value)").await;
     h.shot(2, "versioned-object-version-1").await;
 
     h.assert_console_clean(&["401", "Failed to load resource"])
