@@ -183,7 +183,7 @@ operator their data was scanned.
 | `ch-ahvn13` | CH | AHV-Nummer (AHVN13) | [AHVV Art. 133](https://www.fedlex.admin.ch/eli/cc/63/1185_1183_1185/de) for the structure; the check digit from the [BSV Wegleitung VA/IK 318.106.02 d, Anhang 7](https://sozialversicherungen.admin.ch/de/d/6938/download); matches the plain run and the `756.3047.5009.62` display form |
 | `ch-epd-pid` | CH | Patientenidentifikationsnummer (EPD-PID) | [EPDV-EDI Anhang 1](https://www.fedlex.admin.ch/eli/cc/2017/205/de), vendored at `docs/law/ch/epdv-edi/`: the fixed prefix `76133761` and a mod-10 check digit |
 | `de-kvnr` | DE | Krankenversichertennummer (the unchangeable part) | [GKV-Spitzenverband, Richtlinie nach § 290 SGB V, 3.4.1, with Anlage 1](https://www.gkv-datenaustausch.de/kvnr/kvnr.jsp); the letter-to-digit convention (A=01 … Z=26) is stated in prose only in the same Richtlinie's Anlage 2 and fixed for A and C by the KVNR's own worked examples |
-| `fi-hetu` | FI | henkilötunnus | [Digital and Population Data Services Agency](https://dvv.fi/en/personal-identity-code) |
+| `fi-hetu` | FI | henkilötunnus | [Valtioneuvoston asetus väestötietojärjestelmästä 128/2010, 2 §](https://www.finlex.fi/fi/laki/ajantasa/2010/20100128): the date of birth, the century sign, the individual number and the mod-31 check character |
 | `gb-nhs-number` | GB | NHS Number | [NHS Data Model and Dictionary](https://www.datadictionary.nhs.uk/attributes/nhs_number.html) |
 | `nl-bsn` | NL | burgerservicenummer | [Rijksdienst voor Identiteitsgegevens, Logisch Ontwerp BSN](https://www.rvig.nl/logisch-ontwerp-bsn) |
 | `no-fodselsnummer` | NO | fødselsnummer | [Skatteetaten](https://skatteetaten.github.io/folkeregisteret-api-dokumentasjon/nytt-fodselsnummer-fra-2032/) |
