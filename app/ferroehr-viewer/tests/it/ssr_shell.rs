@@ -512,6 +512,65 @@ async fn the_shell_links_the_bundle_stylesheet_from_the_document_head() {
     );
 }
 
+/// The shell links the FerroEHR mark as the tab icon, and both icon paths
+/// answer `200` with the mark, without a session (#3808): a browser asks for
+/// `/favicon.ico` unasked, and a `404` there costs every page load a failed
+/// request.
+#[tokio::test]
+async fn the_shell_links_the_icon_and_both_icon_paths_serve_the_mark() {
+    use tower::util::ServiceExt;
+
+    let pass = render_route("/login").await;
+    let head = pass
+        .html
+        .split_once("<body")
+        .map_or(pass.html.as_str(), |(head, _)| head);
+    assert!(
+        head.contains(r#"rel="icon""#) && head.contains(r#"href="/favicon.svg""#),
+        "the shell must link the icon in <head>: {head}"
+    );
+
+    drop(leptos_axum::generate_route_list(|| ()));
+    for (path, content_type, starts) in [
+        ("/favicon.svg", "image/svg+xml", b"<svg".as_slice()),
+        (
+            "/favicon.ico",
+            "image/x-icon",
+            b"\x00\x00\x01\x00".as_slice(),
+        ),
+    ] {
+        let options = LeptosOptions::builder()
+            .output_name(env!("CARGO_PKG_NAME"))
+            .build();
+        let service = ferroehr_viewer::server::router(app_state(), options);
+        let request = http::Request::builder()
+            .uri(path)
+            .body(axum::body::Body::empty())
+            .expect("the request fixture should build from a static URI and an empty body");
+        let (parts, body) = service
+            .oneshot(request)
+            .await
+            .expect("the service is infallible")
+            .into_parts();
+        assert_eq!(parts.status, http::StatusCode::OK, "{path}");
+        assert_eq!(
+            parts
+                .headers
+                .get(http::header::CONTENT_TYPE)
+                .and_then(|value| value.to_str().ok()),
+            Some(content_type),
+            "{path}"
+        );
+        let bytes = axum::body::to_bytes(body, usize::MAX)
+            .await
+            .expect("the response body should read back in full from an in-memory body");
+        assert!(
+            bytes.starts_with(starts),
+            "{path} must serve the FerroEHR mark"
+        );
+    }
+}
+
 /// The in-view guard (`AppShell`'s `<Redirect/>`) still stands behind the
 /// router layer: rendered bare (no axum service, so no login guard), a
 /// guarded URL keeps answering `302 → /login` on the response line — the

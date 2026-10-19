@@ -479,9 +479,7 @@ fn version_section(
         <section class=format!("{CARD_PAD} mb-4")>
             <h2 class=CARD_TITLE>"Version"</h2>
             <Transition fallback=|| {
-                view! {
-                    {ferrohealth_ui::view::empty::skeleton(1, "Loading…")}
-                }
+                view! { {ferrohealth_ui::view::empty::skeleton(1, "Loading…")} }
             }>{chips}</Transition>
             {version_form(template_id, tab, version)}
         </section>
@@ -626,13 +624,21 @@ fn absent_view(what: &str) -> AnyView {
          or go back to the ADL2 listing."
     );
     view! {
-        {ferrohealth_ui::view::notice::notice(ferrohealth_ui::tone::Tone::Warn, ferrohealth_ui::view::notice::Announce::Status, None, view! { {message} " "
+        {ferrohealth_ui::view::notice::notice(
+            ferrohealth_ui::tone::Tone::Warn,
+            ferrohealth_ui::view::notice::Announce::Status,
+            None,
+            view! {
+                {message}
+                " "
                 <leptos_router::components::A
                     href=TemplateFamily::Adl2.href()
                     attr:class="text-accent hover:underline"
                 >
                     "ADL2 templates"
-                </leptos_router::components::A> })}
+                </leptos_router::components::A>
+            },
+        )}
     }
     .into_any()
 }
@@ -646,7 +652,12 @@ fn source_tab(source: Resource<Result<PaneBody, ViewerError>>) -> AnyView {
                 match source.await {
                     Ok(PaneBody::Idle) => ().into_any(),
                     Ok(PaneBody::Loaded(text)) => {
-                        view! { <crate::components::format_view::DocumentPane id="adl2-source-document" body=text /> }
+                        view! {
+                            <crate::components::format_view::DocumentPane
+                                id="adl2-source-document"
+                                body=text
+                            />
+                        }
                             .into_any()
                     }
                     Ok(PaneBody::Absent) => absent_view("ADL2 source"),
@@ -671,7 +682,12 @@ fn json_tab(json: Resource<Result<PaneBody, ViewerError>>) -> AnyView {
                             &raw,
                             ReprFormat::CanonicalJson,
                         );
-                        view! { <crate::components::format_view::DocumentPane id="adl2-opt-document" body=pretty /> }
+                        view! {
+                            <crate::components::format_view::DocumentPane
+                                id="adl2-opt-document"
+                                body=pretty
+                            />
+                        }
                             .into_any()
                     }
                     Ok(PaneBody::Absent) => absent_view("OperationalTemplateV2 JSON"),
@@ -713,7 +729,12 @@ fn example_tab(
                                 &raw,
                                 format.get_untracked(),
                             );
-                            view! { <crate::components::format_view::DocumentPane id="adl2-example-document" body=pretty /> }
+                            view! {
+                                <crate::components::format_view::DocumentPane
+                                    id="adl2-example-document"
+                                    body=pretty
+                                />
+                            }
                                 .into_any()
                         }
                         Ok(PaneBody::Absent) => absent_view("example composition"),

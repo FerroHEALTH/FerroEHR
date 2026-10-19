@@ -233,9 +233,7 @@ where
 {
     let count = row_total(rows.len());
     let total = Signal::derive(move || count);
-    let body = view! {
-        <For each=move || page_rows(&rows, paging.window(total.get())) key=key children=row />
-    }
+    let body = view! { <For each=move || page_rows(&rows, paging.window(total.get())) key=key children=row /> }
     .into_any();
     let footer = table_footer(base, label, noun, paging, total);
     view! {

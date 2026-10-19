@@ -433,13 +433,7 @@ fn create_section(kind: PartyKind, toaster: ferrohealth_ui::widget::toast::Toast
             <label class=LABEL r#for="party-create-body">
                 {format!("{} document (canonical JSON)", kind.rm_type())}
             </label>
-            {code_field(
-                "party-create-body",
-                Language::Json,
-                body,
-                None,
-                Height::Document,
-            )}
+            {code_field("party-create-body", Language::Json, body, None, Height::Document)}
             <div class="mt-3 flex items-center gap-3">
                 <button
                     id="party-create-submit"
@@ -619,9 +613,15 @@ fn tag_index_row(
     view! {
         <tr class=ROW>
             <td class=CELL_MONO>{key}</td>
-            <td class=CELL data-label="Value">{value}</td>
-            <td class=CELL_MONO data-label="Target path">{target_path}</td>
-            <td class=CELL_MONO data-label="Target">{shown_target}</td>
+            <td class=CELL data-label="Value">
+                {value}
+            </td>
+            <td class=CELL_MONO data-label="Target path">
+                {target_path}
+            </td>
+            <td class=CELL_MONO data-label="Target">
+                {shown_target}
+            </td>
             <td class=CELL data-label="Actions">
                 <button
                     type="button"

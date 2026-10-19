@@ -497,9 +497,7 @@ fn subsumption_card(selected: Signal<String>) -> AnyView {
                     "Test"
                 </button>
             </div>
-            <p class="mt-2 fui-help">
-                "Subsumption is strict: a code never subsumes itself."
-            </p>
+            <p class="mt-2 fui-help">"Subsumption is strict: a code never subsumes itself."</p>
             <div class="mt-2 text-sm">
                 <Show when=move || test.pending().get()>
                     <span class="text-ink-muted">"Testing…"</span>
@@ -724,8 +722,12 @@ fn terms_table(extract: &TerminologyExtractView, hook: &'static str) -> AnyView 
                     <td class=CELL_MONO data-term-code=code_hook>
                         {rubric}
                     </td>
-                    <td class=CELL data-label="Language">{language}</td>
-                    <td class=CELL data-label="Preferred">{preferred}</td>
+                    <td class=CELL data-label="Language">
+                        {language}
+                    </td>
+                    <td class=CELL data-label="Preferred">
+                        {preferred}
+                    </td>
                 </tr>
             }
         })
@@ -749,8 +751,12 @@ fn relationships_table(extract: &TerminologyExtractView) -> AnyView {
             view! {
                 <tr class=ROW>
                     <td class=CELL_MONO>{origin}</td>
-                    <td class=CELL data-label="Relation">{name}</td>
-                    <td class=CELL_MONO data-label="Targets">{targets}</td>
+                    <td class=CELL data-label="Relation">
+                        {name}
+                    </td>
+                    <td class=CELL_MONO data-label="Targets">
+                        {targets}
+                    </td>
                 </tr>
             }
         })

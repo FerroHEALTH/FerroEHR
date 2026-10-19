@@ -157,13 +157,15 @@ fn versioned_card(facts: &VersionedObjectFacts) -> AnyView {
         view! {
             <div>
                 <dt>"contribution"</dt>
-                <dd><leptos_router::components::A
-                    href=href
-                    attr:class="font-mono wrap-break-word text-accent hover:underline"
-                    attr:data-demographic-fact="contribution"
-                >
-                    {shown}
-                </leptos_router::components::A></dd>
+                <dd>
+                    <leptos_router::components::A
+                        href=href
+                        attr:class="font-mono wrap-break-word text-accent hover:underline"
+                        attr:data-demographic-fact="contribution"
+                    >
+                        {shown}
+                    </leptos_router::components::A>
+                </dd>
             </div>
         }
         .into_any()

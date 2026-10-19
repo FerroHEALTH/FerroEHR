@@ -850,8 +850,14 @@ fn empty_family_state(family: TemplateFamily) -> AnyView {
             "Upload your first ADL2 operational template with the Upload ADL2 button above."
         }
     };
-    view! { <EmptyState icon=ferrohealth_ui::icon::Glyph::FILE_CODE message="No templates yet" hint=hint /> }
-        .into_any()
+    view! {
+        <EmptyState
+            icon=ferrohealth_ui::icon::Glyph::FILE_CODE
+            message="No templates yet"
+            hint=hint
+        />
+    }
+    .into_any()
 }
 
 /// One table row: the template id links to its family's detail route; concept
@@ -877,9 +883,15 @@ fn row_view(
                     {row.template_id}
                 </leptos_router::components::A>
             </td>
-            <td class=CELL data-label="Concept">{row.concept}</td>
-            <td class=CELL_MONO data-label="Archetype ID">{row.archetype_id}</td>
-            <td class=CELL data-label="Created">{ferrohealth_ui::view::time::timestamp(&row.created)}</td>
+            <td class=CELL data-label="Concept">
+                {row.concept}
+            </td>
+            <td class=CELL_MONO data-label="Archetype ID">
+                {row.archetype_id}
+            </td>
+            <td class=CELL data-label="Created">
+                {ferrohealth_ui::view::time::timestamp(&row.created)}
+            </td>
             {action}
         </tr>
     }

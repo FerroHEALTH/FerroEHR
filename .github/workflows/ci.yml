@@ -382,6 +382,13 @@ jobs:
           # rustfmt compiles nothing — a restored target/registry cache is
           # pure download time here.
           cache: false
+      # The viewer's `view!` bodies are formatted by leptosfmt, which rustfmt
+      # leaves alone (#3814). Pinned here and in the ui-gates skill; leptosfmt
+      # runs first because its output moves where rustfmt breaks a chain.
+      - uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
+        with:
+          tool: leptosfmt@0.1.33
+      - run: leptosfmt --check app/ferroehr-viewer/src app/ferroehr-viewer/tests
       - run: cargo fmt --all --check
 
   # ── Always required: no AI/Claude attribution in commit messages ────────────

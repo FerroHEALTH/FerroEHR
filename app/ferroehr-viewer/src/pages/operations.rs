@@ -153,9 +153,7 @@ pub fn OperationsPage() -> impl IntoView {
 
 /// The `<Suspense>` fallback shared by every data-backed card.
 fn card_skeleton() -> impl IntoView {
-    view! {
-        {ferrohealth_ui::view::empty::skeleton(3, "Loading…")}
-    }
+    view! { {ferrohealth_ui::view::empty::skeleton(3, "Loading…")} }
 }
 
 /// A status pill in the shared chip shape: `UP` reads neutral-good, `DEGRADED`
@@ -219,12 +217,18 @@ fn readiness_body(view: ReadinessView) -> AnyView {
                 } else {
                     component.detail
                 };
-                view! { <td class=CELL data-label="Detail">{text}</td> }
+                view! {
+                    <td class=CELL data-label="Detail">
+                        {text}
+                    </td>
+                }
             });
             view! {
                 <tr class=ROW>
                     <td class=CELL_MONO>{component.name}</td>
-                    <td class=CELL data-label="Status">{pill}</td>
+                    <td class=CELL data-label="Status">
+                        {pill}
+                    </td>
                     {detail}
                 </tr>
             }
@@ -490,7 +494,9 @@ fn metric_detail_body(detail: MetricDetailView) -> AnyView {
             view! {
                 <tr class=ROW>
                     <td class=CELL_MONO>{labels}</td>
-                    <td class=format!("{CELL} fui-num") data-label="Value">{value}</td>
+                    <td class=format!("{CELL} fui-num") data-label="Value">
+                        {value}
+                    </td>
                 </tr>
             }
             .into_any()
@@ -631,7 +637,10 @@ fn loggers_body(
                     disabled=move || draft.read().trim().is_empty()
                     on:click=move |_| pending_apply.set(Some(draft.read().trim().to_owned()))
                 >
-                    {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::SLIDERS_HORIZONTAL, "14")}
+                    {ferrohealth_ui::icon::icon(
+                        ferrohealth_ui::icon::Glyph::SLIDERS_HORIZONTAL,
+                        "14",
+                    )}
                     " Apply filter"
                 </button>
                 <button
@@ -715,9 +724,16 @@ fn filter_dialogs(
 /// an error to report.
 fn surface_absent(what: &'static str) -> AnyView {
     view! {
-        {ferrohealth_ui::view::notice::notice(ferrohealth_ui::tone::Tone::Info, ferrohealth_ui::view::notice::Announce::Status, None, view! { {what}
+        {ferrohealth_ui::view::notice::notice(
+            ferrohealth_ui::tone::Tone::Info,
+            ferrohealth_ui::view::notice::Announce::Status,
+            None,
+            view! {
+                {what}
                 " is not available: the CDR does not serve this management endpoint. Enable it "
-                "server-side ([management] — each endpoint takes its own access level)." })}
+                "server-side ([management] — each endpoint takes its own access level)."
+            },
+        )}
     }
     .into_any()
 }
