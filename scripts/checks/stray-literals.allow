@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+# The literals scripts/checks/stray-literals.sh reads as words that no
+# reader of the viewer sees as its text, each with the reason, and the
+# files it does not cover.
+
+skip app/ferroehr-viewer/src/locale.rs   # the catalog mechanism: message ids
+
+allow ^(ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Home|End|Enter|Escape|Tab)$   # UI Events KeyboardEvent.key values
+allow ^Ferro(BRIDGE|FED|EHR|TERM|HEALTH)   # product names, the same in every language
+allow ^Cadasto B\.V\.$                      # the maker's legal name
