@@ -371,7 +371,7 @@ fn contribution_row_view(row: &ContributionRow) -> AnyView {
     view! {
         <tr class=ROW>
             <td class=CELL_MONO>{row.uid.clone()}</td>
-            <td class=CELL data-label="Committed">{row.time_committed.clone()}</td>
+            <td class=CELL data-label="Committed">{crate::components::timestamp::timestamp(row.time_committed.clone())}</td>
             <td class=CELL data-label="Committer">{row.committer.clone()}</td>
             <td class=CELL title=row.change_type.clone() data-label="Change type">
                 {change_type}

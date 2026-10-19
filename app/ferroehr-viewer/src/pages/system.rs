@@ -648,7 +648,7 @@ fn status_body(body: &str) -> Result<AnyView, ViewerError> {
         .map(|(k, v)| {
             view! {
                 <dt class="font-medium text-ink-muted">{k}</dt>
-                <dd class="font-mono wrap-break-word text-ink">{v}</dd>
+                <dd class="font-mono wrap-break-word text-ink">{crate::components::timestamp::fact_value(v)}</dd>
             }
         })
         .collect::<Vec<_>>();

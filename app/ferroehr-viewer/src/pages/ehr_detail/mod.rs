@@ -280,11 +280,7 @@ fn summary_facts(summary: &EhrSummary) -> AnyView {
 
 /// One label/value line of the summary card (an absent value shows an em dash).
 fn summary_fact(label: String, value: String) -> AnyView {
-    let shown = if value.is_empty() {
-        "—".to_owned()
-    } else {
-        value
-    };
+    let shown = crate::components::timestamp::fact_value(value);
     view! {
         <div>
             <dt>{label}</dt>

@@ -42,7 +42,9 @@ workflow refuses a tag that has no matching section here.
   the directory JSON, the staged change, the relationship details, the AQL
   editor and its parameters, and the template upload) is a highlighted,
   numbered editor that opens on an indented document, and on a phone every
-  listing shows each row as a card with every column named.
+  listing shows each row as a card with every column named. Every timestamp
+  reads as "2026-10-18 23:18:37 UTC" on one line, with the exact value the
+  CDR sent in its tooltip.
 
 ### Security
 

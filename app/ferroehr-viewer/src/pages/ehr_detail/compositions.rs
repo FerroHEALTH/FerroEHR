@@ -596,7 +596,12 @@ fn composition_row(row: &[Value], ehr_id: &str) -> AnyView {
                 .into_any()
             } else {
                 let label = COMPOSITION_LABELS.get(i).copied().unwrap_or_default();
-                view! { <td class=CELL data-label=label>{text}</td> }.into_any()
+                let shown = if label == "Started" {
+                    crate::components::timestamp::timestamp(text)
+                } else {
+                    text.into_any()
+                };
+                view! { <td class=CELL data-label=label>{shown}</td> }.into_any()
             }
         })
         .collect::<Vec<_>>();

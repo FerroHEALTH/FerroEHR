@@ -26,11 +26,7 @@ pub fn fact_row(
     hook: &'static str,
     value: String,
 ) -> AnyView {
-    let shown = if value.is_empty() {
-        "—".to_owned()
-    } else {
-        value
-    };
+    let shown = crate::components::timestamp::fact_value(value);
     // The hook attribute's NAME is data, so the whole attribute set is applied
     // with the custom-attribute API: attributes serialize in the order they are
     // applied, and a view-declared one would sort AFTER them.

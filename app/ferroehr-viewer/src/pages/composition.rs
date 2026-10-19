@@ -889,11 +889,7 @@ fn versioned_card(details: &VersionedCompositionDetails) -> AnyView {
 /// `data-versioned-fact` value — the stable E2E hook; an absent value shows an
 /// em dash.
 fn versioned_row(label: &'static str, hook: &'static str, value: String) -> AnyView {
-    let shown = if value.is_empty() {
-        "—".to_owned()
-    } else {
-        value
-    };
+    let shown = crate::components::timestamp::fact_value(value);
     view! {
         <div>
             <dt>{label}</dt>
@@ -1368,11 +1364,7 @@ fn audit_card(entry: Option<&VersionEntry>) -> AnyView {
 
 /// One label/value line in the audit card (empty values shown as an em dash).
 fn audit_row(label: &'static str, value: String) -> AnyView {
-    let shown = if value.is_empty() {
-        "—".to_owned()
-    } else {
-        value
-    };
+    let shown = crate::components::timestamp::fact_value(value);
     view! {
         <div>
             <dt>{label}</dt>

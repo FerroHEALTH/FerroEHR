@@ -603,7 +603,7 @@ fn row_view(
                     {state}
                 </span>
             </td>
-            <td class=CELL_MONO data-label="Created">{row.created_at}</td>
+            <td class=CELL data-label="Created">{crate::components::timestamp::timestamp(row.created_at)}</td>
             <td class=ferrohealth_ui::table::view::ACTIONS data-label="Actions">
                 <div class="flex justify-end gap-2">
                     <button
