@@ -8,7 +8,7 @@ metadata:
   modified: 2026-10-08T09:10:23.250Z
 ---
 
-**FerroHEALTH** is the family (mother) name; FerroEHR is one product in it, beside FerroBRIDGE, FerroTERM, FerroCHART, FerroFED and the planned FerroPIX, FerroSMART, FerroSYS, FerroTASK; every product links one family book instead of copying it. Cadasto B.V. is the manufacturer of every product. The family site is <https://ferrohealth.eu> (repo FerroHEALTH/FerroHEALTH, local `/Users/ruben.talstra/RustroverProjects/FerroHEALTH`); each product documents itself on its own domain.
+**FerroHEALTH** is the family (mother) name; FerroEHR is one product in it, beside FerroBRIDGE, FerroTERM, FerroCHART, FerroFED and the planned FerroPIX, FerroSYS, FerroTASK (no authorisation-server product: owner 2026-10-19, each product is its own SMART resource server, no central authorisation service); every product links one family book instead of copying it. Cadasto B.V. is the manufacturer of every product. The family site is <https://ferrohealth.eu> (repo FerroHEALTH/FerroHEALTH, local `/Users/ruben.talstra/RustroverProjects/FerroHEALTH`); each product documents itself on its own domain.
 
 **Why:** owner 2026-10-08: "most of our documentation needs to go to FerroHEALTH because not everything is only for FerroEHR… it's about the bundled products". Tracked as FerroHEALTH#37 (the family mdBook) with one issue per product: FerroEHR#3701 (v4.3.6), FerroBRIDGE#402, FerroTERM#709, FerroFED#848, FerroCHART#233. The owner: "otherwise we are duplicating so much of the same things"; a new product (FerroPIX first) starts from the family book.
 
