@@ -52,6 +52,7 @@ use crate::components::surface::{CARD_PAD, CARD_TITLE, WELL};
 use crate::components::toast::toast_success;
 use crate::error::ViewerError;
 use crate::format::ReprFormat;
+use crate::locale::{Msg, tr, tr_with};
 use crate::pages::ehr_detail::commit::staged::{
     ChangeType, StagedChange, StagedKind, check, create_target_label,
 };
@@ -61,7 +62,9 @@ use ferrohealth_ui::highlight::Language;
 
 /// The noun phrase every commit-failure toast is built around
 /// ([`crate::feedback::write_failure_copy`]).
-const COMMIT_OBJECT: &str = "this contribution";
+fn commit_object() -> String {
+    tr(Msg::ThisContribution)
+}
 
 /// What a successful commit reports back.
 ///
@@ -387,10 +390,12 @@ pub(super) fn commit_section(ehr_id: Signal<String>, selected: Memo<String>) -> 
     seed_status(form, status_seed);
     Effect::new(move |_| match commit.value().get() {
         Some(Ok(outcome)) => {
-            toast_success(toaster, "Contribution committed", &committed_copy(&outcome));
+            let title = tr(Msg::ContributionCommitted);
+            toast_success(toaster, &title, &committed_copy(&outcome));
         }
         Some(Err(error)) => {
-            crate::feedback::toast_write_failure(toaster, "Commit failed", COMMIT_OBJECT, &error);
+            let title = tr(Msg::CommitFailed);
+            crate::feedback::toast_write_failure(toaster, &title, &commit_object(), &error);
         }
         None => {}
     });
@@ -470,12 +475,12 @@ fn seed_status(form: CommitForm, resource: Resource<Result<Option<EhrStatusState
 fn staging_notice() -> AnyView {
     view! {
         <section class=CARD_PAD id="stage-notice">
-            <h2 class=CARD_TITLE>"Commit several changes as one contribution"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::CommitSeveralChangesOneContribution)}</h2>
             <p class="text-sm text-ink-muted">
-                "A CONTRIBUTION is openEHR's atomic change set: every staged change is committed together, or none of them is. Stage the changes that belong together — a new composition and the EHR status it goes with — then commit once."
+                {tr(Msg::ContributionOpenehrSAtomicChangeSet)}
             </p>
             <p class="mt-2 text-xs text-ink-faint">
-                "Staged changes live in this browser tab only. The viewer stores nothing of its own, so leaving this screen discards them; nothing reaches the CDR until you commit."
+                {tr(Msg::StagedChangesLiveBrowserTabOnly)}
             </p>
         </section>
     }
@@ -509,7 +514,7 @@ fn add_change_card(
     let draft = draft_editor(form, unseeded);
     view! {
         <section class=CARD_PAD id="stage-add">
-            <h2 class=CARD_TITLE>"Add a change"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::AddAChange)}</h2>
             <div class="flex flex-col gap-3">
                 <div class="fui-field-flow">
                     {kind_row} <div class="flex flex-col gap-1" class:hidden=move || !is_create()>
@@ -521,7 +526,7 @@ fn add_change_card(
                 <div class:hidden=move || is_create()>{preceding_row}</div>
                 {draft}
                 <p class="text-xs text-ink-faint" class:hidden=move || !is_status()>
-                    "The document is the EHR's current status, loaded for you — edit it and it commits as a new EHR_STATUS version."
+                    {tr(Msg::DocumentEhrSCurrentStatusLoaded)}
                 </p>
             </div>
         </section>
@@ -534,7 +539,7 @@ fn kind_picker(form: CommitForm) -> AnyView {
     view! {
         <div class="flex flex-col gap-1">
             <label class=LABEL r#for="stage-kind">
-                "Change"
+                {tr(Msg::Change)}
             </label>
             <select
                 id="stage-kind"
@@ -544,9 +549,9 @@ fn kind_picker(form: CommitForm) -> AnyView {
                     form.switch_kind(StagedKind::from_value(&ev.target().value()));
                 }
             >
-                <option value="create">{StagedKind::CompositionCreate.label()}</option>
-                <option value="amend">{StagedKind::CompositionAmend.label()}</option>
-                <option value="status">{StagedKind::StatusModify.label()}</option>
+                <option value="create">{tr(StagedKind::CompositionCreate.label())}</option>
+                <option value="amend">{tr(StagedKind::CompositionAmend.label())}</option>
+                <option value="status">{tr(StagedKind::StatusModify.label())}</option>
             </select>
         </div>
     }
@@ -561,10 +566,10 @@ fn template_picker(
 ) -> AnyView {
     view! {
         <label class=LABEL r#for="stage-template">
-            "Template"
+            {tr(Msg::Template)}
         </label>
         <Transition fallback=|| {
-            view! { <span class="text-sm text-ink-muted">"Loading templates…"</span> }
+            view! { <span class="text-sm text-ink-muted">{tr(Msg::LoadingTemplates)}</span> }
         }>
             {move || Suspend::new(async move {
                 match templates.await {
@@ -586,7 +591,7 @@ fn template_picker(
                                 prop:value=move || form.template_id.get()
                                 on:change:target=move |ev| form.template_id.set(ev.target().value())
                             >
-                                <option value="">"— from the document —"</option>
+                                <option value="">{tr(Msg::FromTheDocument)}</option>
                                 {options}
                             </select>
                         }
@@ -609,10 +614,10 @@ fn composition_picker(
 ) -> AnyView {
     view! {
         <label class=LABEL r#for="stage-composition">
-            "Composition"
+            {tr(Msg::Composition2)}
         </label>
         <Transition fallback=|| {
-            view! { <span class="text-sm text-ink-muted">"Loading compositions…"</span> }
+            view! { <span class="text-sm text-ink-muted">{tr(Msg::LoadingCompositions)}</span> }
         }>
             {move || Suspend::new(async move {
                 match compositions.await {
@@ -626,7 +631,7 @@ fn composition_picker(
                                 let label = if name.is_empty() {
                                     uid.clone()
                                 } else {
-                                    format!("{name} — {uid}")
+                                    format!("{name} · {uid}")
                                 };
                                 view! { <option value=uid.clone()>{label}</option> }
                             })
@@ -643,7 +648,7 @@ fn composition_picker(
                                     form.composition_uid.set(ev.target().value());
                                 }
                             >
-                                <option value="">"— pick a composition —"</option>
+                                <option value="">{tr(Msg::PickAComposition)}</option>
                                 {options}
                             </select>
                         }
@@ -663,11 +668,11 @@ fn composition_picker(
 fn preceding_readout(form: CommitForm) -> AnyView {
     view! {
         <p class="fui-help">
-            <span class="font-medium">"Preceding version: "</span>
+            <span class="font-medium">{tr(Msg::PrecedingVersion2)}</span>
             <span id="stage-preceding" class="font-mono wrap-break-word">
                 {move || {
                     let uid = form.preceding.get();
-                    if uid.is_empty() { "not loaded yet".to_owned() } else { uid }
+                    if uid.is_empty() { tr(Msg::NotLoadedYet) } else { uid }
                 }}
             </span>
         </p>
@@ -681,7 +686,7 @@ fn change_type_picker(form: CommitForm) -> AnyView {
     view! {
         <div class="flex flex-col gap-1">
             <label class=LABEL r#for="stage-change-type">
-                "Change type"
+                {tr(Msg::ChangeType)}
             </label>
             <select
                 id="stage-change-type"
@@ -742,10 +747,10 @@ fn draft_editor(form: CommitForm, unseeded: Signal<bool>) -> AnyView {
     view! {
         <div class="flex flex-col gap-1">
             <label class=LABEL r#for="stage-body">
-                "Document (canonical JSON)"
+                {tr(Msg::DocumentCanonicalJson)}
             </label>
             <p class="fui-help">
-                "Paste the canonical JSON document, or pick a target above to load it."
+                {tr(Msg::PasteCanonicalJsonDocumentPickTarget)}
             </p>
             {code_field("stage-body", Language::Json, form.body, Some(unseeded), Height::Document)}
         </div>
@@ -759,7 +764,7 @@ fn draft_editor(form: CommitForm, unseeded: Signal<bool>) -> AnyView {
                 on:click=move |_| form.stage()
             >
                 {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::PLUS, "14")}
-                "Stage this change"
+                {tr(Msg::StageThisChange)}
             </button>
         </div>
         {complaint}
@@ -782,15 +787,15 @@ fn staging_list(form: CommitForm) -> AnyView {
                 view! {
                     <EmptyState
                         icon=ferrohealth_ui::icon::Glyph::LAYERS
-                        message="Nothing staged yet"
-                        hint="Add a change above; they commit together as one contribution."
+                        message=tr(Msg::NothingStagedYet)
+                        hint=tr(Msg::AddChangeAboveTheyCommitTogether)
                     />
                 }
             }
         >
             {table_shell(
-                "Staged changes",
-                &["Change", "Target", "Change type", ""],
+                &tr(Msg::StagedChanges),
+                &[&tr(Msg::Change), &tr(Msg::Target), &tr(Msg::ChangeType), ""],
                 view! {
                     <For each=move || form.staged.get() key=|change| change.seq let:change>
                         {staged_row(form, &change)}
@@ -804,7 +809,7 @@ fn staging_list(form: CommitForm) -> AnyView {
     view! {
         <section class=CARD_PAD id="stage-list">
             <h2 class=CARD_TITLE>
-                "Staged changes" <span id="stage-count" class="ml-2 font-normal text-ink-muted">
+                {tr(Msg::StagedChanges)} <span id="stage-count" class="ml-2 font-normal text-ink-muted">
                     {move || form.staged.with(Vec::len)}
                 </span>
             </h2>
@@ -817,7 +822,7 @@ fn staging_list(form: CommitForm) -> AnyView {
 /// One staged row plus its (hidden until asked for) document preview row.
 fn staged_row(form: CommitForm, change: &StagedChange) -> AnyView {
     let seq = change.seq;
-    let kind = change.kind.label();
+    let kind = tr(change.kind.label());
     let target = change.target.clone();
     let change_type = format!(
         "{} ({})",
@@ -840,13 +845,13 @@ fn staged_row(form: CommitForm, change: &StagedChange) -> AnyView {
     view! {
         <tr class=ROW data-staged=seq.to_string()>
             <td class=CELL>{kind}</td>
-            <td class=CELL_MONO data-label="Target">
+            <td class=CELL_MONO data-label=tr(Msg::Target)>
                 {target}
             </td>
-            <td class=CELL data-label="Change type">
+            <td class=CELL data-label=tr(Msg::ChangeType)>
                 {change_type}
             </td>
-            <td class=CELL data-label="Actions">
+            <td class=CELL data-label=tr(Msg::Actions)>
                 <div class="flex gap-2">
                     <button
                         id=format!("stage-preview-{seq}")
@@ -854,7 +859,7 @@ fn staged_row(form: CommitForm, change: &StagedChange) -> AnyView {
                         class=BTN_SECONDARY
                         on:click=toggle
                     >
-                        "Preview"
+                        {tr(Msg::Preview)}
                     </button>
                     <button
                         id=format!("stage-remove-{seq}")
@@ -862,7 +867,7 @@ fn staged_row(form: CommitForm, change: &StagedChange) -> AnyView {
                         class=BTN_SECONDARY
                         on:click=remove
                     >
-                        "Remove"
+                        {tr(Msg::Remove)}
                     </button>
                 </div>
             </td>
@@ -901,31 +906,31 @@ fn audit_card(
     let result = commit_result(ehr_id, commit);
     view! {
         <section class=CARD_PAD id="stage-audit">
-            <h2 class=CARD_TITLE>"Contribution audit"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::ContributionAudit)}</h2>
             <div class="flex flex-col gap-3">
                 <div class="fui-field-flow">
                     <div class="flex flex-col gap-1">
                         <label class=LABEL r#for="stage-committer">
-                            "Committer (optional)"
+                            {tr(Msg::CommitterOptional)}
                         </label>
                         <input
                             id="stage-committer"
                             type="text"
                             class=INPUT
-                            placeholder="defaults to your viewer identity"
+                            placeholder=tr(Msg::DefaultsYourViewerIdentity)
                             prop:value=move || form.committer.get()
                             on:input:target=move |ev| form.committer.set(ev.target().value())
                         />
                     </div>
                     <div class="flex grow flex-col gap-1">
                         <label class=LABEL r#for="stage-description">
-                            "Description"
+                            {tr(Msg::Description)}
                         </label>
                         <input
                             id="stage-description"
                             type="text"
                             class=format!("{INPUT} w-full")
-                            placeholder="why these changes belong together"
+                            placeholder=tr(Msg::WhyTheseChangesBelongTogether)
                             prop:value=move || form.description.get()
                             on:input:target=move |ev| form.description.set(ev.target().value())
                         />
@@ -944,7 +949,7 @@ fn audit_card(
                         {move || label.get()}
                     </button>
                     <Show when=move || commit.pending().get()>
-                        <span class="text-sm text-ink-muted">"Committing…"</span>
+                        <span class="text-sm text-ink-muted">{tr(Msg::Committing)}</span>
                     </Show>
                 </div>
                 {result}
@@ -967,7 +972,7 @@ fn commit_result(
                 view! {
                     <div class=WELL id="stage-diagnostic" role="alert">
                         <p class="mb-2 fui-help">
-                            "Nothing was committed and your staged changes are untouched. The CDR refused the change set as a whole — its diagnostic follows verbatim. It always names the defect, and a shape defect also names the member index (counting from the top of the list above); a validation refusal does not, so read it against the staged documents."
+                            {tr(Msg::NothingWasCommittedYourStagedChanges)}
                         </p>
                         <pre class="overflow-auto max-h-[40vh] whitespace-pre-wrap font-mono text-xs text-danger">
                             {error.to_string()}
@@ -990,7 +995,7 @@ fn commit_result(
                         <p class="text-sm text-ink">{committed_copy(&outcome)}</p>
                         <ul class="mt-2 text-xs text-ink-muted">{uids}</ul>
                         <a href=href class="mt-2 inline-block text-sm text-accent hover:underline">
-                            "Open it in the Contributions tab →"
+                            {tr(Msg::OpenContributionsTab)}
                         </a>
                     </div>
                 }
@@ -1006,9 +1011,12 @@ fn commit_result(
 /// contribution.
 fn commit_button_label(count: u32) -> String {
     match count {
-        0 => "Commit as one contribution".to_owned(),
-        1 => "Commit 1 change as one contribution".to_owned(),
-        many => format!("Commit {many} changes as one contribution"),
+        0 => tr(Msg::CommitAsOneContribution),
+        1 => tr(Msg::Commit1ChangeOneContribution),
+        many => tr_with(
+            Msg::CommitChangesOneContribution,
+            &[("many", (many).to_string().into())],
+        ),
     }
 }
 
@@ -1018,11 +1026,21 @@ fn committed_copy(outcome: &CommitOutcome) -> String {
     let versions = outcome.version_uids.len();
     let noun = if versions == 1 { "version" } else { "versions" };
     if outcome.contribution_uid.is_empty() {
-        format!("The change set was committed as one contribution ({versions} {noun}).")
+        tr_with(
+            Msg::ChangeSetWasCommittedOneContribution,
+            &[
+                ("versions", (versions).to_string().into()),
+                ("noun", (noun).to_string().into()),
+            ],
+        )
     } else {
-        format!(
-            "Contribution {} committed with {versions} {noun}.",
-            outcome.contribution_uid
+        tr_with(
+            Msg::ContributionCommittedWith,
+            &[
+                ("contribution_uid", outcome.contribution_uid.clone().into()),
+                ("versions", (versions).to_string().into()),
+                ("noun", (noun).to_string().into()),
+            ],
         )
     }
 }

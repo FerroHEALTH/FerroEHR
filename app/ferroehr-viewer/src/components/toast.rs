@@ -10,6 +10,7 @@
 //! take its handle with [`toaster`]. A toast says what happened and to which
 //! object, never what was in it.
 
+use crate::locale::{Msg, tr};
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::widget::toast::Toasts;
 use leptos::prelude::*;
@@ -58,7 +59,7 @@ pub fn toast_error(toaster: Toasts, title: &str, body: &str) {
 pub fn toast_outcome<T, S, F>(
     toaster: Toasts,
     outcome: Signal<Option<(String, Result<T, crate::error::ViewerError>)>>,
-    titles: (&'static str, &'static str),
+    titles: (Msg, Msg),
     success_body: S,
     failure_body: F,
 ) where
@@ -67,8 +68,12 @@ pub fn toast_outcome<T, S, F>(
     F: Fn(&str, &crate::error::ViewerError) -> String + Send + Sync + 'static,
 {
     Effect::new(move |_| match outcome.get() {
-        Some((name, Ok(value))) => toast_success(toaster, titles.0, &success_body(&name, &value)),
-        Some((name, Err(error))) => toast_error(toaster, titles.1, &failure_body(&name, &error)),
+        Some((name, Ok(value))) => {
+            toast_success(toaster, &tr(titles.0), &success_body(&name, &value));
+        }
+        Some((name, Err(error))) => {
+            toast_error(toaster, &tr(titles.1), &failure_body(&name, &error));
+        }
         None => {}
     });
 }

@@ -45,6 +45,9 @@ use crate::uid::uid_value_of;
 
 use crate::components::data_table::table_skeleton;
 use crate::error::ViewerError;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::locale::tr_served;
+use crate::locale::{Msg, tr, tr_with};
 use crate::pages::ehr_detail::directory::create::create_section;
 use crate::pages::ehr_detail::directory::panels::directory_toolbar;
 use crate::pages::ehr_detail::directory::tree::{EditorState, seed, tree_editor};
@@ -159,9 +162,9 @@ pub(crate) fn empty_root_folder() -> Value {
 /// when the CDR returned no representation body.
 pub(crate) fn directory_toast_detail(uid: &str) -> String {
     if uid.is_empty() {
-        "The directory was committed.".to_owned()
+        tr(Msg::TheDirectoryWasCommitted)
     } else {
-        format!("New version {uid}")
+        tr_with(Msg::NewVersion6, &[("uid", (uid).to_string().into())])
     }
 }
 
@@ -250,9 +253,7 @@ pub async fn create_directory(
     let session = crate::session::require_session().await?;
     let state: crate::state::AppState = expect_context();
     if body.trim().is_empty() {
-        return Err(ViewerError::Invalid(
-            "the directory body is empty".to_owned(),
-        ));
+        return Err(ViewerError::Invalid(tr_served(Msg::DirectoryBodyEmpty)));
     }
     let url = state
         .cdr
@@ -297,15 +298,13 @@ pub async fn update_directory(
     let session = crate::session::require_session().await?;
     let state: crate::state::AppState = expect_context();
     if body.trim().is_empty() {
-        return Err(ViewerError::Invalid(
-            "the directory body is empty".to_owned(),
-        ));
+        return Err(ViewerError::Invalid(tr_served(Msg::DirectoryBodyEmpty)));
     }
     let current = current_version_uid.trim();
     if current.is_empty() {
-        return Err(ViewerError::Invalid(
-            "the current directory version uid is required to update".to_owned(),
-        ));
+        return Err(ViewerError::Invalid(tr_served(
+            Msg::CurrentDirectoryVersionUidRequiredUpdate,
+        )));
     }
     let if_match = format!("\"{current}\"");
     let url = state
@@ -351,9 +350,9 @@ pub async fn delete_directory(
     let state: crate::state::AppState = expect_context();
     let current = current_version_uid.trim();
     if current.is_empty() {
-        return Err(ViewerError::Invalid(
-            "the current directory version uid is required to delete".to_owned(),
-        ));
+        return Err(ViewerError::Invalid(tr_served(
+            Msg::CurrentDirectoryVersionUidRequiredDelete,
+        )));
     }
     let if_match = format!("\"{current}\"");
     let url = state
@@ -500,9 +499,7 @@ pub async fn fetch_directory_at_time(
     let state: crate::state::AppState = expect_context();
     let time = time.trim();
     if time.is_empty() {
-        return Err(ViewerError::Invalid(
-            "a date and time is required".to_owned(),
-        ));
+        return Err(ViewerError::Invalid(tr_served(Msg::DateTimeRequired)));
     }
     let url = state.cdr.rest_v1(&format!(
         "ehr/{}/directory?version_at_time={}",
@@ -543,7 +540,7 @@ pub async fn fetch_directory_subtree(
     let state: crate::state::AppState = expect_context();
     let path = path.trim();
     if path.is_empty() {
-        return Err(ViewerError::Invalid("a path is required".to_owned()));
+        return Err(ViewerError::Invalid(tr_served(Msg::APathIsRequired)));
     }
     let url = state.cdr.rest_v1(&format!(
         "ehr/{}/directory?path={}",
@@ -639,9 +636,9 @@ pub(super) fn directory_section(ehr_id: Signal<String>, selected: Memo<String>) 
         async move {
             match fetch_directory(ehr_id.clone()).await? {
                 Some(current) => update_directory(ehr_id, current.version_uid, body).await,
-                None => Err(ViewerError::Internal(
-                    "the directory disappeared while resolving the conflict".to_owned(),
-                )),
+                None => Err(ViewerError::Internal(tr(
+                    Msg::DirectoryDisappearedWhileResolvingConflict,
+                ))),
             }
         }
     });
@@ -664,29 +661,29 @@ pub(super) fn directory_section(ehr_id: Signal<String>, selected: Memo<String>) 
     write_toast(
         toaster,
         create,
-        "Directory created",
-        "Create failed",
+        tr(Msg::DirectoryCreated),
+        tr(Msg::CreateFailed),
         directory_toast_detail,
     );
     write_toast(
         toaster,
         update,
-        "Directory updated",
-        "Save failed",
+        tr(Msg::DirectoryUpdated),
+        tr(Msg::SaveFailed),
         directory_toast_detail,
     );
     write_toast(
         toaster,
         restore,
-        "Directory restored",
-        "Restore failed",
+        tr(Msg::DirectoryRestored),
+        tr(Msg::RestoreFailed),
         directory_toast_detail,
     );
     write_toast(
         toaster,
         force_save,
-        "Directory updated",
-        "Save failed",
+        tr(Msg::DirectoryUpdated),
+        tr(Msg::SaveFailed),
         directory_toast_detail,
     );
     delete_toast(toaster, delete);
@@ -848,7 +845,9 @@ pub(super) fn directory_section(ehr_id: Signal<String>, selected: Memo<String>) 
 }
 
 /// The noun phrase every directory-write failure toast is built around.
-const DIRECTORY_OBJECT: &str = "the EHR's directory";
+fn directory_object() -> String {
+    tr(Msg::TheEhrSDirectory)
+}
 
 /// Toast a write action's outcome: success with the shared detail formatter, a
 /// `412` conflict with the distinct reload/save-anyway toast, and every other
@@ -863,15 +862,15 @@ fn delete_toast<I: Send + Sync + 'static>(
     Effect::new(move |_| match delete.value().get() {
         Some(Ok(())) => crate::components::toast::toast_success(
             toaster,
-            "Directory deleted",
-            "The directory was deleted.",
+            &tr(Msg::DirectoryDeleted),
+            &tr(Msg::TheDirectoryWasDeleted),
         ),
         Some(Err(error)) if is_conflict(&error) => conflict_toast(toaster),
         Some(Err(error)) => {
             crate::feedback::toast_write_failure(
                 toaster,
-                "Delete failed",
-                DIRECTORY_OBJECT,
+                &tr(Msg::DeleteFailed),
+                &directory_object(),
                 &error,
             );
         }
@@ -904,15 +903,20 @@ where
 fn write_toast<I: Send + Sync + 'static>(
     toaster: ferrohealth_ui::widget::toast::Toasts,
     action: Action<I, Result<String, ViewerError>>,
-    title: &'static str,
-    failure_title: &'static str,
+    title: String,
+    failure_title: String,
     detail: fn(&str) -> String,
 ) {
     Effect::new(move |_| match action.value().get() {
-        Some(Ok(uid)) => crate::components::toast::toast_success(toaster, title, &detail(&uid)),
+        Some(Ok(uid)) => crate::components::toast::toast_success(toaster, &title, &detail(&uid)),
         Some(Err(error)) if is_conflict(&error) => conflict_toast(toaster),
         Some(Err(error)) => {
-            crate::feedback::toast_write_failure(toaster, failure_title, DIRECTORY_OBJECT, &error);
+            crate::feedback::toast_write_failure(
+                toaster,
+                &failure_title,
+                &directory_object(),
+                &error,
+            );
         }
         None => {}
     });
@@ -924,8 +928,8 @@ fn write_toast<I: Send + Sync + 'static>(
 fn conflict_toast(toaster: ferrohealth_ui::widget::toast::Toasts) {
     crate::components::toast::toast_error(
         toaster,
-        "Directory changed on the server",
-        "Your unsaved changes are kept. Load the server version or save anyway from the banner.",
+        &tr(Msg::DirectoryChangedServer),
+        &tr(Msg::YourUnsavedChangesKeptLoadServer),
     );
 }
 

@@ -37,6 +37,7 @@ use crate::components::page_header::PageHeader;
 use crate::components::stat_card::StatCard;
 use crate::components::surface::{CARD_PAD, CARD_TITLE};
 use crate::error::ViewerError;
+use crate::locale::{Msg, tr, tr_with};
 
 /// Total EHRs — a fixed count AQL. Validated by [`tests::dashboard_aql_consts_parse`].
 #[cfg(not(target_arch = "wasm32"))]
@@ -261,18 +262,18 @@ pub fn DashboardPage() -> impl IntoView {
         <Title text="Dashboard" />
         <div>
             <PageHeader
-                title="Dashboard"
-                subtitle="Repository overview, query cohorts, and recent commit activity."
+                title=tr(Msg::Dashboard)
+                subtitle=tr(Msg::RepositoryOverviewQueryCohortsRecentCommit)
             />
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
                 {counts} {stored}
             </div>
             <section class=format!("{CARD_PAD} mb-6")>
-                <h2 class=CARD_TITLE>"Query namespaces"</h2>
+                <h2 class=CARD_TITLE>{tr(Msg::QueryNamespaces)}</h2>
                 {namespaces}
             </section>
             <section class=CARD_PAD>
-                <h2 class=CARD_TITLE>"Commit activity"</h2>
+                <h2 class=CARD_TITLE>{tr(Msg::CommitActivity)}</h2>
                 {trend}
             </section>
         </div>
@@ -283,7 +284,7 @@ pub fn DashboardPage() -> impl IntoView {
 /// tabular-nums value, and a muted label; the whole tile navigates when a
 /// `href` is given.
 fn stat_tile(
-    label: &'static str,
+    label: String,
     value: String,
     icon: ferrohealth_ui::icon::Glyph,
     href: Option<String>,
@@ -296,7 +297,7 @@ fn stat_tile(
 
 /// A single stat-tile skeleton (a card-shaped placeholder).
 fn tile_skeleton() -> AnyView {
-    view! { <div class=CARD_PAD>{ferrohealth_ui::view::empty::skeleton(2, "Loading…")}</div> }
+    view! { <div class=CARD_PAD>{ferrohealth_ui::view::empty::skeleton(2, tr(Msg::Loading))}</div> }
         .into_any()
 }
 
@@ -323,19 +324,19 @@ fn counts_section() -> AnyView {
                         view! {
                             <>
                                 {stat_tile(
-                                    "EHRs",
+                                    tr(Msg::Ehrs),
                                     ehrs.to_string(),
                                     ferrohealth_ui::icon::Glyph::DATABASE,
                                     Some("/ehrs".to_owned()),
                                 )}
                                 {stat_tile(
-                                    "Compositions",
+                                    tr(Msg::Compositions),
                                     compositions.to_string(),
                                     ferrohealth_ui::icon::Glyph::FILE_TEXT,
                                     None,
                                 )}
                                 {stat_tile(
-                                    "Templates",
+                                    tr(Msg::Templates),
                                     templates.to_string(),
                                     ferrohealth_ui::icon::Glyph::FILE_CODE,
                                     Some("/templates".to_owned()),
@@ -366,7 +367,7 @@ fn stored_queries_tile() -> AnyView {
                     Ok(rows) => {
                         let count = u32::try_from(rows.len()).unwrap_or(u32::MAX);
                         stat_tile(
-                            "Stored queries",
+                            tr(Msg::StoredQueries),
                             count.to_string(),
                             ferrohealth_ui::icon::Glyph::SEARCH_CODE,
                             Some("/queries".to_owned()),
@@ -404,11 +405,11 @@ fn namespace_tiles_view(tiles: Vec<NamespaceTile>) -> AnyView {
         return view! {
             <EmptyState
                 icon=ferrohealth_ui::icon::Glyph::SEARCH_CODE
-                message="No stored queries yet"
-                hint="Save a query as namespace::name — each namespace becomes a cohort tile here."
+                message=tr(Msg::NoStoredQueriesYet)
+                hint=tr(Msg::SaveQueryNamespaceNameEachNamespace)
             >
                 <A href="/queries" attr:class=BTN_SECONDARY>
-                    "Go to stored queries"
+                    {tr(Msg::GoToStoredQueries)}
                 </A>
             </EmptyState>
         }
@@ -433,9 +434,9 @@ fn namespace_tile(tile: NamespaceTile) -> AnyView {
     let hook = tile.label.clone();
     let members = tile.members;
     let summary = if members == 1 {
-        "1 query".to_owned()
+        tr(Msg::N1Query)
     } else {
-        format!("{members} queries")
+        tr_with(Msg::Queries2, &[("members", (members).to_string().into())])
     };
     view! {
         <A
@@ -460,7 +461,7 @@ fn trend_section() -> AnyView {
     let resource = Resource::new(|| (), |()| async move { commit_trend().await });
     view! {
         <Suspense fallback=|| {
-            view! { {ferrohealth_ui::view::empty::skeleton(1, "Loading…")} }
+            view! { {ferrohealth_ui::view::empty::skeleton(1, tr(Msg::Loading))} }
         }>
             {move || Suspend::new(async move {
                 match resource.await {
@@ -468,8 +469,8 @@ fn trend_section() -> AnyView {
                         activity_chart(
                             &points,
                             "commits",
-                            "No commit activity yet",
-                            "Commit a composition and the trend appears here from the next day onward.",
+                            tr(Msg::NoCommitActivityYet),
+                            tr(Msg::CommitCompositionTrendAppearsHereFrom),
                         )
                     }
                     Err(e) => crate::components::notice::inline_error(&e),

@@ -31,6 +31,7 @@ use crate::components::format_view::DocumentPane;
 use crate::components::page_header::{Crumb, PageHeader};
 use crate::components::surface::{CARD_PAD, CARD_TITLE};
 use crate::error::ViewerError;
+use crate::locale::{Msg, tr, tr_with};
 use crate::pages::ehrs::ResultPage;
 use crate::pages::query_aql::{LoadedQuery, LoadedQueryResource};
 use crate::pages::query_builder::{paging_buttons, results_view};
@@ -107,9 +108,9 @@ pub fn QueryStoredPage() -> impl IntoView {
         <Title text="Run stored query" />
         <div class="space-y-4">
             <PageHeader
-                title="Run stored query"
-                subtitle="Execute a stored query on the CDR: choose how its version resolves, bind its parameters, page the results."
-                crumbs=vec![Crumb::new("Queries", "/queries")]
+                title=tr(Msg::RunStoredQuery)
+                subtitle=tr(Msg::ExecuteStoredQueryCdrChooseHow)
+                crumbs=vec![Crumb::new(tr(Msg::Queries), "/queries")]
             />
             {definition_pane}
             {resolution}
@@ -133,10 +134,10 @@ fn definition_section(
         return view! {
             <section class=CARD_PAD>
                 <p class="text-sm text-ink-muted">
-                    "No stored query to run. Pick one from "
+                    {tr(Msg::NoStoredQueryRunPickOne)}
                     <a href="/queries" class="text-accent hover:underline">
-                        "Stored queries"
-                    </a> " and choose Run."
+                        {tr(Msg::StoredQueries)}
+                    </a> {tr(Msg::AndChooseRun)}
                 </p>
             </section>
         }
@@ -144,9 +145,9 @@ fn definition_section(
     }
     view! {
         <section class=CARD_PAD>
-            <h2 class=CARD_TITLE>"Definition"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::Definition)}</h2>
             <Transition fallback=move || {
-                view! { <p class="text-sm text-ink-muted">"Loading stored query…"</p> }
+                view! { <p class="text-sm text-ink-muted">{tr(Msg::LoadingStoredQuery)}</p> }
             }>
                 {move || Suspend::new(async move {
                     match definition.await {
@@ -156,7 +157,7 @@ fn definition_section(
                         Ok(None) => {
                             view! {
                                 <p class="text-sm text-ink-muted">
-                                    "That link does not name a stored-query version."
+                                    {tr(Msg::LinkDoesNotNameStoredQuery2)}
                                 </p>
                             }
                                 .into_any()
@@ -180,17 +181,17 @@ fn definition_pane(qualified: String, stored_version: String, aql: String) -> An
         <div class="space-y-2">
             <p class="text-sm text-ink-muted">
                 <span class="font-mono text-ink">{qualified}</span>
-                " as stored at version "
+                {tr(Msg::AsStoredAtVersion)}
                 <span class="font-mono text-ink">{stored_version}</span>
                 "."
             </p>
             <DocumentPane id="stored-query-pane" body=body />
             <div class="flex flex-wrap items-center gap-3 text-sm">
                 <a href=editor_href class="text-accent hover:underline">
-                    "Open in editor"
+                    {tr(Msg::OpenInEditor)}
                 </a>
                 <a href=builder_href class="text-accent hover:underline" data-open-in-builder="">
-                    "Open in builder"
+                    {tr(Msg::OpenInBuilder)}
                 </a>
             </div>
         </div>
@@ -211,16 +212,16 @@ fn resolution_section(
     let options = VersionResolution::ALL
         .into_iter()
         .map(|option| {
-            view! { <option value=option.as_str()>{option.label()}</option> }
+            view! { <option value=option.as_str()>{tr(option.label())}</option> }
         })
         .collect::<Vec<_>>();
     let needs_version = Signal::derive(move || mode.get() != VersionResolution::Latest);
     view! {
         <section class=CARD_PAD>
-            <h2 class=CARD_TITLE>"Version"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::Version)}</h2>
             <div class="fui-field-flow">
                 <label class="flex flex-col gap-1">
-                    <span class=LABEL>"Resolution"</span>
+                    <span class=LABEL>{tr(Msg::Resolution)}</span>
                     <select
                         id="stored-run-mode"
                         class=SELECT
@@ -233,7 +234,7 @@ fn resolution_section(
                     </select>
                 </label>
                 <label class="flex flex-col gap-1">
-                    <span class=LABEL>"Version"</span>
+                    <span class=LABEL>{tr(Msg::Version)}</span>
                     <input
                         id="stored-run-version"
                         type="text"
@@ -266,24 +267,24 @@ fn resolution_note(
                     Ok(None) => {
                         view! {
                             <span class="text-ink-muted">
-                                "Sends "
+                                {tr(Msg::Sends)}
                                 <span class="font-mono text-ink">
-                                    {format!("POST query/{name}")}
-                                </span> " — no version, so the CDR runs the latest one."
+                                    {tr_with(Msg::PostQuery, &[("name", name.clone().into())])}
+                                </span> {tr(Msg::NoVersionSoCdrRunsLatest)}
                             </span>
                         }
                             .into_any()
                     }
                     Ok(Some(resolved)) => {
-                        let path = format!("POST query/{name}/{resolved}");
+                        let path = tr_with(Msg::PostQuery2, &[("name", name.clone().into()), ("resolved", resolved.clone().into())]);
                         let tail = if mode.get() == VersionResolution::Prefix {
-                            " — a partial pattern, so the CDR runs the latest version matching it."
+                            {tr(Msg::PartialPatternSoCdrRunsLatest)}
                         } else {
-                            " — exactly that version."
+                            {tr(Msg::ExactlyThatVersion)}
                         };
                         view! {
                             <span class="text-ink-muted">
-                                "Sends " <span class="font-mono text-ink">{path}</span> {tail}
+                                {tr(Msg::Sends)} <span class="font-mono text-ink">{path}</span> {tail}
                             </span>
                         }
                             .into_any()
@@ -310,9 +311,9 @@ fn parameters_section(
 ) -> AnyView {
     view! {
         <section class=CARD_PAD>
-            <h2 class=CARD_TITLE>"Parameters"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::Parameters)}</h2>
             <Transition fallback=move || {
-                view! { <p class="text-sm text-ink-muted">"Reading parameters…"</p> }
+                view! { <p class="text-sm text-ink-muted">{tr(Msg::ReadingParameters)}</p> }
             }>
                 {move || Suspend::new(async move {
                     match definition.await {
@@ -332,7 +333,7 @@ fn parameter_inputs(names: &[String], bindings: RwSignal<BTreeMap<String, String
     if names.is_empty() {
         return view! {
             <p class="text-sm text-ink-muted">
-                "This query declares no parameters, so it runs as stored."
+                {tr(Msg::QueryDeclaresNoParametersSoRuns)}
             </p>
         }
         .into_any();
@@ -345,12 +346,12 @@ fn parameter_inputs(names: &[String], bindings: RwSignal<BTreeMap<String, String
         <div class="space-y-2">
             <div class="fui-field-flow">{fields}</div>
             <p class="fui-help">
-                "A value that reads as JSON is sent as that type — "
-                <span class="font-mono">"38.5"</span> " as a number, "
+                {tr(Msg::ValueReadsJsonSentType)}
+                <span class="font-mono">"38.5"</span> {tr(Msg::AsANumber)}
                 <span class="font-mono">"true"</span>
-                " as a boolean; anything else is sent as text. Quote a value to force text ("
+                {tr(Msg::BooleanAnythingElseSentTextQuote)}
                 <span class="font-mono">"\"0123\""</span>
-                "). A field left blank is not sent at all."
+                {tr(Msg::FieldLeftBlankNotSentAll)}
             </p>
         </div>
     }
@@ -440,7 +441,7 @@ fn run_section(
                 disabled=disabled
                 on:click=on_click
             >
-                "Run"
+                {tr(Msg::Run)}
             </button>
         </section>
     }
@@ -470,7 +471,7 @@ fn results_section(
                         } else {
                             view! {
                                 <p class="mt-3 fui-help">
-                                    "This query sets its own row window (AQL LIMIT/TOP), so the run is not paged."
+                                    {tr(Msg::QuerySetsOwnRowWindowAql)}
                                 </p>
                             }
                                 .into_any()
@@ -478,7 +479,7 @@ fn results_section(
                         let body = results_view(&page, false);
                         view! {
                             <section class=CARD_PAD data-stored-results="">
-                                <h2 class=CARD_TITLE>"Results"</h2>
+                                <h2 class=CARD_TITLE>{tr(Msg::Results)}</h2>
                                 {body}
                                 {controls}
                             </section>

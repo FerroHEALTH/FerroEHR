@@ -41,6 +41,9 @@ use crate::components::notice::inline_error;
 use crate::components::page_header::{Crumb, PageHeader};
 use crate::components::surface::{CARD_PAD, CARD_TITLE};
 use crate::error::ViewerError;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::locale::tr_served;
+use crate::locale::{Msg, tr, tr_with};
 use crate::pages::demographics::party::fact_row;
 use crate::pages::demographics::{PartyKind, party_href, relationship_href};
 use crate::uid::container_uid_of;
@@ -91,9 +94,9 @@ pub async fn fetch_demographic_contribution(
     let state: crate::state::AppState = expect_context();
     let contribution_uid = contribution_uid.trim();
     if contribution_uid.is_empty() {
-        return Err(ViewerError::Invalid(
-            "a contribution uid is required".to_owned(),
-        ));
+        return Err(ViewerError::Invalid(tr_served(
+            Msg::ContributionUidRequired,
+        )));
     }
     let url = state.cdr.rest_v1(&format!(
         "demographic/contribution/{}",
@@ -115,8 +118,12 @@ pub async fn fetch_demographic_contribution(
 /// # Errors
 /// [`ViewerError::Internal`] when the body is not valid JSON.
 fn parse_contribution(body: &str) -> Result<ContributionState, ViewerError> {
-    let doc: Value = serde_json::from_str(body)
-        .map_err(|e| ViewerError::Internal(format!("CONTRIBUTION JSON: {e}")))?;
+    let doc: Value = serde_json::from_str(body).map_err(|e| {
+        ViewerError::Internal(tr_with(
+            Msg::ContributionJson,
+            &[("e", (e).to_string().into())],
+        ))
+    })?;
     let versions = doc
         .get("versions")
         .and_then(Value::as_array)
@@ -164,7 +171,7 @@ pub fn DemographicContributionPage() -> impl IntoView {
     let heading = Signal::derive(move || {
         let id = uid.get();
         let short: String = id.chars().take(8).collect();
-        format!("Contribution {short}…")
+        tr_with(Msg::Contribution, &[("short", short.clone().into())])
     });
 
     let body = view! {
@@ -179,7 +186,7 @@ pub fn DemographicContributionPage() -> impl IntoView {
                                 id="contribution-not-found"
                                 class="rounded-card border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger"
                             >
-                                "The CDR holds no demographic contribution with this id. A contribution committed against an EHR is read on that EHR's own screen instead."
+                                {tr(Msg::CdrHoldsNoDemographicContributionId)}
                             </div>
                         }
                             .into_any()
@@ -196,7 +203,7 @@ pub fn DemographicContributionPage() -> impl IntoView {
         <div>
             <PageHeader
                 title=heading
-                crumbs=vec![Crumb::new("Demographics", super::browse_href(PartyKind::Person))]
+                crumbs=vec![Crumb::new(tr(Msg::Demographics), super::browse_href(PartyKind::Person))]
                 mono=true
             />
             {body}
@@ -208,13 +215,13 @@ pub fn DemographicContributionPage() -> impl IntoView {
 fn contribution_view(state: &ContributionState) -> AnyView {
     let facts = view! {
         <section class=CARD_PAD id="contribution-facts">
-            <h2 class=CARD_TITLE>"Commit"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::Commit)}</h2>
             <dl class="fui-facts text-sm">
-                {fact_row("contribution", "contribution-uid", state.uid.clone())}
-                {fact_row("committed", "committed", state.time_committed.clone())}
-                {fact_row("committer", "committer", state.committer.clone())}
-                {fact_row("change type", "change-type", state.change_type.clone())}
-                {fact_row("description", "description", state.description.clone())}
+                {fact_row("contribution".to_owned(), "contribution-uid", state.uid.clone())}
+                {fact_row("committed".to_owned(), "committed", state.time_committed.clone())}
+                {fact_row("committer".to_owned(), "committer", state.committer.clone())}
+                {fact_row(tr(Msg::ChangeType2), "change-type", state.change_type.clone())}
+                {fact_row("description".to_owned(), "description", state.description.clone())}
             </dl>
         </section>
     }
@@ -224,7 +231,7 @@ fn contribution_view(state: &ContributionState) -> AnyView {
     view! {
         <div class="flex flex-col gap-4">
             {facts} {versions} <section class=CARD_PAD>
-                <h2 class=CARD_TITLE>"Document"</h2>
+                <h2 class=CARD_TITLE>{tr(Msg::Document)}</h2>
                 <div id="contribution-document">
                     <DocumentPane id="contribution-version-pane" body=pretty />
                 </div>
@@ -243,11 +250,11 @@ fn versions_section(versions: Vec<ContributionVersion>) -> AnyView {
     if versions.is_empty() {
         return view! {
             <section class=CARD_PAD>
-                <h2 class=CARD_TITLE>"Versions"</h2>
+                <h2 class=CARD_TITLE>{tr(Msg::Versions)}</h2>
                 <EmptyState
                     icon=ferrohealth_ui::icon::Glyph::FILE_CLOCK
-                    message="No versions listed"
-                    hint="A CONTRIBUTION always references at least one version; if none is listed, the CDR reported an empty change set."
+                    message=tr(Msg::NoVersionsListed)
+                    hint=tr(Msg::ContributionAlwaysReferencesLeastOneVersion)
                 />
             </section>
         }
@@ -261,8 +268,8 @@ fn versions_section(versions: Vec<ContributionVersion>) -> AnyView {
     .into_any();
     view! {
         <section class=CARD_PAD>
-            <h2 class=CARD_TITLE>"Versions in this contribution"</h2>
-            {table_shell("Contribution versions", &["Type", "Version"], rows)}
+            <h2 class=CARD_TITLE>{tr(Msg::VersionsInThisContribution)}</h2>
+            {table_shell(&tr(Msg::ContributionVersions), &[&tr(Msg::Type2), &tr(Msg::Version)], rows)}
         </section>
     }
     .into_any()
@@ -277,7 +284,7 @@ fn version_row(version: &ContributionVersion) -> AnyView {
     let href = object_href(&version.rm_type, &version_uid);
     let cell = match href {
         Some(href) => view! {
-            <td class=CELL_MONO data-label="Version">
+            <td class=CELL_MONO data-label=tr(Msg::Version)>
                 <A href=href attr:class="text-accent hover:underline">
                     {shown}
                 </A>
@@ -285,7 +292,7 @@ fn version_row(version: &ContributionVersion) -> AnyView {
         }
         .into_any(),
         None => view! {
-            <td class=CELL_MONO data-label="Version">
+            <td class=CELL_MONO data-label=tr(Msg::Version)>
                 {shown}
             </td>
         }

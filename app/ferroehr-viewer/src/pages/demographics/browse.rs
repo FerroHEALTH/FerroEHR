@@ -44,6 +44,7 @@ use crate::components::page_header::PageHeader;
 use crate::components::surface::{CARD_PAD, CARD_TITLE};
 use crate::components::toast::toast_success;
 use crate::error::ViewerError;
+use crate::locale::{Msg, message, tr, tr_with};
 use crate::pages::demographics::tags::list_demographic_tags;
 use crate::pages::demographics::{PartyKind, browse_href, party_href, resolve_party_kind};
 use crate::uid::container_uid_of;
@@ -83,7 +84,7 @@ pub fn unknown_kind_view(segment: &str) -> AnyView {
         .map(|kind| {
             view! {
                 <A href=browse_href(kind) attr:class="text-accent hover:underline">
-                    {kind.plural()}
+                    {tr(kind.plural())}
                 </A>
             }
             .into_any()
@@ -92,11 +93,11 @@ pub fn unknown_kind_view(segment: &str) -> AnyView {
     view! {
         <Title text="Not found" />
         <div>
-            <PageHeader title="Unknown party kind" />
+            <PageHeader title=tr(Msg::UnknownPartyKind) />
             <section class=CARD_PAD id="demographics-unknown-kind">
                 <p class="text-sm text-ink">
-                    "The demographic API has no party kind called "
-                    <span class="font-mono">{shown}</span> ". The five kinds are:"
+                    {tr(Msg::DemographicApiHasNoPartyKind)}
+                    <span class="font-mono">{shown}</span> {tr(Msg::TheFiveKindsAre)}
                 </p>
                 <div class="mt-2 flex flex-wrap gap-3 text-sm">{links}</div>
             </section>
@@ -187,17 +188,15 @@ fn browser_screen(kind: PartyKind) -> AnyView {
     let lookup = lookup_section(kind);
     let create = create_section(kind, toaster);
     let index = tag_index_section(kind);
-    let subtitle = format!(
-        "The openEHR demographic API addresses a {} by its id — it publishes no party list, and \
-         AQL queries EHRs, not parties. Open one by id, create one, or find one through the tag \
-         index.",
-        kind.rm_type()
+    let subtitle = tr_with(
+        Msg::OpenehrDemographicApiAddressesIdPublishes,
+        &[("kind", (kind.rm_type()).to_string().into())],
     );
 
     view! {
         <Title text="Demographics" />
         <div>
-            <PageHeader title=kind.plural().to_owned() subtitle=subtitle />
+            <PageHeader title=tr(kind.plural()) subtitle=subtitle />
             {switcher}
             {lookup}
             {create}
@@ -216,12 +215,12 @@ fn kind_switcher(current: PartyKind) -> AnyView {
         .map(|kind| ferrohealth_ui::view::tabs::KeyedTab {
             key: kind.segment(),
             href: browse_href(kind),
-            label: kind.plural(),
+            label: tr(kind.plural()).into(),
         })
         .collect();
     view! {
         <div class="mb-4">
-            {ferrohealth_ui::view::tabs::keyed_tabs("Party kinds", tabs, current.segment())}
+            {ferrohealth_ui::view::tabs::keyed_tabs(tr(Msg::PartyKinds), tabs, current.segment())}
         </div>
     }
     .into_any()
@@ -253,10 +252,10 @@ fn lookup_section(kind: PartyKind) -> AnyView {
             );
         }
     };
-    let label = format!("{} id", kind.rm_type());
+    let label = tr_with(Msg::Id, &[("kind", (kind.rm_type()).to_string().into())]);
     view! {
         <section class=format!("{CARD_PAD} mb-6")>
-            <h2 class=CARD_TITLE>{format!("Open a {}", kind.rm_type())}</h2>
+            <h2 class=CARD_TITLE>{tr_with(Msg::OpenA, &[("kind", (kind.rm_type()).to_string().into())])}</h2>
             <form method="GET" action=browse_href(kind) on:submit=on_submit>
                 <div class="fui-field-flow">
                     <div class="flex flex-col gap-1">
@@ -268,17 +267,17 @@ fn lookup_section(kind: PartyKind) -> AnyView {
                             name="find"
                             type="text"
                             class=INPUT
-                            placeholder="versioned_object_uid or version_uid"
+                            placeholder=tr(Msg::VersionedObjectUidVersionUid)
                             node_ref=lookup_ref
                         />
                     </div>
                     <button id="party-find" type="submit" class=BTN_PRIMARY>
-                        "Open"
+                        {tr(Msg::Open)}
                     </button>
                 </div>
             </form>
             <p class="mt-2 fui-help">
-                "Either id form works: a versioned_object_uid opens the latest version, and a full version_uid is reduced to its container — every screen here addresses the container."
+                {tr(Msg::EitherIdFormWorksVersionedObject)}
             </p>
         </section>
     }
@@ -327,10 +326,12 @@ const SEEDED_RM_VERSION: &str = "1.1.0";
 /// honest behaviour for a template.
 #[must_use]
 pub fn minimal_party_body(kind: PartyKind) -> String {
-    let archetype_id = format!(
-        "openEHR-DEMOGRAPHIC-{}.{}.v1",
-        kind.rm_type(),
-        kind.segment()
+    let archetype_id = tr_with(
+        Msg::OpenehrDemographicV1,
+        &[
+            ("kind", (kind.rm_type()).to_string().into()),
+            ("kind2", (kind.segment()).to_string().into()),
+        ],
     );
     let mut body = serde_json::json!({
         "_type": kind.rm_type(),
@@ -343,11 +344,11 @@ pub fn minimal_party_body(kind: PartyKind) -> String {
         },
         "identities": [{
             "_type": "PARTY_IDENTITY",
-            "name": { "_type": "DV_TEXT", "value": "legal identity" },
+            "name": { "_type": "DV_TEXT", "value": tr(Msg::LegalIdentity) },
             "archetype_node_id": "at0001",
             "details": {
                 "_type": "ITEM_TREE",
-                "name": { "_type": "DV_TEXT", "value": "identity details" },
+                "name": { "_type": "DV_TEXT", "value": tr(Msg::IdentityDetails) },
                 "archetype_node_id": "at0002",
                 "items": [{
                     "_type": "ELEMENT",
@@ -399,8 +400,14 @@ fn create_section(kind: PartyKind, toaster: ferrohealth_ui::widget::toast::Toast
         Some(Ok(uid)) => {
             toast_success(
                 toaster,
-                "Party created",
-                &format!("New {} version {uid}", kind.rm_type()),
+                &tr(Msg::PartyCreated),
+                &tr_with(
+                    Msg::NewVersion2,
+                    &[
+                        ("kind", (kind.rm_type()).to_string().into()),
+                        ("uid", uid.clone().into()),
+                    ],
+                ),
             );
             navigate(
                 &party_href(kind, &uid),
@@ -410,8 +417,11 @@ fn create_section(kind: PartyKind, toaster: ferrohealth_ui::widget::toast::Toast
         Some(Err(error)) => {
             crate::feedback::toast_write_failure(
                 toaster,
-                "Create failed",
-                &format!("the new {}", kind.rm_type()),
+                &tr(Msg::CreateFailed),
+                &tr_with(
+                    Msg::TheNew,
+                    &[("kind", (kind.rm_type()).to_string().into())],
+                ),
                 &error,
             );
         }
@@ -426,12 +436,12 @@ fn create_section(kind: PartyKind, toaster: ferrohealth_ui::widget::toast::Toast
     };
     view! {
         <section class=format!("{CARD_PAD} mb-6") id="party-create">
-            <h2 class=CARD_TITLE>{format!("Create a {}", kind.rm_type())}</h2>
+            <h2 class=CARD_TITLE>{tr_with(Msg::CreateA, &[("kind", (kind.rm_type()).to_string().into())])}</h2>
             <p class="mb-3 fui-help">
-                "The document below is the smallest party this kind accepts — every attribute in it is mandatory. Replace the archetype ids and the identity details with your own, then create."
+                {tr(Msg::DocumentBelowSmallestPartyKindAccepts)}
             </p>
             <label class=LABEL r#for="party-create-body">
-                {format!("{} document (canonical JSON)", kind.rm_type())}
+                {tr_with(Msg::DocumentCanonicalJson2, &[("kind", (kind.rm_type()).to_string().into())])}
             </label>
             {code_field("party-create-body", Language::Json, body, None, Height::Document)}
             <div class="mt-3 flex items-center gap-3">
@@ -443,10 +453,10 @@ fn create_section(kind: PartyKind, toaster: ferrohealth_ui::widget::toast::Toast
                     on:click=on_click
                 >
                     {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::USER_PLUS, "14")}
-                    {format!("Create {}", kind.rm_type())}
+                    {tr_with(Msg::Create, &[("kind", (kind.rm_type()).to_string().into())])}
                 </button>
                 <Show when=move || create.pending().get()>
-                    <span class="text-sm text-ink-muted">"Creating…"</span>
+                    <span class="text-sm text-ink-muted">{tr(Msg::Creating)}</span>
                 </Show>
             </div>
             {move || match create.value().get() {
@@ -507,19 +517,17 @@ fn tag_index_section(kind: PartyKind) -> AnyView {
             );
         }
     });
-    let note = move || {
-        match open.value().get() {
+    let note = move || match open.value().get() {
         Some((uid, Ok(None))) => view! {
             <p class="mt-2 text-sm text-ink-muted">
-                {format!(
-                    "No party kind holds {uid} — the tag may target an object that was since deleted.",
-                )}
+                {tr_with(Msg::NoPartyKindHoldsTagMay, &[("uid", uid.clone().into())])}
             </p>
         }
         .into_any(),
-        Some((_, Err(error))) => view! { <div class="mt-2">{inline_error(&error)}</div> }.into_any(),
+        Some((_, Err(error))) => {
+            view! { <div class="mt-2">{inline_error(&error)}</div> }.into_any()
+        }
         _ => ().into_any(),
-    }
     };
 
     let table = view! {
@@ -530,8 +538,8 @@ fn tag_index_section(kind: PartyKind) -> AnyView {
                         view! {
                             <EmptyState
                                 icon=ferrohealth_ui::icon::Glyph::TAGS
-                                message="No demographic tags"
-                                hint="Tags are the one demographic collection the openEHR API lists. Set one on a party's Tags tab and it appears here."
+                                message=tr(Msg::NoDemographicTags)
+                                hint=tr(Msg::TagsOneDemographicCollectionOpenehrApi)
                             />
                         }
                             .into_any()
@@ -546,9 +554,9 @@ fn tag_index_section(kind: PartyKind) -> AnyView {
 
     view! {
         <section class=CARD_PAD id="demographic-tag-index">
-            <h2 class=CARD_TITLE>"Tag index (all kinds)"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::TagIndexAllKinds)}</h2>
             <p class="mb-3 fui-help">
-                "The demographic tag list spans every party kind, and a tag names its target without naming that target's kind — so opening a row asks the CDR which kind holds it."
+                {tr(Msg::DemographicTagListSpansEveryParty)}
             </p>
             {tag_filter_form(browse_href(kind), filters, &[])}
             {table}
@@ -587,13 +595,13 @@ fn tag_index_table(
     .into_any();
     let footer = table_footer(
         &browse_href(kind),
-        "Tag pages",
-        ferrohealth_ui::table::model::Noun::new("tag", "tags"),
+        tr(Msg::TagPages),
+        ferrohealth_ui::table::model::Noun::new(message(Msg::NounTags)),
         paging,
         Signal::derive(move || total),
     );
     view! {
-        {table_shell("Demographic tags", &["Key", "Value", "Target path", "Target", ""], rows)}
+        {table_shell(&tr(Msg::DemographicTags), &[&tr(Msg::Key), &tr(Msg::Value), &tr(Msg::TargetPath), &tr(Msg::Target), ""], rows)}
         {footer}
     }
     .into_any()
@@ -613,16 +621,16 @@ fn tag_index_row(
     view! {
         <tr class=ROW>
             <td class=CELL_MONO>{key}</td>
-            <td class=CELL data-label="Value">
+            <td class=CELL data-label=tr(Msg::Value)>
                 {value}
             </td>
-            <td class=CELL_MONO data-label="Target path">
+            <td class=CELL_MONO data-label=tr(Msg::TargetPath)>
                 {target_path}
             </td>
-            <td class=CELL_MONO data-label="Target">
+            <td class=CELL_MONO data-label=tr(Msg::Target)>
                 {shown_target}
             </td>
-            <td class=CELL data-label="Actions">
+            <td class=CELL data-label=tr(Msg::Actions)>
                 <button
                     type="button"
                     class=BTN_SECONDARY
@@ -633,7 +641,7 @@ fn tag_index_row(
                     }
                 >
                     {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::EYE, "14")}
-                    "Open party"
+                    {tr(Msg::OpenParty)}
                 </button>
             </td>
         </tr>

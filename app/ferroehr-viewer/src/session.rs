@@ -67,7 +67,7 @@ impl SessionKeys {
     pub fn from_secret(secret: &str) -> Result<Self, ViewerError> {
         if secret.trim().is_empty() {
             tracing::warn!(
-                "session.secret is empty: using an ephemeral per-instance key — sessions will not \
+                "session.secret is empty: using an ephemeral per-instance key: sessions will not \
                  survive a restart and will NOT work across multiple instances; configure \
                  session.secret (base64, at least 64 bytes) for any scaled deployment"
             );

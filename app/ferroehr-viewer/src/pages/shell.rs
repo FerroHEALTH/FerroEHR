@@ -39,6 +39,7 @@ use leptos_router::components::{Outlet, Redirect};
 use crate::auth::{Logout, SessionInfo, current_session, fetch_status};
 use crate::components::brand::viewer_lockup;
 use crate::components::scope_grants::{ScopePreviewer, capability_note, fact_row, grant_cards};
+use crate::locale::{Msg, tr, tr_with};
 use crate::scopes::{grants_of, policy_source};
 use crate::session_client::{session_ended_epoch, session_ended_signal, signed_out_url};
 
@@ -69,118 +70,110 @@ const OPERATOR_MENU_ID: &str = "user-menu";
 const NAV_DEMOGRAPHICS: &str = "/demographics";
 
 /// The clinical-data entries every deployment shows, in order.
-const DATA: [Entry; 6] = [
-    Entry {
-        href: "/",
-        label: "Dashboard",
-        glyph: Glyph::LAYOUT_DASHBOARD,
-        exact: true,
-    },
-    Entry {
-        href: "/templates",
-        label: "Templates",
-        glyph: Glyph::FILE_CODE,
-        exact: false,
-    },
-    Entry {
-        href: "/queries",
-        label: "Queries",
-        glyph: Glyph::SEARCH_CODE,
-        exact: false,
-    },
-    Entry {
-        href: "/ehrs",
-        label: "EHRs",
-        glyph: Glyph::DATABASE,
-        exact: false,
-    },
-    Entry {
-        href: NAV_DEMOGRAPHICS,
-        label: "Demographics",
-        glyph: Glyph::USERS,
-        exact: false,
-    },
-    Entry {
-        href: "/terminology",
-        label: "Terminology",
-        glyph: Glyph::BOOK_A,
-        exact: false,
-    },
-];
+fn data() -> [Entry; 6] {
+    [
+        Entry {
+            href: "/",
+            label: tr(Msg::Dashboard).into(),
+            glyph: Glyph::LAYOUT_DASHBOARD,
+            exact: true,
+        },
+        Entry {
+            href: "/templates",
+            label: tr(Msg::Templates).into(),
+            glyph: Glyph::FILE_CODE,
+            exact: false,
+        },
+        Entry {
+            href: "/queries",
+            label: tr(Msg::Queries).into(),
+            glyph: Glyph::SEARCH_CODE,
+            exact: false,
+        },
+        Entry {
+            href: "/ehrs",
+            label: tr(Msg::Ehrs).into(),
+            glyph: Glyph::DATABASE,
+            exact: false,
+        },
+        Entry {
+            href: NAV_DEMOGRAPHICS,
+            label: tr(Msg::Demographics).into(),
+            glyph: Glyph::USERS,
+            exact: false,
+        },
+        Entry {
+            href: "/terminology",
+            label: tr(Msg::Terminology).into(),
+            glyph: Glyph::BOOK_A,
+            exact: false,
+        },
+    ]
+}
 
 /// The probe-gated subscriptions entry, last in the data group.
-const SUBSCRIPTIONS: Entry = Entry {
-    href: "/subscriptions",
-    label: "Subscriptions",
-    glyph: Glyph::RADIO_TOWER,
-    exact: false,
-};
+fn subscriptions() -> Entry {
+    Entry {
+        href: "/subscriptions",
+        label: tr(Msg::Subscriptions).into(),
+        glyph: Glyph::RADIO_TOWER,
+        exact: false,
+    }
+}
 
 /// The probe-gated operations entry, first in the platform group.
-const OPERATIONS: Entry = Entry {
-    href: "/operations",
-    label: "Operations",
-    glyph: Glyph::GAUGE,
-    exact: false,
-};
+fn operations() -> Entry {
+    Entry {
+        href: "/operations",
+        label: tr(Msg::Operations).into(),
+        glyph: Glyph::GAUGE,
+        exact: false,
+    }
+}
 
 /// The platform-about-itself entries every deployment shows, `System` last.
-const AUDIT: Entry = Entry {
-    href: "/audit",
-    label: "Audit log",
-    glyph: Glyph::SHIELD_CHECK,
-    exact: false,
-};
+fn audit() -> Entry {
+    Entry {
+        href: "/audit",
+        label: tr(Msg::AuditLog).into(),
+        glyph: Glyph::SHIELD_CHECK,
+        exact: false,
+    }
+}
 
 /// The system entry, last of all.
-const SYSTEM: Entry = Entry {
-    href: "/system",
-    label: "System",
-    glyph: Glyph::SERVER,
-    exact: false,
-};
-
-/// The data group with the subscriptions entry.
-const DATA_WITH_SUBSCRIPTIONS: [Entry; 7] = [
-    DATA[0],
-    DATA[1],
-    DATA[2],
-    DATA[3],
-    DATA[4],
-    DATA[5],
-    SUBSCRIPTIONS,
-];
-
-/// The platform group with the operations entry.
-const PLATFORM_WITH_OPERATIONS: [Entry; 3] = [OPERATIONS, AUDIT, SYSTEM];
-
-/// The platform group without it.
-const PLATFORM: [Entry; 2] = [AUDIT, SYSTEM];
+fn system() -> Entry {
+    Entry {
+        href: "/system",
+        label: tr(Msg::System).into(),
+        glyph: Glyph::SERVER,
+        exact: false,
+    }
+}
 
 /// The navigation's two groups, the gated entries in their group when the CDR
-/// serves their surface: the DATA group (the clinical and definitional
-/// sections a deployment's own data lives in), then the PLATFORM group (the
+/// serves their surface: the data group (the clinical and definitional
+/// sections a deployment's own data lives in), then the platform group (the
 /// platform-about-itself screens), with `System` last.
-fn nav_groups(subscriptions: bool, operations: bool) -> [Group; 2] {
-    let data: &'static [Entry] = if subscriptions {
-        &DATA_WITH_SUBSCRIPTIONS
-    } else {
-        &DATA
-    };
-    let platform: &'static [Entry] = if operations {
-        &PLATFORM_WITH_OPERATIONS
-    } else {
-        &PLATFORM
-    };
-    [
+fn nav_groups(subscriptions: bool, operations: bool) -> Vec<Group> {
+    let mut data = Vec::from(data());
+    if subscriptions {
+        data.push(self::subscriptions());
+    }
+    let mut platform = Vec::new();
+    if operations {
+        platform.push(self::operations());
+    }
+    platform.extend([audit(), system()]);
+    vec![
         Group {
             id: "nav-data",
-            title: "Clinical data",
+            title: tr(Msg::ClinicalData).into(),
             entries: data,
         },
         Group {
             id: "nav-platform",
-            title: "Platform",
+            title: tr(Msg::Platform).into(),
             entries: platform,
         },
     ]
@@ -331,7 +324,7 @@ fn status_pill(status: Resource<Result<String, crate::error::ViewerError>>) -> A
         <span id="cdr-status" class="fui-roomy-only">
             <Transition fallback=|| pill(
                 Tone::Neutral,
-                "Checking the CDR",
+                &tr(Msg::CheckingTheCdr),
             )>
                 {move || {
                     Suspend::new(async move {
@@ -349,16 +342,16 @@ fn status_pill(status: Resource<Result<String, crate::error::ViewerError>>) -> A
                                     .unwrap_or_default();
                                 match doc.as_ref().and_then(|d| d.status.as_deref()) {
                                     Some("UP") => {
-                                        (Tone::Ok, format!("CDR UP · v{version}{profile}"))
+                                        (Tone::Ok, tr_with(Msg::CdrUpV, &[("version", version.clone().into()), ("profile", profile.clone().into())]))
                                     }
-                                    _ => (Tone::Warn, "CDR DEGRADED".to_owned()),
+                                    _ => (Tone::Warn, tr(Msg::CdrDegraded)),
                                 }
                             }
                             Err(
                                 crate::error::ViewerError::Unauthenticated
                                 | crate::error::ViewerError::CdrUnauthorized(_),
-                            ) => (Tone::Warn, "Session ended".to_owned()),
-                            Err(_) => (Tone::Bad, "CDR DOWN".to_owned()),
+                            ) => (Tone::Warn, tr(Msg::SessionEnded)),
+                            Err(_) => (Tone::Bad, tr(Msg::CdrDown)),
                         };
                         pill(tone, &word).into_any()
                     })
@@ -386,8 +379,10 @@ fn sandbox_banner(status: Resource<Result<String, crate::error::ViewerError>>) -
                     };
                     notice
                         .map(|notice| {
-                            let rule = crate::deployment::SandboxNotice::RULE;
-                            let rest = rule.strip_prefix("Sandbox deployment: ").unwrap_or(rule);
+                            let rule = crate::deployment::SandboxNotice::rule();
+                            let rule = rule.as_str();
+                            let prefix = tr(Msg::SandboxDeployment2);
+                            let rest = rule.strip_prefix(prefix.as_str()).unwrap_or(rule);
                             let gaps = notice.gaps_sentence();
                             let body = if gaps.is_empty() {
                                 rest.to_owned()
@@ -399,7 +394,7 @@ fn sandbox_banner(status: Resource<Result<String, crate::error::ViewerError>>) -
                                     {banner(
                                         Tone::Warn,
                                         Glyph::TRIANGLE_ALERT,
-                                        "Sandbox deployment",
+                                        tr(Msg::SandboxDeployment),
                                         &body,
                                     )}
                                 </div>
@@ -432,7 +427,7 @@ fn user_menu(session: Resource<Result<Option<SessionInfo>, crate::error::ViewerE
                             ACCESS_PANEL_ID,
                             SCOPES_TRIGGER,
                             Glyph::SHIELD_CHECK,
-                            "View scopes",
+                            tr(Msg::ViewScopes),
                         )}
                     };
                     view! {
@@ -441,7 +436,7 @@ fn user_menu(session: Resource<Result<Option<SessionInfo>, crate::error::ViewerE
                                 OperatorMenu {
                                     id: OPERATOR_MENU_ID,
                                     name: identity,
-                                    subtitle: "Signed in to this viewer",
+                                    subtitle: tr(Msg::SignedViewer).into(),
                                     sign_out: Some(Logout::url().to_owned()),
                                 },
                                 extra,
@@ -481,7 +476,7 @@ fn scopes_drawer(
                         // Basic auth — the sentence IS the content.
                         view! {
                             <p class="text-sm text-ink-muted">
-                                "No scopes — Basic authentication grants full viewer access."
+                                {tr(Msg::NoScopesBasicAuthenticationGrantsFull)}
                             </p>
                         }
                             .into_any()
@@ -491,13 +486,13 @@ fn scopes_drawer(
                     view! {
                         <div class="flex flex-col gap-3">
                             <div class="flex flex-col gap-1">
-                                {fact_row("Identity", identity)}
-                                {fact_row("Signed in with", policy.label.to_owned())}
+                                {fact_row(tr(Msg::Identity), identity)}
+                                {fact_row(tr(Msg::SignedInWith), policy.label.clone())}
                             </div>
                             <p class="text-xs leading-snug text-ink-muted">{policy.note}</p>
                             <div id="session-scopes" class="flex flex-col gap-2">
                                 <h3 class="text-xs font-medium text-ink">
-                                    "Scopes on this session"
+                                    {tr(Msg::ScopesOnThisSession)}
                                 </h3>
                                 {scope_view}
                             </div>
@@ -521,7 +516,7 @@ fn scopes_drawer(
     side_panel(SidePanel {
         id: ACCESS_PANEL_ID,
         body_id: "access-drawer",
-        title: "Access scopes",
+        title: tr(Msg::AccessScopes).into(),
         body,
     })
 }
@@ -539,8 +534,8 @@ fn navigation(
     view! {
         <Transition fallback=|| sidebar(
             SIDEBAR_ID,
-            "Main",
-            &nav_groups(false, false),
+            tr(Msg::Main),
+            nav_groups(false, false),
         )>
             {move || {
                 Suspend::new(async move {
@@ -548,7 +543,7 @@ fn navigation(
                     let events = crate::subscriptions::renders_event_subscriptions(
                         &subscriptions.await,
                     );
-                    sidebar(SIDEBAR_ID, "Main", &nav_groups(events, operations))
+                    sidebar(SIDEBAR_ID, tr(Msg::Main), nav_groups(events, operations))
                 })
             }}
         </Transition>
@@ -594,7 +589,7 @@ fn authed_shell(
         sidebar: navigation(management, subscriptions),
         content,
         footer: Footer {
-            product: "FerroEHR Viewer",
+            product: "FerroEHR Viewer".into(),
             version: env!("CARGO_PKG_VERSION"),
             about: "/system#manufacturer",
         },
@@ -618,7 +613,7 @@ mod tests {
             .iter()
             .flat_map(|group| {
                 std::iter::once(format!("[{}]", group.title))
-                    .chain(group.entries.iter().map(|entry| entry.label.to_owned()))
+                    .chain(group.entries.iter().map(|entry| entry.label.to_string()))
             })
             .collect()
     }

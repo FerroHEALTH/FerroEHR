@@ -45,6 +45,9 @@ use crate::pages::ehrs::{ResultPage, cell_text, ehr_detail_href, paging_controls
 use ferrohealth_ui::highlight::Language;
 // Server-side helpers, compiled only where the #[server] bodies exist.
 #[cfg(not(target_arch = "wasm32"))]
+use crate::locale::tr_served;
+use crate::locale::{Msg, message, tr, tr_with};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::pages::ehr_detail::composition_filter::composition_query;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::pages::ehrs::{aql_request_body, parse_result_set};
@@ -151,17 +154,15 @@ pub async fn commit_composition(
     let session = crate::session::require_session().await?;
     let state: crate::state::AppState = expect_context();
     if body.trim().is_empty() {
-        return Err(ViewerError::Invalid(
-            "the composition body is empty".to_owned(),
-        ));
+        return Err(ViewerError::Invalid(tr_served(Msg::CompositionBodyEmpty)));
     }
     let template_id = template_id.trim();
     let mut headers: Vec<(&str, &str)> = vec![("Prefer", "return=representation")];
     if matches!(format, ReprFormat::Flat) {
         if template_id.is_empty() {
-            return Err(ViewerError::Invalid(
-                "a template id is required to commit a FLAT composition".to_owned(),
-            ));
+            return Err(ViewerError::Invalid(tr_served(
+                Msg::TemplateIdRequiredCommitFlatComposition,
+            )));
         }
         headers.push(("openehr-template-id", template_id));
     }
@@ -223,16 +224,16 @@ pub(super) fn compositions_section(
     Effect::new(move |_| match commit.value().get() {
         Some(Ok(uid)) => {
             let detail = if uid.is_empty() {
-                "The composition was committed.".to_owned()
+                tr(Msg::TheCompositionWasCommitted)
             } else {
-                format!("New version {uid}")
+                tr_with(Msg::NewVersion5, &[("uid", uid.clone().into())])
             };
-            toast_success(toaster, "Composition committed", &detail);
+            toast_success(toaster, &tr(Msg::CompositionCommitted), &detail);
         }
         Some(Err(error)) => crate::feedback::toast_write_failure(
             toaster,
-            "Commit failed",
-            "the composition",
+            &tr(Msg::CommitFailed),
+            &tr(Msg::TheComposition),
             &error,
         ),
         None => {}
@@ -318,7 +319,7 @@ fn filter_bar(ehr_id: Signal<String>, query: Memo<ParamsMap>) -> AnyView {
             <div class="fui-field-flow">
                 {field(
                     "composition-filter-template",
-                    "Template",
+                    tr(Msg::Template),
                     None,
                     view! {
                         <input
@@ -326,7 +327,7 @@ fn filter_bar(ehr_id: Signal<String>, query: Memo<ParamsMap>) -> AnyView {
                             type="text"
                             name="template"
                             class=INPUT
-                            placeholder="part of the template id"
+                            placeholder=tr(Msg::PartTemplateId)
                             value=initial("template")
                             prop:value=current("template")
                         />
@@ -334,7 +335,7 @@ fn filter_bar(ehr_id: Signal<String>, query: Memo<ParamsMap>) -> AnyView {
                 )}
                 {field(
                     "composition-filter-from",
-                    "From (UTC date)",
+                    tr(Msg::FromUtcDate),
                     None,
                     view! {
                         <input
@@ -349,7 +350,7 @@ fn filter_bar(ehr_id: Signal<String>, query: Memo<ParamsMap>) -> AnyView {
                 )}
                 {field(
                     "composition-filter-to",
-                    "To (UTC date)",
+                    tr(Msg::ToUtcDate),
                     None,
                     view! {
                         <input
@@ -364,7 +365,7 @@ fn filter_bar(ehr_id: Signal<String>, query: Memo<ParamsMap>) -> AnyView {
                 )}
                 {field(
                     "composition-filter-composer",
-                    "Composer",
+                    tr(Msg::Composer),
                     None,
                     view! {
                         <input
@@ -372,20 +373,20 @@ fn filter_bar(ehr_id: Signal<String>, query: Memo<ParamsMap>) -> AnyView {
                             type="text"
                             name="composer"
                             class=INPUT
-                            placeholder="part of the composer's name"
+                            placeholder=tr(Msg::PartComposerSName)
                             value=initial("composer")
                             prop:value=current("composer")
                         />
                     },
                 )} <button id="composition-filter-apply" type="submit" class=BTN_PRIMARY>
                     {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::FUNNEL, "14")}
-                    "Filter"
+                    {tr(Msg::Filter)}
                 </button> <a id="composition-filter-clear" href=clear class=BTN_SECONDARY>
-                    "Clear"
+                    {tr(Msg::Clear)}
                 </a>
             </div>
             <p class="mt-2 fui-help">
-                "Template and composer match anywhere in the value; the dates bound the composition's context start time, each covering its whole UTC day."
+                {tr(Msg::TemplateComposerMatchAnywhereValueDates)}
             </p>
         </leptos_router::components::Form>
     }
@@ -410,12 +411,12 @@ fn commit_form(
     };
     view! {
         <section class=format!("{CARD_PAD} mt-4")>
-            <h2 class=CARD_TITLE>"Commit composition"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::CommitComposition)}</h2>
             <div class="flex flex-col gap-3">
                 <div class="fui-field-flow">
                     <div class="flex flex-col gap-1">
                         <label class=LABEL r#for="commit-format">
-                            "Format"
+                            {tr(Msg::Format)}
                         </label>
                         <select
                             id="commit-format"
@@ -425,20 +426,20 @@ fn commit_form(
                                 format.set(format_from_value(&event_target_value(&ev)));
                             }
                         >
-                            <option value="json">"Canonical JSON"</option>
-                            <option value="xml">"Canonical XML"</option>
+                            <option value="json">{tr(Msg::CanonicalJson)}</option>
+                            <option value="xml">{tr(Msg::CanonicalXml)}</option>
                             <option value="flat">"FLAT"</option>
                         </select>
                     </div>
                     <div class="flex flex-col gap-1" class:hidden=move || !is_flat()>
                         <label class=LABEL r#for="commit-template-id">
-                            "Template id"
+                            {tr(Msg::TemplateId)}
                         </label>
                         <input
                             id="commit-template-id"
                             type="text"
                             class=INPUT
-                            placeholder="template id (required for FLAT)"
+                            placeholder=tr(Msg::TemplateIdRequiredFlat)
                             prop:value=move || template_id.get()
                             on:input:target=move |ev| template_id.set(ev.target().value())
                         />
@@ -446,10 +447,10 @@ fn commit_form(
                 </div>
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="commit-body">
-                        "Composition"
+                        {tr(Msg::Composition2)}
                     </label>
                     <p class="fui-help">
-                        "Paste the composition document in the format chosen above."
+                        {tr(Msg::PasteCompositionDocumentFormatChosenAbove)}
                     </p>
                     {move || {
                         let language = if format.get() == ReprFormat::CanonicalXml {
@@ -468,10 +469,10 @@ fn commit_form(
                         disabled=Signal::derive(move || commit.pending().get())
                         on:click=on_commit
                     >
-                        "Commit"
+                        {tr(Msg::Commit)}
                     </button>
                     <Show when=move || commit.pending().get()>
-                        <span class="text-sm text-ink-muted">"Committing…"</span>
+                        <span class="text-sm text-ink-muted">{tr(Msg::Committing)}</span>
                     </Show>
                 </div>
                 {commit_feedback(commit)}
@@ -541,13 +542,13 @@ fn compositions_table(
     if page.rows.is_empty() {
         let (message, hint) = if unfiltered {
             (
-                "No compositions in this EHR",
-                "Commit one with the form above, or through the CDR's REST API.",
+                tr(Msg::NoCompositionsEhr),
+                tr(Msg::CommitOneFormAboveThroughCdr),
             )
         } else {
             (
-                "No compositions match these filters",
-                "Widen the date window, shorten the template or composer text, or clear the filters.",
+                tr(Msg::NoCompositionsMatchTheseFilters),
+                tr(Msg::WidenDateWindowShortenTemplateComposer),
             )
         };
         return view! { <EmptyState icon=ferrohealth_ui::icon::Glyph::FILE_TEXT message=message hint=hint /> }
@@ -569,13 +570,13 @@ fn compositions_table(
         page.offset,
         page.rows.len(),
         &ehr_detail_href(ehr_id),
-        ferrohealth_ui::table::model::Noun::new("composition", "compositions"),
+        ferrohealth_ui::table::model::Noun::new(message(Msg::NounCompositions)),
         query,
     );
     view! {
         {table_shell(
-            "Compositions",
-            &["Composition", "Name", "Template", "Started", "Composer"],
+            &tr(Msg::Compositions),
+            &[&tr(Msg::Composition2), &tr(Msg::Name), &tr(Msg::Template), &tr(Msg::Started), &tr(Msg::Composer)],
             body,
         )}
         {paging}
@@ -583,15 +584,21 @@ fn compositions_table(
     .into_any()
 }
 
+/// The headers of the composition listing's columns after the first, which
+/// name a stacked row's values on a phone.
+const COMPOSITION_LABELS: [Msg; 5] = [
+    Msg::Composition2,
+    Msg::Name,
+    Msg::Template,
+    Msg::Started,
+    Msg::Composer,
+];
+
 /// One composition row: the uid cell opens the viewer at the versioned-object
 /// id, in the RENDERED clinical view (`?view=` — the composition viewer's
 /// deep-linkable pane mode); the full uid stays visible.
 ///
 /// Both path segments are percent-encoded — an id carrying `/`, `#`, `?` or `%`
-/// The headers of the composition listing's columns after the first, which
-/// name a stacked row's values on a phone.
-const COMPOSITION_LABELS: [&str; 5] = ["Composition", "Name", "Template", "Started", "Composer"];
-
 /// would otherwise address a different route.
 fn composition_row(row: &[Value], ehr_id: &str) -> AnyView {
     let uid = row.first().map(cell_text).unwrap_or_default();
@@ -616,8 +623,9 @@ fn composition_row(row: &[Value], ehr_id: &str) -> AnyView {
                 }
                 .into_any()
             } else {
-                let label = COMPOSITION_LABELS.get(i).copied().unwrap_or_default();
-                let shown = if label == "Started" {
+                let column = COMPOSITION_LABELS.get(i).copied();
+                let label = column.map(tr).unwrap_or_default();
+                let shown = if column == Some(Msg::Started) {
                     ferrohealth_ui::view::time::timestamp(&text).into_any()
                 } else {
                     text.into_any()

@@ -26,6 +26,7 @@ use axum::http::{HeaderMap, HeaderValue, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 
 use crate::error::ViewerError;
+use crate::locale::{Msg, tr, tr_with};
 
 /// The export form body (`q` + optional JSON parameters + the format).
 #[derive(Debug, serde::Deserialize)]
@@ -64,7 +65,10 @@ pub async fn export_aql(
     match run(&state, &admin, &form).await {
         Ok(response) => response,
         Err(ViewerError::Unauthenticated) => axum::response::Redirect::to("/login").into_response(),
-        Err(e) => plain(StatusCode::BAD_GATEWAY, &format!("export failed: {e}")),
+        Err(e) => plain(
+            StatusCode::BAD_GATEWAY,
+            &tr_with(Msg::ExportFailed, &[("e", (e).to_string().into())]),
+        ),
     }
 }
 
@@ -76,13 +80,15 @@ async fn run(
     let parameters: serde_json::Value = if form.parameters_json.trim().is_empty() {
         serde_json::json!({})
     } else {
-        serde_json::from_str(&form.parameters_json)
-            .map_err(|e| ViewerError::Invalid(format!("parameters must be a JSON object: {e}")))?
+        serde_json::from_str(&form.parameters_json).map_err(|e| {
+            ViewerError::Invalid(tr_with(
+                Msg::ParametersMustJsonObject2,
+                &[("e", (e).to_string().into())],
+            ))
+        })?
     };
     if !parameters.is_object() {
-        return Err(ViewerError::Invalid(
-            "parameters must be a JSON object".to_owned(),
-        ));
+        return Err(ViewerError::Invalid(tr(Msg::ParametersMustJsonObject)));
     }
     let url = state.cdr.rest_v1("query/aql");
     let body = serde_json::json!({ "q": form.q, "query_parameters": parameters }).to_string();
@@ -107,10 +113,15 @@ async fn run(
         )),
         "csv" => {
             let csv = result_set_to_csv(&response.body)?;
-            Ok(download("text/csv; charset=utf-8", "aql-export.csv", csv))
+            Ok(download(
+                &tr(Msg::TextCsvCharsetUtf8),
+                "aql-export.csv",
+                csv,
+            ))
         }
-        other => Err(ViewerError::Invalid(format!(
-            "unknown export format `{other}` (csv | json)"
+        other => Err(ViewerError::Invalid(tr_with(
+            Msg::UnknownExportFormatCsvJson,
+            &[("other", (other).to_string().into())],
         ))),
     }
 }
@@ -127,8 +138,12 @@ fn pretty_json(body: &str) -> Vec<u8> {
 /// column path, then to a 1-based position) as the header row, scalar
 /// cells verbatim, null as empty, and structured cells as compact JSON.
 fn result_set_to_csv(body: &str) -> Result<Vec<u8>, ViewerError> {
-    let doc: serde_json::Value = serde_json::from_str(body)
-        .map_err(|e| ViewerError::Internal(format!("unparseable RESULT_SET: {e}")))?;
+    let doc: serde_json::Value = serde_json::from_str(body).map_err(|e| {
+        ViewerError::Internal(tr_with(
+            Msg::UnparseableResultSet,
+            &[("e", (e).to_string().into())],
+        ))
+    })?;
     let columns = doc
         .get("columns")
         .and_then(serde_json::Value::as_array)
@@ -142,7 +157,10 @@ fn result_set_to_csv(body: &str) -> Result<Vec<u8>, ViewerError> {
                 .and_then(serde_json::Value::as_str)
                 .filter(|s| !s.is_empty())
                 .or_else(|| c.get("path").and_then(serde_json::Value::as_str))
-                .map_or_else(|| format!("column {}", i + 1), str::to_owned)
+                .map_or_else(
+                    || tr_with(Msg::Column3, &[("value0", (i + 1).to_string().into())]),
+                    str::to_owned,
+                )
         })
         .collect();
     let mut writer = csv::Writer::from_writer(Vec::new());
@@ -185,7 +203,10 @@ fn download(content_type: &str, filename: &str, body: Vec<u8>) -> Response {
     if let Ok(value) = HeaderValue::from_str(content_type) {
         headers.insert(header::CONTENT_TYPE, value);
     }
-    if let Ok(value) = HeaderValue::from_str(&format!("attachment; filename=\"{filename}\"")) {
+    if let Ok(value) = HeaderValue::from_str(&tr_with(
+        Msg::AttachmentFilename,
+        &[("filename", (filename).to_string().into())],
+    )) {
         headers.insert(header::CONTENT_DISPOSITION, value);
     }
     response

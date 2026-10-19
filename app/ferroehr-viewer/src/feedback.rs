@@ -17,6 +17,7 @@
 //! (carrying the CDR's own diagnostic verbatim), name the next action.
 
 use crate::error::ViewerError;
+use crate::locale::{Msg, tr_with};
 
 /// Actionable copy for a failed write: names `object`, what went wrong, and
 /// the next action.
@@ -30,9 +31,13 @@ use crate::error::ViewerError;
 #[must_use]
 pub fn write_failure_copy(object: &str, error: &ViewerError) -> String {
     match error {
-        ViewerError::Invalid(message) => {
-            format!("{object} was not sent: {message}. Correct the input and retry.")
-        }
+        ViewerError::Invalid(message) => tr_with(
+            Msg::WasNotSentCorrectInputRetry,
+            &[
+                ("object", (object).to_string().into()),
+                ("message", message.clone().into()),
+            ],
+        ),
         // 412 and 409 are different failures on the wire, so they get
         // different next actions: `412` is "one or more conditions given in
         // the request header fields evaluated to false" (the stale `If-Match`
@@ -42,46 +47,80 @@ pub fn write_failure_copy(object: &str, error: &ViewerError) -> String {
         // §status codes.
         ViewerError::Cdr { status, message } => match error.status_code() {
             Some(http::StatusCode::BAD_REQUEST | http::StatusCode::UNPROCESSABLE_ENTITY) => {
-                format!("The CDR rejected {object}: {message}. Fix the reported problem and retry.")
+                tr_with(
+                    Msg::CdrRejectedFixReportedProblemRetry,
+                    &[
+                        ("object", (object).to_string().into()),
+                        ("message", message.clone().into()),
+                    ],
+                )
             }
-            Some(http::StatusCode::PRECONDITION_FAILED) => format!(
-                "{object} changed in the CDR since this screen loaded ({message}). Reload the \
-                 latest version, then reapply your change."
+            Some(http::StatusCode::PRECONDITION_FAILED) => tr_with(
+                Msg::ChangedCdrSinceScreenLoadedReload,
+                &[
+                    ("object", (object).to_string().into()),
+                    ("message", message.clone().into()),
+                ],
             ),
-            Some(http::StatusCode::CONFLICT) => format!(
-                "The CDR already holds a conflicting object, so {object} was not created \
-                 ({message}). Open the existing one, or change the identifier and retry."
+            Some(http::StatusCode::CONFLICT) => tr_with(
+                Msg::CdrAlreadyHoldsConflictingObjectSo,
+                &[
+                    ("object", (object).to_string().into()),
+                    ("message", message.clone().into()),
+                ],
             ),
-            Some(http::StatusCode::NOT_FOUND) => format!(
-                "{object} is not in the CDR ({message}) — it may have been deleted meanwhile. \
-                 Reload this screen and retry."
+            Some(http::StatusCode::NOT_FOUND) => tr_with(
+                Msg::NotCdrMayHaveBeenDeleted,
+                &[
+                    ("object", (object).to_string().into()),
+                    ("message", message.clone().into()),
+                ],
             ),
-            _ => format!("The CDR answered {status} to {object}: {message}. Nothing was saved."),
+            _ => tr_with(
+                Msg::CdrAnsweredNothingWasSaved,
+                &[
+                    ("status", (status).to_string().into()),
+                    ("object", (object).to_string().into()),
+                    ("message", message.clone().into()),
+                ],
+            ),
         },
         // 401 and 403 are different refusals with different next actions: the
         // credential is not accepted any more versus it is accepted and not
         // authorized (ITS-REST
         // `specifications/docs/overview/Requests_and_responses.md`
         // §HTTP status codes).
-        ViewerError::CdrUnauthorized(message) => format!(
-            "The CDR no longer accepts this session, so {object} was not saved ({message}). Sign \
-             in again and retry."
+        ViewerError::CdrUnauthorized(message) => tr_with(
+            Msg::CdrNoLongerAcceptsSessionSo2,
+            &[
+                ("object", (object).to_string().into()),
+                ("message", message.clone().into()),
+            ],
         ),
-        ViewerError::Forbidden(message) => format!(
-            "This session may not write {object} ({message}). Sign in with an account that \
-             carries the required role and retry."
+        ViewerError::Forbidden(message) => tr_with(
+            Msg::SessionMayNotWriteSignAccount,
+            &[
+                ("object", (object).to_string().into()),
+                ("message", message.clone().into()),
+            ],
         ),
-        ViewerError::Unauthenticated => format!(
-            "The viewer session expired before {object} was saved — sign in again and retry; \
-             your input is still on screen."
+        ViewerError::Unauthenticated => tr_with(
+            Msg::ViewerSessionExpiredBeforeWasSaved,
+            &[("object", (object).to_string().into())],
         ),
-        ViewerError::CdrUnreachable(message) => format!(
-            "The CDR is unreachable ({message}), so {object} was not saved. Check the CDR, then \
-             retry."
+        ViewerError::CdrUnreachable(message) => tr_with(
+            Msg::CdrUnreachableSoWasNotSaved,
+            &[
+                ("message", message.clone().into()),
+                ("object", (object).to_string().into()),
+            ],
         ),
-        ViewerError::Internal(message) => format!(
-            "{object} could not be saved: {message}. Retry; if it persists, check the viewer \
-             logs."
+        ViewerError::Internal(message) => tr_with(
+            Msg::CouldNotSavedRetryIfPersists,
+            &[
+                ("object", (object).to_string().into()),
+                ("message", message.clone().into()),
+            ],
         ),
     }
 }
@@ -105,30 +144,41 @@ pub fn write_failure_copy(object: &str, error: &ViewerError) -> String {
 pub fn logical_delete_failure_copy(object: &str, error: &ViewerError) -> String {
     match error {
         ViewerError::Cdr { message, .. } => match error.status_code() {
-            Some(http::StatusCode::CONFLICT | http::StatusCode::PRECONDITION_FAILED) => format!(
-                "{object} moved on in the CDR since this screen loaded, so nothing was deleted \
-                 ({message}). Reload the version history and delete the version that is latest \
-                 now."
+            Some(http::StatusCode::CONFLICT | http::StatusCode::PRECONDITION_FAILED) => tr_with(
+                Msg::MovedCdrSinceScreenLoadedSo,
+                &[
+                    ("object", (object).to_string().into()),
+                    ("message", message.clone().into()),
+                ],
             ),
             // `400_already_deleted` on the COMPOSITION delete: the version is
             // already logically deleted, so there is nothing left to do.
-            Some(http::StatusCode::BAD_REQUEST) => format!(
-                "The CDR refused to delete {object}: {message}. It may already be deleted — \
-                 reload this screen to see the current history."
+            Some(http::StatusCode::BAD_REQUEST) => tr_with(
+                Msg::CdrRefusedDeleteMayAlreadyDeleted,
+                &[
+                    ("object", (object).to_string().into()),
+                    ("message", message.clone().into()),
+                ],
             ),
-            Some(http::StatusCode::NOT_FOUND) => format!(
-                "{object} is not in the CDR ({message}) — it may have been deleted meanwhile. \
-                 Reload this screen."
+            Some(http::StatusCode::NOT_FOUND) => tr_with(
+                Msg::NotCdrMayHaveBeenDeleted2,
+                &[
+                    ("object", (object).to_string().into()),
+                    ("message", message.clone().into()),
+                ],
             ),
             _ => write_failure_copy(object, error),
         },
-        ViewerError::Forbidden(message) => format!(
-            "This session may not delete {object} ({message}). Sign in with an account that \
-             carries the required role and retry."
+        ViewerError::Forbidden(message) => tr_with(
+            Msg::SessionMayNotDeleteSignAccount,
+            &[
+                ("object", (object).to_string().into()),
+                ("message", message.clone().into()),
+            ],
         ),
-        ViewerError::CdrUnauthorized(message) => format!(
-            "The CDR no longer accepts this session, so nothing was deleted ({message}). Sign in \
-             again and retry."
+        ViewerError::CdrUnauthorized(message) => tr_with(
+            Msg::CdrNoLongerAcceptsSessionSo3,
+            &[("message", message.clone().into())],
         ),
         other => write_failure_copy(object, other),
     }

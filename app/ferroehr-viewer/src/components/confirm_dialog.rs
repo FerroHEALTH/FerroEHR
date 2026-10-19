@@ -19,6 +19,7 @@ use leptos::prelude::*;
 
 use crate::components::field::BTN_DESTRUCTIVE;
 use crate::error::ViewerError;
+use crate::locale::{Msg, tr};
 
 /// The row-driven delete confirmation a listing screen mounts once, outside its
 /// table.
@@ -31,8 +32,8 @@ use crate::error::ViewerError;
 pub fn delete_confirmation<R>(
     pending: RwSignal<Option<R>>,
     delete: Action<R, (String, Result<(), ViewerError>)>,
-    title: &'static str,
-    confirm_label: &'static str,
+    title: Msg,
+    confirm_label: Msg,
     ids: (&'static str, &'static str),
     message: Signal<String>,
 ) -> AnyView
@@ -43,9 +44,9 @@ where
     view! {
         <ConfirmDialog
             open=Signal::derive(move || pending.get().is_some())
-            title=title
+            title=tr(title)
             message=message
-            confirm_label=confirm_label
+            confirm_label=tr(confirm_label)
             dialog_id=dialog_id
             confirm_id=confirm_id
             on_cancel=Callback::new(move |()| pending.set(None))
@@ -73,12 +74,12 @@ pub fn ConfirmDialog(
     #[prop(into)]
     open: Signal<bool>,
     /// The dialog heading: the action, e.g. "Delete template".
-    title: &'static str,
+    title: String,
     /// The consequence copy, naming the exact object and what is lost.
     #[prop(into)]
     message: Signal<String>,
     /// The confirming button's label.
-    confirm_label: &'static str,
+    confirm_label: String,
     /// The confirming button's icon. Defaults to the trash glyph (the
     /// destructive-delete case this dialog was built for); a non-delete
     /// consequence — swapping a live log filter — passes its own.
@@ -111,7 +112,7 @@ pub fn ConfirmDialog(
     modal_dialog(
         Modal {
             id: dialog_id,
-            title: Signal::derive(move || title.to_owned()),
+            title: Signal::derive(move || title.clone()),
             danger: true,
             width: Width::Narrow,
             body,

@@ -13,6 +13,8 @@
 use ferrohealth_ui::view::tabs::{KeyedTab, keyed_tabs};
 use leptos::prelude::*;
 
+use crate::locale::{Msg, tr};
+
 /// The tab strip named `label` over `tabs` (each its key and its words), each
 /// leading to `href` of its key, the one whose key `current` reads marked.
 ///
@@ -20,8 +22,8 @@ use leptos::prelude::*;
 /// navigation to another object of the same screen.
 #[must_use]
 pub fn url_tabs(
-    label: &'static str,
-    tabs: &'static [(&'static str, &'static str)],
+    label: String,
+    tabs: &'static [(&'static str, Msg)],
     href: impl Fn(&'static str) -> String + Send + Sync + 'static,
     current: Signal<String>,
 ) -> AnyView {
@@ -34,10 +36,10 @@ pub fn url_tabs(
                     .map(|(key, words)| KeyedTab {
                         key,
                         href: href(key),
-                        label: words,
+                        label: tr(*words).into(),
                     })
                     .collect();
-                keyed_tabs(label, tabs, &current.get())
+                keyed_tabs(label.clone(), tabs, &current.get())
             }}
         </div>
     }

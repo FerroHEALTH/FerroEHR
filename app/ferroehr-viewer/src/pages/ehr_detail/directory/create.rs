@@ -19,6 +19,7 @@ use leptos::prelude::*;
 use crate::components::field::{BTN_PRIMARY, LABEL};
 use crate::components::surface::{CARD_PAD, CARD_TITLE, WELL};
 use crate::error::ViewerError;
+use crate::locale::{Msg, tr};
 use crate::pages::ehr_detail::directory::empty_root_folder;
 use crate::pages::ehr_detail::directory::tree::read_only_tree;
 
@@ -36,13 +37,13 @@ pub(in crate::pages::ehr_detail::directory) fn create_section(
     };
     view! {
         <section class=CARD_PAD>
-            <h2 class=CARD_TITLE>"Create directory"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::CreateDirectory)}</h2>
             <p class="mb-3 text-sm text-ink-muted">
-                "This EHR has no directory yet. Create the empty root folder, then add sub-folders and item references in the tree editor."
+                {tr(Msg::EhrHasNoDirectoryYetCreate)}
             </p>
             <div class="flex flex-col gap-3">
                 <div class="flex flex-col gap-1">
-                    <span class=LABEL>"Will be committed"</span>
+                    <span class=LABEL>{tr(Msg::WillBeCommitted)}</span>
                     <div class=WELL>
                         {read_only_tree("directory-create-preview", &empty_root_folder())}
                     </div>
@@ -56,10 +57,10 @@ pub(in crate::pages::ehr_detail::directory) fn create_section(
                         on:click=on_create
                     >
                         {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::PLUS, "14")}
-                        "Create directory"
+                        {tr(Msg::CreateDirectory)}
                     </button>
                     <Show when=move || create.pending().get()>
-                        <span class="text-sm text-ink-muted">"Creating…"</span>
+                        <span class="text-sm text-ink-muted">{tr(Msg::Creating)}</span>
                     </Show>
                 </div>
                 {create_feedback(create)}

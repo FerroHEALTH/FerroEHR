@@ -49,6 +49,7 @@ use crate::components::stat_card::StatCard;
 use crate::components::surface::titled_card;
 use crate::components::toast::toast_success;
 use crate::error::ViewerError;
+use crate::locale::{Msg, tr, tr_with};
 use crate::management::{
     BuildInfoView, InfoSection, LoggerView, MetricDetailView, MetricTile, ReadinessView,
     fetch_build_info, fetch_headline_metrics, fetch_loggers, fetch_metric_detail,
@@ -89,16 +90,19 @@ pub fn OperationsPage() -> impl IntoView {
     Effect::new(move |_| match apply.value().get() {
         Some((filter, Ok(view))) => toast_success(
             toaster,
-            "Log filter applied",
-            &format!(
-                "The CDR is now logging with `{}` (requested `{filter}`).",
-                view.filter
+            &tr(Msg::LogFilterApplied),
+            &tr_with(
+                Msg::CdrNowLoggingRequested,
+                &[
+                    ("filter", view.filter.clone().into()),
+                    ("filter2", filter.clone().into()),
+                ],
             ),
         ),
         Some((filter, Err(error))) => crate::feedback::toast_write_failure(
             toaster,
-            "Log filter not applied",
-            &format!("the log filter `{filter}`"),
+            &tr(Msg::LogFilterNotApplied),
+            &tr_with(Msg::TheLogFilter2, &[("filter", filter.clone().into())]),
             &error,
         ),
         None => {}
@@ -106,13 +110,16 @@ pub fn OperationsPage() -> impl IntoView {
     Effect::new(move |_| match reset.value().get() {
         Some(Ok(view)) => toast_success(
             toaster,
-            "Log filter reset",
-            &format!("The CDR restored its boot filter `{}`.", view.filter),
+            &tr(Msg::LogFilterReset),
+            &tr_with(
+                Msg::CdrRestoredBootFilter,
+                &[("filter", view.filter.clone().into())],
+            ),
         ),
         Some(Err(error)) => crate::feedback::toast_write_failure(
             toaster,
-            "Log filter not reset",
-            "the log filter",
+            &tr(Msg::LogFilterNotReset),
+            &tr(Msg::TheLogFilter),
             &error,
         ),
         None => {}
@@ -135,8 +142,8 @@ pub fn OperationsPage() -> impl IntoView {
         <Title text="Operations" />
         <div>
             <PageHeader
-                title="Operations"
-                subtitle="Dependency health, build provenance, the metric registry, and live log control."
+                title=tr(Msg::Operations)
+                subtitle=tr(Msg::DependencyHealthBuildProvenanceMetricRegistry)
             />
             // The long provenance card takes one column; health, the log
             // control and the configuration stack in the other, and the
@@ -153,7 +160,7 @@ pub fn OperationsPage() -> impl IntoView {
 
 /// The `<Suspense>` fallback shared by every data-backed card.
 fn card_skeleton() -> impl IntoView {
-    view! { {ferrohealth_ui::view::empty::skeleton(3, "Loading…")} }
+    view! { {ferrohealth_ui::view::empty::skeleton(3, tr(Msg::Loading))} }
 }
 
 /// A status pill in the shared chip shape: `UP` reads neutral-good, `DEGRADED`
@@ -196,7 +203,7 @@ fn health_card() -> AnyView {
         </Suspense>
     }
     .into_any();
-    titled_card("Dependency health", false, body)
+    titled_card(tr(Msg::DependencyHealth), false, body)
 }
 
 /// Render a readiness aggregate: the overall pill, the one-line explanation of
@@ -213,12 +220,12 @@ fn readiness_body(view: ReadinessView) -> AnyView {
             let pill = status_pill(&component.status);
             let detail = detailed.then(|| {
                 let text = if component.detail.is_empty() {
-                    "—".to_owned()
+                    tr(Msg::NoValue)
                 } else {
                     component.detail
                 };
                 view! {
-                    <td class=CELL data-label="Detail">
+                    <td class=CELL data-label=tr(Msg::Detail)>
                         {text}
                     </td>
                 }
@@ -226,7 +233,7 @@ fn readiness_body(view: ReadinessView) -> AnyView {
             view! {
                 <tr class=ROW>
                     <td class=CELL_MONO>{component.name}</td>
-                    <td class=CELL data-label="Status">
+                    <td class=CELL data-label=tr(Msg::Status)>
                         {pill}
                     </td>
                     {detail}
@@ -238,19 +245,23 @@ fn readiness_body(view: ReadinessView) -> AnyView {
         .into_any();
     let table = if detailed {
         table_shell(
-            "Health indicators",
-            &["Indicator", "Status", "Detail"],
+            &tr(Msg::HealthIndicators),
+            &[&tr(Msg::Indicator), &tr(Msg::Status), &tr(Msg::Detail)],
             rows,
         )
     } else {
-        table_shell_unstacked("Health indicators", &["Indicator", "Status"], rows)
+        table_shell_unstacked(
+            &tr(Msg::HealthIndicators),
+            &[&tr(Msg::Indicator), &tr(Msg::Status)],
+            rows,
+        )
     };
     let scope = (!detailed).then(|| {
         view! {
             <p class="mb-3 text-sm text-ink-muted">
-                "Statuses only: the detail behind each one is served by the CDR's "
+                {tr(Msg::StatusesOnlyDetailBehindEachOne)}
                 <code>"/management/health"</code>
-                ", which this deployment does not offer to this session."
+                {tr(Msg::WhichDeploymentDoesNotOfferSession)}
             </p>
         }
     });
@@ -258,8 +269,8 @@ fn readiness_body(view: ReadinessView) -> AnyView {
         <div id="ops-readiness">
             {pill}
             <p class="mt-2 mb-3 text-sm text-ink-muted">
-                "The topbar pill reports the API itself (status document: reachable, and at which version). "
-                "This is the other question — the CDR's readiness probe, one row per dependency it checks."
+                {tr(Msg::TopbarPillReportsApiItselfStatus)}
+                {tr(Msg::OtherQuestionCdrSReadinessProbe)}
             </p> {scope} {table}
         </div>
     }
@@ -279,7 +290,7 @@ fn build_info_card() -> AnyView {
                 Suspend::new(async move {
                     match resource.await {
                         Ok(Some(view)) => build_info_body(view),
-                        Ok(None) => surface_absent("Build provenance"),
+                        Ok(None) => surface_absent(tr(Msg::BuildProvenance)),
                         Err(e) => inline_error(&e),
                     }
                 })
@@ -287,7 +298,7 @@ fn build_info_card() -> AnyView {
         </Suspense>
     }
     .into_any();
-    titled_card("Build & spec provenance", false, body)
+    titled_card(tr(Msg::BuildSpecProvenance), false, body)
 }
 
 /// Renders a `(key, text)` list as the rows of a definition list, keyed by
@@ -368,7 +379,7 @@ fn metrics_card(query: Memo<leptos_router::params::ParamsMap>) -> AnyView {
                 Suspend::new(async move {
                     match tiles.await {
                         Ok(Some(tiles)) => tiles_body(tiles),
-                        Ok(None) => surface_absent("Metrics"),
+                        Ok(None) => surface_absent(tr(Msg::Metrics)),
                         Err(e) => inline_error(&e),
                     }
                 })
@@ -411,7 +422,7 @@ fn metrics_card(query: Memo<leptos_router::params::ParamsMap>) -> AnyView {
     .into_any();
 
     let body = view! { <div>{tiles_section} {browser_section} {detail_section}</div> }.into_any();
-    titled_card("Metrics", true, body)
+    titled_card(tr(Msg::Metrics), true, body)
 }
 
 /// The headline tiles: one [`StatCard`] per tracked metric, `—` where the
@@ -460,7 +471,7 @@ fn metric_picker(names: Vec<String>, current: Option<&str>) -> AnyView {
         >
             {field(
                 "ops-metric",
-                "Metric",
+                tr(Msg::Metric),
                 None,
                 view! {
                     <select id="ops-metric" name="metric" class=format!("min-w-72 {SELECT}")>
@@ -469,7 +480,7 @@ fn metric_picker(names: Vec<String>, current: Option<&str>) -> AnyView {
                 },
             )}
             <button id="ops-metric-inspect" type="submit" class=BTN_SECONDARY>
-                "Inspect"
+                {tr(Msg::Inspect)}
             </button>
         </leptos_router::components::Form>
     }
@@ -486,7 +497,7 @@ fn metric_detail_body(detail: MetricDetailView) -> AnyView {
         .into_iter()
         .map(|sample| {
             let labels = if sample.labels.is_empty() {
-                "—".to_owned()
+                tr(Msg::NoValue)
             } else {
                 sample.labels
             };
@@ -494,7 +505,7 @@ fn metric_detail_body(detail: MetricDetailView) -> AnyView {
             view! {
                 <tr class=ROW>
                     <td class=CELL_MONO>{labels}</td>
-                    <td class=format!("{CELL} fui-num") data-label="Value">
+                    <td class=format!("{CELL} fui-num") data-label=tr(Msg::Value)>
                         {value}
                     </td>
                 </tr>
@@ -503,7 +514,11 @@ fn metric_detail_body(detail: MetricDetailView) -> AnyView {
         })
         .collect_view()
         .into_any();
-    let table = table_shell("Metric samples", &["Labels", "Value"], rows);
+    let table = table_shell(
+        &tr(Msg::MetricSamples),
+        &[&tr(Msg::Labels), &tr(Msg::Value)],
+        rows,
+    );
     let subtitle = metric_subtitle(&kind, &help);
     view! {
         <div id="ops-metric-detail" class="mt-3">
@@ -542,19 +557,19 @@ fn config_card() -> AnyView {
     let body = view! {
         <div class="flex flex-col items-start gap-3">
             <p class="text-sm text-ink-muted">
-                "The CDR's effective configuration, with every secret redacted. The CDR serves the "
-                "same snapshot on its management surface and its admin API, so the viewer reads it "
-                "in exactly one place — the System screen, over the API base URL it is always "
-                "configured for."
+                {tr(Msg::CdrSEffectiveConfigurationEverySecret)}
+                {tr(Msg::SameSnapshotManagementSurfaceAdminApi)}
+                {tr(Msg::ExactlyOnePlaceSystemScreenOver)}
+                {tr(Msg::ConfiguredFor)}
             </p>
             <A href="/system" attr:class=BTN_SECONDARY>
                 {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::SETTINGS, "14")}
-                " Open runtime configuration"
+                {tr(Msg::OpenRuntimeConfiguration)}
             </A>
         </div>
     }
     .into_any();
-    titled_card("Runtime configuration", false, body)
+    titled_card(tr(Msg::RuntimeConfiguration), false, body)
 }
 
 // ── Log control ─────────────────────────────────────────────────────────────
@@ -584,7 +599,7 @@ fn loggers_card(
                 Suspend::new(async move {
                     match loggers.await {
                         Ok(Some(view)) => loggers_body(view, draft, pending_apply, pending_reset),
-                        Ok(None) => surface_absent("Log control"),
+                        Ok(None) => surface_absent(tr(Msg::LogControl)),
                         Err(e) => inline_error(&e),
                     }
                 })
@@ -592,7 +607,7 @@ fn loggers_card(
         </Transition>
     }
     .into_any();
-    titled_card("Log level", false, body)
+    titled_card(tr(Msg::LogLevel), false, body)
 }
 
 /// Render the live filter, the boot filter, and the two write affordances.
@@ -617,7 +632,7 @@ fn loggers_body(
             <div class="mt-3 fui-field-flow">
                 {field(
                     "ops-log-filter",
-                    "New filter directives",
+                    tr(Msg::NewFilterDirectives),
                     None,
                     view! {
                         <input
@@ -641,7 +656,7 @@ fn loggers_body(
                         ferrohealth_ui::icon::Glyph::SLIDERS_HORIZONTAL,
                         "14",
                     )}
-                    " Apply filter"
+                    {tr(Msg::ApplyFilter2)}
                 </button>
                 <button
                     id="ops-log-reset"
@@ -650,11 +665,11 @@ fn loggers_body(
                     on:click=move |_| pending_reset.set(true)
                 >
                     {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::ROTATE_CCW, "14")}
-                    " Reset to boot filter"
+                    {tr(Msg::ResetToBootFilter)}
                 </button>
             </div>
             <p class="mt-2 fui-help">
-                "Takes effect immediately, for this CDR instance only, until it restarts."
+                {tr(Msg::TakesEffectImmediatelyCdrInstanceOnly)}
             </p>
         </div>
     }
@@ -671,19 +686,18 @@ fn filter_dialogs(
 ) -> AnyView {
     let apply_message = Signal::derive(move || {
         pending_apply.get().map_or_else(String::new, |filter| {
-            format!(
-                "Switch the CDR's live log filter to “{filter}”? Logging changes immediately for \
-                 every request this instance serves; a verbose filter on a busy server produces a \
-                 lot of output."
+            tr_with(
+                Msg::SwitchCdrSLiveLogFilter,
+                &[("filter", filter.clone().into())],
             )
         })
     });
     view! {
         <ConfirmDialog
             open=Signal::derive(move || pending_apply.get().is_some())
-            title="Apply log filter"
+            title=tr(Msg::ApplyLogFilter)
             message=apply_message
-            confirm_label="Apply filter"
+            confirm_label=tr(Msg::ApplyFilter)
             confirm_icon=ferrohealth_ui::icon::Glyph::SLIDERS_HORIZONTAL
             dialog_id="ops-log-apply-confirm-dialog"
             confirm_id="ops-log-apply-confirm"
@@ -697,12 +711,11 @@ fn filter_dialogs(
         />
         <ConfirmDialog
             open=pending_reset
-            title="Reset log filter"
+            title=tr(Msg::ResetLogFilter)
             message=Signal::derive(|| {
-                "Restore the CDR's boot log filter? Any filter applied since startup is discarded."
-                    .to_owned()
+                {tr(Msg::RestoreCdrSBootLogFilter)}.clone()
             })
-            confirm_label="Reset filter"
+            confirm_label=tr(Msg::ResetFilter)
             confirm_icon=ferrohealth_ui::icon::Glyph::ROTATE_CCW
             dialog_id="ops-log-reset-confirm-dialog"
             confirm_id="ops-log-reset-confirm"
@@ -722,7 +735,7 @@ fn filter_dialogs(
 /// answered `404`): the management surface is off by default and each endpoint
 /// is independently opt-in, so absence is a configuration fact to state, never
 /// an error to report.
-fn surface_absent(what: &'static str) -> AnyView {
+fn surface_absent(what: String) -> AnyView {
     view! {
         {ferrohealth_ui::view::notice::notice(
             ferrohealth_ui::tone::Tone::Info,
@@ -730,8 +743,8 @@ fn surface_absent(what: &'static str) -> AnyView {
             None,
             view! {
                 {what}
-                " is not available: the CDR does not serve this management endpoint. Enable it "
-                "server-side ([management] — each endpoint takes its own access level)."
+                {tr(Msg::NotAvailableCdrDoesNotServe)}
+                {tr(Msg::ServerSideManagementEachEndpointTakes)}
             },
         )}
     }

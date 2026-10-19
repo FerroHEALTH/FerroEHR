@@ -30,6 +30,7 @@
               (#1694)"
 )]
 
+use crate::locale::{Msg, tr, tr_with};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
@@ -50,11 +51,11 @@ pub enum StagedKind {
 impl StagedKind {
     /// Returns the operator-facing name of this kind.
     #[must_use]
-    pub fn label(self) -> &'static str {
+    pub fn label(self) -> Msg {
         match self {
-            Self::CompositionCreate => "Composition — create",
-            Self::CompositionAmend => "Composition — amend",
-            Self::StatusModify => "EHR status — modify",
+            Self::CompositionCreate => Msg::CompositionCreate,
+            Self::CompositionAmend => Msg::CompositionAmend,
+            Self::StatusModify => Msg::EhrStatusModify,
         }
     }
 
@@ -194,7 +195,7 @@ pub fn create_target_label(template_id: &str, body: &str) -> String {
         return picked.to_owned();
     }
     let Ok(doc) = serde_json::from_str::<Value>(body) else {
-        return "new COMPOSITION".to_owned();
+        return tr(Msg::NewComposition);
     };
     let from_template = doc
         .get("archetype_details")
@@ -211,7 +212,7 @@ pub fn create_target_label(template_id: &str, body: &str) -> String {
         .and_then(Value::as_str)
         .unwrap_or_default();
     if from_name.is_empty() {
-        "new COMPOSITION".to_owned()
+        tr(Msg::NewComposition)
     } else {
         from_name.to_owned()
     }
@@ -231,24 +232,19 @@ pub fn create_target_label(template_id: &str, body: &str) -> String {
 pub fn check(change: &StagedChange) -> Result<(), String> {
     let body = change.body.trim();
     if body.is_empty() {
-        return Err("the document is empty — paste or load the body to commit".to_owned());
+        return Err(tr(Msg::DocumentEmptyPasteLoadBodyCommit));
     }
-    let value: Value = serde_json::from_str(body).map_err(|e| format!("not valid JSON: {e}"))?;
+    let value: Value = serde_json::from_str(body)
+        .map_err(|e| tr_with(Msg::NotValidJson, &[("e", (e).to_string().into())]))?;
     if !value.is_object() {
-        return Err("the document must be a JSON object — a canonical openEHR document".to_owned());
+        return Err(tr(Msg::DocumentMustJsonObjectCanonicalOpenehr));
     }
     let preceding = change.preceding_version_uid.trim();
     if change.kind.supersedes() && preceding.is_empty() {
-        return Err(
-            "no preceding version is known yet — pick the target and wait for it to load"
-                .to_owned(),
-        );
+        return Err({ tr(Msg::NoPrecedingVersionKnownYetPick) }.clone());
     }
     if !change.kind.supersedes() && !preceding.is_empty() {
-        return Err(
-            "a creation commits a NEW versioned object, so it carries no preceding version"
-                .to_owned(),
-        );
+        return Err({ tr(Msg::CreationCommitsNewVersionedObjectSo) }.clone());
     }
     Ok(())
 }
@@ -292,20 +288,23 @@ pub fn contribution_body(
     description: &str,
 ) -> Result<String, String> {
     if changes.is_empty() {
-        return Err("stage at least one change before committing".to_owned());
+        return Err(tr(Msg::StageLeastOneChangeBeforeCommitting));
     }
     let committer = committer.trim();
     if committer.is_empty() {
-        return Err("a committer is required on a CONTRIBUTION audit".to_owned());
+        return Err(tr(Msg::CommitterRequiredContributionAudit));
     }
     let mut versions = Vec::with_capacity(changes.len());
     for (position, change) in changes.iter().enumerate() {
         check(change).map_err(|complaint| {
-            format!(
-                "change {} ({} — {}): {complaint}",
-                position.saturating_add(1),
-                change.kind.label(),
-                change.target
+            tr_with(
+                Msg::Change2,
+                &[
+                    ("position", (position.saturating_add(1)).to_string().into()),
+                    ("change", tr(change.kind.label()).into()),
+                    ("target", change.target.clone().into()),
+                    ("complaint", complaint.clone().into()),
+                ],
             )
         })?;
         versions.push(update_version(change, committer)?);
@@ -320,14 +319,18 @@ pub fn contribution_body(
             json!({ "_type": "DV_TEXT", "value": description }),
         ));
     }
-    serde_json::to_string(&json!({ "versions": versions, "audit": audit }))
-        .map_err(|e| format!("the contribution could not be serialized: {e}"))
+    serde_json::to_string(&json!({ "versions": versions, "audit": audit })).map_err(|e| {
+        tr_with(
+            Msg::ContributionCouldNotSerialized,
+            &[("e", (e).to_string().into())],
+        )
+    })
 }
 
 /// One `UPDATE_VERSION` member of the envelope.
 fn update_version(change: &StagedChange, committer: &str) -> Result<Value, String> {
     let data: Value = serde_json::from_str(change.body.trim())
-        .map_err(|e| format!("the document is not valid JSON: {e}"))?;
+        .map_err(|e| tr_with(Msg::DocumentNotValidJson, &[("e", (e).to_string().into())]))?;
     let mut member = json!({
         "lifecycle_state": coded_text(LIFECYCLE_COMPLETE, "complete"),
         "data": data,

@@ -26,7 +26,7 @@ pub const CARD_TITLE: &str = "fui-card-title mb-3";
 /// the two-column operational panels (`/system`, `/operations`). `full_width`
 /// spans both grid columns.
 #[must_use]
-pub fn titled_card(title: &'static str, full_width: bool, body: AnyView) -> AnyView {
+pub fn titled_card(title: String, full_width: bool, body: AnyView) -> AnyView {
     let class = if full_width {
         format!("{CARD_PAD} lg:col-span-2")
     } else {

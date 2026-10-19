@@ -47,6 +47,9 @@ use leptos::server;
 use serde::{Deserialize, Serialize};
 
 use crate::error::ViewerError;
+use crate::locale::{Msg, tr, tr_with};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::locale::{tr_served, tr_served_with};
 
 /// One subscription as the CDR serves it
 /// (`{id, name, kind, change_type, template_id, enabled,
@@ -221,7 +224,7 @@ pub fn match_summary(row: &SubscriptionRow) -> String {
     let mut parts = Vec::new();
     for (label, value) in [
         ("kind", row.kind.as_str()),
-        ("change type", row.change_type.as_str()),
+        (&tr(Msg::ChangeType2), row.change_type.as_str()),
         ("template", row.template_id.as_str()),
     ] {
         if !value.trim().is_empty() {
@@ -229,9 +232,12 @@ pub fn match_summary(row: &SubscriptionRow) -> String {
         }
     }
     if parts.is_empty() {
-        return "Matches every committed version.".to_owned();
+        return tr(Msg::MatchesEveryCommittedVersion);
     }
-    format!("Matches {}.", parts.join(", "))
+    tr_with(
+        Msg::Matches,
+        &[("parts", (parts.join(", ")).clone().into())],
+    )
 }
 
 /// Actionable copy for a refused subscription operation — a write, a delete, or
@@ -246,22 +252,31 @@ pub fn subscription_failure_copy(object: &str, error: &ViewerError) -> String {
         ViewerError::Cdr { message, .. }
             if error.status_code() == Some(http::StatusCode::CONFLICT) =>
         {
-            format!(
-                "The CDR already holds a subscription with that name, so {object} was not saved \
-                 ({message}). Choose another name, or edit the existing subscription."
+            tr_with(
+                Msg::CdrAlreadyHoldsSubscriptionNameSo,
+                &[
+                    ("object", (object).to_string().into()),
+                    ("message", message.clone().into()),
+                ],
             )
         }
         ViewerError::Cdr { message, .. }
             if error.status_code() == Some(http::StatusCode::NOT_FOUND) =>
         {
-            format!(
-                "{object} is not on the CDR any more ({message}) — another operator may have \
-                 deleted it. Reload this screen."
+            tr_with(
+                Msg::NotCdrAnyMoreAnotherOperator,
+                &[
+                    ("object", (object).to_string().into()),
+                    ("message", message.clone().into()),
+                ],
             )
         }
-        ViewerError::Forbidden(message) => format!(
-            "This session may not administer {object} ({message}). Sign in with an ADMIN-role \
-             account and retry."
+        ViewerError::Forbidden(message) => tr_with(
+            Msg::SessionMayNotAdministerSignAdmin,
+            &[
+                ("object", (object).to_string().into()),
+                ("message", message.clone().into()),
+            ],
         ),
         other => crate::feedback::write_failure_copy(object, other),
     }
@@ -314,8 +329,12 @@ pub async fn list_event_subscriptions() -> Result<Option<Vec<SubscriptionRow>>, 
         return Ok(None);
     }
     let body = crate::cdr::CdrClient::expect_success(response)?.body;
-    let value = serde_json::from_str::<serde_json::Value>(&body)
-        .map_err(|e| ViewerError::Internal(format!("event subscription list JSON: {e}")))?;
+    let value = serde_json::from_str::<serde_json::Value>(&body).map_err(|e| {
+        ViewerError::Internal(tr_served_with(
+            Msg::EventSubscriptionListJson,
+            &[("e", (e).to_string().into())],
+        ))
+    })?;
     let rows = value
         .as_array()
         .map(|items| items.iter().map(subscription_row).collect())
@@ -345,8 +364,7 @@ pub async fn create_event_subscription(
     let session = crate::session::require_session().await?;
     if !name_is_valid(&name) {
         return Err(ViewerError::Invalid(
-            "a subscription name is required and may hold only letters, digits, `_`, `.` and `-`"
-                .to_owned(),
+            { tr_served(Msg::SubscriptionNameRequiredMayHoldOnly) }.clone(),
         ));
     }
     let state: crate::state::AppState = expect_context();
@@ -390,9 +408,7 @@ pub async fn update_event_subscription(
 ) -> Result<SubscriptionRow, ViewerError> {
     let session = crate::session::require_session().await?;
     if subscription_id.trim().is_empty() {
-        return Err(ViewerError::Invalid(
-            "no subscription id to update".to_owned(),
-        ));
+        return Err(ViewerError::Invalid(tr_served(Msg::NoSubscriptionIdUpdate)));
     }
     let state: crate::state::AppState = expect_context();
     let url = state.cdr.rest_v1(&format!(
@@ -428,9 +444,7 @@ pub async fn delete_event_subscription(
 ) -> Result<(), ViewerError> {
     let session = crate::session::require_session().await?;
     if subscription_id.trim().is_empty() {
-        return Err(ViewerError::Invalid(
-            "no subscription id to delete".to_owned(),
-        ));
+        return Err(ViewerError::Invalid(tr_served(Msg::NoSubscriptionIdDelete)));
     }
     let state: crate::state::AppState = expect_context();
     let url = state.cdr.rest_v1(&format!(
@@ -491,8 +505,12 @@ fn subscription_update(predicates: &SubscriptionPredicates) -> String {
 /// Parse the stored record a create/update answered with.
 #[cfg(not(target_arch = "wasm32"))]
 fn stored_record(body: &str) -> Result<SubscriptionRow, ViewerError> {
-    let value = serde_json::from_str::<serde_json::Value>(body)
-        .map_err(|e| ViewerError::Internal(format!("event subscription record JSON: {e}")))?;
+    let value = serde_json::from_str::<serde_json::Value>(body).map_err(|e| {
+        ViewerError::Internal(tr_with(
+            Msg::EventSubscriptionRecordJson,
+            &[("e", (e).to_string().into())],
+        ))
+    })?;
     Ok(subscription_row(&value))
 }
 

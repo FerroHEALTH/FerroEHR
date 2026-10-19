@@ -19,12 +19,13 @@ use openehr_query::lexer::CompOp;
 use crate::builder::model::{
     BoolOp, BuilderQuery, Criterion, CriterionKind, CriterionNode, QueryShape,
 };
+use crate::locale::{Msg, tr};
 
 /// Everything that can be wrong with a builder state.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, serde::Serialize, serde::Deserialize)]
 pub enum BuilderError {
     /// A criterion group has no children.
-    #[error("a criterion group is empty — add a condition or remove the group")]
+    #[error("a criterion group is empty: add a condition or remove the group")]
     EmptyGroup,
     /// Data-value shape without any selected column.
     #[error("select at least one column for a data-value query")]
@@ -408,7 +409,7 @@ fn parse_path_rooted(rooted: &str) -> Result<IdentifiedPath, BuilderError> {
         }) => Ok(path),
         _ => Err(BuilderError::InvalidPath {
             path: rooted.to_owned(),
-            detail: "did not parse as a data path".to_owned(),
+            detail: tr(Msg::DidNotParseDataPath),
         }),
     }
 }

@@ -28,6 +28,7 @@ use serde_json::Value;
 use crate::chart_model::{AxisScale, AxisSpec, ChartModel, time_tick_label};
 use crate::components::empty_state::EmptyState;
 use crate::components::field::SELECT;
+use crate::locale::{Msg, tr, tr_with};
 
 /// How many ticks the X axis carries.
 const X_TICKS: u32 = 5;
@@ -94,8 +95,14 @@ fn line_chart_of(model: &ChartModel, axis: usize) -> LineChart {
     let axis_label = spec.map(|spec| spec.label.clone()).unwrap_or_default();
     LineChart {
         id: "results-chart",
-        label: "The result set as a chart".to_owned(),
-        summary: format!("{} series over {axis_label}.", model.series.len()),
+        label: tr(Msg::ResultSetChart),
+        summary: tr_with(
+            Msg::SeriesOver,
+            &[
+                ("model", (model.series.len()).to_string().into()),
+                ("axis_label", axis_label.clone().into()),
+            ],
+        ),
         series,
         x_ticks: spec.map(x_ticks).unwrap_or_default(),
         y_range: None,
@@ -142,7 +149,7 @@ fn axis_picker(labels: &[String], axis: RwSignal<usize>) -> AnyView {
         .collect::<Vec<_>>();
     view! {
         <label class="flex items-center gap-2">
-            <span class="fui-label">"X axis"</span>
+            <span class="fui-label">{tr(Msg::XAxis)}</span>
             <select
                 class=format!("{SELECT} w-auto")
                 data-chart-axis="picker"
@@ -165,22 +172,22 @@ fn axis_picker(labels: &[String], axis: RwSignal<usize>) -> AnyView {
 fn chart_absent(row_count: usize) -> AnyView {
     if row_count <= 1 {
         return view! {
-            <div data-chart-empty="single-row">
+            <div data-chart-empty=tr(Msg::SingleRow)>
                 <EmptyState
                     icon=ferrohealth_ui::icon::Glyph::CHART_LINE
-                    message="One row is not a trend"
-                    hint="A chart needs at least two rows — widen the query's window, or relax a condition, and run it again."
+                    message=tr(Msg::OneRowNotTrend)
+                    hint=tr(Msg::ChartNeedsLeastTwoRowsWiden)
                 />
             </div>
         }
         .into_any();
     }
     view! {
-        <div data-chart-empty="no-numeric-column">
+        <div data-chart-empty=tr(Msg::NoNumericColumn)>
             <EmptyState
                 icon=ferrohealth_ui::icon::Glyph::CHART_LINE
-                message="Nothing numeric to chart"
-                hint="Charting needs a column holding at least two numbers — project a quantity magnitude, a count, or an ordinal value. An ISO date/time column then becomes the X axis."
+                message=tr(Msg::NothingNumericToChart)
+                hint=tr(Msg::ChartingNeedsColumnHoldingLeastTwo)
             />
         </div>
     }

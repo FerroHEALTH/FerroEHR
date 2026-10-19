@@ -73,6 +73,9 @@ use crate::components::item_tags::{
 use crate::components::notice::inline_error;
 use crate::components::surface::{CARD_PAD, CARD_TITLE};
 use crate::error::ViewerError;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::locale::tr_served;
+use crate::locale::{Msg, message, tr, tr_with};
 use crate::uid::container_uid_of;
 
 /// The browser's resolve-and-open action: `(ehr_id, target uid)` in, the uid it
@@ -258,8 +261,7 @@ async fn set_tag_at(
     let key = key.trim();
     if key.is_empty() {
         return Err(ViewerError::Invalid(
-            "a tag key is required (ITEM_TAG invariant Inv_key_valid: the key is not empty)"
-                .to_owned(),
+            { tr(Msg::TagKeyRequiredItemTagInvariant) }.clone(),
         ));
     }
     let response = state.cdr.get(credential, url, "application/json").await?;
@@ -339,7 +341,7 @@ async fn delete_tag_at(
 ) -> Result<(), ViewerError> {
     let key = key.trim();
     if key.is_empty() {
-        return Err(ViewerError::Invalid("a tag key is required".to_owned()));
+        return Err(ViewerError::Invalid(tr(Msg::TagKeyRequired)));
     }
     let url = format!("{url}/{}", urlencoding::encode(key));
     let response = state.cdr.delete(credential, &url, &[]).await?;
@@ -417,9 +419,7 @@ pub async fn resolve_ehr_target(
     let state: crate::state::AppState = expect_context();
     let container = container_uid_of(&uid);
     if container.is_empty() {
-        return Err(ViewerError::Invalid(
-            "a tag target id is required".to_owned(),
-        ));
+        return Err(ViewerError::Invalid(tr_served(Msg::TagTargetIdRequired)));
     }
     if ehr_status_container(&state, &session.credential, &ehr_id).await? == container {
         return Ok(Some(EhrTargetKind::EhrStatus.segment().to_owned()));
@@ -506,8 +506,9 @@ async fn ehr_status_container(
         .rest_v1(&format!("ehr/{}", urlencoding::encode(ehr_id)));
     let response = state.cdr.get(credential, &url, "application/json").await?;
     let response = crate::cdr::CdrClient::expect_success(response)?;
-    let doc: serde_json::Value = serde_json::from_str(&response.body)
-        .map_err(|e| ViewerError::Internal(format!("EHR JSON: {e}")))?;
+    let doc: serde_json::Value = serde_json::from_str(&response.body).map_err(|e| {
+        ViewerError::Internal(tr_with(Msg::EhrJson2, &[("e", (e).to_string().into())]))
+    })?;
     Ok(container_uid_of(
         doc.get("ehr_status")
             .and_then(|status| status.get("id"))
@@ -623,17 +624,12 @@ pub(crate) fn composition_tags_section(ehr_id: Signal<String>, uid: Signal<Strin
         EhrTargetKind::Composition,
         uid,
         Signal::derive(|| true),
-        "this composition's tags",
+        Msg::ThisCompositionSTags,
         TagPanelCopy {
-            title: "Tags",
-            note: "Tags on the collection named below: the VERSIONED_COMPOSITION container while \
-                   the selector shows Latest, or that one version once you pin it — openEHR keeps \
-                   the two apart, so a tag set on one is invisible to the other. Saving re-sends \
-                   the whole collection, and the openEHR tag operations take no version check, so \
-                   a tag another client added meanwhile can be lost.",
-            empty_message: "No tags on this collection",
-            empty_hint: "Tags are free key/value markers a client sets on a composition; add one \
-                         below.",
+            title: Msg::Tags,
+            note: Msg::TagsCollectionNamedBelowVersionedComposition,
+            empty_message: Msg::NoTagsCollection,
+            empty_hint: Msg::TagsFreeKeyValueMarkersClient2,
             form_id: "composition-tag-set",
         },
     )
@@ -673,18 +669,14 @@ pub(crate) fn status_tags_section(ehr_id: Signal<String>, active: Signal<bool>) 
             }
         },
     );
-    write_toasts(toaster, set, remove, "this EHR status's tags");
+    write_toasts(toaster, set, remove, Msg::EhrStatusSTags);
 
     tag_panel(
         TagPanelCopy {
-            title: "Tags",
-            note: "These are the VERSIONED_EHR_STATUS container's tags, so they stay put when the \
-                   status is edited into a new version. Saving re-sends the whole collection, and \
-                   the openEHR tag operations take no version check, so a tag another client \
-                   added meanwhile can be lost.",
-            empty_message: "No tags on this EHR status",
-            empty_hint: "Tags are free key/value markers a client sets on the EHR's status; add \
-                         one below.",
+            title: Msg::Tags,
+            note: Msg::TheseVersionedEhrStatusContainerS,
+            empty_message: Msg::NoTagsEhrStatus,
+            empty_hint: Msg::TagsFreeKeyValueMarkersClient3,
             form_id: "ehr-status-tag-set",
         },
         Signal::derive(String::new),
@@ -708,7 +700,7 @@ fn target_tags_section(
     kind: EhrTargetKind,
     uid: Signal<String>,
     active: Signal<bool>,
-    object: &'static str,
+    object: Msg,
     copy: TagPanelCopy,
 ) -> AnyView {
     let toaster = crate::components::toast::toaster();
@@ -780,7 +772,7 @@ fn write_toasts<SetIn, DeleteIn>(
     toaster: ferrohealth_ui::widget::toast::Toasts,
     set: Action<SetIn, Result<(), ViewerError>>,
     remove: Action<DeleteIn, Result<(), ViewerError>>,
-    object: &'static str,
+    object: Msg,
 ) where
     SetIn: Send + Sync + 'static,
     DeleteIn: Send + Sync + 'static,
@@ -788,24 +780,29 @@ fn write_toasts<SetIn, DeleteIn>(
     Effect::new(move |_| match set.value().get() {
         Some(Ok(())) => crate::components::toast::toast_success(
             toaster,
-            "Tag saved",
-            "The tag collection was replaced with the merged list.",
+            &tr(Msg::TagSaved),
+            &tr(Msg::TagCollectionWasReplacedMergedList),
         ),
         Some(Err(error)) => {
-            crate::feedback::toast_write_failure(toaster, "Tag save failed", object, &error);
+            crate::feedback::toast_write_failure(
+                toaster,
+                &tr(Msg::TagSaveFailed),
+                &tr(object),
+                &error,
+            );
         }
         None => {}
     });
     Effect::new(move |_| match remove.value().get() {
         Some(Ok(())) => crate::components::toast::toast_success(
             toaster,
-            "Tag deleted",
-            "Every tag carrying that key was removed.",
+            &tr(Msg::TagDeleted),
+            &tr(Msg::EveryTagCarryingKeyWasRemoved),
         ),
         Some(Err(error)) => crate::components::toast::toast_error(
             toaster,
-            "Tag delete failed",
-            &crate::feedback::write_failure_copy(object, &error),
+            &tr(Msg::TagDeleteFailed),
+            &crate::feedback::write_failure_copy(&tr(object), &error),
         ),
         None => {}
     });
@@ -867,9 +864,7 @@ pub(crate) fn ehr_tags_section(ehr_id: Signal<String>, selected: Memo<String>) -
     let note = move || match open.value().get() {
         Some((uid, Ok(None))) => view! {
             <p class="mt-2 text-sm text-ink-muted">
-                {format!(
-                    "Nothing in this EHR holds {uid} — the tagged object may have been deleted.",
-                )}
+                {tr_with(Msg::NothingEhrHoldsTaggedObjectMay, &[("uid", uid.clone().into())])}
             </p>
         }
         .into_any(),
@@ -887,8 +882,8 @@ pub(crate) fn ehr_tags_section(ehr_id: Signal<String>, selected: Memo<String>) -
                         view! {
                             <EmptyState
                                 icon=ferrohealth_ui::icon::Glyph::TAGS
-                                message="No tags in this EHR"
-                                hint="Tags are free key/value markers a client sets on a composition, the EHR status or the directory; the composition viewer and the Status tab both set them."
+                                message=tr(Msg::NoTagsEhr)
+                                hint=tr(Msg::TagsFreeKeyValueMarkersClient4)
                             />
                         }
                             .into_any()
@@ -905,9 +900,9 @@ pub(crate) fn ehr_tags_section(ehr_id: Signal<String>, selected: Memo<String>) -
     let action = Signal::derive(move || crate::pages::ehrs::ehr_detail_href(&ehr_id.get()));
     view! {
         <section class=CARD_PAD id="ehr-tag-browser">
-            <h2 class=CARD_TITLE>"Tags in this EHR"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::TagsInThisEhr)}</h2>
             <p class="mb-3 fui-help">
-                "Every tag on every object in this EHR, grouped by the object it is on. A tag names its target without naming that target's kind, so opening a group asks the CDR which object holds that id. The container form and one version of the same object are separate collections and appear as separate groups."
+                {tr(Msg::EveryTagEveryObjectEhrGrouped)}
             </p>
             {move || { tag_filter_form(action.get(), filters, &[("tab", "tags".to_owned())]) }}
             {table}
@@ -950,17 +945,17 @@ fn browser_table(
     .into_any();
     let footer = table_footer(
         &crate::pages::ehrs::ehr_detail_href(&ehr_id.get_untracked()),
-        "Tagged object pages",
-        ferrohealth_ui::table::model::Noun::new("tagged object", "tagged objects"),
+        tr(Msg::TaggedObjectPages),
+        ferrohealth_ui::table::model::Noun::new(message(Msg::NounTaggedObjects)),
         paging,
         Signal::derive(move || total),
     );
     view! {
-        {table_shell(
-            "Tagged objects",
-            if paths { &["Key", "Value", "Target path", ""] } else { &["Key", "Value", ""] },
-            rows,
-        )}
+        {
+            let (key, value, target_path) = (tr(Msg::Key), tr(Msg::Value), tr(Msg::TargetPath));
+            let headers: &[&str] = if paths { &[&key, &value, &target_path, ""] } else { &[&key, &value, ""] };
+            table_shell(&tr(Msg::TaggedObjects), headers, rows)
+        }
         {footer}
     }
     .into_any()
@@ -998,7 +993,7 @@ fn group_rows(
                     }
                 >
                     {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::EYE, "14")}
-                    "Open"
+                    {tr(Msg::Open)}
                 </button>
             </td>
         </tr>
@@ -1020,13 +1015,13 @@ fn browser_row(tag: &ItemTagRow, paths: bool) -> AnyView {
             <td class=CELL_MONO data-tag-key=hook>
                 {key}
             </td>
-            <td class=CELL data-label="Value" colspan=if paths { "1" } else { "2" }>
+            <td class=CELL data-label=tr(Msg::Value) colspan=if paths { "1" } else { "2" }>
                 {value}
             </td>
             {paths
                 .then(|| {
                     view! {
-                        <td class=CELL_MONO data-label="Target path" colspan="2">
+                        <td class=CELL_MONO data-label=tr(Msg::TargetPath) colspan="2">
                             {target_path}
                         </td>
                     }

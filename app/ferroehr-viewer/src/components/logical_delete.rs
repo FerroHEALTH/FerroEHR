@@ -19,6 +19,7 @@ use crate::components::confirm_dialog::ConfirmDialog;
 use crate::components::field::BTN_DANGER;
 use crate::components::toast::{toast_error, toast_success};
 use crate::error::ViewerError;
+use crate::locale::{Msg, tr};
 
 /// The copy and DOM hooks one family's delete affordance renders with.
 #[derive(Debug, Clone, Copy)]
@@ -27,15 +28,15 @@ pub struct LogicalDeleteCopy {
     pub button_id: &'static str,
     /// The action's label, used for the button, the dialog title and the
     /// confirming button alike ("Delete party").
-    pub label: &'static str,
+    pub label: Msg,
     /// The confirmation dialog's DOM id.
     pub dialog_id: &'static str,
     /// The confirming button's DOM id.
     pub confirm_id: &'static str,
     /// The success toast's title.
-    pub success_title: &'static str,
+    pub success_title: Msg,
     /// The noun phrase the failure copy is built around ("this party").
-    pub object: &'static str,
+    pub object: Msg,
 }
 
 /// The delete button plus its confirmation modal and outcome toasts.
@@ -60,15 +61,15 @@ pub fn logical_delete_section(
         Some(Ok(())) => {
             toast_success(
                 toaster,
-                copy.success_title,
-                "A deleted version was committed; earlier versions stay readable in History.",
+                &tr(copy.success_title),
+                &tr(Msg::DeletedVersionWasCommittedEarlierVersions),
             );
             navigate(&return_href, leptos_router::NavigateOptions::default());
         }
         Some(Err(error)) => toast_error(
             toaster,
-            "Delete failed",
-            &crate::feedback::logical_delete_failure_copy(copy.object, &error),
+            &tr(Msg::DeleteFailed),
+            &crate::feedback::logical_delete_failure_copy(&tr(copy.object), &error),
         ),
         None => {}
     });
@@ -83,13 +84,13 @@ pub fn logical_delete_section(
                 on:click=move |_| confirming.set(true)
             >
                 {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::TRASH, "14")}
-                {copy.label}
+                {tr(copy.label)}
             </button>
             <ConfirmDialog
                 open=confirming
-                title=copy.label
+                title=tr(copy.label)
                 message=message
-                confirm_label=copy.label
+                confirm_label=tr(copy.label)
                 dialog_id=copy.dialog_id
                 confirm_id=copy.confirm_id
                 on_cancel=Callback::new(move |()| confirming.set(false))

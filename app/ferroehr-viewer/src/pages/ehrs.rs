@@ -42,6 +42,9 @@ use crate::components::page_header::PageHeader;
 use crate::components::surface::{CARD_PAD, CARD_TITLE};
 use crate::components::toast::toast_success;
 use crate::error::ViewerError;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::locale::tr_served;
+use crate::locale::{Msg, message, tr, tr_with};
 
 #[cfg(not(target_arch = "wasm32"))]
 /// The fixed AQL that lists EHRs newest-first for the recent-EHRs table.
@@ -88,8 +91,12 @@ pub(crate) fn aql_request_body(aql: &str, parameters: &Value, offset: u32) -> St
 /// # Errors
 /// [`ViewerError::Internal`] when the body is not valid JSON.
 pub(crate) fn parse_result_set(body: &str, offset: u32) -> Result<ResultPage, ViewerError> {
-    let doc: Value = serde_json::from_str(body)
-        .map_err(|e| ViewerError::Internal(format!("AQL result JSON: {e}")))?;
+    let doc: Value = serde_json::from_str(body).map_err(|e| {
+        ViewerError::Internal(tr_with(
+            Msg::AqlResultJson,
+            &[("e", (e).to_string().into())],
+        ))
+    })?;
     let columns = doc
         .get("columns")
         .and_then(Value::as_array)
@@ -180,7 +187,7 @@ pub(crate) fn subject_ehr_status(subject_id: &str, subject_namespace: &str) -> V
             },
             "rm_version": "1.2.0"
         },
-        "name": { "_type": "DV_TEXT", "value": "EHR Status" },
+        "name": { "_type": "DV_TEXT", "value": tr(Msg::EhrStatus) },
         "subject": {
             "_type": "PARTY_SELF",
             "external_ref": {
@@ -204,13 +211,14 @@ pub(crate) fn subject_ehr_status(subject_id: &str, subject_namespace: &str) -> V
 /// [`ViewerError::Internal`] when the body is not valid JSON or carries no
 /// `ehr_id`.
 pub(crate) fn parse_ehr_id(body: &str) -> Result<String, ViewerError> {
-    let doc: Value =
-        serde_json::from_str(body).map_err(|e| ViewerError::Internal(format!("EHR JSON: {e}")))?;
+    let doc: Value = serde_json::from_str(body).map_err(|e| {
+        ViewerError::Internal(tr_with(Msg::EhrJson3, &[("e", (e).to_string().into())]))
+    })?;
     doc.get("ehr_id")
         .and_then(|v| v.get("value"))
         .and_then(Value::as_str)
         .map(str::to_owned)
-        .ok_or_else(|| ViewerError::Internal("EHR response carried no ehr_id".to_owned()))
+        .ok_or_else(|| ViewerError::Internal(tr(Msg::EhrResponseCarriedNoEhrId)))
 }
 
 /// Whether `value` is a UUID in the RFC 9562 §4 string representation
@@ -279,16 +287,16 @@ pub async fn create_ehr(
         (false, false) => subject_ehr_status(subject_id, subject_namespace).to_string(),
         // Exactly one: a bad request; the subject needs both parts.
         _ => {
-            return Err(ViewerError::Invalid(
-                "provide both a subject id and a subject namespace, or leave both empty".to_owned(),
-            ));
+            return Err(ViewerError::Invalid(tr_served(
+                Msg::ProvideBothSubjectIdSubjectNamespace,
+            )));
         }
     };
     // A server function is a public endpoint: the client-side check is a
     // courtesy, this one is the guard.
     if !ehr_id.is_empty() && !is_uuid(ehr_id) {
         return Err(ViewerError::Invalid(format!(
-            "{ehr_id:?} is not a UUID — the openEHR EHR API strongly recommends a UUID for a \
+            "{ehr_id:?} is not a UUID: the openEHR EHR API strongly recommends a UUID for a \
              client-supplied EHR id"
         )));
     }
@@ -354,9 +362,9 @@ pub async fn find_ehr_by_subject(
     let subject_id = subject_id.trim();
     let subject_namespace = subject_namespace.trim();
     if subject_id.is_empty() || subject_namespace.is_empty() {
-        return Err(ViewerError::Invalid(
-            "both a subject id and a subject namespace are required".to_owned(),
-        ));
+        return Err(ViewerError::Invalid(tr_served(
+            Msg::BothSubjectIdSubjectNamespaceRequired,
+        )));
     }
     let url = state.cdr.rest_v1(&format!(
         "ehr?subject_id={}&subject_namespace={}",
@@ -437,8 +445,8 @@ pub fn EhrsPage() -> impl IntoView {
         <Title text="EHRs" />
         <div>
             <PageHeader
-                title="EHRs"
-                subtitle="Create an EHR, find one by id or subject, or browse the most recent."
+                title=tr(Msg::Ehrs)
+                subtitle=tr(Msg::CreateEhrFindOneIdSubject)
             />
             {create}
             {finder}
@@ -482,14 +490,23 @@ fn create_ehr_section(toaster: ferrohealth_ui::widget::toast::Toasts) -> AnyView
     let navigate = leptos_router::hooks::use_navigate();
     Effect::new(move |_| match create.value().get() {
         Some(Ok(new_id)) => {
-            toast_success(toaster, "EHR created", &format!("New EHR {new_id}"));
+            toast_success(
+                toaster,
+                &tr(Msg::EhrCreated),
+                &tr_with(Msg::NewEhr, &[("new_id", new_id.clone().into())]),
+            );
             navigate(
                 &ehr_detail_href(&new_id),
                 leptos_router::NavigateOptions::default(),
             );
         }
         Some(Err(error)) => {
-            crate::feedback::toast_write_failure(toaster, "Create failed", "the new EHR", &error);
+            crate::feedback::toast_write_failure(
+                toaster,
+                &tr(Msg::CreateFailed),
+                &tr(Msg::TheNewEhr),
+                &error,
+            );
         }
         None => {}
     });
@@ -515,17 +532,12 @@ fn create_ehr_section(toaster: ferrohealth_ui::widget::toast::Toasts) -> AnyView
             .to_owned();
         if id.is_empty() != ns.is_empty() {
             validation.set(Some(
-                "Provide both a subject id and a namespace, or leave both empty for an anonymous EHR."
-                    .to_owned(),
+                { tr(Msg::ProvideBothSubjectIdNamespaceLeave) }.clone(),
             ));
             return;
         }
         if !ehr_id.is_empty() && !is_uuid(&ehr_id) {
-            validation.set(Some(
-                "An EHR id must be a UUID (8-4-4-4-12 hex, e.g. \
-                 7d44aa01-0f9e-4a2c-9a0f-2a6a5f9b1c3d). Leave it empty to let the CDR mint one."
-                    .to_owned(),
-            ));
+            validation.set(Some(tr(Msg::EhrIdMustUuid84)));
             return;
         }
         validation.set(None);
@@ -534,35 +546,35 @@ fn create_ehr_section(toaster: ferrohealth_ui::widget::toast::Toasts) -> AnyView
 
     view! {
         <section class=format!("{CARD_PAD} mb-6")>
-            <h2 class=CARD_TITLE>"Create EHR"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::CreateEhr)}</h2>
             <div class="fui-field-flow">
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="ehr-create-id">
-                        "EHR id (optional)"
+                        {tr(Msg::EhrIdOptional)}
                     </label>
                     <input
                         id="ehr-create-id"
                         type="text"
                         class=INPUT
-                        placeholder="ehr_id (UUID) — blank lets the CDR mint one"
+                        placeholder=tr(Msg::EhrIdUuidBlankLetsCdr)
                         node_ref=ehr_id_ref
                     />
                 </div>
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="ehr-create-subject-id">
-                        "Subject id (optional)"
+                        {tr(Msg::SubjectIdOptional)}
                     </label>
                     <input
                         id="ehr-create-subject-id"
                         type="text"
                         class=INPUT
-                        placeholder="external subject id"
+                        placeholder=tr(Msg::ExternalSubjectId)
                         node_ref=subject_id_ref
                     />
                 </div>
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="ehr-create-subject-namespace">
-                        "Subject namespace (optional)"
+                        {tr(Msg::SubjectNamespaceOptional)}
                     </label>
                     <input
                         id="ehr-create-subject-namespace"
@@ -579,16 +591,16 @@ fn create_ehr_section(toaster: ferrohealth_ui::widget::toast::Toasts) -> AnyView
                     disabled=Signal::derive(move || create.pending().get())
                     on:click=on_click
                 >
-                    "Create EHR"
+                    {tr(Msg::CreateEhr)}
                 </button>
             </div>
             <p class="mt-2 fui-help">
-                "Leave the subject fields blank for an anonymous EHR (the CDR mints the default EHR_STATUS), or set both to bind a subject. "
-                "Supply an EHR id to create that exact EHR — it must be a UUID, and an id already in use is refused by the CDR."
+                {tr(Msg::LeaveSubjectFieldsBlankAnonymousEhr)}
+                {tr(Msg::SupplyEhrIdCreateExactEhr)}
             </p>
             <div class="mt-2 text-sm">
                 <Show when=move || create.pending().get()>
-                    <span class="text-ink-muted">"Creating…"</span>
+                    <span class="text-ink-muted">{tr(Msg::Creating)}</span>
                 </Show>
                 {move || {
                     validation
@@ -704,7 +716,7 @@ fn finder_section() -> AnyView {
 
     view! {
         <section class=format!("{CARD_PAD} mb-6")>
-            <h2 class=CARD_TITLE>"Find an EHR"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::FindAnEhr)}</h2>
             // method=GET + action=/ehrs: the no-JS submission lands on
             // /ehrs?find=<id>, which EhrsPage answers with a redirect to the
             // detail route (lookup state travels in the URL).
@@ -715,38 +727,38 @@ fn finder_section() -> AnyView {
                         // association deterministic and preserve the E2E contract
                         // (`#ehr-lookup`).
                         <label class=LABEL r#for="ehr-lookup">
-                            "EHR id"
+                            {tr(Msg::EhrId2)}
                         </label>
                         <input
                             id="ehr-lookup"
                             name="find"
                             type="text"
                             class=INPUT
-                            placeholder="ehr_id (UUID)"
+                            placeholder=tr(Msg::EhrIdUuid)
                             node_ref=lookup_ref
                         />
                     </div>
                     <button id="ehr-find" type="submit" class=BTN_PRIMARY>
-                        "Find"
+                        {tr(Msg::Find)}
                     </button>
                 </div>
             </form>
             <div class="mt-3 fui-field-flow">
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="ehr-subject-id">
-                        "Subject id"
+                        {tr(Msg::SubjectId)}
                     </label>
                     <input
                         id="ehr-subject-id"
                         type="text"
                         class=INPUT
-                        placeholder="external subject id"
+                        placeholder=tr(Msg::ExternalSubjectId)
                         node_ref=subject_id_ref
                     />
                 </div>
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="ehr-subject-namespace">
-                        "Subject namespace"
+                        {tr(Msg::SubjectNamespace)}
                     </label>
                     <input
                         id="ehr-subject-namespace"
@@ -763,12 +775,12 @@ fn finder_section() -> AnyView {
                     disabled=Signal::derive(move || find.pending().get())
                     on:click=on_find_subject
                 >
-                    "Find by subject"
+                    {tr(Msg::FindBySubject)}
                 </button>
             </div>
             <div class="mt-2 text-sm">
                 <Show when=move || find.pending().get()>
-                    <span class="text-ink-muted">"Searching…"</span>
+                    <span class="text-ink-muted">{tr(Msg::Searching)}</span>
                 </Show>
                 // The "not found" line is deliberately an inline note rather than
                 // an EmptyState: it answers the search control it sits under
@@ -777,7 +789,7 @@ fn finder_section() -> AnyView {
                 // empty state.
                 {move || match find.value().get() {
                     Some(Ok(None)) => {
-                        view! { <p class="text-ink-muted">"No EHR found for that subject."</p> }
+                        view! { <p class="text-ink-muted">{tr(Msg::NoEhrFoundSubject)}</p> }
                             .into_any()
                     }
                     Some(Err(error)) => inline_error(&error),
@@ -821,8 +833,8 @@ fn ehrs_table(page: &ResultPage, query: Memo<leptos_router::params::ParamsMap>) 
         return view! {
             <EmptyState
                 icon=ferrohealth_ui::icon::Glyph::DATABASE
-                message="No EHRs found"
-                hint="Create an EHR through the CDR, then browse it here."
+                message=tr(Msg::NoEhrsFound)
+                hint=tr(Msg::CreateEhrThroughCdrThenBrowse)
             />
         }
         .into_any();
@@ -842,11 +854,11 @@ fn ehrs_table(page: &ResultPage, query: Memo<leptos_router::params::ParamsMap>) 
         page.offset,
         page.rows.len(),
         "/ehrs",
-        Noun::new("EHR", "EHRs"),
+        Noun::new(message(Msg::NounEhrs)),
         query,
     );
     view! {
-        {table_shell("EHRs", &["EHR ID", "Created"], body)}
+        {table_shell(&tr(Msg::Ehrs), &[&tr(Msg::EhrId), &tr(Msg::Created)], body)}
         {paging}
     }
     .into_any()
@@ -873,7 +885,7 @@ fn ehrs_row(row: &[Value]) -> AnyView {
                 .into_any()
             } else {
                 view! {
-                    <td class=CELL data-label="Created">
+                    <td class=CELL data-label=tr(Msg::Created)>
                         {ferrohealth_ui::view::time::timestamp(&text)}
                     </td>
                 }
@@ -926,7 +938,11 @@ pub(crate) fn paging_controls(
         }
         format!("{base}{}", map.to_query_string())
     };
-    link_open_pager(Listing::new("Pages").noun(noun).sizes(&[]), window, &href)
+    link_open_pager(
+        Listing::new(tr(Msg::Pages)).noun(noun).sizes(&[]),
+        window,
+        &href,
+    )
 }
 
 /// Render one raw AQL cell value as display text: strings verbatim, JSON null

@@ -53,6 +53,9 @@ use ferrohealth_ui::highlight::Language;
 use crate::components::format_view::pretty_body;
 use crate::error::ViewerError;
 use crate::format::ReprFormat;
+use crate::locale::{Msg, tr, tr_with};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::locale::{tr_served, tr_served_with};
 
 /// The revision history of a versioned composition, newest-first.
 ///
@@ -161,9 +164,7 @@ pub async fn fetch_version_at_time(
     let state: crate::state::AppState = expect_context();
     let at_time = crate::format::datetime_local_to_rfc3339(&at_time);
     if at_time.is_empty() {
-        return Err(ViewerError::Invalid(
-            "pick a date and time to travel to".to_owned(),
-        ));
+        return Err(ViewerError::Invalid(tr_served(Msg::PickDateTimeTravel)));
     }
     let url = state.cdr.rest_v1(&format!(
         "ehr/{}/versioned_composition/{}/version?version_at_time={}",
@@ -213,15 +214,13 @@ pub async fn update_composition(
     let session = crate::session::require_session().await?;
     let state: crate::state::AppState = expect_context();
     if body.trim().is_empty() {
-        return Err(ViewerError::Invalid(
-            "the composition body is empty".to_owned(),
-        ));
+        return Err(ViewerError::Invalid(tr_served(Msg::CompositionBodyEmpty)));
     }
     let current_version_uid = current_version_uid.trim();
     if current_version_uid.is_empty() {
-        return Err(ViewerError::Invalid(
-            "no current version is known — reload the page and retry".to_owned(),
-        ));
+        return Err(ViewerError::Invalid(tr_served(
+            Msg::NoCurrentVersionKnownReloadPage,
+        )));
     }
     // If-Match value is the version_uid in double quotes (composition_update).
     let if_match = format!("\"{current_version_uid}\"");
@@ -249,8 +248,9 @@ pub async fn update_composition(
             .err()
             .map(|e| e.to_string())
             .unwrap_or_default();
-        return Err(ViewerError::Invalid(format!(
-            "the composition changed since this page loaded — reload and retry. {detail}"
+        return Err(ViewerError::Invalid(tr_served_with(
+            Msg::CompositionChangedSincePageLoadedReload,
+            &[("detail", detail.clone().into())],
         )));
     }
     let response = crate::cdr::CdrClient::expect_success(response)?;
@@ -289,11 +289,9 @@ pub async fn delete_composition(
     let state: crate::state::AppState = expect_context();
     let version_uid = version_uid.trim();
     if version_uid.is_empty() || !version_uid.contains("::") {
-        return Err(ViewerError::Invalid(
-            "the latest version's full OBJECT_VERSION_ID is required to delete a composition — \
-             reload this screen and retry"
-                .to_owned(),
-        ));
+        return Err(ViewerError::Invalid(tr_served(
+            Msg::LatestVersionSFullObjectVersion,
+        )));
     }
     let url = state.cdr.rest_v1(&format!(
         "ehr/{}/composition/{}",
@@ -413,10 +411,15 @@ fn parse_versioned_details(
     object_body: &str,
     version_body: &str,
 ) -> Result<VersionedCompositionDetails, ViewerError> {
-    let object: Value = serde_json::from_str(object_body)
-        .map_err(|e| ViewerError::Internal(format!("versioned composition JSON: {e}")))?;
-    let version: Value = serde_json::from_str(version_body)
-        .map_err(|e| ViewerError::Internal(format!("version JSON: {e}")))?;
+    let object: Value = serde_json::from_str(object_body).map_err(|e| {
+        ViewerError::Internal(tr_with(
+            Msg::VersionedCompositionJson,
+            &[("e", (e).to_string().into())],
+        ))
+    })?;
+    let version: Value = serde_json::from_str(version_body).map_err(|e| {
+        ViewerError::Internal(tr_with(Msg::VersionJson, &[("e", (e).to_string().into())]))
+    })?;
     Ok(VersionedCompositionDetails {
         object_uid: crate::uid::uid_value_of_document(&object),
         owner_id: json_str(&object, &["owner_id", "id", "value"]),
@@ -441,8 +444,12 @@ fn parse_versioned_details(
 /// # Errors
 /// [`ViewerError::Internal`] when the body is not valid JSON.
 pub(crate) fn parse_versions(body: &str) -> Result<Vec<VersionEntry>, ViewerError> {
-    let doc: Value = serde_json::from_str(body)
-        .map_err(|e| ViewerError::Internal(format!("revision history JSON: {e}")))?;
+    let doc: Value = serde_json::from_str(body).map_err(|e| {
+        ViewerError::Internal(tr_with(
+            Msg::RevisionHistoryJson,
+            &[("e", (e).to_string().into())],
+        ))
+    })?;
     let items = doc
         .get("items")
         .and_then(Value::as_array)
@@ -517,16 +524,16 @@ fn wire_commit_toast<I: Send + Sync + 'static>(
     Effect::new(move |_| match update.value().get() {
         Some(Ok(uid)) => {
             let detail = if uid.is_empty() {
-                "A new version was committed.".to_owned()
+                tr(Msg::NewVersionWasCommitted)
             } else {
-                format!("New version {uid}")
+                tr_with(Msg::NewVersion, &[("uid", uid.clone().into())])
             };
-            toast_success(toaster, "New version committed", &detail);
+            toast_success(toaster, &tr(Msg::NewVersionCommitted), &detail);
         }
         Some(Err(error)) => crate::feedback::toast_write_failure(
             toaster,
-            "Commit failed",
-            "the new composition version",
+            &tr(Msg::CommitFailed),
+            &tr(Msg::TheNewCompositionVersion),
             &error,
         ),
         None => {}
@@ -549,8 +556,8 @@ fn wire_delete_outcome<I: Send + Sync + 'static>(
         Some(Ok(())) => {
             toast_success(
                 toaster,
-                "Composition deleted",
-                "The composition was logically deleted — its version history stays readable.",
+                &tr(Msg::CompositionDeleted),
+                &tr(Msg::CompositionWasLogicallyDeletedVersionHistory),
             );
             // The route param is percent-encoded through the shared href
             // builder — all percent-coding goes through `urlencoding`.
@@ -564,8 +571,8 @@ fn wire_delete_outcome<I: Send + Sync + 'static>(
         }
         Some(Err(error)) => toast_error(
             toaster,
-            "Delete failed",
-            &crate::feedback::logical_delete_failure_copy("this composition", &error),
+            &tr(Msg::DeleteFailed),
+            &crate::feedback::logical_delete_failure_copy(&tr(Msg::ThisComposition), &error),
         ),
         None => {}
     });
@@ -722,7 +729,7 @@ pub fn CompositionPage() -> impl IntoView {
 
     let title = Signal::derive(move || {
         let short: String = uid.get().chars().take(8).collect();
-        format!("Composition {short}…")
+        tr_with(Msg::Composition, &[("short", short.clone().into())])
     });
 
     // The parent-EHR crumb href/label reads the route param once at setup (a
@@ -730,8 +737,11 @@ pub fn CompositionPage() -> impl IntoView {
     let ehr_id_value = ehr_id.get_untracked();
     let ehr_short: String = ehr_id_value.chars().take(8).collect();
     let crumbs = vec![
-        Crumb::new("EHRs", "/ehrs"),
-        Crumb::new(format!("EHR {ehr_short}…"), format!("/ehrs/{ehr_id_value}")),
+        Crumb::new(tr(Msg::Ehrs), "/ehrs"),
+        Crumb::new(
+            tr_with(Msg::Ehr, &[("ehr_short", ehr_short.clone().into())]),
+            format!("/ehrs/{ehr_id_value}"),
+        ),
     ];
 
     view! {
@@ -778,34 +788,29 @@ fn delete_section(
             .and_then(|entries| entries.first().map(|entry| entry.version_id.clone()))
             .unwrap_or_default()
     };
-    let message = Signal::derive(|| {
-        "Logically delete the latest version of this composition? The CDR commits a deleted \
-         version on top of it: the composition stops resolving as current, while every earlier \
-         version and its audit trail stay readable. It cannot be undone."
-            .to_owned()
-    });
+    let message = Signal::derive(|| tr(Msg::LogicallyDeleteLatestVersionCompositionCdr));
     view! {
         <div class="contents">
             <span id="composition-delete-help" class="fui-sr-only">
-                "Deletes the latest version."
+                {tr(Msg::DeletesTheLatestVersion2)}
             </span>
             <button
                 id="composition-delete"
                 type="button"
                 class=BTN_DANGER
-                title="Deletes the latest version"
+                title=tr(Msg::DeletesTheLatestVersion)
                 aria-describedby="composition-delete-help"
                 disabled=Signal::derive(move || delete.pending().get())
                 on:click=move |_| confirming.set(true)
             >
                 {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::TRASH, "14")}
-                "Delete composition"
+                {tr(Msg::DeleteComposition)}
             </button>
             <crate::components::confirm_dialog::ConfirmDialog
                 open=confirming
-                title="Delete composition"
+                title=tr(Msg::DeleteComposition)
                 message=message
-                confirm_label="Delete composition"
+                confirm_label=tr(Msg::DeleteComposition)
                 dialog_id="composition-delete-confirm-dialog"
                 confirm_id="composition-delete-confirm"
                 on_cancel=Callback::new(move |()| confirming.set(false))
@@ -835,7 +840,7 @@ fn versioned_section(
     view! {
         <div class="mt-3">
             <Transition fallback=|| {
-                view! { {ferrohealth_ui::view::empty::skeleton(4, "Loading…")} }
+                view! { {ferrohealth_ui::view::empty::skeleton(4, tr(Msg::Loading))} }
             }>
                 {move || Suspend::new(async move {
                     match versioned.await {
@@ -854,7 +859,7 @@ fn versioned_card(details: &VersionedCompositionDetails) -> AnyView {
     let content = if details.has_data {
         "present".to_owned()
     } else {
-        "none (deleted version)".to_owned()
+        tr(Msg::NoneDeletedVersion)
     };
     let signature = if details.signed {
         "present".to_owned()
@@ -863,20 +868,20 @@ fn versioned_card(details: &VersionedCompositionDetails) -> AnyView {
     };
     view! {
         <section class=CARD_PAD id="versioned-composition">
-            <h2 class=CARD_TITLE>"Versioned object"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::VersionedObject2)}</h2>
             <dl class="fui-facts text-sm">
-                {versioned_row("versioned object", "object-uid", details.object_uid.clone())}
-                {versioned_row("owner EHR", "owner", details.owner_id.clone())}
-                {versioned_row("created", "created", details.time_created.clone())}
-                {versioned_row("version", "version", details.version_id.clone())}
-                {versioned_row("lifecycle", "lifecycle", details.lifecycle_state.clone())}
+                {versioned_row(tr(Msg::VersionedObject), "object-uid", details.object_uid.clone())}
+                {versioned_row(tr(Msg::OwnerEhr), "owner", details.owner_id.clone())}
+                {versioned_row("created".to_owned(), "created", details.time_created.clone())}
+                {versioned_row("version".to_owned(), "version", details.version_id.clone())}
+                {versioned_row("lifecycle".to_owned(), "lifecycle", details.lifecycle_state.clone())}
                 {versioned_row(
-                    "preceding version",
+                    tr(Msg::PrecedingVersion),
                     "preceding",
                     details.preceding_version_uid.clone(),
-                )} {versioned_row("contribution", "contribution", details.contribution_uid.clone())}
-                {versioned_row("signature", "signature", signature)}
-                {versioned_row("content", "content", content)}
+                )} {versioned_row("contribution".to_owned(), "contribution", details.contribution_uid.clone())}
+                {versioned_row("signature".to_owned(), "signature", signature)}
+                {versioned_row("content".to_owned(), "content", content)}
             </dl>
         </section>
     }
@@ -886,7 +891,7 @@ fn versioned_card(details: &VersionedCompositionDetails) -> AnyView {
 /// One label/value line of the versioned-object card. `hook` is the row's
 /// `data-versioned-fact` value — the stable E2E hook; an absent value shows an
 /// em dash.
-fn versioned_row(label: &'static str, hook: &'static str, value: String) -> AnyView {
+fn versioned_row(label: String, hook: &'static str, value: String) -> AnyView {
     let shown = crate::components::facts::fact_value(value);
     view! {
         <div>
@@ -947,8 +952,8 @@ fn edit_section(
         else {
             toast_error(
                 commit_toaster,
-                "Version history still loading",
-                "The commit needs the latest version id as its precondition — try again in a moment.",
+                &tr(Msg::VersionHistoryStillLoading),
+                &tr(Msg::CommitNeedsLatestVersionIdPrecondition),
             );
             return;
         };
@@ -957,18 +962,18 @@ fn edit_section(
     view! {
         <div class="mt-3">
             <button id="edit-new-version" type="button" class=BTN_SECONDARY on:click=toggle>
-                {move || if edit_open.get() { "Close editor" } else { "Edit as new version" }}
+                {move || if edit_open.get() { tr(Msg::CloseEditor) } else { tr(Msg::EditAsNewVersion) }}
             </button>
             <div class:hidden=move || !edit_open.get()>
                 <section class=format!("{CARD_PAD} mt-3")>
-                    <h2 class=CARD_TITLE>"Commit new version"</h2>
-                    <p class="mb-2 fui-help">"Commits on top of the latest version."</p>
+                    <h2 class=CARD_TITLE>{tr(Msg::CommitNewVersion)}</h2>
+                    <p class="mb-2 fui-help">{tr(Msg::CommitsTopLatestVersion)}</p>
                     <div class:hidden=move || is_json()>
-                        <p class="text-sm text-ink-muted">"Switch to canonical JSON to edit."</p>
+                        <p class="text-sm text-ink-muted">{tr(Msg::SwitchCanonicalJsonEdit)}</p>
                     </div>
                     <div class:hidden=move || !is_json() class="flex flex-col gap-3">
                         <label class=LABEL r#for="edit-body">
-                            "Composition (canonical JSON)"
+                            {tr(Msg::CompositionCanonicalJson)}
                         </label>
                         {code_field(
                             "edit-body",
@@ -985,10 +990,10 @@ fn edit_section(
                                 disabled=Signal::derive(move || update.pending().get())
                                 on:click=on_commit
                             >
-                                "Commit new version"
+                                {tr(Msg::CommitNewVersion)}
                             </button>
                             <Show when=move || update.pending().get()>
-                                <span class="text-sm text-ink-muted">"Committing…"</span>
+                                <span class="text-sm text-ink-muted">{tr(Msg::Committing)}</span>
                             </Show>
                         </div>
                         {move || match update.value().get() {
@@ -1028,7 +1033,7 @@ fn toolbar_section(
     let select = view! {
         <Suspense fallback=|| {
             ferrohealth_ui::view::empty::busy(
-                "Reading the versions",
+                tr(Msg::ReadingTheVersions),
                 ferrohealth_ui::view::empty::Busy::Inline,
             )
         }>
@@ -1038,7 +1043,7 @@ fn toolbar_section(
                     Err(_) => {
                         // Resolve inside the Suspense: an SSR'd ErrorBoundary fallback
                         // mismatches at hydration in leptos 0.8.
-                        view! { <span class="text-xs text-danger">"versions unavailable"</span> }
+                        view! { <span class="text-xs text-danger">{tr(Msg::VersionsUnavailable)}</span> }
                             .into_any()
                     }
                 }
@@ -1061,7 +1066,7 @@ fn toolbar_section(
     let note = move || match version_at_time.value().get() {
         Some(Err(ref e)) if e.status_code() == Some(http::StatusCode::NOT_FOUND) => view! {
             <p class="mt-2 text-sm text-ink-muted">
-                "No version of this composition existed at that time."
+                {tr(Msg::NoVersionCompositionExistedTime)}
             </p>
         }
         .into_any(),
@@ -1074,14 +1079,14 @@ fn toolbar_section(
                 <FormatSelector selected=format />
                 <div class="flex items-center gap-2">
                     <label class=LABEL r#for="version-select">
-                        "Version"
+                        {tr(Msg::Version)}
                     </label>
                     {select}
                 </div>
                 <div class="flex items-end gap-2">
                     <div class="flex flex-col gap-1">
                         <label class=LABEL r#for="version-at-time">
-                            "Time travel (interpreted as UTC)"
+                            {tr(Msg::TimeTravelInterpretedUtc)}
                         </label>
                         <input
                             id="version-at-time"
@@ -1098,7 +1103,7 @@ fn toolbar_section(
                         disabled=Signal::derive(move || version_at_time.pending().get())
                         on:click=on_at_time
                     >
-                        "At time"
+                        {tr(Msg::AtTime)}
                     </button>
                 </div>
             </div>
@@ -1111,10 +1116,10 @@ fn toolbar_section(
 /// The version `<select>`: a "Latest" option (empty value) plus one option per
 /// version, driven by `prop:value` + `on:change`.
 fn version_select(entries: Vec<VersionEntry>, selected: RwSignal<String>) -> AnyView {
-    let mut options = vec![view! { <option value="">"Latest"</option> }.into_any()];
+    let mut options = vec![view! { <option value="">{tr(Msg::Latest)}</option> }.into_any()];
     options.extend(entries.into_iter().map(|entry| {
         let value = entry.version_id.clone();
-        let label = format!("{} — {}", short_version(&entry.version_id), entry.committed);
+        let label = format!("{} · {}", short_version(&entry.version_id), entry.committed);
         view! { <option value=value>{label}</option> }.into_any()
     }));
     view! {
@@ -1145,7 +1150,7 @@ fn document_section(
 ) -> AnyView {
     view! {
         <Transition fallback=|| {
-            view! { {ferrohealth_ui::view::empty::skeleton(8, "Loading…")} }
+            view! { {ferrohealth_ui::view::empty::skeleton(8, tr(Msg::Loading))} }
         }>
             {move || Suspend::new(async move {
                 match document.await {
@@ -1181,8 +1186,8 @@ fn deleted_pane() -> AnyView {
         <div id="composition-version-deleted">
             <EmptyState
                 icon=ferrohealth_ui::icon::Glyph::TRASH
-                message="This version was deleted at the selected instant"
-                hint="The delete committed a deleted-lifecycle version; pick an earlier version above to read it."
+                message=tr(Msg::VersionWasDeletedSelectedInstant)
+                hint=tr(Msg::DeleteCommittedDeletedLifecycleVersionPick)
             />
         </div>
     }
@@ -1245,7 +1250,7 @@ fn timeline_strip(entries: &[VersionEntry], selected: RwSignal<String>) -> AnyVi
     };
     view! {
         <section class=CARD_PAD>
-            <h2 class=CARD_TITLE>"Version timeline"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::VersionTimeline)}</h2>
             <div class="flex flex-wrap items-center gap-2">{chips}</div>
         </section>
     }
@@ -1283,7 +1288,7 @@ fn timeline_chip(entry: &VersionEntry, newest: &str, selected: RwSignal<String>)
     view! {
         <button type="button" class=class on:click=move |_| selected.set(target.clone())>
             {label}
-            {is_newest.then_some(" · current")}
+            {is_newest.then_some(tr(Msg::Current))}
         </button>
     }
     .into_any()
@@ -1340,8 +1345,8 @@ fn audit_card(entry: Option<&VersionEntry>) -> AnyView {
         return view! {
             <EmptyState
                 icon=ferrohealth_ui::icon::Glyph::SHIELD_CHECK
-                message="No audit for the selected version"
-                hint="Pick another version above — every committed version carries its own audit."
+                message=tr(Msg::NoAuditSelectedVersion)
+                hint=tr(Msg::PickAnotherVersionAboveEveryCommitted)
             />
         }
         .into_any();
@@ -1352,10 +1357,10 @@ fn audit_card(entry: Option<&VersionEntry>) -> AnyView {
     let committer = entry.committer.clone();
     view! {
         <section class=CARD_PAD>
-            <h2 class=CARD_TITLE>"Audit"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::Audit)}</h2>
             <dl class="fui-facts text-sm">
-                {audit_row("version", version_id)} {audit_row("committed", committed_at)}
-                {audit_row("change type", change_type)} {audit_row("committer", committer)}
+                {audit_row("version".to_owned(), version_id)} {audit_row("committed".to_owned(), committed_at)}
+                {audit_row(tr(Msg::ChangeType2), change_type)} {audit_row("committer".to_owned(), committer)}
             </dl>
         </section>
     }
@@ -1363,7 +1368,7 @@ fn audit_card(entry: Option<&VersionEntry>) -> AnyView {
 }
 
 /// One label/value line in the audit card (empty values shown as an em dash).
-fn audit_row(label: &'static str, value: String) -> AnyView {
+fn audit_row(label: String, value: String) -> AnyView {
     let shown = crate::components::facts::fact_value(value);
     view! {
         <div>

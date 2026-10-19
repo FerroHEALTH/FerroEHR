@@ -26,6 +26,7 @@ use crate::components::page_header::{Crumb, PageHeader};
 use crate::components::surface::CARD_PAD;
 use crate::components::toast::toast_success;
 use crate::error::ViewerError;
+use crate::locale::{Msg, tr};
 use crate::pages::ehrs::ResultPage;
 use crate::pages::query_builder::{
     SaveAction, SaveFields, export_forms, paging_buttons, results_view, save_as_fields,
@@ -116,12 +117,12 @@ pub fn QueryAqlPage() -> impl IntoView {
     // it rejected.
     let toaster = crate::components::toast::toaster();
     Effect::new(move |_| match save_action.value().get() {
-        Some(Ok(())) => toast_success(toaster, "Query saved", ""),
+        Some(Ok(())) => toast_success(toaster, &tr(Msg::QuerySaved), ""),
         Some(Err(error)) => {
             crate::feedback::toast_write_failure(
                 toaster,
-                "Save failed",
-                "the stored query",
+                &tr(Msg::SaveFailed),
+                &tr(Msg::TheStoredQuery),
                 &error,
             );
         }
@@ -154,9 +155,9 @@ pub fn QueryAqlPage() -> impl IntoView {
         <Title text="AQL editor" />
         <div class="space-y-4">
             <PageHeader
-                title="Raw AQL"
-                subtitle="Write and run AQL directly, bind parameters, and save it as a stored query."
-                crumbs=vec![Crumb::new("Queries", "/queries")]
+                title=tr(Msg::RawAql)
+                subtitle=tr(Msg::WriteRunAqlDirectlyBindParameters)
+                crumbs=vec![Crumb::new(tr(Msg::Queries), "/queries")]
             />
             {load_status}
             {editor}
@@ -244,7 +245,7 @@ fn load_status_section(
 ) -> AnyView {
     view! {
         <Transition fallback=move || {
-            view! { <p class="text-sm text-ink-muted">"Loading stored query…"</p> }
+            view! { <p class="text-sm text-ink-muted">{tr(Msg::LoadingStoredQuery)}</p> }
         }>
             {move || Suspend::new(async move {
                 match load_resource.await {
@@ -257,11 +258,11 @@ fn load_status_section(
                         view! {
                             <div class="space-y-1">
                                 <p class="text-sm text-ink-muted">
-                                    "Loaded stored query "
+                                    {tr(Msg::LoadedStoredQuery)}
                                     <span class="font-mono text-ink">{qualified}</span>
-                                    " at version " <span class="font-mono text-ink">{version}</span>
-                                    ". Saving stores the version in the field below — that version is "
-                                    "immutable, so the next one is proposed."
+                                    {tr(Msg::AtVersion)} <span class="font-mono text-ink">{version}</span>
+                                    {tr(Msg::SavingStoresVersionFieldBelowVersion)}
+                                    {tr(Msg::ImmutableSoNextOneProposed)}
                                 </p>
                                 <div class="flex flex-wrap items-center gap-3 text-sm">
                                     <a
@@ -269,14 +270,14 @@ fn load_status_section(
                                         class="text-accent hover:underline"
                                         data-open-in-builder=""
                                     >
-                                        "Open in builder"
+                                        {tr(Msg::OpenInBuilder)}
                                     </a>
                                     <a
                                         href=run_href
                                         class="text-accent hover:underline"
                                         data-run-stored=""
                                     >
-                                        "Run with parameters"
+                                        {tr(Msg::RunWithParameters)}
                                     </a>
                                 </div>
                             </div>
@@ -307,7 +308,7 @@ fn editor_section(
                 <label class=LABEL r#for="aql-editor">
                     "AQL"
                 </label>
-                <p class="fui-help">"For example: SELECT c FROM EHR e CONTAINS COMPOSITION c"</p>
+                <p class="fui-help">{tr(Msg::ExampleSelectCFromEhrE)}</p>
                 {code_field("aql-editor", Language::Aql, aql, None, Height::Short)}
                 <div class="flex items-center gap-3">
                     <button
@@ -316,7 +317,7 @@ fn editor_section(
                         disabled=Signal::derive(move || aql.with(String::is_empty))
                         on:click=validate_click
                     >
-                        "Validate"
+                        {tr(Msg::Validate)}
                     </button>
                     {validate_feedback(validate_action)}
                 </div>
@@ -331,13 +332,13 @@ fn validate_feedback(validate_action: Action<String, Result<(), ViewerError>>) -
     view! {
         <div class="text-sm">
             <Show when=move || validate_action.pending().get()>
-                <span class="text-ink-muted">"Validating…"</span>
+                <span class="text-ink-muted">{tr(Msg::Validating)}</span>
             </Show>
             {move || match validate_action.value().get() {
                 Some(Ok(())) => {
                     view! {
                         <span class="rounded-control bg-ok-subtle px-2 py-0.5 text-ok">
-                            "AQL is valid."
+                            {tr(Msg::AqlIsValid)}
                         </span>
                     }
                         .into_any()
@@ -356,7 +357,7 @@ fn parameters_section(params: RwSignal<String>) -> AnyView {
         <section class=CARD_PAD>
             <div class="space-y-2">
                 <label class=LABEL r#for="aql-params">
-                    "Parameters (JSON object)"
+                    {tr(Msg::ParametersJsonObject)}
                 </label>
                 <p class="fui-help">
                     "A JSON object of the query's parameters, such as {\"ehr_id\": \"…\"}."
@@ -407,7 +408,7 @@ fn run_save_section(
             <div class="space-y-3">
                 {save_fields} <div class="fui-cluster">
                     <button type="button" class=BTN_PRIMARY disabled=empty_aql on:click=run_click>
-                        "Run"
+                        {tr(Msg::Run)}
                     </button>
                     <button
                         type="button"
@@ -415,7 +416,7 @@ fn run_save_section(
                         disabled=save_disabled
                         on:click=save_click
                     >
-                        "Save"
+                        {tr(Msg::Save)}
                     </button>
                 </div> {save_feedback(save_action)}
             </div>
@@ -431,7 +432,7 @@ fn save_feedback(save_action: SaveAction) -> AnyView {
     view! {
         <div class="text-sm">
             <Show when=move || save_action.pending().get()>
-                <span class="text-ink-muted">"Saving…"</span>
+                <span class="text-ink-muted">{tr(Msg::Saving)}</span>
             </Show>
             {move || match save_action.value().get() {
                 Some(Err(error)) => crate::components::notice::inline_error(&error),
@@ -463,7 +464,7 @@ fn results_section(
                         view! {
                             <section class=CARD_PAD>
                                 <div class="flex items-center justify-between gap-2 flex-wrap mb-3">
-                                    <h2 class="text-sm font-semibold text-ink">"Results"</h2>
+                                    <h2 class="text-sm font-semibold text-ink">{tr(Msg::Results)}</h2>
                                     {export}
                                 </div>
                                 {body}

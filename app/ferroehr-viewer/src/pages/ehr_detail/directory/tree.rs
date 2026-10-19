@@ -37,6 +37,7 @@ use crate::components::notice::inline_error;
 use crate::components::surface::{CARD_PAD, CARD_TITLE, WELL};
 use crate::error::ViewerError;
 use crate::format::ReprFormat;
+use crate::locale::{Msg, tr, tr_with};
 use crate::pages::ehr_detail::directory::edit::{
     add_item, add_subfolder, child_node_keys, count_tree, delete_folder, find_item_index,
     find_path_by_key, item_count, item_node_keys, item_summary, node_key_at, node_name, object_ref,
@@ -189,8 +190,12 @@ pub(in crate::pages::ehr_detail::directory) fn seed(
     if editor.seeded_uid.get_untracked().as_deref() == Some(state.version_uid.as_str()) {
         return Ok(());
     }
-    let mut doc: Value = serde_json::from_str(&state.body)
-        .map_err(|e| ViewerError::Internal(format!("directory JSON: {e}")))?;
+    let mut doc: Value = serde_json::from_str(&state.body).map_err(|e| {
+        ViewerError::Internal(tr_with(
+            Msg::DirectoryJson2,
+            &[("e", (e).to_string().into())],
+        ))
+    })?;
     let mut fresh_counter = 0u64;
     stamp_keys(&mut doc, &mut fresh_counter);
     editor.tree.set(doc.clone());
@@ -325,7 +330,10 @@ pub(in crate::pages::ehr_detail::directory) fn tree_editor(
             editor.tree.set(value);
             editor.json_error.set(None);
         }
-        Err(e) => editor.json_error.set(Some(format!("Invalid JSON: {e}"))),
+        Err(e) => editor.json_error.set(Some(tr_with(
+            Msg::InvalidJson,
+            &[("e", (e).to_string().into())],
+        ))),
     };
 
     let tree_body = tree_view(ed);
@@ -335,11 +343,11 @@ pub(in crate::pages::ehr_detail::directory) fn tree_editor(
         <section class=CARD_PAD>
             <div class="flex flex-wrap items-center justify-between gap-2">
                 <div class="flex items-center gap-2">
-                    <h2 class=CARD_TITLE>"Directory"</h2>
+                    <h2 class=CARD_TITLE>{tr(Msg::Directory)}</h2>
                     <span class="text-xs text-ink-muted">
                         {move || {
                             let (folders, items) = editor.tree.with(count_tree);
-                            format!("{folders} folders · {items} items")
+                            tr_with(Msg::FoldersItems2, &[("folders", (folders).to_string().into()), ("items", (items).to_string().into())])
                         }}
                     </span>
                 </div>
@@ -351,7 +359,7 @@ pub(in crate::pages::ehr_detail::directory) fn tree_editor(
                 >
                     {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::CODE, "14")}
                     {move || {
-                        if editor.advanced.get() { "Hide JSON" } else { "Advanced: edit as JSON" }
+                        if editor.advanced.get() { tr(Msg::HideJson) } else { tr(Msg::AdvancedEditAsJson) }
                     }}
                 </button>
             </div>
@@ -373,7 +381,7 @@ pub(in crate::pages::ehr_detail::directory) fn tree_editor(
                 <div class="flex items-center gap-3">
                     <button type="button" class=BTN_SECONDARY on:click=on_apply_json>
                         {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::CHECK, "14")}
-                        "Apply to tree"
+                        {tr(Msg::ApplyToTree)}
                     </button>
                     {move || {
                         editor
@@ -394,7 +402,7 @@ pub(in crate::pages::ehr_detail::directory) fn tree_editor(
                 class:hidden=move || !conflicted.get()
             >
                 <span class="text-sm text-danger">
-                    "This directory changed on the server since it was loaded. Your unsaved edits are still here."
+                    {tr(Msg::DirectoryChangedServerSinceWasLoaded)}
                 </span>
                 <button
                     type="button"
@@ -405,14 +413,14 @@ pub(in crate::pages::ehr_detail::directory) fn tree_editor(
                         force_save.dispatch((ehr_id.get(), body));
                     }
                 >
-                    "Save anyway (overwrite the server change)"
+                    {tr(Msg::SaveAnywayOverwriteServerChange)}
                 </button>
                 <button
                     type="button"
                     class=BTN_SECONDARY
                     on:click=move |_| reload.update(|n| *n = n.wrapping_add(1))
                 >
-                    "Discard my edits and load the server version"
+                    {tr(Msg::DiscardMyEditsLoadServerVersion)}
                 </button>
             </div>
 
@@ -429,13 +437,13 @@ pub(in crate::pages::ehr_detail::directory) fn tree_editor(
                     on:click=on_save
                 >
                     {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::SAVE, "14")}
-                    "Save directory"
+                    {tr(Msg::SaveDirectory)}
                 </button>
                 <button type="button" class=BTN_SECONDARY on:click=on_discard>
-                    "Discard changes"
+                    {tr(Msg::DiscardChanges)}
                 </button>
                 <Show when=move || update.pending().get()>
-                    <span class="text-sm text-ink-muted">"Saving…"</span>
+                    <span class="text-sm text-ink-muted">{tr(Msg::Saving)}</span>
                 </Show>
             </div>
 
@@ -525,7 +533,7 @@ fn render_folder(ed: TreeEditor, node_key: String, is_root: bool) -> AnyView {
     view! {
         <li class="py-0.5">
             <div class="flex items-center gap-1">
-                <button type="button" class=ICON_BTN aria-label="Toggle folder" on:click=on_toggle>
+                <button type="button" class=ICON_BTN aria-label=tr(Msg::ToggleFolder) on:click=on_toggle>
                     {chevron}
                 </button>
                 {folder_icon}
@@ -591,14 +599,14 @@ fn name_area(ed: TreeEditor, node_key: String) -> AnyView {
                 <span class="inline-flex items-center gap-1">
                     <input
                         class=INPUT
-                        aria-label="Folder name"
+                        aria-label=tr(Msg::FolderName)
                         prop:value=move || ed.rename_draft.get()
                         on:input:target=move |ev| ed.rename_draft.set(ev.target().value())
                     />
                     <button
                         type="button"
                         class=ICON_BTN
-                        aria-label="Confirm rename"
+                        aria-label=tr(Msg::ConfirmRename)
                         on:click=on_confirm
                     >
                         {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::CHECK, "14")}
@@ -606,7 +614,7 @@ fn name_area(ed: TreeEditor, node_key: String) -> AnyView {
                     <button
                         type="button"
                         class=ICON_BTN
-                        aria-label="Cancel rename"
+                        aria-label=tr(Msg::CancelRename)
                         on:click=on_cancel
                     >
                         {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::X, "14")}
@@ -638,7 +646,7 @@ fn folder_actions(ed: TreeEditor, node_key: String, is_root: bool) -> AnyView {
         ed.counter.update_value(|c| {
             ed.tree.update(|t| {
                 if let Some(p) = find_path_by_key(t, &add_folder_key) {
-                    add_subfolder(t, &p, "New folder");
+                    add_subfolder(t, &p, &tr(Msg::NewFolder));
                     stamp_keys(t, c);
                 }
             });
@@ -674,8 +682,8 @@ fn folder_actions(ed: TreeEditor, node_key: String, is_root: bool) -> AnyView {
             <button
                 type="button"
                 class=ICON_BTN_DANGER
-                aria-label="Delete folder"
-                title="Delete folder"
+                aria-label=tr(Msg::DeleteFolder)
+                title=tr(Msg::DeleteFolder)
                 on:click=on_delete
             >
                 {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::TRASH, "14")}
@@ -688,8 +696,8 @@ fn folder_actions(ed: TreeEditor, node_key: String, is_root: bool) -> AnyView {
             <button
                 type="button"
                 class=ICON_BTN
-                aria-label="Add subfolder"
-                title="Add subfolder"
+                aria-label=tr(Msg::AddSubfolder)
+                title=tr(Msg::AddSubfolder)
                 on:click=on_add_folder
             >
                 {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::FOLDER_PLUS, "14")}
@@ -697,8 +705,8 @@ fn folder_actions(ed: TreeEditor, node_key: String, is_root: bool) -> AnyView {
             <button
                 type="button"
                 class=ICON_BTN
-                aria-label="Add item reference"
-                title="Add item reference"
+                aria-label=tr(Msg::AddItemReference)
+                title=tr(Msg::AddItemReference)
                 on:click=on_add_item
             >
                 {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::FILE_PLUS, "14")}
@@ -706,8 +714,8 @@ fn folder_actions(ed: TreeEditor, node_key: String, is_root: bool) -> AnyView {
             <button
                 type="button"
                 class=ICON_BTN
-                aria-label="Rename folder"
-                title="Rename folder"
+                aria-label=tr(Msg::RenameFolder)
+                title=tr(Msg::RenameFolder)
                 on:click=on_rename
             >
                 {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::PENCIL, "14")}
@@ -753,8 +761,8 @@ fn render_item(ed: TreeEditor, parent_key: String, item_key: String) -> AnyView 
             <button
                 type="button"
                 class=ICON_BTN_DANGER
-                aria-label="Remove item"
-                title="Remove item"
+                aria-label=tr(Msg::RemoveItem)
+                title=tr(Msg::RemoveItem)
                 on:click=on_remove
             >
                 {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::X, "12")}
@@ -810,7 +818,7 @@ fn picker_modal(ed: TreeEditor) -> AnyView {
 
     let composition_list = view! {
         <Transition fallback=|| {
-            view! { <p class="text-sm text-ink-muted">"Loading compositions…"</p> }
+            view! { <p class="text-sm text-ink-muted">{tr(Msg::LoadingCompositions)}</p> }
         }>
             {move || Suspend::new(async move {
                 match ed.picker.await {
@@ -830,49 +838,49 @@ fn picker_modal(ed: TreeEditor) -> AnyView {
         >
             <div class="max-h-[85vh] w-full max-w-xl overflow-auto rounded-card border border-edge bg-raised p-4 shadow-card">
                 <div class="mb-3 flex items-center justify-between">
-                    <h3 class=CARD_TITLE>"Add item reference"</h3>
-                    <button type="button" class=ICON_BTN aria-label="Close" on:click=close>
+                    <h3 class=CARD_TITLE>{tr(Msg::AddItemReference)}</h3>
+                    <button type="button" class=ICON_BTN aria-label=tr(Msg::Close) on:click=close>
                         {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::X, "16")}
                     </button>
                 </div>
 
-                <p class="mb-2 text-sm font-medium text-ink">"This EHR's compositions"</p>
+                <p class="mb-2 text-sm font-medium text-ink">{tr(Msg::ThisEhrSCompositions)}</p>
                 <div class="mb-4 flex flex-col gap-1">{composition_list}</div>
 
-                <p class="mb-2 text-sm font-medium text-ink">"Or enter a reference manually"</p>
+                <p class="mb-2 text-sm font-medium text-ink">{tr(Msg::EnterReferenceManually)}</p>
                 <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <input
                         class=INPUT
-                        aria-label="Namespace"
-                        placeholder="namespace (e.g. local)"
+                        aria-label=tr(Msg::Namespace)
+                        placeholder=tr(Msg::NamespaceEGLocal)
                         prop:value=move || manual_namespace.get()
                         on:input:target=move |ev| manual_namespace.set(ev.target().value())
                     />
                     <input
                         class=INPUT
-                        aria-label="Reference type"
-                        placeholder="type (e.g. COMPOSITION)"
+                        aria-label=tr(Msg::ReferenceType)
+                        placeholder=tr(Msg::TypeEGComposition)
                         prop:value=move || manual_type.get()
                         on:input:target=move |ev| manual_type.set(ev.target().value())
                     />
                     <input
                         class=INPUT
-                        aria-label="Id type"
-                        placeholder="id type (e.g. HIER_OBJECT_ID)"
+                        aria-label=tr(Msg::IdType)
+                        placeholder=tr(Msg::IdTypeEGHierObject)
                         prop:value=move || manual_id_type.get()
                         on:input:target=move |ev| manual_id_type.set(ev.target().value())
                     />
                     <input
                         class=INPUT
-                        aria-label="Id value"
-                        placeholder="id value"
+                        aria-label=tr(Msg::IdValue2)
+                        placeholder=tr(Msg::IdValue)
                         prop:value=move || manual_id.get()
                         on:input:target=move |ev| manual_id.set(ev.target().value())
                     />
                 </div>
                 <div class="mt-3 flex justify-end gap-2">
                     <button type="button" class=BTN_SECONDARY on:click=close>
-                        "Cancel"
+                        {tr(Msg::Cancel)}
                     </button>
                     <button
                         type="button"
@@ -881,7 +889,7 @@ fn picker_modal(ed: TreeEditor) -> AnyView {
                         on:click=add_manual
                     >
                         {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::PLUS, "14")}
-                        "Add reference"
+                        {tr(Msg::AddReference)}
                     </button>
                 </div>
             </div>
@@ -899,7 +907,7 @@ fn composition_choices(ed: TreeEditor, rows: &[Vec<Value>]) -> AnyView {
         // picker overlay whose other half ("or enter a reference manually")
         // remains fully usable, so the region is not a void — and a dashed box
         // inside a modal reads as a second, broken dialog.
-        return view! { <p class="text-sm text-ink-muted">"No compositions in this EHR yet."</p> }
+        return view! { <p class="text-sm text-ink-muted">{tr(Msg::NoCompositionsEhrYet)}</p> }
             .into_any();
     }
     let rows = rows.to_vec();
@@ -989,7 +997,7 @@ pub(in crate::pages::ehr_detail::directory) fn read_only_tree(
     open_folders(&root, &mut open);
     ferrohealth_ui::widget::tree::tree_view(Tree {
         id,
-        label: "Directory",
+        label: tr(Msg::Directory).into(),
         nodes: Signal::derive(move || vec![root.clone()]),
         expanded: RwSignal::new(open),
         selected: Signal::derive(|| None),

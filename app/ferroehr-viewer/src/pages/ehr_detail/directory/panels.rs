@@ -24,6 +24,7 @@ use crate::components::field::{BTN_DANGER, BTN_DESTRUCTIVE, BTN_SECONDARY, INPUT
 use crate::components::notice::inline_error;
 use crate::components::surface::{CARD_PAD, CARD_TITLE, WELL};
 use crate::error::ViewerError;
+use crate::locale::{Msg, tr, tr_with};
 use crate::pages::ehr_detail::directory::tree::read_only_tree;
 use crate::pages::ehr_detail::directory::{
     DirectoryAtTime, DirectoryHistory, DirectoryState, DirectorySubtree, DirectoryVersion,
@@ -119,7 +120,7 @@ fn toolbar_body(
                             ferrohealth_ui::icon::Glyph::ROTATE_CCW_CLOCK,
                             "14",
                         )}
-                        "Version history"
+                        {tr(Msg::VersionHistory)}
                     </button>
                     <button
                         type="button"
@@ -127,7 +128,7 @@ fn toolbar_body(
                         on:click=move |_| time_open.update(|o| *o = !*o)
                     >
                         {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::CLOCK, "14")}
-                        "At time"
+                        {tr(Msg::AtTime)}
                     </button>
                     <button
                         type="button"
@@ -138,12 +139,12 @@ fn toolbar_body(
                             ferrohealth_ui::icon::Glyph::FOLDER_SEARCH,
                             "14",
                         )}
-                        "Path query"
+                        {tr(Msg::PathQuery)}
                     </button>
                 </div>
                 <button type="button" class=BTN_DANGER on:click=move |_| confirm_delete.set(true)>
                     {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::TRASH, "14")}
-                    "Delete directory"
+                    {tr(Msg::DeleteDirectory)}
                 </button>
             </div>
 
@@ -153,7 +154,7 @@ fn toolbar_body(
                 class:hidden=move || !confirm_delete.get()
             >
                 <span class="text-sm text-danger">
-                    "Permanently delete this EHR's directory? This creates a deletion version."
+                    {tr(Msg::PermanentlyDeleteEhrSDirectoryCreates)}
                 </span>
                 <button
                     id="directory-delete-confirm"
@@ -162,14 +163,14 @@ fn toolbar_body(
                     disabled=Signal::derive(move || delete.pending().get())
                     on:click=on_delete
                 >
-                    "Delete directory"
+                    {tr(Msg::DeleteDirectory)}
                 </button>
                 <button
                     type="button"
                     class=BTN_SECONDARY
                     on:click=move |_| confirm_delete.set(false)
                 >
-                    "Cancel"
+                    {tr(Msg::Cancel)}
                 </button>
             </div>
         </section>
@@ -192,9 +193,9 @@ pub(in crate::pages::ehr_detail::directory) fn history_panel(
     let selected = RwSignal::new(Option::<String>::None);
     view! {
         <section class=CARD_PAD class:hidden=move || !history_open.get()>
-            <h2 class=CARD_TITLE>"Version history"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::VersionHistory)}</h2>
             <Transition fallback=|| {
-                view! { <p class="text-sm text-ink-muted">"Loading versions…"</p> }
+                view! { <p class="text-sm text-ink-muted">{tr(Msg::LoadingVersions)}</p> }
             }>
                 {move || Suspend::new(async move {
                     match versions.await {
@@ -202,8 +203,8 @@ pub(in crate::pages::ehr_detail::directory) fn history_panel(
                             view! {
                                 <EmptyState
                                     icon=ferrohealth_ui::icon::Glyph::ROTATE_CCW_CLOCK
-                                    message="No versions yet"
-                                    hint="This EHR has no directory — create one and its versions are listed here."
+                                    message=tr(Msg::NoVersionsYet)
+                                    hint=tr(Msg::EhrHasNoDirectoryCreateOne)
                                 />
                             }
                                 .into_any()
@@ -251,10 +252,8 @@ fn history_content(
         });
         match chosen {
             Some(version) => version_preview(ehr_id, directory, restore, &version),
-            None => {
-                view! { <p class="text-sm text-ink-muted">"Select a version to preview it."</p> }
-                    .into_any()
-            }
+            None => view! { <p class="text-sm text-ink-muted">{tr(Msg::SelectVersionPreview)}</p> }
+                .into_any(),
         }
     };
     view! {
@@ -281,7 +280,7 @@ fn load_older(has_older: bool, history_window: RwSignal<u32>) -> AnyView {
         <div>
             <button id="directory-history-older" type="button" class=BTN_SECONDARY on:click=widen>
                 {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::CHEVRON_DOWN, "14")}
-                "Load older versions"
+                {tr(Msg::LoadOlderVersions)}
             </button>
         </div>
     }
@@ -296,9 +295,12 @@ fn history_row(version: &DirectoryVersion, selected: RwSignal<Option<String>>) -
     let on_click = move |_| selected.set(Some(uid.clone()));
     let label = format!("v{}", version.number);
     let name = version.root_name.clone();
-    let counts = format!(
-        "{} folders · {} items",
-        version.folder_count, version.item_count
+    let counts = tr_with(
+        Msg::FoldersItems,
+        &[
+            ("folder_count", (version.folder_count).to_string().into()),
+            ("item_count", (version.item_count).to_string().into()),
+        ],
     );
     let is_latest = version.is_latest;
     view! {
@@ -331,7 +333,10 @@ fn version_preview(
 ) -> AnyView {
     let tree = match serde_json::from_str::<Value>(&version.body) {
         Ok(value) => read_only_tree("directory-version-tree", &value),
-        Err(e) => inline_error(&ViewerError::Internal(format!("version JSON: {e}"))),
+        Err(e) => inline_error(&ViewerError::Internal(tr_with(
+            Msg::VersionJson2,
+            &[("e", (e).to_string().into())],
+        ))),
     };
     let is_latest = version.is_latest;
     let label = format!("v{}", version.number);
@@ -367,7 +372,7 @@ fn version_preview(
                                     ferrohealth_ui::icon::Glyph::ROTATE_CCW,
                                     "14",
                                 )}
-                                "Restore this version"
+                                {tr(Msg::RestoreThisVersion)}
                             </button>
                         }
                     }
@@ -388,10 +393,10 @@ pub(in crate::pages::ehr_detail::directory) fn time_travel_panel(
 ) -> AnyView {
     view! {
         <section class=CARD_PAD class:hidden=move || !time_open.get()>
-            <h2 class=CARD_TITLE>"Directory at a point in time"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::DirectoryPointTime)}</h2>
             <div class="mb-3 flex flex-col gap-1">
                 <label class=LABEL r#for="directory-at-time">
-                    "Date and time (interpreted as UTC)"
+                    {tr(Msg::DateTimeInterpretedUtc)}
                 </label>
                 <input
                     id="directory-at-time"
@@ -402,14 +407,14 @@ pub(in crate::pages::ehr_detail::directory) fn time_travel_panel(
                 />
             </div>
             <Transition fallback=|| {
-                view! { <p class="text-sm text-ink-muted">"Loading…"</p> }
+                view! { <p class="text-sm text-ink-muted">{tr(Msg::Loading)}</p> }
             }>
                 {move || Suspend::new(async move {
                     match at_time.await {
                         Ok(None) => {
                             view! {
                                 <p class="text-sm text-ink-muted">
-                                    "Pick a date and time to view the directory as it stood then."
+                                    {tr(Msg::PickDateTimeViewDirectoryStood)}
                                 </p>
                             }
                                 .into_any()
@@ -419,7 +424,7 @@ pub(in crate::pages::ehr_detail::directory) fn time_travel_panel(
                                 Ok(value) => read_only_tree("directory-at-time-tree", &value),
                                 Err(e) => {
                                     inline_error(
-                                        &ViewerError::Internal(format!("directory JSON: {e}")),
+                                        &ViewerError::Internal(tr_with(Msg::DirectoryJson, &[("e", (e).to_string().into())])),
                                     )
                                 }
                             }
@@ -428,8 +433,8 @@ pub(in crate::pages::ehr_detail::directory) fn time_travel_panel(
                             view! {
                                 <EmptyState
                                     icon=ferrohealth_ui::icon::Glyph::TRIANGLE_ALERT
-                                    message="Deleted at that time"
-                                    hint="The directory had been deleted as of the selected time."
+                                    message=tr(Msg::DeletedAtThatTime)
+                                    hint=tr(Msg::DirectoryHadBeenDeletedSelectedTime)
                                 />
                             }
                                 .into_any()
@@ -438,8 +443,8 @@ pub(in crate::pages::ehr_detail::directory) fn time_travel_panel(
                             view! {
                                 <EmptyState
                                     icon=ferrohealth_ui::icon::Glyph::CLOCK
-                                    message="No directory then"
-                                    hint="No directory existed at the selected time."
+                                    message=tr(Msg::NoDirectoryThen)
+                                    hint=tr(Msg::NoDirectoryExistedSelectedTime)
                                 />
                             }
                                 .into_any()
@@ -462,10 +467,10 @@ pub(in crate::pages::ehr_detail::directory) fn path_panel(
 ) -> AnyView {
     view! {
         <section class=CARD_PAD class:hidden=move || !path_open.get()>
-            <h2 class=CARD_TITLE>"Sub-folder by path"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::SubFolderByPath)}</h2>
             <div class="mb-3 flex flex-col gap-1">
                 <label class=LABEL r#for="directory-path">
-                    "Path (e.g. folder-a/folder-b)"
+                    {tr(Msg::PathEGFolderFolderB)}
                 </label>
                 <input
                     id="directory-path"
@@ -477,14 +482,14 @@ pub(in crate::pages::ehr_detail::directory) fn path_panel(
                 />
             </div>
             <Transition fallback=|| {
-                view! { <p class="text-sm text-ink-muted">"Loading…"</p> }
+                view! { <p class="text-sm text-ink-muted">{tr(Msg::Loading)}</p> }
             }>
                 {move || Suspend::new(async move {
                     match at_path.await {
                         Ok(None) => {
                             view! {
                                 <p class="text-sm text-ink-muted">
-                                    "Enter a path to view only that sub-folder of the directory."
+                                    {tr(Msg::EnterPathViewOnlySubFolder)}
                                 </p>
                             }
                                 .into_any()
@@ -494,7 +499,7 @@ pub(in crate::pages::ehr_detail::directory) fn path_panel(
                                 Ok(value) => read_only_tree("directory-at-path-tree", &value),
                                 Err(e) => {
                                     inline_error(
-                                        &ViewerError::Internal(format!("subtree JSON: {e}")),
+                                        &ViewerError::Internal(tr_with(Msg::SubtreeJson, &[("e", (e).to_string().into())])),
                                     )
                                 }
                             }
@@ -503,8 +508,8 @@ pub(in crate::pages::ehr_detail::directory) fn path_panel(
                             view! {
                                 <EmptyState
                                     icon=ferrohealth_ui::icon::Glyph::FOLDER_X
-                                    message="No folder at that path"
-                                    hint="The directory has no sub-folder matching the path."
+                                    message=tr(Msg::NoFolderPath)
+                                    hint=tr(Msg::DirectoryHasNoSubFolderMatching)
                                 />
                             }
                                 .into_any()

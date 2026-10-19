@@ -49,13 +49,13 @@ pub fn alert_note(id: &'static str, message: String) -> AnyView {
 /// The whole-section notice that an object's current version is logically
 /// deleted — a first-class state, so it is `role="status"`, not an alert.
 #[must_use]
-pub fn deleted_notice(id: &'static str, message: &'static str) -> AnyView {
+pub fn deleted_notice(id: &'static str, message: String) -> AnyView {
     notice(Tone::Warn, Announce::Status, Some(id), message).into_any()
 }
 
 /// The whole-section notice that the CDR holds no object with this id.
 #[must_use]
-pub fn missing_notice(id: &'static str, message: &'static str) -> AnyView {
+pub fn missing_notice(id: &'static str, message: String) -> AnyView {
     notice(Tone::Bad, Announce::Alert, Some(id), message).into_any()
 }
 

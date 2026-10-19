@@ -7,6 +7,7 @@
 //! storage model) beside the product name, drawn by FerroUI's lockup. Pure SVG,
 //! no asset fetch, the same in both halves.
 
+use crate::locale::{Msg, tr};
 use ferrohealth_ui::view::shell::lockup;
 use leptos::prelude::*;
 
@@ -30,5 +31,5 @@ pub fn mark() -> impl IntoView {
 /// The lockup that leads to the dashboard: the mark beside "FerroEHR Viewer".
 #[must_use]
 pub fn viewer_lockup() -> impl IntoView {
-    lockup("/", mark(), "FerroEHR", "Viewer")
+    lockup("/", mark(), "FerroEHR", tr(Msg::Viewer))
 }

@@ -10,6 +10,7 @@
 //! one-line wrapper that fixes its own attribute and passes everything else
 //! through.
 
+use crate::locale::{Msg, tr};
 use leptos::prelude::*;
 
 /// One label/value pair of a facts card, a `<div>` holding its `<dt>` and
@@ -21,7 +22,7 @@ use leptos::prelude::*;
 /// markup.
 #[must_use]
 pub fn fact_row(
-    label: &'static str,
+    label: String,
     hook_attr: &'static str,
     hook: &'static str,
     value: String,
@@ -48,7 +49,7 @@ pub fn fact_row(
 #[must_use]
 pub fn fact_value(value: String) -> AnyView {
     if value.is_empty() {
-        "—".into_any()
+        tr(Msg::NoValue).into_any()
     } else if ferrohealth_ui::view::time::reading(&value) == value {
         // NOTE: `reading` returns a value that is no date-time verbatim, so an
         // unchanged reading is free text, which must wrap in a narrow card.
@@ -64,7 +65,7 @@ mod tests {
     use leptos::prelude::*;
 
     /// Render one row's server pass, the way the axum integration does.
-    fn render(label: &'static str, hook: &'static str, value: &str) -> String {
+    fn render(label: String, hook: &'static str, value: &str) -> String {
         let owner = Owner::new();
         owner.with(|| fact_row(label, "data-versioned-fact", hook, value.to_owned()).to_html())
     }
@@ -74,7 +75,7 @@ mod tests {
         // The E2E journeys select on this attribute, and its NAME is a
         // parameter here — so the server pass is what proves it is emitted,
         // in the order a fact line has always carried it.
-        let html = render("version", "version", "8849182c::example.org::2");
+        let html = render("version".to_owned(), "version", "8849182c::example.org::2");
         assert!(
             html.contains(
                 "<dd class=\"font-mono wrap-break-word text-ink\" data-versioned-fact=\"version\">"
@@ -85,15 +86,20 @@ mod tests {
     }
 
     #[test]
-    fn an_absent_value_reads_as_an_em_dash_not_as_blank_markup() {
-        let html = render("lifecycle", "lifecycle", "");
+    fn an_absent_value_reads_as_no_value_not_as_blank_markup() {
+        let html = render("lifecycle".to_owned(), "lifecycle", "");
         assert!(html.contains("data-versioned-fact=\"lifecycle\""), "{html}");
-        assert!(html.contains('—'), "{html}");
+        assert!(html.contains("(no value)"), "{html}");
+        assert!(!html.contains('—'), "{html}");
     }
 
     #[test]
     fn a_date_time_reads_on_one_line_and_free_text_stays_text() {
-        let html = render("committed", "committed", "2026-10-18T23:18:37.039437+00:00");
+        let html = render(
+            "committed".to_owned(),
+            "committed",
+            "2026-10-18T23:18:37.039437+00:00",
+        );
         assert!(html.contains("<time"), "{html}");
         assert!(html.contains("2026-10-18 23:18:37 UTC"), "{html}");
         assert!(
@@ -101,7 +107,7 @@ mod tests {
             "{html}"
         );
         for text in ["8849182c::example.org::2", "2026-10-18"] {
-            let html = render("version", "version", text);
+            let html = render("version".to_owned(), "version", text);
             assert!(!html.contains("<time"), "{text} drew a time: {html}");
             assert!(!html.contains("fui-time"), "{text} cannot wrap: {html}");
             assert!(html.contains(text), "{html}");

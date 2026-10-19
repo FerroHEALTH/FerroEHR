@@ -23,6 +23,7 @@
 //! access control policies, the authenticated user's permissions" — so the CDR
 //! remains the enforcer and a previewed grant is an upper bound, never a promise.
 
+use crate::locale::{Msg, tr, tr_with};
 use openehr_sdt::smart_scopes::{
     Compartment, LaunchContext, Permissions, ResourceScope, ResourceSelector, SmartScope,
 };
@@ -36,7 +37,10 @@ pub const RESOURCE_SCOPE_FORM: &str = "<compartment>/<resource>.<permission>";
 ///
 /// The Platform validates every requested scope against the client
 /// registration, the access-control policies and the user's own permissions).
-pub const CAPABILITY_NOTE: &str = "Scopes narrow access, they never grant it: they say what a token may ask for, and the CDR still decides every request against its own policies and your permissions. A grant shown here is an upper bound.";
+#[must_use]
+pub fn capability_note_text() -> String {
+    tr(Msg::ScopesNarrowAccessTheyNeverGrant)
+}
 
 /// One scope string and what the grammar made of it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -59,14 +63,14 @@ pub enum GrantDetail {
         /// Row label.
         label: String,
         /// What requesting the context means.
-        note: &'static str,
+        note: String,
     },
     /// An `OpenID` Connect identity scope (master08 §Scopes, "Identity Claims").
     Identity {
         /// Row label.
         label: String,
         /// What the claim scope does — and does not — carry.
-        note: &'static str,
+        note: String,
     },
     /// The grammar did not recognise the string: it is retained verbatim and
     /// inert. `expected` carries the master08 explanation whenever the string
@@ -84,15 +88,15 @@ pub struct ResourceGrant {
     /// The compartment keyword (`patient` / `user` / `system`).
     pub compartment: &'static str,
     /// What that compartment narrows access to (master08 §Resource Scopes).
-    pub compartment_note: &'static str,
+    pub compartment_note: String,
     /// The resource family the scope reaches.
-    pub family: &'static str,
+    pub family: String,
     /// The template-id / query-name pattern, as written.
     pub pattern: String,
     /// How that pattern matches (master08 §Resource Scopes pattern table).
-    pub pattern_note: &'static str,
+    pub pattern_note: String,
     /// The permitted operations, in CRUDS order.
-    pub permissions: Vec<&'static str>,
+    pub permissions: Vec<String>,
     /// A bare `*`/`**` pattern: broad access, which master08's NOTE says to use
     /// cautiously ("`system/aql-*.rs` would grant access to all registered and
     /// ad-hoc AQL queries system-wide").
@@ -104,13 +108,13 @@ pub struct ResourceGrant {
 pub fn grant(raw: &str) -> Grant {
     let detail = match SmartScope::parse(raw) {
         SmartScope::Launch => GrantDetail::Context {
-            label: "Launch marker".to_owned(),
-            note: "Marks an embedded launch. Advisory only — the CDR performs no launch selection.",
+            label: tr(Msg::LaunchMarker),
+            note: tr(Msg::MarksEmbeddedLaunchAdvisoryOnlyCdr),
         },
         SmartScope::LaunchContext(context) => context_detail(&context),
         SmartScope::Identity(name) => GrantDetail::Identity {
-            label: format!("Identity claim · {name}"),
-            note: "An OpenID Connect scope: it identifies the user to the application and reaches no clinical data.",
+            label: tr_with(Msg::IdentityClaim, &[("name", name.clone().into())]),
+            note: tr(Msg::OpenidConnectScopeIdentifiesUserApplication),
         },
         SmartScope::Resource(scope) => GrantDetail::Resource(resource_grant(&scope)),
         SmartScope::Other(_) => GrantDetail::Unrecognized {
@@ -141,12 +145,12 @@ pub fn grants_of(scopes: &[String]) -> Vec<Grant> {
 }
 
 /// Where the authority for this session's requests comes from.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PolicySource {
     /// How the session authenticates to the CDR.
-    pub label: &'static str,
+    pub label: String,
     /// What decides what it may do.
-    pub note: &'static str,
+    pub note: String,
 }
 
 /// The policy source for a session's authentication method (`"basic"` /
@@ -160,16 +164,16 @@ pub struct PolicySource {
 pub fn policy_source(method: &str) -> PolicySource {
     match method {
         "basic" => PolicySource {
-            label: "Basic authentication",
-            note: "The viewer replays this account's CDR credentials on every call, so the CDR applies that account's own privileges. A Basic session carries no SMART scopes.",
+            label: tr(Msg::BasicAuthentication),
+            note: tr(Msg::ViewerReplaysAccountSCdrCredentials),
         },
         "oidc" => PolicySource {
-            label: "OIDC bearer token",
-            note: "The CDR resolves this session's roles and permissions from the same access token; the scopes below are the ones the token was issued with.",
+            label: tr(Msg::OidcBearerToken),
+            note: tr(Msg::CdrResolvesSessionSRolesPermissions),
         },
         _ => PolicySource {
-            label: "Viewer session",
-            note: "The CDR decides every request from the credential this session holds.",
+            label: tr(Msg::ViewerSession),
+            note: tr(Msg::CdrDecidesEveryRequestFromCredential),
         },
     }
 }
@@ -179,16 +183,16 @@ pub fn policy_source(method: &str) -> PolicySource {
 fn context_detail(context: &LaunchContext) -> GrantDetail {
     match context {
         LaunchContext::Patient => GrantDetail::Context {
-            label: "Launch context · patient".to_owned(),
-            note: "Asks the launching platform to put one patient/EHR in context; a patient-compartment scope is then read against that EHR.",
+            label: tr(Msg::LaunchContextPatient),
+            note: tr(Msg::AsksLaunchingPlatformPutOnePatient),
         },
         LaunchContext::Episode => GrantDetail::Context {
-            label: "Launch context · episode".to_owned(),
-            note: "Asks for an episode of care in context. Experimental in the specification.",
+            label: tr(Msg::LaunchContextEpisode),
+            note: tr(Msg::AsksEpisodeCareContextExperimentalSpecification),
         },
         LaunchContext::Other(other) => GrantDetail::Context {
-            label: format!("Launch context · {other}"),
-            note: "Not a context openEHR defines. Carried alongside the openEHR scopes and inert here.",
+            label: tr_with(Msg::LaunchContext, &[("other", other.clone().into())]),
+            note: tr(Msg::NotContextOpenehrDefinesCarriedAlongside),
         },
     }
 }
@@ -197,23 +201,14 @@ fn context_detail(context: &LaunchContext) -> GrantDetail {
 fn resource_grant(scope: &ResourceScope) -> ResourceGrant {
     let (compartment, compartment_note) = match scope.compartment {
         // The three compartment bullets of master08 §Resource Scopes.
-        Compartment::Patient => (
-            "patient",
-            "Restricted to the EHR of the patient in context.",
-        ),
-        Compartment::User => (
-            "user",
-            "Subject to the authenticated user's security profile — not limited to the patient in context.",
-        ),
-        Compartment::System => (
-            "system",
-            "A backend client acting without a user context: across all data.",
-        ),
+        Compartment::Patient => ("patient", tr(Msg::RestrictedEhrPatientContext)),
+        Compartment::User => ("user", tr(Msg::SubjectAuthenticatedUserSSecurityProfile)),
+        Compartment::System => ("system", tr(Msg::BackendClientActingWithoutUserContext)),
     };
     let family = match &scope.resource {
-        ResourceSelector::Template(_) => "Operational templates",
-        ResourceSelector::Composition(_) => "Compositions of the matching template",
-        ResourceSelector::Aql(_) => "AQL queries",
+        ResourceSelector::Template(_) => tr(Msg::OperationalTemplates),
+        ResourceSelector::Composition(_) => tr(Msg::CompositionsMatchingTemplate),
+        ResourceSelector::Aql(_) => tr(Msg::AqlQueries),
     };
     let pattern = scope.resource.pattern().as_str().to_owned();
     let broad = pattern == "*" || pattern == "**";
@@ -223,19 +218,22 @@ fn resource_grant(scope: &ResourceScope) -> ResourceGrant {
         family,
         pattern_note: pattern_note(&pattern, broad),
         pattern,
-        permissions: permission_labels(scope.permissions),
+        permissions: permission_labels(scope.permissions)
+            .into_iter()
+            .map(str::to_owned)
+            .collect(),
         broad,
     }
 }
 
 /// How a pattern matches, per the master08 §Resource Scopes pattern table.
-fn pattern_note(pattern: &str, broad: bool) -> &'static str {
+fn pattern_note(pattern: &str, broad: bool) -> String {
     if broad {
-        "All available templates or queries — including ad-hoc AQL."
+        tr(Msg::AllAvailableTemplatesQueriesIncludingAd)
     } else if pattern.contains('*') {
-        "Wildcard pattern: * matches within one namespace segment, ** across segments."
+        tr(Msg::WildcardPatternMatchesWithinOneNamespace)
     } else {
-        "Exact match only."
+        tr(Msg::ExactMatchOnly)
     }
 }
 
@@ -272,13 +270,27 @@ fn permission_labels(permissions: Permissions) -> Vec<&'static str> {
 fn resource_expectation(raw: &str) -> Option<String> {
     let (compartment, rest) = raw.split_once('/')?;
     if !matches!(compartment, "patient" | "user" | "system") {
-        return Some(format!(
-            "\"{compartment}\" is not a compartment. A resource scope is {RESOURCE_SCOPE_FORM}, and master08 defines exactly three compartments: patient, user, system."
+        return Some(tr_with(
+            Msg::NotCompartmentResourceScopeMaster08Defines,
+            &[
+                ("compartment", (compartment).to_string().into()),
+                (
+                    "resource_scope_form",
+                    (RESOURCE_SCOPE_FORM).to_string().into(),
+                ),
+            ],
         ));
     }
     let Some((resource, tail)) = rest.rsplit_once('.') else {
-        return Some(format!(
-            "\"{rest}\" carries no .<permission> tail. A resource scope is {RESOURCE_SCOPE_FORM} — for example patient/composition-*.rs."
+        return Some(tr_with(
+            Msg::CarriesNoPermissionTailResourceScope,
+            &[
+                ("rest", (rest).to_string().into()),
+                (
+                    "resource_scope_form",
+                    (RESOURCE_SCOPE_FORM).to_string().into(),
+                ),
+            ],
         ));
     };
     if tail.is_empty()
@@ -286,20 +298,26 @@ fn resource_expectation(raw: &str) -> Option<String> {
             .chars()
             .any(|c| !matches!(c, 'c' | 'r' | 'u' | 'd' | 's'))
     {
-        return Some(format!(
-            "\"{tail}\" is not a permission tail. master08 allows only c (create), r (read), u (update), d (delete) and s (search), in any order — for example .rs or .crud."
+        return Some(tr_with(
+            Msg::NotPermissionTailMaster08AllowsOnly,
+            &[("tail", (tail).to_string().into())],
         ));
     }
     if !(resource.starts_with("template-")
         || resource.starts_with("composition-")
         || resource.starts_with("aql-"))
     {
-        return Some(format!(
-            "\"{resource}\" is not a resource. master08 defines template-<templateId>, composition-<templateId> and aql-<queryName>."
+        return Some(tr_with(
+            Msg::NotResourceMaster08DefinesTemplateTemplateid,
+            &[("resource", (resource).to_string().into())],
         ));
     }
-    Some(format!(
-        "Not a resource scope. The master08 form is {RESOURCE_SCOPE_FORM} — for example patient/composition-*.rs."
+    Some(tr_with(
+        Msg::NotResourceScopeMaster08FormExample,
+        &[(
+            "resource_scope_form",
+            (RESOURCE_SCOPE_FORM).to_string().into(),
+        )],
     ))
 }
 

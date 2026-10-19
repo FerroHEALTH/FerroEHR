@@ -32,6 +32,7 @@ use serde_json::Value;
 use crate::components::field::{BTN_PRIMARY, Height, LABEL, code_field};
 use crate::components::surface::{CARD_PAD, CARD_TITLE, WELL};
 use crate::error::ViewerError;
+use crate::locale::{Msg, tr, tr_with};
 use crate::pages::ehr_detail::status::EhrStatusState;
 use ferrohealth_ui::highlight::Language;
 
@@ -155,13 +156,17 @@ pub(super) fn parse_other_details(draft: &str) -> Result<Option<Value>, String> 
     if trimmed.is_empty() {
         return Ok(None);
     }
-    let value: Value = serde_json::from_str(trimmed)
-        .map_err(|e| format!("other_details is not valid JSON: {e}"))?;
+    let value: Value = serde_json::from_str(trimmed).map_err(|e| {
+        tr_with(
+            Msg::OtherDetailsNotValidJson,
+            &[("e", (e).to_string().into())],
+        )
+    })?;
     if value.is_object() {
         Ok(Some(value))
     } else {
         Err(
-            "other_details must be a JSON object — an ITEM_STRUCTURE such as \
+            "other_details must be a JSON object: an ITEM_STRUCTURE such as \
              {\"_type\": \"ITEM_TREE\", …}"
                 .to_owned(),
         )
@@ -191,17 +196,15 @@ pub(super) fn apply_status_edits(
     other_details: &str,
 ) -> Result<String, ViewerError> {
     let mut doc: Value = serde_json::from_str(base).map_err(|e| {
-        ViewerError::Invalid(format!(
-            "the loaded EHR_STATUS document is not valid JSON ({e}) — reload this tab and retry"
+        ViewerError::Invalid(tr_with(
+            Msg::LoadedEhrStatusDocumentNotValid,
+            &[("e", (e).to_string().into())],
         ))
     })?;
     let details = parse_other_details(other_details).map_err(ViewerError::Invalid)?;
-    let object = doc.as_object_mut().ok_or_else(|| {
-        ViewerError::Invalid(
-            "the loaded EHR_STATUS document is not a JSON object — reload this tab and retry"
-                .to_owned(),
-        )
-    })?;
+    let object = doc
+        .as_object_mut()
+        .ok_or_else(|| ViewerError::Invalid({ tr(Msg::LoadedEhrStatusDocumentNotJson) }.clone()))?;
     drop(object.insert("is_queryable".to_owned(), Value::Bool(is_queryable)));
     drop(object.insert("is_modifiable".to_owned(), Value::Bool(is_modifiable)));
     match details {
@@ -209,8 +212,9 @@ pub(super) fn apply_status_edits(
         None => drop(object.remove("other_details")),
     }
     serde_json::to_string(&doc).map_err(|e| {
-        ViewerError::Invalid(format!(
-            "the edited EHR_STATUS could not be serialized: {e}"
+        ViewerError::Invalid(tr_with(
+            Msg::EditedEhrStatusCouldNotSerialized,
+            &[("e", (e).to_string().into())],
         ))
     })
 }
@@ -290,27 +294,27 @@ pub(super) fn edit_form(
     };
     view! {
         <section class=CARD_PAD id="status-edit">
-            <h2 class=CARD_TITLE>"Edit status"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::EditStatus)}</h2>
             <p class="mb-3 fui-help">
-                "Commits a new EHR_STATUS version on top of the one loaded above (If-Match), so a concurrent change is refused rather than overwritten. Every other attribute — the subject included — is sent back exactly as the CDR served it."
+                {tr(Msg::CommitsNewEhrStatusVersionTop)}
             </p>
             <div class="flex flex-col gap-3">
                 {toggle_row(
                     "status-queryable",
-                    "is_queryable",
-                    "Include this EHR in population queries (AQL).",
+                    "is_queryable".to_owned(),
+                    tr(Msg::IncludeEhrPopulationQueriesAql),
                     form.queryable,
                     unseeded,
                 )}
                 {toggle_row(
                     "status-modifiable",
-                    "is_modifiable",
-                    "Allow new content to be committed to this EHR.",
+                    "is_modifiable".to_owned(),
+                    tr(Msg::AllowNewContentCommittedEhr),
                     form.modifiable,
                     unseeded,
                 )} <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="status-other-details">
-                        "other_details (canonical JSON ITEM_STRUCTURE — leave blank to remove)"
+                        {tr(Msg::OtherDetailsCanonicalJsonItemStructure)}
                     </label>
                     {code_field(
                         "status-other-details",
@@ -329,10 +333,10 @@ pub(super) fn edit_form(
                         on:click=on_save
                     >
                         {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::SAVE, "14")}
-                        "Save status"
+                        {tr(Msg::SaveStatus)}
                     </button>
                     <Show when=move || save.pending().get()>
-                        <span class="text-sm text-ink-muted">"Saving…"</span>
+                        <span class="text-sm text-ink-muted">{tr(Msg::Saving)}</span>
                     </Show>
                 </div> {validation} {diagnostic}
             </div>
@@ -351,8 +355,8 @@ pub(super) fn edit_form(
 /// binding exists, so only a property applied at hydration enables reliably.
 fn toggle_row(
     id: &'static str,
-    label: &'static str,
-    hint: &'static str,
+    label: String,
+    hint: String,
     value: RwSignal<bool>,
     disabled: Signal<bool>,
 ) -> AnyView {

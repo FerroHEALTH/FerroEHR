@@ -15,6 +15,7 @@
 //! function of the controls the operator picked, so both template families
 //! ask the CDR the same way.
 
+use crate::locale::Msg;
 use serde::{Deserialize, Serialize};
 
 /// How much of the template a generated example fills in (`detail_level`).
@@ -43,11 +44,11 @@ impl ExampleDetail {
 
     /// Short human label for the selector.
     #[must_use]
-    pub fn label(self) -> &'static str {
+    pub fn label(self) -> Msg {
         match self {
-            Self::Required => "Required",
-            Self::Medium => "Medium",
-            Self::Complete => "Complete",
+            Self::Required => Msg::Required,
+            Self::Medium => Msg::Medium,
+            Self::Complete => Msg::Complete,
         }
     }
 }
@@ -74,10 +75,10 @@ impl ExampleType {
 
     /// Short human label for the selector.
     #[must_use]
-    pub fn label(self) -> &'static str {
+    pub fn label(self) -> Msg {
         match self {
-            Self::Input => "Input",
-            Self::Output => "Output",
+            Self::Input => Msg::Input,
+            Self::Output => Msg::Output,
         }
     }
 }
@@ -100,6 +101,7 @@ pub fn example_query(detail: ExampleDetail, kind: ExampleType) -> String {
 #[cfg(test)]
 mod tests {
     use crate::example_options::{ExampleDetail, ExampleType, example_query};
+    use crate::locale::tr;
 
     #[test]
     fn every_option_spells_the_token_its_spec_enum_names() {
@@ -139,9 +141,9 @@ mod tests {
             (ExampleDetail::Medium, "Medium"),
             (ExampleDetail::Complete, "Complete"),
         ] {
-            assert_eq!(option.label(), label);
+            assert_eq!(tr(option.label()), label);
         }
-        assert_eq!(ExampleType::Input.label(), "Input");
-        assert_eq!(ExampleType::Output.label(), "Output");
+        assert_eq!(tr(ExampleType::Input.label()), "Input");
+        assert_eq!(tr(ExampleType::Output.label()), "Output");
     }
 }

@@ -24,6 +24,7 @@ use crate::components::notice::inline_error;
 use crate::components::surface::{CARD_PAD, CARD_TITLE};
 use crate::components::wire::VersionEntry;
 use crate::error::ViewerError;
+use crate::locale::{Msg, tr, tr_with};
 
 /// The revision-history resource: a versioned object's commits, newest-first.
 pub type HistoryResource = Resource<Result<Vec<VersionEntry>, ViewerError>>;
@@ -42,19 +43,19 @@ pub struct VersionHistoryLabels {
     /// stable E2E hook (`data-status-version`, `data-demographic-version`).
     pub row_hook: &'static str,
     /// The empty-history message.
-    pub empty_message: &'static str,
+    pub empty_message: Msg,
     /// The empty-history hint.
-    pub empty_hint: &'static str,
+    pub empty_hint: Msg,
     /// The revision-history card's lead paragraph.
-    pub history_lead: &'static str,
+    pub history_lead: Msg,
     /// The at-time card's heading.
-    pub at_time_title: &'static str,
+    pub at_time_title: Msg,
     /// The at-time input's DOM id (also its label's `for`).
     pub at_time_field_id: &'static str,
     /// The at-time button's DOM id.
     pub at_time_button_id: &'static str,
     /// The neutral note a `404` from the at-time lookup renders.
-    pub at_time_absent: &'static str,
+    pub at_time_absent: Msg,
     /// The pinned document pane's DOM id.
     pub document_id: &'static str,
 }
@@ -76,7 +77,7 @@ where
 {
     view! {
         <Transition fallback=|| {
-            view! { {ferrohealth_ui::view::empty::skeleton(4, "Loading…")} }
+            view! { {ferrohealth_ui::view::empty::skeleton(4, tr(Msg::Loading))} }
         }>
             {move || Suspend::new(async move {
                 match versioned.await {
@@ -106,8 +107,8 @@ pub fn revision_history_section(
                         view! {
                             <EmptyState
                                 icon=ferrohealth_ui::icon::Glyph::ROTATE_CCW_CLOCK
-                                message=labels.empty_message
-                                hint=labels.empty_hint
+                                message=tr(labels.empty_message)
+                                hint=tr(labels.empty_hint)
                             />
                         }
                             .into_any()
@@ -121,8 +122,8 @@ pub fn revision_history_section(
     .into_any();
     view! {
         <section class=CARD_PAD>
-            <h2 class=CARD_TITLE>"Revision history"</h2>
-            <p class="mb-3 fui-help">{labels.history_lead}</p>
+            <h2 class=CARD_TITLE>{tr(Msg::RevisionHistory)}</h2>
+            <p class="mb-3 fui-help">{tr(labels.history_lead)}</p>
             {table}
         </section>
     }
@@ -143,8 +144,14 @@ fn history_table(
     }
     .into_any();
     table_shell(
-        "Revision history",
-        &["Version", "Committed", "Change type", "Committer", ""],
+        &tr(Msg::RevisionHistory),
+        &[
+            &tr(Msg::Version),
+            &tr(Msg::Committed),
+            &tr(Msg::ChangeType),
+            &tr(Msg::Committer),
+            "",
+        ],
         rows,
     )
 }
@@ -175,7 +182,7 @@ fn history_row(entry: &VersionEntry, pinned: RwSignal<String>, row_hook: &'stati
     let open = view! {
         <button on:click=move |_| {
             pinned.set(target.clone());
-        }>{ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::EYE, "14")} "Open"</button>
+        }>{ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::EYE, "14")} {tr(Msg::Open)}</button>
     }
     .attr("type", "button")
     .attr("class", BTN_SECONDARY_SMALL)
@@ -183,16 +190,16 @@ fn history_row(entry: &VersionEntry, pinned: RwSignal<String>, row_hook: &'stati
     view! {
         <tr class=row_class>
             <td class=CELL_MONO>{shown}</td>
-            <td class=CELL data-label="Committed">
+            <td class=CELL data-label=tr(Msg::Committed)>
                 {ferrohealth_ui::view::time::timestamp(&committed)}
             </td>
-            <td class=CELL data-label="Change type">
+            <td class=CELL data-label=tr(Msg::ChangeType)>
                 {change_type}
             </td>
-            <td class=CELL data-label="Committer">
+            <td class=CELL data-label=tr(Msg::Committer)>
                 {committed_by}
             </td>
-            <td class=ferrohealth_ui::table::view::ACTIONS data-label="Actions">
+            <td class=ferrohealth_ui::table::view::ACTIONS data-label=tr(Msg::Actions)>
                 {open}
             </td>
         </tr>
@@ -223,18 +230,19 @@ pub fn at_time_lookup_section(
     };
     let note = move || match at_time.value().get() {
         Some(Err(ref e)) if e.status_code() == Some(http::StatusCode::NOT_FOUND) => {
-            view! { <p class="mt-2 text-sm text-ink-muted">{labels.at_time_absent}</p> }.into_any()
+            view! { <p class="mt-2 text-sm text-ink-muted">{tr(labels.at_time_absent)}</p> }
+                .into_any()
         }
         Some(Err(error)) => inline_error(&error),
         _ => ().into_any(),
     };
     view! {
         <section class=CARD_PAD>
-            <h2 class=CARD_TITLE>{labels.at_time_title}</h2>
+            <h2 class=CARD_TITLE>{tr(labels.at_time_title)}</h2>
             <div class="fui-field-flow">
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for=labels.at_time_field_id>
-                        "Date and time (interpreted as UTC)"
+                        {tr(Msg::DateTimeInterpretedUtc)}
                     </label>
                     <input
                         id=labels.at_time_field_id
@@ -252,7 +260,7 @@ pub fn at_time_lookup_section(
                     on:click=on_go
                 >
                     {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::CLOCK, "14")}
-                    "Open that version"
+                    {tr(Msg::OpenThatVersion)}
                 </button>
             </div>
             {note}
@@ -274,9 +282,9 @@ pub fn pinned_document_section(
     let heading = move || {
         let version = pinned.get();
         if version.is_empty() {
-            "Version document".to_owned()
+            tr(Msg::VersionDocument)
         } else {
-            format!("Version {version}")
+            tr_with(Msg::Version2, &[("version", version.clone().into())])
         }
     };
     let body = view! {
@@ -296,8 +304,8 @@ pub fn pinned_document_section(
                         view! {
                             <EmptyState
                                 icon=ferrohealth_ui::icon::Glyph::FILE_CLOCK
-                                message="No version opened"
-                                hint="Open a version from the revision history above, or resolve one by date and time."
+                                message=tr(Msg::NoVersionOpened)
+                                hint=tr(Msg::OpenVersionFromRevisionHistoryAbove)
                             />
                         }
                             .into_any()

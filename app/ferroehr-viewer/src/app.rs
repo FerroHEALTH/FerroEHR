@@ -12,6 +12,7 @@
 //! product suffix is appended in exactly one place, `viewer_title`, through
 //! the root `<Title formatter=…/>`.
 
+use crate::locale::{Msg, tr};
 use leptos::prelude::*;
 use leptos_meta::{HashedStylesheet, MetaTags, Title, provide_meta_context};
 use leptos_router::components::{ParentRoute, Route, Router, Routes};
@@ -228,22 +229,22 @@ pub fn App() -> impl IntoView {
 pub fn NotFound() -> impl IntoView {
     let content = ferrohealth_ui::view::surface::panel(ferrohealth_ui::view::empty::empty_state(
         ferrohealth_ui::icon::Glyph::COMPASS,
-        crate::locale::tr(crate::locale::Msg::Heading404),
-        crate::locale::tr(crate::locale::Msg::Body404),
+        tr(Msg::Heading404),
+        tr(Msg::Body404),
         ferrohealth_ui::view::button::link_button(
             "/".to_owned(),
             ferrohealth_ui::view::button::Variant::Primary,
             None,
-            "Return to the dashboard",
+            tr(Msg::ReturnToTheDashboard),
         ),
     ))
     .into_any();
     view! {
-        <Title text=crate::locale::tr(crate::locale::Msg::Title404) />
+        <Title text=tr(Msg::Title404) />
         {ferrohealth_ui::view::shell::centred(
             content,
             ferrohealth_ui::view::shell::Footer {
-                product: PRODUCT,
+                product: PRODUCT.into(),
                 version: env!("CARGO_PKG_VERSION"),
                 about: "/system#manufacturer",
             },
