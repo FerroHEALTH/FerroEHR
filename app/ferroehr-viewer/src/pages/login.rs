@@ -96,10 +96,6 @@ pub fn LoginPage() -> impl IntoView {
                         notices.push(Notice::new(Tone::Accent, configured));
                     }
                     if let Some(error) = mode_error {
-                        // The Err arm offers both paths plus this warning — an
-                        // Err fallback that silently DIFFERS from what the
-                        // server may have rendered is a hydration hazard, so
-                        // the failure is explicit and visible.
                         notices
                             .push(
                                 Notice::new(

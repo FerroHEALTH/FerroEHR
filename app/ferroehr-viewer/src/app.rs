@@ -48,6 +48,7 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                 <MetaTags />
                 <link rel="stylesheet" href=STYLESHEET_PATH />
                 <link rel="stylesheet" href=THEME_PATH />
+                <link rel="icon" type="image/svg+xml" href=ICON_PATH />
             </head>
             <body>
                 <App />
@@ -67,6 +68,9 @@ pub const STYLESHEET_PATH: &str = "/ferrohealth-ui.css";
 
 /// The path the server serves the FerroEHR brand theme at.
 pub const THEME_PATH: &str = "/theme.css";
+
+/// The path the FerroEHR mark is served at as the tab icon.
+pub const ICON_PATH: &str = "/favicon.svg";
 
 /// Formats one screen's section name into the document title.
 ///
@@ -122,105 +126,96 @@ pub fn App() -> impl IntoView {
     mark_hydration();
     view! {
         <Title formatter=viewer_title text=PRODUCT />
-            <Router>
-                <Routes fallback=|| view! { <NotFound /> }>
-                    // NOTE: /login uses SsrMode::Async so the sign-in form
-                    // works with JavaScript disabled (Leptos book, ssr/23
-                    // "Async Rendering": "Works if JavaScript is disabled").
+        <Router>
+            <Routes fallback=|| view! { <NotFound /> }>
+                // NOTE: /login uses SsrMode::Async so the sign-in form
+                // works with JavaScript disabled (Leptos book, ssr/23
+                // "Async Rendering": "Works if JavaScript is disabled").
+                <Route
+                    path=path!("/login")
+                    view=crate::pages::login::LoginPage
+                    ssr=leptos_router::SsrMode::Async
+                />
+                // NOTE: every authenticated screen uses SsrMode::Async on
+                // the PARENT route — streamed fragments race WASM init and
+                // crash hydration (Leptos book, ssr/23 "Async Rendering").
+                <ParentRoute
+                    path=path!("")
+                    view=crate::pages::shell::AppShell
+                    ssr=leptos_router::SsrMode::Async
+                >
+                    <Route path=path!("") view=crate::pages::dashboard::DashboardPage />
+                    <Route path=path!("templates") view=crate::pages::templates::TemplatesPage />
                     <Route
-                        path=path!("/login")
-                        view=crate::pages::login::LoginPage
-                        ssr=leptos_router::SsrMode::Async
+                        path=path!("templates/adl2/:template_id")
+                        view=crate::pages::template_adl2::Adl2TemplateDetailPage
                     />
-                    // NOTE: every authenticated screen uses SsrMode::Async on
-                    // the PARENT route — streamed fragments race WASM init and
-                    // crash hydration (Leptos book, ssr/23 "Async Rendering").
-                    <ParentRoute
-                        path=path!("")
-                        view=crate::pages::shell::AppShell
-                        ssr=leptos_router::SsrMode::Async
-                    >
-                        <Route path=path!("") view=crate::pages::dashboard::DashboardPage />
-                        <Route
-                            path=path!("templates")
-                            view=crate::pages::templates::TemplatesPage
-                        />
-                        <Route
-                            path=path!("templates/adl2/:template_id")
-                            view=crate::pages::template_adl2::Adl2TemplateDetailPage
-                        />
-                        <Route
-                            path=path!("templates/:template_id")
-                            view=crate::pages::template_detail::TemplateDetailPage
-                        />
-                        <Route path=path!("queries") view=crate::pages::queries::QueriesPage />
-                        <Route
-                            path=path!("queries/builder")
-                            view=crate::pages::query_builder::QueryBuilderPage
-                        />
-                        <Route
-                            path=path!("queries/aql")
-                            view=crate::pages::query_aql::QueryAqlPage
-                        />
-                        <Route
-                            path=path!("queries/stored")
-                            view=crate::pages::query_stored::QueryStoredPage
-                        />
-                        <Route path=path!("ehrs") view=crate::pages::ehrs::EhrsPage />
-                        <Route
-                            path=path!("ehrs/:ehr_id")
-                            view=crate::pages::ehr_detail::EhrDetailPage
-                        />
-                        <Route
-                            path=path!("ehrs/:ehr_id/compositions/:uid")
-                            view=crate::pages::composition::CompositionPage
-                        />
-                        // The demographic routes are declared BEFORE the
-                        // `:kind` ones on purpose: leptos_router matches a
-                        // route tuple in declaration order and takes the first
-                        // hit, so `relationship`/`contribution` would otherwise
-                        // be read as a party kind.
-                        <Route
-                            path=path!("demographics")
-                            view=crate::pages::demographics::browse::DemographicsPage
-                        />
-                        <Route
-                            path=path!("demographics/relationship")
-                            view=crate::pages::demographics::relationship::RelationshipsPage
-                        />
-                        <Route
-                            path=path!("demographics/relationship/:uid")
-                            view=crate::pages::demographics::relationship::RelationshipDetailPage
-                        />
-                        <Route
-                            path=path!("demographics/contribution/:uid")
-                            view=crate::pages::demographics::contribution::DemographicContributionPage
-                        />
-                        <Route
-                            path=path!("demographics/:kind")
-                            view=crate::pages::demographics::browse::PartyBrowserPage
-                        />
-                        <Route
-                            path=path!("demographics/:kind/:uid")
-                            view=crate::pages::demographics::party::PartyDetailPage
-                        />
-                        <Route
-                            path=path!("terminology")
-                            view=crate::pages::terminology::TerminologyPage
-                        />
-                        <Route path=path!("audit") view=crate::pages::audit::AuditPage />
-                        <Route path=path!("system") view=crate::pages::system::SystemPage />
-                        <Route
-                            path=path!("subscriptions")
-                            view=crate::pages::subscriptions::SubscriptionsPage
-                        />
-                        <Route
-                            path=path!("operations")
-                            view=crate::pages::operations::OperationsPage
-                        />
-                    </ParentRoute>
-                </Routes>
-            </Router>
+                    <Route
+                        path=path!("templates/:template_id")
+                        view=crate::pages::template_detail::TemplateDetailPage
+                    />
+                    <Route path=path!("queries") view=crate::pages::queries::QueriesPage />
+                    <Route
+                        path=path!("queries/builder")
+                        view=crate::pages::query_builder::QueryBuilderPage
+                    />
+                    <Route path=path!("queries/aql") view=crate::pages::query_aql::QueryAqlPage />
+                    <Route
+                        path=path!("queries/stored")
+                        view=crate::pages::query_stored::QueryStoredPage
+                    />
+                    <Route path=path!("ehrs") view=crate::pages::ehrs::EhrsPage />
+                    <Route
+                        path=path!("ehrs/:ehr_id")
+                        view=crate::pages::ehr_detail::EhrDetailPage
+                    />
+                    <Route
+                        path=path!("ehrs/:ehr_id/compositions/:uid")
+                        view=crate::pages::composition::CompositionPage
+                    />
+                    // The demographic routes are declared BEFORE the
+                    // `:kind` ones on purpose: leptos_router matches a
+                    // route tuple in declaration order and takes the first
+                    // hit, so `relationship`/`contribution` would otherwise
+                    // be read as a party kind.
+                    <Route
+                        path=path!("demographics")
+                        view=crate::pages::demographics::browse::DemographicsPage
+                    />
+                    <Route
+                        path=path!("demographics/relationship")
+                        view=crate::pages::demographics::relationship::RelationshipsPage
+                    />
+                    <Route
+                        path=path!("demographics/relationship/:uid")
+                        view=crate::pages::demographics::relationship::RelationshipDetailPage
+                    />
+                    <Route
+                        path=path!("demographics/contribution/:uid")
+                        view=crate::pages::demographics::contribution::DemographicContributionPage
+                    />
+                    <Route
+                        path=path!("demographics/:kind")
+                        view=crate::pages::demographics::browse::PartyBrowserPage
+                    />
+                    <Route
+                        path=path!("demographics/:kind/:uid")
+                        view=crate::pages::demographics::party::PartyDetailPage
+                    />
+                    <Route
+                        path=path!("terminology")
+                        view=crate::pages::terminology::TerminologyPage
+                    />
+                    <Route path=path!("audit") view=crate::pages::audit::AuditPage />
+                    <Route path=path!("system") view=crate::pages::system::SystemPage />
+                    <Route
+                        path=path!("subscriptions")
+                        view=crate::pages::subscriptions::SubscriptionsPage
+                    />
+                    <Route path=path!("operations") view=crate::pages::operations::OperationsPage />
+                </ParentRoute>
+            </Routes>
+        </Router>
     }
 }
 

@@ -56,6 +56,16 @@ pub fn router(app_state: AppState, leptos_options: LeptosOptions) -> axum::Route
             axum::routing::get(|| async { css(BRAND_THEME) }),
         )
         .route(crate::theme::THEME_ROUTE, axum::routing::post(choose_theme))
+        // The FerroEHR mark as the tab icon: the SVG the shell links, and the
+        // raster set at the path a browser requests unasked.
+        .route(
+            crate::app::ICON_PATH,
+            axum::routing::get(|| async { icon("image/svg+xml", FAVICON_SVG) }),
+        )
+        .route(
+            FAVICON_ICO_PATH,
+            axum::routing::get(|| async { icon("image/x-icon", FAVICON_ICO) }),
+        )
         .leptos_routes_with_context(&leptos_options, routes, provide_viewer_context.clone(), {
             let options = leptos_options.clone();
             move || crate::app::shell(options.clone())
@@ -74,6 +84,26 @@ pub fn router(app_state: AppState, leptos_options: LeptosOptions) -> axum::Route
 
 /// The FerroEHR brand theme: FerroEHR's palette over FerroUI's roles.
 const BRAND_THEME: &str = include_str!("../style/theme.css");
+
+/// The path a browser requests the tab icon from when a page links none.
+const FAVICON_ICO_PATH: &str = "/favicon.ico";
+
+/// The FerroEHR favicon master, the tile with `Fe` (`assets/brand/README.md`).
+const FAVICON_SVG: &[u8] = include_bytes!("../../../assets/brand/favicon.svg");
+
+/// The raster favicon set (48, 32 and 16 px) rendered from [`FAVICON_SVG`].
+const FAVICON_ICO: &[u8] = include_bytes!("../../../assets/brand/favicon.ico");
+
+/// An icon response of the given media type.
+fn icon(content_type: &'static str, bytes: &'static [u8]) -> axum::response::Response {
+    axum::response::IntoResponse::into_response((
+        [(
+            http::header::CONTENT_TYPE,
+            http::HeaderValue::from_static(content_type),
+        )],
+        bytes,
+    ))
+}
 
 /// A stylesheet response.
 fn css(text: &'static str) -> axum::response::Response {
@@ -208,7 +238,8 @@ fn sets_session_cookie(headers: &http::HeaderMap) -> bool {
 /// refusal, which its WASM caller expects instead of a redirect).
 fn is_public_path(path: &str) -> bool {
     path == "/login"
-        || path == "/favicon.ico"
+        || path == FAVICON_ICO_PATH
+        || path == crate::app::ICON_PATH
         || path == crate::app::STYLESHEET_PATH
         || path == crate::app::THEME_PATH
         || path.starts_with("/auth/")
@@ -415,6 +446,7 @@ mod tests {
         for public in [
             "/login",
             "/favicon.ico",
+            "/favicon.svg",
             "/auth/oidc/login",
             "/auth/oidc/callback",
             "/pkg/ferroehr-viewer.css",

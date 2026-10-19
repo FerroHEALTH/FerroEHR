@@ -459,9 +459,7 @@ fn usage_card() -> AnyView {
     let resource = Resource::new(|| (), |()| async move { template_usage().await });
     let body = view! {
         <Suspense fallback=|| {
-            view! {
-                {ferrohealth_ui::view::empty::skeleton(4, "Loading…")}
-            }
+            view! { {ferrohealth_ui::view::empty::skeleton(4, "Loading…")} }
         }>
             {move || {
                 Suspend::new(async move {
@@ -487,14 +485,23 @@ fn usage_card() -> AnyView {
                                             <td class=crate::components::data_table::CELL_MONO>
                                                 {template_id}
                                             </td>
-                                            <td class=format!("{} fui-num", crate::components::data_table::CELL) data-label="Compositions">{count}</td>
+                                            <td
+                                                class=format!(
+                                                    "{} fui-num",
+                                                    crate::components::data_table::CELL,
+                                                )
+                                                data-label="Compositions"
+                                            >
+                                                {count}
+                                            </td>
                                         </tr>
                                     }
                                         .into_any()
                                 })
                                 .collect_view()
                                 .into_any();
-                            let table = crate::components::data_table::table_shell("Compositions per template", 
+                            let table = crate::components::data_table::table_shell(
+                                "Compositions per template",
                                 &["Template", "Compositions"],
                                 body,
                             );
@@ -531,9 +538,7 @@ fn config_card() -> AnyView {
     let resource = Resource::new(|| (), |()| async move { fetch_admin_config().await });
     let body = view! {
         <Suspense fallback=|| {
-            view! {
-                {ferrohealth_ui::view::empty::skeleton(4, "Loading…")}
-            }
+            view! { {ferrohealth_ui::view::empty::skeleton(4, "Loading…")} }
         }>
             {move || {
                 Suspend::new(async move {
@@ -582,9 +587,7 @@ fn config_card() -> AnyView {
 
 /// The `<Suspense>` fallback shared by every data-backed card.
 fn card_skeleton() -> impl IntoView {
-    view! {
-        {ferrohealth_ui::view::empty::skeleton(3, "Loading…")}
-    }
+    view! { {ferrohealth_ui::view::empty::skeleton(3, "Loading…")} }
 }
 
 /// Status card: `fetch_status` JSON → a definition list. A transport or parse
@@ -649,7 +652,9 @@ fn status_body(body: &str) -> Result<AnyView, ViewerError> {
         .map(|(k, v)| {
             view! {
                 <dt class="font-medium text-ink-muted">{k}</dt>
-                <dd class="font-mono wrap-break-word text-ink">{crate::components::facts::fact_value(v)}</dd>
+                <dd class="font-mono wrap-break-word text-ink">
+                    {crate::components::facts::fact_value(v)}
+                </dd>
             }
         })
         .collect::<Vec<_>>();
@@ -686,7 +691,12 @@ fn smart_card() -> AnyView {
                     Ok(config) => smart_body(config),
                     Err(e) => {
                         view! {
-                            {ferrohealth_ui::view::notice::notice(ferrohealth_ui::tone::Tone::Warn, ferrohealth_ui::view::notice::Announce::Status, None, view! { {smart_probe_failure_copy(&e)} })}
+                            {ferrohealth_ui::view::notice::notice(
+                                ferrohealth_ui::tone::Tone::Warn,
+                                ferrohealth_ui::view::notice::Announce::Status,
+                                None,
+                                view! { {smart_probe_failure_copy(&e)} },
+                            )}
                         }
                             .into_any()
                     }
@@ -750,13 +760,25 @@ pub fn smart_probe_failure_copy(error: &ViewerError) -> String {
 fn smart_body(config: Option<String>) -> AnyView {
     let Some(raw) = config else {
         return view! {
-            {ferrohealth_ui::view::notice::notice(ferrohealth_ui::tone::Tone::Info, ferrohealth_ui::view::notice::Announce::Status, None, view! { "SMART is not enabled on this CDR: it serves no service-discovery document." })}
+            {ferrohealth_ui::view::notice::notice(
+                ferrohealth_ui::tone::Tone::Info,
+                ferrohealth_ui::view::notice::Announce::Status,
+                None,
+                view! {
+                    "SMART is not enabled on this CDR: it serves no service-discovery document."
+                },
+            )}
         }
         .into_any();
     };
     let Ok(doc) = serde_json::from_str::<serde_json::Value>(&raw) else {
         return view! {
-            {ferrohealth_ui::view::notice::notice(ferrohealth_ui::tone::Tone::Warn, ferrohealth_ui::view::notice::Announce::Status, None, view! { "SMART configuration returned, but it is not valid JSON." })}
+            {ferrohealth_ui::view::notice::notice(
+                ferrohealth_ui::tone::Tone::Warn,
+                ferrohealth_ui::view::notice::Announce::Status,
+                None,
+                view! { "SMART configuration returned, but it is not valid JSON." },
+            )}
         }
         .into_any();
     };
@@ -902,8 +924,7 @@ fn openapi_selector(family: Memo<String>) -> AnyView {
                             {options}
                         </select>
                     },
-                )}
-                <button id="openapi-family-show" type="submit" class=BTN_SECONDARY>
+                )} <button id="openapi-family-show" type="submit" class=BTN_SECONDARY>
                     "Show"
                 </button>
             </div>
