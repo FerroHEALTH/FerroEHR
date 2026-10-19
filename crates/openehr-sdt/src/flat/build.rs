@@ -220,6 +220,35 @@ pub fn build_party(
             root: wt.tree.rm_type.clone(),
         });
     }
+    let value = build_root(doc, wt, options)?;
+    check_party_decodes(&value, class)?;
+    Ok(value)
+}
+
+/// Converts a parsed simplified document to an instance of the template's root class.
+///
+/// The root may be any class (an ENTRY, a SECTION, a CLUSTER, a party), and
+/// the build skips the composition steps: no `category`, no `ctx/` vocabulary
+/// and no entry defaults; a `ctx/` key is refused.
+///
+/// The composition builder is [`build_composition_with`] and the checked party
+/// builder [`build_party`]; this is the walk both share for a root that is not
+/// a COMPOSITION. The result is not decoded, so the caller owns the check that
+/// it is an instance of its class.
+///
+/// NOTE: ITS-REST `simplified_formats/master04` defines FLAT for compositions only; a non-COMPOSITION root is our own extension over the same walk.
+///
+/// # Errors
+///
+/// [`FlatError::ContextOnParty`] for a `ctx/` key; [`FlatError::UnknownPath`]
+/// for a field identifier matching no web-template node; the datum errors of
+/// [`build_composition_with`]; and [`FlatError::Conversion`] when the document
+/// carries no data root.
+pub fn build_root(
+    doc: &SimDocument,
+    wt: &WebTemplate,
+    options: &BuildOptions<'_>,
+) -> Result<Value, FlatError> {
     let root_id = &wt.tree.id;
     let mut data_root = None;
     for (name, child) in &doc.children {
@@ -235,21 +264,20 @@ pub fn build_party(
         ));
     };
     let build_ctx = BuildCtx::new(wt, options);
-    let mut party = match build(&wt.tree, data_root, root_id, &build_ctx)? {
+    let mut root = match build(&wt.tree, data_root, root_id, &build_ctx)? {
         Some(Value::Object(m)) => m,
         _ => Map::new(),
     };
     finish_identity(
-        &mut party,
+        &mut root,
         &wt.tree,
         true,
         &wt.template_id,
         options.rm_version,
     );
-    ensure_template_id(&mut party, &wt.tree, &wt.template_id, options.rm_version);
-    let mut value = Value::Object(party);
+    ensure_template_id(&mut root, &wt.tree, &wt.template_id, options.rm_version);
+    let mut value = Value::Object(root);
     complete_tree(&mut value);
-    check_party_decodes(&value, class)?;
     Ok(value)
 }
 
@@ -978,8 +1006,8 @@ fn place_direct_rm_path(
 /// Builds a `PARTY_REF` from the master05 §OBJECT_REF suffixes `|id`,
 /// `|namespace`, `|type` and the optional `|id_scheme`.
 ///
-/// All of `id`, `namespace` and `type` are mandatory on an `OBJECT_REF` (RM
-/// support `master03-identification_package.adoc` §OBJECT_REF), and a reference
+/// All of `id`, `namespace` and `type` are mandatory on an `OBJECT_REF` (BASE
+/// `base_types/master05-identification_package.adoc` §References), and a reference
 /// to a real actor has no sensible default for any of them, so each is required.
 /// A `|id_scheme` makes the id a `GENERIC_ID`; without one it is the
 /// `HIER_OBJECT_ID` a versioned party carries.

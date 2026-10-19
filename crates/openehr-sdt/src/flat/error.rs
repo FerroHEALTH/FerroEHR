@@ -166,10 +166,12 @@ pub enum FlatError {
         root: String,
     },
 
-    /// A party document carries a `ctx/` key: the `ctx/` vocabulary is the
-    /// COMPOSITION context (ITS-REST `simplified_formats/master06`), and a party
-    /// has none.
-    #[error("a party document takes no ctx/ keys: ctx/ is the COMPOSITION context vocabulary")]
+    /// A party (or other non-COMPOSITION root) document carries a `ctx/` key:
+    /// the `ctx/` vocabulary is the COMPOSITION context (ITS-REST
+    /// `simplified_formats/master06`), and such a root has none.
+    #[error(
+        "only a COMPOSITION document takes ctx/ keys: ctx/ is the COMPOSITION context vocabulary"
+    )]
     ContextOnParty,
 
     /// A built party does not decode as its root class; the strict canonical

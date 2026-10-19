@@ -449,6 +449,11 @@ fn name_distinguished_siblings_stay_apart_through_build_and_validation() {
             .map(|m| format!("{}: {}", m.path, m.message))
             .collect();
         assert!(messages.is_empty(), "{level:?}: {messages:#?}");
+        if level == DetailLevel::Required {
+            // The two OBSERVATIONs are optional, so the required example
+            // carries no event to tell apart.
+            continue;
+        }
         let mut events = Vec::new();
         collect_event_names(&example, &mut events);
         for name in ["Baseline", "Follow up"] {
