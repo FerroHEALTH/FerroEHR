@@ -45,6 +45,18 @@ workflow refuses a tag that has no matching section here.
   listing shows each row as a card with every column named. Every timestamp
   reads as "2026-10-18 23:18:37 UTC" on one line, with the exact value the
   CDR sent in its tooltip.
+- **The viewer moves to FerroUI 0.1.4** (#3811). Every timestamp, the
+  build date on the Operations screen included, is drawn by FerroUI's shared
+  timestamp, the same in every FerroHEALTH console. On a phone the dashboard
+  and Operations figures are compact tiles with the glyph, the number and the
+  label on one line, a field and its button stack with the button on its own
+  line, and a disabled field keeps its edge in the dark theme.
+
+### Fixed
+
+- On a phone the CDR status pill no longer covers the FerroEHR mark in the
+  top bar (#3812). The pill shows from a 64rem window up, where the top bar
+  has room for its full words.
 
 ### Security
 

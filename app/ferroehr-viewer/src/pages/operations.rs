@@ -295,7 +295,9 @@ fn definition_rows(rows: Vec<(String, String)>) -> AnyView {
             children=|(key, value)| {
                 view! {
                     <dt class="font-medium text-ink-muted">{key}</dt>
-                    <dd class="font-mono wrap-break-word text-ink">{value}</dd>
+                    <dd class="font-mono wrap-break-word text-ink">
+                        {crate::components::facts::fact_value(value)}
+                    </dd>
                 }
             }
         />

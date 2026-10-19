@@ -26,7 +26,7 @@ pub fn fact_row(
     hook: &'static str,
     value: String,
 ) -> AnyView {
-    let shown = crate::components::timestamp::fact_value(value);
+    let shown = fact_value(value);
     // The hook attribute's NAME is data, so the whole attribute set is applied
     // with the custom-attribute API: attributes serialize in the order they are
     // applied, and a view-declared one would sort AFTER them.
@@ -40,6 +40,22 @@ pub fn fact_row(
         </div>
     }
     .into_any()
+}
+
+/// Returns a fact's value: a date-time as FerroUI's
+/// [`timestamp`](ferrohealth_ui::view::time::timestamp) draws it, on one
+/// line, anything else as text that wraps, an empty value as an em dash.
+#[must_use]
+pub fn fact_value(value: String) -> AnyView {
+    if value.is_empty() {
+        "—".into_any()
+    } else if ferrohealth_ui::view::time::reading(&value) == value {
+        // NOTE: `reading` returns a value that is no date-time verbatim, so an
+        // unchanged reading is free text, which must wrap in a narrow card.
+        value.into_any()
+    } else {
+        ferrohealth_ui::view::time::timestamp(&value).into_any()
+    }
 }
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
@@ -73,5 +89,22 @@ mod tests {
         let html = render("lifecycle", "lifecycle", "");
         assert!(html.contains("data-versioned-fact=\"lifecycle\""), "{html}");
         assert!(html.contains('—'), "{html}");
+    }
+
+    #[test]
+    fn a_date_time_reads_on_one_line_and_free_text_stays_text() {
+        let html = render("committed", "committed", "2026-10-18T23:18:37.039437+00:00");
+        assert!(html.contains("<time"), "{html}");
+        assert!(html.contains("2026-10-18 23:18:37 UTC"), "{html}");
+        assert!(
+            html.contains("title=\"2026-10-18T23:18:37.039437+00:00\""),
+            "{html}"
+        );
+        for text in ["8849182c::example.org::2", "2026-10-18"] {
+            let html = render("version", "version", text);
+            assert!(!html.contains("<time"), "{text} drew a time: {html}");
+            assert!(!html.contains("fui-time"), "{text} cannot wrap: {html}");
+            assert!(html.contains(text), "{html}");
+        }
     }
 }

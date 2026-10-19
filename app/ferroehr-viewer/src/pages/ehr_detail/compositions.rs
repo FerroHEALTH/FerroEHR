@@ -597,7 +597,7 @@ fn composition_row(row: &[Value], ehr_id: &str) -> AnyView {
             } else {
                 let label = COMPOSITION_LABELS.get(i).copied().unwrap_or_default();
                 let shown = if label == "Started" {
-                    crate::components::timestamp::timestamp(text)
+                    ferrohealth_ui::view::time::timestamp(&text).into_any()
                 } else {
                     text.into_any()
                 };
