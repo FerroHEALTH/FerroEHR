@@ -24,7 +24,12 @@
 #         ├─ docs-freeze
 #         └─ (smoke hangs off app-image; viewer-smoke off both images —
 #             it drives the viewer against this run's own CDR)
+#   milestone ── needs every leg, if: always()
 #   announce ── needs everything, if: always()
+#
+# `plan` refuses a tag whose milestone (titled exactly as the tag) is missing
+# or still holds an open item, and `milestone` closes it once every leg
+# succeeded (scripts/release/milestone.sh).
 #
 # `crates` is the one leg that PAUSES: it runs in the `crates-io` environment,
 # which carries a required reviewer, so the pipeline waits for an explicit
@@ -96,6 +101,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+      issues: read # the milestone titled as the tag
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
       version: ${{ steps.tag.outputs.version }}
@@ -151,6 +157,15 @@ jobs:
         uses: ./.github/actions/release-kind
         with:
           tag: ${{ steps.tag.outputs.tag }}
+
+      # A release is cut only when its milestone is empty
+      # (.claude/rules/issue-workflow.md), so this refuses the tag before
+      # anything is built and names every open item.
+      - name: The milestone titled as the tag holds no open item
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: bash scripts/release/milestone.sh check "$TAG"
 
       - name: Verify the tag matches the workspace version
         run: |
@@ -1491,6 +1506,52 @@ jobs:
           CRATE_VERSION: ${{ needs.plan.outputs.crate-version }}
         run: bash scripts/release/crate-sbom.sh verify-published "$CRATE_VERSION"
 
+  # ── milestone: close the release's milestone ────────────────────────────────
+  # Needs every other leg, the approval-gated crates leg included, and
+  # announce reports it. `always()` keeps the job in the graph when a leg
+  # fails, so its log names that leg and the milestone stays open; re-running
+  # the failed jobs closes it. An already-closed milestone counts as done, and
+  # a pre-release finishes no milestone.
+  milestone:
+    name: close the milestone
+    if: ${{ always() && needs.plan.result == 'success' }}
+    needs:
+      - plan
+      - github-release
+      - build-binaries
+      - crate-sboms
+      - vulnerability-record
+      - finalize-release
+      - binary
+      - app-image
+      - viewer-binary
+      - viewer-image
+      - postgres-image
+      - scan-and-tag
+      - smoke
+      - viewer-smoke
+      - chart
+      - sandbox
+      - sandbox-reseed
+      - docs-freeze
+      - crates
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read # check out the script
+      issues: write # close the milestone
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }} # == plan's pinned commit: the dispatch-at-tag refusal makes them equal (#2790)
+      - name: Close the milestone titled as the tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.plan.outputs.tag }}
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: bash scripts/release/milestone.sh close "$TAG"
+
   # ── announce: the one summary a human reads ─────────────────────────────────
   # Asserts every leg landed — a skipped leg is accepted only where a skip is
   # the correct outcome — and on any failure names the exact recovery instead of
@@ -1518,6 +1579,7 @@ jobs:
       - sandbox-reseed
       - docs-freeze
       - crates
+      - milestone
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -1555,6 +1617,7 @@ jobs:
           R_SANDBOX_RESEED: ${{ needs.sandbox-reseed.result }}
           R_DOCS_FREEZE: ${{ needs.docs-freeze.result }}
           R_CRATES: ${{ needs.crates.result }}
+          R_MILESTONE: ${{ needs.milestone.result }}
         run: |
           set -uo pipefail
           fail=0
@@ -1598,6 +1661,7 @@ jobs:
           check "sandbox reseed" "$R_SANDBOX_RESEED" prerelease
           check "docs freeze" "$R_DOCS_FREEZE" prerelease
           check "crates.io" "$R_CRATES" prerelease
+          check "milestone closed" "$R_MILESTONE"
 
           chart_version="$(sed -nE 's/^version: *"?([^"]+)"?$/\1/p' deploy/helm/ferroehr/Chart.yaml | head -1)"
           crates_version="$(bash scripts/release/publish-crates.sh version || echo unknown)"
@@ -1656,8 +1720,12 @@ jobs:
                 '- **crates.io published and the read-back failed**: the uploaded versions are' \
                 '  public and immutable. Re-run the leg first — a split set finishes, an index' \
                 '  lag resolves. Wrong CONTENT is never replaced: yank and bump.' \
+                '- **milestone failed**: its log names the leg that did not succeed, or the' \
+                '  item still open in the milestone. The milestone stays open until a re-run' \
+                '  of the failed jobs lands every leg; the job then closes it.' \
                 ''
             fi
           } >> "$GITHUB_STEP_SUMMARY"
           printf '%s\n' "$rows"
           [ "$fail" = 0 ] || { echo "::error::the release pipeline for ${TAG} did not land every leg — see the run summary for the recovery"; exit 1; }
+

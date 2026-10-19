@@ -21,6 +21,15 @@ optional:
   releases):** the `vX.Y.Z` GitHub milestone collects the release's issues;
   the release is cut when the milestone reaches **zero open issues** (or
   the owner calls the cut and moves the stragglers to the next milestone).
+  The release pipeline holds both ends: `plan` refuses a tag when no
+  milestone is titled exactly as the tag or that milestone still holds an
+  open issue or pull request, and names each one; the `milestone` job
+  closes it once every other leg, crates.io included, has succeeded, and leaves it
+  open with the failed leg named otherwise. Both call
+  `scripts/release/milestone.sh`; after a manual or recovery release, check
+  the milestone is closed and run
+  `GITHUB_REPOSITORY=FerroHEALTH/FerroEHR bash scripts/release/milestone.sh close vX.Y.Z`
+  when it is not.
 - **The support period goes into every release's notes.** The release lane
   appends a "Support period" section to the notes it extracts: only the newest
   release is supported, and Cadasto B.V. keeps publishing security fixes, in
