@@ -28,7 +28,7 @@
 - [Published crates cite specs only](published-crates-cite-specs-only.md) — openehr-* sources never reference AMB ids or instrument paths
 - [BMM v3 on hold](bmm3-on-hold.md) — v3-only issues get on-hold + blocked-by #1920
 - [Multi-gen refactor: no legacy carried](multi-generation-refactor-no-legacy.md) — #1936 residue removed or filed under #1936
-- [No worktrees — one checkout](no-worktrees-single-checkout.md) — all changes in the main tree; never `isolation: worktree`
+- [Worktrees for parallel branches](worktrees-for-parallel-branches.md) — allowed (owner 2026-10-19); use one for branch work beside a release or another worker; one `./target` still
 - [K8s testing uses a compose postgres](k8s-testing-uses-compose-postgres.md) — never deploy postgres into the test cluster
 - [This is a rewrite, not inherited code](rewrite-not-inherited-code.md) — existing code never assumed correct; breaking changes over bad code
 - [One Closes keyword per issue; current milestone always](pr-closes-one-keyword-per-issue.md) — "Closes #1, #2" closes only #1
