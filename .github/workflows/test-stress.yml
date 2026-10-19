@@ -1,0 +1,123 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+
+# .github/workflows/test-stress.yml
+#
+# Runs one nextest filter many times over, optionally while other suites load
+# the same PostgreSQL server, to reproduce a test that failed once in a full
+# run (#3533). The test job in ci.yml runs each test once per shard, so a flake
+# that needs parallel load to appear is never seen twice there, and the
+# development machines do not run the suites locally.
+#
+# DISPATCH ONLY. It reports, and writes nothing back: the nextest output and
+# the load runs' logs leave as a run artifact, and the issue the run serves
+# records the verdict.
+name: Test stress
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: "Cargo package whose tests the filter selects"
+        required: false
+        default: ferroehr
+        type: string
+      filter:
+        description: "nextest filterset of the tests to repeat"
+        required: true
+        type: string
+      count:
+        description: "How many times the filtered set runs"
+        required: false
+        default: "50"
+        type: string
+      load_runs:
+        description: "Full runs of the package started beside the stress run, to load the shared server (0 for none)"
+        required: false
+        default: "2"
+        type: string
+
+permissions: {}
+
+env:
+  FERROEHR__USAGE_REPORT__ENABLED: "false"
+
+jobs:
+  stress:
+    name: stress ${{ inputs.package }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:18.6@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336
+        env:
+          POSTGRES_USER: openehr
+          POSTGRES_PASSWORD: openehr
+          POSTGRES_DB: openehr_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U openehr"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://openehr:openehr@localhost:5432/openehr_test
+      FERROEHR_TEST_PG_URL: postgres://openehr:openehr@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache-save-if: false
+      - name: Non-durable test tuning
+        # The same tuning and tools as the test job in ci.yml, so a failure here
+        # is a failure of the suite that job runs.
+        run: |
+          sudo apt-get update && sudo apt-get install -y postgresql-client libxml2-utils
+          PGPASSWORD=openehr psql -h localhost -U openehr -d postgres \
+            -c "ALTER SYSTEM SET fsync = off" -c "ALTER SYSTEM SET synchronous_commit = off" -c "ALTER SYSTEM SET full_page_writes = off" -c "SELECT pg_reload_conf()"
+      - uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
+        with:
+          tool: cargo-nextest
+      - name: Build the test binaries
+        run: cargo nextest run --locked -p "$PACKAGE" --all-features --no-run
+        env:
+          PACKAGE: ${{ inputs.package }}
+      - name: Stress the filter under load
+        env:
+          PACKAGE: ${{ inputs.package }}
+          FILTER: ${{ inputs.filter }}
+          COUNT: ${{ inputs.count }}
+          LOAD_RUNS: ${{ inputs.load_runs }}
+        run: |
+          set -euo pipefail
+          [[ "$COUNT" =~ ^[1-9][0-9]*$ ]] || { echo "count must be a positive integer" >&2; exit 2; }
+          [[ "$LOAD_RUNS" =~ ^[0-9]+$ ]] || { echo "load_runs must be a non-negative integer" >&2; exit 2; }
+          mkdir -p stress-out
+          load_pids=()
+          for i in $(seq 1 "$LOAD_RUNS"); do
+            cargo nextest run --locked -p "$PACKAGE" --all-features --no-tests=pass --no-fail-fast \
+              > "stress-out/load-$i.log" 2>&1 &
+            load_pids+=("$!")
+          done
+          status=0
+          cargo nextest run --locked -p "$PACKAGE" --all-features --profile ci \
+            --stress-count "$COUNT" -E "$FILTER" 2>&1 | tee stress-out/stress.log || status=$?
+          for pid in "${load_pids[@]}"; do
+            wait "$pid" || echo "a load run exited non-zero (see its log)" >&2
+          done
+          {
+            echo "### Stress: \`$FILTER\` x $COUNT in \`$PACKAGE\`, $LOAD_RUNS load run(s)"
+            echo
+            if [[ "$status" -eq 0 ]]; then echo "Every iteration passed."; else echo "The stress run failed (exit $status); the artifact holds the output."; fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
+      - name: Keep the output
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-stress-output
+          path: stress-out/
+          if-no-files-found: ignore
