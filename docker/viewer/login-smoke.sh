@@ -151,6 +151,22 @@ done
   dump_browser_log
   exit 1
 }
+# The page is server-rendered and its no-JS form works by design, so typing
+# before the WASM hydrates posts a document and reads as the #2164 defect
+# although the bundle may attach a moment later. Wait (bounded) for the marker
+# the hydrated app sets on <body> (`app::mark_hydration`); a bundle that never
+# hydrates still fails, with its own message.
+HYDRATED=""
+for _ in $(seq 1 30); do
+  HYDRATED=$(find_element 'body[data-hydrated]')
+  [[ -n "$HYDRATED" ]] && break
+  sleep 1
+done
+[[ -n "$HYDRATED" ]] || {
+  echo "::error::the viewer page never hydrated within 30 s: the shipped WASM did not attach (the #2164 class)"
+  dump_browser_log
+  exit 1
+}
 PASS_EL=$(find_element 'input[name=password]')
 SUBMIT_EL=$(find_element 'button[type=submit]')
 [[ -n "$PASS_EL" && -n "$SUBMIT_EL" ]] || {
