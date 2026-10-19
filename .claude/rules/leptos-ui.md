@@ -140,3 +140,27 @@ and `leptos-chartistry` gone, measured 1425689 brotli bytes of WebAssembly
 (1433578 on 0.1.3, 1426414 on 0.1.5, 1420876 on 0.1.6);
 the budget leaves about 8% for growth. Raise it only in the
 change that needs the room, with the new measurement.
+
+## 8. Strings and locales
+
+The catalog rule is FerroUI's (its `.claude/rules/leptos-ui.md` §13): no
+string the viewer draws lives outside a catalog, and a language joins as a
+catalog file with no code change.
+
+- The viewer's catalog is
+  `app/ferroehr-viewer/locales/<tag>/ferroehr-viewer.ftl`, embedded by
+  `fluent_templates::static_loader!` in `crate::locale`, where each message
+  is one `Msg`. A test holds every catalog directory to the full message
+  set, and a throwaway catalog under `tests/locales/` shows the words change
+  with no code change.
+- The server chooses the locale once per request (`crate::locale::current`):
+  the best language of `Accept-Language` the catalog holds, else `[ui]
+  locale`. The document writes it as `<html lang>`, the browser reads it back
+  from there, and `App` provides it with `ferrohealth_ui::i18n::provide_locale`
+  so the viewer's words and FerroUI's switch together.
+- `scripts/checks/stray-literals.sh app/ferroehr-viewer/src` runs in CI
+  against `scripts/checks/stray-literals.baseline`: a file may hold no more
+  stray literals than its count, and a change that moves strings into the
+  catalog lowers the count with `--update`. Most of the remaining strings
+  reach a component that takes a `&'static str`, which FerroHEALTH/FerroUI#114
+  widens.

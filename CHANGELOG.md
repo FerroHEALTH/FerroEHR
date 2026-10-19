@@ -42,6 +42,15 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **The viewer draws with FerroUI 0.1.7 and is ready for more languages**,
+  English the one that ships (#300). FerroUI's words and the viewer's come
+  from Fluent catalogs, the viewer's under `app/ferroehr-viewer/locales/`,
+  so a language joins as a catalog file with no code change. The locale is
+  chosen once per request, the best language of `Accept-Language` the
+  viewer's catalog holds or else the new `[ui] locale` (default `en`), and
+  the page writes it as `<html lang>`. `scripts/checks/stray-literals.sh`
+  fails CI on a viewer string outside the catalog beyond the per-file
+  baseline the remaining strings hold while they move.
 - A structure the Web Template compacts away (an `ITEM_TREE` under a party
   identity or an ENTRY, for example) is rebuilt with the name its term
   definition gives instead of its at-code (#3810).
