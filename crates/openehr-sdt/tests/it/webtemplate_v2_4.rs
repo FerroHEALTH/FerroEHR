@@ -35,7 +35,9 @@ use openehr_adl::opt::create_opt;
 use openehr_adl::parse::Dialect;
 use openehr_am::v2_4::aom2::constraint_model::c_complex_object::CComplexObject;
 use openehr_am::v2_4::aom2::constraint_model::c_object::CObject;
-use openehr_sdt::flat::example::{DetailLevel, ExampleType, example_composition};
+use openehr_sdt::flat::example::{
+    DetailLevel, ExampleType, example_composition, example_root_instance,
+};
 use openehr_sdt::flat::validation::validate_archetype_conformance;
 use openehr_sdt::flat::webtemplate::builder_v2_4::build_web_template_v2_4;
 use openehr_sdt::flat::webtemplate::model::{WebTemplate, WebTemplateCardinality, WebTemplateNode};
@@ -420,7 +422,9 @@ fn v2_4_archetype_conformance_walk_enforces_cardinality() {
     // A self-consistent example carries no cardinality violation against its own
     // ADL2 template (symmetric with the OPT-1.4 front end, whose generated
     // examples validate clean — `crates/openehr-its/tests/validation.rs`).
-    let comp = example_composition(&wt, DetailLevel::Complete).expect("the example builds");
+    // The template is rooted at an OBSERVATION, which has no example
+    // COMPOSITION (#3780), so the instance is the root class's own.
+    let comp = example_root_instance(&wt, DetailLevel::Complete).expect("the example builds");
     let baseline = validate_archetype_conformance(&comp, &wt);
     assert!(
         !baseline

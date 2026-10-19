@@ -181,6 +181,34 @@ pub fn example_composition(wt: &WebTemplate, level: DetailLevel) -> Result<Value
     Ok(value)
 }
 
+/// Generates an example instance of a non-COMPOSITION template's root class.
+///
+/// The root is an ENTRY, a SECTION or a CLUSTER, for example; the instance is
+/// built from `wt` at `level` by [`crate::flat::build::build_root`] without any
+/// COMPOSITION member.
+///
+/// The ITS-REST example operation serves [`example_composition`]; this is the
+/// library form for validating or exercising a non-COMPOSITION template.
+///
+/// # Errors
+///
+/// [`FlatError::Conversion`] for a COMPOSITION-rooted template (use
+/// [`example_composition`]), and the build's own [`FlatError`].
+pub fn example_root_instance(wt: &WebTemplate, level: DetailLevel) -> Result<Value, FlatError> {
+    if wt.tree.rm_type == "COMPOSITION" {
+        return Err(FlatError::Conversion(
+            "a COMPOSITION-rooted template's example is example_composition".to_owned(),
+        ));
+    }
+    let mut flat: Map<String, Value> = Map::new();
+    walk(&wt.tree, &wt.tree.id, 0, level, false, &mut flat);
+    let doc = crate::flat::sim::flat::parse_flat(&flat)?;
+    let mut value =
+        crate::flat::build::build_root(&doc, wt, &crate::flat::build::BuildOptions::default())?;
+    fill_mandatory_structures(&mut value, &wt.tree);
+    Ok(value)
+}
+
 /// Populate a deterministic `uid` (an `OBJECT_VERSION_ID`) on an example
 /// composition — the `type=output` form (as retrieved from the repository).
 ///

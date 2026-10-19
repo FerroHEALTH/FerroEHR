@@ -29,6 +29,9 @@ workflow refuses a tag that has no matching section here.
   is returned, so a party the RM refuses is reported as an error. Simplified
   Formats define FLAT for compositions only, so this is FerroEHR's own
   extension over the same template walk.
+  `flat::build::build_root` is the same walk for any non-COMPOSITION root,
+  and `flat::example::example_root_instance` generates an example instance of
+  such a root class for validation and tests.
 - **The openEHR terminology serves `interoperability` (672) as a term mapping
   purpose** (#3838, SPECTERM-31): `TERM_MAPPING.purpose` validation accepts
   it, and the terminology endpoints list it in all five languages.
