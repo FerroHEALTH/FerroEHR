@@ -25,7 +25,8 @@ terminology / management / event-subscription surfaces). Entry point:
   a client or probe needs** (owner decision 2026-10-06): the detail lives on the
   `/management` surface behind its per-endpoint access levels —
   `/management/health` (every indicator with its detail) and
-  `/management/status` (licence, deployment gaps, support period; the public
+  `/management/status` (licence, deployment gaps, the end month of the support
+  commitment; the public
   `{rest root}/status` keeps status, versions, timestamp and the deployment
   profile only), beside info/prometheus/metrics/env/loggers/flamegraph. No
   openEHR spec governs either — our own operational surface.

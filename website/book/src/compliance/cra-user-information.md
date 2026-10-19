@@ -162,7 +162,7 @@ risks;"
   [foreseeable misuse table](intended-purpose.md#reasonably-foreseeable-use-and-misuse)
   lists each case (real patient data under the `sandbox` profile,
   authentication off, a plaintext listener, several organisations in one
-  instance, a release run after its support period, and others), what
+  instance, a release run after a newer one is published, and others), what
   FerroEHR does against it, and what remains.
 - **What is not defended against:** the
   [threat model](../threat-model.md#what-is-explicitly-not-defended-against)
@@ -189,22 +189,29 @@ in the technical documentation.
 end-date of the support period during which users can expect vulnerabilities
 to be handled and to receive security updates;"
 
-- **The support period** of a release is five years from the month it is
-  published. **Its end date**, month and year, is printed in the "Support
-  period" section of that release's notes, and the running server states it on
-  its boot banner, in `ferroehr --version`, under `support` in
-  `GET /management/info` and as `support.status` in
-  `GET /management/status`
+- **Only the newest release is supported.** When a new release is published,
+  every earlier release stops receiving fixes: there are no maintenance
+  branches, no long-term-support line and no backports. If you are not on the
+  newest release, upgrade; upgrading is free. Under the Cyber Resilience Act,
+  Cadasto B.V. commits to keep publishing security fixes for at least five
+  years after each release (Art 13(8)) and ships them only in the newest
+  release (Art 13(10)).
+- **The end date**, month and year, is the end of that five-year commitment
+  for a release: the date until which Cadasto B.V. keeps shipping fixed
+  releases. It is printed in the "Support period" section of the release's
+  notes, and the running server states it on its boot banner, in
+  `ferroehr --version`, under `support` in `GET /management/info` and as
+  `support.status` in `GET /management/status`
   ([how long the version you pinned is supported](../operations.md#how-long-the-version-you-pinned-is-supported)).
-- **The type of support:** Cadasto B.V. handles vulnerabilities in a release
-  during its support period, and the security update ships in the newest
-  release, as a security-only patch where that is technically feasible. There
-  are no maintenance branches, no long-term-support line and no backports
-  (CRA Art. 13(10)). Every fixed vulnerability gets a GitHub security advisory
-  with its severity, the affected and fixed versions, and what to do.
+  A release itself is supported only while it is the newest.
+- **The type of support:** Cadasto B.V. handles vulnerabilities in FerroEHR,
+  and the security update ships in the newest release, as a security-only
+  patch where that is technically feasible. Every fixed vulnerability gets a
+  GitHub security advisory with its severity, the affected and fixed versions,
+  and what to do.
 - **The source:**
   [`SECURITY.md` § Supported versions](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions),
-  which also gives the periods of the Helm chart and the `openehr-*` crates,
+  which also covers the Helm chart and the `openehr-*` crates,
   and the reasoning in the technical documentation
   ([`cra-annex-vii-4-support-period.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/technical-documentation/cra-annex-vii-4-support-period.md)).
 

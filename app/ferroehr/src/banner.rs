@@ -159,7 +159,7 @@ mod tests {
             "1.0.0",
             crate::config::profile::SpecProfile::Development,
             &sandbox(),
-            "until the end of October 2031",
+            "newest release only; fixes published until the end of October 2031",
             false,
         );
         // The notice is wrapped to the banner's width, so compare on words.
@@ -171,7 +171,7 @@ mod tests {
             "1.0.0",
             crate::config::profile::SpecProfile::Development,
             &sandbox(),
-            "until the end of October 2031",
+            "newest release only; fixes published until the end of October 2031",
             true,
         );
         assert!(coloured.contains("\x1b[1;31m"), "{coloured}");
@@ -184,7 +184,7 @@ mod tests {
             "1.0.0",
             crate::config::profile::SpecProfile::Development,
             &production,
-            "until the end of October 2031",
+            "newest release only; fixes published until the end of October 2031",
             true,
         );
         assert!(
@@ -199,7 +199,7 @@ mod tests {
             "9.9.9",
             crate::config::profile::SpecProfile::Development,
             &sandbox(),
-            "until the end of October 2031",
+            "newest release only; fixes published until the end of October 2031",
             false,
         );
         assert!(b.contains("v9.9.9"), "version must be substituted");
@@ -225,7 +225,7 @@ mod tests {
             "9.9.9",
             crate::config::profile::SpecProfile::Development,
             &sandbox(),
-            "until the end of October 2031",
+            "newest release only; fixes published until the end of October 2031",
             false,
         );
         assert!(
@@ -246,7 +246,7 @@ mod tests {
             "9.9.9",
             crate::config::profile::SpecProfile::Stable,
             &sandbox(),
-            "until the end of October 2031",
+            "newest release only; fixes published until the end of October 2031",
             false,
         );
         assert!(b.contains("stable"));
@@ -279,7 +279,7 @@ mod tests {
                 env!("CARGO_PKG_VERSION"),
                 crate::config::profile::SpecProfile::default(),
                 &sandbox(),
-                "until the end of October 2031",
+                "newest release only; fixes published until the end of October 2031",
                 false,
             )
             .contains(env!("CARGO_PKG_VERSION"))
@@ -293,11 +293,13 @@ mod tests {
             "9.9.9",
             crate::config::profile::SpecProfile::Development,
             &sandbox(),
-            "until the end of October 2031",
+            "newest release only; fixes published until the end of October 2031",
             false,
         );
         assert!(
-            b.contains("  Support     until the end of October 2031\n"),
+            b.contains(
+                "  Support     newest release only; fixes published until the end of October 2031\n"
+            ),
             "{b}"
         );
     }

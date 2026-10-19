@@ -90,3 +90,4 @@
 - [Podman, not Docker](podman-not-docker.md) — podman for containers and Kubernetes (kind, podman provider); DOCKER_HOST to the podman socket
 - [Agent pushes release tags](agent-pushes-release-tags.md) — create+push the signed vX.Y.Z tag, watch the run, close the milestone, clean branches; owner only merges
 - [FerroUI](ferroui.md) — every console draws in FerroUI; uniform design, shared components, all four consoles move in lockstep with each FerroUI release
+- [Support: newest release only](support-newest-release-only.md): owner 2026-10-19: only the newest release is supported; CRA five years = product-wide fix commitment, shipped only in the newest (Art 13(8), 13(10))

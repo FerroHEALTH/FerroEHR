@@ -728,12 +728,14 @@ why they are written as your checklist rather than as our claim.
 
 Plan the upgrade cadence around this:
 
-- **Each release is supported for five years from the month it is
-  published, and its fixes ship in the newest release.** There are no
-  maintenance branches, no long-term-support line and no backports: a
-  vulnerability in a release inside its support period is fixed in the next
-  release, which every user of an earlier release may run under the same
-  licence terms (CRA Art 13(10)). Staying on an older release means running
+- **Only the newest release is supported.** When a new release is
+  published, every earlier release stops receiving fixes: there are no
+  maintenance branches, no long-term-support line and no backports. If you are
+  not on the newest release, upgrade; upgrading is free. Under the Cyber
+  Resilience Act, Cadasto B.V. commits to keep publishing security fixes for at
+  least five years after each release (Art 13(8)) and ships them only in the
+  newest release (Art 13(10)), which every user of an earlier release may run
+  under the same licence terms. Staying on an older release means running
   without the fix.
 - **A fix normally arrives as the next patch** on the current minor, so taking
   it does not oblige you to take new behaviour, but that is the usual case,
@@ -743,18 +745,21 @@ Plan the upgrade cadence around this:
   means the assets and the tag of a published release cannot be modified at
   all, so the remedy for any defect is a new version.
 - **The Helm chart and the published crates follow their own version lines**,
-  each with the same five-year period and its fixes in the newest published
-  version. A chart-only fix ships as a new chart version between server
+  each supported only in its newest published version, which is where its
+  fixes ship. A chart-only fix ships as a new chart version between server
   releases.
 
-**The running server states its own support period.** Each release is
-supported for five years from the month of its release date (CRA Art 13(8)),
-and the server reads that date from its changelog heading at build time. The
-end month is on the boot banner (`Support` line), in the boot log, in
+**The running server states the end month of the commitment.** Cadasto B.V.
+keeps publishing fixed releases for at least five years after each release
+(CRA Art 13(8)), and the server reads its release date from its changelog
+heading at build time. The end month, the date until which fixed releases
+keep coming, does not make the running release supported: a release is
+supported only while it is the newest. The end month is on the boot banner (`Support` line), in the boot log, in
 `ferroehr --version`, under `support` in `GET /management/info`, and under
 `support` in `GET /management/status` as
 `{release_date, support_ends, status}`, where `support_ends` is `YYYY-MM` and
-`status` is `supported`, `ended` or `unreleased`. Once the end month has passed,
+`status` is `supported` (the commitment is still running), `ended` or
+`unreleased`. Once the end month has passed,
 `status` reads `ended` and the server logs a `warn` line at boot and once a day
 (CRA Art 13(19)). A build of a version whose changelog heading carries no date
 is not a release: it reports `unreleased` and no end month.
