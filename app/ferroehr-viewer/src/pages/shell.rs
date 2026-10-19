@@ -324,7 +324,7 @@ fn status_pill(status: Resource<Result<String, crate::error::ViewerError>>) -> A
     // Transition keeps the previous pill visible during reload instead of
     // flashing the fallback every poll (book async/12).
     view! {
-        <span id="cdr-status">
+        <span id="cdr-status" class="fui-roomy-only">
             <Transition fallback=|| pill(Tone::Neutral, "Checking the CDR")>
                 {move || {
                     Suspend::new(async move {

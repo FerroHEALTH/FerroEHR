@@ -52,6 +52,12 @@ workflow refuses a tag that has no matching section here.
   label on one line, a field and its button stack with the button on its own
   line, and a disabled field keeps its edge in the dark theme.
 
+### Fixed
+
+- On a phone the CDR status pill no longer covers the FerroEHR mark in the
+  top bar (#3812). The pill shows from a 64rem window up, where the top bar
+  has room for its full words.
+
 ### Security
 
 - `cargo deny` passes again: the viewer's WebDriver test client no longer

@@ -284,6 +284,11 @@ async fn the_topbar_carries_the_lockup_the_health_pill_the_theme_toggle_and_the_
     assert!(!header.contains("fui-tone-bad"), "{header}");
     assert!(header.contains("fui-tone-warn"), "{header}");
     assert!(!header.contains("Checking the CDR"), "{header}");
+    // The pill shows from 64rem only, so on a phone it never covers the mark.
+    assert!(
+        header.contains("<span id=\"cdr-status\" class=\"fui-roomy-only\">"),
+        "{header}"
+    );
     // The user menu's stable trigger id (the E2E journeys target it) and the
     // theme toggle, a plain form posting the other theme to the server: both
     // buttons are in the document and the stylesheet shows the one leading
