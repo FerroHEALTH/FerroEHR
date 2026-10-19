@@ -61,6 +61,8 @@ workflow refuses a tag that has no matching section here.
 - On a phone the CDR status pill no longer covers the FerroEHR mark in the
   top bar (#3812). The pill shows from a 64rem window up, where the top bar
   has room for its full words.
+- The viewer shows the FerroEHR mark as its tab icon and answers
+  `/favicon.ico` with it, instead of a `404` on every page load (#3808).
 
 ### Security
 

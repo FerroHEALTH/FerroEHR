@@ -328,8 +328,12 @@ fn stored_row(
             on:click=on_click
         >
             <td class=CELL_MONO>{row.name}</td>
-            <td class=CELL_MONO data-label="Version">{row.version}</td>
-            <td class=format!("{CELL} text-xs text-ink-muted whitespace-nowrap") data-label="Saved">{ferrohealth_ui::view::time::timestamp(&row.saved)}</td>
+            <td class=CELL_MONO data-label="Version">
+                {row.version}
+            </td>
+            <td class=format!("{CELL} text-xs text-ink-muted whitespace-nowrap") data-label="Saved">
+                {ferrohealth_ui::view::time::timestamp(&row.saved)}
+            </td>
             <td class=format!("{CELL} min-w-[15rem]") data-label="Actions">
                 // The row wraps between whole actions, never inside a label.
                 <div class="flex flex-wrap items-center gap-2 whitespace-nowrap">

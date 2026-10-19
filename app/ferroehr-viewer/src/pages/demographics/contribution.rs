@@ -284,7 +284,12 @@ fn version_row(version: &ContributionVersion) -> AnyView {
             </td>
         }
         .into_any(),
-        None => view! { <td class=CELL_MONO data-label="Version">{shown}</td> }.into_any(),
+        None => view! {
+            <td class=CELL_MONO data-label="Version">
+                {shown}
+            </td>
+        }
+        .into_any(),
     };
     view! {
         <tr class=ROW>

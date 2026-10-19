@@ -263,9 +263,20 @@ fn tag_row(tag: &ItemTagRow, paths: bool, actions: TagActions) -> AnyView {
             <td class=CELL_MONO data-tag-key=hook.clone()>
                 {shown_key}
             </td>
-            <td class=CELL data-label="Value">{value}</td>
-            {paths.then(|| view! { <td class=CELL_MONO data-label="Target path">{target_path}</td> })}
-            <td class=CELL_MONO data-label="Target">{target}</td>
+            <td class=CELL data-label="Value">
+                {value}
+            </td>
+            {paths
+                .then(|| {
+                    view! {
+                        <td class=CELL_MONO data-label="Target path">
+                            {target_path}
+                        </td>
+                    }
+                })}
+            <td class=CELL_MONO data-label="Target">
+                {target}
+            </td>
             <td class=ferrohealth_ui::table::view::ACTIONS data-label="Actions">
                 <button
                     type="button"

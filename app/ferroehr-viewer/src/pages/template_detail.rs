@@ -438,9 +438,7 @@ fn meta_section(detail: Resource<Result<TemplateDetail, ViewerError>>) -> AnyVie
     view! {
         <section class=format!("{CARD_PAD} mb-4")>
             <Suspense fallback=|| {
-                view! {
-                    {ferrohealth_ui::view::empty::skeleton(1, "Loading…")}
-                }
+                view! { {ferrohealth_ui::view::empty::skeleton(1, "Loading…")} }
             }>
                 {move || {
                     Suspend::new(async move {
@@ -520,9 +518,7 @@ fn wt_tab(
 /// The `<Transition>` fallback the template detail panes share (both ADL
 /// families — the ADL2 screen imports it rather than re-declaring a copy).
 pub(crate) fn tree_skeleton() -> impl IntoView {
-    view! {
-        {ferrohealth_ui::view::empty::skeleton(3, "Loading…")}
-    }
+    view! { {ferrohealth_ui::view::empty::skeleton(3, "Loading…")} }
 }
 
 /// The catalog error state (e.g. a `404` unknown template, or a `WebTemplate`
@@ -611,12 +607,18 @@ pub(crate) fn CatalogTreeNode(
                 {move || {
                     if expanded.get() {
                         view! {
-                            {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::CHEVRON_DOWN, "12")}
+                            {ferrohealth_ui::icon::icon(
+                                ferrohealth_ui::icon::Glyph::CHEVRON_DOWN,
+                                "12",
+                            )}
                         }
                             .into_any()
                     } else {
                         view! {
-                            {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::CHEVRON_RIGHT, "12")}
+                            {ferrohealth_ui::icon::icon(
+                                ferrohealth_ui::icon::Glyph::CHEVRON_RIGHT,
+                                "12",
+                            )}
                         }
                             .into_any()
                     }
@@ -777,7 +779,10 @@ fn opt_tab(detail: Resource<Result<TemplateDetail, ViewerError>>) -> AnyView {
                         // Resolve inside the Transition: an SSR'd ErrorBoundary fallback
                         // mismatches at hydration in leptos 0.8.
                         view! {
-                            <crate::components::format_view::DocumentPane id="template-source-pane" body=loaded.source />
+                            <crate::components::format_view::DocumentPane
+                                id="template-source-pane"
+                                body=loaded.source
+                            />
                         }
                             .into_any()
                     }
@@ -816,7 +821,12 @@ fn example_tab(
                             );
                             // Resolve inside the Transition: an SSR'd ErrorBoundary fallback
                             // mismatches at hydration in leptos 0.8.
-                            view! { <crate::components::format_view::DocumentPane id="template-example-pane" body=pretty /> }
+                            view! {
+                                <crate::components::format_view::DocumentPane
+                                    id="template-example-pane"
+                                    body=pretty
+                                />
+                            }
                                 .into_any()
                         }
                         Err(e) => crate::components::notice::inline_error(&e),

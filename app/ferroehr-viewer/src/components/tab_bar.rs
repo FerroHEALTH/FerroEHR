@@ -28,17 +28,17 @@ pub fn url_tabs(
     // The strip keeps one spacing step from the panel it switches.
     view! {
         <div class="mb-4">
-        {move || {
-            let tabs = tabs
-                .iter()
-                .map(|(key, words)| KeyedTab {
-                    key,
-                    href: href(key),
-                    label: words,
-                })
-                .collect();
-            keyed_tabs(label, tabs, &current.get())
-        }}
+            {move || {
+                let tabs = tabs
+                    .iter()
+                    .map(|(key, words)| KeyedTab {
+                        key,
+                        href: href(key),
+                        label: words,
+                    })
+                    .collect();
+                keyed_tabs(label, tabs, &current.get())
+            }}
         </div>
     }
     .into_any()

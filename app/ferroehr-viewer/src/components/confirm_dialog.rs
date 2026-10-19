@@ -97,7 +97,12 @@ pub fn ConfirmDialog(
     let glyph = confirm_icon.unwrap_or(Glyph::TRASH);
     let body = view! { <p class="text-sm text-ink">{move || message.get()}</p> }.into_any();
     let actions = view! {
-        <button id=confirm_id type="button" class=BTN_DESTRUCTIVE on:click=move |_| on_confirm.run(())>
+        <button
+            id=confirm_id
+            type="button"
+            class=BTN_DESTRUCTIVE
+            on:click=move |_| on_confirm.run(())
+        >
             {icon(glyph, "16")}
             {confirm_label}
         </button>

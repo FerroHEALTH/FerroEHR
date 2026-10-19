@@ -180,9 +180,7 @@ fn summary_section(ehr_id: Signal<String>, status: StatusFeed) -> AnyView {
             <section class=CARD_PAD id="ehr-summary">
                 {identity}
                 <Suspense fallback=|| {
-                    view! {
-                        {ferrohealth_ui::view::empty::skeleton(1, "Loading…")}
-                    }
+                    view! { {ferrohealth_ui::view::empty::skeleton(1, "Loading…")} }
                 }>
                     {move || Suspend::new(async move {
                         match resource.await {
@@ -221,9 +219,7 @@ fn identity_strip(status: StatusFeed) -> AnyView {
     let resource = status.resource;
     view! {
         <Transition fallback=|| {
-            view! {
-                {ferrohealth_ui::view::empty::skeleton(1, "Loading…")}
-            }
+            view! { {ferrohealth_ui::view::empty::skeleton(1, "Loading…")} }
         }>
             {move || Suspend::new(async move {
                 match resource.await {
@@ -270,12 +266,7 @@ fn summary_facts(summary: &EhrSummary) -> AnyView {
         summary_fact("time_created".to_owned(), summary.time_created.clone()),
         summary_fact(status_label, summary.ehr_status_uid.clone()),
     ];
-    view! {
-        <dl class="fui-facts text-sm">
-            {facts}
-        </dl>
-    }
-    .into_any()
+    view! { <dl class="fui-facts text-sm">{facts}</dl> }.into_any()
 }
 
 /// One label/value line of the summary card (an absent value shows an em dash).

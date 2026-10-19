@@ -358,7 +358,9 @@ fn parameters_section(params: RwSignal<String>) -> AnyView {
                 <label class=LABEL r#for="aql-params">
                     "Parameters (JSON object)"
                 </label>
-                <p class="fui-help">"A JSON object of the query's parameters, such as {\"ehr_id\": \"…\"}."</p>
+                <p class="fui-help">
+                    "A JSON object of the query's parameters, such as {\"ehr_id\": \"…\"}."
+                </p>
                 {code_field("aql-params", Language::Json, params, None, Height::Short)}
             </div>
         </section>
@@ -401,21 +403,24 @@ fn run_save_section(
     };
     let save_fields = save_as_fields("aql", fields);
     view! {
-            <section class=CARD_PAD>
-                <div class="space-y-3">
-                    {save_fields}
-                    <div class="fui-cluster">
-                        <button type="button" class=BTN_PRIMARY disabled=empty_aql on:click=run_click>
-                            "Run"
-                        </button>
-                        <button type="button" class=BTN_SECONDARY disabled=save_disabled on:click=save_click>
-                            "Save"
-                        </button>
-                    </div>
-                    {save_feedback(save_action)}
-                </div>
-            </section>
-        }
+        <section class=CARD_PAD>
+            <div class="space-y-3">
+                {save_fields} <div class="fui-cluster">
+                    <button type="button" class=BTN_PRIMARY disabled=empty_aql on:click=run_click>
+                        "Run"
+                    </button>
+                    <button
+                        type="button"
+                        class=BTN_SECONDARY
+                        disabled=save_disabled
+                        on:click=save_click
+                    >
+                        "Save"
+                    </button>
+                </div> {save_feedback(save_action)}
+            </div>
+        </section>
+    }
     .into_any()
 }
 

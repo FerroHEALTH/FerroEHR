@@ -24,7 +24,7 @@ failure; run the cheap gates first.
 - Tooling presence: `rustup target list --installed | grep wasm32` (install
   with `rustup target add wasm32-unknown-unknown` if missing);
   `cargo leptos --version`; `leptosfmt --version` (report if missing —
-  install is `cargo install --locked cargo-leptos leptosfmt`, ask before
+  install is `cargo install --locked cargo-leptos` and `cargo install --locked leptosfmt --version 0.1.33`, the version CI pins; ask before
   installing).
 
 ## The battery (in order)
